@@ -1,14 +1,23 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 #
-# TEMPLATE-TODO: change this example to suit your needs.
-# If you don't need a config, you can remove the file entirely.
-# It ties in to the example _on_config_changed handler in src/charm.py
-#
 # Learn more about config at: https://juju.is/docs/sdk/config
 
 options:
-  thing:
-    default: 🎁
-    description: A thing used by the charm.
+  cluster_name:
+    default: opensearch
+    description: opensearch cluster name.
     type: string
+  os_java_opts:
+    default: 3
+    description: |
+      Maximum and initial JVM heap size for Opensearch, in GB.
+      Recommend half of system RAM
+    type: int
+  max_map_count:
+    default: 262144
+    description: |
+      Maximum number of memory map areas a process may have.
+      Should be at least 262144. For more information check
+      at https://opensearch.org/docs/latest/opensearch/install/important-settings/
+    type: int
