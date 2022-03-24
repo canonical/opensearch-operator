@@ -8,6 +8,7 @@ from pathlib import Path
 from subprocess import CalledProcessError
 from unittest.mock import PropertyMock, call, patch
 
+import requests
 from ops.model import BlockedStatus
 from ops.testing import Harness
 
@@ -54,6 +55,7 @@ class TestCharm(unittest.TestCase):
                         "admin_dn": self.get_dn("ADMIN"),
                         "ca": "root-ca.pem",
                         "nodes_dn": [self.get_dn("opensearch-0")],
+                        "followers_dn": [],
                     }
                     for template in charm.CONFIG_MAP:
                         cmd = charm.CONFIG_MAP[template].get("cmd")
@@ -107,6 +109,7 @@ class TestCharm(unittest.TestCase):
                     "admin_dn": self.get_dn("ADMIN"),
                     "ca": "root-ca.pem",
                     "nodes_dn": [self.get_dn("opensearch-0"), self.get_dn("opensearch-1")],
+                    "followers_dn": [],
                 }
                 self.harness.add_relation_unit(self.peer_rel_id, "opensearch/1")
                 self.harness.update_relation_data(
@@ -272,3 +275,100 @@ class TestCharm(unittest.TestCase):
                 mock_check_call.side_effect = FileNotFoundError
                 self.harness.charm._configure_self_signed_cert()
         self.assertIn("FileNotFoundError:", "".join(logger.output))
+
+    @patch("charm.OpenSearchCharm._on_config_changed")
+    def test_ccr_leader_relation(self, mock_config_changed):
+        ccr_leader_id = self.harness.add_relation("ccr_leader", "opensearch")
+        self.harness.add_relation_unit(ccr_leader_id, "opensearch-follower/0")
+        # assert on_config_changed is called on leader cluster to add
+        # followers_dn
+        mock_config_changed.assert_called_once()
+
+    @patch("charm.requests")
+    def test_ccr_follower_relation_leader(self, mock_requests):
+        expected_put = call.put(
+            "https://localhost:9200/_cluster/settings?pretty",
+            data={
+                "persistent": {
+                    "cluster": {"remote": {charm.CCR_CONNECTION: {"seeds": ["10.6.215.2:9300"]}}}
+                }
+            },
+            cert=self.harness.charm._admin_cert_requests,
+            verify=self.harness.charm._ca_cert,
+        )
+        expected_post = call.post(
+            "https://localhost:9200/_plugins/_replication/_autofollow?pretty",
+            data={
+                "leader_alias": charm.CCR_CONNECTION,
+                "name": "all-replication-rule",
+                "pattern": "*",
+                "use_roles": {
+                    "leader_cluster_role": "all_access",
+                    "follower_cluster_role": "all_access",
+                },
+            },
+            cert=self.harness.charm._admin_cert_requests,
+            verify=self.harness.charm._ca_cert,
+        )
+
+        with patch("charm.OpenSearchCharm._node_dn", new_callable=PropertyMock) as node_dn:
+            self.harness.set_leader(True)
+            node_dn.return_value = self.get_dn("opensearch-follower-0")
+            ccr_follower_id = self.harness.add_relation("ccr_follower", "opensearch")
+            self.harness.add_relation_unit(ccr_follower_id, "opensearch-leader/0")
+            self.harness.update_relation_data(
+                ccr_follower_id, "opensearch-leader/0", {"private-address": "10.6.215.2"}
+            )
+            # check that DN was passed to the leader unit
+            self.assertDictEqual(
+                self.harness.get_relation_data(ccr_follower_id, "opensearch/0"),
+                {"dn": "CN=opensearch-follower-0"},
+            )
+            request_calls = mock_requests.method_calls
+            self.assertTrue(len(request_calls) == 2)
+            self.assertIn(expected_put, request_calls)
+            self.assertIn(expected_post, request_calls)
+
+    @patch("charm.requests")
+    def test_ccr_follower_relation_leader_put_error(self, mock_requests):
+        with patch("charm.OpenSearchCharm._node_dn", new_callable=PropertyMock) as node_dn:
+            self.harness.set_leader(True)
+            response = requests.Response()
+            response.status_code = 400
+            mock_requests.put.return_value = response
+            with self.assertLogs("charm", "ERROR") as logger:
+                with self.assertRaises(requests.exceptions.HTTPError):
+                    node_dn.return_value = self.get_dn("opensearch-follower-0")
+                    ccr_follower_id = self.harness.add_relation("ccr_follower", "opensearch")
+                    self.harness.add_relation_unit(ccr_follower_id, "opensearch-leader/0")
+                    self.harness.update_relation_data(
+                        ccr_follower_id, "opensearch-leader/0", {"private-address": "10.6.215.2"}
+                    )
+            self.assertIn("Failed to create a CCR connection:", "".join(logger.output))
+
+    @patch("charm.requests")
+    def test_ccr_follower_relation_leader_post_error(self, mock_requests):
+        with patch("charm.OpenSearchCharm._node_dn", new_callable=PropertyMock) as node_dn:
+            self.harness.set_leader(True)
+            response = requests.Response()
+            response.status_code = 400
+            mock_requests.post.return_value = response
+            with self.assertLogs("charm", "ERROR") as logger:
+                with self.assertRaises(requests.exceptions.HTTPError):
+                    node_dn.return_value = self.get_dn("opensearch-follower-0")
+                    ccr_follower_id = self.harness.add_relation("ccr_follower", "opensearch")
+                    self.harness.add_relation_unit(ccr_follower_id, "opensearch-leader/0")
+                    self.harness.update_relation_data(
+                        ccr_follower_id, "opensearch-leader/0", {"private-address": "10.6.215.2"}
+                    )
+            self.assertIn("Failed to create a CCR auto-follow:", "".join(logger.output))
+
+    @patch("charm.requests")
+    def test_ccr_follower_relation_not_leader(self, mock_requests):
+        with patch("charm.OpenSearchCharm._node_dn", new_callable=PropertyMock) as node_dn:
+            self.harness.set_leader(False)
+            node_dn.return_value = self.get_dn("opensearch-follower-0")
+            ccr_follower_id = self.harness.add_relation("ccr_follower", "opensearch")
+            self.harness.add_relation_unit(ccr_follower_id, "opensearch-leader/0")
+            mock_requests.put.assert_not_called()
+            mock_requests.post.assert_not_called()

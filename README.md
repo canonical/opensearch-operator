@@ -56,11 +56,30 @@ For more information about self-signed certificates, please check the [OpenSearc
 
 Not supported yet.
 
+### Cross-cluster replication (CCR) :computer: :arrows_counterclockwise: :computer:
+The [cross-cluster replication](https://opensearch.org/docs/latest/replication-plugin/index/) replicate **all**  indexes, mappings, and metadata from the `leader` cluster to the `follower` cluster. The standard [auto-follow](https://opensearch.org/docs/latest/replication-plugin/auto-follow/) is set to `*`. If you want to have a different behavior, use the [API](https://opensearch.org/docs/latest/replication-plugin/api/) to delete the `all-replication-rule` and set your own rules.
+
+To use the CCR, deploy two or more clusters and then use the juju relations to achieve it.
+
+```shell
+# deploy leader cluster
+juju deploy opensearch opensearch-leader -n 3 \
+--config cluster_name="opensearch-leader"
+
+# deploy follower cluster
+juju deploy opensearch opensearch-follower -n 3 \
+--config cluster_name="opensearch-follower" \
+
+# add relation
+juju add-relation opensearch-leader:ccr_leader \
+opensearch-follower:ccr_follower
+```
 ## Relations
 
 Currently supported [relations](https://juju.is/docs/olm/relations) are:
 
-* **Client**: pass the cluster name and port over the `elasticsearch` interface
+* **client**: pass the cluster name and port over the `elasticsearch` interface.
+* **ccr_leader** and **ccr_follower**: responsible for the [cross-cluster replication](https://opensearch.org/docs/latest/replication-plugin/index/) (CCR) over the `opensearch-cluster` interface.
 
 ## Contributing
 

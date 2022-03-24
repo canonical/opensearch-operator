@@ -6,18 +6,21 @@
 import logging
 from pathlib import Path
 from subprocess import CalledProcessError, check_call, check_output
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
+import requests
 from jinja2 import Environment, FileSystemLoader
 from ops.charm import CharmBase, RelationEvent, RelationJoinedEvent
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import BlockedStatus, ModelError, Relation
+from requests.exceptions import HTTPError
 
 logger = logging.getLogger(__name__)
 
 PEER = "opensearch"
 TLS = "certificates"
+CCR_CONNECTION = "ccr-connection-alias"
 
 # TODO(gabrielcocenza) change it to the right location after having the snap
 CONFIG_PATH = Path("/home/ubuntu/")
@@ -42,6 +45,59 @@ class OpenSearchCharm(CharmBase):
         )
         self.framework.observe(self.on.client_relation_joined, self._client_relation_handler)
         self.framework.observe(self.on.client_relation_changed, self._client_relation_handler)
+        self.framework.observe(
+            self.on.ccr_leader_relation_joined,
+            self._on_config_changed,
+        )
+        self.framework.observe(
+            self.on.ccr_leader_relation_changed,
+            self._on_config_changed,
+        )
+        self.framework.observe(
+            self.on.ccr_follower_relation_changed,
+            self._ccr_follower_relation_handler,
+        )
+
+    @property
+    def _ca_cert(self) -> Path:
+        """Get the root CA certificate path.
+
+        Returns:
+            Path: path of root CA file on opensearch config.
+        """
+        return CONFIG_PATH / "root-ca.pem"
+
+    @property
+    def _admin_cert(self) -> Path:
+        """Get the admin client certificate path.
+
+        Returns:
+            Path: path of admin client certificate file on opensearch
+            config.
+        """
+        return CONFIG_PATH / "admin.pem"
+
+    @property
+    def _admin_key(self) -> Path:
+        """Get the admin private key path.
+
+        Returns:
+            Path: path of admin private key file on opensearch config.
+        """
+        return CONFIG_PATH / "admin-key.pem"
+
+    @property
+    def _admin_cert_requests(self) -> Tuple[str, str]:
+        """Get the certificate to be used on requests python lib.
+
+        With admin cert is possible to use Opensearch API with privileges,
+        using encryption in the requests.
+
+        Returns:
+            Tuple[str, str]: tuple containing the string path to admin
+            client certificate and admin private key.
+        """
+        return (str(self._admin_cert), str(self._admin_key))
 
     @property
     def _peers(self) -> Optional[Relation]:
@@ -149,6 +205,23 @@ class OpenSearchCharm(CharmBase):
         nodes_dn.sort()
         return nodes_dn
 
+    @property
+    def _followers_dn(self) -> List[str]:
+        """Retrieve distinguished names (DN) associated with OpenSearch follower nodes.
+
+        Returns:
+            List[str]: a list of DN from all nodes in the ccr_leader relation.
+        """
+        cross_cluster_leader_relation = self.model.get_relation("ccr_leader")
+        followers_dn = []
+        if cross_cluster_leader_relation:
+            followers_dn = [
+                str(cross_cluster_leader_relation.data[unit].get("dn"))
+                for unit in cross_cluster_leader_relation.units
+            ]
+            followers_dn.sort()
+        return followers_dn
+
     def _get_context(self) -> Dict[str, Any]:
         """Get variables context necessary to render configuration templates.
 
@@ -165,6 +238,7 @@ class OpenSearchCharm(CharmBase):
         context["admin_dn"] = self._admin_dn
         context["ca"] = "root-ca.pem"
         context["nodes_dn"] = self._nodes_dn
+        context["followers_dn"] = self._followers_dn
 
         return context
 
@@ -261,6 +335,11 @@ class OpenSearchCharm(CharmBase):
             self._configure_self_signed_cert()
 
     def _configure_self_signed_cert(self):
+        """Configure self signed certificates.
+
+        Please consult the documentation for further information:
+        https://opensearch.org/docs/latest/security-plugin/configuration/generate-certificates/
+        """
         node_key = CONFIG_PATH / f"{self._unit_name}-key.pem"
         node_cert = CONFIG_PATH / f"{self._unit_name}.pem"
 
@@ -331,6 +410,79 @@ class OpenSearchCharm(CharmBase):
         logger.info("Removing temp key and csr file from %s", self.unit.name)
         for file in files_to_remove:
             Path(file).unlink()
+
+    def _ccr_follower_relation_handler(self, event: RelationEvent) -> None:
+        """Set the configuration for Cross Cluster Configuration (CCR) on follower side.
+
+        Most changes occur on the follower cluster, not the leader cluster. Just the
+        leader of follower cluster sets the configuration for CCR and non-leader share
+        the CN to update opensearch configuration on the leader cluster units.
+        All indexes from the leader cluster are replicated with the auto-follow pattern
+        set to "*".
+        Please consult the documentation for further information:
+        * https://opensearch.org/docs/latest/replication-plugin/index/
+        * https://opensearch.org/docs/latest/replication-plugin/get-started/
+        * https://opensearch.org/docs/latest/replication-plugin/auto-follow/
+
+        Args:
+            event (RelationEvent): The triggering relation event.
+        """
+        # share CN with the leader cluster
+        follower_dn = self._node_dn.split(",")[0]
+        logger.info(f"Sharing DN follower: {follower_dn}")
+        event.relation.data[self.unit]["dn"] = follower_dn
+        # only leader need to configure CCR
+        if not self.unit.is_leader():
+            return
+
+        # Set up a cross-cluster connection
+
+        # NOTE(gabrielcocenza) the ideal approach would be using the opensearch-py python client,
+        # to be agnostic with changes on future versions that can break the request. So far it
+        # seems that it doesn't has the feature needed for CCR. I've opened a feature
+        # request in the project: https://github.com/opensearch-project/opensearch-py/issues/143
+
+        leader_ips = [
+            f"{event.relation.data[unit].get('private-address')}:9300"
+            for unit in event.relation.units
+        ]
+        data = {"persistent": {"cluster": {"remote": {CCR_CONNECTION: {"seeds": leader_ips}}}}}
+        try:
+            resp = requests.put(
+                "https://localhost:9200/_cluster/settings?pretty",
+                data=data,
+                cert=self._admin_cert_requests,
+                verify=self._ca_cert,
+            )
+            logger.info("response for set up CCR connection: %s", resp.text)
+            resp.raise_for_status()
+        except HTTPError as e:
+            logger.exception("Failed to create a CCR connection: %s", e)
+            raise
+
+        # set auto-follow to all indexes on the leader cluster
+        data = {
+            "leader_alias": CCR_CONNECTION,
+            "name": "all-replication-rule",
+            "pattern": "*",
+            "use_roles": {
+                "leader_cluster_role": "all_access",
+                "follower_cluster_role": "all_access",
+            },
+        }
+
+        try:
+            resp = requests.post(
+                "https://localhost:9200/_plugins/_replication/_autofollow?pretty",
+                data=data,
+                cert=self._admin_cert_requests,
+                verify=self._ca_cert,
+            )
+            logger.info("response for set up CCR auto-follow: %s", resp.text)
+            resp.raise_for_status()
+        except HTTPError as e:
+            logger.exception("Failed to create a CCR auto-follow: %s", e)
+            raise
 
 
 if __name__ == "__main__":

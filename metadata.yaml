@@ -22,9 +22,15 @@ provides:
     # and we might want change the name for supporting a interface for both 
     # elasticsearch and opensearch.
     interface: elasticsearch
+  ccr_leader:
+    # Cross Cluster Replication (CCR) endpoint for the leader cluster.
+    interface: opensearch-cluster
 requires:
   certificates:
     interface: tls-certificates
+  ccr_follower:
+    # Cross Cluster Replication (CCR) endpoint for the follower cluster.
+    interface: opensearch-cluster
 resources:
   tls_ca:
     type: file
