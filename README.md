@@ -1,3 +1,4 @@
+<img src="https://opensearch.org/assets/img/opensearch-logo-themed.svg" height="64px"><br><br>
 # OpenSearch Operator
 
 ## Description :pencil:
@@ -18,17 +19,27 @@ You can easily generate your certificates following these steps:
 [req]
 distinguished_name = dn
 default_keyfile    = {{ node_name }}.csr
+req_extensions     = v3_req
 prompt             = no
 
 [dn]
-CN={{ node_name }}
-OU="Data Platform"
-O="Canonical"
-L="TORONTO"
-ST="ONTARIO"
 C="CA"
+ST="ONTARIO"
+L="TORONTO"
+O="Canonical"
+OU="Data Platform"
+CN={{ node_name }}
+
+[v3_req]
+subjectAltName = @alt_names
+
+[alt_names]
+IP = {{ network_host }}
+DNS.1 = {{ node_name }}
+DNS.2 = {{ host_name }}
+DNS.3 = localhost
 ```
-**Note**: You can edit `CN`, `OU`, `O`, `L`, `ST` and `CA` fields.
+**Note**: You can edit `OU`, `O`, `L`, `ST` and `C` fields.
 
 2. Edit the `bin/helpers/admin.conf` and `bin/helpers/root.conf` if you wish to change `[dn]` fields.
 
@@ -56,11 +67,30 @@ For more information about self-signed certificates, please check the [OpenSearc
 
 Not supported yet.
 
+### Cross-cluster replication (CCR) :computer: :arrows_counterclockwise: :computer:
+The [cross-cluster replication](https://opensearch.org/docs/latest/replication-plugin/index/) replicate **all**  indexes, mappings, and metadata from the `leader` cluster to the `follower` cluster. The standard [auto-follow](https://opensearch.org/docs/latest/replication-plugin/auto-follow/) is set to `*`. If you want to have a different behavior, use the [API](https://opensearch.org/docs/latest/replication-plugin/api/) to delete the `all-replication-rule` and set your own rules.
+
+To use the CCR, deploy two or more clusters and then use the juju relations to achieve it.
+
+```shell
+# deploy leader cluster
+juju deploy opensearch opensearch-leader -n 3 \
+--config cluster_name="opensearch-leader"
+
+# deploy follower cluster
+juju deploy opensearch opensearch-follower -n 3 \
+--config cluster_name="opensearch-follower" \
+
+# add relation
+juju add-relation opensearch-leader:ccr_leader \
+opensearch-follower:ccr_follower
+```
 ## Relations
 
 Currently supported [relations](https://juju.is/docs/olm/relations) are:
 
-* **Client**: pass the cluster name and port over the `elasticsearch` interface
+* **client**: pass the cluster name and port over the `elasticsearch` interface.
+* **ccr_leader** and **ccr_follower**: responsible for the [cross-cluster replication](https://opensearch.org/docs/latest/replication-plugin/index/) (CCR) over the `opensearch-cluster` interface.
 
 ## Contributing
 

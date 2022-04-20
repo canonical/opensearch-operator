@@ -1,6 +1,8 @@
 ###############################################################################
 # [ WARNING ]
 # Configuration file maintained by Juju. Local changes may be overwritten.
+# This document should be reviewed on every OpenSearch release to check if
+# new parameters are set.
 ###############################################################################
 
 # ======================== OpenSearch Configuration =========================
@@ -35,11 +37,11 @@ node.name: {{ node_name }}
 #
 # Path to directory where to store the data (separate multiple locations by comma):
 #
-#path.data: /path/to/data
+path.data: /var/snap/opensearch/common/data
 #
 # Path to log files:
 #
-#path.logs: /path/to/logs
+path.logs: /var/snap/opensearch/common/logs
 #
 # ----------------------------------- Memory -----------------------------------
 #
@@ -57,7 +59,7 @@ bootstrap.memory_lock: true
 #
 # Set the bind address to a specific IP (IPv4 or IPv6):
 #
-network.host: {{ network_host }}
+network.host: [{{ network_host }}, _local_]
 #
 # Set a custom port for HTTP:
 #
@@ -74,7 +76,7 @@ discovery.seed_hosts: {{ unit_ips }}
 #
 # Bootstrap the cluster using an initial set of master-eligible nodes:
 #
-#cluster.initial_master_nodes: ["node-1", "node-2"]
+cluster.initial_master_nodes: {{ master_node }}
 #
 # For more information, consult the discovery and cluster formation module documentation.
 #
@@ -97,7 +99,7 @@ discovery.seed_hosts: {{ unit_ips }}
 
 plugins.security.ssl.transport.pemcert_filepath: {{ node_cert }}
 plugins.security.ssl.transport.pemkey_filepath: {{ node_key }}
-plugins.security.ssl.transport.pemtrustedcas_filepath: {{ ca }} root-ca.pem
+plugins.security.ssl.transport.pemtrustedcas_filepath: {{ ca }}
 plugins.security.ssl.transport.enforce_hostname_verification: true
 plugins.security.ssl.http.enabled: true
 plugins.security.ssl.http.pemcert_filepath: {{ node_cert }}
@@ -106,8 +108,11 @@ plugins.security.ssl.http.pemtrustedcas_filepath: {{ ca }}
 plugins.security.allow_unsafe_democertificates: false
 plugins.security.allow_default_init_securityindex: true
 plugins.security.authcz.admin_dn:
-  - {{ admin_dn }}
+  - '{{ admin_dn }}'
 plugins.security.nodes_dn:
 {% for node_dn in nodes_dn %}
-  - {{ node_dn }}
+  - '{{ node_dn }}'
+{% endfor %}
+{% for follower_dn in followers_dn %}
+  - '{{ follower_dn }}'
 {% endfor %}
