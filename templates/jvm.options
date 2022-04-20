@@ -1,6 +1,8 @@
 ###############################################################################
 # [ WARNING ]
 # Configuration file maintained by Juju. Local changes may be overwritten.
+# This document should be reviewed on every OpenSearch release to check if
+# new parameters are set.
 ###############################################################################
 
 ## JVM configuration
@@ -66,7 +68,7 @@
 -XX:HeapDumpPath=data
 
 # specify an alternative path for JVM fatal error logs
--XX:ErrorFile=logs/hs_err_pid%p.log
+-XX:ErrorFile=/var/snap/opensearch/common/logs/hs_err_pid%p.log
 
 ## JDK 8 GC logging
 8:-XX:+PrintGCDetails
@@ -79,9 +81,7 @@
 8:-XX:GCLogFileSize=64m
 
 # JDK 9+ GC logging
-9-:-Xlog:gc*,gc+age=trace,safepoint:file=logs/gc.log:utctime,pid,tags:filecount=32,filesize=64m
+9-:-Xlog:gc*,gc+age=trace,safepoint:file=/var/snap/opensearch/common/logs/gc.log:utctime,pid,tags:filecount=32,filesize=64m
 
-## OpenSearch Performance Analyzer
--Dclk.tck=100
--Djdk.attach.allowAttachSelf=true
--Djava.security.policy=/home/ubuntu/opensearch-1.2.4/plugins/opensearch-performance-analyzer/pa_config/opensearch_security.policy
+# Explicitly allow security manager (https://bugs.openjdk.java.net/browse/JDK-8270380)
+18-:-Djava.security.manager=allow

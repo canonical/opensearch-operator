@@ -22,9 +22,15 @@ provides:
     # and we might want change the name for supporting a interface for both 
     # elasticsearch and opensearch.
     interface: elasticsearch
+  ccr_leader:
+    # Cross Cluster Replication (CCR) endpoint for the leader cluster.
+    interface: opensearch-cluster
 requires:
   certificates:
     interface: tls-certificates
+  ccr_follower:
+    # Cross Cluster Replication (CCR) endpoint for the follower cluster.
+    interface: opensearch-cluster
 resources:
   tls_ca:
     type: file
@@ -58,3 +64,7 @@ resources:
       Template file containing config for req on openssl used for node certifications.
       Check instructions on README.md on how to create this template.
     filename: openssl.conf
+  # TODO(gabrielcocenza) remove the snap as resource when it's published
+  opensearch:
+    type: file
+    filename: opensearch_1.3.1_amd64.snap
