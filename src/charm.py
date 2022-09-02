@@ -1,17 +1,8 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-#
-# Learn more at: https://juju.is/docs/sdk
 
-"""Charm the service.
-
-Refer to the following post for a quick-start guide that will help you
-develop a new k8s charm using the Operator Framework:
-
-    https://discourse.charmhub.io/t/4208
-"""
-
+"""Charmed Machine Operator for OpenSearch"""
 import logging
 
 from ops.charm import CharmBase
@@ -19,16 +10,20 @@ from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus
 
+from helpers.conf_setter import ConfigSetter
+
 logger = logging.getLogger(__name__)
 
 
-class OperatorTemplateCharm(CharmBase):
-    """Charm the service."""
+class OpenSearchOperatorCharm(CharmBase):
 
     _stored = StoredState()
 
     def __init__(self, *args):
         super().__init__(*args)
+
+        self.config_setter = ConfigSetter()
+
         self.framework.observe(self.on.httpbin_pebble_ready, self._on_httpbin_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.fortune_action, self._on_fortune_action)
@@ -101,4 +96,4 @@ class OperatorTemplateCharm(CharmBase):
 
 
 if __name__ == "__main__":
-    main(OperatorTemplateCharm)
+    main(OpenSearchOperatorCharm)
