@@ -1,15 +1,19 @@
 #!/usr/bin/python
+import sys
 from collections.abc import Mapping
 from enum import Enum
 
 from ruamel.yaml import YAML, CommentedSeq
 
-"""Utilities for editing yaml configuration files at any level of nestedness."""
+
+"""Utilities for editing yaml configuration files at any level of nestedness while maintaining comments"""
 
 
 class OutputType(Enum):
     file = 'file'
     obj = 'obj'
+    console = 'console'
+    all = 'all'
 
     def __str__(self):
         return self.value
@@ -20,16 +24,17 @@ class ConfigSetter:
     def __init__(self):
         self.yaml = YAML()
 
-    def load(self, target_file: str):
-        with open(target_file, mode='r') as f:
+    def load(self, config_file: str) -> dict[str, any]:
+        with open(config_file, mode='r') as f:
             data = self.yaml.load(f)
 
         return data
 
-    def put(self, target_file: str, key_path: str, val: any, sep='/',
-            output_type: OutputType = OutputType.file, inline_array: bool = False) -> dict[str, any]:
+    def put(self, config_file: str, key_path: str, val: any, sep='/',
+            output_type: OutputType = OutputType.file, inline_array: bool = False,
+            output_file: str = None) -> dict[str, any]:
 
-        with open(target_file, mode='r') as f:
+        with open(config_file, mode='r') as f:
             data = self.yaml.load(f)
 
         self.__deep_update(data, key_path.split(sep), val)
@@ -37,25 +42,34 @@ class ConfigSetter:
         if inline_array:
             data = self.__inline_array_format(data, key_path.split(sep), val)
 
-        if output_type == OutputType.file:
-            with open(target_file, mode='w') as f:
-                self.yaml.dump(data, f)
+        self.__dump(data,
+                    output_type,
+                    config_file if output_file is None else output_file)
 
         return data
 
-    def delete(self, target_file: str, key_path: str, sep='/',
-               output_type: OutputType = OutputType.file) -> dict[str, any]:
+    def delete(self, config_file: str, key_path: str, sep='/',
+               output_type: OutputType = OutputType.file,
+               output_file: str = None) -> dict[str, any]:
 
-        with open(target_file, mode='r') as f:
+        with open(config_file, mode='r') as f:
             data = self.yaml.load(f)
 
         self.__deep_delete(data, key_path.split(sep))
 
-        if output_type == OutputType.file:
-            with open(target_file, mode='w') as f:
-                self.yaml.dump(data, f)
+        self.__dump(data,
+                    output_type,
+                    config_file if output_file is None else output_file)
 
         return data
+
+    def __dump(self, data: dict[str, any], output_type: OutputType, target_file: str):
+        if output_type in [OutputType.console, OutputType.all]:
+            self.yaml.dump(data, sys.stdout)
+
+        if output_type in [OutputType.file, OutputType.all]:
+            with open(target_file, mode='w') as f:
+                self.yaml.dump(data, f)
 
     def __deep_update(self, source, node_keys: list[str], val: any):
         if not node_keys:
