@@ -5,22 +5,21 @@
 
 """Charmed Machine Operator for OpenSearch."""
 import logging
-from typing import Optional, List
-
-from ops.charm import (
-    ActionEvent,
-    InstallEvent,
-    LeaderElectedEvent, RelationJoinedEvent,
-)
-from ops.framework import StoredState
-from ops.main import main
-from ops.model import MaintenanceStatus, BlockedStatus, ActiveStatus
+from typing import List, Optional
 
 from charms.opensearch.v0.helpers.charms import Scope
 from charms.opensearch.v0.helpers.security import generate_hashed_password
 from charms.opensearch.v0.opensearch_base_charm import PEER, OpenSearchBaseCharm
-from charms.opensearch.v0.opensearch_distro import OpenSearchInstallError, OpenSearchHttpError
+from charms.opensearch.v0.opensearch_distro import (
+    OpenSearchHttpError,
+    OpenSearchInstallError,
+)
 from charms.opensearch.v0.opensearch_tls import CertType
+from ops.charm import ActionEvent, InstallEvent, LeaderElectedEvent, RelationJoinedEvent
+from ops.framework import StoredState
+from ops.main import main
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+
 from opensearch import OpenSearchSnap
 
 logger = logging.getLogger(__name__)
@@ -89,7 +88,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         except OpenSearchHttpError:
             event.defer()
 
-    def on_tls_conf_set(self, scope: Scope, cert_type: CertType, secret_key_prefix: str, renewal: bool):
+    def on_tls_conf_set(
+        self, scope: Scope, cert_type: CertType, secret_key_prefix: str, renewal: bool
+    ):
         """Called after certificate ready and stored on the corresponding scope databag.
 
         - Store the cert on the file system, on all nodes for APP certificates
@@ -142,26 +143,25 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 "hash": hashed_pwd,
                 "reserved": "true",
                 "backend_roles": ["admin"],
-                "description": "Admin user"
-            })
+                "description": "Admin user",
+            },
+        )
 
     def _require_client_tls_auth(self):
         self.opensearch.config.put(
-            "opensearch.yml",
-            "plugins.security.ssl.http.clientauth_mode",
-            "REQUIRE"
+            "opensearch.yml", "plugins.security.ssl.http.clientauth_mode", "REQUIRE"
         )
 
         self.opensearch.config.put(
             f"{self.opensearch.path_conf}/opensearch-security/config.yml",
             "config/dynamic/authc/clientcert_auth_domain/http_enabled",
-            "true"
+            "true",
         )
 
         self.opensearch.config.put(
             f"{self.opensearch.path_conf}/opensearch-security/config.yml",
             "config/dynamic/authc/clientcert_auth_domain/transport_enabled",
-            "true"
+            "true",
         )
 
     def _initialize_security_index(self, admin_key_password: Optional[str]):
@@ -177,7 +177,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if admin_key_password is not None:
             args.append(f"keypass {admin_key_password}")
 
-        self.opensearch.run_script("plugins/opensearch-security/tools/securityadmin.sh", " ".join(args))
+        self.opensearch.run_script(
+            "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
+        )
 
     def _add_update_client(self, cert_cn: str, roles: List[str]) -> None:
         # TODO: create user ?
@@ -185,21 +187,14 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         resp = self.opensearch.request(
             "PUT",
             "/_plugins/_security/api/rolesmapping/",
-            {
-                "backend_roles": roles,
-                "hosts": [self.opensearch.host],
-                "users": [cert_cn]
-            }
+            {"backend_roles": roles, "hosts": [self.opensearch.host], "users": [cert_cn]},
         )
 
         logger.debug(resp)
 
     def _delete_client(self, cert_cn: str) -> None:
         # TODO delete user ?
-        resp = self.opensearch.request(
-            "DELETE",
-            "/_plugins/_security/api/rolesmapping/"
-        )
+        resp = self.opensearch.request("DELETE", "/_plugins/_security/api/rolesmapping/")
 
         logger.debug(resp)
 
@@ -209,41 +204,37 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         # TODO: for now it's okay since only CN on subj,
         # but make sure to format the subject as per RFC2253 (inverted)
         self.opensearch.config.put(
-            target_conf_file,
-            "plugins.security.authcz.admin_dn/[]",
-            subject
+            target_conf_file, "plugins.security.authcz.admin_dn/[]", subject
         )
 
-    def _write_node_tls_conf(self, cert_type: CertType, subject: str, key_pwd: Optional[str], path_prefix: str):
+    def _write_node_tls_conf(
+        self, cert_type: CertType, subject: str, key_pwd: Optional[str], path_prefix: str
+    ):
         target_conf_file = "opensearch.yml"
         target_conf_layer = "http" if cert_type == CertType.UNIT_HTTP else "transport"
 
         self.opensearch.config.put(
             target_conf_file,
             f"plugins.security.ssl.{target_conf_layer}.pemcert_filepath",
-            f"{path_prefix}.cert"
+            f"{path_prefix}.cert",
         )
 
         self.opensearch.config.put(
             target_conf_file,
             f"plugins.security.ssl.{target_conf_layer}.pemkey_filepath",
-            f"{path_prefix}.key"
+            f"{path_prefix}.key",
         )
 
         if key_pwd is not None:
             self.opensearch.config.put(
                 target_conf_file,
                 f"plugins.security.ssl.{target_conf_layer}.pemkey_password",
-                key_pwd
+                key_pwd,
             )
 
         # TODO: for now it's okay since only CN on subj,
         # but make sure to format the subject as per RFC2253 (inverted)
-        self.opensearch.config.put(
-            target_conf_file,
-            "plugins.security.nodes_dn/[]",
-            subject
-        )
+        self.opensearch.config.put(target_conf_file, "plugins.security.nodes_dn/[]", subject)
 
 
 if __name__ == "__main__":

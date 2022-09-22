@@ -252,10 +252,18 @@ class OpenSearchTLS(Object):
         return base64.b64decode(raw_content)
 
     def _find_secret(self, event_data: str, secret_name: str) -> Optional[Tuple[Scope, CertType, Dict[str, str]]]:
+        """Find secret across all scopes (app, unit) and across all cert types.
+
+        Returns:
+            scope: scope type of the secret.
+            cert type: certificate type of the secret (APP_ADMIN, UNIT_HTTP etc.)
+            secret: dictionary of the data stored in this secret
+        """
 
         def is_secret_found(secrets: Optional[Dict[str, str]]) -> bool:
-            return secrets is not None \
-                   and secrets.get(secret_name, "").rstrip() == event_data.rstrip()
+            return (secrets is not None
+                    and
+                    secrets.get(secret_name, "").rstrip() == event_data.rstrip())
 
         app_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN)
         if is_secret_found(app_secrets):

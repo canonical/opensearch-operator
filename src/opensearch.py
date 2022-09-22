@@ -8,6 +8,7 @@ It also exposes some properties and methods for interacting with an OpenSearch I
 """
 
 import logging
+import tarfile
 
 from charms.opensearch.v0.opensearch_distro import (
     OpenSearchDistribution,
@@ -17,12 +18,8 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
-
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
-
-import tarfile
-
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +52,13 @@ class OpenSearchSnap(OpenSearchDistribution):
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()
 
-        plugs = ["log-observe", "mount-observe", "process-control", "procsys-read", "system-observe"]
+        plugs = [
+            "log-observe",
+            "mount-observe",
+            "process-control",
+            "procsys-read",
+            "system-observe",
+        ]
         for plug in plugs:
             self._run_cmd(f"snap connect opensearch:{plug}", cmd_has_args=True)
 
@@ -65,7 +68,9 @@ class OpenSearchSnap(OpenSearchDistribution):
             raise OpenSearchMissingError()
 
         if self._opensearch.services[self.SERVICE_NAME]["active"]:
-            logger.info(f"Not doing anything, the opensearch.{self.SERVICE_NAME} service is already started.")
+            logger.info(
+                f"Not doing anything, the opensearch.{self.SERVICE_NAME} service is already started."
+            )
             return
 
         try:
