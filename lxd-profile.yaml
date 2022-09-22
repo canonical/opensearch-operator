@@ -1,0 +1,7 @@
+config:
+  cloud-init.user-data: |
+    #cloud-config
+    runcmd:
+      - [sysctl, -w, vm.swappiness=0]
+      - [sysctl, -w, vm.max_map_count=262144]
+      - [sysctl, -w, net.ipv4.tcp_retries2=5]

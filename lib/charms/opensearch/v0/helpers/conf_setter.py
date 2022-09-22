@@ -10,31 +10,47 @@ from ruamel.yaml import YAML, CommentedSeq
 
 
 class OutputType(Enum):
-    file = 'file'
-    obj = 'obj'
-    console = 'console'
-    all = 'all'
+    file = "file"
+    obj = "obj"
+    console = "console"
+    all = "all"
 
     def __str__(self):
         return self.value
 
 
 class ConfigSetter:
+    """Utility class for updating YAML config, supporting diverse object types and nestedness
 
-    def __init__(self):
+        conf_setter = ConfigSetter()
+        put("file.yml", "cluster.name", "new_name")
+        put("file.yml", "cluster.core/target.obj/key3/key3.a/obj", {"a": "new_name_1", "b": ["hello", "world"]})
+        put("file.yml", "cluster.core/target.arr.simple/[0]", "hello")
+        put("file.yml", "cluster.core/target.arr.complex/[name:complex3]", {"a": "new_name_1", "b": ["hello", "world"]})
+        put("file.yml", "cluster.core/target.arr.complex/[name:complex5]/val/key", "new_val25")
+        put("file.yml", "cluster.core/target.arr.complex/[0]/val", "complex2_updated")
+        put("file.yml", "cluster.core/target.arr.complex/[0]/new_val/new_sub_key", "updated")
+    """
+
+    def __init__(self, base_path: str = None):
+        """base_path: if set, where to look for files relatively on "load / put / delete" methods"""
+
         self.yaml = YAML()
+        self.base_path = self.__clean_base_path(base_path)
 
     def load(self, config_file: str) -> dict[str, any]:
-        with open(config_file, mode='r') as f:
+        """Load the content of a YAML file"""
+        with open(f"{self.base_path}{config_file}", mode="r") as f:
             data = self.yaml.load(f)
 
         return data
 
-    def put(self, config_file: str, key_path: str, val: any, sep='/',
+    def put(self, config_file: str, key_path: str, val: any, sep="/",
             output_type: OutputType = OutputType.file, inline_array: bool = False,
             output_file: str = None) -> dict[str, any]:
+        """Add or update the value of a key (or content of array at index / key) if it exists"""
 
-        with open(config_file, mode='r') as f:
+        with open(f"{self.base_path}{config_file}", mode="r") as f:
             data = self.yaml.load(f)
 
         self.__deep_update(data, key_path.split(sep), val)
@@ -44,31 +60,33 @@ class ConfigSetter:
 
         self.__dump(data,
                     output_type,
-                    config_file if output_file is None else output_file)
+                    f"{self.base_path}{config_file}" if output_file is None else output_file)
 
         return data
 
-    def delete(self, config_file: str, key_path: str, sep='/',
+    def delete(self, config_file: str, key_path: str, sep="/",
                output_type: OutputType = OutputType.file,
                output_file: str = None) -> dict[str, any]:
+        """Delete the value of a key (or content of array at index / key) if it exists"""
 
-        with open(config_file, mode='r') as f:
+        with open(f"{self.base_path}{config_file}", mode="r") as f:
             data = self.yaml.load(f)
 
         self.__deep_delete(data, key_path.split(sep))
 
         self.__dump(data,
                     output_type,
-                    config_file if output_file is None else output_file)
+                    f"{self.base_path}{config_file}" if output_file is None else output_file)
 
         return data
 
     def __dump(self, data: dict[str, any], output_type: OutputType, target_file: str):
+        """Write the YAML data on the corresponding "output_type" stream """
         if output_type in [OutputType.console, OutputType.all]:
             self.yaml.dump(data, sys.stdout)
 
         if output_type in [OutputType.file, OutputType.all]:
-            with open(target_file, mode='w') as f:
+            with open(target_file, mode="w") as f:
                 self.yaml.dump(data, f)
 
     def __deep_update(self, source, node_keys: list[str], val: any):
@@ -76,7 +94,7 @@ class ConfigSetter:
             return val
 
         if source is None:
-            if node_keys[0].startswith('['):
+            if node_keys[0].startswith("["):
                 source = []
             else:
                 source = {}
@@ -111,7 +129,7 @@ class ConfigSetter:
         leaf_level = self.__leaf_level(source, node_keys)
         leaf_key = node_keys.pop(0)
 
-        if leaf_key in leaf_level and (isinstance(leaf_level[leaf_key], Mapping) or not leaf_key.startswith('[')):
+        if leaf_key in leaf_level and (isinstance(leaf_level[leaf_key], Mapping) or not leaf_key.startswith("[")):
             del leaf_level[leaf_key]
             return
 
@@ -124,7 +142,7 @@ class ConfigSetter:
             return current
 
         current_key = node_names.pop(0)
-        if current_key.startswith('[') and current_key.endswith(']'):
+        if current_key.startswith("[") and current_key.endswith("]"):
             target_index = self.__target_array_index(current, current_key)
             return self.__leaf_level(current[target_index], node_names)
 
@@ -138,7 +156,7 @@ class ConfigSetter:
 
         # where user provides a key [key:val] or [key]
         if str_index and not str_index.isnumeric():
-            key = str_index.split(':')
+            key = str_index.split(":")
             if len(key) == 1:
                 index = source.index(str_index)
             else:
@@ -149,7 +167,7 @@ class ConfigSetter:
                         break
 
                 if index == -1:
-                    raise ValueError(f'{str_index} not found in the object.')
+                    raise ValueError(f"{str_index} not found in the object.")
 
         exists = index is not None or (str_index and (int(str_index) < len(source)))
         if not exists:
@@ -158,6 +176,7 @@ class ConfigSetter:
         return int(str_index) if index is None else index
 
     def __inline_array_format(self, data, node_keys: list[str], val: list[any]) -> dict[str, any]:
+        """Reformat a multiline YAML array into one with square braces"""
         leaf_k = node_keys[-1]
 
         leaf_l = self.__leaf_level(data, node_keys)
@@ -171,3 +190,14 @@ class ConfigSetter:
         ret = CommentedSeq()
         ret.fa.set_flow_style()
         return ret
+
+    @staticmethod
+    def __clean_base_path(base_path: str):
+        if base_path is None:
+            return ""
+
+        base_path = base_path.strip()
+        if not base_path.endswith("/"):
+            base_path = f"{base_path}/"
+
+        return base_path

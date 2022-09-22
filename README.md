@@ -1,10 +1,13 @@
 # operator-template
 
 ## Description
-
-TODO: Describe your charm in a few paragraphs of Markdown
+OpenSearch Machine Charm
 
 ## Usage
+
+```
+juju model-config cloudinit-userdata=cloud-init-user-data.yaml
+```
 
 TODO: Provide high-level usage, such as required config or relations
 

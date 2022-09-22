@@ -1,16 +1,41 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-#
-# TEMPLATE-TODO: change this example to suit your needs.
-# If you don't need actions, you can remove the file entirely.
-# It ties in to the example _on_fortune_action handler in src/charm.py
-#
-# Learn more about actions at: https://juju.is/docs/sdk/actions
 
-fortune:
-  description: Returns a pithy phrase.
+set-tls-private-key:
+  description: Set the private keys, which will be used for certificate signing requests (CSR). Run for each unit separately or on-leader only depending on the type.
   params:
-    fail:
-      description: "Fail with this message"
+    type:
       type: string
-      default: ""
+      enum:
+        - app-admin
+        - unit-transport
+        - unit-http
+      description: [Required] Type of private key to be set. "app-admin" must only be set on the leader.
+    key:
+      type: string
+      description: [Optional] The content of the private key. The content will be auto-generated if not set.
+    password:
+      type: string
+      description: [Optional] The passphrase of the private key. Will NOT be set if omitted.
+  required:
+    - type
+
+put-client:
+  description: Add new or update existing client
+  params:
+    cn:
+      type: string
+      description: [Required] The CN (common name) of the certificate of the client.
+    roles:
+      type: string
+      description: [Required] List of comma separated roles.
+  required:
+    - cn
+    - roles
+
+delete-client:
+  description: Delete client
+  params:
+    cn:
+      type: string
+      description: [Required] The CN of the client's certificate
