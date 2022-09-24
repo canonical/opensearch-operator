@@ -17,6 +17,7 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchRestartError,
     OpenSearchStartError,
     OpenSearchStopError,
+    Paths,
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
@@ -25,15 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class OpenSearchSnap(OpenSearchDistribution):
-    """Snap distribution of opensearch, only overrides properties and logic proper to the snap.
-
-    The main paths are:
-    - OPENSEARCH_HOME: read-only path ($SNAP/..), where the opensearch binaries are.
-    - OPENSEARCH_CONF: writeable by root or snap_daemon ($SNAP_COMMON) where config files are.
-    """
-
-    __OPENSEARCH_HOME = "/var/snap/opensearch/current"
-    __OPENSEARCH_CONF_PATH = "/var/snap/opensearch/common/config"
+    """Snap distribution of opensearch, only overrides properties and logic proper to the snap."""
 
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
@@ -101,12 +94,23 @@ class OpenSearchSnap(OpenSearchDistribution):
             logger.error(f"Failed to restart the opensearch.{self.SERVICE_NAME} service. \n{e}")
             raise OpenSearchRestartError()
 
+    def _build_paths(self) -> Paths:
+        """Builds a Path object.
+
+        The main paths are:
+          - OPENSEARCH_HOME: read-only path ($SNAP/..), where the opensearch binaries are
+          - OPENSEARCH_CONF: writeable by root or snap_daemon ($SNAP_COMMON) where config files are
+        """
+        return Paths(
+            home="/var/snap/opensearch/current",
+            conf="/var/snap/opensearch/common/config",
+            data="/var/snap/opensearch/common/data",
+            logs="/var/snap/opensearch/common/logs",
+        )
+
 
 class OpenSearchTarball(OpenSearchDistribution):
     """Snap distribution of opensearch, only overrides properties and logic proper to the snap."""
-
-    __OPENSEARCH_HOME = "/etc/opensearch"
-    __OPENSEARCH_CONF_PATH = f"${__OPENSEARCH_HOME}/config"
 
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
@@ -114,7 +118,7 @@ class OpenSearchTarball(OpenSearchDistribution):
     def install(self):
         """Un-tar the opensearch distro located in the charm/resources folder."""
         with tarfile.open("resources/opensearch.tar.gz") as tar:
-            tar.extractall(self.path_home)
+            tar.extractall(self.paths.home)
 
     def start(self):
         """Start opensearch as a Daemon."""
@@ -128,3 +132,11 @@ class OpenSearchTarball(OpenSearchDistribution):
         """Restart opensearch."""
         self.stop()
         self.start()
+
+    def _build_paths(self) -> Paths:
+        return Paths(
+            home="/etc/opensearch",
+            conf="/etc/opensearch/config",
+            data="/mnt/opensearch/data",
+            logs="/mnt/opensearch/logs",
+        )

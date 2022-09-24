@@ -60,13 +60,32 @@ class OpenSearchHttpError(OpenSearchError):
     """Exception thrown when an OpenSearch REST call fails"""
 
 
+class Paths:
+    """This class represents the group of Paths that need to be exposed."""
+
+    def __init__(self, home: str, conf: str, data: str, logs: str):
+        """
+        :param home: Home path of Opensearch, equivalent to the env variable ${OPENSEARCH_HOME}
+        :param conf: Path to the config folder of opensearch
+        :param data: Path to the data folder of opensearch
+        :param logs: Path to the logs folder of opensearch
+        """
+        self.home = home
+        self.conf = conf
+        self.plugins = f"{home}/plugins"
+        self.data = data
+        self.logs = logs
+        self.certs = f"{conf}/certificates"  # must be under config
+
+
 class OpenSearchDistribution:
     """This class represents an interface for a Distributed Opensearch, be it a Snap or OCI image etc."""
 
     SERVICE_NAME = "daemon"
 
     def __init__(self, charm, peer_relation_name):
-        self.config = ConfigSetter(base_path=self.path_conf)
+        self.paths = self._build_paths()
+        self.config = ConfigSetter(base_path=self.paths.conf)
         self._charm = charm
         self._peer_relation_name = peer_relation_name
 
@@ -88,13 +107,15 @@ class OpenSearchDistribution:
 
     def run_bin(self, bin_script_name: str, args: str = None):
         """Run command using an opensearch bin provided script, relative to OPENSEARCH_HOME/bin"""
-        self._run_cmd(f"{self.path_home}/bin/{bin_script_name}", args)
+        self._run_cmd(f"{self.paths.home}/bin/{bin_script_name}", args)
 
     def run_script(self, script_name: str, args: str = None):
         """Run script that is provided by Opensearch in another directory, relative to OPENSEARCH_HOME"""
-        self._run_cmd(f"{self.path_home}/{script_name}", args)
+        self._run_cmd(f"{self.paths.home}/{script_name}", args)
 
-    def request(self, method: str, endpoint: str, payload: Optional[Dict[str, any]] = None) -> Dict[str, any]:
+    def request(
+        self, method: str, endpoint: str, payload: Optional[Dict[str, any]] = None, host: Optional[str] = None
+    ) -> Dict[str, any]:
         """Make an HTTP request, endpoint must be relative to the base uri and verb matching the http methods"""
         if None in [endpoint, method]:
             raise ValueError("endpoint or method missing")
@@ -102,7 +123,7 @@ class OpenSearchDistribution:
         if not endpoint.startswith("/"):
             endpoint = f"/{endpoint}"
 
-        full_url = f"https://{self.host}{endpoint}"
+        full_url = f"https://{self.host if host is None else host}{endpoint}"
         try:
             with requests.Session() as s:
                 resp = s.request(
@@ -110,7 +131,7 @@ class OpenSearchDistribution:
                     url=full_url,
                     data=payload,
                     verify=True,
-                    cert=f"{self.path_certs}/{CertType.UNIT_HTTP}.cert",
+                    cert=f"{self.paths.certs}/{CertType.UNIT_HTTP}.cert",
                     headers={
                         "Accept": "application/json",
                         "Content-Type": "application/json"
@@ -143,25 +164,9 @@ class OpenSearchDistribution:
             logger.error(f"{' '.join(cmd)}: \n{e}")
             raise OpenSearchCmdError()
 
-    @property
-    def path_home(self) -> str:
-        """Home path of Opensearch, equivalent to the env variable ${OPENSEARCH_HOME}"""
-        return ""
-
-    @property
-    def path_conf(self) -> str:
-        """Path to the config folder of opensearch"""
-        return ""
-
-    @property
-    def path_plugins(self) -> str:
-        """Path to the plugins directory of opensearch"""
-        return f"{self.path_home}/plugins"
-
-    @property
-    def path_certs(self) -> str:
-        """Path to the directory where certificates are stored, must be under config"""
-        return f"{self.path_conf}/certificates"
+    def _build_paths(self) -> Paths:
+        """Build the Paths object."""
+        pass
 
     @property
     def host(self) -> str:

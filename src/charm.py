@@ -8,6 +8,8 @@ import logging
 from typing import List, Optional
 
 from charms.opensearch.v0.helpers.charms import Scope
+from charms.opensearch.v0.helpers.cluster import ClusterTopology, Node
+from charms.opensearch.v0.helpers.networking import units_ips
 from charms.opensearch.v0.helpers.security import generate_hashed_password
 from charms.opensearch.v0.opensearch_base_charm import PEER, OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_distro import (
@@ -27,8 +29,6 @@ logger = logging.getLogger(__name__)
 
 class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     """This class represents the machine charm for OpenSearch."""
-
-    _stored = StoredState()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -67,24 +67,71 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.unit.status = ActiveStatus()
 
     def _on_relation_joined(self, event: RelationJoinedEvent):
-        """Triggered when a new peer relation is established."""
-        pass
+        """Triggered when a new peer relation is established. Set the right node role."""
+        units_ips_map = units_ips(self, PEER)
+        host: Optional[str] = None
+        if len(units_ips_map) > 0:
+            host = next(iter(units_ips_map.values()))  # get first value
+
+        nodes: List[Node] = []
+        try:
+            if host is not None:
+                response = self.opensearch.request("GET", "/_nodes", host=host)
+                if "nodes" in response:
+                    for obj in response["nodes"].values():
+                        nodes.append(Node(obj["name"], obj["roles"], obj["ip"]))
+        except OpenSearchHttpError:
+            event.defer()
+            return
+
+        is_cluster_bootstrapped = ClusterTopology.is_cluster_bootstrapped(nodes)
+
+        self._initialize_node(nodes)
+        self.opensearch.start()
+
+        roles_count_map = ClusterTopology.nodes_count_by_role(nodes)
+        if (
+            not is_cluster_bootstrapped and roles_count_map.get("cluster_manager", 0) == 2
+        ):  # we just added a CM node
+            # cluster is bootstrapped now, we need to clean up the conf
+            # https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-discovery-bootstrap-cluster.html
+            self.opensearch.config.delete(
+                "opensearch.yml", "cluster.initial_cluster_manager_nodes"
+            )
 
     def _on_put_client(self, event: ActionEvent):
-        # need to create users / roles
-        cert_cn = event.params.get("cn")
-        roles = event.params.get("roles").split(",")
+        """Create or update client / user and link the required roles to it."""
+        if not self.unit.is_leader():
+            return
+
+        client_name = event.params.get("name")
+        client_roles = [role.strip() for role in event.params.get("roles").split(",")]
+        client_password = event.params.get("password")
+
+        client_hosts = event.params.get("hosts", None)
+        if client_hosts is not None:
+            client_hosts = [host.strip() for host in client_hosts.split(",")]
+
+        with_cert = event.params.get("with-cert", False)
 
         try:
-            self._add_update_client(cert_cn, roles)
+            self._add_update_client(
+                client_name, client_roles, client_password, client_hosts, with_cert
+            )
         except OpenSearchHttpError:
             event.defer()
 
     def _on_delete_client(self, event: ActionEvent):
-        # need to create users / roles
-        cert_cn = event.params.get("cn")
+        """Delete a registered client if exists."""
+        if not self.unit.is_leader():
+            return
+
+        client_name = event.params.get("name")
         try:
-            self._delete_client(cert_cn)
+            resp = self.opensearch.request(
+                "DELETE", f"/_plugins/_security/api/internalusers/{client_name}/"
+            )
+            logger.debug(resp)
         except OpenSearchHttpError:
             event.defer()
 
@@ -106,7 +153,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         key_pwd = current_secrets.get(f"{secret_key_prefix}.key-password", None)
 
         # Store the certificate and key on disk
-        path_prefix = f"{self.opensearch.path_certs}/{secret_key_prefix}"
+        path_prefix = f"{self.opensearch.paths.certs}/{secret_key_prefix}"
         self.opensearch.write_file(f"{path_prefix}.key", key)
         self.opensearch.write_file(f"{path_prefix}.cert", cert)
 
@@ -131,47 +178,88 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         # TODO: remove from disk? remove YAML configs?
         pass
 
+    def _initialize_node(self, nodes: List[Node]) -> None:
+        """Set base config for each node in the cluster."""
+        target_conf_file = "opensearch.yml"
+
+        self.opensearch.config.put(
+            target_conf_file, "cluster.name", self.config.get("cluster-name")
+        )
+        self.opensearch.config.put(target_conf_file, "node.name", self.unit.name)
+        self.opensearch.config.put(target_conf_file, "network.host", self.opensearch.host)
+
+        roles = ClusterTopology.suggest_roles(nodes)
+        self.opensearch.config.put(target_conf_file, "node.roles", roles)
+
+        cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
+        if len(cm_ips) > 0:
+            self.opensearch.config.put(target_conf_file, "discovery.seed_hosts", cm_ips)
+
+        if "cluster_manager" in roles and len(cm_ips) < 2:  # cluster NOT bootstrapped yet
+            cm_names = ClusterTopology.get_cluster_managers_names(nodes)
+            cm_names.append(self.unit.name)
+            self.opensearch.config.put(
+                target_conf_file, "cluster.initial_cluster_manager_nodes", cm_names
+            )
+
+        self.opensearch.config.put(target_conf_file, "path.data", self.opensearch.paths.data)
+        self.opensearch.config.put(target_conf_file, "path.logs", self.opensearch.paths.logs)
+        self.opensearch.config.put(target_conf_file, "plugins.security.disabled", "false")
+
     def _initialize_admin_user(self):
+        """Change default password of Admin user."""
         hashed_pwd, pwd = generate_hashed_password()
         self.secrets.put(Scope.APP, "admin_password", pwd)
 
-        config_path = f"{self.opensearch.path_plugins}/config/internal_users.yml"
+        config_path = f"{self.opensearch.paths.plugins}/config/internal_users.yml"
         self.opensearch.config.put(
             config_path,
             "admin",
             {
                 "hash": hashed_pwd,
-                "reserved": "true",
-                "backend_roles": ["admin"],
+                "reserved": "true",  # this protects this resource from being updated on the dashboard or rest api
+                "opendistro_security_roles": ["admin"],
                 "description": "Admin user",
             },
         )
 
     def _require_client_tls_auth(self):
+        """Configure TLS and basic http for clients."""
+        # The security plugin will accept TLS client certs if certs but doesn't require them
         self.opensearch.config.put(
-            "opensearch.yml", "plugins.security.ssl.http.clientauth_mode", "REQUIRE"
+            "opensearch.yml", "plugins.security.ssl.http.clientauth_mode", "OPTIONAL"
         )
 
         self.opensearch.config.put(
-            f"{self.opensearch.path_conf}/opensearch-security/config.yml",
+            f"{self.opensearch.paths.conf}/opensearch-security/config.yml",
+            "config/dynamic/authc/basic_internal_auth_domain/http_enabled",
+            "true"
+        )
+
+        self.opensearch.config.put(
+            f"{self.opensearch.paths.conf}/opensearch-security/config.yml",
             "config/dynamic/authc/clientcert_auth_domain/http_enabled",
             "true",
         )
 
         self.opensearch.config.put(
-            f"{self.opensearch.path_conf}/opensearch-security/config.yml",
+            f"{self.opensearch.paths.conf}/opensearch-security/config.yml",
             "config/dynamic/authc/clientcert_auth_domain/transport_enabled",
             "true",
         )
 
     def _initialize_security_index(self, admin_key_password: Optional[str]):
+        """Run the security_admin script, it creates and initializes the opendistro_security index.
+
+        IMPORTANT: must only run once per cluster, otherwise the index gets overrode
+        """
         args = [
-            f"-cd {self.opensearch.path_conf}/opensearch-security/",
+            f"-cd {self.opensearch.paths.conf}/opensearch-security/",
             "-icl",
             "-nhnv",
-            f"-cacert {self.opensearch.path_certs}/root-ca.pem",
-            f"-cert {self.opensearch.path_certs}/admin.pem",
-            f"-key {self.opensearch.path_certs}/admin-key.pem",
+            f"-cacert {self.opensearch.paths.certs}/root-ca.pem",
+            f"-cert {self.opensearch.paths.certs}/admin.pem",
+            f"-key {self.opensearch.paths.certs}/admin-key.pem",
         ]
 
         if admin_key_password is not None:
@@ -181,28 +269,46 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
         )
 
-    def _add_update_client(self, cert_cn: str, roles: List[str]) -> None:
-        # TODO: create user ?
-
-        resp = self.opensearch.request(
+    def _add_update_client(
+        self,
+        client_name: str,
+        client_roles: List[str],
+        client_password: str,
+        client_hosts: Optional[List[str]],
+        with_cert: bool,
+    ) -> None:
+        """Create or update user and assign the requested roles to the user."""
+        put_user_resp = self.opensearch.request(
             "PUT",
-            "/_plugins/_security/api/rolesmapping/",
-            {"backend_roles": roles, "hosts": [self.opensearch.host], "users": [cert_cn]},
+            f"/_plugins/_security/api/internalusers/{client_name}",
+            {
+                "password": client_password,
+                "opendistro_security_roles": client_roles,
+            },
         )
+        logger.debug(put_user_resp)
 
-        logger.debug(resp)
+        if with_cert:
+            payload = {
+                "users": [client_name],
+                "opendistro_security_roles": client_roles,
+            }
+            if client_hosts is not None:
+                payload["hosts"] = client_hosts
 
-    def _delete_client(self, cert_cn: str) -> None:
-        # TODO delete user ?
-        resp = self.opensearch.request("DELETE", "/_plugins/_security/api/rolesmapping/")
+            put_role_mapping_resp = self.opensearch.request(
+                "PUT",
+                "/_plugins/_security/api/rolesmapping/",
+                payload,
+            )
 
-        logger.debug(resp)
+            logger.debug(put_role_mapping_resp)
 
     def _write_admin_tls_conf(self, subject: str):
+        """Configures the admin certificate."""
         target_conf_file = "opensearch.yml"
 
-        # TODO: for now it's okay since only CN on subj,
-        # but make sure to format the subject as per RFC2253 (inverted)
+        # later when CN != subject, make sure to format the subject as per RFC2253 (inverted)
         self.opensearch.config.put(
             target_conf_file, "plugins.security.authcz.admin_dn/[]", subject
         )
@@ -210,6 +316,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     def _write_node_tls_conf(
         self, cert_type: CertType, subject: str, key_pwd: Optional[str], path_prefix: str
     ):
+        """Configures TLS for nodes."""
         target_conf_file = "opensearch.yml"
         target_conf_layer = "http" if cert_type == CertType.UNIT_HTTP else "transport"
 
@@ -232,8 +339,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 key_pwd,
             )
 
-        # TODO: for now it's okay since only CN on subj,
-        # but make sure to format the subject as per RFC2253 (inverted)
+        # later when CN != subject make sure to format the subject as per RFC2253 (inverted)
         self.opensearch.config.put(target_conf_file, "plugins.security.nodes_dn/[]", subject)
 
 
