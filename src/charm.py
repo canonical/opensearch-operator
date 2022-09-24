@@ -18,7 +18,6 @@ from charms.opensearch.v0.opensearch_distro import (
 )
 from charms.opensearch.v0.opensearch_tls import CertType
 from ops.charm import ActionEvent, InstallEvent, LeaderElectedEvent, RelationJoinedEvent
-from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
