@@ -9,11 +9,7 @@ the interaction with the TLS Certificates Operator.
 This library needs https://charmhub.io/tls-certificates-interface/libraries/tls_certificates
 library is imported to work.
 
-It also needs the following methods in the charm class:
-— get_hostname_by_unit: to retrieve the DNS hostname of the unit.
-— get_secret: to retrieve TLS files from secrets.
-— push_tls_files_to_workload: to push TLS files to the workload container and enable TLS.
-— set_secret: to store TLS files as secrets.
+It requires a charm that extends OpenSearchBaseCharm as it refers internal objects of that class.
 — update_config: to disable TLS when relation with the TLS Certificates Operator is broken.
 """
 
@@ -22,22 +18,21 @@ import logging
 import re
 import socket
 from enum import Enum
-from typing import Optional, List, Dict, Tuple
+from typing import Dict, List, Optional, Tuple
 
-from ops.charm import ActionEvent, RelationJoinedEvent, RelationBrokenEvent
-from ops.framework import Object
-
-from charms.opensearch.v0.helpers.charms import Scope
+from charms.opensearch.v0.helpers.databag import Scope
 from charms.opensearch.v0.helpers.networking import get_host_ip, get_hostname_by_unit
 from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+from charms.opensearch.v0.opensearch_distro import OpenSearchError
 from charms.tls_certificates_interface.v1.tls_certificates import (
-    TLSCertificatesRequiresV1,
     CertificateAvailableEvent,
     CertificateExpiringEvent,
-    generate_private_key,
+    TLSCertificatesRequiresV1,
     generate_csr,
+    generate_private_key,
 )
-
+from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
+from ops.framework import Object
 
 logger = logging.getLogger(__name__)
 
@@ -45,17 +40,20 @@ TLS_RELATION = "certificates"
 
 
 class CertType(Enum):
-    """Certificate types"""
+    """Certificate types."""
+
     APP_ADMIN = "app-admin"  # admin / management of cluster
     # APP_CLIENT_HTTP = "app-client-http"  # external http clients (rest layer)
     UNIT_TRANSPORT = "unit-transport"  # internal node to node communication (transport layer)
     UNIT_HTTP = "unit-http"  # http for nodes (rest layer) - units act as servers
 
     def __str__(self):
+        """String representation of enum value."""
         return self.value
 
 
 class TlsFileExt(Enum):
+    """Extensions of TLS generated files."""
 
     CA = ".ca"
     CERT = ".cert"
@@ -65,23 +63,30 @@ class TlsFileExt(Enum):
     KEYPASS = ".key-password"
 
     def __str__(self):
+        """String representation of enum value."""
         return self.value
 
 
 class OpenSearchTLS(Object):
+    """Class that Manages OpenSearch relation with TLS Certificates Operator."""
 
     def __init__(self, charm: OpenSearchBaseCharm, peer_relation: str):
-        """Manager of OpenSearch relation with TLS Certificates Operator."""
         super().__init__(charm, "client-relations")
 
         self.charm = charm
         self.peer_relation = peer_relation
         self.certs = TLSCertificatesRequiresV1(charm, TLS_RELATION)
 
-        self.framework.observe(self.charm.on.set_tls_private_key_action, self._on_set_tls_private_key)
+        self.framework.observe(
+            self.charm.on.set_tls_private_key_action, self._on_set_tls_private_key
+        )
 
-        self.framework.observe(self.charm.on[TLS_RELATION].relation_joined, self._on_tls_relation_joined)
-        self.framework.observe(self.charm.on[TLS_RELATION].relation_broken, self._on_tls_relation_broken)
+        self.framework.observe(
+            self.charm.on[TLS_RELATION].relation_joined, self._on_tls_relation_joined
+        )
+        self.framework.observe(
+            self.charm.on[TLS_RELATION].relation_broken, self._on_tls_relation_broken
+        )
 
         self.framework.observe(self.certs.on.certificate_available, self._on_certificate_available)
         self.framework.observe(self.certs.on.certificate_expiring, self._on_certificate_expiring)
@@ -96,10 +101,9 @@ class OpenSearchTLS(Object):
             return
 
         try:
-            self._request_certificate(scope,
-                                      cert_type,
-                                      event.params.get("key", None),
-                                      event.params.get("password", None))
+            self._request_certificate(
+                scope, cert_type, event.params.get("key", None), event.params.get("password", None)
+            )
         except ValueError as e:
             event.fail(str(e))
 
@@ -136,18 +140,20 @@ class OpenSearchTLS(Object):
         old_cert = secrets["cert"]
         renewal = old_cert and old_cert != event.certificate
 
-        self.charm.secrets.put_object(scope,
-                                      cert_type.value,
-                                      {
-                                          "chain": event.chain,
-                                          "cert": event.certificate,
-                                          "ca": event.ca,
-                                      },
-                                      merge=True)
+        self.charm.secrets.put_object(
+            scope,
+            cert_type.value,
+            {
+                "chain": event.chain,
+                "cert": event.certificate,
+                "ca": event.ca,
+            },
+            merge=True,
+        )
 
         try:
             self.charm.on_tls_conf_set(scope, cert_type, renewal)
-        except Exception:
+        except OpenSearchError:
             event.defer()
 
     def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
@@ -172,22 +178,23 @@ class OpenSearchTLS(Object):
             sans=self._get_sans(cert_type),
         )
 
-        self.charm.secrets.put_object(scope,
-                                      cert_type,
-                                      {
-                                          "csr": new_csr.decode("utf-8"),
-                                          "subject": subject
-                                      },
-                                      merge=True)
+        self.charm.secrets.put_object(
+            scope, cert_type, {"csr": new_csr.decode("utf-8"), "subject": subject}, merge=True
+        )
 
         self.certs.request_certificate_renewal(
             old_certificate_signing_request=old_csr,
             new_certificate_signing_request=new_csr,
         )
 
-    def _request_certificate(self, scope: Scope, cert_type: CertType, param: Optional[str] = None,
-                             password: Optional[str] = None):
-        """Request certificate and store the key/key-password/csr in the scope's data bag"""
+    def _request_certificate(
+        self,
+        scope: Scope,
+        cert_type: CertType,
+        param: Optional[str] = None,
+        password: Optional[str] = None,
+    ):
+        """Request certificate and store the key/key-password/csr in the scope's data bag."""
         if param is None:
             key = generate_private_key()
         else:
@@ -205,15 +212,17 @@ class OpenSearchTLS(Object):
             sans=self._get_sans(cert_type),
         )
 
-        self.charm.secrets.put_object(scope,
-                                      cert_type.value,
-                                      {
-                                          "key": key.decode("utf-8"),
-                                          "key-password": password,
-                                          "csr": csr.decode("utf-8"),
-                                          "subject": subject
-                                      },
-                                      merge=True)
+        self.charm.secrets.put_object(
+            scope,
+            cert_type.value,
+            {
+                "key": key.decode("utf-8"),
+                "key-password": password,
+                "csr": csr.decode("utf-8"),
+                "subject": subject,
+            },
+            merge=True,
+        )
 
         if self.charm.model.get_relation(TLS_RELATION):
             self.certs.request_certificate_creation(certificate_signing_request=csr)
@@ -230,9 +239,11 @@ class OpenSearchTLS(Object):
 
         unit_id = self.charm.unit.name.split("/")[1]
 
-        return [f"{self.charm.app.name}-{unit_id}",
-                socket.getfqdn(),
-                get_host_ip(self.charm, self.peer_relation)]
+        return [
+            f"{self.charm.app.name}-{unit_id}",
+            socket.getfqdn(),
+            get_host_ip(self.charm, self.peer_relation),
+        ]
 
     def _get_subject(self, cert_type: CertType) -> str:
         if cert_type == CertType.APP_ADMIN:
@@ -251,7 +262,9 @@ class OpenSearchTLS(Object):
             ).encode("utf-8")
         return base64.b64decode(raw_content)
 
-    def _find_secret(self, event_data: str, secret_name: str) -> Optional[Tuple[Scope, CertType, Dict[str, str]]]:
+    def _find_secret(
+        self, event_data: str, secret_name: str
+    ) -> Optional[Tuple[Scope, CertType, Dict[str, str]]]:
         """Find secret across all scopes (app, unit) and across all cert types.
 
         Returns:
@@ -261,9 +274,10 @@ class OpenSearchTLS(Object):
         """
 
         def is_secret_found(secrets: Optional[Dict[str, str]]) -> bool:
-            return (secrets is not None
-                    and
-                    secrets.get(secret_name, "").rstrip() == event_data.rstrip())
+            return (
+                secrets is not None
+                and secrets.get(secret_name, "").rstrip() == event_data.rstrip()
+            )
 
         app_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN)
         if is_secret_found(app_secrets):

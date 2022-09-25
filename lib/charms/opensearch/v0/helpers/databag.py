@@ -1,21 +1,30 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""Utility classes for app / unit data bag related operations."""
+
 import json
 from enum import Enum
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 
 class Scope(Enum):
-    """Peer relations scope"""
+    """Peer relations scope."""
+
     APP = "app"
     UNIT = "unit"
 
     def __str__(self):
+        """String representation of enum value."""
         return self.value
 
 
 class SecretStore:
-    """Class representing a secret store for a charm. Requires the 2 following properties on the charm:
-        - app_peers_data
-        - unit_peers_data
+    """Class representing a secret store for a charm.
+
+    Requires the following 2 properties on the charm:
+      - app_peers_data
+      - unit_peers_data
     """
 
     def __init__(self, charm):
@@ -32,7 +41,9 @@ class SecretStore:
 
         self._put_or_delete(data, key, value)
 
-    def put_object(self, scope: Scope, key: str, value: Dict[str, any], merge: bool = False) -> None:
+    def put_object(
+        self, scope: Scope, key: str, value: Dict[str, any], merge: bool = False
+    ) -> None:
         """Put dict / json object secret into the secret storage."""
         if merge:
             stored = self.get_object(scope, key)
@@ -67,12 +78,12 @@ class SecretStore:
         return json.loads(data)
 
     def delete(self, scope: Scope, key: str):
-        """Delete secret from the secret storage"""
+        """Delete secret from the secret storage."""
         self.put(scope, key, None)
 
     @staticmethod
     def _put_or_delete(peers_data: Dict[str, str], key: str, value: Optional[str]):
-        """Put data into the secret storage or delete if value is None"""
+        """Put data into the secret storage or delete if value is None."""
         if value is None:
             del peers_data[key]
             return

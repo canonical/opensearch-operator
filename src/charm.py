@@ -7,8 +7,8 @@
 import logging
 from typing import List, Optional
 
-from charms.opensearch.v0.helpers.charms import Scope
 from charms.opensearch.v0.helpers.cluster import ClusterTopology, Node
+from charms.opensearch.v0.helpers.databag import Scope
 from charms.opensearch.v0.helpers.networking import units_ips
 from charms.opensearch.v0.helpers.security import generate_hashed_password
 from charms.opensearch.v0.opensearch_base_charm import PEER, OpenSearchBaseCharm
@@ -232,7 +232,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch.config.put(
             f"{self.opensearch.paths.conf}/opensearch-security/config.yml",
             "config/dynamic/authc/basic_internal_auth_domain/http_enabled",
-            "true"
+            "true",
         )
 
         self.opensearch.config.put(

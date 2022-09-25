@@ -1,7 +1,13 @@
-from typing import List, Dict
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""Utility class for getting cluster configuration info and suggestions."""
+
+from typing import Dict, List
 
 
 class Node:
+    """Data class representing a node in a cluster."""
 
     def __init__(self, name: str, roles: List[str], ip: str):
         self.name = name
@@ -11,6 +17,7 @@ class Node:
 
 class ClusterTopology:
     """Class for creating the best possible configuration for a Node.
+
     The current logic is to try to get to the config:
         - 2 dedicated cluster manager nodes
         - 1 voting only data node
@@ -25,6 +32,7 @@ class ClusterTopology:
     @staticmethod
     def suggest_roles(nodes: List[Node]) -> List[str]:
         """Get roles for a Node, for now, we only focus on the 3 most important roles.
+
         We will do more interesting things with the nodes list, to find the best role.
         The logic here is:
             - the first node should be a CM-eligible node
@@ -48,6 +56,7 @@ class ClusterTopology:
 
     @staticmethod
     def is_cluster_bootstrapped(nodes: List[Node]) -> bool:
+        """Check if cluster is bootstrapped. 2 cm + 1 voting only nodes created."""
         roles = ClusterTopology.suggest_roles(nodes)
         if "cluster_manager" in roles or "voting_only" in roles:
             return False
@@ -76,7 +85,7 @@ class ClusterTopology:
 
     @staticmethod
     def nodes_count_by_role(nodes: List[Node]) -> Dict[str, int]:
-        """Count number of nodes by role"""
+        """Count number of nodes by role."""
         result = {}
         for node in nodes:
             for role in node.roles:

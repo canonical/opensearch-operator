@@ -10,13 +10,13 @@ set-tls-private-key:
         - app-admin
         - unit-transport
         - unit-http
-      description: [Required] Type of private key to be set. "app-admin" must only be set on the leader.
+      description: (Required) Type of private key to be set. "app-admin" must only be set on the leader.
     key:
       type: string
-      description: [Optional] The content of the private key. The content will be auto-generated if not set.
+      description: (Optional) The content of the private key. The content will be auto-generated if not set.
     password:
       type: string
-      description: [Optional] The passphrase of the private key. Will NOT be set if omitted.
+      description: (Optional) The passphrase of the private key. Will NOT be set if omitted.
   required:
     - type
 
@@ -25,19 +25,19 @@ put-client:
   params:
     name:
       type: string
-      description: [Required] The name of the client, or in case "with-cert" set to true, it represents the CN (common name) of the certificate of the client.
+      description: (Required) The name of the client, or in case "with-cert" set to true, it represents the CN (common name) of the certificate of the client.
     roles:
       type: string
-      description: [Required] List of comma separated roles.
+      description: (Required) List of comma separated roles.
     password:
       type: string
-      description: [Required] Password to be used on the HTTP requests (basic auth).
+      description: (Required) Password to be used on the HTTP requests (basic auth).
     hosts:
       type: string
-      description: [Optional] The list of hosts the client is making requests from
+      description: (Optional) The list of hosts the client is making requests from
     with-cert:
       type: boolean
-      description: [Optional] Whether this client will authenticate using TLS.
+      description: (Optional) Whether this client will authenticate using TLS.
       default: false
   required:
     - name
@@ -49,4 +49,4 @@ delete-client:
   params:
     name:
       type: string
-      description: [Required] Name of the client or its CN if it was created with-cert = true
+      description: (Required) Name of the client or its CN if it was created with-cert = true

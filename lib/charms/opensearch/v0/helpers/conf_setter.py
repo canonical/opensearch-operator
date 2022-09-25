@@ -1,55 +1,65 @@
-#!/usr/bin/python
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""Utilities for editing yaml config files at any depth level and maintaining comments."""
+
 import sys
 from collections.abc import Mapping
 from enum import Enum
+from typing import Dict
 
 from ruamel.yaml import YAML, CommentedSeq
 
 
-"""Utilities for editing yaml configuration files at any level of nestedness while maintaining comments"""
-
-
 class OutputType(Enum):
+    """Enum representing the output type of a write operation."""
+
     file = "file"
     obj = "obj"
     console = "console"
     all = "all"
 
     def __str__(self):
+        """String representation of enum value."""
         return self.value
 
 
 class ConfigSetter:
-    """Utility class for updating YAML config, supporting diverse object types and nestedness
+    """Utility class for updating YAML config, supporting diverse object types and nestedness.
 
-        conf_setter = ConfigSetter()
-        put("file.yml", "cluster.name", "new_name")
-        put("file.yml", "cluster.core/target.obj/key3/key3.a/obj", {"a": "new_name_1", "b": ["hello", "world"]})
-        put("file.yml", "cluster.core/target.arr.simple/[0]", "hello")
-        put("file.yml", "cluster.core/target.arr.complex/[name:complex3]", {"a": "new_name_1", "b": ["hello", "world"]})
-        put("file.yml", "cluster.core/target.arr.complex/[name:complex5]/val/key", "new_val25")
-        put("file.yml", "cluster.core/target.arr.complex/[0]/val", "complex2_updated")
-        put("file.yml", "cluster.core/target.arr.complex/[0]/new_val/new_sub_key", "updated")
+    conf_setter = ConfigSetter()
+    put("file.yml", "a.b", "new_name")
+    put("file.yml", "a.b/c.obj/key3/key1.a/obj", {"a": "new_name_1", "b": ["hello", "world"]})
+    put("file.yml", "a.b/c.arr.simple/[0]", "hello")
+    put("file.yml", "a.b/c.arr.complex/[name:name1]", {"a": "new_name_1", "b": ["hello", "world"]})
+    put("file.yml", "a.b/c.arr.complex/[name:name5]/val/key", "new_val25")
+    put("file.yml", "a.b/c.arr.complex/[0]/val", "complex2_updated")
+    put("file.yml", "a.b/c.arr.complex/[0]/new_val/new_sub_key", "updated")
     """
 
     def __init__(self, base_path: str = None):
-        """base_path: if set, where to look for files relatively on "load / put / delete" methods"""
-
+        """base_path: if set, where to look for files relatively on "load/put/delete" methods."""
         self.yaml = YAML()
         self.base_path = self.__clean_base_path(base_path)
 
     def load(self, config_file: str) -> dict[str, any]:
-        """Load the content of a YAML file"""
+        """Load the content of a YAML file."""
         with open(f"{self.base_path}{config_file}", mode="r") as f:
             data = self.yaml.load(f)
 
         return data
 
-    def put(self, config_file: str, key_path: str, val: any, sep="/",
-            output_type: OutputType = OutputType.file, inline_array: bool = False,
-            output_file: str = None) -> dict[str, any]:
-        """Add or update the value of a key (or content of array at index / key) if it exists"""
-
+    def put(
+        self,
+        config_file: str,
+        key_path: str,
+        val: any,
+        sep="/",
+        output_type: OutputType = OutputType.file,
+        inline_array: bool = False,
+        output_file: str = None,
+    ) -> Dict[str, any]:
+        """Add or update the value of a key (or content of array at index / key) if it exists."""
         with open(f"{self.base_path}{config_file}", mode="r") as f:
             data = self.yaml.load(f)
 
@@ -58,30 +68,38 @@ class ConfigSetter:
         if inline_array:
             data = self.__inline_array_format(data, key_path.split(sep), val)
 
-        self.__dump(data,
-                    output_type,
-                    f"{self.base_path}{config_file}" if output_file is None else output_file)
+        self.__dump(
+            data,
+            output_type,
+            f"{self.base_path}{config_file}" if output_file is None else output_file,
+        )
 
         return data
 
-    def delete(self, config_file: str, key_path: str, sep="/",
-               output_type: OutputType = OutputType.file,
-               output_file: str = None) -> dict[str, any]:
-        """Delete the value of a key (or content of array at index / key) if it exists"""
-
+    def delete(
+        self,
+        config_file: str,
+        key_path: str,
+        sep="/",
+        output_type: OutputType = OutputType.file,
+        output_file: str = None,
+    ) -> dict[str, any]:
+        """Delete the value of a key (or content of array at index / key) if it exists."""
         with open(f"{self.base_path}{config_file}", mode="r") as f:
             data = self.yaml.load(f)
 
         self.__deep_delete(data, key_path.split(sep))
 
-        self.__dump(data,
-                    output_type,
-                    f"{self.base_path}{config_file}" if output_file is None else output_file)
+        self.__dump(
+            data,
+            output_type,
+            f"{self.base_path}{config_file}" if output_file is None else output_file,
+        )
 
         return data
 
     def __dump(self, data: dict[str, any], output_type: OutputType, target_file: str):
-        """Write the YAML data on the corresponding "output_type" stream """
+        """Write the YAML data on the corresponding "output_type" stream."""
         if output_type in [OutputType.console, OutputType.all]:
             self.yaml.dump(data, sys.stdout)
 
@@ -129,7 +147,9 @@ class ConfigSetter:
         leaf_level = self.__leaf_level(source, node_keys)
         leaf_key = node_keys.pop(0)
 
-        if leaf_key in leaf_level and (isinstance(leaf_level[leaf_key], Mapping) or not leaf_key.startswith("[")):
+        if leaf_key in leaf_level and (
+            isinstance(leaf_level[leaf_key], Mapping) or not leaf_key.startswith("[")
+        ):
             del leaf_level[leaf_key]
             return
 
@@ -176,7 +196,7 @@ class ConfigSetter:
         return int(str_index) if index is None else index
 
     def __inline_array_format(self, data, node_keys: list[str], val: list[any]) -> dict[str, any]:
-        """Reformat a multiline YAML array into one with square braces"""
+        """Reformat a multiline YAML array into one with square braces."""
         leaf_k = node_keys[-1]
 
         leaf_l = self.__leaf_level(data, node_keys)

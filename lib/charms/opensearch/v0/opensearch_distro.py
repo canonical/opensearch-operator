@@ -1,11 +1,14 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""Base class for Opensearch distributions."""
+
 import logging
 import subprocess
+from abc import ABC, abstractmethod
 from typing import Dict, Optional
-import requests
 
+import requests
 from charms.opensearch.v0.helpers.conf_setter import ConfigSetter
 from charms.opensearch.v0.helpers.networking import get_host_ip
 from charms.opensearch.v0.opensearch_tls import CertType
@@ -25,46 +28,47 @@ logger = logging.getLogger(__name__)
 
 
 class OpenSearchError(Exception):
-    """Base exception class for OpenSearch errors"""
+    """Base exception class for OpenSearch errors."""
 
 
 class OpenSearchMissingError(OpenSearchError):
-    """Exception thrown when an action is attempted on OpenSearch when it's not installed"""
+    """Exception thrown when an action is attempted on OpenSearch when it's not installed."""
 
 
 class OpenSearchInstallError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to be installed"""
+    """Exception thrown when OpenSearch fails to be installed."""
 
 
 class OpenSearchStartError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to start"""
+    """Exception thrown when OpenSearch fails to start."""
 
 
 class OpenSearchStopError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to stop"""
+    """Exception thrown when OpenSearch fails to stop."""
 
 
 class OpenSearchRestartError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to restart"""
+    """Exception thrown when OpenSearch fails to restart."""
 
 
 class OpenSearchNotStartedError(OpenSearchError):
-    """Exception thrown when attempting an operation when the OpenSearch service is stopped"""
+    """Exception thrown when attempting an operation when the OpenSearch service is stopped."""
 
 
 class OpenSearchCmdError(OpenSearchError):
-    """Exception thrown when an OpenSearch bin command fails"""
+    """Exception thrown when an OpenSearch bin command fails."""
 
 
 class OpenSearchHttpError(OpenSearchError):
-    """Exception thrown when an OpenSearch REST call fails"""
+    """Exception thrown when an OpenSearch REST call fails."""
 
 
 class Paths:
     """This class represents the group of Paths that need to be exposed."""
 
     def __init__(self, home: str, conf: str, data: str, logs: str):
-        """
+        """Constructor of Paths.
+
         :param home: Home path of Opensearch, equivalent to the env variable ${OPENSEARCH_HOME}
         :param conf: Path to the config folder of opensearch
         :param data: Path to the data folder of opensearch
@@ -78,8 +82,8 @@ class Paths:
         self.certs = f"{conf}/certificates"  # must be under config
 
 
-class OpenSearchDistribution:
-    """This class represents an interface for a Distributed Opensearch, be it a Snap or OCI image etc."""
+class OpenSearchDistribution(ABC):
+    """This class represents an interface for a Distributed Opensearch (snap, tarball, oci img)."""
 
     SERVICE_NAME = "daemon"
 
@@ -89,34 +93,49 @@ class OpenSearchDistribution:
         self._charm = charm
         self._peer_relation_name = peer_relation_name
 
+    @abstractmethod
     def install(self):
-        """Install the package"""
+        """Install the package."""
         pass
 
+    @abstractmethod
     def start(self):
-        """Start the opensearch service"""
+        """Start the opensearch service."""
         pass
 
+    @abstractmethod
     def restart(self):
-        """Restart the opensearch service"""
+        """Restart the opensearch service."""
         pass
 
+    @abstractmethod
     def stop(self):
-        """Stop the opensearch service"""
+        """Stop the opensearch service."""
         pass
 
     def run_bin(self, bin_script_name: str, args: str = None):
-        """Run command using an opensearch bin provided script, relative to OPENSEARCH_HOME/bin"""
+        """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin."""
         self._run_cmd(f"{self.paths.home}/bin/{bin_script_name}", args)
 
     def run_script(self, script_name: str, args: str = None):
-        """Run script that is provided by Opensearch in another directory, relative to OPENSEARCH_HOME"""
+        """Run script provided by Opensearch in another directory, relative to OPENSEARCH_HOME."""
         self._run_cmd(f"{self.paths.home}/{script_name}", args)
 
     def request(
-        self, method: str, endpoint: str, payload: Optional[Dict[str, any]] = None, host: Optional[str] = None
+        self,
+        method: str,
+        endpoint: str,
+        payload: Optional[Dict[str, any]] = None,
+        host: Optional[str] = None,
     ) -> Dict[str, any]:
-        """Make an HTTP request, endpoint must be relative to the base uri and verb matching the http methods"""
+        """Make an HTTP request.
+
+        Args:
+            method: matching the known http methods.
+            endpoint: relative to the base uri.
+            payload: JSON / map body payload.
+            host: host of the node we wish to make a request on, by default current host.
+        """
         if None in [endpoint, method]:
             raise ValueError("endpoint or method missing")
 
@@ -132,10 +151,8 @@ class OpenSearchDistribution:
                     data=payload,
                     verify=True,
                     cert=f"{self.paths.certs}/{CertType.UNIT_HTTP}.cert",
-                    headers={
-                        "Accept": "application/json",
-                        "Content-Type": "application/json"
-                    })
+                    headers={"Accept": "application/json", "Content-Type": "application/json"},
+                )
         except requests.exceptions.RequestException as e:
             logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
             raise OpenSearchHttpError()
@@ -144,26 +161,30 @@ class OpenSearchDistribution:
 
     @staticmethod
     def write_file(path: str, data: str):
-        """Persists data into file. Useful for files generated on the fly, such as certs and keys etc."""
+        """Persists data into file. Useful for files generated on the fly, such as certs etc."""
         with open(path, mode="w") as f:
             f.write(data)
 
     @staticmethod
     def _run_cmd(command: str, args: str = None, cmd_has_args: bool = False):
         """Run command.
-        command -> can contain args, in which case the cmd_has_args must be set to true
+
+        :param command -> can contain args, in which case the cmd_has_args must be set to true
         """
         cmd = command.split() if cmd_has_args else [command]
         if args:
             cmd.extend(args.split())
 
         try:
-            output = subprocess.run(cmd, stdout=subprocess.PIPE, text=True, check=True, encoding='utf-8')
+            output = subprocess.run(
+                cmd, stdout=subprocess.PIPE, text=True, check=True, encoding="utf-8"
+            )
             logger.debug(f"{' '.join(cmd)}: \n{output}")
         except subprocess.CalledProcessError as e:
             logger.error(f"{' '.join(cmd)}: \n{e}")
             raise OpenSearchCmdError()
 
+    @abstractmethod
     def _build_paths(self) -> Paths:
         """Build the Paths object."""
         pass
