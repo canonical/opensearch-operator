@@ -2,28 +2,43 @@
 # See LICENSE file for licensing details.
 
 """Base class for the OpenSearch Operators."""
-
-from abc import ABC
-from typing import Dict
+import logging
+from typing import Dict, Type
 
 from charms.opensearch.v0.helpers.databag import Scope, SecretStore
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
-from charms.opensearch.v0.opensearch_tls import TLS_RELATION, CertType
+from charms.opensearch.v0.tls_constants import TLS_RELATION, CertType
 from charms.tls_certificates_interface.v1.tls_certificates import (
     TLSCertificatesRequiresV1,
 )
 from ops.charm import CharmBase
 
+# The unique Charmhub library identifier, never change it
+LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
+
+
 PEER = "opensearch-peers"
 
 
-class OpenSearchBaseCharm(ABC, CharmBase):
+logger = logging.getLogger(__name__)
+
+
+class OpenSearchBaseCharm(CharmBase):
     """Base class for OpenSearch charms."""
 
-    def __init__(self, *args):
+    def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
         super().__init__(*args)
 
-        self.opensearch: OpenSearchDistribution
+        if distro is None:
+            raise ValueError("The type of the opensearch distro must be specified.")
+        self.opensearch = distro(self, PEER)
 
         self.secrets = SecretStore(self)
         self.certs = TLSCertificatesRequiresV1(self, TLS_RELATION)

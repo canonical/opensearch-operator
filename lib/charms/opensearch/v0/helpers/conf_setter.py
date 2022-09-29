@@ -2,10 +2,11 @@
 # See LICENSE file for licensing details.
 
 """Utilities for editing yaml config files at any depth level and maintaining comments."""
-
 import sys
+import uuid
 from collections.abc import Mapping
 from enum import Enum
+from os.path import exists
 from typing import Dict
 
 from ruamel.yaml import YAML, CommentedSeq
@@ -42,10 +43,34 @@ class ConfigSetter:
         self.yaml = YAML()
         self.base_path = self.__clean_base_path(base_path)
 
-    def load(self, config_file: str) -> dict[str, any]:
+    def load(self, config_file: str) -> Dict[str, any]:
         """Load the content of a YAML file."""
-        with open(f"{self.base_path}{config_file}", mode="r") as f:
+        path = f"{self.base_path}{config_file}"
+
+        if not exists(path):
+            raise FileNotFoundError(f"{path} not found.")
+
+        random_id = uuid.uuid4().hex
+        with open(path, "r") as f:
+            lines = f.readlines()
+
+            doc_empty_or_full_comments = True
+            for line in lines:
+                if not line.startswith("#") and line.strip() != "":
+                    doc_empty_or_full_comments = False
+                    break
+
+        if doc_empty_or_full_comments:
+            with open(path, "a") as f:
+                f.write(f'\n{random_id}: "{random_id}"')
+
+        with open(path, mode="r") as f:
             data = self.yaml.load(f)
+            if doc_empty_or_full_comments:
+                del data[random_id]
+
+        if doc_empty_or_full_comments:
+            self.__dump(data, OutputType.file, path)
 
         return data
 
@@ -60,8 +85,7 @@ class ConfigSetter:
         output_file: str = None,
     ) -> Dict[str, any]:
         """Add or update the value of a key (or content of array at index / key) if it exists."""
-        with open(f"{self.base_path}{config_file}", mode="r") as f:
-            data = self.yaml.load(f)
+        data = self.load(config_file)
 
         self.__deep_update(data, key_path.split(sep), val)
 
@@ -85,8 +109,7 @@ class ConfigSetter:
         output_file: str = None,
     ) -> dict[str, any]:
         """Delete the value of a key (or content of array at index / key) if it exists."""
-        with open(f"{self.base_path}{config_file}", mode="r") as f:
-            data = self.yaml.load(f)
+        data = self.load(config_file)
 
         self.__deep_delete(data, key_path.split(sep))
 

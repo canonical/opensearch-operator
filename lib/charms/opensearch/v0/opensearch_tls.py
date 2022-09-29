@@ -17,13 +17,13 @@ import base64
 import logging
 import re
 import socket
-from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.helpers.databag import Scope
 from charms.opensearch.v0.helpers.networking import get_host_ip, get_hostname_by_unit
 from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_distro import OpenSearchError
+from charms.opensearch.v0.tls_constants import TLS_RELATION, CertType
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiringEvent,
@@ -34,37 +34,17 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
+# The unique Charmhub library identifier, never change it
+LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
+
 logger = logging.getLogger(__name__)
-
-TLS_RELATION = "certificates"
-
-
-class CertType(Enum):
-    """Certificate types."""
-
-    APP_ADMIN = "app-admin"  # admin / management of cluster
-    # APP_CLIENT_HTTP = "app-client-http"  # external http clients (rest layer)
-    UNIT_TRANSPORT = "unit-transport"  # internal node to node communication (transport layer)
-    UNIT_HTTP = "unit-http"  # http for nodes (rest layer) - units act as servers
-
-    def __str__(self):
-        """String representation of enum value."""
-        return self.value
-
-
-class TlsFileExt(Enum):
-    """Extensions of TLS generated files."""
-
-    CA = ".ca"
-    CERT = ".cert"
-    CHAIN = ".chain"
-    CSR = ".csr"
-    KEY = ".key"
-    KEYPASS = ".key-password"
-
-    def __str__(self):
-        """String representation of enum value."""
-        return self.value
 
 
 class OpenSearchTLS(Object):
@@ -93,7 +73,7 @@ class OpenSearchTLS(Object):
 
     def _on_set_tls_private_key(self, event: ActionEvent) -> None:
         """Set the TLS private key, which will be used for requesting the certificate."""
-        cert_type = CertType[event.params["type"]]
+        cert_type = CertType[event.params["category"]]  # type
         scope = Scope.APP if cert_type == CertType.APP_ADMIN else Scope.UNIT
 
         if scope == Scope.APP and not self.charm.unit.is_leader():

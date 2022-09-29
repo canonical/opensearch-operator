@@ -16,12 +16,12 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchHttpError,
     OpenSearchInstallError,
 )
-from charms.opensearch.v0.opensearch_tls import CertType
+from charms.opensearch.v0.tls_constants import CertType
 from ops.charm import ActionEvent, InstallEvent, LeaderElectedEvent, RelationJoinedEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
-from opensearch import OpenSearchSnap
+from opensearch import OpenSearchTarball
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +30,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     """This class represents the machine charm for OpenSearch."""
 
     def __init__(self, *args):
-        super().__init__(*args)
-
-        self.opensearch = OpenSearchSnap(self, PEER)
+        super().__init__(*args, distro=OpenSearchTarball)  # OpenSearchSnap
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
@@ -210,9 +208,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         hashed_pwd, pwd = generate_hashed_password()
         self.secrets.put(Scope.APP, "admin_password", pwd)
 
-        config_path = f"{self.opensearch.paths.plugins}/config/internal_users.yml"
         self.opensearch.config.put(
-            config_path,
+            "opensearch-security/internal_users.yml",
             "admin",
             {
                 "hash": hashed_pwd,
@@ -230,19 +227,19 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         )
 
         self.opensearch.config.put(
-            f"{self.opensearch.paths.conf}/opensearch-security/config.yml",
+            "opensearch-security/config.yml",
             "config/dynamic/authc/basic_internal_auth_domain/http_enabled",
             "true",
         )
 
         self.opensearch.config.put(
-            f"{self.opensearch.paths.conf}/opensearch-security/config.yml",
+            "opensearch-security/config.yml",
             "config/dynamic/authc/clientcert_auth_domain/http_enabled",
             "true",
         )
 
         self.opensearch.config.put(
-            f"{self.opensearch.paths.conf}/opensearch-security/config.yml",
+            "opensearch-security/config.yml",
             "config/dynamic/authc/clientcert_auth_domain/transport_enabled",
             "true",
         )

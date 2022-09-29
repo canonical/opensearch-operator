@@ -8,8 +8,8 @@ It also exposes some properties and methods for interacting with an OpenSearch I
 """
 
 import logging
-import tarfile
 
+import requests
 from charms.opensearch.v0.opensearch_distro import (
     OpenSearchDistribution,
     OpenSearchInstallError,
@@ -21,6 +21,8 @@ from charms.opensearch.v0.opensearch_distro import (
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
+
+from utils import extract_tarball
 
 logger = logging.getLogger(__name__)
 
@@ -117,8 +119,18 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def install(self):
         """Un-tar the opensearch distro located in the charm/resources folder."""
-        with tarfile.open("resources/opensearch.tar.gz") as tar:
-            tar.extractall(self.paths.home)
+        # response = requests.get(
+        #     "https://artifacts.opensearch.org/releases/bundle/opensearch/2.3.0/opensearch-2.3.0-linux-x64.tar.gz"
+        # )
+        response = requests.get(
+            "https://192.168.111.75/opensearch-2.3.0-linux-x64.tar.gz", verify=False
+        )
+
+        tarball_path = "opensearch.tar.gz"
+        with open(tarball_path, "wb") as f:
+            f.write(response.content)
+
+        extract_tarball(tarball_path, self.paths.home)
 
     def start(self):
         """Start opensearch as a Daemon."""

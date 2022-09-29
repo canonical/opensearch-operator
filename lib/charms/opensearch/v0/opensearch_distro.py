@@ -11,7 +11,7 @@ from typing import Dict, Optional
 import requests
 from charms.opensearch.v0.helpers.conf_setter import ConfigSetter
 from charms.opensearch.v0.helpers.networking import get_host_ip
-from charms.opensearch.v0.opensearch_tls import CertType
+from charms.opensearch.v0.tls_constants import CertType
 
 # The unique Charmhub library identifier, never change it
 LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
@@ -69,10 +69,11 @@ class Paths:
     def __init__(self, home: str, conf: str, data: str, logs: str):
         """Constructor of Paths.
 
-        :param home: Home path of Opensearch, equivalent to the env variable ${OPENSEARCH_HOME}
-        :param conf: Path to the config folder of opensearch
-        :param data: Path to the data folder of opensearch
-        :param logs: Path to the logs folder of opensearch
+        Args:
+            home: Home path of Opensearch, equivalent to the env variable ${OPENSEARCH_HOME}
+            conf: Path to the config folder of opensearch
+            data: Path to the data folder of opensearch
+            logs: Path to the logs folder of opensearch
         """
         self.home = home
         self.conf = conf
@@ -169,7 +170,10 @@ class OpenSearchDistribution(ABC):
     def _run_cmd(command: str, args: str = None, cmd_has_args: bool = False):
         """Run command.
 
-        :param command -> can contain args, in which case the cmd_has_args must be set to true
+        Arg:
+            command: can contain args, in which case the cmd_has_args must be set to true
+            args: command line arguments
+            cmd_has_args: if the command argument contains the command + args
         """
         cmd = command.split() if cmd_has_args else [command]
         if args:
