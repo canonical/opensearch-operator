@@ -111,6 +111,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             conf="/var/snap/opensearch/common/config",
             data="/var/snap/opensearch/common/data",
             logs="/var/snap/opensearch/common/logs",
+            jdk="/var/snap/opensearch/current/jdk",
             tmp="/var/snap/opensearch/common/tmp"
         )
 
@@ -148,18 +149,17 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def stop(self):
         """Stop opensearch."""
-        self._run_cmd("ps aux | grep opensearch | xargs '{print $2}' | kill -9")
+        self._run_cmd("ps aux | grep opensearch | xargs '{print $2}' | kill -15")
 
         """
-        TODO: 
-            Important! Before you stop a node, you should ensure that no indexing requests or 
-            administration-related tasks are being made on the cluster. If you stop a node during 
-            indexing, the cluster meta data might get corrupted and the cluster could become 
-            non-operational (red color code). To ensure that no instances of PTSF_GENFEED are running, 
-            check the Process Monitor. If all processes are finished, you may stop all the nodes in 
-            a cluster and make the required modifications. 
-            After completing the modifications, you may start all the nodes of the cluster.
-        """
+        TODO:
+            Important! Before you stop a node, you should ensure that no indexing requests or
+            administration-related tasks are being made on the cluster. If you stop a node during
+            indexing, the cluster meta data might get corrupted and the cluster could become
+            non-operational (red color code). To ensure that no instances of PTSF_GENFEED are
+            running, check the Process Monitor. If all processes are finished, you may stop
+            all the nodes in a cluster and make the required modifications.
+            After completing the modifications, you may start all the nodes of the cluster."""
 
     def restart(self):
         """Restart opensearch."""
@@ -188,6 +188,6 @@ class OpenSearchTarball(OpenSearchDistribution):
         os.environ["OPENSEARCH_PLUGINS"] = self.paths.plugins
 
     def _setup_linux_perms(self):
-        """Create ubuntu:ubuntu user:group"""
+        """Create ubuntu:ubuntu user:group."""
         self._run_cmd("chown", f'-R ubuntu:ubuntu {self.paths.home}')
-        self._run_cmd("chown", f'-R ubuntu:ubuntu /mnt/opensearch')
+        self._run_cmd("chown", '-R ubuntu:ubuntu /mnt/opensearch')

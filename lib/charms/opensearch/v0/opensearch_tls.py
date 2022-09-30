@@ -95,14 +95,8 @@ class OpenSearchTLS(Object):
         self._request_certificate(Scope.UNIT, CertType.UNIT_HTTP)
 
     def _on_tls_relation_broken(self, _: RelationBrokenEvent) -> None:
-        """Disable TLS when TLS relation broken."""
-        if self.charm.unit.is_leader():
-            self.charm.secrets.delete(Scope.APP, CertType.APP_ADMIN)
-
-        self.charm.secrets.delete(Scope.UNIT, CertType.UNIT_TRANSPORT)
-        self.charm.secrets.delete(Scope.UNIT, CertType.UNIT_HTTP)
-
-        self.charm.on_tls_conf_remove()
+        """We don't need to handle much here."""
+        pass
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Enable TLS when TLS certificate available."""
@@ -111,9 +105,6 @@ class OpenSearchTLS(Object):
             logger.debug(f"{scope.value}.{cert_type.value} TLS certificate available.")
         except TypeError:
             logger.debug("Unknown certificate available.")
-            return
-
-        if scope == Scope.APP and not self.charm.unit.is_leader():
             return
 
         old_cert = secrets["cert"]

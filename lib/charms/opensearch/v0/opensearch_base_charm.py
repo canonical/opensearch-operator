@@ -41,9 +41,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.secrets = SecretStore(self)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
 
-    def on_tls_conf_set(
-        self, scope: Scope, cert_type: CertType, secret_key_prefix: str, renewal: bool
-    ) -> None:
+    def on_tls_conf_set(self, scope: Scope, cert_type: CertType, renewal: bool) -> None:
         """Called after certificate ready and stored on the corresponding scope databag."""
         pass
 

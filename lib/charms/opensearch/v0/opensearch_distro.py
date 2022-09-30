@@ -74,6 +74,7 @@ class Paths:
             conf: Path to the config folder of opensearch
             data: Path to the data folder of opensearch
             logs: Path to the logs folder of opensearch
+            jdk: Path of the jdk that comes bundled with the opensearch distro
             tmp: JNA temporary directory
         """
         self.home = home
@@ -116,6 +117,14 @@ class OpenSearchDistribution(ABC):
     def stop(self):
         """Stop the opensearch service."""
         pass
+
+    def is_node_up(self) -> bool:
+        """Get status of current node."""
+        try:
+            self.request("GET", "/_nodes")
+            return True
+        except OpenSearchHttpError:
+            return False
 
     def run_bin(self, bin_script_name: str, args: str = None):
         """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin."""
