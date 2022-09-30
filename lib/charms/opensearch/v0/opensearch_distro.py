@@ -66,7 +66,7 @@ class OpenSearchHttpError(OpenSearchError):
 class Paths:
     """This class represents the group of Paths that need to be exposed."""
 
-    def __init__(self, home: str, conf: str, data: str, logs: str):
+    def __init__(self, home: str, conf: str, data: str, logs: str, jdk: str, tmp: str):
         """Constructor of Paths.
 
         Args:
@@ -74,12 +74,15 @@ class Paths:
             conf: Path to the config folder of opensearch
             data: Path to the data folder of opensearch
             logs: Path to the logs folder of opensearch
+            tmp: JNA temporary directory
         """
         self.home = home
         self.conf = conf
         self.plugins = f"{home}/plugins"
         self.data = data
         self.logs = logs
+        self.jdk = jdk
+        self.tmp = tmp
         self.certs = f"{conf}/certificates"  # must be under config
 
 
@@ -176,7 +179,7 @@ class OpenSearchDistribution(ABC):
             cmd_has_args: if the command argument contains the command + args
         """
         cmd = command.split() if cmd_has_args else [command]
-        if args:
+        if args is not None:
             cmd.extend(args.split())
 
         try:

@@ -9,6 +9,7 @@ It also exposes some properties and methods for interacting with an OpenSearch I
 
 import logging
 
+import os
 import requests
 from charms.opensearch.v0.opensearch_distro import (
     OpenSearchDistribution,
@@ -21,6 +22,8 @@ from charms.opensearch.v0.opensearch_distro import (
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
+
+from pathlib import Path
 
 from utils import extract_tarball
 
@@ -108,6 +111,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             conf="/var/snap/opensearch/common/config",
             data="/var/snap/opensearch/common/data",
             logs="/var/snap/opensearch/common/logs",
+            tmp="/var/snap/opensearch/common/tmp"
         )
 
 
@@ -134,11 +138,28 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def start(self):
         """Start opensearch as a Daemon."""
-        self.run_bin("opensearch", "--daemonize")
+        self._set_env_variables()
+        self._setup_linux_perms()
+
+        self._run_cmd(
+            "setpriv",
+            f"--clear-groups --reuid ubuntu --regid ubuntu -- {self.paths.home}/bin/opensearch --daemonize"
+        )
 
     def stop(self):
-        """Stop opensearch."""  # TODO gracefully
+        """Stop opensearch."""
         self._run_cmd("ps aux | grep opensearch | xargs '{print $2}' | kill -9")
+
+        """
+        TODO: 
+            Important! Before you stop a node, you should ensure that no indexing requests or 
+            administration-related tasks are being made on the cluster. If you stop a node during 
+            indexing, the cluster meta data might get corrupted and the cluster could become 
+            non-operational (red color code). To ensure that no instances of PTSF_GENFEED are running, 
+            check the Process Monitor. If all processes are finished, you may stop all the nodes in 
+            a cluster and make the required modifications. 
+            After completing the modifications, you may start all the nodes of the cluster.
+        """
 
     def restart(self):
         """Restart opensearch."""
@@ -151,4 +172,22 @@ class OpenSearchTarball(OpenSearchDistribution):
             conf="/etc/opensearch/config",
             data="/mnt/opensearch/data",
             logs="/mnt/opensearch/logs",
+            jdk="/etc/opensearch/jdk",
+            tmp="/mnt/opensearch/tmp",
         )
+
+    def _set_env_variables(self):
+        """Set the necessary environment variables."""
+        for dir_path in self.paths.__dict__.values():
+            Path(dir_path).mkdir(parents=True, exist_ok=True)
+
+        os.environ["OPENSEARCH_HOME"] = self.paths.home
+        os.environ["OPENSEARCH_JAVA_HOME"] = self.paths.jdk
+        os.environ["OPENSEARCH_PATH_CONF"] = self.paths.conf
+        os.environ["OPENSEARCH_TMPDIR"] = self.paths.tmp
+        os.environ["OPENSEARCH_PLUGINS"] = self.paths.plugins
+
+    def _setup_linux_perms(self):
+        """Create ubuntu:ubuntu user:group"""
+        self._run_cmd("chown", f'-R ubuntu:ubuntu {self.paths.home}')
+        self._run_cmd("chown", f'-R ubuntu:ubuntu /mnt/opensearch')

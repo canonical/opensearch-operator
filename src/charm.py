@@ -17,7 +17,7 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchInstallError,
 )
 from charms.opensearch.v0.tls_constants import CertType
-from ops.charm import ActionEvent, InstallEvent, LeaderElectedEvent, RelationJoinedEvent
+from ops.charm import ActionEvent, InstallEvent, LeaderElectedEvent, StartEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
@@ -34,8 +34,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
-
-        self.framework.observe(self.on[PEER].relation_joined, self._on_relation_joined)
+        self.framework.observe(self.on.start, self._on_start)
 
         self.framework.observe(self.on.put_client_action, self._on_put_client)
         self.framework.observe(self.on.delete_client_action, self._on_delete_client)
@@ -63,33 +62,21 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         self.unit.status = ActiveStatus()
 
-    def _on_relation_joined(self, event: RelationJoinedEvent):
-        """Triggered when a new peer relation is established. Set the right node role."""
-        units_ips_map = units_ips(self, PEER)
-        host: Optional[str] = None
-        if len(units_ips_map) > 0:
-            host = next(iter(units_ips_map.values()))  # get first value
-
-        nodes: List[Node] = []
+    def _on_start(self, event: StartEvent):
+        """Triggered when on start. Set the right node role."""
         try:
-            if host is not None:
-                response = self.opensearch.request("GET", "/_nodes", host=host)
-                if "nodes" in response:
-                    for obj in response["nodes"].values():
-                        nodes.append(Node(obj["name"], obj["roles"], obj["ip"]))
+            nodes = self._get_nodes()
         except OpenSearchHttpError:
             event.defer()
             return
 
-        is_cluster_bootstrapped = ClusterTopology.is_cluster_bootstrapped(nodes)
-
         self._initialize_node(nodes)
         self.opensearch.start()
 
-        roles_count_map = ClusterTopology.nodes_count_by_role(nodes)
-        if (
-            not is_cluster_bootstrapped and roles_count_map.get("cluster_manager", 0) == 2
-        ):  # we just added a CM node
+        is_cluster_bootstrapped = ClusterTopology.is_cluster_bootstrapped(nodes)
+        cm_nodes_count = ClusterTopology.nodes_count_by_role(nodes).get("cluster_manager", 0)
+        if not is_cluster_bootstrapped and cm_nodes_count == 2:
+            # this condition means that we just added a CM node
             # cluster is bootstrapped now, we need to clean up the conf
             # https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-discovery-bootstrap-cluster.html
             self.opensearch.config.delete(
@@ -201,6 +188,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         self.opensearch.config.put(target_conf_file, "path.data", self.opensearch.paths.data)
         self.opensearch.config.put(target_conf_file, "path.logs", self.opensearch.paths.logs)
+
+        self.opensearch.config.replace("jvm.options", "=logs/", f"={self.opensearch.paths.logs}/")
+
         self.opensearch.config.put(target_conf_file, "plugins.security.disabled", "false")
 
     def _initialize_admin_user(self):
@@ -337,6 +327,23 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         # later when CN != subject make sure to format the subject as per RFC2253 (inverted)
         self.opensearch.config.put(target_conf_file, "plugins.security.nodes_dn/[]", subject)
+
+    def _get_nodes(self) -> List[Node]:
+        """Fetch the list of nodes of the cluster."""
+        units_ips_map = units_ips(self, PEER)
+        host: Optional[str] = None
+
+        if len(units_ips_map) > 0:
+            host = next(iter(units_ips_map.values()))  # get first value
+
+        nodes: List[Node] = []
+        if host is not None:
+            response = self.opensearch.request("GET", "/_nodes", host=host)
+            if "nodes" in response:
+                for obj in response["nodes"].values():
+                    nodes.append(Node(obj["name"], obj["roles"], obj["ip"]))
+
+        return nodes
 
 
 if __name__ == "__main__":

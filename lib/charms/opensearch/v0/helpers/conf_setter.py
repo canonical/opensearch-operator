@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Utilities for editing yaml config files at any depth level and maintaining comments."""
+import re
 import sys
 import uuid
 from collections.abc import Mapping
@@ -107,7 +108,7 @@ class ConfigSetter:
         sep="/",
         output_type: OutputType = OutputType.file,
         output_file: str = None,
-    ) -> dict[str, any]:
+    ) -> Dict[str, any]:
         """Delete the value of a key (or content of array at index / key) if it exists."""
         data = self.load(config_file)
 
@@ -120,6 +121,23 @@ class ConfigSetter:
         )
 
         return data
+
+    def replace(self, file: str, old_val: str, new_val: any, regex: bool = False) -> None:
+        """Replace any substring in a text file."""
+        path = f"{self.base_path}{file}"
+
+        if not exists(path):
+            raise FileNotFoundError(f"{path} not found.")
+
+        with open(path, "r+") as f:
+            data = f.read()
+
+            if regex:
+                data = re.sub(r"{}".format(old_val), f"{new_val}", data)
+            else:
+                data = data.replace(old_val, new_val)
+
+            f.write(data)
 
     def __dump(self, data: dict[str, any], output_type: OutputType, target_file: str):
         """Write the YAML data on the corresponding "output_type" stream."""

@@ -21,7 +21,6 @@ from typing import Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.helpers.databag import Scope
 from charms.opensearch.v0.helpers.networking import get_host_ip, get_hostname_by_unit
-from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_distro import OpenSearchError
 from charms.opensearch.v0.tls_constants import TLS_RELATION, CertType
 from charms.tls_certificates_interface.v1.tls_certificates import (
@@ -50,7 +49,7 @@ logger = logging.getLogger(__name__)
 class OpenSearchTLS(Object):
     """Class that Manages OpenSearch relation with TLS Certificates Operator."""
 
-    def __init__(self, charm: OpenSearchBaseCharm, peer_relation: str):
+    def __init__(self, charm, peer_relation: str):
         super().__init__(charm, "client-relations")
 
         self.charm = charm
@@ -73,7 +72,7 @@ class OpenSearchTLS(Object):
 
     def _on_set_tls_private_key(self, event: ActionEvent) -> None:
         """Set the TLS private key, which will be used for requesting the certificate."""
-        cert_type = CertType[event.params["category"]]  # type
+        cert_type = CertType(event.params["category"])  # type
         scope = Scope.APP if cert_type == CertType.APP_ADMIN else Scope.UNIT
 
         if scope == Scope.APP and not self.charm.unit.is_leader():

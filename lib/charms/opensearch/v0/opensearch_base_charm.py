@@ -7,10 +7,8 @@ from typing import Dict, Type
 
 from charms.opensearch.v0.helpers.databag import Scope, SecretStore
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
 from charms.opensearch.v0.tls_constants import TLS_RELATION, CertType
-from charms.tls_certificates_interface.v1.tls_certificates import (
-    TLSCertificatesRequiresV1,
-)
 from ops.charm import CharmBase
 
 # The unique Charmhub library identifier, never change it
@@ -38,10 +36,10 @@ class OpenSearchBaseCharm(CharmBase):
 
         if distro is None:
             raise ValueError("The type of the opensearch distro must be specified.")
-        self.opensearch = distro(self, PEER)
 
+        self.opensearch = distro(self, PEER)
         self.secrets = SecretStore(self)
-        self.certs = TLSCertificatesRequiresV1(self, TLS_RELATION)
+        self.tls = OpenSearchTLS(self, TLS_RELATION)
 
     def on_tls_conf_set(
         self, scope: Scope, cert_type: CertType, secret_key_prefix: str, renewal: bool
