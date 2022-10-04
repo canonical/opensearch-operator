@@ -11,6 +11,7 @@ from os.path import exists
 from typing import Dict
 
 from ruamel.yaml import YAML, CommentedSeq
+from ruamel.yaml.comments import CommentedSet
 
 
 class OutputType(Enum):
@@ -150,15 +151,29 @@ class ConfigSetter:
 
     def __deep_update(self, source, node_keys: list[str], val: any):
         if not node_keys:
+            if isinstance(val, set):
+                return list(val)
+
             return val
 
         if source is None:
             if node_keys[0].startswith("["):
                 source = []
+            elif node_keys[0].startswith("{"):
+                source = set()
             else:
-                source = {}
+                source = dict()
 
         current_key: str = node_keys.pop(0)
+
+        # handling the insert / update of simple types on sets
+        if current_key.startswith("{"):
+            source = CommentedSet(source)
+            if isinstance(val, set) or isinstance(val, list):
+                source = val
+            else:
+                source.add(val)
+            return list(source)
 
         # handling the insert / update on json objects
         if isinstance(source, Mapping):
@@ -192,6 +207,10 @@ class ConfigSetter:
             isinstance(leaf_level[leaf_key], Mapping) or not leaf_key.startswith("[")
         ):
             del leaf_level[leaf_key]
+            return
+
+        if leaf_key.startswith("{"):
+            leaf_level.remove(leaf_key[1:-1])
             return
 
         # list
