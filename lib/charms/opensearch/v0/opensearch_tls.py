@@ -102,17 +102,17 @@ class OpenSearchTLS(Object):
         """Enable TLS when TLS certificate available."""
         try:
             scope, cert_type, secrets = self._find_secret(event.certificate_signing_request, "csr")
-            logger.debug(f"{scope.value}.{cert_type.value} TLS certificate available.")
+            logger.debug(f"{scope.val}.{cert_type.val} TLS certificate available.")
         except TypeError:
             logger.debug("Unknown certificate available.")
             return
 
-        old_cert = secrets["cert"]
-        renewal = old_cert and old_cert != event.certificate
+        old_cert = secrets.get("cert", None)
+        renewal = old_cert is not None and old_cert != event.certificate
 
         self.charm.secrets.put_object(
             scope,
-            cert_type.value,
+            cert_type.val,
             {
                 "chain": event.chain,
                 "cert": event.certificate,
@@ -130,7 +130,7 @@ class OpenSearchTLS(Object):
         """Request the new certificate when old certificate is expiring."""
         try:
             scope, cert_type, secrets = self._find_secret(event.certificate, "cert")
-            logger.debug(f"{scope.value}.{cert_type.value} TLS certificate expiring.")
+            logger.debug(f"{scope.val}.{cert_type.val} TLS certificate expiring.")
         except TypeError:
             logger.debug("Unknown certificate expiring.")
             return
@@ -184,7 +184,7 @@ class OpenSearchTLS(Object):
 
         self.charm.secrets.put_object(
             scope,
-            cert_type.value,
+            cert_type.val,
             {
                 "key": key.decode("utf-8"),
                 "key-password": password,
@@ -195,6 +195,7 @@ class OpenSearchTLS(Object):
         )
 
         if self.charm.model.get_relation(TLS_RELATION):
+            logger.debug("Requesting cert...")
             self.certs.request_certificate_creation(certificate_signing_request=csr)
 
     def _get_sans(self, cert_type: CertType) -> Optional[List[str]]:
@@ -217,7 +218,7 @@ class OpenSearchTLS(Object):
 
     def _get_subject(self, cert_type: CertType) -> str:
         if cert_type == CertType.APP_ADMIN:
-            return "admin"
+            return "CN=admin"
 
         return get_hostname_by_unit(self.charm, self.charm.unit.name)
 
@@ -249,15 +250,17 @@ class OpenSearchTLS(Object):
                 and secrets.get(secret_name, "").rstrip() == event_data.rstrip()
             )
 
-        app_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN)
+        app_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         if is_secret_found(app_secrets):
             return Scope.APP, CertType.APP_ADMIN, app_secrets
 
-        u_transport_secrets = self.charm.secrets.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT)
+        u_transport_secrets = self.charm.secrets.get_object(
+            Scope.UNIT, CertType.UNIT_TRANSPORT.val
+        )
         if is_secret_found(u_transport_secrets):
             return Scope.UNIT, CertType.UNIT_TRANSPORT, u_transport_secrets
 
-        u_http_secrets = self.charm.secrets.get_object(Scope.UNIT, CertType.UNIT_HTTP)
+        u_http_secrets = self.charm.secrets.get_object(Scope.UNIT, CertType.UNIT_HTTP.val)
         if is_secret_found(u_http_secrets):
             return Scope.UNIT, CertType.UNIT_HTTP, u_http_secrets
 

@@ -3,10 +3,13 @@
 
 """Helpers for security related operations, such as password generation etc."""
 import math
+import os
 import secrets
 import string
+import subprocess
+import tempfile
 from datetime import datetime
-from typing import Tuple
+from typing import Optional, Tuple
 
 import bcrypt
 from cryptography import x509
@@ -42,3 +45,45 @@ def cert_expiration_remaining_hours(cert: string) -> int:
     time_difference = certificate_object.not_valid_after - datetime.utcnow()
 
     return math.floor(time_difference.total_seconds() / 3600)
+
+
+def to_pkcs8(private_key: str, password: Optional[str] = None) -> str:
+    """Convert a PEM key to PKCS8."""
+    command = """openssl pkcs8 \
+        -inform PEM \
+        -outform PEM \
+        -in {tmp_key_filename} \
+        -topk8 \
+        -v1 PBE-SHA1-3DES \
+        -passout pass:"{password}" \
+        -passin pass:"{password}" \
+        -out {tmp_pkcs8_key_filename}"""
+    if password is None:
+        password = ""
+        command = f"{command} -nocrypt"
+
+    tmp_key = tempfile.NamedTemporaryFile(delete=False)
+    tmp_pkcs8_key = tempfile.NamedTemporaryFile(delete=False)
+
+    try:
+        with open(tmp_key.name, "w") as f:
+            f.write(private_key)
+
+        subprocess.run(
+            command.format(
+                password=password,
+                tmp_key_filename=tmp_key.name,
+                tmp_pkcs8_key_filename=tmp_pkcs8_key.name
+            ),
+            shell=True,
+            text=True,
+            check=True,
+            encoding="utf-8",
+            env=os.environ,
+        )
+
+        with open(tmp_pkcs8_key.name, "r") as f:
+            return f.read()
+    finally:
+        os.unlink(tmp_key.name)
+        os.unlink(tmp_pkcs8_key.name)
