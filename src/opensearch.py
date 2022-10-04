@@ -8,8 +8,8 @@ It also exposes some properties and methods for interacting with an OpenSearch I
 """
 
 import logging
+import time
 
-import os
 import requests
 from charms.opensearch.v0.opensearch_distro import (
     OpenSearchDistribution,
@@ -22,8 +22,6 @@ from charms.opensearch.v0.opensearch_distro import (
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
-
-from pathlib import Path
 
 from utils import extract_tarball
 
@@ -58,7 +56,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             "system-observe",
         ]
         for plug in plugs:
-            self._run_cmd(f"snap connect opensearch:{plug}", cmd_has_args=True)
+            self._run_cmd(f"snap connect opensearch:{plug}")
 
     def start(self):
         """Start the snap exposed "daemon" service."""
@@ -112,7 +110,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             data="/var/snap/opensearch/common/data",
             logs="/var/snap/opensearch/common/logs",
             jdk="/var/snap/opensearch/current/jdk",
-            tmp="/var/snap/opensearch/common/tmp"
+            tmp="/var/snap/opensearch/common/tmp",
         )
 
 
@@ -139,17 +137,23 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def start(self):
         """Start opensearch as a Daemon."""
-        self._set_env_variables()
+        logger.debug("Starting opensearch.")
         self._setup_linux_perms()
 
         self._run_cmd(
             "setpriv",
-            f"--clear-groups --reuid ubuntu --regid ubuntu -- {self.paths.home}/bin/opensearch --daemonize"
+            f"--clear-groups --reuid ubuntu --regid ubuntu -- {self.paths.home}/bin/opensearch --daemonize",
         )
+
+        while not self.is_node_up():
+            time.sleep(2)
 
     def stop(self):
         """Stop opensearch."""
         self._run_cmd("ps aux | grep opensearch | xargs '{print $2}' | kill -15")
+
+        while self.is_node_up():
+            time.sleep(2)
 
         """
         TODO:
@@ -176,18 +180,7 @@ class OpenSearchTarball(OpenSearchDistribution):
             tmp="/mnt/opensearch/tmp",
         )
 
-    def _set_env_variables(self):
-        """Set the necessary environment variables."""
-        for dir_path in self.paths.__dict__.values():
-            Path(dir_path).mkdir(parents=True, exist_ok=True)
-
-        os.environ["OPENSEARCH_HOME"] = self.paths.home
-        os.environ["OPENSEARCH_JAVA_HOME"] = self.paths.jdk
-        os.environ["OPENSEARCH_PATH_CONF"] = self.paths.conf
-        os.environ["OPENSEARCH_TMPDIR"] = self.paths.tmp
-        os.environ["OPENSEARCH_PLUGINS"] = self.paths.plugins
-
     def _setup_linux_perms(self):
         """Create ubuntu:ubuntu user:group."""
-        self._run_cmd("chown", f'-R ubuntu:ubuntu {self.paths.home}')
-        self._run_cmd("chown", '-R ubuntu:ubuntu /mnt/opensearch')
+        self._run_cmd("chown", f"-R ubuntu:ubuntu {self.paths.home}")
+        self._run_cmd("chown", "-R ubuntu:ubuntu /mnt/opensearch")

@@ -4,8 +4,12 @@
 """Base class for Opensearch distributions."""
 
 import logging
+import os
+import pathlib
 import subprocess
 from abc import ABC, abstractmethod
+from os.path import exists
+from pathlib import Path
 from typing import Dict, Optional
 
 import requests
@@ -85,6 +89,7 @@ class Paths:
         self.jdk = jdk
         self.tmp = tmp
         self.certs = f"{conf}/certificates"  # must be under config
+        self.certs_relative = "certificates"
 
 
 class OpenSearchDistribution(ABC):
@@ -94,6 +99,9 @@ class OpenSearchDistribution(ABC):
 
     def __init__(self, charm, peer_relation_name):
         self.paths = self._build_paths()
+        self.__create_directories()
+        self._set_env_variables()
+
         self.config = ConfigSetter(base_path=self.paths.conf)
         self._charm = charm
         self._peer_relation_name = peer_relation_name
@@ -123,16 +131,23 @@ class OpenSearchDistribution(ABC):
         try:
             self.request("GET", "/_nodes")
             return True
-        except OpenSearchHttpError:
+        except (OpenSearchHttpError, Exception) as e:
+            logger.error(e)
             return False
 
     def run_bin(self, bin_script_name: str, args: str = None):
         """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin."""
-        self._run_cmd(f"{self.paths.home}/bin/{bin_script_name}", args)
+        script_path = f"{self.paths.home}/bin/{bin_script_name}"
+        self._run_cmd(f"chmod a+x {script_path}")
+
+        self._run_cmd(script_path, args)
 
     def run_script(self, script_name: str, args: str = None):
         """Run script provided by Opensearch in another directory, relative to OPENSEARCH_HOME."""
-        self._run_cmd(f"{self.paths.home}/{script_name}", args)
+        script_path = f"{self.paths.home}/{script_name}"
+        self._run_cmd(f"chmod a+x {script_path}")
+
+        self._run_cmd(f"{script_path}", args)
 
     def request(
         self,
@@ -155,7 +170,7 @@ class OpenSearchDistribution(ABC):
         if not endpoint.startswith("/"):
             endpoint = f"/{endpoint}"
 
-        full_url = f"https://{self.host if host is None else host}{endpoint}"
+        full_url = f"https://{self.host if host is None else host}:9200{endpoint}"
         try:
             with requests.Session() as s:
                 resp = s.request(
@@ -173,37 +188,64 @@ class OpenSearchDistribution(ABC):
         return resp.json()
 
     @staticmethod
-    def write_file(path: str, data: str):
+    def write_file(path: str, data: str, override: bool = True):
         """Persists data into file. Useful for files generated on the fly, such as certs etc."""
+        if not override and exists(path):
+            return
+
+        parent_dir_path = "/".join(path.split("/")[:-1])
+        if parent_dir_path:
+            pathlib.Path(parent_dir_path).mkdir(parents=True, exist_ok=True)
+
         with open(path, mode="w") as f:
             f.write(data)
 
     @staticmethod
-    def _run_cmd(command: str, args: str = None, cmd_has_args: bool = False):
+    def _run_cmd(command: str, args: str = None):
         """Run command.
 
         Arg:
-            command: can contain args, in which case the cmd_has_args must be set to true
+            command: can contain arguments
             args: command line arguments
-            cmd_has_args: if the command argument contains the command + args
         """
-        cmd = command.split() if cmd_has_args else [command]
         if args is not None:
-            cmd.extend(args.split())
+            command = f"{command} {args}"
 
-        try:
-            output = subprocess.run(
-                cmd, stdout=subprocess.PIPE, text=True, check=True, encoding="utf-8"
-            )
-            logger.debug(f"{' '.join(cmd)}: \n{output}")
-        except subprocess.CalledProcessError as e:
-            logger.error(f"{' '.join(cmd)}: \n{e}")
+        logger.debug(f"Executing command: {command}")
+
+        output = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True,
+            text=True,
+            encoding="utf-8",
+            env=os.environ,
+        )
+
+        if output.returncode != 0:
+            logger.error(f"{command}:\n Stderr: {output.stderr}\n Stdout: {output.stdout}")
             raise OpenSearchCmdError()
+
+        logger.debug(f"{command}:\n{output.stdout}")
 
     @abstractmethod
     def _build_paths(self) -> Paths:
         """Build the Paths object."""
         pass
+
+    def __create_directories(self) -> None:
+        """Create the directories defined in self.paths."""
+        for dir_path in self.paths.__dict__.values():
+            Path(dir_path).mkdir(parents=True, exist_ok=True)
+
+    def _set_env_variables(self):
+        """Set the necessary environment variables."""
+        os.environ["OPENSEARCH_HOME"] = self.paths.home
+        os.environ["OPENSEARCH_JAVA_HOME"] = self.paths.jdk
+        os.environ["OPENSEARCH_PATH_CONF"] = self.paths.conf
+        os.environ["OPENSEARCH_TMPDIR"] = self.paths.tmp
+        os.environ["OPENSEARCH_PLUGINS"] = self.paths.plugins
 
     @property
     def host(self) -> str:
