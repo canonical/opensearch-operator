@@ -52,17 +52,19 @@ class OpenSearchBaseCharm(CharmBase):
     @property
     def app_peers_data(self) -> Dict[str, str]:
         """Peer relation data object."""
-        relation = self.model.get_relation(PEER)
-        if relation is None:
-            return {}
-
-        return relation.data[self.app]
+        return self._get_relation_data(Scope.APP, PEER)
 
     @property
     def unit_peers_data(self) -> Dict[str, str]:
         """Peer relation data object."""
-        relation = self.model.get_relation(PEER)
+        return self._get_relation_data(Scope.UNIT, PEER)
+
+    def _get_relation_data(self, scope: Scope, relation_name: str) -> Dict[str, str]:
+        """Relation data object."""
+        relation = self.model.get_relation(relation_name)
         if relation is None:
             return {}
 
-        return relation.data[self.unit]
+        relation_scope = self.app if scope == Scope.APP else self.unit
+
+        return relation.data[relation_scope]
