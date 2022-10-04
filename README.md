@@ -6,7 +6,15 @@ OpenSearch Machine Charm
 ## Usage
 
 ```
-juju model-config cloudinit-userdata=cloud-init-user-data.yaml
+cat <<EOF > cloudinit-userdata.yaml
+cloudinit-userdata: |
+  postruncmd:
+    - [ "sysctl", "-w", "vm.swappiness=0" ]
+    - [ "sysctl", "-w", "vm.max_map_count=262144" ]
+    - [ "sysctl", "-w", "net.ipv4.tcp_retries2=5" ]
+EOF
+
+juju model-config ./cloudinit-userdata.yaml
 ```
 
 TODO: Provide high-level usage, such as required config or relations
