@@ -2,12 +2,12 @@
 # See LICENSE file for licensing details.
 
 """In this file we declare the constants and enums used by TLS related components."""
-from enum import Enum
+from charms.opensearch.v0.helpers.enums import BaseStrEnum
 
 TLS_RELATION = "certificates"
 
 
-class CertType(Enum):
+class CertType(BaseStrEnum):
     """Certificate types."""
 
     APP_ADMIN = "app-admin"  # admin / management of cluster
@@ -15,12 +15,8 @@ class CertType(Enum):
     UNIT_TRANSPORT = "unit-transport"  # internal node to node communication (transport layer)
     UNIT_HTTP = "unit-http"  # http for nodes (rest layer) - units act as servers
 
-    def __str__(self):
-        """String representation of enum value."""
-        return self.value
 
-
-class TlsFileExt(Enum):
+class TlsFileExt(BaseStrEnum):
     """Extensions of TLS generated files."""
 
     CA = ".ca"
@@ -29,7 +25,3 @@ class TlsFileExt(Enum):
     CSR = ".csr"
     KEY = ".key"
     KEYPASS = ".key-password"
-
-    def __str__(self):
-        """String representation of enum value."""
-        return self.value

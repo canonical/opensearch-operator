@@ -4,19 +4,16 @@
 """Utility classes for app / unit data bag related operations."""
 
 import json
-from enum import Enum
 from typing import Dict, Optional
 
+from charms.opensearch.v0.helpers.enums import BaseStrEnum
 
-class Scope(Enum):
+
+class Scope(BaseStrEnum):
     """Peer relations scope."""
 
     APP = "app"
     UNIT = "unit"
-
-    def __str__(self):
-        """String representation of enum value."""
-        return self.value
 
 
 class SecretStore:
