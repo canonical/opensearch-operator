@@ -47,6 +47,23 @@ def cert_expiration_remaining_hours(cert: string) -> int:
     return math.floor(time_difference.total_seconds() / 3600)
 
 
+def normalized_tls_subject(subject: string) -> str:
+    """Removes any / character from a subject."""
+    if subject.startswith("/"):
+        subject = subject[1:]
+    return subject.replace("/", ",")
+
+
+def rfc2253_tls_subject(subject: string) -> str:
+    """Format the subject as per RFC2253 (inverted and , instead of /)."""
+    if subject.startswith("/"):
+        inverted_arr = subject[1:].split("/")[::-1]
+        return ",".join(inverted_arr)
+
+    # only the ip address was set
+    return f"CN={subject}"
+
+
 def to_pkcs8(private_key: str, password: Optional[str] = None) -> str:
     """Convert a PEM key to PKCS8."""
     command = """openssl pkcs8 \

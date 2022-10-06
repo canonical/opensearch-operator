@@ -14,6 +14,7 @@ from charms.opensearch.v0.helpers.networking import units_ips
 from charms.opensearch.v0.helpers.security import (
     cert_expiration_remaining_hours,
     generate_hashed_password,
+    normalized_tls_subject,
     to_pkcs8,
 )
 from charms.opensearch.v0.opensearch_base_charm import PEER, OpenSearchBaseCharm
@@ -22,6 +23,9 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchInstallError,
 )
 from charms.opensearch.v0.tls_constants import CertType
+from charms.tls_certificates_interface.v1.tls_certificates import (
+    CertificateAvailableEvent,
+)
 from ops.charm import (
     ActionEvent,
     InstallEvent,
@@ -52,8 +56,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         self.framework.observe(self.on.update_status, self._on_update_status)
 
-        self.framework.observe(self.on.put_client_action, self._on_put_client)
-        self.framework.observe(self.on.delete_client_action, self._on_delete_client)
+        # self.framework.observe(self.on.put_client_action, self._on_put_client)
+        # self.framework.observe(self.on.delete_client_action, self._on_delete_client)
 
     def _on_install(self, event: InstallEvent) -> None:
         """Handle the install event."""
@@ -63,8 +67,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         except OpenSearchInstallError:
             self.unit.status = BlockedStatus("Could not install OpenSearch.")
             event.defer()
-
-        self.unit.status = ActiveStatus()
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle the install event."""
@@ -110,7 +112,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch.write_file(f"{path_prefix}.cert", current_secrets["cert"])
         self.opensearch.write_file(f"{path_prefix}.key", current_secrets["key"])
 
-    def _on_update_status(self, _: UpdateStatusEvent):
+    def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
 
         We want to periodically (every 6 hours) check if certs are expiring soon (in 24h),
@@ -118,6 +120,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         without the user noticing in case the cert of the unit transport layer expires.
         So we want to stop opensearch in that case, since it cannot be recovered from.
         """
+        # if there are missing system requirements defer
+        if self._deferred_because_missing_reqs(event):
+            return
+
         # If relation broken - leave
         if self.model.get_relation("certificates") is not None:
             return
@@ -163,6 +169,68 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         self.unit_peers_data["certs_exp_checked_at"] = datetime.now().strftime(date_format)
 
+    def on_tls_conf_set(
+        self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
+    ):
+        """Called after certificate ready and stored on the corresponding scope databag.
+
+        - Store the cert on the file system, on all nodes for APP certificates
+        - Update the corresponding yaml conf files
+        - Run the security admin script
+        """
+        # Get the list of stored secrets for this cert
+        current_secrets = self.secrets.get_object(scope, cert_type.val)
+
+        # In case of renewal of the unit transport layer cert - stop opensearch
+        if renewal and cert_type == CertType.UNIT_TRANSPORT:
+            self.opensearch.stop()
+
+        # Store the cert and key on disk - must happen after opensearch stop for transport certs
+        self._write_tls_resources(cert_type, current_secrets)
+
+        if scope == Scope.UNIT:
+            # node http or transport cert
+            self._write_node_tls_conf(cert_type, current_secrets)
+        else:
+            # write the admin cert conf on all units, in case there is a leader loss + cert renewal
+            self._write_admin_tls_conf(current_secrets)
+
+        # start opensearch
+        if not self.start_if_ready(event):
+            return
+
+        # initialize the security index if the admin certs are written on disk
+        if (
+            self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) is not None
+            and self.app_peers_data.get("security_index_initialised", None) is None
+        ):
+            self._initialize_security_index(current_secrets)
+            self.app_peers_data["security_index_initialised"] = "True"
+
+    def start_if_ready(self, event: CertificateAvailableEvent) -> bool:
+        """Start OpenSearch if TLS fully configured."""
+        admin_secrets = self.secrets.get_object(Scope.APP, str(CertType.APP_ADMIN))
+        if self.unit.is_leader() and (None in [admin_secrets, admin_secrets.get("cert", None)]):
+            return False
+
+        unit_transport_secrets = self.secrets.get_object(Scope.UNIT, str(CertType.UNIT_TRANSPORT))
+        if None in [unit_transport_secrets, unit_transport_secrets.get("cert", None)]:
+            return False
+
+        unit_http_secrets = self.secrets.get_object(Scope.UNIT, str(CertType.UNIT_HTTP))
+        if None in [unit_http_secrets, unit_http_secrets.get("cert", None)]:
+            return False
+
+        # if there are missing system requirements defer
+        if self._deferred_because_missing_reqs(event):
+            return False
+
+        self.app.status = BlockedStatus("Waiting for OpenSearch to start...")
+        self.opensearch.start()
+        self.app.status = ActiveStatus()
+
+        return True
+
     def _on_put_client(self, event: ActionEvent):
         """Create or update client / user and link the required roles to it."""
         if not self.unit.is_leader():
@@ -199,62 +267,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         except OpenSearchHttpError:
             event.defer()
 
-    def on_tls_conf_set(self, scope: Scope, cert_type: CertType, renewal: bool):
-        """Called after certificate ready and stored on the corresponding scope databag.
-
-        - Store the cert on the file system, on all nodes for APP certificates
-        - Update the corresponding yaml conf files
-        - Run the security admin script
-        """
-        # Get the list of stored secrets for this cert
-        current_secrets = self.secrets.get_object(scope, cert_type.val)
-
-        # In case of renewal of the unit transport layer cert - stop opensearch
-        if renewal and cert_type == CertType.UNIT_TRANSPORT:
-            self.opensearch.stop()
-
-        # Store the cert and key on disk - must happen after opensearch stop for transport certs
-        self._write_tls_resources(cert_type, current_secrets)
-
-        if scope == Scope.UNIT:
-            # node http or transport cert
-            self._write_node_tls_conf(cert_type, current_secrets)
-        else:
-            # write the admin cert conf on all units, in case there is a leader loss + cert renewal
-            self._write_admin_tls_conf(current_secrets)
-
-        # start opensearch
-        if not self.start_if_ready():
-            return
-
-        # initialize the security index if the admin certs are written on disk
-        if (
-            self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) is not None
-            and self.app_peers_data.get("security_index_initialised", None) is None
-        ):
-            self._initialize_security_index(current_secrets)
-            self.app_peers_data["security_index_initialised"] = "True"
-
-    def start_if_ready(self) -> bool:
-        """Start OpenSearch if TLS fully configured."""
-        admin_secrets = self.secrets.get_object(Scope.APP, str(CertType.APP_ADMIN))
-        if self.unit.is_leader() and (None in [admin_secrets, admin_secrets.get("cert", None)]):
-            return False
-
-        unit_transport_secrets = self.secrets.get_object(Scope.UNIT, str(CertType.UNIT_TRANSPORT))
-        if None in [unit_transport_secrets, unit_transport_secrets.get("cert", None)]:
-            return False
-
-        unit_http_secrets = self.secrets.get_object(Scope.UNIT, str(CertType.UNIT_HTTP))
-        if None in [unit_http_secrets, unit_http_secrets.get("cert", None)]:
-            return False
-
-        self.app.status = BlockedStatus("Waiting for OpenSearch to start...")
-        self.opensearch.start()
-        self.app.status = ActiveStatus()
-
-        return True
-
     def _write_tls_resources(self, cert_type: CertType, secrets: Dict[str, any]):
         """Write certificates and keys on disk."""
         certs_dir = self.opensearch.paths.certs
@@ -273,7 +285,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch.config.put(
             target_conf_file, "cluster.name", f"{self.app.name}-{self.model.name}"
         )
-        self.opensearch.config.put(target_conf_file, "node.name", self.unit.name.replace("/", "-"))
+        self.opensearch.config.put(target_conf_file, "node.name", self.unit_name)
         self.opensearch.config.put(
             target_conf_file, "network.host", ["_local_", self.opensearch.host]
         )
@@ -287,7 +299,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         if "cluster_manager" in roles and len(cm_ips) < 2:  # cluster NOT bootstrapped yet
             cm_names = ClusterTopology.get_cluster_managers_names(nodes)
-            cm_names.append(self.unit.name)
+            cm_names.append(self.unit_name)
             self.opensearch.config.put(
                 target_conf_file, "cluster.initial_cluster_manager_nodes", cm_names
             )
@@ -297,7 +309,11 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         self.opensearch.config.replace("jvm.options", "=logs/", f"={self.opensearch.paths.logs}/")
 
-        self.opensearch.config.put(target_conf_file, "plugins.security.disabled", "false")
+        self.opensearch.config.put(target_conf_file, "plugins.security.disabled", False)
+        self.opensearch.config.put(target_conf_file, "plugins.security.ssl.http.enabled", True)
+        self.opensearch.config.put(
+            target_conf_file, "plugins.security.ssl.transport.enforce_hostname_verification", True
+        )
 
     def _initialize_admin_user(self):
         """Change default password of Admin user."""
@@ -309,8 +325,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             "admin",
             {
                 "hash": hashed_pwd,
-                "reserved": "true",  # this protects this resource from being updated on the dashboard or rest api
-                "opendistro_security_roles": ["admin"],
+                "reserved": True,  # this protects this resource from being updated on the dashboard or rest api
+                "backend_roles": ["admin"],
                 "description": "Admin user",
             },
         )
@@ -327,19 +343,19 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch.config.put(
             security_config_file,
             "config/dynamic/authc/basic_internal_auth_domain/http_enabled",
-            "true",
+            True,
         )
 
         self.opensearch.config.put(
             security_config_file,
             "config/dynamic/authc/clientcert_auth_domain/http_enabled",
-            "true",
+            True,
         )
 
         self.opensearch.config.put(
             security_config_file,
             "config/dynamic/authc/clientcert_auth_domain/transport_enabled",
-            "true",
+            True,
         )
 
     def _initialize_security_index(self, secrets: Dict[str, any]):
@@ -349,8 +365,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         """
         args = [
             f"-cd {self.opensearch.paths.conf}/opensearch-security/",
-            "-icl",
-            "-nhnv",
+            f"-cn {self.app.name}-{self.model.name}",
+            f"-h {self.unit_ip}",
             f"-cacert {self.opensearch.paths.certs}/root-ca.cert",
             f"-cert {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.cert",
             f"-key {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.key",
@@ -358,7 +374,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         admin_key_pwd = secrets.get("key-password", None)
         if admin_key_pwd is not None:
-            args.append(f"keypass {admin_key_pwd}")
+            args.append(f"-keypass {admin_key_pwd}")
 
         self.opensearch.run_script(
             "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
@@ -403,9 +419,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         """Configures the admin certificate."""
         target_conf_file = "opensearch.yml"
 
-        # later when/if CN != subject, make sure to format the subject as per RFC2253 (inverted)
         self.opensearch.config.put(
-            target_conf_file, "plugins.security.authcz.admin_dn/{}", secrets["subject"]
+            target_conf_file,
+            "plugins.security.authcz.admin_dn/{}",
+            f"{normalized_tls_subject(secrets['subject'])}",
         )
 
     def _write_node_tls_conf(self, cert_type: CertType, secrets: Dict[str, any]):
@@ -440,9 +457,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 key_pwd,
             )
 
-        # later when CN != subject make sure to format the subject as per RFC2253 (inverted)
         self.opensearch.config.put(
-            target_conf_file, "plugins.security.nodes_dn/{}", secrets["subject"]
+            target_conf_file,
+            "plugins.security.nodes_dn/{}",
+            f"{normalized_tls_subject(secrets['subject'])}",
         )
 
     def _get_nodes(self) -> List[Node]:

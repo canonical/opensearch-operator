@@ -35,22 +35,22 @@ class ClusterTopology:
 
         We will do more interesting things with the nodes list, to find the best role.
         The logic here is:
-            - the first node should be a CM-eligible node
+            - the first node should be a CM-eligible node, but will add "data" to it
             - the second node should be a data and voting-only node, so that:
                 - a 2 nodes cluster can function
                 - when a 2CM-eligible node joins, the CM voting can happen immediately
-            - the 3rd one should be a CM-eligible
+            - the 3rd one should be a CM-eligible, but will add "data" to it
             - the +4 nodes should be data etc.
         """
         nodes_by_roles = ClusterTopology.nodes_count_by_role(nodes)
         if nodes_by_roles.get("cluster_manager", 0) == 0:
-            return ["cluster_manager"]
+            return ["cluster_manager", "data"]
 
         if nodes_by_roles.get("voting_only", 0) == 0:
             return ["voting_only", "data"]
 
         if nodes_by_roles["cluster_manager"] == 1:
-            return ["cluster_manager"]
+            return ["cluster_manager", "data"]
 
         return ["data"]
 

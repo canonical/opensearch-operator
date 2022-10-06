@@ -10,7 +10,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from os.path import exists
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import requests
 from charms.opensearch.v0.helpers.conf_setter import ConfigSetter
@@ -41,6 +41,12 @@ class OpenSearchMissingError(OpenSearchError):
 
 class OpenSearchInstallError(OpenSearchError):
     """Exception thrown when OpenSearch fails to be installed."""
+
+
+class OpenSearchMissingSysReqError(OpenSearchError):
+    """Exception thrown when OpenSearch fails to be installed."""
+    def __init__(self, missing_requirements: List[str]):
+        self.missing_requirements = missing_requirements
 
 
 class OpenSearchStartError(OpenSearchError):
@@ -251,3 +257,31 @@ class OpenSearchDistribution(ABC):
     def host(self) -> str:
         """Host IP address of the current node."""
         return get_host_ip(self._charm, self._peer_relation_name)
+
+    @staticmethod
+    def check_missing_sys_requirements() -> None:
+        """Checks the system requirements."""
+        missing_requirements = []
+
+        file_descriptors = int(subprocess.getoutput("ulimit -n"))
+        logger.debug(f"file_descriptors: {file_descriptors}")
+        if file_descriptors < 65535:
+            missing_requirements.append("ulimit -n should be at least 65535")
+
+        max_map_count = int(subprocess.getoutput("sysctl vm.max_map_count").split("=")[-1].strip())
+        logger.debug(f"max_map_count: {max_map_count}")
+        if max_map_count < 262144:
+            missing_requirements.append("vm.max_map_count should be at least 262144")
+
+        swappiness = int(subprocess.getoutput("sysctl vm.swappiness").split("=")[-1].strip())
+        logger.debug(f"swappiness: {swappiness}")
+        if swappiness != 0:
+            missing_requirements.append("vm.swappiness should be 0")
+
+        tcp_retries = int(subprocess.getoutput("sysctl net.ipv4.tcp_retries2").split("=")[-1].strip())
+        logger.debug(f"tcp_retries: {tcp_retries}")
+        if tcp_retries > 15:
+            missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
+
+        if len(missing_requirements) > 0:
+            raise OpenSearchMissingSysReqError(missing_requirements)

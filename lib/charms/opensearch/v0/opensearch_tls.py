@@ -20,7 +20,7 @@ import socket
 from typing import Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.helpers.databag import Scope
-from charms.opensearch.v0.helpers.networking import get_host_ip, get_hostname_by_unit
+from charms.opensearch.v0.helpers.networking import get_host_ip
 from charms.opensearch.v0.opensearch_distro import OpenSearchError
 from charms.opensearch.v0.tls_constants import TLS_RELATION, CertType
 from charms.tls_certificates_interface.v1.tls_certificates import (
@@ -122,7 +122,7 @@ class OpenSearchTLS(Object):
         )
 
         try:
-            self.charm.on_tls_conf_set(scope, cert_type, renewal)
+            self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
         except OpenSearchError:
             event.defer()
 
@@ -175,6 +175,7 @@ class OpenSearchTLS(Object):
 
         subject = self._get_subject(cert_type)
         csr = generate_csr(
+            add_unique_id_to_subject_name=False,
             private_key=key,
             private_key_password=password,
             subject=subject,
@@ -189,7 +190,7 @@ class OpenSearchTLS(Object):
                 "key": key.decode("utf-8"),
                 "key-password": password,
                 "csr": csr.decode("utf-8"),
-                "subject": subject,
+                "subject": f"/O={self.charm.app.name}/CN={subject}",
             },
             merge=True,
         )
@@ -217,10 +218,16 @@ class OpenSearchTLS(Object):
         ]
 
     def _get_subject(self, cert_type: CertType) -> str:
+        """Get subject of the certificate."""
         if cert_type == CertType.APP_ADMIN:
-            return "CN=admin"
+            cn = "admin"
+        else:
+            cn = self.charm.unit_ip
 
-        return get_hostname_by_unit(self.charm, self.charm.unit.name)
+        return cn
+
+        # TODO make configurable
+        # return f"/C=DE/ST=Berlin/L=Berlin/O=Canonical/OU=DataPlatform/CN={cn}"
 
     @staticmethod
     def _parse_tls_file(raw_content: str) -> bytes:

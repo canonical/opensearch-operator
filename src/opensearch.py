@@ -122,8 +122,14 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def install(self):
         """Download and Un-tar the opensearch distro."""
+        # response = requests.get(
+        #     "https://artifacts.opensearch.org/releases/bundle/opensearch/2.3.0/opensearch-2.3.0-linux-x64.tar.gz"
+        # )
+        # response = requests.get(
+        #     "https://192.168.1.136/opensearch-2.3.0-linux-x64.tar.gz", verify=False
+        # )
         response = requests.get(
-            "https://artifacts.opensearch.org/releases/bundle/opensearch/2.3.0/opensearch-2.3.0-linux-x64.tar.gz"
+            "https://192.168.111.75/opensearch-2.3.0-linux-x64.tar.gz", verify=False
         )
 
         tarball_path = "opensearch.tar.gz"
