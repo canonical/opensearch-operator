@@ -14,7 +14,10 @@ cloudinit-userdata: |
     - [ 'sed', '-i', '/^# End of file.*/i \* soft nofile 1048576\n', '/etc/security/limits.conf' ]
     - [ 'sed', '-i', 's@.*DefaultLimitNOFILE.*@DefaultLimitNOFILE=65536:1048576@', '/etc/systemd/system.conf' ]
     - [ 'sed', '-i', 's@.*DefaultLimitNOFILE.*@DefaultLimitNOFILE=65536:1048576@', '/etc/systemd/user.conf' ]
+    - [ 'sed', '-i', '/^# end of pam.*/i \session    required   pam_limits.so\n', '/etc/pam.d/common-session' ]
+    - [ 'sed', '-i', '/^# end of pam.*/i \session    required   pam_limits.so\n', '/etc/pam.d/common-session-noninteractive' ]
     - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
+    - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
 EOF
 
 if [ "${destroy}" == "true" ]; then
