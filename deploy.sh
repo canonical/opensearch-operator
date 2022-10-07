@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 destroy=${1:-"false"}
+serverstack=${2:-"false"}
 
 #cat <<EOF > cloudinit-userdata.yaml
 #cloudinit-userdata: |
@@ -29,7 +30,12 @@ else
     juju remove-application opensearch --force
 fi
 
-charmcraft pack
+if [ "${serverstack}" == "true" ]; then
+    ssh -i ~/.ssh/admin.key ubuntu@juju cd ~/opensearch-operator && git fetch && git checkout init-charm && git pull && charmcraft pack
+    scp -i ~/.ssh/admin.key ubuntu@juju:~/opensearch-operator/opensearch_ubuntu-22.04-amd64.charm .
+else
+    charmcraft pack
+fi
 
 juju deploy -n 1 ./opensearch_ubuntu-22.04-amd64.charm --show-log --verbose
 
