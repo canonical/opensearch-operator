@@ -17,15 +17,11 @@ from ops.charm import CharmBase
 
 from charms.tls_certificates_interface.v1.tls_certificates import CertificateAvailableEvent
 
+
 # The unique Charmhub library identifier, never change it
 LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
-
-# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-
-# Increment this PATCH version before using `charmcraft publish-lib` or reset
-# to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 0
 
 
 PEER = "opensearch-peers"

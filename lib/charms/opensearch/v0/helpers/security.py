@@ -15,6 +15,12 @@ import bcrypt
 from cryptography import x509
 
 
+# The unique Charmhub library identifier, never change it
+LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBAPI = 0
+LIBPATCH = 0
+
+
 def generate_password() -> str:
     """Generate a random password string.
 

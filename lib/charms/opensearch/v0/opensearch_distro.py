@@ -19,13 +19,8 @@ from charms.opensearch.v0.tls_constants import CertType
 
 # The unique Charmhub library identifier, never change it
 LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
-
-# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-
-# Increment this PATCH version before using `charmcraft publish-lib` or reset
-# to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 0
 
 
 logger = logging.getLogger(__name__)
@@ -275,12 +270,12 @@ class OpenSearchDistribution(ABC):
 
         swappiness = int(subprocess.getoutput("sysctl vm.swappiness").split("=")[-1].strip())
         logger.debug(f"swappiness: {swappiness}")
-        if swappiness != 0:
+        if swappiness > 60:  # != 0: TODO
             missing_requirements.append("vm.swappiness should be 0")
 
         tcp_retries = int(subprocess.getoutput("sysctl net.ipv4.tcp_retries2").split("=")[-1].strip())
         logger.debug(f"tcp_retries: {tcp_retries}")
-        if tcp_retries > 15:
+        if tcp_retries > 15:  # > 5: TODO
             missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
 
         if len(missing_requirements) > 0:

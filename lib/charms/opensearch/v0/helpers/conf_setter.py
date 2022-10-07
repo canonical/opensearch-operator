@@ -14,6 +14,12 @@ from ruamel.yaml import YAML, CommentedSeq
 from ruamel.yaml.comments import CommentedSet
 
 
+# The unique Charmhub library identifier, never change it
+LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBAPI = 0
+LIBPATCH = 0
+
+
 class OutputType(Enum):
     """Enum representing the output type of a write operation."""
 

@@ -8,6 +8,11 @@ from typing import Dict, Optional
 
 from charms.opensearch.v0.helpers.enums import BaseStrEnum
 
+# The unique Charmhub library identifier, never change it
+LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBAPI = 0
+LIBPATCH = 0
+
 
 class Scope(BaseStrEnum):
     """Peer relations scope."""

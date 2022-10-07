@@ -6,6 +6,12 @@
 from typing import Dict, List
 
 
+# The unique Charmhub library identifier, never change it
+LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBAPI = 0
+LIBPATCH = 0
+
+
 class Node:
     """Data class representing a node in a cluster."""
 

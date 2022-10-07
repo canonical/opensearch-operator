@@ -9,6 +9,12 @@ from ops.charm import CharmBase
 from ops.model import Unit
 
 
+# The unique Charmhub library identifier, never change it
+LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBAPI = 0
+LIBPATCH = 0
+
+
 def get_host_ip(charm: CharmBase, peer_relation_name: str) -> str:
     """Fetches the IP address of the current unit."""
     address = charm.model.get_binding(peer_relation_name).network.bind_address
