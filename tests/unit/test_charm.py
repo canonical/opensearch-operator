@@ -1,4 +1,4 @@
-# Copyright 2021 Canonical Ltd.
+# Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
@@ -9,12 +9,12 @@ from unittest.mock import Mock
 from ops.model import ActiveStatus
 from ops.testing import Harness
 
-from charm import OperatorTemplateCharm
+from charm import OpenSearchOperatorCharm
 
 
 class TestCharm(unittest.TestCase):
     def setUp(self):
-        self.harness = Harness(OperatorTemplateCharm)
+        self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 

@@ -1,11 +1,8 @@
-# operator-template
+#!/usr/bin/env bash
 
-## Description
-OpenSearch Machine Charm
+destroy=${1:-"false"}
+serverstack=${2:-"false"}
 
-## Usage
-
-```
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
@@ -23,35 +20,29 @@ cloudinit-userdata: |
     - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
 EOF
 
-juju model-config ./cloudinit-userdata.yaml
+if [ "${destroy}" == "true" ]; then
+    juju destroy-model -y dev --no-wait --force --destroy-storage
 
-juju add-model dev
-juju model-config logging-config="<root>=INFO;unit=DEBUG"
-juju model-config update-status-hook-interval=1m
-juju model-config ./cloudinit-userdata.yaml
+    juju add-model dev
+    juju model-config logging-config="<root>=INFO;unit=DEBUG"
+    juju model-config update-status-hook-interval=1m
+    juju model-config ./cloudinit-userdata.yaml
 
-juju switch :dev
+    juju switch :dev
 
-juju deploy tls-certificates-operator --channel edge --show-log --verbose
-juju config tls-certificates-operator generate-self-signed-certificates=true ca-common-name="CN_CA"
+    juju deploy tls-certificates-operator --channel edge --show-log --verbose
+    juju config tls-certificates-operator generate-self-signed-certificates=true ca-common-name="CN_CA"
+else
+    juju switch :dev
+    juju remove-application opensearch --force
+fi
+
+if [ "${serverstack}" == "true" ]; then
+    ssh -i ~/.ssh/admin.key ubuntu@juju cd ~/opensearch-operator && git fetch && git checkout init-charm && git pull && charmcraft pack
+    scp -i ~/.ssh/admin.key ubuntu@juju:~/opensearch-operator/opensearch_ubuntu-22.04-amd64.charm .
+else
+    charmcraft pack
+fi
 
 juju deploy -n 1 ./opensearch_ubuntu-22.04-amd64.charm --show-log --verbose
 juju relate tls-certificates-operator opensearch
-```
-
-## Relations
-
-TODO: Provide any relations which are provided or required by your charm
-
-## OCI Images
-
-TODO: Include a link to the default image your charm uses
-
-## Contributing
-
-<!-- TEMPLATE-TODO: Change this URL to be the full Github path to CONTRIBUTING.md-->
-
-Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this
-charm following best practice guidelines, and
-[CONTRIBUTING.md](https://github.com/<name>/<operator>/blob/main/CONTRIBUTING.md) for developer
-guidance.

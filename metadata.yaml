@@ -1,25 +1,28 @@
-# Copyright 2021 Canonical Ltd.
+# Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-# For a complete list of supported options, see:
-# https://juju.is/docs/sdk/metadata-reference
-name: template-operator
-display-name: |
-  TEMPLATE-TODO: fill out a display name for the Charmcraft store
+name: opensearch
+display-name: OpenSearch
+
 description: |
-  TEMPLATE-TODO: fill out the charm's description
+  Machine charm for OpenSearch
 summary: |
-  TEMPLATE-TODO: fill out the charm's summary
+  Machine charm for OpenSearch
 
-# TEMPLATE-TODO: replace with containers for your workload (delete for non-k8s)
-containers:
-  httpbin:
-    resource: httpbin-image
+peers:
+  opensearch-peers:
+    interface: opensearch-peers
 
-# TEMPLATE-TODO: each container defined above must specify an oci-image resource
-resources:
-  httpbin-image:
-    type: oci-image
-    description: OCI image for httpbin (kennethreitz/httpbin)
-    # Included for simplicity in integration tests
-    upstream-source: kennethreitz/httpbin
+provides:
+  opensearch-client:
+    interface: opensearch-client
+
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
+
+storage:
+  opensearch-data:
+    type: filesystem
+    location: /mnt/opensearch/data  # for snaps: /var/snap/opensearch/common/data
