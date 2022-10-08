@@ -2,59 +2,24 @@
 # See LICENSE file for licensing details.
 
 # For a complete list of supported options, see:
-# https://discourse.charmhub.io/t/charm-metadata-v2/3674/15
-name: opensearch
-display-name: OpenSearch
+# https://juju.is/docs/sdk/metadata-reference
+name: template-operator
+display-name: |
+  TEMPLATE-TODO: fill out a display name for the Charmcraft store
 description: |
-  OpenSearch is a distributed, open-source search and analytics suite
-  used for a broad set of use cases like real-time application monitoring,
-  log analytics, and website search. This charm deploys and operates OpenSearch
+  TEMPLATE-TODO: fill out the charm's description
 summary: |
-  A OpenSearch operator charm
-series:
-  - focal
-peers:
-  opensearch:
-    interface: opensearch-node
-provides:
-  client:
-    # NOTE:(gabrielcocenza) this interface is used on other charms (Graylog, Logstash, Filebeat)
-    # and we might want change the name for supporting a interface for both 
-    # elasticsearch and opensearch.
-    interface: elasticsearch
-requires:
-  certificates:
-    interface: tls-certificates
+  TEMPLATE-TODO: fill out the charm's summary
+
+# TEMPLATE-TODO: replace with containers for your workload (delete for non-k8s)
+containers:
+  httpbin:
+    resource: httpbin-image
+
+# TEMPLATE-TODO: each container defined above must specify an oci-image resource
 resources:
-  tls_ca:
-    type: file
-    description: |
-      Self-signed certificate for the root CA. This is only
-      required if the charm is not relating with a CA charm like Vault or EasyRSA.
-    filename: root-ca.pem
-  tls_key:
-    type: file
-    description: |
-      TLS private key used to generate tls_ca. Key should be with at least
-      2048 of length to be secure. This key will be used to generate
-      certificates for opensearch nodes.
-    filename: root-ca-key.pem
-  admin_key:
-    type: file
-    description: |
-      Admin private key to generate the Admin certificate.
-      For more information check the documentation:
-      https://opensearch.org/docs/latest/security-plugin/configuration/tls/#configure-admin-certificates
-    filename: admin-key.pem
-  admin_cert:
-    type: file
-    description: |
-      Admin certificates are regular client certificates that have elevated rights to
-      perform administrative tasks.
-    filename: admin.pem
-  open_ssl_conf:
-    type: file
-    description: |
-      Template file containing config for req on openssl used for node certifications.
-      Check instructions on README.md on how to create this template.
-    filename: openssl.conf
+  httpbin-image:
+    type: oci-image
+    description: OCI image for httpbin (kennethreitz/httpbin)
+    # Included for simplicity in integration tests
+    upstream-source: kennethreitz/httpbin
