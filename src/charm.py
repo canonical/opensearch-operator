@@ -73,15 +73,17 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if self.app_peers_data.get("security_index_initialised", None) is not None:
             return
 
-        self.unit.status = MaintenanceStatus("Configuring admin and clients security...")
+        self.unit.status = MaintenanceStatus("Configuring admin user if needed...")
 
-        self._initialize_admin_user()
-        self._configure_client_auth()
+        if self.app_peers_data.get("admin_user_initialized", None) is None:
+            self._initialize_admin_user()
 
         self.unit.status = ActiveStatus()
 
     def _on_start(self, event: StartEvent):
         """Triggered when on start. Set the right node role."""
+        self._configure_client_auth()
+
         try:
             nodes = self._get_nodes()
         except OpenSearchHttpError:
@@ -107,10 +109,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if current_secrets is None:
             return
 
-        # Store the "Admin" certificate and key on disk
-        path_prefix = f"{self.opensearch.paths.certs}/{CertType.APP_ADMIN.value}"
-        self.opensearch.write_file(f"{path_prefix}.cert", current_secrets["cert"])
-        self.opensearch.write_file(f"{path_prefix}.key", current_secrets["key"])
+        # Store the "Admin" certificate, key and CA on disk
+        self._write_tls_resources(CertType.APP_ADMIN, current_secrets)
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
@@ -196,7 +196,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self._write_admin_tls_conf(current_secrets)
 
         # start opensearch
-        if not self.start_if_ready(event):
+        if not self.opensearch.is_node_up() and not self.start_if_ready(event):
             return
 
         # initialize the security index if the admin certs are written on disk
@@ -225,9 +225,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if self._deferred_because_missing_reqs(event):
             return False
 
-        self.app.status = BlockedStatus("Waiting for OpenSearch to start...")
+        self.unit.status = BlockedStatus("Waiting for OpenSearch to start...")
         self.opensearch.start()
-        self.app.status = ActiveStatus()
+        self.unit.status = ActiveStatus()
 
         return True
 
@@ -294,6 +294,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch.config.put(target_conf_file, "node.roles", roles)
 
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
+        logger.debug(f"Seed hosts: {', '.join(cm_ips)}")
         if len(cm_ips) > 0:
             self.opensearch.config.put(target_conf_file, "discovery.seed_hosts", cm_ips)
 
