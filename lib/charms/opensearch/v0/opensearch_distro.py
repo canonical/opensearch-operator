@@ -14,7 +14,7 @@ from typing import Dict, List, Optional
 
 import requests
 from charms.opensearch.v0.helpers.conf_setter import ConfigSetter
-from charms.opensearch.v0.helpers.networking import get_host_ip
+from charms.opensearch.v0.helpers.networking import get_host_ip, is_reachable
 from charms.opensearch.v0.tls_constants import CertType
 
 # The unique Charmhub library identifier, never change it
@@ -128,13 +128,24 @@ class OpenSearchDistribution(ABC):
         """Stop the opensearch service."""
         pass
 
+    def is_started(self) -> bool:
+        """Check if OpenSearch is started."""
+        reachable = is_reachable(self.host, self.port)
+        if not reachable:
+            logger.error("Cannot connect to the OpenSearch server...")
+
+        return reachable
+
     def is_node_up(self) -> bool:
-        """Get status of current node."""
+        """Get status of current node. This assumes OpenSearch is Running."""
+        if not self.is_started():
+            return False
+
         try:
             self.request("GET", "/_nodes")
             return True
         except (OpenSearchHttpError, Exception) as e:
-            logger.error(e)
+            logger.exception(e)
             return False
 
     def run_bin(self, bin_script_name: str, args: str = None):
@@ -169,10 +180,10 @@ class OpenSearchDistribution(ABC):
         if None in [endpoint, method]:
             raise ValueError("endpoint or method missing")
 
-        if not endpoint.startswith("/"):
-            endpoint = f"/{endpoint}"
+        if endpoint.startswith("/"):
+            endpoint = endpoint[1:]
 
-        full_url = f"https://{self.host if host is None else host}:9200{endpoint}"
+        full_url = f"https://{self.host if host is None else host}:{self.port}/{endpoint}"
         try:
             with requests.Session() as s:
                 resp = s.request(
@@ -254,6 +265,11 @@ class OpenSearchDistribution(ABC):
         """Host IP address of the current node."""
         return get_host_ip(self._charm, self._peer_relation_name)
 
+    @property
+    def port(self) -> int:
+        """Return Port of OpenSearch."""
+        return 9200
+
     @staticmethod
     def check_missing_sys_requirements() -> None:
         """Checks the system requirements."""
@@ -261,8 +277,8 @@ class OpenSearchDistribution(ABC):
 
         file_descriptors = int(subprocess.getoutput("ulimit -n"))
         logger.debug(f"file_descriptors: {file_descriptors}")
-        if file_descriptors < 65535:
-            missing_requirements.append("ulimit -n should be at least 65535")
+        """if file_descriptors < 65535:
+            missing_requirements.append("ulimit -n should be at least 65535")"""
 
         max_map_count = int(subprocess.getoutput("sysctl vm.max_map_count").split("=")[-1].strip())
         logger.debug(f"max_map_count: {max_map_count}")
@@ -271,7 +287,7 @@ class OpenSearchDistribution(ABC):
 
         swappiness = int(subprocess.getoutput("sysctl vm.swappiness").split("=")[-1].strip())
         logger.debug(f"swappiness: {swappiness}")
-        if swappiness > 60:  # != 0: TODO
+        if swappiness > 60:  # > 0: TODO
             missing_requirements.append("vm.swappiness should be 0")
 
         tcp_retries = int(

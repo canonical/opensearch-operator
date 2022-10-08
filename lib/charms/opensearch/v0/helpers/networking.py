@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Helpers for networking related operations."""
-
+import socket
 from typing import Dict
 
 from ops.charm import CharmBase
@@ -46,3 +46,15 @@ def units_ips(charm: CharmBase, peer_relation_name: str) -> Dict[str, str]:
         unit_ip_map[unit_id] = unit_ip(charm, unit, peer_relation_name)
 
     return unit_ip_map
+
+
+def is_reachable(ip_address: str, port: int) -> bool:
+    """Attempting a socket connection to a host/port"""
+    s = socket.socket()
+    try:
+        s.connect((ip_address, port))
+        return True
+    except:
+        return False
+    finally:
+        s.close()

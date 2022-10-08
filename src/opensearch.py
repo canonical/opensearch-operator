@@ -142,7 +142,7 @@ class OpenSearchTarball(OpenSearchDistribution):
             f"--clear-groups --reuid ubuntu --regid ubuntu -- {self.paths.home}/bin/opensearch --daemonize",
         )
 
-        while not self.is_node_up():
+        while not self.is_started():
             time.sleep(2)
 
     def stop(self):
