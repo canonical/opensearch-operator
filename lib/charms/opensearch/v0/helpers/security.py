@@ -63,7 +63,7 @@ def build_regex_tls_dns(app_name: str, ip: string) -> str:
     """Removes any / character from a subject."""
     subject = f"O={app_name},CN={ip}"
     new_subject = subject[: subject.rindex(".")].replace(".", "\\.")
-    return f"'/{new_subject}\\.[0-9]+/'"
+    return f"/{new_subject}\\.[0-9]+/"
 
 
 def rfc2253_tls_subject(subject: string) -> str:
