@@ -13,9 +13,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import requests
-from charms.opensearch.v0.helpers.conf_setter import ConfigSetter
+from charms.opensearch.v0.helpers.conf_setter import YamlConfigSetter
+from charms.opensearch.v0.helpers.databag import Scope
 from charms.opensearch.v0.helpers.networking import get_host_ip, is_reachable
-from charms.opensearch.v0.tls_constants import CertType
 
 # The unique Charmhub library identifier, never change it
 LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
@@ -104,7 +104,7 @@ class OpenSearchDistribution(ABC):
         self.__create_directories()
         self._set_env_variables()
 
-        self.config = ConfigSetter(base_path=self.paths.conf)
+        self.config = YamlConfigSetter(base_path=self.paths.conf)
         self._charm = charm
         self._peer_relation_name = peer_relation_name
 
@@ -186,12 +186,13 @@ class OpenSearchDistribution(ABC):
         full_url = f"https://{self.host if host is None else host}:{self.port}/{endpoint}"
         try:
             with requests.Session() as s:
+                s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
+
                 resp = s.request(
                     method=method.upper(),
                     url=full_url,
                     data=payload,
-                    verify=True,
-                    cert=f"{self.paths.certs}/{CertType.UNIT_HTTP}.cert",
+                    verify=f"{self.paths.certs}/chain.pem",
                     headers={"Accept": "application/json", "Content-Type": "application/json"},
                 )
         except requests.exceptions.RequestException as e:
@@ -226,21 +227,25 @@ class OpenSearchDistribution(ABC):
 
         logger.debug(f"Executing command: {command}")
 
-        output = subprocess.run(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True,
-            text=True,
-            encoding="utf-8",
-            env=os.environ,
-        )
+        try:
+            output = subprocess.run(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=True,
+                text=True,
+                encoding="utf-8",
+                timeout=15,
+                env=os.environ,
+            )
 
-        if output.returncode != 0:
-            logger.error(f"{command}:\n Stderr: {output.stderr}\n Stdout: {output.stdout}")
+            logger.debug(f"{command}:\n{output.stdout}")
+
+            if output.returncode != 0:
+                logger.error(f"{command}:\n Stderr: {output.stderr}\n Stdout: {output.stdout}")
+                raise OpenSearchCmdError()
+        except (TimeoutError, subprocess.TimeoutExpired):
             raise OpenSearchCmdError()
-
-        logger.debug(f"{command}:\n{output.stdout}")
 
     @abstractmethod
     def _build_paths(self) -> Paths:
@@ -271,7 +276,7 @@ class OpenSearchDistribution(ABC):
         return 9200
 
     @staticmethod
-    def check_missing_sys_requirements() -> None:
+    def missing_sys_requirements() -> List[str]:
         """Checks the system requirements."""
         missing_requirements = []
 
@@ -297,5 +302,4 @@ class OpenSearchDistribution(ABC):
         if tcp_retries > 5:
             missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
 
-        if len(missing_requirements) > 0:
-            raise OpenSearchMissingSysReqError(missing_requirements)
+        return missing_requirements

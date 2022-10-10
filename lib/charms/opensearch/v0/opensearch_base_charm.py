@@ -7,18 +7,14 @@ from typing import Dict, Type
 
 from charms.opensearch.v0.helpers.databag import Scope, SecretStore
 from charms.opensearch.v0.helpers.networking import get_host_ip
-from charms.opensearch.v0.opensearch_distro import (
-    OpenSearchDistribution,
-    OpenSearchMissingSysReqError,
-)
+from charms.opensearch.v0.opensearch_config import OpenSearchConfig
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
 from charms.opensearch.v0.tls_constants import TLS_RELATION, CertType
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
 from ops.charm import CharmBase
-from ops.framework import EventBase
-from ops.model import BlockedStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
@@ -42,6 +38,7 @@ class OpenSearchBaseCharm(CharmBase):
             raise ValueError("The type of the opensearch distro must be specified.")
 
         self.opensearch = distro(self, PEER)
+        self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.secrets = SecretStore(self)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
 
@@ -84,13 +81,3 @@ class OpenSearchBaseCharm(CharmBase):
         relation_scope = self.app if scope == Scope.APP else self.unit
 
         return relation.data[relation_scope]
-
-    def _deferred_because_missing_reqs(self, event: EventBase) -> bool:
-        """Check if missing system requirements, if yes - defer."""
-        try:
-            self.opensearch.check_missing_sys_requirements()
-            return False
-        except OpenSearchMissingSysReqError as e:
-            self.unit.status = BlockedStatus(" - ".join(e.missing_requirements))
-            event.defer()
-            return True

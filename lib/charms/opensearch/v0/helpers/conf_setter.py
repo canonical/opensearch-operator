@@ -32,7 +32,7 @@ class OutputType(Enum):
         return self.value
 
 
-class ConfigSetter:
+class YamlConfigSetter:
     """Utility class for updating YAML config, supporting diverse object types and nestedness.
 
     conf_setter = ConfigSetter()

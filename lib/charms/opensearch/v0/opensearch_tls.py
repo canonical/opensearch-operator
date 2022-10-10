@@ -83,7 +83,8 @@ class OpenSearchTLS(Object):
 
     def _on_tls_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Request certificate when TLS relation joined."""
-        if self.charm.unit.is_leader():
+        admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN)
+        if self.charm.unit.is_leader() and admin_cert is None:
             self._request_certificate(Scope.APP, CertType.APP_ADMIN)
 
         self._request_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
@@ -118,7 +119,8 @@ class OpenSearchTLS(Object):
 
         try:
             self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
-        except OpenSearchError:
+        except OpenSearchError as e:
+            logger.error(e)
             event.defer()
 
     def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
@@ -191,7 +193,6 @@ class OpenSearchTLS(Object):
         )
 
         if self.charm.model.get_relation(TLS_RELATION):
-            logger.debug("Requesting cert...")
             self.certs.request_certificate_creation(certificate_signing_request=csr)
 
     def _get_sans(self, cert_type: CertType) -> Optional[List[str]]:

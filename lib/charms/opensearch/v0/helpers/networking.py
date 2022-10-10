@@ -41,6 +41,7 @@ def unit_ip(charm: CharmBase, unit: Unit, peer_relation_name: str) -> str:
 def units_ips(charm: CharmBase, peer_relation_name: str) -> Dict[str, str]:
     """Returns the mapping "unit id / ip address" of all units."""
     unit_ip_map = {}
+
     for unit in charm.model.get_relation(peer_relation_name).units:
         unit_id = unit.name.split("/")[1]
         unit_ip_map[unit_id] = unit_ip(charm, unit, peer_relation_name)
@@ -49,12 +50,12 @@ def units_ips(charm: CharmBase, peer_relation_name: str) -> Dict[str, str]:
 
 
 def is_reachable(ip_address: str, port: int) -> bool:
-    """Attempting a socket connection to a host/port"""
+    """Attempting a socket connection to a host/port."""
     s = socket.socket()
     try:
         s.connect((ip_address, port))
         return True
-    except:
+    except Exception:
         return False
     finally:
         s.close()

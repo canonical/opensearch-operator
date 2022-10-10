@@ -135,15 +135,17 @@ class OpenSearchTarball(OpenSearchDistribution):
     def start(self):
         """Start opensearch as a Daemon."""
         logger.debug("Starting opensearch.")
-        self._setup_linux_perms()
+        if self.is_started():
+            return
 
+        self._setup_linux_perms()
         self._run_cmd(
             "setpriv",
             f"--clear-groups --reuid ubuntu --regid ubuntu -- {self.paths.home}/bin/opensearch --daemonize",
         )
 
-        while not self.is_started():
-            time.sleep(2)
+        if not self.is_started():
+            raise OpenSearchStartError()
 
     def stop(self):
         """Stop opensearch."""
@@ -164,7 +166,9 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def restart(self):
         """Restart opensearch."""
-        self.stop()
+        if self.is_started():
+            self.stop()
+
         self.start()
 
     def _build_paths(self) -> Paths:
