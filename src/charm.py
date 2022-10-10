@@ -119,8 +119,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self._initialize_security_index(admin_secrets)
             self.app_peers_data["security_index_initialised"] = "True"
 
-        logger.debug("----- End of On start....\n\n\n\n ")
-
     def _on_peer_relation_joined(self, _: RelationJoinedEvent):
         """New node joining the cluster, we want to persist the admin certificate."""
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
