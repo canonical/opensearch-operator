@@ -84,7 +84,7 @@ class OpenSearchConfig:
             f"{self._opensearch.paths.certs_relative}/root-ca.cert",
         )
 
-        key_pwd = secrets.get("key-password", None)
+        key_pwd = secrets.get("key-password")
         if key_pwd is not None:
             self._opensearch.config.put(
                 target_conf_file,
@@ -92,11 +92,22 @@ class OpenSearchConfig:
                 key_pwd,
             )
 
-        self._opensearch.config.put(
-            target_conf_file,
-            "plugins.security.nodes_dn/{}",
-            f"{normalized_tls_subject(secrets['subject'])}",
-        )
+    def append_transport_node(self, ip_pattern_entries: List[str], append: bool = True):
+        """Set the IP address of the new unit in nodes_dn."""
+        if not append:
+            self._opensearch.config.put(
+                "opensearch.yml",
+                "plugins.security.nodes_dn",
+                ip_pattern_entries,
+            )
+            return
+
+        for entry in ip_pattern_entries:
+            self._opensearch.config.put(
+                "opensearch.yml",
+                "plugins.security.nodes_dn/{}",
+                entry,
+            )
 
     def set_node(
         self,
@@ -105,7 +116,7 @@ class OpenSearchConfig:
         unit_name: str,
         roles: List[str],
         cm_names: List[str],
-        cm_ips: List[str]
+        cm_ips: List[str],
     ) -> None:
         """Set base config for each node in the cluster."""
         target_conf_file = "opensearch.yml"

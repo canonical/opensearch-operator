@@ -658,6 +658,7 @@ def generate_csr(
     country_name: str = None,
     private_key_password: Optional[bytes] = None,
     sans: Optional[List[str]] = None,
+    oid: Optional[str] = None,
     additional_critical_extensions: Optional[List] = None,
 ) -> bytes:
     """Generates a CSR using private key and subject.
@@ -673,6 +674,7 @@ def generate_csr(
         country_name (str): Country Name.
         private_key_password (bytes): Private key password
         sans (list): List of subject alternative names
+        oid (str): Additional OID
         additional_critical_extensions (list): List if critical additional extension objects.
             Object must be a x509 ExtensionType.
 
@@ -693,10 +695,18 @@ def generate_csr(
     if country_name:
         subject_name.append(x509.NameAttribute(x509.NameOID.COUNTRY_NAME, country_name))
     csr = x509.CertificateSigningRequestBuilder(subject_name=x509.Name(subject_name))
+
+    _sans = []
+    if oid:
+        _sans.append(x509.RegisteredID(x509.ObjectIdentifier(oid)))
     if sans:
+        _sans.extend([x509.DNSName(san) for san in sans])
+
+    if _sans:
         csr = csr.add_extension(
-            x509.SubjectAlternativeName([x509.DNSName(san) for san in sans]), critical=False
+            x509.SubjectAlternativeName(_sans), critical=True
         )
+
     if additional_critical_extensions:
         for extension in additional_critical_extensions:
             csr = csr.add_extension(extension, critical=True)

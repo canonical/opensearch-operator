@@ -177,7 +177,8 @@ class OpenSearchTLS(Object):
             private_key_password=password,
             subject=subject,
             organization=self.charm.app.name,
-            sans=self._get_sans(cert_type),
+            sans=self._get_sans(cert_type) if cert_type == CertType.UNIT_HTTP else None,
+            oid="1.2.3.4.5.5",
         )
 
         self.charm.secrets.put_object(
@@ -206,7 +207,6 @@ class OpenSearchTLS(Object):
             return None
 
         unit_id = self.charm.unit.name.split("/")[1]
-
         return [
             f"{self.charm.app.name}-{unit_id}",
             socket.getfqdn(),

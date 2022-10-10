@@ -59,6 +59,13 @@ def normalized_tls_subject(subject: string) -> str:
     return subject.replace("/", ",")
 
 
+def build_regex_tls_dns(app_name: str, ip: string) -> str:
+    """Removes any / character from a subject."""
+    subject = f"O={app_name},CN={ip}"
+    new_subject = subject[: subject.rindex(".")].replace(".", "\\.")
+    return f"'/{new_subject}\\.[0-9]+/'"
+
+
 def rfc2253_tls_subject(subject: string) -> str:
     """Format the subject as per RFC2253 (inverted and , instead of /)."""
     if subject.startswith("/"):
