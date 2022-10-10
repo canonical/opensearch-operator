@@ -124,11 +124,15 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         """New node joining the cluster."""
         # register this dn entry: NOT needed once OID is set on the cert
         self.opensearch_config.append_transport_node(
-            self.app.name,
             [self.unit_ip, build_regex_tls_dns(self.app.name, self.unit_ip)]
             + list(units_ips(self, PEER).values()),
-            append=True,
         )
+
+        # the node must be restarted when new node_dns join
+        # temporary while the OID gets set in the certificate
+        if self.opensearch.is_node_up():
+            self.opensearch.restart()
+            return
 
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
@@ -234,7 +238,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
             # register this dn entry: NOT needed once OID is set on the cert
             self.opensearch_config.append_transport_node(
-                self.app.name,
                 [build_regex_tls_dns(self.app.name, self.unit_ip), self.unit_ip]
                 + list(units_ips(self, PEER).values()),
             )
