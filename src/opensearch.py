@@ -122,8 +122,14 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def install(self):
         """Download and Un-tar the opensearch distro."""
-        response = requests.get(
+        """response = requests.get(
             "https://artifacts.opensearch.org/releases/bundle/opensearch/2.3.0/opensearch-2.3.0-linux-x64.tar.gz"
+        )"""
+        # response = requests.get(
+        #     "https://192.168.111.201/opensearch-2.3.0-linux-x64.tar.gz", verify=False
+        # )
+        response = requests.get(
+            "https://192.168.155.200/opensearch-2.3.0-linux-x64.tar.gz", verify=False
         )
 
         tarball_path = "opensearch.tar.gz"
@@ -149,7 +155,7 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def stop(self):
         """Stop opensearch."""
-        self._run_cmd("ps aux | grep opensearch | xargs '{print $2}' | kill -15")
+        self._run_cmd("ps aux | grep opensearch | awk '{print $2}' | kill -15")
 
         while self.is_node_up():
             time.sleep(2)

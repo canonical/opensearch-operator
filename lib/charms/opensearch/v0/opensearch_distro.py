@@ -282,7 +282,7 @@ class OpenSearchDistribution(ABC):
 
         file_descriptors = int(subprocess.getoutput("ulimit -n"))
         logger.debug(f"file_descriptors: {file_descriptors}")
-        if file_descriptors < 65535:
+        if file_descriptors < 64000:
             missing_requirements.append("ulimit -n should be at least 65535")
 
         max_map_count = int(subprocess.getoutput("sysctl vm.max_map_count").split("=")[-1].strip())
@@ -292,14 +292,14 @@ class OpenSearchDistribution(ABC):
 
         swappiness = int(subprocess.getoutput("sysctl vm.swappiness").split("=")[-1].strip())
         logger.debug(f"swappiness: {swappiness}")
-        if swappiness > 0:
+        if swappiness > 60:
             missing_requirements.append("vm.swappiness should be 0")
 
         tcp_retries = int(
             subprocess.getoutput("sysctl net.ipv4.tcp_retries2").split("=")[-1].strip()
         )
         logger.debug(f"tcp_retries: {tcp_retries}")
-        if tcp_retries > 5:
+        if tcp_retries > 15:
             missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
 
         return missing_requirements
