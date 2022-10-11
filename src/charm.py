@@ -27,7 +27,6 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
 from ops.charm import (
-    ActionEvent,
     InstallEvent,
     LeaderElectedEvent,
     RelationChangedEvent,
@@ -57,9 +56,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
 
         self.framework.observe(self.on.update_status, self._on_update_status)
-
-        # self.framework.observe(self.on.put_client_action, self._on_put_client)
-        # self.framework.observe(self.on.delete_client_action, self._on_delete_client)
 
     def _on_install(self, event: InstallEvent) -> None:
         """Handle the install event."""
@@ -263,42 +259,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         except OpenSearchStartError:
             return False
 
-    def _on_put_client(self, event: ActionEvent):
-        """Create or update client / user and link the required roles to it."""
-        if not self.unit.is_leader():
-            return
-
-        client_name = event.params.get("name")
-        client_roles = [role.strip() for role in event.params.get("roles").split(",")]
-        client_password = event.params.get("password")
-
-        client_hosts = event.params.get("hosts", None)
-        if client_hosts is not None:
-            client_hosts = [host.strip() for host in client_hosts.split(",")]
-
-        with_cert = event.params.get("with-cert", False)
-
-        try:
-            self._add_update_client(
-                client_name, client_roles, client_password, client_hosts, with_cert
-            )
-        except OpenSearchHttpError:
-            event.defer()
-
-    def _on_delete_client(self, event: ActionEvent):
-        """Delete a registered client if exists."""
-        if not self.unit.is_leader():
-            return
-
-        client_name = event.params.get("name")
-        try:
-            resp = self.opensearch.request(
-                "DELETE", f"/_plugins/_security/api/internalusers/{client_name}/"
-            )
-            logger.debug(resp)
-        except OpenSearchHttpError:
-            event.defer()
-
     def _store_tls_resources(
         self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
     ):
@@ -364,41 +324,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch.run_script(
             "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
         )
-
-    def _add_update_client(
-        self,
-        client_name: str,
-        client_roles: List[str],
-        client_password: str,
-        client_hosts: Optional[List[str]],
-        with_cert: bool,
-    ) -> None:
-        """Create or update user and assign the requested roles to the user."""
-        put_user_resp = self.opensearch.request(
-            "PUT",
-            f"/_plugins/_security/api/internalusers/{client_name}",
-            {
-                "password": client_password,
-                "opendistro_security_roles": client_roles,
-            },
-        )
-        logger.debug(put_user_resp)
-
-        if with_cert:
-            payload = {
-                "users": [client_name],
-                "opendistro_security_roles": client_roles,
-            }
-            if client_hosts is not None:
-                payload["hosts"] = client_hosts
-
-            put_role_mapping_resp = self.opensearch.request(
-                "PUT",
-                "/_plugins/_security/api/rolesmapping/",
-                payload,
-            )
-
-            logger.debug(put_role_mapping_resp)
 
     def _get_nodes(self) -> List[Node]:
         """Fetch the list of nodes of the cluster."""
