@@ -12,7 +12,6 @@ from charms.opensearch.v0.helpers.cluster import ClusterTopology, Node
 from charms.opensearch.v0.helpers.databag import Scope
 from charms.opensearch.v0.helpers.networking import units_ips
 from charms.opensearch.v0.helpers.security import (
-    build_regex_tls_dns,
     cert_expiration_remaining_hours,
     generate_hashed_password,
     to_pkcs8,
@@ -122,18 +121,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_peer_relation_joined(self, _: RelationJoinedEvent):
         """New node joining the cluster."""
-        # register this dn entry: NOT needed once OID is set on the cert
-        self.opensearch_config.append_transport_node(
-            [self.unit_ip, build_regex_tls_dns(self.app.name, self.unit_ip)]
-            + list(units_ips(self, PEER).values()),
-        )
-
-        # the node must be restarted when new node_dns join
-        # temporary while the OID gets set in the certificate
-        if self.opensearch.is_node_up():
-            self.opensearch.restart()
-            return
-
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
         # In the case of the first unit
@@ -235,12 +222,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if scope == Scope.UNIT:
             # node http or transport cert
             self.opensearch_config.set_node_tls_conf(cert_type, current_secrets)
-
-            # register this dn entry: NOT needed once OID is set on the cert
-            self.opensearch_config.append_transport_node(
-                [build_regex_tls_dns(self.app.name, self.unit_ip), self.unit_ip]
-                + list(units_ips(self, PEER).values()),
-            )
         else:
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
             self.opensearch_config.set_admin_tls_conf(current_secrets)

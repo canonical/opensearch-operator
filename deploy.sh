@@ -18,6 +18,7 @@ cloudinit-userdata: |
     - [ 'sed', '-i', '/^# end of pam.*/i \session    required   pam_limits.so\n', '/etc/pam.d/common-session-noninteractive' ]
     - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
     - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
+    - [ 'sysctl', '-w', 'vm.swappiness=0' ]
 EOF
 
 if [ "${destroy}" == "true" ]; then
