@@ -15,9 +15,14 @@ import bcrypt
 from cryptography import x509
 
 # The unique Charmhub library identifier, never change it
-LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBID = "224ce9884b0d47b997357fec522f11c7"
+
+# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-LIBPATCH = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 
 def generate_password() -> str:

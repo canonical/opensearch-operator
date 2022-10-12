@@ -5,14 +5,19 @@
 import logging
 from typing import Dict, List
 
-from charms.opensearch.v0.helpers.security import normalized_tls_subject
+from charms.opensearch.v0.constants_tls import CertType
+from charms.opensearch.v0.helper_security import normalized_tls_subject
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
-from charms.opensearch.v0.tls_constants import CertType
 
 # The unique Charmhub library identifier, never change it
-LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBID = "b02ab02d4fd644fdabe02c61e509093f"
+
+# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-LIBPATCH = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +129,7 @@ class OpenSearchConfig:
         self._opensearch.config.put(target_conf_file, "cluster.name", f"{app_name}-{model_name}")
         self._opensearch.config.put(target_conf_file, "node.name", unit_name)
         self._opensearch.config.put(
-            target_conf_file, "network.host", ["_local_", self._opensearch.host]
+            target_conf_file, "network.host", ["_site_"] + self._opensearch.network_hosts
         )
 
         self._opensearch.config.put(target_conf_file, "node.roles", roles)

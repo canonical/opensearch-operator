@@ -6,9 +6,14 @@
 from typing import Dict, List
 
 # The unique Charmhub library identifier, never change it
-LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBID = "80c3b9eff6df437bb4175b1666b73f91"
+
+# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-LIBPATCH = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 
 class Node:
@@ -63,10 +68,7 @@ class ClusterTopology:
     def is_cluster_bootstrapped(nodes: List[Node]) -> bool:
         """Check if cluster is bootstrapped. 2 cm + 1 voting only nodes created."""
         roles = ClusterTopology.suggest_roles(nodes)
-        if "cluster_manager" in roles or "voting_only" in roles:
-            return False
-
-        return True
+        return not ("cluster_manager" in roles or "voting_only" in roles)
 
     @staticmethod
     def get_cluster_managers_ips(nodes: List[Node]) -> List[str]:

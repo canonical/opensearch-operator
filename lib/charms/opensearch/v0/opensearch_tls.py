@@ -17,12 +17,11 @@ import base64
 import logging
 import re
 import socket
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
-from charms.opensearch.v0.helpers.databag import Scope
-from charms.opensearch.v0.helpers.networking import get_host_ip
+from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
+from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.opensearch_distro import OpenSearchError
-from charms.opensearch.v0.tls_constants import TLS_RELATION, CertType
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiringEvent,
@@ -34,9 +33,14 @@ from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
 # The unique Charmhub library identifier, never change it
-LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBID = "8bcf275287ad486db5f25a1dbb26f920"
+
+# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-LIBPATCH = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +95,8 @@ class OpenSearchTLS(Object):
         self._request_certificate(Scope.UNIT, CertType.UNIT_HTTP)
 
     def _on_tls_relation_broken(self, _: RelationBrokenEvent) -> None:
-        """We don't need to handle much here."""
-        pass
+        """Notify the charm that the relation is broken."""
+        self.charm.on_tls_relation_broken()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Enable TLS when TLS certificate available."""
@@ -142,7 +146,7 @@ class OpenSearchTLS(Object):
             private_key_password=(None if key_password is None else key_password.encode("utf-8")),
             subject=subject,
             organization=self.charm.app.name,
-            sans=self._get_sans(cert_type),
+            **self._get_sans(cert_type),
         )
 
         self.charm.secrets.put_object(
@@ -177,8 +181,7 @@ class OpenSearchTLS(Object):
             private_key_password=password,
             subject=subject,
             organization=self.charm.app.name,
-            sans=self._get_sans(cert_type) if cert_type == CertType.UNIT_HTTP else None,
-            oid="1.2.3.4.5.5",
+            **self._get_sans(cert_type),
         )
 
         self.charm.secrets.put_object(
@@ -196,22 +199,21 @@ class OpenSearchTLS(Object):
         if self.charm.model.get_relation(TLS_RELATION):
             self.certs.request_certificate_creation(certificate_signing_request=csr)
 
-    def _get_sans(self, cert_type: CertType) -> Optional[List[str]]:
-        """Create a list of DNS names for an OpenSearch unit.
+    def _get_sans(self, cert_type: CertType) -> dict:
+        """Create a list of OID/IP/DNS names for an OpenSearch unit.
 
         Returns:
             A list representing the hostnames of the OpenSearch unit.
             or None if admin cert_type, because that cert is not tied to a specific host.
         """
+        sans = {"sans_oid": "1.2.3.4.5.5"}  # required for node discovery
         if cert_type == CertType.APP_ADMIN:
-            return None
+            return sans
 
-        unit_id = self.charm.unit.name.split("/")[1]
-        return [
-            f"{self.charm.app.name}-{unit_id}",
-            socket.getfqdn(),
-            get_host_ip(self.charm, self.peer_relation),
-        ]
+        sans["sans_ip"] = [self.charm.unit_ip]
+        sans["sans_dns"] = [self.charm.unit_name, socket.getfqdn()]
+
+        return sans
 
     def _get_subject(self, cert_type: CertType) -> str:
         """Get subject of the certificate."""
@@ -221,9 +223,6 @@ class OpenSearchTLS(Object):
             cn = self.charm.unit_ip
 
         return cn
-
-        # TODO make configurable
-        # return f"/C=DE/ST=Berlin/L=Berlin/O=Canonical/OU=DataPlatform/CN={cn}"
 
     @staticmethod
     def _parse_tls_file(raw_content: str) -> bytes:

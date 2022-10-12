@@ -2,12 +2,17 @@
 # See LICENSE file for licensing details.
 
 """In this file we declare the constants and enums used by TLS related components."""
-from charms.opensearch.v0.helpers.enums import BaseStrEnum
+from charms.opensearch.v0.helper_enums import BaseStrEnum
 
 # The unique Charmhub library identifier, never change it
-LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBID = "2f539a53ab0a4916957beaf1d6b27124"
+
+# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-LIBPATCH = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 
 TLS_RELATION = "certificates"

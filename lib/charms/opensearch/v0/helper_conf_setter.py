@@ -7,16 +7,22 @@ import sys
 import uuid
 from collections.abc import Mapping
 from enum import Enum
+from io import StringIO
 from os.path import exists
-from typing import Dict
+from typing import Dict, List
 
 from ruamel.yaml import YAML, CommentedSeq
 from ruamel.yaml.comments import CommentedSet
 
 # The unique Charmhub library identifier, never change it
-LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBID = "69a1559c3e4c40cebd8ff0b255cf13db"
+
+# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-LIBPATCH = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 
 class OutputType(Enum):
@@ -57,29 +63,16 @@ class YamlConfigSetter:
         if not exists(path):
             raise FileNotFoundError(f"{path} not found.")
 
-        random_id = uuid.uuid4().hex
         with open(path, "r") as f:
-            lines = f.readlines()
+            lines = f.read().splitlines()
 
-            doc_empty_or_full_comments = True
-            for line in lines:
-                if not line.startswith("#") and line.strip() != "":
-                    doc_empty_or_full_comments = False
-                    break
+            random_id = uuid.uuid4().hex
+            lines.append(f"{random_id}: {random_id}")
 
-        if doc_empty_or_full_comments:
-            with open(path, "a") as f:
-                f.write(f'\n{random_id}: "{random_id}"')
+            data = self.yaml.load(StringIO("\n".join(lines)))
+            del data[random_id]
 
-        with open(path, mode="r") as f:
-            data = self.yaml.load(f)
-            if doc_empty_or_full_comments:
-                del data[random_id]
-
-        if doc_empty_or_full_comments:
-            self.__dump(data, OutputType.file, path)
-
-        return data
+            return data
 
     def put(
         self,
@@ -145,8 +138,11 @@ class YamlConfigSetter:
 
             f.write(data)
 
-    def __dump(self, data: dict[str, any], output_type: OutputType, target_file: str):
+    def __dump(self, data: Dict[str, any], output_type: OutputType, target_file: str):
         """Write the YAML data on the corresponding "output_type" stream."""
+        if not data:
+            return
+
         if output_type in [OutputType.console, OutputType.all]:
             self.yaml.dump(data, sys.stdout)
 
@@ -154,7 +150,17 @@ class YamlConfigSetter:
             with open(target_file, mode="w") as f:
                 self.yaml.dump(data, f)
 
-    def __deep_update(self, source, node_keys: list[str], val: any):
+    def __deep_update(self, source, node_keys: List[str], val: any):
+        """Recursively traverses the tree of nodes, and writes the value accordingly.
+
+        Arg:
+            source: the data object on which the traversal happens, initially the whole document,
+                    then as the traversal progresses this is substituted by the remaining part
+                    of the tree
+            node_keys: the remaining node keys to land on the target node,
+                       initially the path provided by the user
+            val: the value to be set once the traversal is done and node is found.
+        """
         if not node_keys:
             if isinstance(val, set):
                 return list(val)
@@ -175,7 +181,7 @@ class YamlConfigSetter:
         if current_key.startswith("{"):
             return self.__get_source_for_set(source, val)
 
-        # handling the insert / update on json objects
+        # handling the insert / update on key/val objects
         if isinstance(source, Mapping):
             return self.__get_source_for_object(source, node_keys, val, current_key)
 
@@ -207,7 +213,7 @@ class YamlConfigSetter:
 
         return source
 
-    def __deep_delete(self, source, node_keys: list[str]):
+    def __deep_delete(self, source, node_keys: List[str]):
         if not node_keys:
             return
 
@@ -231,7 +237,7 @@ class YamlConfigSetter:
         target_index = self.__target_array_index(leaf_level, leaf_key)
         del leaf_level[target_index]
 
-    def __leaf_level(self, current, node_names: list[str]):
+    def __leaf_level(self, current, node_names: List[str]):
         if len(node_names) == 1:
             return current
 
@@ -269,7 +275,7 @@ class YamlConfigSetter:
 
         return int(str_index) if index is None else index
 
-    def __inline_array_format(self, data, node_keys: list[str], val: list[any]) -> dict[str, any]:
+    def __inline_array_format(self, data, node_keys: List[str], val: List[any]) -> Dict[str, any]:
         """Reformat a multiline YAML array into one with square braces."""
         leaf_k = node_keys[-1]
 

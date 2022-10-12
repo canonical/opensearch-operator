@@ -6,6 +6,7 @@
 import logging
 import os
 import pathlib
+import socket
 import subprocess
 from abc import ABC, abstractmethod
 from os.path import exists
@@ -13,14 +14,19 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import requests
-from charms.opensearch.v0.helpers.conf_setter import YamlConfigSetter
-from charms.opensearch.v0.helpers.databag import Scope
-from charms.opensearch.v0.helpers.networking import get_host_ip, is_reachable
+from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
+from charms.opensearch.v0.helper_databag import Scope
+from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
 
 # The unique Charmhub library identifier, never change it
-LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBID = "7145c219467d43beb9c566ab4a72c454"
+
+# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-LIBPATCH = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
@@ -269,6 +275,11 @@ class OpenSearchDistribution(ABC):
     def host(self) -> str:
         """Host IP address of the current node."""
         return get_host_ip(self._charm, self._peer_relation_name)
+
+    @property
+    def network_hosts(self) -> List[str]:
+        """All HTTP/Transport hosts for the current node."""
+        return [socket.getfqdn(), self.host]
 
     @property
     def port(self) -> int:

@@ -8,10 +8,11 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from charms.opensearch.v0.helpers.cluster import ClusterTopology, Node
-from charms.opensearch.v0.helpers.databag import Scope
-from charms.opensearch.v0.helpers.networking import units_ips
-from charms.opensearch.v0.helpers.security import (
+from charms.opensearch.v0.constants_tls import CertType
+from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
+from charms.opensearch.v0.helper_databag import Scope
+from charms.opensearch.v0.helper_networking import units_ips
+from charms.opensearch.v0.helper_security import (
     cert_expiration_remaining_hours,
     generate_hashed_password,
     to_pkcs8,
@@ -22,7 +23,6 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchInstallError,
     OpenSearchStartError,
 )
-from charms.opensearch.v0.tls_constants import CertType
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
@@ -71,12 +71,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if self.app_peers_data.get("security_index_initialised", None) is not None:
             return
 
-        self.unit.status = MaintenanceStatus("Configuring admin user if needed...")
-
         if self.app_peers_data.get("admin_user_initialized", None) is None:
+            self.unit.status = MaintenanceStatus("Configuring admin user...")
             self._initialize_admin_user()
-
-        self.unit.status = ActiveStatus()
+            self.unit.status = ActiveStatus()
 
     def _on_start(self, event: StartEvent):
         """Triggered when on start. Set the right node role."""
@@ -138,10 +136,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     def _on_update_status(self, _: UpdateStatusEvent):
         """On update status event.
 
-        We want to periodically (every 6 hours) check if certs are expiring soon (in 24h),
-        as a safeguard in case relation broken. As there will be data loss
-        without the user noticing in case the cert of the unit transport layer expires.
-        So we want to stop opensearch in that case, since it cannot be recovered from.
+        We want to periodically check for 2 things:
+        1- The system requirements are still met
+        2- every 6 hours check if certs are expiring soon (in 7 days),
+            as a safeguard in case relation broken. As there will be data loss
+            without the user noticing in case the cert of the unit transport layer expires.
+            So we want to stop opensearch in that case, since it cannot be recovered from.
         """
         # if there are missing system requirements defer
         missing_sys_reqs = self.opensearch.missing_sys_requirements()
@@ -179,7 +179,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         # keep certificates that are expiring in less than 24h
         for cert_type, cert in certs.items():
             hours = cert_expiration_remaining_hours(cert)
-            if hours > 24:
+            if hours > 24 * 7:
                 del certs[cert_type]
 
         if len(certs) > 0:
@@ -225,8 +225,19 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if should_restart:
             self.unit_peers_data["must_reboot_node"] = "True"
 
+    def on_tls_relation_broken(self):
+        """As long as all certificates are produced, we don't do anything."""
+        if self._is_tls_fully_configured():
+            return
+
+        # Otherwise, we block.
+        self.unit.status = BlockedStatus(
+            "Relation broken with the TLS Operator while TLS not fully configured. Stopping OpenSearch."
+        )
+        self.opensearch.stop()
+
     def _is_tls_fully_configured(self) -> bool:
-        """Start OpenSearch if TLS fully configured and if already not started."""
+        """Check if TLS fully configured meaning the 3 certs are present."""
         # In case there is a new certificate requested by the client
         admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         if self.unit.is_leader() and admin_secrets is None or admin_secrets.get("cert") is None:
@@ -293,14 +304,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 "backend_roles": ["admin"],
                 "description": "Admin user",
             },
-        )
-
-    def _should_init_security_index(self) -> bool:
-        """Evaluate whether we should set the security index."""
-        return (
-            self.unit.is_leader()
-            and self.app_peers_data.get("security_index_initialised") is None
-            and self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) is not None
         )
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]):

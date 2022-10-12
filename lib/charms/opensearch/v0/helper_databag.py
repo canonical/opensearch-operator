@@ -6,12 +6,17 @@
 import json
 from typing import Dict, Optional
 
-from charms.opensearch.v0.helpers.enums import BaseStrEnum
+from charms.opensearch.v0.helper_enums import BaseStrEnum
 
 # The unique Charmhub library identifier, never change it
-LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBID = "e28df77e11504aef9a537b351fd4cf37"
+
+# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-LIBPATCH = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 
 class Scope(BaseStrEnum):

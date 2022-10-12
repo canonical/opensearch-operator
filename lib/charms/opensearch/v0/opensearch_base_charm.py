@@ -5,21 +5,26 @@
 import logging
 from typing import Dict, Type
 
-from charms.opensearch.v0.helpers.databag import Scope, SecretStore
-from charms.opensearch.v0.helpers.networking import get_host_ip
+from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
+from charms.opensearch.v0.helper_databag import Scope, SecretStore
+from charms.opensearch.v0.helper_networking import get_host_ip
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
-from charms.opensearch.v0.tls_constants import TLS_RELATION, CertType
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
 from ops.charm import CharmBase
 
 # The unique Charmhub library identifier, never change it
-LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
+
+# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-LIBPATCH = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 
 PEER = "opensearch-peers"
@@ -48,8 +53,8 @@ class OpenSearchBaseCharm(CharmBase):
         """Called after certificate ready and stored on the corresponding scope databag."""
         pass
 
-    def on_tls_conf_remove(self):
-        """Called after certificates removed."""
+    def on_tls_relation_broken(self):
+        """Called after certificates relation broken."""
         pass
 
     @property
@@ -71,6 +76,11 @@ class OpenSearchBaseCharm(CharmBase):
     def unit_name(self) -> str:
         """Name of the current unit."""
         return self.unit.name.replace("/", "-")
+
+    @property
+    def unit_id(self) -> int:
+        """ID of the current unit."""
+        return int(self.unit.name.split("/")[1])
 
     def _get_relation_data(self, scope: Scope, relation_name: str) -> Dict[str, str]:
         """Relation data object."""

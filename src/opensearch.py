@@ -12,6 +12,7 @@ import time
 
 import requests
 from charms.opensearch.v0.opensearch_distro import (
+    OpenSearchCmdError,
     OpenSearchDistribution,
     OpenSearchInstallError,
     OpenSearchMissingError,
@@ -115,20 +116,24 @@ class OpenSearchSnap(OpenSearchDistribution):
 
 
 class OpenSearchTarball(OpenSearchDistribution):
-    """Snap distribution of opensearch, only overrides properties and logic proper to the snap."""
+    """Tarball distro of opensearch, only overrides properties and logic proper to the tar."""
 
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
 
     def install(self):
-        """Download and Un-tar the opensearch distro."""
-        response = requests.get(
-            "https://artifacts.opensearch.org/releases/bundle/opensearch/2.3.0/opensearch-2.3.0-linux-x64.tar.gz"
-        )
+        """Temporary (will be deleted later) - Download and Un-tar the opensearch distro."""
+        try:
+            response = requests.get(
+                "https://artifacts.opensearch.org/releases/bundle/opensearch/2.3.0/opensearch-2.3.0-linux-x64.tar.gz"
+            )
 
-        tarball_path = "opensearch.tar.gz"
-        with open(tarball_path, "wb") as f:
-            f.write(response.content)
+            tarball_path = "opensearch.tar.gz"
+            with open(tarball_path, "wb") as f:
+                f.write(response.content)
+        except Exception as e:
+            logger.error(e)
+            raise OpenSearchInstallError()
 
         extract_tarball(tarball_path, self.paths.home)
 
@@ -138,11 +143,14 @@ class OpenSearchTarball(OpenSearchDistribution):
         if self.is_started():
             return
 
-        self._setup_linux_perms()
-        self._run_cmd(
-            "setpriv",
-            f"--clear-groups --reuid ubuntu --regid ubuntu -- {self.paths.home}/bin/opensearch --daemonize",
-        )
+        try:
+            self._setup_linux_perms()
+            self._run_cmd(
+                "setpriv",
+                f"--clear-groups --reuid ubuntu --regid ubuntu -- {self.paths.home}/bin/opensearch --daemonize",
+            )
+        except OpenSearchCmdError:
+            raise OpenSearchStartError()
 
         if not self.is_started():
             raise OpenSearchStartError()

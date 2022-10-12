@@ -1,57 +1,73 @@
-# operator-template
+# OpenSearch Operator
 
 ## Description
-OpenSearch Machine Charm
+
+The Charmed OpenSearch Operator deploys and operates the [OpenSearch](https://opensearch.org/) software on VMs and machine clusters.
+
+This operator provides an OpenSearch cluster, with:
+- TLS (for the HTTP and Transport layers)
+- Automated node discovery
+
+The Operator in this repository is a Python script which wraps OpenSearch installed by the OpenSearch Snap, providing lifecycle management and handling events (install, start, etc).
 
 ## Usage
 
+Bootstrap a [lxd controller](https://juju.is/docs/olm/lxd#heading--create-a-controller) to juju and create a model:
+
+```shell
+juju add-model opensearch
+```
+
+Configure the system settings required by [OpenSearch](https://opensearch.org/docs/2.3/opensearch/install/important-settings/), 
+we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model.
 ```
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
     - [ 'ulimit', '-n', '65536' ]
-    - [ 'echo', 'ulimit -n 65536', '>>', '/etc/profile.d/limits.sh' ]
-    - [ 'sed', '-i', '/^# End of file.*/i \root soft nofile 65536\n', '/etc/security/limits.conf' ]
-    - [ 'sed', '-i', '/^# End of file.*/i \root hard nofile 1048576\n', '/etc/security/limits.conf' ]
-    - [ 'sed', '-i', '/^# End of file.*/i \* soft nofile 65536\n', '/etc/security/limits.conf' ]
-    - [ 'sed', '-i', '/^# End of file.*/i \* hard nofile 1048576\n', '/etc/security/limits.conf' ]
-    - [ 'sed', '-i', 's@.*DefaultLimitNOFILE.*@DefaultLimitNOFILE=65536:1048576@', '/etc/systemd/system.conf' ]
-    - [ 'sed', '-i', 's@.*DefaultLimitNOFILE.*@DefaultLimitNOFILE=65536:1048576@', '/etc/systemd/user.conf' ]
-    - [ 'sed', '-i', '/^# end of pam.*/i \session    required   pam_limits.so\n', '/etc/pam.d/common-session' ]
-    - [ 'sed', '-i', '/^# end of pam.*/i \session    required   pam_limits.so\n', '/etc/pam.d/common-session-noninteractive' ]
     - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
+    - [ 'sysctl', '-w', 'vm.swappiness=0' ]
+    - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]
     - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
 EOF
 
 juju model-config ./cloudinit-userdata.yaml
+```
 
-juju add-model dev
-juju model-config logging-config="<root>=INFO;unit=DEBUG"
-juju model-config update-status-hook-interval=1m
-juju model-config ./cloudinit-userdata.yaml
+### Basic Usage
+To deploy a single unit of OpenSearch using its default configuration.
 
-juju switch :dev
-
-juju deploy tls-certificates-operator --channel edge --show-log --verbose
-juju config tls-certificates-operator generate-self-signed-certificates=true ca-common-name="CN_CA"
-
-juju deploy -n 1 ./opensearch_ubuntu-22.04-amd64.charm --show-log --verbose
-juju relate tls-certificates-operator opensearch
+```shell
+juju deploy opensearch --channel edge
 ```
 
 ## Relations
 
-TODO: Provide any relations which are provided or required by your charm
+Supported [relations](https://juju.is/docs/olm/relations):
 
-## OCI Images
+#### `tls-certificates` interface:
 
-TODO: Include a link to the default image your charm uses
+The Charmed OpenSearch Operator also supports TLS encryption on the HTTP and Transport layers. TLS is enabled by default:
+
+```shell
+# Deploy the TLS Certificates Operator. 
+juju deploy tls-certificates-operator --channel=edge
+# Add the necessary configurations for TLS.
+juju config tls-certificates-operator generate-self-signed-certificates="true" ca-common-name="Test CA" 
+# Enable TLS via relation.
+juju relate opensearch tls-certificates-operator
+# Disable TLS by removing relation.
+juju remove-relation opensearch tls-certificates-operator
+```
+
+**Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the TLS Certificates Operator [here](https://charmhub.io/tls-certificates-operator).
+
+## Security
+Security issues in the Charmed OpenSearch Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
 
 ## Contributing
 
-<!-- TEMPLATE-TODO: Change this URL to be the full Github path to CONTRIBUTING.md-->
+Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, and [CONTRIBUTING.md](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) for developer guidance.
 
-Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this
-charm following best practice guidelines, and
-[CONTRIBUTING.md](https://github.com/<name>/<operator>/blob/main/CONTRIBUTING.md) for developer
-guidance.
+## License
+The Charmed OpenSearch Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/opensearch-operator/blob/main/LICENSE) for more information.

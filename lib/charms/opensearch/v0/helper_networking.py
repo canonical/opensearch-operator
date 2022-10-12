@@ -9,9 +9,14 @@ from ops.charm import CharmBase
 from ops.model import Unit
 
 # The unique Charmhub library identifier, never change it
-LIBID = "f4bd9c1dad554f9ea52954b8181cdc19"
+LIBID = "afaa4474be1f4ae09089631dbe729d4c"
+
+# Increment this major API version when introducing breaking changes
 LIBAPI = 0
-LIBPATCH = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 
 def get_host_ip(charm: CharmBase, peer_relation_name: str) -> str:
