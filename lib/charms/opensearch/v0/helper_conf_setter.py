@@ -41,7 +41,7 @@ class OutputType(Enum):
 class YamlConfigSetter:
     """Utility class for updating YAML config, supporting diverse object types and nestedness.
 
-    conf_setter = ConfigSetter()
+    conf_setter = YamlConfigSetter()
     put("file.yml", "a.b", "new_name")
     put("file.yml", "a.b/c.obj/key3/key1.a/obj", {"a": "new_name_1", "b": ["hello", "world"]})
     put("file.yml", "a.b/c.arr.simple/[0]", "hello")
@@ -121,9 +121,17 @@ class YamlConfigSetter:
 
         return data
 
-    def replace(self, file: str, old_val: str, new_val: any, regex: bool = False) -> None:
+    def replace(
+        self,
+        config_file: str,
+        old_val: str,
+        new_val: any,
+        regex: bool = False,
+        output_type: OutputType = OutputType.file,
+        output_file: str = None
+    ) -> None:
         """Replace any substring in a text file."""
-        path = f"{self.base_path}{file}"
+        path = f"{self.base_path}{config_file}"
 
         if not exists(path):
             raise FileNotFoundError(f"{path} not found.")
@@ -136,7 +144,15 @@ class YamlConfigSetter:
             else:
                 data = data.replace(old_val, new_val)
 
-            f.write(data)
+            if output_type in [OutputType.console, OutputType.all]:
+                print(data)
+
+            if output_type in [OutputType.file, OutputType.all]:
+                if output_file is None or output_file == config_file:
+                    f.write(data)
+                else:
+                    with open(output_file, "w") as g:
+                        g.write(data)
 
     def __dump(self, data: Dict[str, any], output_type: OutputType, target_file: str):
         """Write the YAML data on the corresponding "output_type" stream."""
