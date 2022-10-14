@@ -67,21 +67,18 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             event.defer()
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
-        """Handle the install event."""
-        if self.app_peers_data.get("security_index_initialised", None) is not None:
+        """Handle leader election event."""
+        if self.app_peers_data.get("security_index_initialised"):
             return
 
-        if self.app_peers_data.get("admin_user_initialized", None) is None:
+        if not self.app_peers_data.get("admin_user_initialized"):
             self.unit.status = MaintenanceStatus("Configuring admin user...")
             self._initialize_admin_user()
             self.unit.status = ActiveStatus()
 
     def _on_start(self, event: StartEvent):
         """Triggered when on start. Set the right node role."""
-        if (
-            self.opensearch.is_started()
-            and self.app_peers_data.get("security_index_initialised") is not None
-        ):
+        if self.opensearch.is_started() and self.app_peers_data.get("security_index_initialised"):
             return
 
         if not self._is_tls_fully_configured():
@@ -118,7 +115,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
         # In the case of the first unit
-        if current_secrets is None:
+        if not current_secrets:
             return
 
         # Store the "Admin" certificate, key and CA on the disk of the new unit
@@ -368,11 +365,11 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     def _cleanup_conf_if_bootstrapped(self, nodes: List[Node]) -> None:
         """Remove some conf props when cluster is bootstrapped."""
         is_cluster_bootstrapped = ClusterTopology.is_cluster_bootstrapped(nodes)
-        cm_nodes_count = ClusterTopology.nodes_count_by_role(nodes).get("cluster_manager", 0)
+        new_node_roles = ClusterTopology.suggest_roles(nodes)
 
-        if not is_cluster_bootstrapped and cm_nodes_count == 2:
+        if not is_cluster_bootstrapped and "cluster_manager" in new_node_roles:
             # this condition means that we just added the last required CM node
-            # cluster is bootstrapped now, we need to clean up the conf
+            # the cluster is bootstrapped now, we need to clean up the conf
             self.opensearch_config.cleanup_conf_if_bootstrapped()
 
 

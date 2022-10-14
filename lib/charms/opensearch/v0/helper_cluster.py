@@ -67,8 +67,12 @@ class ClusterTopology:
     @staticmethod
     def is_cluster_bootstrapped(nodes: List[Node]) -> bool:
         """Check if cluster is bootstrapped. 2 cm + 1 voting only nodes created."""
-        roles = ClusterTopology.suggest_roles(nodes)
-        return not ("cluster_manager" in roles or "voting_only" in roles)
+        nodes_count = ClusterTopology.nodes_count_by_role(nodes)
+
+        cms_ok = nodes_count.get("cluster_manager", 0) == 2
+        voting_only_ok = nodes_count.get("voting_only", 0) > 0
+
+        return cms_ok and voting_only_ok
 
     @staticmethod
     def get_cluster_managers_ips(nodes: List[Node]) -> List[str]:
