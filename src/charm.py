@@ -64,7 +64,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.opensearch.install()
         except OpenSearchInstallError:
             self.unit.status = BlockedStatus("Could not install OpenSearch.")
-            event.defer()
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle leader election event."""
