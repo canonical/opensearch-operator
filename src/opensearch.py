@@ -23,6 +23,7 @@ from charms.opensearch.v0.opensearch_distro import (
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from utils import extract_tarball
 
@@ -121,6 +122,11 @@ class OpenSearchTarball(OpenSearchDistribution):
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        reraise=True,
+    )
     def install(self):
         """Temporary (will be deleted later) - Download and Un-tar the opensearch distro."""
         try:
@@ -157,7 +163,7 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def stop(self):
         """Stop opensearch."""
-        self._run_cmd("ps aux | grep opensearch | awk '{print $2}' | kill -15")
+        self._run_cmd("pkill -15 opensearch")
 
         while self.is_node_up():
             time.sleep(2)
