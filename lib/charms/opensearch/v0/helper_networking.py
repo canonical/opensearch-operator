@@ -54,11 +54,12 @@ def units_ips(charm: CharmBase, peer_relation_name: str) -> Dict[str, str]:
     return unit_ip_map
 
 
-def is_reachable(ip_address: str, port: int) -> bool:
+def is_reachable(host: str, port: int) -> bool:
     """Attempting a socket connection to a host/port."""
     s = socket.socket()
+    s.settimeout(5)
     try:
-        s.connect((ip_address, port))
+        s.connect((host, port))
         return True
     except Exception:
         return False

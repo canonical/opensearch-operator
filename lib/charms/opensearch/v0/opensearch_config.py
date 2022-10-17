@@ -25,6 +25,10 @@ logger = logging.getLogger(__name__)
 class OpenSearchConfig:
     """This class covers the configuration changes depending on certain actions."""
 
+    CONFIG_YML = "opensearch.yml"
+    SECURITY_CONFIG_YML = "opensearch-security/config.yml"
+    JVM_OPTIONS = "jvm.options"
+
     def __init__(self, opensearch: OpenSearchDistribution):
         self._opensearch = opensearch
 
@@ -32,35 +36,31 @@ class OpenSearchConfig:
         """Configure TLS and basic http for clients."""
         # The security plugin will accept TLS client certs if certs but doesn't require them
         self._opensearch.config.put(
-            "opensearch.yml", "plugins.security.ssl.http.clientauth_mode", "OPTIONAL"
+            self.CONFIG_YML, "plugins.security.ssl.http.clientauth_mode", "OPTIONAL"
         )
 
-        security_config_file = "opensearch-security/config.yml"
-
         self._opensearch.config.put(
-            security_config_file,
+            self.SECURITY_CONFIG_YML,
             "config/dynamic/authc/basic_internal_auth_domain/http_enabled",
             True,
         )
 
         self._opensearch.config.put(
-            security_config_file,
+            self.SECURITY_CONFIG_YML,
             "config/dynamic/authc/clientcert_auth_domain/http_enabled",
             True,
         )
 
         self._opensearch.config.put(
-            security_config_file,
+            self.SECURITY_CONFIG_YML,
             "config/dynamic/authc/clientcert_auth_domain/transport_enabled",
             True,
         )
 
     def set_admin_tls_conf(self, secrets: Dict[str, any]):
         """Configures the admin certificate."""
-        target_conf_file = "opensearch.yml"
-
         self._opensearch.config.put(
-            target_conf_file,
+            self.CONFIG_YML,
             "plugins.security.authcz.admin_dn/{}",
             f"{normalized_tls_subject(secrets['subject'])}",
         )
@@ -68,23 +68,22 @@ class OpenSearchConfig:
     def set_node_tls_conf(self, cert_type: CertType, secrets: Dict[str, any]):
         """Configures TLS for nodes."""
         logger.debug(f"set_node_tls_conf: {cert_type}")
-        target_conf_file = "opensearch.yml"
         target_conf_layer = "http" if cert_type == CertType.UNIT_HTTP else "transport"
 
         self._opensearch.config.put(
-            target_conf_file,
+            self.CONFIG_YML,
             f"plugins.security.ssl.{target_conf_layer}.pemcert_filepath",
             f"{self._opensearch.paths.certs_relative}/{cert_type.val}.cert",
         )
 
         self._opensearch.config.put(
-            target_conf_file,
+            self.CONFIG_YML,
             f"plugins.security.ssl.{target_conf_layer}.pemkey_filepath",
             f"{self._opensearch.paths.certs_relative}/{cert_type.val}.key",
         )
 
         self._opensearch.config.put(
-            target_conf_file,
+            self.CONFIG_YML,
             f"plugins.security.ssl.{target_conf_layer}.pemtrustedcas_filepath",
             f"{self._opensearch.paths.certs_relative}/root-ca.cert",
         )
@@ -92,7 +91,7 @@ class OpenSearchConfig:
         key_pwd = secrets.get("key-password")
         if key_pwd is not None:
             self._opensearch.config.put(
-                target_conf_file,
+                self.CONFIG_YML,
                 f"plugins.security.ssl.{target_conf_layer}.pemkey_password",
                 key_pwd,
             )
@@ -101,7 +100,7 @@ class OpenSearchConfig:
         """Set the IP address of the new unit in nodes_dn."""
         if not append:
             self._opensearch.config.put(
-                "opensearch.yml",
+                self.CONFIG_YML,
                 "plugins.security.nodes_dn",
                 ip_pattern_entries,
             )
@@ -109,7 +108,7 @@ class OpenSearchConfig:
 
         for entry in ip_pattern_entries:
             self._opensearch.config.put(
-                "opensearch.yml",
+                self.CONFIG_YML,
                 "plugins.security.nodes_dn/{}",
                 entry,
             )
@@ -124,37 +123,35 @@ class OpenSearchConfig:
         cm_ips: List[str],
     ) -> None:
         """Set base config for each node in the cluster."""
-        target_conf_file = "opensearch.yml"
-
-        self._opensearch.config.put(target_conf_file, "cluster.name", f"{app_name}-{model_name}")
-        self._opensearch.config.put(target_conf_file, "node.name", unit_name)
+        self._opensearch.config.put(self.CONFIG_YML, "cluster.name", f"{app_name}-{model_name}")
+        self._opensearch.config.put(self.CONFIG_YML, "node.name", unit_name)
         self._opensearch.config.put(
-            target_conf_file, "network.host", ["_site_"] + self._opensearch.network_hosts
+            self.CONFIG_YML, "network.host", ["_site_"] + self._opensearch.network_hosts
         )
 
-        self._opensearch.config.put(target_conf_file, "node.roles", roles)
+        self._opensearch.config.put(self.CONFIG_YML, "node.roles", roles)
 
         if len(cm_ips) > 0:
-            self._opensearch.config.put(target_conf_file, "discovery.seed_hosts", cm_ips)
+            self._opensearch.config.put(self.CONFIG_YML, "discovery.seed_hosts", cm_ips)
 
         if "cluster_manager" in roles and len(cm_ips) < 2:  # cluster NOT bootstrapped yet
             self._opensearch.config.put(
-                target_conf_file, "cluster.initial_cluster_manager_nodes", cm_names
+                self.CONFIG_YML, "cluster.initial_cluster_manager_nodes", cm_names
             )
 
-        self._opensearch.config.put(target_conf_file, "path.data", self._opensearch.paths.data)
-        self._opensearch.config.put(target_conf_file, "path.logs", self._opensearch.paths.logs)
+        self._opensearch.config.put(self.CONFIG_YML, "path.data", self._opensearch.paths.data)
+        self._opensearch.config.put(self.CONFIG_YML, "path.logs", self._opensearch.paths.logs)
 
         self._opensearch.config.replace(
-            "jvm.options", "=logs/", f"={self._opensearch.paths.logs}/"
+            self.JVM_OPTIONS, "=logs/", f"={self._opensearch.paths.logs}/"
         )
 
-        self._opensearch.config.put(target_conf_file, "plugins.security.disabled", False)
-        self._opensearch.config.put(target_conf_file, "plugins.security.ssl.http.enabled", True)
+        self._opensearch.config.put(self.CONFIG_YML, "plugins.security.disabled", False)
+        self._opensearch.config.put(self.CONFIG_YML, "plugins.security.ssl.http.enabled", True)
         self._opensearch.config.put(
-            target_conf_file, "plugins.security.ssl.transport.enforce_hostname_verification", True
+            self.CONFIG_YML, "plugins.security.ssl.transport.enforce_hostname_verification", True
         )
 
     def cleanup_conf_if_bootstrapped(self):
         """Remove some conf entries when the cluster is bootstrapped."""
-        self._opensearch.config.delete("opensearch.yml", "cluster.initial_cluster_manager_nodes")
+        self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")

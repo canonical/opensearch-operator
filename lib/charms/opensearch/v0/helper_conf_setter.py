@@ -128,7 +128,7 @@ class YamlConfigSetter:
         new_val: any,
         regex: bool = False,
         output_type: OutputType = OutputType.file,
-        output_file: str = None
+        output_file: str = None,
     ) -> None:
         """Replace any substring in a text file."""
         path = f"{self.base_path}{config_file}"
