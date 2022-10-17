@@ -20,8 +20,6 @@ ops.testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestHelperSecurity(unittest.TestCase):
-    def setUp(self) -> None:
-        pass
 
     def test_generate_password(self):
         """Test password generation."""
@@ -63,7 +61,7 @@ class TestHelperSecurity(unittest.TestCase):
 
         expected_remaining = math.floor((cert_exp_date - now).total_seconds() / 3600)
 
-        with open("tests/unit/resources/config/test.cert") as cert:
+        with open("tests/unit/resources/test.cert") as cert:
             result = cert_expiration_remaining_hours(cert.read())
             self.assertEqual(expected_remaining, result)
 

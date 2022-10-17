@@ -27,18 +27,16 @@ ops.testing.SIMULATE_CAN_CONNECT = True
 class TestHelperNetworking(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
     def setUp(self, _create_directories) -> None:
-        self._peer_relation = PEER
-
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
         self.charm = self.harness.charm
-        self.rel_id = self.harness.add_relation(self._peer_relation, self.charm.app.name)
+        self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
 
     def test_get_host_ip(self):
         """Test host IP value."""
-        self.assertEqual(get_host_ip(self.charm, self._peer_relation), "1.1.1.1")
+        self.assertEqual(get_host_ip(self.charm, PEER), "1.1.1.1")
 
     def test_get_hostname_by_unit(self):
         """Test the dns name returned."""
@@ -49,7 +47,7 @@ class TestHelperNetworking(unittest.TestCase):
 
     def test_unit_ip(self):
         """Test the unit IP value."""
-        self.assertEqual(unit_ip(self.charm, self.charm.unit, self._peer_relation), "1.1.1.1")
+        self.assertEqual(unit_ip(self.charm, self.charm.unit, PEER), "1.1.1.1")
 
     def test_units_ips(self):
         """Test all units IPs."""

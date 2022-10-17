@@ -19,14 +19,12 @@ ops.testing.SIMULATE_CAN_CONNECT = True
 class TestHelperDatabag(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
     def setUp(self, _create_directories) -> None:
-        self._peer_relation = PEER
-
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
         self.charm = self.harness.charm
-        self.rel_id = self.harness.add_relation(self._peer_relation, self.charm.app.name)
+        self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
 
     def test_app_peers_data(self):
         """Test getting data from the app relation data bag."""

@@ -21,16 +21,13 @@ ops.testing.SIMULATE_CAN_CONNECT = True
 
 class TestOpenSearchConfig(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
-    # @patch("opensearch.OpenSearchTarball._build_paths")
     def setUp(self, _create_directories) -> None:
-        self._peer_relation = PEER
-
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
         self.charm = self.harness.charm
-        self.rel_id = self.harness.add_relation(self._peer_relation, self.charm.app.name)
+        self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
 
         self.config_path = "tests/unit/resources/config"
         self.opensearch_yml = copy_file_content_to_tmp(self.config_path, "opensearch.yml")
@@ -42,7 +39,6 @@ class TestOpenSearchConfig(unittest.TestCase):
         self.charm.opensearch = Mock()
         self.charm.opensearch.network_hosts = ["10.10.10.10"]
         self.charm.opensearch.paths.conf = None
-        # self.charm.opensearch._build_paths.return_value = None
         self.charm.opensearch.config = YamlConfigSetter(f"{self.config_path}/tmp")
 
         self.opensearch_config = self.charm.opensearch_config

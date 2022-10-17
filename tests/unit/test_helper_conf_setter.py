@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Unit test for the helper_conf_setter library."""
-
+import os
 import unittest
 
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
@@ -79,3 +79,9 @@ class TestHelperConfSetter(unittest.TestCase):
         complex_array = self.conf.load(output_file)["obj"]["complex_array"]
         for elt in complex_array:
             self.assertNotEqual(elt["name"], "name1")
+
+    def tearDown(self) -> None:
+        """Cleanup."""
+        output = "tests/unit/resources/produced.yaml"
+        if os.path.exists(output):
+            os.remove("tests/unit/resources/produced.yaml")
