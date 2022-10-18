@@ -2,6 +2,8 @@
 # See LICENSE file for licensing details.
 
 """Unit test for the helper_cluster library."""
+import os
+import shutil
 import socket
 import unittest
 from unittest.mock import Mock, patch
@@ -21,23 +23,14 @@ ops.testing.SIMULATE_CAN_CONNECT = True
 @patch_network_get("1.1.1.1")
 class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
-    def setUp(self, _create_directories) -> None:
+    @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
+    def setUp(self, _create_directories, _initialize_admin_user) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
         self.charm = self.harness.charm
         self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
-
-        config_path = "tests/unit/resources/config"
-        self.sec_conf_yml = copy_file_content_to_tmp(
-            config_path, "opensearch-security/internal_users.yml"
-        )
-
-        self.charm.opensearch = Mock()
-        self.charm.opensearch.network_hosts = ["10.10.10.10"]
-        self.charm.opensearch.paths.conf = None
-        self.charm.opensearch.config = YamlConfigSetter(f"{config_path}/tmp")
 
         self.harness.set_leader(True)
 

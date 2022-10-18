@@ -86,7 +86,3 @@ class TestHelperSecurity(unittest.TestCase):
             "CN=localhost,OU=DataPlatform,O=Canonical,L=Berlin,ST=Berlin,C=DE",
         )
         self.assertEqual(rfc2253_tls_subject(subject_2), f"CN={subject_2}")
-
-    def test_to_pkcs8(self):
-        """Test conversion of X509 key to PKCS8."""
-        pass

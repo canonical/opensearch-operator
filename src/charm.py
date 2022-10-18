@@ -57,7 +57,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         self.framework.observe(self.on.update_status, self._on_update_status)
 
-    def _on_install(self, event: InstallEvent) -> None:
+    def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
         self.unit.status = MaintenanceStatus("Installing OpenSearch...")
         try:
