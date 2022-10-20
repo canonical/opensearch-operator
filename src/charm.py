@@ -36,6 +36,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
 from ops.charm import (
+    ActionEvent,
     InstallEvent,
     LeaderElectedEvent,
     RelationChangedEvent,
@@ -65,6 +66,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
 
         self.framework.observe(self.on.update_status, self._on_update_status)
+
+        self.framework.observe(
+            self.on.get_admin_password_action, self._on_get_admin_password_action
+        )
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
@@ -208,6 +213,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 self.opensearch.stop()
 
         self.unit_peers_data["certs_exp_checked_at"] = datetime.now().strftime(date_format)
+
+    def _on_get_admin_password_action(self, event: ActionEvent):
+        """Return the password for the admin user of the cluster."""
+        event.set_results({"password": self.secrets.get(Scope.APP, "admin_password")})
 
     def on_tls_conf_set(
         self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
