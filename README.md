@@ -24,7 +24,6 @@ we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https:/
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
-    - [ 'ulimit', '-n', '65536' ]
     - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
     - [ 'sysctl', '-w', 'vm.swappiness=0' ]
     - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]

@@ -20,6 +20,7 @@ ops.testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestHelperSecurity(unittest.TestCase):
+    """Test class for the security related utility functions."""
 
     def test_generate_password(self):
         """Test password generation."""

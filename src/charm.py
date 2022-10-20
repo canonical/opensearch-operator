@@ -8,6 +8,15 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from charms.opensearch.v0.constants_charm import (
+    AdminUserInitProgress,
+    CertsExpirationError,
+    InstallError,
+    InstallProgress,
+    SecurityIndexInitProgress,
+    TLSRelationBrokenError,
+    WaitingToStart,
+)
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_databag import Scope
@@ -59,11 +68,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
-        self.unit.status = MaintenanceStatus("Installing OpenSearch...")
+        self.unit.status = MaintenanceStatus(InstallProgress)
         try:
             self.opensearch.install()
+            self.unit.status = ActiveStatus()
         except OpenSearchInstallError:
-            self.unit.status = BlockedStatus("Could not install OpenSearch.")
+            self.unit.status = BlockedStatus(InstallError)
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle leader election event."""
@@ -71,13 +81,17 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
 
         if not self.app_peers_data.get("admin_user_initialized"):
-            self.unit.status = MaintenanceStatus("Configuring admin user...")
+            self.unit.status = MaintenanceStatus(AdminUserInitProgress)
             self._initialize_admin_user()
             self.unit.status = ActiveStatus()
 
     def _on_start(self, event: StartEvent):
         """Triggered when on start. Set the right node role."""
         if self.opensearch.is_started() and self.app_peers_data.get("security_index_initialised"):
+            # in the case where it was on WaitingToStart status, event got deferred
+            # and the service started in between
+            if self.unit.status.message == WaitingToStart:
+                self.unit.status = ActiveStatus()
             return
 
         if not self._is_tls_fully_configured():
@@ -87,6 +101,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch_config.set_client_auth()
 
         try:
+            # Retrieve the nodes of the cluster, needed to configure this node
             nodes = self._get_nodes()
         except OpenSearchHttpError:
             event.defer()
@@ -109,12 +124,18 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self._initialize_security_index(admin_secrets)
             self.app_peers_data["security_index_initialised"] = "True"
 
-    def _on_peer_relation_joined(self, _: RelationJoinedEvent):
+    def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """New node joining the cluster."""
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
-        # In the case of the first unit
+        # In the case of the first units before TLS is initialized
         if not current_secrets:
+            return
+
+        # in the case the cluster was bootstrapped with multiple units at the same time
+        # and cert not ready yet
+        if not current_secrets.get("cert"):
+            event.defer()
             return
 
         # Store the "Admin" certificate, key and CA on the disk of the new unit
@@ -180,9 +201,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         if len(certs) > 0:
             missing = [cert.val for cert in certs.keys()]
-            self.unit.status = BlockedStatus(
-                f"The certificates: {', '.join(missing)} need to be refreshed."
-            )
+            self.unit.status = BlockedStatus(CertsExpirationError.format(", ".join(missing)))
 
             # stop opensearch in case the Node-transport certificate expires.
             if certs.get(CertType.UNIT_TRANSPORT) is not None:
@@ -227,24 +246,22 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
 
         # Otherwise, we block.
-        self.unit.status = BlockedStatus(
-            "Relation broken with the TLS Operator while TLS not fully configured. Stopping OpenSearch."
-        )
+        self.unit.status = BlockedStatus(TLSRelationBrokenError)
         self.opensearch.stop()
 
     def _is_tls_fully_configured(self) -> bool:
         """Check if TLS fully configured meaning the 3 certs are present."""
         # In case there is a new certificate requested by the client
         admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if self.unit.is_leader() and admin_secrets is None or admin_secrets.get("cert") is None:
+        if self.unit.is_leader() and (not admin_secrets or not admin_secrets.get("cert")):
             return False
 
         unit_transport_secrets = self.secrets.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)
-        if unit_transport_secrets is None or unit_transport_secrets.get("cert") is None:
+        if not unit_transport_secrets or not unit_transport_secrets.get("cert"):
             return False
 
         unit_http_secrets = self.secrets.get_object(Scope.UNIT, CertType.UNIT_HTTP.val)
-        if unit_http_secrets is None or unit_http_secrets.get("cert") is None:
+        if not unit_http_secrets or not unit_http_secrets.get("cert"):
             return False
 
         return True
@@ -258,7 +275,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return False
 
         try:
-            self.unit.status = BlockedStatus("Waiting for OpenSearch to start...")
+            self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
             self.unit.status = ActiveStatus()
 
@@ -320,27 +337,38 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if admin_key_pwd is not None:
             args.append(f"-keypass {admin_key_pwd}")
 
+        self.unit.status = MaintenanceStatus(SecurityIndexInitProgress)
         self.opensearch.run_script(
             "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
         )
+        self.unit.status = ActiveStatus()
 
     def _get_nodes(self) -> List[Node]:
-        """Fetch the list of nodes of the cluster."""
-        units_ips_map = units_ips(self, PEER)
-        host: Optional[str] = None
+        """Fetch the list of nodes of the cluster, depending on the requester."""
 
-        if len(units_ips_map) > 0:
-            host = next(iter(units_ips_map.values()))  # get first value
+        def fetch() -> List[Node]:
+            """Fetches the list of nodes through HTTP."""
+            units_ips_map = units_ips(self, PEER)
+            host: Optional[str] = None
 
-        nodes: List[Node] = []
-        if host is not None:
-            response = self.opensearch.request("GET", "/_nodes", host=host)
+            if len(units_ips_map) > 0:
+                host = next(iter(units_ips_map.values()))  # get first value
 
-            if "nodes" in response:
-                for obj in response["nodes"].values():
-                    nodes.append(Node(obj["name"], obj["roles"], obj["ip"]))
+            nodes: List[Node] = []
+            if host is not None:
+                response = self.opensearch.request("GET", "/_nodes", host=host)
+                if "nodes" in response:
+                    for obj in response["nodes"].values():
+                        nodes.append(Node(obj["name"], obj["roles"], obj["ip"]))
 
-        return nodes
+            return nodes
+
+        try:
+            return fetch()
+        except OpenSearchHttpError:
+            if self.unit.is_leader() and not self.app_peers_data.get("security_index_initialised"):
+                return []
+            raise
 
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
@@ -363,10 +391,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _cleanup_conf_if_bootstrapped(self, nodes: List[Node]) -> None:
         """Remove some conf props when cluster is bootstrapped."""
-        is_cluster_bootstrapped = ClusterTopology.is_cluster_bootstrapped(nodes)
-        new_node_roles = ClusterTopology.suggest_roles(nodes)
-
-        if not is_cluster_bootstrapped and "cluster_manager" in new_node_roles:
+        remaining_nodes_for_bootstrap = ClusterTopology.remaining_nodes_for_bootstrap(nodes)
+        if remaining_nodes_for_bootstrap == 0:
             # this condition means that we just added the last required CM node
             # the cluster is bootstrapped now, we need to clean up the conf
             self.opensearch_config.cleanup_conf_if_bootstrapped()
