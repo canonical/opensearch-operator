@@ -368,11 +368,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         def fetch() -> List[Node]:
             """Fetches the list of nodes through HTTP."""
-            units_ips_map = units_ips(self, PEER)
             host: Optional[str] = None
 
-            if len(units_ips_map) > 0:
-                host = next(iter(units_ips_map.values()))  # get first value
+            all_units_ips = set(units_ips(self, PEER).values())
+            all_units_ips.discard(self.unit_ip)
+            if len(all_units_ips) > 0:
+                host = next(iter(all_units_ips))  # get first value
 
             nodes: List[Node] = []
             if host is not None:

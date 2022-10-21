@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -16,6 +16,9 @@ SERIES = "jammy"
 UNIT_IDS = [0, 1, 2]
 
 TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
+
+
+logger = logging.getLogger(__name__)
 
 
 async def get_admin_password(ops_test: OpsTest) -> str:

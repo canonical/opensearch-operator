@@ -21,7 +21,7 @@ async def check_security_index_initialised(ops_test: OpsTest, unit_ip: str) -> b
     """
     try:
         for attempt in Retrying(
-            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+            stop=stop_after_attempt(15), wait=wait_exponential(multiplier=1, min=2, max=30)
         ):
             with attempt:
                 response = await http_request(
