@@ -46,6 +46,19 @@ def copy_file_content_to_tmp(config_dir_path: str, source_path: str) -> str:
     return dest_path
 
 
+def create_utf8_encoded_private_key() -> str:
+    """Creates a private key."""
+    return (
+        rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        .private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        .decode("utf-8")
+    )
+
+
 def create_x509_resources(expiring_in_days: int = 1) -> SimpleNamespace:
     """Generate an X509 self-signed certificate with a key and exp date."""
     # Create key if not passed

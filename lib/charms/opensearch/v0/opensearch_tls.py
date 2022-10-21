@@ -150,7 +150,7 @@ class OpenSearchTLS(Object):
         )
 
         self.charm.secrets.put_object(
-            scope, cert_type, {"csr": new_csr.decode("utf-8"), "subject": subject}, merge=True
+            scope, cert_type.val, {"csr": new_csr.decode("utf-8"), "subject": subject}, merge=True
         )
 
         self.certs.request_certificate_renewal(
