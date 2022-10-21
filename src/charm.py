@@ -82,6 +82,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle leader election event."""
+        self.app_peers_data["leader_ip"] = self.unit_ip
+
         if self.app_peers_data.get("security_index_initialised"):
             return
 
@@ -370,10 +372,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             """Fetches the list of nodes through HTTP."""
             host: Optional[str] = None
 
-            all_units_ips = set(units_ips(self, PEER).values())
-            all_units_ips.discard(self.unit_ip)
-            if len(all_units_ips) > 0:
-                host = next(iter(all_units_ips))  # get first value
+            if not self.unit.is_leader() and self.app_peers_data.get("leader_ip"):
+                host = self.app_peers_data.get("leader_ip")
+            else:
+                all_units_ips = units_ips(self, PEER).values()
+                if len(all_units_ips) > 0:
+                    host = next(iter(all_units_ips))  # get first value
 
             nodes: List[Node] = []
             if host is not None:
