@@ -217,7 +217,8 @@ class OpenSearchTarball(OpenSearchDistribution):
         """Create a systemd unit file to run OpenSearch as a service."""
         env_variables = ""
         for key, val in os.environ.items():
-            env_variables = f"{env_variables}Environment={key}={val}\n"
+            if key.startswith("OPENSEARCH"):
+                env_variables = f"{env_variables}Environment={key}={val}\n"
 
         unit_content = f"""[Unit]
         Description=OpenSearch Service

@@ -88,6 +88,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if not self.app_peers_data.get("admin_user_initialized"):
             self.unit.status = MaintenanceStatus(AdminUserInitProgress)
             self._initialize_admin_user()
+            self.app_peers_data["admin_user_initialized"] = "True"
             self.unit.status = ActiveStatus()
 
     def _on_start(self, event: StartEvent):
@@ -104,6 +105,11 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
 
         self.opensearch_config.set_client_auth()
+
+        # if admin user not yet fully initialized
+        if not self.app_peers_data.get("admin_user_initialized"):
+            event.defer()
+            return
 
         try:
             # Retrieve the nodes of the cluster, needed to configure this node
@@ -135,11 +141,13 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         # In the case of the first units before TLS is initialized
         if not current_secrets:
+            if not self.unit.is_leader():
+                event.defer()
             return
 
         # in the case the cluster was bootstrapped with multiple units at the same time
         # and cert not ready yet
-        if not current_secrets.get("cert"):
+        if not current_secrets.get("cert") or not current_secrets.get("chain"):
             event.defer()
             return
 
@@ -262,7 +270,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         """Check if TLS fully configured meaning the 3 certs are present."""
         # In case there is a new certificate requested by the client
         admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if self.unit.is_leader() and (not admin_secrets or not admin_secrets.get("cert")):
+        if not admin_secrets or not admin_secrets.get("cert") or not admin_secrets.get("chain"):
             return False
 
         unit_transport_secrets = self.secrets.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)
@@ -306,11 +314,14 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch.write_file(f"{certs_dir}/root-ca.cert", secrets["ca"], override=False)
 
         if cert_type == CertType.APP_ADMIN:
+            logger.debug(f"\n\n\n------ \nWRITING the chain on disk for UNIT: {self.unit_id}\n-------")
             self.opensearch.write_file(
                 f"{certs_dir}/chain.pem",
                 "\n".join(secrets["chain"][::-1]),
                 override=override_admin,
             )
+            self.opensearch._run_cmd(f"ls -la {certs_dir}/")
+            logger.debug("WRITTEN \n\n ------ \n\n")
 
     def _initialize_admin_user(self):
         """Change default password of Admin user."""
@@ -404,7 +415,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if remaining_nodes_for_bootstrap == 0:
             # this condition means that we just added the last required CM node
             # the cluster is bootstrapped now, we need to clean up the conf
-            self.opensearch_config.cleanup_conf_if_bootstrapped()
+            # TODO: check if following requires reboot of node or not:
+            #  self.opensearch_config.cleanup_conf_if_bootstrapped()
+            pass
 
 
 if __name__ == "__main__":
