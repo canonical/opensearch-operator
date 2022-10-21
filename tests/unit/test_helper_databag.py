@@ -6,14 +6,11 @@
 import unittest
 from unittest.mock import patch
 
-import ops
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.opensearch_base_charm import PEER
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
-
-ops.testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestHelperDatabag(unittest.TestCase):
@@ -28,7 +25,7 @@ class TestHelperDatabag(unittest.TestCase):
         self.secret_store = self.charm.secrets
 
     def test_put_get(self):
-        """Test putting data of simple type in the secret store."""
+        """Test putting and getting data of simple type in/from the secret store."""
         self.secret_store.put(Scope.UNIT, "unit-key", "unit-val")
         self.secret_store.put(Scope.APP, "app-key", "app-val")
 
@@ -36,7 +33,7 @@ class TestHelperDatabag(unittest.TestCase):
         self.assertEqual(self.secret_store.get(Scope.APP, "app-key"), "app-val")
 
     def test_put_get_object(self):
-        """Test putting objects in the secret store."""
+        """Test putting and getting objects in/from the secret store."""
         self.secret_store.put_object(Scope.UNIT, "unit-key-obj", {"key": "val"})
         self.secret_store.put_object(Scope.APP, "app-key-obj", {"name": "val"})
 

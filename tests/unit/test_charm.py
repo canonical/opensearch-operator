@@ -130,7 +130,7 @@ class TestCharm(unittest.TestCase):
     def test_on_update_status(
         self, missing_sys_requirements, get_relation, is_node_up, cert_expiration_remaining_hours
     ):
-        """Test on update status relation joined."""
+        """Test on update status."""
         # test missing sys requirements
         missing_sys_requirements.return_value = ["ulimit -n not set"]
         self.charm.on.update_status.emit()

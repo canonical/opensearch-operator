@@ -6,7 +6,6 @@
 import unittest
 from unittest.mock import patch
 
-import ops
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
     get_hostname_by_unit,
@@ -19,8 +18,6 @@ from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
 from tests.helpers import patch_network_get
-
-ops.testing.SIMULATE_CAN_CONNECT = True
 
 
 @patch_network_get("1.1.1.1")
