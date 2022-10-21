@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from charms.opensearch.v0.constants_tls import CertType
+from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.opensearch_base_charm import PEER
 from ops.testing import Harness
 
@@ -28,6 +29,8 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         self.harness.set_leader(True)
 
+        self.secret_store = self.charm.secrets
+
         socket.getfqdn = Mock()
         socket.getfqdn.return_value = "nebula"
 
@@ -47,3 +50,22 @@ class TestOpenSearchTLS(unittest.TestCase):
                     "sans_dns": [self.charm.unit_name, "nebula"],
                 },
             )
+
+    def test_find_secret(self):
+        """Test the secrets lookup depending on the event data."""
+        event_data_cert = "cert_abcd12345"
+        event_data_csr = "csr_abcd12345"
+
+        self.assertIsNone(self.charm.tls._find_secret(event_data_cert, "cert"))
+        self.assertIsNone(self.charm.tls._find_secret(event_data_csr, "csr"))
+
+        self.secret_store.put_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val, {"cert": event_data_cert})
+        self.secret_store.put_object(Scope.APP, CertType.APP_ADMIN.val, {"csr": event_data_csr})
+
+    def test_on_relation_joined(self):
+        """Test on certificate relation joined event."""
+        pass
+
+    def test_on_set_tls_private_key(self):
+        """Test _on_set_tls private key event."""
+        pass

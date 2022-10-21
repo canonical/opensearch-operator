@@ -118,6 +118,7 @@ class TestCharm(unittest.TestCase):
 
         # initialisation of the security index
         del self.charm.app_peers_data["security_index_initialised"]
+        _start_opensearch.return_value = True
         self.harness.set_leader()
         self.charm.on.start.emit()
         self.assertEqual(self.charm.app_peers_data["security_index_initialised"], "True")
