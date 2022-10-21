@@ -2,22 +2,16 @@
 # See LICENSE file for licensing details.
 
 """Unit test for the helper_cluster library."""
-import os
-import shutil
 import socket
 import unittest
 from unittest.mock import Mock, patch
 
-import ops
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.opensearch_base_charm import PEER
 from ops.testing import Harness
-from tests.helpers import patch_network_get, copy_file_content_to_tmp
 
 from charm import OpenSearchOperatorCharm
-
-ops.testing.SIMULATE_CAN_CONNECT = True
+from tests.helpers import patch_network_get
 
 
 @patch_network_get("1.1.1.1")

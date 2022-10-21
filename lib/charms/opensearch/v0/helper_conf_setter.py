@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Utilities for editing yaml config files at any depth level and maintaining comments."""
+import logging
 import re
 import sys
 import uuid
@@ -23,6 +24,9 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
+
+
+logger = logging.getLogger(__name__)
 
 
 class OutputType(Enum):
@@ -145,7 +149,7 @@ class YamlConfigSetter:
                 data = data.replace(old_val, new_val)
 
             if output_type in [OutputType.console, OutputType.all]:
-                print(data)
+                logger.info(data)
 
             if output_type in [OutputType.file, OutputType.all]:
                 if output_file is None or output_file == config_file:

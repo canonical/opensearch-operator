@@ -7,7 +7,6 @@ import unittest
 from typing import Dict
 from unittest.mock import Mock, patch
 
-import ops
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.opensearch_base_charm import PEER
@@ -15,8 +14,6 @@ from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
 from tests.helpers import copy_file_content_to_tmp
-
-ops.testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestOpenSearchConfig(unittest.TestCase):

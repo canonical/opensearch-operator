@@ -5,16 +5,19 @@
 
 import unittest
 from datetime import datetime, timedelta
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch
 
-from ops.model import MaintenanceStatus, ActiveStatus, BlockedStatus
-from ops.testing import Harness
-
-from charm import OpenSearchOperatorCharm
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.opensearch_base_charm import PEER
-from charms.opensearch.v0.opensearch_distro import OpenSearchInstallError, OpenSearchHttpError
+from charms.opensearch.v0.opensearch_distro import (
+    OpenSearchHttpError,
+    OpenSearchInstallError,
+)
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.testing import Harness
+
+from charm import OpenSearchOperatorCharm
 
 
 class TestCharm(unittest.TestCase):
@@ -106,7 +109,7 @@ class TestCharm(unittest.TestCase):
         # _get_nodes succeeds
         _is_tls_fully_configured.return_value = True
         _get_nodes.side_effect = None
-        _start_opensearch = False
+        _start_opensearch.return_value = False
         self.charm.on.start.emit()
         _get_nodes.assert_called()
         _set_node_conf.assert_called_once()
@@ -127,7 +130,7 @@ class TestCharm(unittest.TestCase):
     def test_on_update_status(
         self, missing_sys_requirements, get_relation, is_node_up, cert_expiration_remaining_hours
     ):
-        """Test on update status relation joined."""
+        """Test on update status."""
         # test missing sys requirements
         missing_sys_requirements.return_value = ["ulimit -n not set"]
         self.charm.on.update_status.emit()
@@ -136,8 +139,12 @@ class TestCharm(unittest.TestCase):
         # test when TLS relation is broken and cert is expiring soon
         get_relation.return_value = None
         is_node_up.return_value = True
-        self.charm.unit_peers_data["certs_exp_checked_at"] = (datetime.now() - timedelta(hours=7)).strftime("%Y-%m-%d %H:%M:%S")
-        self.charm.secrets.put_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val, {"cert": "transport"})
+        self.charm.unit_peers_data["certs_exp_checked_at"] = (
+            datetime.now() - timedelta(hours=7)
+        ).strftime("%Y-%m-%d %H:%M:%S")
+        self.charm.secrets.put_object(
+            Scope.UNIT, CertType.UNIT_TRANSPORT.val, {"cert": "transport"}
+        )
         cert_expiration_remaining_hours.return_value = 24 * 3
         self.charm.on.update_status.emit()
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))

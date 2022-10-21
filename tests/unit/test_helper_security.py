@@ -5,9 +5,8 @@
 import math
 import re
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 
-import ops
 from charms.opensearch.v0.helper_security import (
     cert_expiration_remaining_hours,
     generate_hashed_password,
@@ -15,12 +14,10 @@ from charms.opensearch.v0.helper_security import (
     normalized_tls_subject,
     rfc2253_tls_subject,
 )
-
-ops.testing.SIMULATE_CAN_CONNECT = True
+from helpers import create_x509_resources
 
 
 class TestHelperSecurity(unittest.TestCase):
-
     def test_generate_password(self):
         """Test password generation."""
         password_1 = generate_password()
@@ -56,14 +53,16 @@ class TestHelperSecurity(unittest.TestCase):
 
     def test_cert_expiration_remaining_hours(self):
         """Test the evaluation of the correct expiration date in hours."""
-        cert_exp_date = datetime.strptime("2023-10-11 13:48:31", "%Y-%m-%d %H:%M:%S")
-        now = datetime.utcnow()
+        expected_exp_date = datetime.now() + timedelta(days=1)
 
-        expected_remaining = math.floor((cert_exp_date - now).total_seconds() / 3600)
+        expected_remaining = math.floor(
+            (expected_exp_date - datetime.now()).total_seconds() / 3600
+        )
 
-        with open("tests/unit/resources/test.cert") as cert:
-            result = cert_expiration_remaining_hours(cert.read())
-            self.assertEqual(expected_remaining, result)
+        resources = create_x509_resources()
+
+        fetched_remaining_hours = cert_expiration_remaining_hours(resources.cert)
+        self.assertEqual(fetched_remaining_hours, expected_remaining)
 
     def test_normalized_tls_subject(self):
         """Test the normalized subject of a certificate."""
