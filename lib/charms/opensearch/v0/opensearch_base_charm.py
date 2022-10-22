@@ -5,8 +5,6 @@
 import logging
 from typing import Dict, Type
 
-from ops.model import ActiveStatus
-
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_databag import Scope, SecretStore
 from charms.opensearch.v0.helper_networking import get_host_ip
@@ -17,6 +15,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
 from ops.charm import CharmBase
+from ops.model import ActiveStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
