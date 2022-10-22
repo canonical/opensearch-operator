@@ -5,6 +5,8 @@
 import logging
 from typing import Dict, Type
 
+from ops.model import ActiveStatus
+
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_databag import Scope, SecretStore
 from charms.opensearch.v0.helper_networking import get_host_ip
@@ -56,6 +58,11 @@ class OpenSearchBaseCharm(CharmBase):
     def on_tls_relation_broken(self):
         """Called after certificates relation broken."""
         pass
+
+    def clear_status(self, status_message: str):
+        """Resets the unit status if it was previously blocked/maintenance with message."""
+        if self.unit.status.message == status_message:
+            self.unit.status = ActiveStatus()
 
     @property
     def app_peers_data(self) -> Dict[str, str]:

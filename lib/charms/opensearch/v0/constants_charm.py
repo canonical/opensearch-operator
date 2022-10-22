@@ -18,6 +18,7 @@ LIBPATCH = 1
 WaitingToStart = "Waiting for OpenSearch to start..."
 InstallError = "Could not install OpenSearch."
 CertsExpirationError = "The certificates: {} need to be refreshed."
+TLSNotFullyConfigured = "Waiting for TLS to be fully configured..."
 TLSRelationBrokenError = (
     "Relation broken with the TLS Operator while TLS not fully configured. Stopping OpenSearch."
 )

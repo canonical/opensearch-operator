@@ -2,11 +2,13 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import logging
+import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import requests
 import yaml
+from ops.model import StatusBase
 from pytest_operator.plugin import OpsTest
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
@@ -21,21 +23,21 @@ TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
 logger = logging.getLogger(__name__)
 
 
-async def get_admin_password(ops_test: OpsTest) -> str:
-    """Use the charm action to retrieve the password from provided unit.
+async def get_admin_secrets(ops_test: OpsTest) -> Dict[str, str]:
+    """Use the charm action to retrieve the admin password and chain.
 
     Returns:
-        String with the password stored on the peer relation databag.
+        Dict with the admin and cert chain stored on the peer relation databag.
     """
     # can retrieve from any unit running unit, so we pick the first
     unit_name = ops_test.model.applications[APP_NAME].units[0].name
     unit_id = unit_name.split("/")[1]
 
     action = await ops_test.model.units.get(f"{APP_NAME}/{unit_id}").run_action(
-        "get-admin-password"
+        "get-admin-secrets"
     )
     action = await action.wait()
-    return action.results["password"]
+    return action.results
 
 
 def get_application_unit_names(ops_test: OpsTest) -> List[str]:
@@ -50,6 +52,18 @@ def get_application_unit_names(ops_test: OpsTest) -> List[str]:
     return [unit.name.replace("/", "-") for unit in ops_test.model.applications[APP_NAME].units]
 
 
+def get_application_unit_status(ops_test: OpsTest) -> List[StatusBase]:
+    """List the unit statuses of an application.
+
+    Args:
+        ops_test: The ops test framework instance
+
+    Returns:
+        list of current unit statuses of the application
+    """
+    return [unit.status for unit in ops_test.model.applications[APP_NAME].units]
+
+
 def get_application_unit_ips(ops_test: OpsTest) -> List[str]:
     """List the unit IPs of an application.
 
@@ -62,18 +76,20 @@ def get_application_unit_ips(ops_test: OpsTest) -> List[str]:
     return [unit.public_address for unit in ops_test.model.applications[APP_NAME].units]
 
 
-def get_application_unit_ips_names(ops_test: OpsTest) -> List[Tuple[str, str]]:
-    """List the unit IPs, Names of an application.
+def get_application_unit_ips_names(ops_test: OpsTest) -> Dict[str, str]:
+    """List the units of an application by name and corresponding IPs.
 
     Args:
         ops_test: The ops test framework instance
 
     Returns:
-        list of tuples of current unit IPs, Names of the application
+        Dictionary unit_name / unit_ip, of the application
     """
-    return [
-        (unit.public_address, unit.name) for unit in ops_test.model.applications[APP_NAME].units
-    ]
+    result = {}
+    for unit in ops_test.model.applications[APP_NAME].units:
+        result[unit.name.replace("/", "-")] = unit.public_address
+
+    return result
 
 
 async def get_leader_unit_ip(ops_test: OpsTest) -> str:
@@ -99,23 +115,26 @@ async def http_request(
     Args:
         ops_test: The ops test framework instance.
         endpoint: the url to be called.
-        method: the HTTP method (GET, POST etc.)
+        method: the HTTP method (GET, POST, HEAD etc.)
         payload: the body of the request if any.
         resp_status_code: whether to only return the http response code.
 
     Returns:
         A json object.
     """
-    admin_password = await get_admin_password(ops_test)
+    admin_secrets = await get_admin_secrets(ops_test)
 
     # fetch the cluster info from the endpoint of this unit
-    with requests.Session() as s:
-        s.auth = ("admin", admin_password)
-        resp = s.request(
+    with requests.Session() as session, tempfile.NamedTemporaryFile(mode="w+") as chain:
+        chain.write(admin_secrets["chain"])
+        chain.seek(0)
+
+        session.auth = ("admin", admin_secrets["password"])
+        resp = session.request(
             method=method,
             url=endpoint,
             data=payload,
-            verify=f"{TARBALL_INSTALL_CERTS_DIR}/chain.pem",
+            verify=chain.name,
             headers={"Accept": "application/json", "Content-Type": "application/json"},
         )
 

@@ -6,20 +6,19 @@ on:
       - main
 
 jobs:
-  lib-check:
-    name: Check libraries
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
+#  lib-check:
+#    name: Check libraries
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
   ci-tests:
     uses: ./.github/workflows/ci.yaml
 
   release-to-charmhub:
     name: Release to CharmHub
     needs:
-      - lib-check
+      # - lib-check
       - ci-tests
     runs-on: ubuntu-latest
     steps:

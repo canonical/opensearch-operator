@@ -14,6 +14,7 @@ from charms.opensearch.v0.constants_charm import (
     InstallError,
     InstallProgress,
     SecurityIndexInitProgress,
+    TLSNotFullyConfigured,
     TLSRelationBrokenError,
     WaitingToStart,
 )
@@ -67,9 +68,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         self.framework.observe(self.on.update_status, self._on_update_status)
 
-        self.framework.observe(
-            self.on.get_admin_password_action, self._on_get_admin_password_action
-        )
+        self.framework.observe(self.on.get_admin_secrets_action, self._on_get_admin_secrets_action)
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
@@ -82,8 +81,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle leader election event."""
-        self.app_peers_data["leader_ip"] = self.unit_ip
-
         if self.app_peers_data.get("security_index_initialised"):
             return
 
@@ -97,21 +94,20 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         """Triggered when on start. Set the right node role."""
         if self.opensearch.is_started() and self.app_peers_data.get("security_index_initialised"):
             # in the case where it was on WaitingToStart status, event got deferred
-            # and the service started in between
-            if self.unit.status.message == WaitingToStart:
-                self.unit.status = ActiveStatus()
+            # and the service started in between, put status back to active
+            self.clear_status(WaitingToStart)
             return
 
         if not self._is_tls_fully_configured():
+            self.unit.status = BlockedStatus(TLSNotFullyConfigured)
             event.defer()
             return
 
+        # reset status to active if it was TLSNotFullyConfigured
+        self.clear_status(TLSNotFullyConfigured)
+
+        # configure clients auth
         self.opensearch_config.set_client_auth()
-
-        # if admin user not yet fully initialized
-        if not self.app_peers_data.get("admin_user_initialized"):
-            event.defer()
-            return
 
         try:
             # Retrieve the nodes of the cluster, needed to configure this node
@@ -224,9 +220,16 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         self.unit_peers_data["certs_exp_checked_at"] = datetime.now().strftime(date_format)
 
-    def _on_get_admin_password_action(self, event: ActionEvent):
-        """Return the password for the admin user of the cluster."""
-        event.set_results({"password": self.secrets.get(Scope.APP, "admin_password")})
+    def _on_get_admin_secrets_action(self, event: ActionEvent):
+        """Return the password and cert chain for the admin user of the cluster."""
+        password = self.secrets.get(Scope.APP, "admin_password")
+
+        chain = None
+        admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        if admin_secrets and admin_secrets.get("chain"):
+            chain = "\n".join(admin_secrets["chain"][::-1])
+
+        event.set_results({"password": password, "chain": chain})
 
     def on_tls_conf_set(
         self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
@@ -269,7 +272,11 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch.stop()
 
     def _is_tls_fully_configured(self) -> bool:
-        """Check if TLS fully configured meaning the 3 certs are present."""
+        """Check if TLS fully configured meaning the admin user configured & 3 certs present."""
+        # In case the initialisation of the admin user is not finished yet
+        if not self.app_peers_data.get("admin_user_initialized"):
+            return False
+
         # In case there is a new certificate requested by the client
         admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         if not admin_secrets or not admin_secrets.get("cert") or not admin_secrets.get("chain"):
@@ -316,14 +323,11 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch.write_file(f"{certs_dir}/root-ca.cert", secrets["ca"], override=False)
 
         if cert_type == CertType.APP_ADMIN:
-            logger.debug(f"\n\n\n------ \nWRITING the chain on disk for UNIT: {self.unit_id}\n-------")
             self.opensearch.write_file(
                 f"{certs_dir}/chain.pem",
                 "\n".join(secrets["chain"][::-1]),
                 override=override_admin,
             )
-            self.opensearch._run_cmd(f"ls -la {certs_dir}/")
-            logger.debug("WRITTEN \n\n ------ \n\n")
 
     def _initialize_admin_user(self):
         """Change default password of Admin user."""
@@ -372,12 +376,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             """Fetches the list of nodes through HTTP."""
             host: Optional[str] = None
 
-            if not self.unit.is_leader() and self.app_peers_data.get("leader_ip"):
-                host = self.app_peers_data.get("leader_ip")
-            else:
-                all_units_ips = units_ips(self, PEER).values()
-                if len(all_units_ips) > 0:
-                    host = next(iter(all_units_ips))  # get first value
+            all_units_ips = units_ips(self, PEER).values()
+            if len(all_units_ips) > 0:
+                host = next(iter(all_units_ips))  # get first value
 
             nodes: List[Node] = []
             if host is not None:

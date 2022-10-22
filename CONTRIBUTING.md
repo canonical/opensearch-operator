@@ -88,7 +88,7 @@ juju deploy tls-certificates-operator --channel edge --show-log --verbose
 juju config tls-certificates-operator generate-self-signed-certificates=true ca-common-name="CN_CA"
 
 # Deploy the opensearch charm
-juju deploy -n 1 ./opensearch_ubuntu-22.04-amd64.charm --show-log --verbose
+juju deploy -n 1 ./opensearch_ubuntu-22.04-amd64.charm --series jammy --show-log --verbose
 
 # Relate the opensearch charm with the TLS operator
 juju relate tls-certificates-operator opensearch

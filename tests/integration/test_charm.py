@@ -12,6 +12,7 @@ from tests.integration.helpers import APP_NAME, SERIES, UNIT_IDS
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.charm_tests
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -38,8 +39,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle()
 
 
+@pytest.mark.charm_tests
 @pytest.mark.abort_on_fail
 async def test_status(ops_test: OpsTest) -> None:
     """Verifies that the application and unit are active."""
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="blocked", timeout=1000)
     assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)

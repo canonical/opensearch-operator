@@ -4,9 +4,10 @@
 
 from typing import List
 
-from tests.integration.helpers import http_request
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
+
+from tests.integration.helpers import http_request
 
 
 async def check_security_index_initialised(ops_test: OpsTest, unit_ip: str) -> bool:
@@ -71,7 +72,6 @@ async def check_cluster_formation_successful(
         Whether TLS is well configured.
     """
     unit_names_set = set(unit_names)
-
     try:
         for attempt in Retrying(
             stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)

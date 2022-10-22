@@ -206,6 +206,8 @@ class OpenSearchDistribution(ABC):
                     verify=f"{self.paths.certs}/chain.pem",
                     headers={"Accept": "application/json", "Content-Type": "application/json"},
                 )
+
+                resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
             raise OpenSearchHttpError()
