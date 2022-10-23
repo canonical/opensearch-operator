@@ -51,7 +51,7 @@ charmcraft pack
 ### Deploy
 
 OpenSearch has a set of system requirements to correctly function, you can find the list [here](https://opensearch.org/docs/2.3/opensearch/install/important-settings/).
-To set those settings:
+To set those settings using cloudinit-userdata:
 ```bash
 # Create a cloudinit-userdata file, to set the required system settings of opensearch.
 cat <<EOF > cloudinit-userdata.yaml
@@ -63,6 +63,13 @@ cloudinit-userdata: |
     - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
 EOF
 ```
+or in a single machine:
+```
+sudo sysctl -w vm.max_map_count=262144
+sudo sysctl -w vm.swappiness=0
+sudo sysctl -w net.ipv4.tcp_retries2=5
+```
+
 
 Then create a new model and set the previously generated file in it.
 ```bash
