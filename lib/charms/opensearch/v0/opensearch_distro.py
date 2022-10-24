@@ -107,7 +107,7 @@ class OpenSearchDistribution(ABC):
 
     def __init__(self, charm, peer_relation_name):
         self.paths = self._build_paths()
-        self.__create_directories()
+        self._create_directories()
         self._set_env_variables()
 
         self.config = YamlConfigSetter(base_path=self.paths.conf)
@@ -258,7 +258,7 @@ class OpenSearchDistribution(ABC):
         """Build the Paths object."""
         pass
 
-    def __create_directories(self) -> None:
+    def _create_directories(self) -> None:
         """Create the directories defined in self.paths."""
         for dir_path in self.paths.__dict__.values():
             Path(dir_path).mkdir(parents=True, exist_ok=True)

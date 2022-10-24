@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Helpers for networking related operations."""
+import logging
 import socket
 from typing import Dict
 
@@ -17,6 +18,9 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_host_ip(charm: CharmBase, peer_relation_name: str) -> str:
@@ -54,13 +58,15 @@ def units_ips(charm: CharmBase, peer_relation_name: str) -> Dict[str, str]:
     return unit_ip_map
 
 
-def is_reachable(ip_address: str, port: int) -> bool:
+def is_reachable(host: str, port: int) -> bool:
     """Attempting a socket connection to a host/port."""
     s = socket.socket()
+    s.settimeout(5)
     try:
-        s.connect((ip_address, port))
+        s.connect((host, port))
         return True
-    except Exception:
+    except Exception as e:
+        logger.error(e)
         return False
     finally:
         s.close()
