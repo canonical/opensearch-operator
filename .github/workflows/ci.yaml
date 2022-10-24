@@ -38,6 +38,7 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
+          bootstrap-options: "--agent-version 2.9.29"
       - name: Run integration tests
         run: tox -e charm-integration
       - name: Dump logs
@@ -57,6 +58,7 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
+          bootstrap-options: "--agent-version 2.9.29"
       - name: Run integration tests
         run: |
           # set sysctl values in case the cloudinit-userdata not applied

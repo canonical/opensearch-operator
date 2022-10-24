@@ -31,11 +31,8 @@ async def get_admin_secrets(ops_test: OpsTest) -> Dict[str, str]:
     """
     # can retrieve from any unit running unit, so we pick the first
     unit_name = ops_test.model.applications[APP_NAME].units[0].name
-    unit_id = unit_name.split("/")[1]
 
-    action = await ops_test.model.units.get(f"{APP_NAME}/{unit_id}").run_action(
-        "get-admin-secrets"
-    )
+    action = await ops_test.model.units.get(unit_name).run_action("get-admin-secrets")
     action = await action.wait()
     return action.results
 

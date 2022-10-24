@@ -65,12 +65,12 @@ class ClusterTopology:
         return ["data"]
 
     @staticmethod
-    def remaining_nodes_for_bootstrap(nodes: List[Node]) -> bool:
+    def remaining_nodes_for_bootstrap(nodes: List[Node]) -> int:
         """Check if cluster is bootstrapped. 2 cm + 1 voting only nodes created."""
         nodes_count = ClusterTopology.nodes_count_by_role(nodes)
 
-        cms = 2 - nodes_count.get("cluster_manager", 0) == 2
-        voting_only = 1 - nodes_count.get("voting_only", 0) > 0
+        cms = 2 - nodes_count.get("cluster_manager", 0)
+        voting_only = 1 - nodes_count.get("voting_only", 0)
 
         return cms + voting_only
 

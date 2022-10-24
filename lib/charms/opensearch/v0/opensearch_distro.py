@@ -189,7 +189,7 @@ class OpenSearchDistribution(ABC):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        target_host = self.host if host is None else host
+        target_host = host if host else self.host
         if not is_reachable(target_host, self.port):
             logger.error(f"Host {target_host}:{self.port} not reachable.")
             raise OpenSearchHttpError()

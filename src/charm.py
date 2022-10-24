@@ -224,12 +224,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         """Return the password and cert chain for the admin user of the cluster."""
         password = self.secrets.get(Scope.APP, "admin_password")
 
-        chain = None
+        chain = ""
         admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         if admin_secrets and admin_secrets.get("chain"):
             chain = "\n".join(admin_secrets["chain"][::-1])
 
-        event.set_results({"password": password, "chain": chain})
+        event.set_results({"password": password if password else "", "chain": chain})
 
     def on_tls_conf_set(
         self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
@@ -377,7 +377,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             host: Optional[str] = None
 
             all_units_ips = units_ips(self, PEER).values()
-            if len(all_units_ips) > 0:
+            if all_units_ips:
                 host = next(iter(all_units_ips))  # get first value
 
             nodes: List[Node] = []
