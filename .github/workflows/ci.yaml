@@ -41,12 +41,6 @@ jobs:
           bootstrap-options: "--agent-version 2.9.29"
       - name: Run integration tests
         run: tox -e charm-integration
-      - name: Dump logs
-        uses: canonical/charm-logdump-action@main
-        if: failure()
-        with:
-          app: opensearch
-          model: testing
 
   integration-test-lxd-tls:
     name: Integration tests for TLS (lxd)
@@ -67,9 +61,3 @@ jobs:
           sudo sysctl -w net.ipv4.tcp_retries2=5
           
           tox -e tls-integration
-      - name: Dump logs
-        uses: canonical/charm-logdump-action@main
-        if: failure()
-        with:
-          app: opensearch
-          model: testing
