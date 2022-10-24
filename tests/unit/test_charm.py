@@ -58,7 +58,6 @@ class TestCharm(unittest.TestCase):
         self.charm.app_peers_data["security_index_initialised"] = "True"
         self.charm.on.leader_elected.emit()
         _initialize_admin_user.assert_not_called()
-        del self.charm.app_peers_data["security_index_initialised"]
 
         # admin_user_initialized
         del self.charm.app_peers_data["security_index_initialised"]
