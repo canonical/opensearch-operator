@@ -32,9 +32,9 @@ class TestHelperCluster(unittest.TestCase):
 
     def test_remaining_nodes_for_bootstrap(self):
         """Test if cluster is bootstrapped."""
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_0) == 2)
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_1) == 1)
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_2) == 0)
+        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_0) == 3)
+        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_1) == 2)
+        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_2) == 1)
         self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_3) == 0)
         self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_4) == 0)
 
