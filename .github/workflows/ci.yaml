@@ -31,6 +31,9 @@ jobs:
   integration-test-lxd-charm:
     name: Integration tests for the charm (lxd)
     runs-on: ubuntu-latest
+    needs:
+      - lint
+      - unit-test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -38,13 +41,14 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-          bootstrap-options: "--agent-version 2.9.29"
       - name: Run integration tests
         run: tox -e charm-integration
 
   integration-test-lxd-tls:
     name: Integration tests for TLS (lxd)
     runs-on: ubuntu-latest
+    needs:
+      - integration-test-lxd-charm
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -52,7 +56,6 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-          bootstrap-options: "--agent-version 2.9.29"
       - name: Run integration tests
         run: |
           # set sysctl values in case the cloudinit-userdata not applied
