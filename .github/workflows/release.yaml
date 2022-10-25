@@ -29,20 +29,15 @@ jobs:
       - name: Directory tests
         run: |
           pwd
-          ls -la 
-          ls -la opensearch-operator
+          ls -la
+          charmcraft pack
       - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@2.1.1
+        uses: canonical/charming-actions/channel@2.1.0
         id: channel
 
       - name: Upload charm to charmhub
-        uses: canonical/charming-actions/upload-charm@2.1.1
+        uses: canonical/charming-actions/upload-charm@2.1.0
         with:
           credentials: "${{ secrets.CHARMHUB_TOKEN }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           channel: "${{ steps.channel.outputs.name }}"
-      - name: Dump logs
-        uses: canonical/charm-logdump-action@main
-        if: failure()
-        with:
-          app: opensearch
