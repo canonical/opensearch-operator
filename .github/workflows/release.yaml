@@ -3,7 +3,7 @@ name: Release to latest/edge
 on:
   push:
     branches:
-      - main
+      - ci-logs-dumping
 
 jobs:
 #  lib-check:
@@ -12,8 +12,8 @@ jobs:
 #    steps:
 #      - name: Checkout
 #        uses: actions/checkout@v3
-  ci-tests:
-    uses: ./.github/workflows/ci.yaml
+#  ci-tests:
+#    uses: ./.github/workflows/ci.yaml
 
   release-to-charmhub:
     name: Release to CharmHub
@@ -26,9 +26,15 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Directory tests
+        run: |
+          pwd
+          ls -la 
+          ls -la opensearch-operator
       - name: Select charmhub channel
         uses: canonical/charming-actions/channel@2.1.1
         id: channel
+
       - name: Upload charm to charmhub
         uses: canonical/charming-actions/upload-charm@2.1.1
         with:
