@@ -8,6 +8,7 @@ It also exposes some properties and methods for interacting with an OpenSearch I
 """
 
 import logging
+import os
 import time
 
 import requests
@@ -142,6 +143,7 @@ class OpenSearchTarball(OpenSearchDistribution):
             raise OpenSearchInstallError()
 
         extract_tarball(tarball_path, self.paths.home)
+        self._create_systemd_unit()
 
     def start(self):
         """Start opensearch as a Daemon."""
@@ -153,20 +155,31 @@ class OpenSearchTarball(OpenSearchDistribution):
             self._setup_linux_perms()
             self._run_cmd(
                 "setpriv",
-                f"--clear-groups --reuid ubuntu --regid ubuntu -- {self.paths.home}/bin/opensearch --daemonize",
+                "--clear-groups --reuid ubuntu --regid ubuntu -- sudo systemctl start opensearch.service",
             )
         except OpenSearchCmdError:
             raise OpenSearchStartError()
 
-        if not self.is_started():
+        retries = 0
+        while not self.is_started() and retries < 3:
+            time.sleep(2)
+            retries += 1
+        else:
             raise OpenSearchStartError()
 
     def stop(self):
         """Stop opensearch."""
-        self._run_cmd("pkill -15 opensearch")
+        self._run_cmd(
+            "setpriv",
+            "--clear-groups --reuid ubuntu --regid ubuntu -- sudo systemctl stop opensearch.service",
+        )
 
-        while self.is_node_up():
+        retries = 0
+        while self.is_node_up() and retries < 3:
             time.sleep(2)
+            retries += 1
+        else:
+            raise OpenSearchStopError()
 
         """
         TODO:
@@ -199,3 +212,31 @@ class OpenSearchTarball(OpenSearchDistribution):
         """Create ubuntu:ubuntu user:group."""
         self._run_cmd("chown", f"-R ubuntu:ubuntu {self.paths.home}")
         self._run_cmd("chown", "-R ubuntu:ubuntu /mnt/opensearch")
+
+    def _create_systemd_unit(self):
+        """Create a systemd unit file to run OpenSearch as a service."""
+        env_variables = ""
+        for key, val in os.environ.items():
+            if key.startswith("OPENSEARCH"):
+                env_variables = f"{env_variables}Environment={key}={val}\n"
+
+        unit_content = f"""[Unit]
+        Description=OpenSearch Service
+
+        [Service]
+        User=ubuntu
+        Group=ubuntu
+        ExecStart={self.paths.home}/bin/opensearch
+        LimitNOFILE=65536:1048576
+        {env_variables}
+
+        [Install]
+        WantedBy=multi-user.target
+        """
+
+        self.write_file(
+            "/etc/systemd/system/opensearch.service",
+            "\n".join([line.strip() for line in unit_content.split("\n")]),
+        )
+
+        self._run_cmd("systemctl daemon-reload")

@@ -14,7 +14,7 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchHttpError,
     OpenSearchInstallError,
 )
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -35,7 +35,6 @@ class TestCharm(unittest.TestCase):
     def test_on_install(self, install):
         """Test the install event callback on success."""
         self.charm.on.install.emit()
-        self.assertTrue(isinstance(self.harness.model.unit.status, MaintenanceStatus))
         install.assert_called_once()
 
     @patch("opensearch.OpenSearchTarball.install")
@@ -48,6 +47,7 @@ class TestCharm(unittest.TestCase):
     @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
     def test_on_leader_elected(self, _initialize_admin_user):
         """Test on leader elected event."""
+        self.harness.set_leader(True)
         self.charm.on.leader_elected.emit()
         _initialize_admin_user.assert_called_once()
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))

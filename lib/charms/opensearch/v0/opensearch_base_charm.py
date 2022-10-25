@@ -15,6 +15,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
 from ops.charm import CharmBase
+from ops.model import ActiveStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -56,6 +57,11 @@ class OpenSearchBaseCharm(CharmBase):
     def on_tls_relation_broken(self):
         """Called after certificates relation broken."""
         pass
+
+    def clear_status(self, status_message: str):
+        """Resets the unit status if it was previously blocked/maintenance with message."""
+        if self.unit.status.message == status_message:
+            self.unit.status = ActiveStatus()
 
     @property
     def app_peers_data(self) -> Dict[str, str]:

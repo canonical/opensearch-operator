@@ -18,6 +18,8 @@ from helpers import create_x509_resources
 
 
 class TestHelperSecurity(unittest.TestCase):
+    """Test class for the security related utility functions."""
+
     def test_generate_password(self):
         """Test password generation."""
         password_1 = generate_password()

@@ -189,7 +189,12 @@ class OpenSearchDistribution(ABC):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        full_url = f"https://{self.host if host is None else host}:{self.port}/{endpoint}"
+        target_host = host if host else self.host
+        if not is_reachable(target_host, self.port):
+            logger.error(f"Host {target_host}:{self.port} not reachable.")
+            raise OpenSearchHttpError()
+
+        full_url = f"https://{target_host}:{self.port}/{endpoint}"
         try:
             with requests.Session() as s:
                 s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
@@ -201,6 +206,8 @@ class OpenSearchDistribution(ABC):
                     verify=f"{self.paths.certs}/chain.pem",
                     headers={"Accept": "application/json", "Content-Type": "application/json"},
                 )
+
+                resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
             raise OpenSearchHttpError()
@@ -291,25 +298,17 @@ class OpenSearchDistribution(ABC):
         """Checks the system requirements."""
         missing_requirements = []
 
-        file_descriptors = int(subprocess.getoutput("ulimit -n"))
-        logger.debug(f"file_descriptors: {file_descriptors}")
-        if file_descriptors < 65535:
-            missing_requirements.append("ulimit -n should be at least 65535")
-
         max_map_count = int(subprocess.getoutput("sysctl vm.max_map_count").split("=")[-1].strip())
-        logger.debug(f"max_map_count: {max_map_count}")
         if max_map_count < 262144:
             missing_requirements.append("vm.max_map_count should be at least 262144")
 
         swappiness = int(subprocess.getoutput("sysctl vm.swappiness").split("=")[-1].strip())
-        logger.debug(f"swappiness: {swappiness}")
         if swappiness > 0:
             missing_requirements.append("vm.swappiness should be 0")
 
         tcp_retries = int(
             subprocess.getoutput("sysctl net.ipv4.tcp_retries2").split("=")[-1].strip()
         )
-        logger.debug(f"tcp_retries: {tcp_retries}")
         if tcp_retries > 5:
             missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
 
