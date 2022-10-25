@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Select charmhub channel
@@ -35,3 +35,8 @@ jobs:
           credentials: "${{ secrets.CHARMHUB_TOKEN }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           channel: "${{ steps.channel.outputs.name }}"
+      - name: Dump logs
+        uses: canonical/charm-logdump-action@main
+        if: failure()
+        with:
+          app: opensearch
