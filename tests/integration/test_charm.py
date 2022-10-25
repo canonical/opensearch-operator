@@ -1,55 +1,47 @@
 #!/usr/bin/env python3
-# Copyright 2021 Canonical Ltd.
+# Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import logging
-import urllib.request
-from pathlib import Path
 
 import pytest
-import yaml
 from pytest_operator.plugin import OpsTest
+
+from tests.integration.helpers import APP_NAME, SERIES, UNIT_IDS
 
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
 
-
+@pytest.mark.charm_tests
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest):
-    """Build the charm-under-test and deploy it together with related charms.
-
-    Assert on the unit status before any relations/configurations take place.
-    """
-    # build and deploy charm from local source folder
-    charm = await ops_test.build_charm(".")
-    resources = {"httpbin-image": METADATA["resources"]["httpbin-image"]["upstream-source"]}
-    await ops_test.model.deploy(charm, resources=resources, application_name=APP_NAME)
-
-    # issuing dummy update_status just to trigger an event
-    await ops_test.model.set_config({"update-status-hook-interval": "10s"})
-
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
-        status="active",
-        raise_on_blocked=True,
-        timeout=1000,
+@pytest.mark.skip_if_deployed
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
+    """Build and deploy one unit of MongoDB."""
+    my_charm = await ops_test.build_charm(".")
+    await ops_test.model.set_config(
+        {
+            "logging-config": "<root>=INFO;unit=DEBUG",
+            "update-status-hook-interval": "1m",
+            "cloudinit-userdata": """postruncmd:
+                - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
+                - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
+                - [ 'sysctl', '-w', 'vm.swappiness=0' ]
+                - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]
+        """,
+        }
     )
-    assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"
 
-    # effectively disable the update status from firing
-    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
+    await ops_test.model.deploy(
+        my_charm,
+        num_units=len(UNIT_IDS),
+        series=SERIES,
+    )
+    await ops_test.model.wait_for_idle()
 
 
+@pytest.mark.charm_tests
 @pytest.mark.abort_on_fail
-async def test_application_is_up(ops_test: OpsTest):
-    status = await ops_test.model.get_status()  # noqa: F821
-    address = status["applications"][APP_NAME]["units"][f"{APP_NAME}/0"]["address"]
-
-    url = f"http://{address}"
-
-    logger.info("querying app address: %s", url)
-    response = urllib.request.urlopen(url, data=None, timeout=2.0)
-    assert response.code == 200
+async def test_status(ops_test: OpsTest) -> None:
+    """Verifies that the application and unit are active."""
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="blocked", timeout=1000)
+    assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)

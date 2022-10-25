@@ -1,9 +1,9 @@
 name: Tests
 on:
+  workflow_call:
   push:
     branches:
       - main
-  pull_request:
 
 jobs:
   lint:
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install dependencies
         run: python3 -m pip install tox
       - name: Run linters
@@ -22,32 +22,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install dependencies
         run: python -m pip install tox
       - name: Run tests
         run: tox -e unit
 
-  integration-test-microk8s:
-    name: Integration tests (microk8s)
-    needs:
-      - lint
-      - unit-test
+  integration-test-lxd-charm:
+    name: Integration tests for the charm (lxd)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:
-          provider: microk8s
+          provider: lxd
       - name: Run integration tests
-        # set a predictable model name so it can be consumed by charm-logdump-action
-        run: tox -e integration -- --model testing
-      - name: Dump logs
-        uses: canonical/charm-logdump-action@main
-        if: failure()
+        run: tox -e charm-integration
+
+  integration-test-lxd-tls:
+    name: Integration tests for TLS (lxd)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
         with:
-          # TEMPLATE-TODO: Replace the application name
-          app: operator-template
-          model: testing
+          provider: lxd
+      - name: Run integration tests
+        run: |
+          # set sysctl values in case the cloudinit-userdata not applied
+          sudo sysctl -w vm.max_map_count=262144
+          sudo sysctl -w vm.swappiness=0
+          sudo sysctl -w net.ipv4.tcp_retries2=5
+          
+          tox -e tls-integration

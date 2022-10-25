@@ -1,0 +1,37 @@
+name: Release to latest/edge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+#  lib-check:
+#    name: Check libraries
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+  ci-tests:
+    uses: ./.github/workflows/ci.yaml
+
+  release-to-charmhub:
+    name: Release to CharmHub
+    needs:
+      # - lib-check
+      - ci-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Select charmhub channel
+        uses: canonical/charming-actions/channel@2.1.1
+        id: channel
+      - name: Upload charm to charmhub
+        uses: canonical/charming-actions/upload-charm@2.1.1
+        with:
+          credentials: "${{ secrets.CHARMHUB_TOKEN }}"
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          channel: "${{ steps.channel.outputs.name }}"
