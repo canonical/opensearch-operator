@@ -11,7 +11,7 @@ from tests.integration.helpers import http_request
 
 
 @retry(
-    wait=wait_fixed(wait=3) + wait_random(1, 3),
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
 async def check_security_index_initialised(ops_test: OpsTest, unit_ip: str) -> bool:
@@ -34,7 +34,7 @@ async def check_security_index_initialised(ops_test: OpsTest, unit_ip: str) -> b
 
 
 @retry(
-    wait=wait_fixed(wait=3) + wait_random(1, 3),
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
 async def check_unit_tls_configured(ops_test: OpsTest, unit_ip: str, unit_name: str) -> bool:
@@ -53,7 +53,7 @@ async def check_unit_tls_configured(ops_test: OpsTest, unit_ip: str, unit_name: 
 
 
 @retry(
-    wait=wait_fixed(wait=3) + wait_random(1, 3),
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
 async def check_cluster_formation_successful(
