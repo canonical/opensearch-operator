@@ -5,16 +5,14 @@
 from typing import List
 
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, retry_if_not_result, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.helpers import http_request
 
 
 @retry(
-    wait=wait_exponential(multiplier=1, min=2, max=30),
+    wait=wait_fixed(wait=3) + wait_random(1, 3),
     stop=stop_after_attempt(15),
-    retry_error_callback=(lambda state: state.outcome.result()),
-    retry=(retry_if_not_result(lambda result: True if result else False) | retry_if_exception_type()),
 )
 async def check_security_index_initialised(ops_test: OpsTest, unit_ip: str) -> bool:
     """Returns whether the security index is initialised.
@@ -36,10 +34,8 @@ async def check_security_index_initialised(ops_test: OpsTest, unit_ip: str) -> b
 
 
 @retry(
-    wait=wait_exponential(multiplier=1, min=2, max=30),
+    wait=wait_fixed(wait=3) + wait_random(1, 3),
     stop=stop_after_attempt(15),
-    retry_error_callback=(lambda state: state.outcome.result()),
-    retry=(retry_if_not_result(lambda result: True if result else False) | retry_if_exception_type()),
 )
 async def check_unit_tls_configured(ops_test: OpsTest, unit_ip: str, unit_name: str) -> bool:
     """Returns whether TLS is enabled on the specific OpenSearch unit.
@@ -57,10 +53,8 @@ async def check_unit_tls_configured(ops_test: OpsTest, unit_ip: str, unit_name: 
 
 
 @retry(
-    wait=wait_exponential(multiplier=1, min=2, max=30),
+    wait=wait_fixed(wait=3) + wait_random(1, 3),
     stop=stop_after_attempt(15),
-    retry_error_callback=(lambda state: state.outcome.result()),
-    retry=(retry_if_not_result(lambda result: True if result else False) | retry_if_exception_type()),
 )
 async def check_cluster_formation_successful(
     ops_test: OpsTest, unit_ip: str, unit_names: List[str]
