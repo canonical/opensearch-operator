@@ -17,7 +17,7 @@ import base64
 import logging
 import re
 import socket
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_databag import Scope
@@ -199,14 +199,14 @@ class OpenSearchTLS(Object):
         if self.charm.model.get_relation(TLS_RELATION):
             self.certs.request_certificate_creation(certificate_signing_request=csr)
 
-    def _get_sans(self, cert_type: CertType) -> dict:
+    def _get_sans(self, cert_type: CertType) -> Dict[str, List[str]]:
         """Create a list of OID/IP/DNS names for an OpenSearch unit.
 
         Returns:
             A list representing the hostnames of the OpenSearch unit.
             or None if admin cert_type, because that cert is not tied to a specific host.
         """
-        sans = {"sans_oid": "1.2.3.4.5.5"}  # required for node discovery
+        sans = {"sans_oid": ["1.2.3.4.5.5"]}  # required for node discovery
         if cert_type == CertType.APP_ADMIN:
             return sans
 

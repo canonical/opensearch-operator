@@ -6,19 +6,26 @@ on:
       - main
 
 jobs:
-#  lib-check:
-#    name: Check libraries
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
+  lib-check:
+    name: Check libraries
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check libs
+        uses: canonical/charming-actions/check-libraries@2.1.1
+        with:
+          credentials: "${{ secrets.CHARMHUB_TOKEN }}" # FIXME: current token will expire in 2023-07-04
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
   ci-tests:
     uses: ./.github/workflows/ci.yaml
 
   release-to-charmhub:
     name: Release to CharmHub
     needs:
-      # - lib-check
+      - lib-check
       - ci-tests
     runs-on: ubuntu-22.04
     steps:

@@ -38,14 +38,14 @@ class TestOpenSearchTLS(unittest.TestCase):
         """Test the SANs returned depending on the cert type."""
         self.assertDictEqual(
             self.charm.tls._get_sans(CertType.APP_ADMIN),
-            {"sans_oid": "1.2.3.4.5.5"},
+            {"sans_oid": ["1.2.3.4.5.5"]},
         )
 
         for cert_type in [CertType.UNIT_HTTP, CertType.UNIT_TRANSPORT]:
             self.assertDictEqual(
                 self.charm.tls._get_sans(cert_type),
                 {
-                    "sans_oid": "1.2.3.4.5.5",
+                    "sans_oid": ["1.2.3.4.5.5"],
                     "sans_ip": ["1.1.1.1"],
                     "sans_dns": [self.charm.unit_name, "nebula"],
                 },
