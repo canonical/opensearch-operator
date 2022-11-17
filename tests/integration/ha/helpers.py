@@ -14,7 +14,7 @@ from tests.integration.helpers import http_request
     stop=stop_after_attempt(15),
 )
 async def get_shards_by_status(ops_test: OpsTest, unit_ip: str) -> Dict[str, List[str]]:
-    """Returns whether all shards are marked as STARTED.
+    """Returns all shard statuses for all indexes in the cluster.
 
     Args:
         ops_test: The ops test framework instance.

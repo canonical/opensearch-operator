@@ -57,7 +57,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 async def test_horizontal_scale_up(ops_test: OpsTest) -> None:
     """Tests that new added units to the cluster are discoverable."""
     # scale up
-    await ops_test.model.applications[APP_NAME].scale(scale_change=2)
+    await ops_test.model.applications[APP_NAME].add_unit(count=2)
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=5
     )
@@ -70,6 +70,6 @@ async def test_horizontal_scale_up(ops_test: OpsTest) -> None:
     assert await check_cluster_formation_successful(ops_test, leader_unit_ip, unit_names)
 
     shards_by_status = await get_shards_by_status(ops_test, leader_unit_ip)
-    assert not shards_by_status["INITIALIZING"]
-    assert not shards_by_status["RELOCATING"]
-    assert not shards_by_status["UNASSIGNED"]
+    assert not shards_by_status.get("INITIALIZING")
+    assert not shards_by_status.get("RELOCATING")
+    assert not shards_by_status.get("UNASSIGNED")

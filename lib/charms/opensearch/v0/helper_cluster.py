@@ -127,7 +127,7 @@ class ClusterState:
     def busy_shards_by_unit(
         opensearch: OpenSearchDistribution, host: str = None
     ) -> Dict[str, List[str]]:
-        """Get the busy shards of the indexes of the cluster."""
+        """Get the busy shards of each index in the cluster."""
         shards = ClusterState.shards(opensearch, host)
 
         busy_shards = {}

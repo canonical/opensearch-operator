@@ -307,7 +307,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         # defer the start until all the shards are "started"
         if self.app_peers_data.get("leader_ip"):
             try:
-                busy_shards = ClusterState.busy_shards_by_unit(self.opensearch)
+                busy_shards = ClusterState.busy_shards_by_unit(
+                    self.opensearch, self.app_peers_data.get("leader_ip")
+                )
                 if busy_shards:
                     message = WaitingForBusyShards.format(
                         " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
@@ -315,6 +317,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                     self.unit.status = BlockedStatus(message)
                     return False
             except OpenSearchHttpError:
+                # this means that the leader is not started yet, so it's a new cluster,
+                # we can safely start the service
                 pass
 
         try:

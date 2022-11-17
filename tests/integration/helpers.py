@@ -170,8 +170,6 @@ async def check_cluster_formation_successful(
     Returns:
         Whether The cluster formation is successful.
     """
-    unit_names_set = set(unit_names)
-
     response = await http_request(ops_test, f"https://{unit_ip}:9200/_nodes", "GET")
     if "_nodes" not in response or "nodes" not in response:
         return False
@@ -180,11 +178,5 @@ async def check_cluster_formation_successful(
     if successful_nodes < len(unit_names):
         return False
 
-    for node_id, node_desc in response["nodes"].items():
-        node_name = node_desc["name"]
-        if node_name not in unit_names_set:
-            return False
-
-        unit_names_set.remove(node_name)
-
-    return len(unit_names_set) == 0
+    registered_nodes = [node_desc["name"] for node_desc in response["nodes"].values()]
+    return set(unit_names) == set(registered_nodes)
