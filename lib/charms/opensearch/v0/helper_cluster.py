@@ -1,9 +1,12 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Utility class for getting cluster configuration info and suggestions."""
+"""Utility class for getting cluster info, configuration info and suggestions."""
 
 from typing import Dict, List
+
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 # The unique Charmhub library identifier, never change it
 LIBID = "80c3b9eff6df437bb4175b1666b73f91"
@@ -105,3 +108,38 @@ class ClusterTopology:
                 result[role] += 1
 
         return result
+
+
+class ClusterState:
+    """Class for getting cluster state info."""
+
+    @staticmethod
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        reraise=True,
+    )
+    def shards(opensearch: OpenSearchDistribution, host: str = None) -> List[Dict[str, str]]:
+        """Get all shards of all indexes in the cluster."""
+        return opensearch.request("GET", "/_cat/shards", host=host)
+
+    @staticmethod
+    def busy_shards_by_unit(
+        opensearch: OpenSearchDistribution, host: str = None
+    ) -> Dict[str, List[str]]:
+        """Get the busy shards of the indexes of the cluster."""
+        shards = ClusterState.shards(opensearch, host)
+
+        busy_shards = {}
+        for shard in shards:
+            state = shard.get("state")
+            if state not in ["INITIALIZING", "RELOCATING"]:
+                continue
+
+            unit_name = shard["node"]
+            if unit_name not in busy_shards:
+                busy_shards[unit_name] = []
+
+            busy_shards[unit_name].append(shard["index"])
+
+        return busy_shards

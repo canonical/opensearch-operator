@@ -16,10 +16,11 @@ from charms.opensearch.v0.constants_charm import (
     SecurityIndexInitProgress,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
+    WaitingForBusyShards,
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
+from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology, Node
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.helper_security import (
@@ -81,6 +82,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle leader election event."""
+        self.app_peers_data["leader_ip"] = self.unit_ip
+
         if self.app_peers_data.get("security_index_initialised"):
             return
 
@@ -144,7 +147,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
 
         # in the case the cluster was bootstrapped with multiple units at the same time
-        # and cert not ready yet
+        # and the certificates have not been generated yet
         if not current_secrets.get("cert") or not current_secrets.get("chain"):
             event.defer()
             return
@@ -300,6 +303,20 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
             return False
 
+        # check if there are shards that are "busy" or "relocating"
+        # defer the start until all the shards are "started"
+        if self.app_peers_data.get("leader_ip"):
+            try:
+                busy_shards = ClusterState.busy_shards_by_unit(self.opensearch)
+                if busy_shards:
+                    message = WaitingForBusyShards.format(
+                        " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
+                    )
+                    self.unit.status = BlockedStatus(message)
+                    return False
+            except OpenSearchHttpError:
+                pass
+
         try:
             self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
@@ -420,10 +437,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         remaining_nodes_for_bootstrap = ClusterTopology.remaining_nodes_for_bootstrap(nodes)
         if remaining_nodes_for_bootstrap == 0:
             # this condition means that we just added the last required CM node
-            # the cluster is bootstrapped now, we need to clean up the conf
-            # TODO: check if following requires reboot of node or not:
-            #  self.opensearch_config.cleanup_conf_if_bootstrapped()
-            pass
+            # the cluster is bootstrapped now, we need to clean up the conf on the CM nodes
+            self.opensearch_config.cleanup_conf_if_bootstrapped()
 
 
 if __name__ == "__main__":

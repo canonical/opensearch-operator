@@ -10,6 +10,7 @@ import requests
 import yaml
 from ops.model import StatusBase
 from pytest_operator.plugin import OpsTest
+from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
@@ -18,6 +19,17 @@ SERIES = "jammy"
 UNIT_IDS = [0, 1, 2]
 
 TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
+
+MODEL_CONFIG = {
+    "logging-config": "<root>=INFO;unit=DEBUG",
+    "update-status-hook-interval": "1m",
+    "cloudinit-userdata": """postruncmd:
+        - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
+        - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
+        - [ 'sysctl', '-w', 'vm.swappiness=0' ]
+        - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]
+    """,
+}
 
 
 logger = logging.getLogger(__name__)
@@ -139,3 +151,40 @@ async def http_request(
             return resp.status_code
 
         return resp.json()
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
+async def check_cluster_formation_successful(
+    ops_test: OpsTest, unit_ip: str, unit_names: List[str]
+) -> bool:
+    """Returns whether the cluster formation was successful and all nodes successfully joined.
+
+    Args:
+        ops_test: The ops test framework instance.
+        unit_ip: The ip of the unit of the OpenSearch unit.
+        unit_names: The list of unit names in the cluster.
+
+    Returns:
+        Whether The cluster formation is successful.
+    """
+    unit_names_set = set(unit_names)
+
+    response = await http_request(ops_test, f"https://{unit_ip}:9200/_nodes", "GET")
+    if "_nodes" not in response or "nodes" not in response:
+        return False
+
+    successful_nodes = response["_nodes"]["successful"]
+    if successful_nodes < len(unit_names):
+        return False
+
+    for node_id, node_desc in response["nodes"].items():
+        node_name = node_desc["name"]
+        if node_name not in unit_names_set:
+            return False
+
+        unit_names_set.remove(node_name)
+
+    return len(unit_names_set) == 0
