@@ -240,22 +240,26 @@ class YamlConfigSetter:
         if source is None:
             return
 
-        leaf_level = self.__leaf_level(source, node_keys)
-        leaf_key = node_keys.pop(0)
+        try:
+            leaf_level = self.__leaf_level(source, node_keys)
+            leaf_key = node_keys.pop(0)
 
-        if leaf_key in leaf_level and (
-            isinstance(leaf_level[leaf_key], Mapping) or not leaf_key.startswith("[")
-        ):
-            del leaf_level[leaf_key]
-            return
+            if leaf_key in leaf_level and (
+                isinstance(leaf_level[leaf_key], Mapping) or not leaf_key.startswith("[")
+            ):
+                del leaf_level[leaf_key]
+                return
 
-        if leaf_key.startswith("{"):
-            leaf_level.remove(leaf_key[1:-1])
-            return
+            if leaf_key.startswith("{"):
+                leaf_level.remove(leaf_key[1:-1])
+                return
 
-        # list
-        target_index = self.__target_array_index(leaf_level, leaf_key)
-        del leaf_level[target_index]
+            # list
+            target_index = self.__target_array_index(leaf_level, leaf_key)
+            del leaf_level[target_index]
+        except AttributeError:
+            # element not found
+            pass
 
     def __leaf_level(self, current, node_names: List[str]):
         if len(node_names) == 1:
