@@ -13,7 +13,7 @@ from tests.integration.helpers import http_request
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def get_shards_by_status(ops_test: OpsTest, unit_ip: str) -> Dict[str, List[str]]:
+async def get_shards_by_state(ops_test: OpsTest, unit_ip: str) -> Dict[str, List[str]]:
     """Returns all shard statuses for all indexes in the cluster.
 
     Args:
@@ -31,10 +31,10 @@ async def get_shards_by_status(ops_test: OpsTest, unit_ip: str) -> Dict[str, Lis
 
     indexes_by_status = {}
     for shard in response:
-        status = shard["status"]
-        if status not in indexes_by_status:
-            indexes_by_status[status] = []
+        state = shard["state"]
+        if state not in indexes_by_status:
+            indexes_by_status[state] = []
 
-        indexes_by_status[status].append(f"{shard['node']}/{shard['index']}")
+        indexes_by_status[state].append(f"{shard['node']}/{shard['index']}")
 
     return indexes_by_status

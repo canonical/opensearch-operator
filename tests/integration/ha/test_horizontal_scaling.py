@@ -7,7 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.helpers import get_shards_by_status
+from tests.integration.ha.helpers import get_shards_by_state
 from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
@@ -69,7 +69,7 @@ async def test_horizontal_scale_up(ops_test: OpsTest) -> None:
 
     assert await check_cluster_formation_successful(ops_test, leader_unit_ip, unit_names)
 
-    shards_by_status = await get_shards_by_status(ops_test, leader_unit_ip)
+    shards_by_status = await get_shards_by_state(ops_test, leader_unit_ip)
     assert not shards_by_status.get("INITIALIZING")
     assert not shards_by_status.get("RELOCATING")
     assert not shards_by_status.get("UNASSIGNED")
