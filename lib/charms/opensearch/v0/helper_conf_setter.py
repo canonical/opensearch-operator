@@ -245,7 +245,7 @@ class YamlConfigSetter:
             leaf_key = node_keys.pop(0)
 
             # remove simple type elements and entire collections by key
-            if leaf_key in leaf_container and not leaf_key[0] not in {"{", "["}:
+            if leaf_key in leaf_container and leaf_key[0] not in {"{", "["}:
                 del leaf_container[leaf_key]
                 return
 
