@@ -317,8 +317,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                     self.unit.status = BlockedStatus(message)
                     return False
             except OpenSearchHttpError:
-                # this means that the leader is not started yet, so it's a new cluster,
-                # we can safely start the service
+                # this means that the leader unit is not reachable (not started yet),
+                # meaning that it's a new cluster, so we can safely start the OpenSearch service
                 pass
 
         try:
