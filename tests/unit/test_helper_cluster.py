@@ -30,14 +30,6 @@ class TestHelperCluster(unittest.TestCase):
         )
         self.assertCountEqual(self.cluster_topology.suggest_roles(self.nodes_3), ["data"])
 
-    def test_remaining_nodes_for_bootstrap(self):
-        """Test if cluster is bootstrapped."""
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_0) == 3)
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_1) == 2)
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_2) == 1)
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_3) == 0)
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_4) == 0)
-
     def test_get_cluster_managers_ips(self):
         """Test correct retrieval of cm ips from a list of nodes."""
         self.assertCountEqual(

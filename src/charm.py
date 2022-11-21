@@ -119,9 +119,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         # Set the configuration of the node
         self._set_node_conf(nodes)
 
-        # Remove some config entries when cluster bootstrapped
-        self._cleanup_conf_if_bootstrapped(nodes)
-
         # start opensearch
         if not self._start_opensearch():
             event.defer()
@@ -398,7 +395,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
-        roles = ClusterTopology.suggest_roles(nodes)
+        roles = ClusterTopology.suggest_roles(nodes, self.app.planned_units)
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
@@ -414,16 +411,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             cm_names,
             cm_ips,
         )
-
-    def _cleanup_conf_if_bootstrapped(self, nodes: List[Node]) -> None:
-        """Remove some conf props when cluster is bootstrapped."""
-        remaining_nodes_for_bootstrap = ClusterTopology.remaining_nodes_for_bootstrap(nodes)
-        if remaining_nodes_for_bootstrap == 0:
-            # this condition means that we just added the last required CM node
-            # the cluster is bootstrapped now, we need to clean up the conf
-            # TODO: check if following requires reboot of node or not:
-            #  self.opensearch_config.cleanup_conf_if_bootstrapped()
-            pass
 
 
 if __name__ == "__main__":

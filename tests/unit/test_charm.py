@@ -70,7 +70,6 @@ class TestCharm(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_client_auth")
     @patch("charm.OpenSearchOperatorCharm._get_nodes")
     @patch("charm.OpenSearchOperatorCharm._set_node_conf")
-    @patch("charm.OpenSearchOperatorCharm._cleanup_conf_if_bootstrapped")
     @patch("charm.OpenSearchOperatorCharm._start_opensearch")
     @patch("charm.OpenSearchOperatorCharm._initialize_security_index")
     @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
@@ -79,7 +78,6 @@ class TestCharm(unittest.TestCase):
         _initialize_admin_user,
         _initialize_security_index,
         _start_opensearch,
-        _cleanup_conf_if_bootstrapped,
         _set_node_conf,
         _get_nodes,
         set_client_auth,
@@ -112,7 +110,6 @@ class TestCharm(unittest.TestCase):
         self.charm.on.start.emit()
         _get_nodes.assert_called()
         _set_node_conf.assert_called_once()
-        _cleanup_conf_if_bootstrapped.assert_called_once()
         _initialize_security_index.assert_not_called()
 
         # initialisation of the security index

@@ -40,39 +40,30 @@ class ClusterTopology:
     """
 
     @staticmethod
-    def suggest_roles(nodes: List[Node]) -> List[str]:
-        """Get roles for a Node, for now, we only focus on the 3 most important roles.
+    def suggest_roles(nodes: List[Node], planned_units: int) -> List[str]:
+        """Get roles for a Node.
 
-        We will do more interesting things with the nodes list, to find the best role.
+        For now, we don't allow to end-user control roles.
         The logic here is:
-            - the first node should be a CM-eligible node, but will add "data" to it
-            - the second node should be a data and voting-only node, so that:
-                - a 2 nodes cluster can function
-                - when a 2CM-eligible node joins, the CM voting can happen immediately
-            - the 3rd one should be a CM-eligible, but will add "data" to it
-            - the +4 nodes should be data etc.
+            — The first nine nodes should be CM-eligible.
+            — All others should not participate in the voting to speedup voting time.
         """
         nodes_by_roles = ClusterTopology.nodes_count_by_role(nodes)
-        if nodes_by_roles.get("cluster_manager", 0) == 0:
-            return ["cluster_manager", "data"]
+        max_managers = planned_units
+        max_votiers = planned_units
+        if planned_units % 2 == 0:
+            max_managers -= 1
+            max_votiers -= 1
+        if max_managers > 3:
+            max_managers = max_managers // 2 + 1
 
-        if nodes_by_roles.get("voting_only", 0) == 0:
-            return ["voting_only", "data"]
+        if nodes_by_roles.get("cluster_manager", 0) + nodes_by_roles.get("voting_only", 0) >= max_votiers:
+            return ["data", "ingest", "ml", "coordinating_only"]
 
-        if nodes_by_roles["cluster_manager"] == 1:
-            return ["cluster_manager", "data"]
+        if nodes_by_roles.get("cluster_manager", 0) >= max_managers:
+            return ["voting_only", "data", "ingest", "ml", "coordinating_only"]
 
-        return ["data"]
-
-    @staticmethod
-    def remaining_nodes_for_bootstrap(nodes: List[Node]) -> int:
-        """Check if cluster is bootstrapped. 2 cm + 1 voting only nodes created."""
-        nodes_count = ClusterTopology.nodes_count_by_role(nodes)
-
-        cms = 2 - nodes_count.get("cluster_manager", 0)
-        voting_only = 1 - nodes_count.get("voting_only", 0)
-
-        return cms + voting_only
+        return ["cluster_manager", "data", "ingest", "ml", "coordinating_only"]
 
     @staticmethod
     def get_cluster_managers_ips(nodes: List[Node]) -> List[str]:
