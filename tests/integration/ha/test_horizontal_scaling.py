@@ -32,13 +32,13 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     await ops_test.model.deploy(
         my_charm,
-        num_units=len(UNIT_IDS),
+        num_units=1,
         series=SERIES,
     )
     await ops_test.model.wait_for_idle()
 
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="blocked", timeout=1000)
-    assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
+    assert len(ops_test.model.applications[APP_NAME].units) == 1
 
     # Deploy TLS Certificates operator.
     config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
@@ -59,10 +59,10 @@ async def test_horizontal_scale_up(ops_test: OpsTest) -> None:
     # scale up
     await ops_test.model.applications[APP_NAME].add_unit(count=2)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=5
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
     )
     num_units = len(ops_test.model.applications[APP_NAME].units)
-    assert num_units == 5
+    assert num_units == 3
 
     unit_names = get_application_unit_names(ops_test)
     leader_unit_ip = await get_leader_unit_ip(ops_test)

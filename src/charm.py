@@ -52,7 +52,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import BlockedStatus, MaintenanceStatus
 
 from opensearch import OpenSearchTarball
 
@@ -81,14 +81,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.unit.status = MaintenanceStatus(InstallProgress)
         try:
             self.opensearch.install()
-            self.unit.status = ActiveStatus()
+            self.clear_status(InstallProgress)
         except OpenSearchInstallError:
             self.unit.status = BlockedStatus(InstallError)
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle leader election event."""
-        self.app_peers_data["leader_ip"] = self.unit_ip
-
         if self.app_peers_data.get("security_index_initialised"):
             return
 
@@ -96,7 +94,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = MaintenanceStatus(AdminUserInitProgress)
             self._initialize_admin_user()
             self.app_peers_data["admin_user_initialized"] = "True"
-            self.unit.status = ActiveStatus()
+            self.clear_status(AdminUserInitProgress)
 
     def _on_start(self, event: StartEvent):
         """Triggered when on start. Set the right node role."""
@@ -136,10 +134,13 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
 
         # initialize the security index if the admin certs are written on disk
-        if self.unit.is_leader() and self.app_peers_data.get("security_index_initialised") is None:
-            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-            self._initialize_security_index(admin_secrets)
-            self.app_peers_data["security_index_initialised"] = "True"
+        if self.unit.is_leader():
+            if self.app_peers_data.get("security_index_initialised") is None:
+                admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+                self._initialize_security_index(admin_secrets)
+                self.app_peers_data["security_index_initialised"] = "True"
+
+            self.app_peers_data["leader_ip"] = self.unit_ip
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """New node joining the cluster."""
@@ -309,7 +310,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         # check if there are shards that are "busy" or "relocating"
         # defer the start until all the shards are "started"
-        if self.app_peers_data.get("leader_ip"):
+        if not self.unit.is_leader() and self.app_peers_data.get("leader_ip"):
             try:
                 busy_shards = ClusterState.busy_shards_by_unit(
                     self.opensearch, self.app_peers_data.get("leader_ip")
@@ -330,7 +331,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         try:
             self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
-            self.unit.status = ActiveStatus()
+            self.clear_status(WaitingToStart)
 
             return True
         except OpenSearchStartError:
@@ -404,7 +405,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch.run_script(
             "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
         )
-        self.unit.status = ActiveStatus()
+        self.clear_status(SecurityIndexInitProgress)
 
     def _get_nodes(self) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""

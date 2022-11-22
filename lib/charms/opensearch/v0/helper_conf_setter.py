@@ -259,6 +259,7 @@ class YamlConfigSetter:
             del leaf_container[target_index]
         except AttributeError:
             # element not found
+            logger.debug("Target element not found.")
             pass
 
     def __leaf_container(self, current, node_names: List[str]):
