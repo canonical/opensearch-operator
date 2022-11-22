@@ -6,6 +6,7 @@
 """Charmed Machine Operator for OpenSearch."""
 import logging
 from datetime import datetime
+from os.path import exists
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import (
@@ -28,7 +29,11 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     to_pkcs8,
 )
-from charms.opensearch.v0.opensearch_base_charm import PEER, OpenSearchBaseCharm
+from charms.opensearch.v0.opensearch_base_charm import (
+    PEER,
+    OpenSearchBaseCharm,
+    StatusCheckPattern,
+)
 from charms.opensearch.v0.opensearch_distro import (
     OpenSearchHttpError,
     OpenSearchInstallError,
@@ -280,7 +285,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if not self.app_peers_data.get("admin_user_initialized"):
             return False
 
-        # In case there is a new certificate requested by the client
         admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         if not admin_secrets or not admin_secrets.get("cert") or not admin_secrets.get("chain"):
             return False
@@ -293,7 +297,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if not unit_http_secrets or not unit_http_secrets.get("cert"):
             return False
 
-        return True
+        return self._are_all_tls_resources_stored()
 
     def _start_opensearch(self) -> bool:
         """Start OpenSearch if all resources configured."""
@@ -316,6 +320,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                     )
                     self.unit.status = BlockedStatus(message)
                     return False
+
+                self.clear_status(WaitingForBusyShards, pattern=StatusCheckPattern.Interpolated)
             except OpenSearchHttpError:
                 # this means that the leader unit is not reachable (not started yet),
                 # meaning that it's a new cluster, so we can safely start the OpenSearch service
@@ -349,6 +355,16 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 "\n".join(secrets["chain"][::-1]),
                 override=override_admin,
             )
+
+    def _are_all_tls_resources_stored(self):
+        """Check if all TLS resources are stored on disk."""
+        certs_dir = self.opensearch.paths.certs
+        for cert_type in [CertType.APP_ADMIN, CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]:
+            for extension in ["key", "cert"]:
+                if not exists(f"{certs_dir}/{cert_type.val}.{extension}"):
+                    return False
+
+        return exists(f"{certs_dir}/chain.pem") and exists(f"{certs_dir}/root-ca.cert")
 
     def _initialize_admin_user(self):
         """Change default password of Admin user."""

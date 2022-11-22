@@ -3,10 +3,12 @@
 
 """Base class for the OpenSearch Operators."""
 import logging
+import re
 from typing import Dict, Type
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_databag import Scope, SecretStore
+from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.helper_networking import get_host_ip
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -34,6 +36,16 @@ PEER = "opensearch-peers"
 logger = logging.getLogger(__name__)
 
 
+class StatusCheckPattern(BaseStrEnum):
+    """Enum for types of status comparison."""
+
+    Equal = "equal"
+    Start = "start"
+    End = "end"
+    Contain = "contain"
+    Interpolated = "interpolated"
+
+
 class OpenSearchBaseCharm(CharmBase):
     """Base class for OpenSearch charms."""
 
@@ -58,9 +70,25 @@ class OpenSearchBaseCharm(CharmBase):
         """Called after certificates relation broken."""
         pass
 
-    def clear_status(self, status_message: str):
+    def clear_status(
+        self, status_message: str, pattern: StatusCheckPattern = StatusCheckPattern.Equal
+    ):
         """Resets the unit status if it was previously blocked/maintenance with message."""
-        if self.unit.status.message == status_message:
+        condition: bool
+        if pattern == StatusCheckPattern.Equal:
+            condition = self.unit.status.message == status_message
+        elif pattern == StatusCheckPattern.Start:
+            condition = self.unit.status.message.startswith(status_message)
+        elif pattern == StatusCheckPattern.End:
+            condition = self.unit.status.message.endswith(status_message)
+        elif pattern == StatusCheckPattern.Interpolated:
+            condition = (
+                re.fullmatch(status_message.replace("{}", "(?s:.*?)"), status_message) is not None
+            )
+        else:
+            condition = status_message in self.unit.status.message
+
+        if condition:
             self.unit.status = ActiveStatus()
 
     @property
