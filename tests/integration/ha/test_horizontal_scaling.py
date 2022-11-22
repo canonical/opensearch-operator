@@ -12,7 +12,6 @@ from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
-    UNIT_IDS,
     check_cluster_formation_successful,
     get_application_unit_names,
     get_leader_unit_ip,
