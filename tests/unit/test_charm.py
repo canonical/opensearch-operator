@@ -14,12 +14,14 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchHttpError,
     OpenSearchInstallError,
 )
+from helpers import patch_network_get
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
 
 
+@patch_network_get("1.1.1.1")
 class TestCharm(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
     def setUp(self, _create_directories):
@@ -56,6 +58,7 @@ class TestCharm(unittest.TestCase):
     def test_on_leader_elected_index_initialised(self, _initialize_admin_user):
         # security_index_initialised
         self.charm.app_peers_data["security_index_initialised"] = "True"
+        self.harness.set_leader(True)
         self.charm.on.leader_elected.emit()
         _initialize_admin_user.assert_not_called()
 
