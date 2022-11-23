@@ -308,8 +308,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
             return False
 
-        # check if there are shards that are "busy" or "relocating"
-        # defer the start until all the shards are "started"
+        # When a new unit joins, replica shards are automatically added to it. In order to prevent
+        # overloading the cluster, units must be started one at a time. So we defer starting
+        # opensearch until all shards in other units are in a "started" or "unassigned" state.
         if not self.unit.is_leader() and self.app_peers_data.get("leader_ip"):
             try:
                 busy_shards = ClusterState.busy_shards_by_unit(
