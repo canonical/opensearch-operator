@@ -22,32 +22,25 @@ class TestHelperCluster(unittest.TestCase):
 
         self.opensearch = self.charm.opensearch
 
+        self.base_roles = ["data", "ingest", "ml", "coordinating_only"]
+        self.voting_only_roles = self.base_roles + ["voting_only"]
+        self.cm_roles = self.base_roles + ["cluster_manager"]
+
         self.nodes_0 = []
-        self.nodes_1 = [Node("cm1", ["cluster_manager", "data"], "2.2.2.2")]
-        self.nodes_2 = self.nodes_1 + [Node("data1", ["voting_only", "data"], "2.2.2.3")]
-        self.nodes_3 = self.nodes_2 + [Node("cm2", ["cluster_manager", "data"], "2.2.2.4")]
-        self.nodes_4 = self.nodes_3 + [Node("data2", ["data"], "2.2.2.5")]
+        self.nodes_1 = [Node("cm1", self.cm_roles, "2.2.2.2")]
+        self.nodes_2 = self.nodes_1 + [Node("voting1", self.voting_only_roles, "2.2.2.3")]
+        self.nodes_3 = self.nodes_2 + [Node("cm2", self.cm_roles, "2.2.2.4")]
+        self.nodes_4 = self.nodes_3 + [Node("data2", self.base_roles, "2.2.2.5")]
+        self.nodes_5 = self.nodes_4 + [Node("cm3", self.cm_roles, "2.2.2.6")]
 
     def test_topology_roles_suggestion(self):
         """Test the suggestion of roles for a new node."""
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles(self.nodes_0), ["cluster_manager", "data"]
-        )
-        self.assertCountEqual(ClusterTopology.suggest_roles(self.nodes_1), ["voting_only", "data"])
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles(self.nodes_2), ["cluster_manager", "data"]
-        )
-        self.assertCountEqual(ClusterTopology.suggest_roles(self.nodes_3), ["data"])
+        self.assertCountEqual(ClusterTopology.suggest_roles(self.nodes_0, 2), self.cm_roles)
+        self.assertCountEqual(ClusterTopology.suggest_roles(self.nodes_1, 2), self.base_roles)
+        self.assertCountEqual(ClusterTopology.suggest_roles(self.nodes_2, 3), self.cm_roles)
+        self.assertCountEqual(ClusterTopology.suggest_roles(self.nodes_3, 4), self.base_roles)
 
-    def test_remaining_nodes_for_bootstrap(self):
-        """Test if cluster is bootstrapped."""
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_0) == 3)
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_1) == 2)
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_2) == 1)
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_3) == 0)
-        self.assertTrue(self.cluster_topology.remaining_nodes_for_bootstrap(self.nodes_4) == 0)
-
-    def test_get_cluster_managers_ips(self):
+    def test_topology_get_cluster_managers_ips(self):
         """Test correct retrieval of cm ips from a list of nodes."""
         self.assertCountEqual(
             ClusterTopology.get_cluster_managers_ips(self.nodes_4), ["2.2.2.2", "2.2.2.4"]
@@ -67,6 +60,9 @@ class TestHelperCluster(unittest.TestCase):
                 "cluster_manager": 2,
                 "voting_only": 1,
                 "data": 4,
+                "ml": 4,
+                "coordinating_only": 4,
+                "ingest": 4,
             },
         )
 

@@ -29,18 +29,7 @@ class Node:
 
 
 class ClusterTopology:
-    """Class for creating the best possible configuration for a Node.
-
-    The current logic is to try to get to the config:
-        - 2 dedicated cluster manager nodes
-        - 1 voting only data node
-    And create them with the following order:
-        - cm0
-        - data, voting only
-        - cm1
-        - data
-        - data
-    """
+    """Class for creating the best possible configuration for a Node."""
 
     @staticmethod
     def suggest_roles(nodes: List[Node], planned_units: int) -> List[str]:
@@ -48,25 +37,32 @@ class ClusterTopology:
 
         For now, we don't allow to end-user control roles.
         The logic here is:
-            — The first nine nodes should be CM-eligible.
+            — Half of the nodes should be CM-eligible.
             — All others should not participate in the voting to speedup voting time.
         """
         nodes_by_roles = ClusterTopology.nodes_count_by_role(nodes)
+
         max_managers = planned_units
-        max_votiers = planned_units
+        max_voters = planned_units
         if planned_units % 2 == 0:
             max_managers -= 1
-            max_votiers -= 1
+            max_voters -= 1
+
         if max_managers > 3:
             max_managers = max_managers // 2 + 1
 
-        if nodes_by_roles.get("cluster_manager", 0) + nodes_by_roles.get("voting_only", 0) >= max_votiers:
-            return ["data", "ingest", "ml", "coordinating_only"]
+        base_roles = ["data", "ingest", "ml", "coordinating_only"]
+
+        if (
+            nodes_by_roles.get("cluster_manager", 0) + nodes_by_roles.get("voting_only", 0)
+            >= max_voters
+        ):
+            return base_roles
 
         if nodes_by_roles.get("cluster_manager", 0) >= max_managers:
-            return ["voting_only", "data", "ingest", "ml", "coordinating_only"]
+            return base_roles + ["voting_only"]
 
-        return ["cluster_manager", "data", "ingest", "ml", "coordinating_only"]
+        return base_roles + ["cluster_manager"]
 
     @staticmethod
     def get_cluster_managers_ips(nodes: List[Node]) -> List[str]:
