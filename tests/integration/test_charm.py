@@ -7,7 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import APP_NAME, SERIES, UNIT_IDS
+from tests.integration.helpers import APP_NAME, MODEL_CONFIG, SERIES, UNIT_IDS
 
 logger = logging.getLogger(__name__)
 
@@ -18,18 +18,7 @@ logger = logging.getLogger(__name__)
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of MongoDB."""
     my_charm = await ops_test.build_charm(".")
-    await ops_test.model.set_config(
-        {
-            "logging-config": "<root>=INFO;unit=DEBUG",
-            "update-status-hook-interval": "1m",
-            "cloudinit-userdata": """postruncmd:
-                - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
-                - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
-                - [ 'sysctl', '-w', 'vm.swappiness=0' ]
-                - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]
-        """,
-        }
-    )
+    await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
         my_charm,

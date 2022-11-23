@@ -6,6 +6,7 @@
 """Charmed Machine Operator for OpenSearch."""
 import logging
 from datetime import datetime
+from os.path import exists
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import (
@@ -16,10 +17,11 @@ from charms.opensearch.v0.constants_charm import (
     SecurityIndexInitProgress,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
+    WaitingForBusyShards,
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
+from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology, Node
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.helper_security import (
@@ -27,7 +29,11 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     to_pkcs8,
 )
-from charms.opensearch.v0.opensearch_base_charm import PEER, OpenSearchBaseCharm
+from charms.opensearch.v0.opensearch_base_charm import (
+    PEER,
+    OpenSearchBaseCharm,
+    StatusCheckPattern,
+)
 from charms.opensearch.v0.opensearch_distro import (
     OpenSearchHttpError,
     OpenSearchInstallError,
@@ -46,7 +52,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import BlockedStatus, MaintenanceStatus
 
 from opensearch import OpenSearchTarball
 
@@ -75,7 +81,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.unit.status = MaintenanceStatus(InstallProgress)
         try:
             self.opensearch.install()
-            self.unit.status = ActiveStatus()
+            self.clear_status(InstallProgress)
         except OpenSearchInstallError:
             self.unit.status = BlockedStatus(InstallError)
 
@@ -88,7 +94,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = MaintenanceStatus(AdminUserInitProgress)
             self._initialize_admin_user()
             self.app_peers_data["admin_user_initialized"] = "True"
-            self.unit.status = ActiveStatus()
+            self.clear_status(AdminUserInitProgress)
 
     def _on_start(self, event: StartEvent):
         """Triggered when on start. Set the right node role."""
@@ -128,10 +134,13 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
 
         # initialize the security index if the admin certs are written on disk
-        if self.unit.is_leader() and self.app_peers_data.get("security_index_initialised") is None:
-            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-            self._initialize_security_index(admin_secrets)
-            self.app_peers_data["security_index_initialised"] = "True"
+        if self.unit.is_leader():
+            if self.app_peers_data.get("security_index_initialised") is None:
+                admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+                self._initialize_security_index(admin_secrets)
+                self.app_peers_data["security_index_initialised"] = "True"
+
+            self.app_peers_data["leader_ip"] = self.unit_ip
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """New node joining the cluster."""
@@ -144,7 +153,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
 
         # in the case the cluster was bootstrapped with multiple units at the same time
-        # and cert not ready yet
+        # and the certificates have not been generated yet
         if not current_secrets.get("cert") or not current_secrets.get("chain"):
             event.defer()
             return
@@ -277,7 +286,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if not self.app_peers_data.get("admin_user_initialized"):
             return False
 
-        # In case there is a new certificate requested by the client
         admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         if not admin_secrets or not admin_secrets.get("cert") or not admin_secrets.get("chain"):
             return False
@@ -290,7 +298,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if not unit_http_secrets or not unit_http_secrets.get("cert"):
             return False
 
-        return True
+        return self._are_all_tls_resources_stored()
 
     def _start_opensearch(self) -> bool:
         """Start OpenSearch if all resources configured."""
@@ -300,10 +308,31 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
             return False
 
+        # When a new unit joins, replica shards are automatically added to it. In order to prevent
+        # overloading the cluster, units must be started one at a time. So we defer starting
+        # opensearch until all shards in other units are in a "started" or "unassigned" state.
+        if not self.unit.is_leader() and self.app_peers_data.get("leader_ip"):
+            try:
+                busy_shards = ClusterState.busy_shards_by_unit(
+                    self.opensearch, self.app_peers_data.get("leader_ip")
+                )
+                if busy_shards:
+                    message = WaitingForBusyShards.format(
+                        " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
+                    )
+                    self.unit.status = BlockedStatus(message)
+                    return False
+
+                self.clear_status(WaitingForBusyShards, pattern=StatusCheckPattern.Interpolated)
+            except OpenSearchHttpError:
+                # this means that the leader unit is not reachable (not started yet),
+                # meaning that it's a new cluster, so we can safely start the OpenSearch service
+                pass
+
         try:
             self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
-            self.unit.status = ActiveStatus()
+            self.clear_status(WaitingToStart)
 
             return True
         except OpenSearchStartError:
@@ -328,6 +357,16 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 "\n".join(secrets["chain"][::-1]),
                 override=override_admin,
             )
+
+    def _are_all_tls_resources_stored(self):
+        """Check if all TLS resources are stored on disk."""
+        certs_dir = self.opensearch.paths.certs
+        for cert_type in [CertType.APP_ADMIN, CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]:
+            for extension in ["key", "cert"]:
+                if not exists(f"{certs_dir}/{cert_type.val}.{extension}"):
+                    return False
+
+        return exists(f"{certs_dir}/chain.pem") and exists(f"{certs_dir}/root-ca.cert")
 
     def _initialize_admin_user(self):
         """Change default password of Admin user."""
@@ -367,7 +406,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.opensearch.run_script(
             "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
         )
-        self.unit.status = ActiveStatus()
+        self.clear_status(SecurityIndexInitProgress)
 
     def _get_nodes(self) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
@@ -420,10 +459,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         remaining_nodes_for_bootstrap = ClusterTopology.remaining_nodes_for_bootstrap(nodes)
         if remaining_nodes_for_bootstrap == 0:
             # this condition means that we just added the last required CM node
-            # the cluster is bootstrapped now, we need to clean up the conf
-            # TODO: check if following requires reboot of node or not:
-            #  self.opensearch_config.cleanup_conf_if_bootstrapped()
-            pass
+            # the cluster is bootstrapped now, we need to clean up the conf on the CM nodes
+            self.opensearch_config.cleanup_conf_if_bootstrapped()
 
 
 if __name__ == "__main__":

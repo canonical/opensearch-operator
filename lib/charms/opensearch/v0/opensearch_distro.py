@@ -3,11 +3,13 @@
 
 """Base class for Opensearch distributions."""
 
+import json
 import logging
 import os
 import pathlib
 import socket
 import subprocess
+import typing
 from abc import ABC, abstractmethod
 from os.path import exists
 from pathlib import Path
@@ -174,7 +176,7 @@ class OpenSearchDistribution(ABC):
         endpoint: str,
         payload: Optional[Dict[str, any]] = None,
         host: Optional[str] = None,
-    ) -> Dict[str, any]:
+    ) -> typing.Union[Dict[str, any], List[any]]:
         """Make an HTTP request.
 
         Args:
@@ -202,7 +204,7 @@ class OpenSearchDistribution(ABC):
                 resp = s.request(
                     method=method.upper(),
                     url=full_url,
-                    data=payload,
+                    data=json.dumps(payload),
                     verify=f"{self.paths.certs}/chain.pem",
                     headers={"Accept": "application/json", "Content-Type": "application/json"},
                 )

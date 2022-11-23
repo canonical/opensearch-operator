@@ -72,6 +72,8 @@ class TestHelperConfSetter(unittest.TestCase):
         self.conf.delete(input_file, "simple_key", output_file=output_file)
         self.assertFalse("simple_key" in self.conf.load(output_file))
 
+        self.conf.delete(input_file, "non_existing_key.non_existing", output_file=output_file)
+
         self.conf.delete(input_file, "obj/simple_array/[1]", output_file=output_file)
         self.assertFalse("elt2" in self.conf.load(output_file)["obj"]["simple_array"])
 
