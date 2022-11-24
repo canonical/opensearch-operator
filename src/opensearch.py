@@ -51,15 +51,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()
 
-        plugs = [
-            "log-observe",
-            "mount-observe",
-            "process-control",
-            "procsys-read",
-            "system-observe",
-        ]
-        for plug in plugs:
-            self._run_cmd(f"snap connect opensearch:{plug}")
+        self._run_cmd("snap connect opensearch:process-control")
 
     def start(self):
         """Start the snap exposed "daemon" service."""
@@ -132,7 +124,7 @@ class OpenSearchTarball(OpenSearchDistribution):
         """Temporary (will be deleted later) - Download and Un-tar the opensearch distro."""
         try:
             response = requests.get(
-                "https://artifacts.opensearch.org/releases/bundle/opensearch/2.3.0/opensearch-2.3.0-linux-x64.tar.gz"
+                "https://artifacts.opensearch.org/releases/bundle/opensearch/2.4.0/opensearch-2.4.0-linux-x64.tar.gz"
             )
 
             tarball_path = "opensearch.tar.gz"

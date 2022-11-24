@@ -240,33 +240,38 @@ class YamlConfigSetter:
         if source is None:
             return
 
-        leaf_level = self.__leaf_level(source, node_keys)
-        leaf_key = node_keys.pop(0)
+        try:
+            leaf_container = self.__leaf_container(source, node_keys)
+            leaf_key = node_keys.pop(0)
 
-        if leaf_key in leaf_level and (
-            isinstance(leaf_level[leaf_key], Mapping) or not leaf_key.startswith("[")
-        ):
-            del leaf_level[leaf_key]
-            return
+            # remove simple type elements and entire collections by key
+            if leaf_key in leaf_container and leaf_key[0] not in {"{", "["}:
+                del leaf_container[leaf_key]
+                return
 
-        if leaf_key.startswith("{"):
-            leaf_level.remove(leaf_key[1:-1])
-            return
+            # remove element from set
+            if leaf_key.startswith("{"):
+                leaf_container.remove(leaf_key[1:-1])
+                return
 
-        # list
-        target_index = self.__target_array_index(leaf_level, leaf_key)
-        del leaf_level[target_index]
+            # remove element from list
+            target_index = self.__target_array_index(leaf_container, leaf_key)
+            del leaf_container[target_index]
+        except AttributeError:
+            # element not found
+            logger.debug("Target element not found.")
+            pass
 
-    def __leaf_level(self, current, node_names: List[str]):
+    def __leaf_container(self, current, node_names: List[str]):
         if len(node_names) == 1:
             return current
 
         current_key = node_names.pop(0)
         if current_key.startswith("[") and current_key.endswith("]"):
             target_index = self.__target_array_index(current, current_key)
-            return self.__leaf_level(current[target_index], node_names)
+            return self.__leaf_container(current[target_index], node_names)
 
-        return self.__leaf_level(current[current_key], node_names)
+        return self.__leaf_container(current[current_key], node_names)
 
     @staticmethod
     def __target_array_index(source: list, node_key: str) -> int:
@@ -299,7 +304,7 @@ class YamlConfigSetter:
         """Reformat a multiline YAML array into one with square braces."""
         leaf_k = node_keys[-1]
 
-        leaf_l = self.__leaf_level(data, node_keys)
+        leaf_l = self.__leaf_container(data, node_keys)
         leaf_l[leaf_k] = self.__flow_style()
         leaf_l[leaf_k].extend(val)
 

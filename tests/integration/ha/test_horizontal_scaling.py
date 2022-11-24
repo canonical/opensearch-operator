@@ -7,41 +7,37 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
+from tests.integration.ha.helpers import get_shards_by_state
 from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
-    UNIT_IDS,
     check_cluster_formation_successful,
-    get_application_unit_ips_names,
     get_application_unit_names,
     get_leader_unit_ip,
 )
-from tests.integration.tls.helpers import (
-    check_security_index_initialised,
-    check_unit_tls_configured,
-)
+from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
 
-TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 
-
-@pytest.mark.tls_tests
+@pytest.mark.ha_tests
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of MongoDB."""
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
         my_charm,
-        num_units=len(UNIT_IDS),
+        num_units=1,
         series=SERIES,
     )
     await ops_test.model.wait_for_idle()
-    assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
+
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="blocked", timeout=1000)
+    assert len(ops_test.model.applications[APP_NAME].units) == 1
 
     # Deploy TLS Certificates operator.
     config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
@@ -55,28 +51,24 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
 
-@pytest.mark.tls_tests
+@pytest.mark.ha_tests
 @pytest.mark.abort_on_fail
-async def test_security_index_initialised(ops_test: OpsTest) -> None:
-    """Test that the security index is well initialised."""
-    # Wait for the leader unit to initialize the security index.
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
-    assert await check_security_index_initialised(ops_test, leader_unit_ip)
+async def test_horizontal_scale_up(ops_test: OpsTest) -> None:
+    """Tests that new added units to the cluster are discoverable."""
+    # scale up
+    await ops_test.model.applications[APP_NAME].add_unit(count=2)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+    )
+    num_units = len(ops_test.model.applications[APP_NAME].units)
+    assert num_units == 3
 
-
-@pytest.mark.tls_tests
-@pytest.mark.abort_on_fail
-async def test_tls_configured(ops_test: OpsTest) -> None:
-    """Test that TLS is enabled when relating to the TLS Certificates Operator."""
-    for unit_name, unit_ip in get_application_unit_ips_names(ops_test).items():
-        assert await check_unit_tls_configured(ops_test, unit_ip, unit_name)
-
-
-@pytest.mark.tls_tests
-@pytest.mark.abort_on_fail
-async def test_cluster_formation_after_tls(ops_test: OpsTest) -> None:
-    """Test that the cluster formation is successful after TLS setup."""
     unit_names = get_application_unit_names(ops_test)
     leader_unit_ip = await get_leader_unit_ip(ops_test)
 
     assert await check_cluster_formation_successful(ops_test, leader_unit_ip, unit_names)
+
+    shards_by_status = await get_shards_by_state(ops_test, leader_unit_ip)
+    assert not shards_by_status.get("INITIALIZING")
+    assert not shards_by_status.get("RELOCATING")
+    assert not shards_by_status.get("UNASSIGNED")
