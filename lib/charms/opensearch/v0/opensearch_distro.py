@@ -19,7 +19,6 @@ import requests
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
-from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -108,7 +107,7 @@ class OpenSearchDistribution(ABC):
 
     SERVICE_NAME = "daemon"
 
-    def __init__(self, charm: OpenSearchBaseCharm, peer_relation_name: str):
+    def __init__(self, charm, peer_relation_name: str):
         self.paths = self._build_paths()
         self._create_directories()
         self._set_env_variables()
@@ -137,19 +136,12 @@ class OpenSearchDistribution(ABC):
         response = self.request(
             "PUT",
             "/_cluster/settings",
-            {
-                "transient": {
-                    "cluster.routing.allocation.exclude._name": self._charm.unit_name
-                }
-            }
+            {"transient": {"cluster.routing.allocation.exclude._name": self._charm.unit_name}},
         )
         if not response.get("acknowledged"):
             raise OpenSearchStopError()
 
-        response = self.request(
-            "GET",
-            "/_cluster/health?wait_for_status=green&timeout=60s"
-        )
+        response = self.request("GET", "/_cluster/health?wait_for_status=green&timeout=60s")
         unassigned_shards = response.get("unassigned_shards", 0)
         if unassigned_shards > 0:
             self._charm.on_suggestion_horizontal_scale_up(unassigned_shards)
