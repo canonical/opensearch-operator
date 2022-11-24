@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Dict, Type
 
+from charms.opensearch.v0.constants_charm import HorizontalScaleUpSuggest
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_databag import Scope, SecretStore
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -17,7 +18,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
 from ops.charm import CharmBase
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, MaintenanceStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -59,6 +60,10 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.secrets = SecretStore(self)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
+
+    def on_suggestion_horizontal_scale_up(self, unassigned_shards: int):
+        """Called during node shutdown / horizontal scale-down if some shards left unassigned."""
+        self.app.status = MaintenanceStatus(HorizontalScaleUpSuggest.format(unassigned_shards))
 
     def on_tls_conf_set(
         self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool

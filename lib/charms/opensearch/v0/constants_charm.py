@@ -28,3 +28,4 @@ TLSRelationBrokenError = (
 InstallProgress = "Installing OpenSearch..."
 SecurityIndexInitProgress = "Initializing the security index..."
 AdminUserInitProgress = "Configuring admin user..."
+HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."

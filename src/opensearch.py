@@ -70,7 +70,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             logger.error(f"Failed to start the opensearch.{self.SERVICE_NAME} service. \n{e}")
             raise OpenSearchStartError()
 
-    def stop(self):
+    def _stop_service(self):
         """Stop the snap exposed "daemon" service."""
         if not self._opensearch.present:
             raise OpenSearchMissingError()
@@ -159,7 +159,7 @@ class OpenSearchTarball(OpenSearchDistribution):
         else:
             raise OpenSearchStartError()
 
-    def stop(self):
+    def _stop_service(self):
         """Stop opensearch."""
         self._run_cmd(
             "setpriv",
@@ -172,16 +172,6 @@ class OpenSearchTarball(OpenSearchDistribution):
             retries += 1
         else:
             raise OpenSearchStopError()
-
-        """
-        TODO:
-            Important! Before you stop a node, you should ensure that no indexing requests or
-            administration-related tasks are being made on the cluster. If you stop a node during
-            indexing, the cluster meta data might get corrupted and the cluster could become
-            non-operational (red color code). To ensure that no instances of PTSF_GENFEED are
-            running, check the Process Monitor. If all processes are finished, you may stop
-            all the nodes in a cluster and make the required modifications.
-            After completing the modifications, you may start all the nodes of the cluster."""
 
     def restart(self):
         """Restart opensearch."""
