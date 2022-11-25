@@ -215,7 +215,7 @@ async def check_cluster_formation_successful(
     Returns:
         Whether The cluster formation is successful.
     """
-    response = await http_request(ops_test, f"https://{unit_ip}:9200/_nodes", "GET")
+    response = await http_request(ops_test, "GET", f"https://{unit_ip}:9200/_nodes")
     if "_nodes" not in response or "nodes" not in response:
         return False
 
