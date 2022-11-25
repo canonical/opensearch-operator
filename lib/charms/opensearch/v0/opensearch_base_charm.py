@@ -3,6 +3,7 @@
 
 """Base class for the OpenSearch Operators."""
 import logging
+import random
 import re
 from typing import Dict, Type
 
@@ -10,7 +11,7 @@ from charms.opensearch.v0.constants_charm import HorizontalScaleUpSuggest
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_databag import Scope, SecretStore
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.helper_networking import get_host_ip
+from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
@@ -120,6 +121,14 @@ class OpenSearchBaseCharm(CharmBase):
     def unit_id(self) -> int:
         """ID of the current unit."""
         return int(self.unit.name.split("/")[1])
+
+    @property
+    def alternative_host(self) -> str:
+        """Return an alternative host (of another node) in case the current is offline."""
+        all_units_ips = units_ips(self, PEER)
+        del all_units_ips[str(self.unit_id)]
+
+        return random.choice(list(all_units_ips.values()))
 
     def _get_relation_data(self, scope: Scope, relation_name: str) -> Dict[str, str]:
         """Relation data object."""

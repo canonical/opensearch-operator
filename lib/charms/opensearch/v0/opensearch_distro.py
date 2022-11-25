@@ -150,6 +150,14 @@ class OpenSearchDistribution(ABC):
 
         self._stop_service()
 
+        # remove the exclusion back
+        self.request(
+            "PUT",
+            "/_cluster/settings",
+            {"transient": {"cluster.routing.allocation.exclude._name": ""}},
+            host=self._charm.alternative_host,
+        )
+
     @abstractmethod
     def _stop_service(self):
         """Stop the opensearch service."""
