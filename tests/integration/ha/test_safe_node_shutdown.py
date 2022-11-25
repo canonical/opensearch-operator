@@ -27,7 +27,7 @@ from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.ha_tests
+@pytest.mark.ha_service_tests
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -57,7 +57,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
 
-@pytest.mark.ha_tests
+@pytest.mark.ha_service_tests
 @pytest.mark.abort_on_fail
 async def test_safe_node_shutdown(ops_test: OpsTest) -> None:
     """Tests the shutdown of a node, and re-allocation of shards to a newly joined unit."""
