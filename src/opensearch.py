@@ -17,7 +17,6 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchDistribution,
     OpenSearchInstallError,
     OpenSearchMissingError,
-    OpenSearchRestartError,
     OpenSearchStartError,
     OpenSearchStopError,
     Paths,
@@ -80,17 +79,6 @@ class OpenSearchSnap(OpenSearchDistribution):
         except SnapError as e:
             logger.error(f"Failed to stop the opensearch.{self.SERVICE_NAME} service. \n{e}")
             raise OpenSearchStopError()
-
-    def restart(self):
-        """Restart the snap exposed "daemon" service."""
-        if not self._opensearch.present:
-            raise OpenSearchMissingError()
-
-        try:
-            self._opensearch.restart([self.SERVICE_NAME])
-        except SnapError as e:
-            logger.error(f"Failed to restart the opensearch.{self.SERVICE_NAME} service. \n{e}")
-            raise OpenSearchRestartError()
 
     def _build_paths(self) -> Paths:
         """Builds a Path object.
@@ -172,13 +160,6 @@ class OpenSearchTarball(OpenSearchDistribution):
             retries += 1
         else:
             raise OpenSearchStopError()
-
-    def restart(self):
-        """Restart opensearch."""
-        if self.is_started():
-            self.stop()
-
-        self.start()
 
     def _build_paths(self) -> Paths:
         return Paths(

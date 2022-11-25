@@ -126,10 +126,12 @@ class OpenSearchDistribution(ABC):
         """Start the opensearch service."""
         pass
 
-    @abstractmethod
     def restart(self):
         """Restart the opensearch service."""
-        pass
+        if self.is_started():
+            self.stop()
+
+        self.start()
 
     def stop(self):
         """Exclude the allocation of this node."""
