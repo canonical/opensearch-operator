@@ -155,11 +155,14 @@ class OpenSearchTarball(OpenSearchDistribution):
         )
 
         retries = 0
-        while self.is_node_up() and retries < 3:
+        while retries < 3:
+            if not self.is_started():
+                return
+
             time.sleep(2)
             retries += 1
-        else:
-            raise OpenSearchStopError()
+
+        raise OpenSearchStopError()
 
     def _build_paths(self) -> Paths:
         return Paths(

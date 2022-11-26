@@ -15,6 +15,8 @@ from charms.opensearch.v0.constants_charm import (
     InstallError,
     InstallProgress,
     SecurityIndexInitProgress,
+    ServiceIsStopping,
+    ServiceStopped,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
     WaitingForBusyShards,
@@ -254,13 +256,18 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_restart_service_action(self, event: ActionEvent):
         """Restart the OpenSearch service from an action event."""
+        self.unit.status = BlockedStatus(ServiceIsStopping)
         self.opensearch.stop()
+        self.unit.status = BlockedStatus(ServiceStopped)
+
         self._start_opensearch()
         event.set_results({"message": "The OpenSearch service is attempting a restart..."})
 
     def _on_stop_service_action(self, event: ActionEvent):
         """Stop the OpenSearch service from an action event."""
+        self.unit.status = BlockedStatus(ServiceIsStopping)
         self.opensearch.stop()
+        self.unit.status = BlockedStatus(ServiceStopped)
         event.set_results({"message": "The OpenSearch service is stopping..."})
 
     def on_tls_conf_set(

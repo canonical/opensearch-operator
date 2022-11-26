@@ -126,8 +126,6 @@ class OpenSearchBaseCharm(CharmBase):
     def alternative_host(self) -> str:
         """Return an alternative host (of another node) in case the current is offline."""
         all_units_ips = units_ips(self, PEER)
-        del all_units_ips[str(self.unit_id)]
-
         return random.choice(list(all_units_ips.values()))
 
     def _get_relation_data(self, scope: Scope, relation_name: str) -> Dict[str, str]:
