@@ -62,9 +62,22 @@ class OpenSearchBaseCharm(CharmBase):
         self.secrets = SecretStore(self)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
 
-    def on_suggestion_horizontal_scale_up(self, unassigned_shards: int):
+    def on_unassigned_shards(self, unassigned_shards: int):
         """Called during node shutdown / horizontal scale-down if some shards left unassigned."""
         self.app.status = MaintenanceStatus(HorizontalScaleUpSuggest.format(unassigned_shards))
+
+    def append_allocation_exclusion(self, unit_name) -> None:
+        """Store a unit in the app data bag, to be removed from the allocation exclusion."""
+        exclusion = set(
+            self.app_peers_data.get("remove_from_allocation_exclusions", "").split(",")
+        )
+        exclusion.add(unit_name)
+
+        self.app_peers_data["remove_from_allocation_exclusions"] = ",".join(exclusion)
+
+    def get_allocation_exclusions(self) -> str:
+        """Retrieve the units that must be removed from the allocation exclusion."""
+        return self.app_peers_data.get("to_remove_from_allocation_exclusion", "")
 
     def on_tls_conf_set(
         self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool

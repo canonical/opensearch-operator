@@ -147,6 +147,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
             self.app_peers_data["leader_ip"] = self.unit_ip
 
+        # store the exclusions that previously failed to be stored when no units online
+        if self.app_peers_data.get("remove_from_allocation_exclusions"):
+            self.opensearch.store_allocation_exclusions(
+                self.app_peers_data["remove_from_allocation_exclusions"]
+            )
+
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """New node joining the cluster."""
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)

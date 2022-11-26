@@ -9,11 +9,10 @@ import os
 import pathlib
 import socket
 import subprocess
-import typing
 from abc import ABC, abstractmethod
 from os.path import exists
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set, Union
 
 import requests
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
@@ -135,28 +134,67 @@ class OpenSearchDistribution(ABC):
 
     def stop(self):
         """Exclude the allocation of this node."""
+        try:
+            self.add_allocation_exclusions(self._charm.unit_name)
+
+            response = self.request("GET", "/_cluster/health?wait_for_status=green&timeout=60s")
+            unassigned_shards = response.get("unassigned_shards", 0)
+            if unassigned_shards > 0:
+                self._charm.on_unassigned_shards(unassigned_shards)
+
+            # stop the opensearch service
+            self._stop_service()
+
+            if self._charm.alternative_host:
+                # remove the exclusion back
+                self.remove_allocation_exclusions(
+                    self._charm.unit_name, self._charm.alternative_host
+                )
+            else:
+                # no node online, store in the app databag to exclude at a future start
+                self._charm.append_allocation_exclusion(self._charm.unit_name)
+        except Exception as e:
+            logger.error(e)
+            raise OpenSearchStopError()
+
+    def add_allocation_exclusions(
+        self, exclusions: Union[List[str], Set[str], str], host: str = None
+    ):
+        """Register new allocation exclusions."""
+        exclusions = self.normalize_allocation_exclusions(exclusions)
+        existing_exclusions = self._fetch_allocation_exclusions(host)
+        self._store_allocation_exclusions(existing_exclusions.union(exclusions))
+
+    def remove_allocation_exclusions(
+        self, exclusions: Union[List[str], Set[str], str], host: str = None
+    ):
+        """This removes the allocation exclusions if needed."""
+        exclusions = self.normalize_allocation_exclusions(exclusions)
+        existing_exclusions = self._fetch_allocation_exclusions(host)
+        self._store_allocation_exclusions(existing_exclusions - exclusions)
+
+    def _store_allocation_exclusions(self, exclusions: Set[str]):
+        """Updates the cluster settings with the new allocation exclusions."""
         response = self.request(
             "PUT",
             "/_cluster/settings",
-            {"transient": {"cluster.routing.allocation.exclude._name": self._charm.unit_name}},
+            {"transient": {"cluster.routing.allocation.exclude._name": ",".join(exclusions)}},
         )
         if not response.get("acknowledged"):
-            raise OpenSearchStopError()
+            raise OpenSearchError()
 
-        response = self.request("GET", "/_cluster/health?wait_for_status=green&timeout=60s")
-        unassigned_shards = response.get("unassigned_shards", 0)
-        if unassigned_shards > 0:
-            self._charm.on_suggestion_horizontal_scale_up(unassigned_shards)
-
-        self._stop_service()
-
-        # remove the exclusion back
-        self.request(
-            "PUT",
-            "/_cluster/settings",
-            {"transient": {"cluster.routing.allocation.exclude._name": ""}},
-            host=self._charm.alternative_host,
-        )
+    def _fetch_allocation_exclusions(self, host: str = None) -> Set[str]:
+        """Fetch the registered allocation exclusions."""
+        allocation_exclusions = set()
+        try:
+            resp = self.request("GET", "/_cluster/settings", host=host)
+            exclusions = resp["transient"]["cluster"]["routing"]["allocation"]["exclude"]["_name"]
+            allocation_exclusions = set(exclusions.split(","))
+        except KeyError:
+            # no allocation exclusion set
+            pass
+        finally:
+            return allocation_exclusions
 
     @abstractmethod
     def _stop_service(self):
@@ -212,7 +250,7 @@ class OpenSearchDistribution(ABC):
         endpoint: str,
         payload: Optional[Dict[str, any]] = None,
         host: Optional[str] = None,
-    ) -> typing.Union[Dict[str, any], List[any]]:
+    ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request.
 
         Args:
@@ -330,6 +368,16 @@ class OpenSearchDistribution(ABC):
     def port(self) -> int:
         """Return Port of OpenSearch."""
         return 9200
+
+    @staticmethod
+    def normalize_allocation_exclusions(exclusions: Union[List[str], Set[str], str]) -> Set[str]:
+        """Normalize a list of allocation exclusions into a set."""
+        if type(exclusions) is list:
+            exclusions = set(exclusions)
+        elif type(exclusions) is str:
+            exclusions = set(exclusions.split(","))
+
+        return exclusions
 
     @staticmethod
     def missing_sys_requirements() -> List[str]:
