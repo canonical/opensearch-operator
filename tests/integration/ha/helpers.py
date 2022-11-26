@@ -60,7 +60,7 @@ async def create_dummy_indexes(ops_test: OpsTest, unit_ip: str, count: int = 5) 
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def create_dummy_docs(ops_test: OpsTest, unit_ip: str, count: int = 10) -> None:
+async def create_dummy_docs(ops_test: OpsTest, unit_ip: str, count: int = 5) -> None:
     """Store documents in the dummy indexes."""
     for index_id in range(count):
         for doc_id in range(count):
