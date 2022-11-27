@@ -173,12 +173,13 @@ class OpenSearchDistribution(ABC):
         existing_exclusions = self._fetch_allocation_exclusions(host)
         self._store_allocation_exclusions(existing_exclusions - exclusions)
 
-    def _store_allocation_exclusions(self, exclusions: Set[str]):
+    def _store_allocation_exclusions(self, exclusions: Set[str], host: str = None):
         """Updates the cluster settings with the new allocation exclusions."""
         response = self.request(
             "PUT",
             "/_cluster/settings",
             {"transient": {"cluster.routing.allocation.exclude._name": ",".join(exclusions)}},
+            host=host
         )
         if not response.get("acknowledged"):
             raise OpenSearchError()
