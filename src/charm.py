@@ -40,6 +40,7 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchHttpError,
     OpenSearchInstallError,
     OpenSearchStartError,
+    OpenSearchStopError,
 )
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
@@ -149,7 +150,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         # store the exclusions that previously failed to be stored when no units online
         if self.app_peers_data.get("remove_from_allocation_exclusions"):
-            self.opensearch.store_allocation_exclusions(
+            self.opensearch.add_allocation_exclusions(
                 self.app_peers_data["remove_from_allocation_exclusions"]
             )
 
@@ -257,24 +258,48 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             event.set_results({"message": "OpenSearch is already started in this node."})
             return
 
-        self._start_opensearch()
+        if not self._start_opensearch():
+            event.defer()
+            event.set_results(
+                {"message": "Something happened, the OpenSearch service will re-attempt a start."}
+            )
+            return
+
         event.set_results({"message": "The OpenSearch service is attempting a start..."})
 
     def _on_restart_service_action(self, event: ActionEvent):
         """Restart the OpenSearch service from an action event."""
-        self.unit.status = BlockedStatus(ServiceIsStopping)
-        self.opensearch.stop()
-        self.unit.status = BlockedStatus(ServiceStopped)
+        try:
+            self.unit.status = BlockedStatus(ServiceIsStopping)
+            self.opensearch.stop()
+            self.unit.status = BlockedStatus(ServiceStopped)
 
-        self._start_opensearch()
-        event.set_results({"message": "The OpenSearch service is attempting a restart..."})
+            if not self._start_opensearch():
+                event.defer()
+                event.set_results(
+                    {
+                        "message": "Something happened, the OpenSearch service will re-attempt a start."
+                    }
+                )
+                return
+
+            event.set_results({"message": "The OpenSearch service is attempting a restart..."})
+        except OpenSearchStopError:
+            event.set_results(
+                {"message": "An error occurred during the stop of the OpenSearch service."}
+            )
 
     def _on_stop_service_action(self, event: ActionEvent):
         """Stop the OpenSearch service from an action event."""
-        self.unit.status = BlockedStatus(ServiceIsStopping)
-        self.opensearch.stop()
-        self.unit.status = BlockedStatus(ServiceStopped)
-        event.set_results({"message": "The OpenSearch service is stopping..."})
+        try:
+            self.unit.status = BlockedStatus(ServiceIsStopping)
+            self.opensearch.stop()
+            self.unit.status = BlockedStatus(ServiceStopped)
+            event.set_results({"message": "The OpenSearch service is stopping..."})
+        except OpenSearchStopError:
+            event.set_results(
+                {"message": "An error occurred during the stop of the OpenSearch service."}
+            )
 
     def on_tls_conf_set(
         self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool

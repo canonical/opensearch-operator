@@ -5,7 +5,7 @@
 import logging
 import random
 import re
-from typing import Dict, Type
+from typing import Dict, Set, Type
 
 from charms.opensearch.v0.constants_charm import HorizontalScaleUpSuggest
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
@@ -68,12 +68,21 @@ class OpenSearchBaseCharm(CharmBase):
 
     def append_allocation_exclusion(self, unit_name) -> None:
         """Store a unit in the app data bag, to be removed from the allocation exclusion."""
-        exclusion = set(
+        exclusions = set(
             self.app_peers_data.get("remove_from_allocation_exclusions", "").split(",")
         )
-        exclusion.add(unit_name)
+        exclusions.add(unit_name)
 
-        self.app_peers_data["remove_from_allocation_exclusions"] = ",".join(exclusion)
+        self.app_peers_data["remove_from_allocation_exclusions"] = ",".join(exclusions)
+
+    def remove_allocation_exclusions(self, exclusions: Set[str]) -> None:
+        """Remove the allocation exclusions from the app databag if existing."""
+        stored_exclusions = set(
+            self.app_peers_data.get("remove_from_allocation_exclusions", "").split(",")
+        )
+        self.app_peers_data["remove_from_allocation_exclusions"] = ",".join(
+            stored_exclusions - exclusions
+        )
 
     def get_allocation_exclusions(self) -> str:
         """Retrieve the units that must be removed from the allocation exclusion."""

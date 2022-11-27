@@ -163,23 +163,27 @@ class OpenSearchDistribution(ABC):
         """Register new allocation exclusions."""
         exclusions = self.normalize_allocation_exclusions(exclusions)
         existing_exclusions = self._fetch_allocation_exclusions(host)
-        self._store_allocation_exclusions(existing_exclusions.union(exclusions))
+        self._put_allocation_exclusions(existing_exclusions.union(exclusions), host)
 
     def remove_allocation_exclusions(
         self, exclusions: Union[List[str], Set[str], str], host: str = None
     ):
         """This removes the allocation exclusions if needed."""
-        exclusions = self.normalize_allocation_exclusions(exclusions)
-        existing_exclusions = self._fetch_allocation_exclusions(host)
-        self._store_allocation_exclusions(existing_exclusions - exclusions)
+        if exclusions:
+            exclusions = self.normalize_allocation_exclusions(exclusions)
+            existing_exclusions = self._fetch_allocation_exclusions(host)
+            self._put_allocation_exclusions(existing_exclusions - exclusions, host)
 
-    def _store_allocation_exclusions(self, exclusions: Set[str], host: str = None):
+        # remove these exclusions from the app data bag if any
+        self._charm.remove_allocation_exclusions(exclusions)
+
+    def _put_allocation_exclusions(self, exclusions: Set[str], host: str = None):
         """Updates the cluster settings with the new allocation exclusions."""
         response = self.request(
             "PUT",
             "/_cluster/settings",
             {"transient": {"cluster.routing.allocation.exclude._name": ",".join(exclusions)}},
-            host=host
+            host=host,
         )
         if not response.get("acknowledged"):
             raise OpenSearchError()
