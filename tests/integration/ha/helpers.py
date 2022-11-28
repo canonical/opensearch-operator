@@ -90,9 +90,13 @@ async def cluster_allocation(ops_test: OpsTest, unit_ip: str) -> List[Dict[str, 
     )
 
 
-async def get_number_of_shards_by_node(ops_test: OpsTest, unit_ip: str) -> Dict[str, int]:
+async def get_number_of_shards_by_node(ops_test: OpsTest, unit_ip: str) -> Dict[int, int]:
     """Get the number of shards allocated per node."""
     init_cluster_alloc = await cluster_allocation(ops_test, unit_ip)
     return dict(
-        [(node_alloc["node"], int(node_alloc["shards"])) for node_alloc in init_cluster_alloc]
+        [
+            (int(alloc["node"].split("-")[1]), int(alloc["shards"]))
+            for alloc in init_cluster_alloc
+            if alloc["node"] != "UNASSIGNED"
+        ]
     )

@@ -66,8 +66,12 @@ class OpenSearchBaseCharm(CharmBase):
         """Called during node shutdown / horizontal scale-down if some shards left unassigned."""
         self.app.status = MaintenanceStatus(HorizontalScaleUpSuggest.format(unassigned_shards))
 
-    def append_allocation_exclusion(self, unit_name) -> None:
-        """Store a unit in the app data bag, to be removed from the allocation exclusion."""
+    def append_allocation_exclusion_to_remove(self, unit_name) -> None:
+        """Store a unit in the relation data bag, to be removed from the allocation exclusion."""
+        if not self.unit.is_leader():
+            self.unit_peers_data["remove_from_allocation_exclusions"] = unit_name
+            return
+
         exclusions = set(
             self.app_peers_data.get("remove_from_allocation_exclusions", "").split(",")
         )
@@ -76,13 +80,16 @@ class OpenSearchBaseCharm(CharmBase):
         self.app_peers_data["remove_from_allocation_exclusions"] = ",".join(exclusions)
 
     def remove_allocation_exclusions(self, exclusions: Set[str]) -> None:
-        """Remove the allocation exclusions from the app databag if existing."""
+        """Remove the allocation exclusions from the peer databag if existing."""
         stored_exclusions = set(
             self.app_peers_data.get("remove_from_allocation_exclusions", "").split(",")
         )
-        self.app_peers_data["remove_from_allocation_exclusions"] = ",".join(
-            stored_exclusions - exclusions
-        )
+        exclusions_to_keep = ",".join(stored_exclusions - exclusions)
+
+        if self.unit.is_leader():
+            self.app_peers_data["remove_from_allocation_exclusions"] = exclusions_to_keep
+        else:
+            self.unit_peers_data["remove_from_allocation_exclusions"] = exclusions_to_keep
 
     def get_allocation_exclusions(self) -> str:
         """Retrieve the units that must be removed from the allocation exclusion."""

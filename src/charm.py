@@ -115,9 +115,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             event.defer()
             return
 
-        # reset status to active if it was TLSNotFullyConfigured
-        self.clear_status(TLSNotFullyConfigured)
-
         # configure clients auth
         self.opensearch_config.set_client_auth()
 
@@ -150,7 +147,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         # store the exclusions that previously failed to be stored when no units online
         if self.app_peers_data.get("remove_from_allocation_exclusions"):
-            self.opensearch.add_allocation_exclusions(
+            self.opensearch.remove_allocation_exclusions(
                 self.app_peers_data["remove_from_allocation_exclusions"]
             )
 
@@ -174,7 +171,16 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self._store_tls_resources(CertType.APP_ADMIN, current_secrets, override_admin=False)
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
-        """Restart node when cert renewal for the transport layer."""
+        """Handle peer relation changes."""
+        if self.unit.is_leader():
+            if event.relation.data.get(event.unit):
+                exclusions_to_remove = event.relation.data.get(event.unit).get(
+                    "remove_from_allocation_exclusions"
+                )
+                if exclusions_to_remove:
+                    self.remove_allocation_exclusions(set(exclusions_to_remove.split(",")))
+
+        # Restart node when cert renewal for the transport layer
         if self.unit_peers_data.get("must_reboot_node") == "True":
             try:
                 self.opensearch.restart()
@@ -284,7 +290,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 return
 
             event.set_results({"message": "The OpenSearch service is attempting a restart..."})
-        except OpenSearchStopError:
+        except OpenSearchStopError as e:
+            logger.error(e)
             event.set_results(
                 {"message": "An error occurred during the stop of the OpenSearch service."}
             )

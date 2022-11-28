@@ -18,6 +18,7 @@ from tests.integration.helpers import (
     SERIES,
     UNIT_IDS,
     cluster_health,
+    get_application_unit_status,
     get_leader_unit_id,
     get_leader_unit_ip,
     run_action,
@@ -54,7 +55,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=len(UNIT_IDS)
+    )
 
 
 @pytest.mark.ha_service_tests
@@ -85,24 +88,46 @@ async def test_safe_node_shutdown(ops_test: OpsTest) -> None:
     new_shards_per_node = await get_number_of_shards_by_node(ops_test, leader_unit_ip)
 
     # some shards should have been reallocated, not all due to already existing replicas elsewhere
-    assert new_shards_per_node[unit_id_to_stop] in range(1, init_shards_per_node[unit_id_to_stop])
+    assert new_shards_per_node.get(unit_id_to_stop, 0) < init_shards_per_node[unit_id_to_stop]
+
+    are_some_shards_reallocated = False
     for unit_id in unit_ids_to_keep:
-        assert new_shards_per_node[unit_id] > init_shards_per_node[unit_id]
+        are_some_shards_reallocated = (
+            are_some_shards_reallocated
+            or new_shards_per_node[unit_id] > init_shards_per_node[unit_id]
+        )
+    assert are_some_shards_reallocated
 
     # get new cluster health
     cluster_health_resp = await cluster_health(ops_test, leader_unit_ip)
-    assert cluster_health_resp["status"] == "yellow"
-    assert cluster_health_resp["unassigned_shards"] > 0
+
+    if new_shards_per_node.get(unit_id_to_stop, 0) == 0:
+        # all shards reallocated
+        expected_health_color = "green"
+    else:
+        # not all shards reallocated
+        expected_health_color = "yellow"
+
+    assert cluster_health_resp["status"] == expected_health_color
 
     # scale up by 1 unit
     await ops_test.model.applications[APP_NAME].add_unit(count=1)
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=4
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], timeout=1000, wait_for_exact_units=4)
+
+    new_unit_id = [
+        int(unit.name.split("/")[1])
+        for unit in ops_test.model.applications[APP_NAME].units
+        if int(unit.name.split("/")[1]) not in UNIT_IDS
+    ][0]
+
+    # wait for the new unit to be active
+    await ops_test.model.block_until(
+        lambda: get_application_unit_status(ops_test)[new_unit_id] == "active"
     )
 
     # check if the unallocated shards have successfully moved to the newest unit
     new_shards_per_node = await get_number_of_shards_by_node(ops_test, leader_unit_ip)
-    assert new_shards_per_node[unit_id_to_stop] == 0
+    assert new_shards_per_node[new_unit_id] > 0
 
     # get new cluster health
     cluster_health_resp = await cluster_health(ops_test, leader_unit_ip)

@@ -8,7 +8,6 @@ from typing import Dict, List, Optional
 
 import requests
 import yaml
-from ops.model import StatusBase
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
@@ -82,7 +81,7 @@ def get_application_unit_ids(ops_test: OpsTest) -> List[int]:
     return [int(unit.name.split("/")[0]) for unit in ops_test.model.applications[APP_NAME].units]
 
 
-def get_application_unit_status(ops_test: OpsTest) -> List[StatusBase]:
+def get_application_unit_status(ops_test: OpsTest) -> Dict[int, str]:
     """List the unit statuses of an application.
 
     Args:
@@ -91,7 +90,13 @@ def get_application_unit_status(ops_test: OpsTest) -> List[StatusBase]:
     Returns:
         list of current unit statuses of the application
     """
-    return [unit.status for unit in ops_test.model.applications[APP_NAME].units]
+    units = ops_test.model.applications[APP_NAME].units
+
+    result = {}
+    for unit in units:
+        result[int(unit.name.split("/")[1])] = unit.workload_status
+
+    return result
 
 
 def get_application_unit_ips(ops_test: OpsTest) -> List[str]:

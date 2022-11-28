@@ -152,7 +152,7 @@ class OpenSearchDistribution(ABC):
                 )
             else:
                 # no node online, store in the app databag to exclude at a future start
-                self._charm.append_allocation_exclusion(self._charm.unit_name)
+                self._charm.append_allocation_exclusion_to_remove(self._charm.unit_name)
         except Exception as e:
             logger.error(e)
             raise OpenSearchStopError()
