@@ -408,7 +408,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
 
-
             self.clear_status(WaitingToStart)
 
             return True
