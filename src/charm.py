@@ -173,12 +173,11 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
         if self.unit.is_leader():
-            if event.relation.data.get(event.unit):
-                exclusions_to_remove = event.relation.data.get(event.unit).get(
-                    "remove_from_allocation_exclusions"
-                )
+            data = event.relation.data.get(event.unit)
+            if data:
+                exclusions_to_remove = data.get("remove_from_allocation_exclusions")
                 if exclusions_to_remove:
-                    self.remove_allocation_exclusions(set(exclusions_to_remove.split(",")))
+                    self.append_allocation_exclusion_to_remove(exclusions_to_remove)
 
         # Restart node when cert renewal for the transport layer
         if self.unit_peers_data.get("must_reboot_node") == "True":
@@ -398,8 +397,18 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 pass
 
         try:
+            if self.app_peers_data.get("unit_starting_lock_acquired", False):
+                return False
+
+            if self.unit.is_leader():
+                self.app_peers_data["unit_starting_lock"] = "True"
+            else:
+                self.unit_peers_data["unit_starting_lock"] = "True"
+
             self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
+
+
             self.clear_status(WaitingToStart)
 
             return True
