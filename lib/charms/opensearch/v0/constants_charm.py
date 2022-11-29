@@ -15,6 +15,7 @@ LIBPATCH = 1
 
 
 # Blocked statuses
+ServiceStopError = "An error occurred during the stop of the OpenSearch service. "
 WaitingToStart = "Waiting for OpenSearch to start..."
 InstallError = "Could not install OpenSearch."
 CertsExpirationError = "The certificates: {} need to be refreshed."
@@ -31,3 +32,4 @@ InstallProgress = "Installing OpenSearch..."
 SecurityIndexInitProgress = "Initializing the security index..."
 AdminUserInitProgress = "Configuring admin user..."
 HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
+WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."

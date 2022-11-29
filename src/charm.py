@@ -16,10 +16,12 @@ from charms.opensearch.v0.constants_charm import (
     InstallProgress,
     SecurityIndexInitProgress,
     ServiceIsStopping,
+    ServiceStopError,
     ServiceStopped,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
     WaitingForBusyShards,
+    WaitingForOtherUnitServiceOps,
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import CertType
@@ -55,7 +57,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.main import main
-from ops.model import BlockedStatus, MaintenanceStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
 from opensearch import OpenSearchTarball
 
@@ -173,12 +175,17 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
         if self.unit.is_leader():
-            if event.relation.data.get(event.unit):
-                exclusions_to_remove = event.relation.data.get(event.unit).get(
-                    "remove_from_allocation_exclusions"
-                )
+            unit_data = event.relation.data.get(event.unit)
+            if unit_data:
+                exclusions_to_remove = unit_data.get("remove_from_allocation_exclusions")
                 if exclusions_to_remove:
                     self.remove_allocation_exclusions(set(exclusions_to_remove.split(",")))
+
+                service_op_unit_lock = unit_data.get("service_unit_lock_acquired", "False")
+                if service_op_unit_lock == "True":
+                    self.app_peers_data["service_unit_lock_acquired"] = service_op_unit_lock
+                else:
+                    del self.app_peers_data["service_unit_lock_acquired"]
 
         # Restart node when cert renewal for the transport layer
         if self.unit_peers_data.get("must_reboot_node") == "True":
@@ -275,37 +282,30 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_restart_service_action(self, event: ActionEvent):
         """Restart the OpenSearch service from an action event."""
-        try:
-            self.unit.status = BlockedStatus(ServiceIsStopping)
-            self.opensearch.stop()
-            self.unit.status = BlockedStatus(ServiceStopped)
-
-            if not self._start_opensearch():
-                event.defer()
-                event.set_results(
-                    {
-                        "message": "Something happened, the OpenSearch service will re-attempt a start."
-                    }
-                )
-                return
-
-            event.set_results({"message": "The OpenSearch service is attempting a restart..."})
-        except OpenSearchStopError as e:
-            logger.error(e)
+        if not self._stop_opensearch():
             event.set_results(
-                {"message": "An error occurred during the stop of the OpenSearch service."}
+                {"message": f"{ServiceStopError} -- check the logs for more details."}
             )
+            return
+
+        self.unit_peers_data["service_unit_lock_acquired"] = "True"
+
+        if not self._start_opensearch():
+            event.defer()
+            event.set_results(
+                {"message": "Something happened, the OpenSearch service will re-attempt a start."}
+            )
+            return
+
+        event.set_results({"message": "The OpenSearch service is starting..."})
 
     def _on_stop_service_action(self, event: ActionEvent):
         """Stop the OpenSearch service from an action event."""
-        try:
-            self.unit.status = BlockedStatus(ServiceIsStopping)
-            self.opensearch.stop()
-            self.unit.status = BlockedStatus(ServiceStopped)
+        if self._stop_opensearch():
             event.set_results({"message": "The OpenSearch service is stopping..."})
-        except OpenSearchStopError:
+        else:
             event.set_results(
-                {"message": "An error occurred during the stop of the OpenSearch service."}
+                {"message": f"{ServiceStopError} -- check the logs for more details."}
             )
 
     def on_tls_conf_set(
@@ -370,6 +370,43 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _start_opensearch(self) -> bool:
         """Start OpenSearch if all resources configured."""
+        if not self._can_service_start():
+            return False
+
+        if self.unit_peers_data.get("service_unit_lock_acquired") == "True":
+            self.unit.status = WaitingStatus(WaitingForOtherUnitServiceOps)
+            return False
+
+        self.unit_peers_data["service_unit_lock_acquired"] = "True"
+
+        try:
+            self.unit.status = BlockedStatus(WaitingToStart)
+            self.opensearch.start()
+            self.clear_status(WaitingToStart)
+
+            self.unit_peers_data["service_unit_lock_acquired"] = "False"
+
+            return True
+        except OpenSearchStartError:
+            return False
+
+    def _stop_opensearch(self) -> bool:
+        """Stop OpenSearch if allowed."""
+        if self.unit_peers_data.get("service_unit_lock_acquired") == "True":
+            self.unit.status = WaitingStatus(WaitingForOtherUnitServiceOps)
+            return False
+
+        self.unit_peers_data["service_unit_lock_acquired"] = "True"
+
+        try:
+            self.unit.status = WaitingStatus(ServiceIsStopping)
+            self.opensearch.stop()
+            self.unit.status = WaitingStatus(ServiceStopped)
+        except OpenSearchStopError:
+            self.unit.status = BlockedStatus(ServiceStopError)
+
+    def _can_service_start(self):
+        """Return if the opensearch service can start."""
         # if there are any missing system requirements leave
         missing_sys_reqs = self.opensearch.missing_sys_requirements()
         if len(missing_sys_reqs) > 0:
@@ -397,14 +434,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 # meaning that it's a new cluster, so we can safely start the OpenSearch service
                 pass
 
-        try:
-            self.unit.status = BlockedStatus(WaitingToStart)
-            self.opensearch.start()
-            self.clear_status(WaitingToStart)
-
-            return True
-        except OpenSearchStartError:
-            return False
+        return True
 
     def _store_tls_resources(
         self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
