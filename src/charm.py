@@ -397,17 +397,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 pass
 
         try:
-            if self.app_peers_data.get("unit_starting_lock_acquired", False):
-                return False
-
-            if self.unit.is_leader():
-                self.app_peers_data["unit_starting_lock"] = "True"
-            else:
-                self.unit_peers_data["unit_starting_lock"] = "True"
-
             self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
-
             self.clear_status(WaitingToStart)
 
             return True
