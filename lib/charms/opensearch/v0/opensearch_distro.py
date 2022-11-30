@@ -269,6 +269,7 @@ class OpenSearchDistribution(ABC):
         endpoint: str,
         payload: Optional[Dict[str, any]] = None,
         host: Optional[str] = None,
+        alt_hosts: Optional[List[str]] = None,
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request.
 
@@ -277,6 +278,7 @@ class OpenSearchDistribution(ABC):
             endpoint: relative to the base uri.
             payload: JSON / map body payload.
             host: host of the node we wish to make a request on, by default current host.
+            alt_hosts: in case the default host is unreachable, fallback hosts
         """
         if None in [endpoint, method]:
             raise ValueError("endpoint or method missing")
@@ -284,9 +286,19 @@ class OpenSearchDistribution(ABC):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        target_host = host if host else self.host
-        if not is_reachable(target_host, self.port):
-            logger.error(f"Host {target_host}:{self.port} not reachable.")
+        primary_host = host if host else self.host
+        target_hosts = [primary_host]
+        if alt_hosts:
+            target_hosts.extend([alt_host for alt_host in alt_hosts if alt_host != primary_host])
+
+        target_host: Optional[str] = None
+        for host_candidate in target_hosts:
+            if is_reachable(host_candidate, self.port):
+                target_host = host_candidate
+                break
+
+        if not target_host:
+            logger.error(f"Host {primary_host}:{self.port} and alternative_hosts not reachable.")
             raise OpenSearchHttpError()
 
         full_url = f"https://{target_host}:{self.port}/{endpoint}"
