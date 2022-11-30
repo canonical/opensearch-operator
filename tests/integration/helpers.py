@@ -8,7 +8,6 @@ from typing import Dict, List, Optional
 
 import requests
 import yaml
-from ops.model import StatusBase
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
@@ -35,6 +34,19 @@ MODEL_CONFIG = {
 logger = logging.getLogger(__name__)
 
 
+async def run_action(ops_test: OpsTest, unit_id: int, action_name: str) -> Dict[str, str]:
+    """Run a charm action.
+
+    Returns:
+        Dict with the parameters returned from the completed action.
+    """
+    unit_name = ops_test.model.applications[APP_NAME].units[unit_id].name
+
+    action = await ops_test.model.units.get(unit_name).run_action(action_name)
+    action = await action.wait()
+    return action.results
+
+
 async def get_admin_secrets(ops_test: OpsTest) -> Dict[str, str]:
     """Use the charm action to retrieve the admin password and chain.
 
@@ -42,11 +54,7 @@ async def get_admin_secrets(ops_test: OpsTest) -> Dict[str, str]:
         Dict with the admin and cert chain stored on the peer relation databag.
     """
     # can retrieve from any unit running unit, so we pick the first
-    unit_name = ops_test.model.applications[APP_NAME].units[0].name
-
-    action = await ops_test.model.units.get(unit_name).run_action("get-admin-secrets")
-    action = await action.wait()
-    return action.results
+    return await run_action(ops_test, 0, "get-admin-secrets")
 
 
 def get_application_unit_names(ops_test: OpsTest) -> List[str]:
@@ -61,7 +69,19 @@ def get_application_unit_names(ops_test: OpsTest) -> List[str]:
     return [unit.name.replace("/", "-") for unit in ops_test.model.applications[APP_NAME].units]
 
 
-def get_application_unit_status(ops_test: OpsTest) -> List[StatusBase]:
+def get_application_unit_ids(ops_test: OpsTest) -> List[int]:
+    """List the unit IDs of an application.
+
+    Args:
+        ops_test: The ops test framework instance
+
+    Returns:
+        list of current unit ids of the application
+    """
+    return [int(unit.name.split("/")[1]) for unit in ops_test.model.applications[APP_NAME].units]
+
+
+def get_application_unit_status(ops_test: OpsTest) -> Dict[int, str]:
     """List the unit statuses of an application.
 
     Args:
@@ -70,7 +90,13 @@ def get_application_unit_status(ops_test: OpsTest) -> List[StatusBase]:
     Returns:
         list of current unit statuses of the application
     """
-    return [unit.status for unit in ops_test.model.applications[APP_NAME].units]
+    units = ops_test.model.applications[APP_NAME].units
+
+    result = {}
+    for unit in units:
+        result[int(unit.name.split("/")[1])] = unit.workload_status
+
+    return result
 
 
 def get_application_unit_ips(ops_test: OpsTest) -> List[str]:
@@ -112,10 +138,21 @@ async def get_leader_unit_ip(ops_test: OpsTest) -> str:
     return leader_unit.public_address
 
 
+async def get_leader_unit_id(ops_test: OpsTest) -> int:
+    """Helper function that retrieves the leader unit ID."""
+    leader_unit = None
+    for unit in ops_test.model.applications[APP_NAME].units:
+        if await unit.is_leader_from_status():
+            leader_unit = unit
+            break
+
+    return int(leader_unit.name.split("/")[1])
+
+
 async def http_request(
     ops_test: OpsTest,
-    endpoint: str,
     method: str,
+    endpoint: str,
     payload: Optional[Dict[str, any]] = None,
     resp_status_code: bool = False,
 ):
@@ -123,8 +160,8 @@ async def http_request(
 
     Args:
         ops_test: The ops test framework instance.
-        endpoint: the url to be called.
         method: the HTTP method (GET, POST, HEAD etc.)
+        endpoint: the url to be called.
         payload: the body of the request if any.
         resp_status_code: whether to only return the http response code.
 
@@ -157,6 +194,19 @@ async def http_request(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
+async def cluster_health(ops_test: OpsTest, unit_ip: str) -> Dict[str, any]:
+    """Fetch the cluster health."""
+    return await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_cluster/health",
+    )
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
 async def check_cluster_formation_successful(
     ops_test: OpsTest, unit_ip: str, unit_names: List[str]
 ) -> bool:
@@ -170,7 +220,7 @@ async def check_cluster_formation_successful(
     Returns:
         Whether The cluster formation is successful.
     """
-    response = await http_request(ops_test, f"https://{unit_ip}:9200/_nodes", "GET")
+    response = await http_request(ops_test, "GET", f"https://{unit_ip}:9200/_nodes")
     if "_nodes" not in response or "nodes" not in response:
         return False
 
