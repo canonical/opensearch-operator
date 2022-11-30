@@ -371,11 +371,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if not self._can_service_start():
             return False
 
-        if self.app_peers_data.get("service_unit_lock_acquired") != self.unit_ip:
-            self.unit.status = WaitingStatus(WaitingForOtherUnitServiceOps)
+        if not self._acquire_service_lock():
             return False
-
-        self.unit_peers_data["service_unit_lock_acquired"] = self.unit_ip
 
         try:
             self.unit.status = BlockedStatus(WaitingToStart)
@@ -390,11 +387,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _stop_opensearch(self) -> bool:
         """Stop OpenSearch if allowed."""
-        if self.app_peers_data.get("service_unit_lock_acquired") != self.unit_ip:
-            self.unit.status = WaitingStatus(WaitingForOtherUnitServiceOps)
+        if not self._acquire_service_lock():
             return False
-
-        self.unit_peers_data["service_unit_lock_acquired"] = self.unit_ip
 
         try:
             self.unit.status = WaitingStatus(ServiceIsStopping)
@@ -403,6 +397,20 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         except OpenSearchStopError:
             self.unit.status = BlockedStatus(ServiceStopFailed)
             self.unit_peers_data["service_unit_lock_acquired"] = ""
+
+    def _acquire_service_lock(self) -> bool:
+        """Attempt to acquire the service ops lock for this unit."""
+        unit_holding_lock = self.app_peers_data.get("service_unit_lock_acquired")
+        if unit_holding_lock and unit_holding_lock != self.unit_ip:
+            self.unit.status = WaitingStatus(WaitingForOtherUnitServiceOps)
+            return False
+
+        if self.unit.is_leader():
+            self.app_peers_data["service_unit_lock_acquired"] = self.unit_ip
+        else:
+            self.unit_peers_data["service_unit_lock_acquired"] = self.unit_ip
+
+        return True
 
     def _can_service_start(self):
         """Return if the opensearch service can start."""
