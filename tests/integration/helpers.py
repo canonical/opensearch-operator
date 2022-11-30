@@ -78,7 +78,7 @@ def get_application_unit_ids(ops_test: OpsTest) -> List[int]:
     Returns:
         list of current unit ids of the application
     """
-    return [int(unit.name.split("/")[0]) for unit in ops_test.model.applications[APP_NAME].units]
+    return [int(unit.name.split("/")[1]) for unit in ops_test.model.applications[APP_NAME].units]
 
 
 def get_application_unit_status(ops_test: OpsTest) -> Dict[int, str]:

@@ -278,7 +278,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             )
             return
 
-        event.set_results({"message": "The OpenSearch service is attempting a start..."})
+        event.set_results({"message": "The OpenSearch service is starting."})
 
     def _on_restart_service_action(self, event: ActionEvent):
         """Restart the OpenSearch service from an action event."""
@@ -295,7 +295,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             )
             return
 
-        event.set_results({"message": "The OpenSearch service is starting..."})
+        event.set_results({"message": "The OpenSearch service is starting."})
 
     def _on_stop_service_action(self, event: ActionEvent):
         """Stop the OpenSearch service from an action event."""
