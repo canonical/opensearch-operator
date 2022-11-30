@@ -17,6 +17,7 @@ from charms.opensearch.v0.constants_charm import (
     SecurityIndexInitProgress,
     ServiceIsStopping,
     ServiceStopError,
+    ServiceStopFailed,
     ServiceStopped,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
@@ -175,13 +176,13 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
         if self.unit.is_leader():
-            unit_data = event.relation.data.get(event.unit)
-            if unit_data:
-                exclusions_to_remove = unit_data.get("remove_from_allocation_exclusions")
+            data = event.relation.data.get(event.unit)
+            if data:
+                exclusions_to_remove = data.get("remove_from_allocation_exclusions")
                 if exclusions_to_remove:
-                    self.remove_allocation_exclusions(set(exclusions_to_remove.split(",")))
+                    self.append_allocation_exclusion_to_remove(exclusions_to_remove)
 
-                service_op_unit_lock = unit_data.get("service_unit_lock_acquired", "False")
+                service_op_unit_lock = data.get("service_unit_lock_acquired", "False")
                 if service_op_unit_lock == "True":
                     self.app_peers_data["service_unit_lock_acquired"] = service_op_unit_lock
                 else:
