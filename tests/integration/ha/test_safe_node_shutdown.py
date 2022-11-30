@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
-    """Build and deploy one unit of MongoDB."""
+    """Build and deploy one unit of OpenSearch."""
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
