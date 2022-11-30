@@ -285,6 +285,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 {"message": "An error occurred during the stop of the OpenSearch service."}
             )
             self.unit.status = BlockedStatus(ServiceStopFailed)
+            return
 
         if not self._start_opensearch():
             event.defer()
