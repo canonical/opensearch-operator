@@ -16,7 +16,6 @@ from charms.opensearch.v0.constants_charm import (
     InstallProgress,
     SecurityIndexInitProgress,
     ServiceIsStopping,
-    ServiceStopError,
     ServiceStopFailed,
     ServiceStopped,
     TLSNotFullyConfigured,
@@ -182,8 +181,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 if exclusions_to_remove:
                     self.append_allocation_exclusion_to_remove(exclusions_to_remove)
 
-                service_op_unit_lock = data.get("service_unit_lock_acquired", "False")
-                if service_op_unit_lock == "True":
+                service_op_unit_lock = data.get("service_unit_lock_acquired")
+                if service_op_unit_lock:
                     self.app_peers_data["service_unit_lock_acquired"] = service_op_unit_lock
                 else:
                     del self.app_peers_data["service_unit_lock_acquired"]
@@ -285,11 +284,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         """Restart the OpenSearch service from an action event."""
         if not self._stop_opensearch():
             event.set_results(
-                {"message": f"{ServiceStopError} -- check the logs for more details."}
+                {"message": f"{ServiceStopFailed} -- check the logs for more details."}
             )
             return
-
-        self.unit_peers_data["service_unit_lock_acquired"] = "True"
 
         if not self._start_opensearch():
             event.defer()
@@ -306,7 +303,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             event.set_results({"message": "The OpenSearch service is stopping..."})
         else:
             event.set_results(
-                {"message": f"{ServiceStopError} -- check the logs for more details."}
+                {"message": f"{ServiceStopFailed} -- check the logs for more details."}
             )
 
     def on_tls_conf_set(
@@ -374,18 +371,18 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if not self._can_service_start():
             return False
 
-        if self.unit_peers_data.get("service_unit_lock_acquired") == "True":
+        if self.app_peers_data.get("service_unit_lock_acquired") != self.unit_ip:
             self.unit.status = WaitingStatus(WaitingForOtherUnitServiceOps)
             return False
 
-        self.unit_peers_data["service_unit_lock_acquired"] = "True"
+        self.unit_peers_data["service_unit_lock_acquired"] = self.unit_ip
 
         try:
             self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
             self.clear_status(WaitingToStart)
 
-            self.unit_peers_data["service_unit_lock_acquired"] = "False"
+            self.unit_peers_data["service_unit_lock_acquired"] = ""
 
             return True
         except OpenSearchStartError:
@@ -393,18 +390,19 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _stop_opensearch(self) -> bool:
         """Stop OpenSearch if allowed."""
-        if self.unit_peers_data.get("service_unit_lock_acquired") == "True":
+        if self.app_peers_data.get("service_unit_lock_acquired") != self.unit_ip:
             self.unit.status = WaitingStatus(WaitingForOtherUnitServiceOps)
             return False
 
-        self.unit_peers_data["service_unit_lock_acquired"] = "True"
+        self.unit_peers_data["service_unit_lock_acquired"] = self.unit_ip
 
         try:
             self.unit.status = WaitingStatus(ServiceIsStopping)
             self.opensearch.stop()
             self.unit.status = WaitingStatus(ServiceStopped)
         except OpenSearchStopError:
-            self.unit.status = BlockedStatus(ServiceStopError)
+            self.unit.status = BlockedStatus(ServiceStopFailed)
+            self.unit_peers_data["service_unit_lock_acquired"] = ""
 
     def _can_service_start(self):
         """Return if the opensearch service can start."""
