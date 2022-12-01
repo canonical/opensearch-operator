@@ -379,7 +379,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.opensearch.start()
             self.clear_status(WaitingToStart)
 
-            self.unit_peers_data["service_unit_lock_acquired"] = ""
+            self._release_service_lock()
 
             return True
         except OpenSearchStartError:
@@ -396,7 +396,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = WaitingStatus(ServiceStopped)
         except OpenSearchStopError:
             self.unit.status = BlockedStatus(ServiceStopFailed)
-            self.unit_peers_data["service_unit_lock_acquired"] = ""
+            self._release_service_lock()
 
     def _acquire_service_lock(self) -> bool:
         """Attempt to acquire the service ops lock for this unit."""
@@ -405,12 +405,23 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = WaitingStatus(WaitingForOtherUnitServiceOps)
             return False
 
+        self.clear_status(WaitingForOtherUnitServiceOps)
+
         if self.unit.is_leader():
             self.app_peers_data["service_unit_lock_acquired"] = self.unit_ip
         else:
             self.unit_peers_data["service_unit_lock_acquired"] = self.unit_ip
 
         return True
+
+    def _release_service_lock(self):
+        """Remove the ip of the current unit from unit or app peer relation data."""
+        if self.unit.is_leader():
+            del self.app_peers_data["service_unit_lock_acquired"]
+        else:
+            del self.unit_peers_data["service_unit_lock_acquired"]
+
+        self.clear_status(WaitingForOtherUnitServiceOps)
 
     def _can_service_start(self):
         """Return if the opensearch service can start."""
@@ -432,7 +443,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                     message = WaitingForBusyShards.format(
                         " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
                     )
-                    self.unit.status = BlockedStatus(message)
+                    self.unit.status = WaitingStatus(message)
                     return False
 
                 self.clear_status(WaitingForBusyShards, pattern=StatusCheckPattern.Interpolated)
