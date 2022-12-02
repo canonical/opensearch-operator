@@ -26,8 +26,8 @@ class Scope(BaseStrEnum):
     UNIT = "unit"
 
 
-class SecretStore:
-    """Class representing a secret store for a charm.
+class Store:
+    """Class representing a relation data store for a charm.
 
     Requires the following 2 properties on the charm:
       - app_peers_data
@@ -38,7 +38,7 @@ class SecretStore:
         self._charm = charm
 
     def put(self, scope: Scope, key: str, value: Optional[str]) -> None:
-        """Put string secret into the secret storage."""
+        """Put object into the relation data store."""
         if scope is None:
             raise ValueError("Scope undefined.")
 
@@ -46,12 +46,12 @@ class SecretStore:
         if scope == Scope.APP:
             data = self._charm.app_peers_data
 
-        self._put_or_delete(data, key, value)
+        self.put_or_delete(data, key, value)
 
     def put_object(
         self, scope: Scope, key: str, value: Dict[str, any], merge: bool = False
     ) -> None:
-        """Put dict / json object secret into the secret storage."""
+        """Put dict / json object into relation data store."""
         if merge:
             stored = self.get_object(scope, key)
 
@@ -66,7 +66,7 @@ class SecretStore:
         self.put(scope, key, payload_str)
 
     def get(self, scope: Scope, key: str) -> Optional[str]:
-        """Get string secret from the secret storage."""
+        """Get string from the relation data store."""
         if scope is None:
             raise ValueError("Scope undefined.")
 
@@ -77,7 +77,7 @@ class SecretStore:
         return data.get(key, None)
 
     def get_object(self, scope: Scope, key: str) -> Optional[Dict[str, any]]:
-        """Get dict / json object secret from the secret storage."""
+        """Get dict / json object from the relation data store."""
         data = self.get(scope, key)
         if data is None:
             return None
@@ -85,14 +85,23 @@ class SecretStore:
         return json.loads(data)
 
     def delete(self, scope: Scope, key: str):
-        """Delete secret from the secret storage."""
+        """Delete object from the relation data store."""
         self.put(scope, key, None)
 
     @staticmethod
-    def _put_or_delete(peers_data: Dict[str, str], key: str, value: Optional[str]):
-        """Put data into the secret storage or delete if value is None."""
+    def put_or_delete(peers_data: Dict[str, str], key: str, value: Optional[str]):
+        """Put data into the relation data store or delete if value is None."""
         if value is None:
             del peers_data[key]
             return
 
         peers_data.update({key: value})
+
+
+class SecretStore(Store):
+    """Class representing a secret store for a charm.
+
+    For now, it is simply a base class for regular Relation data store
+    """
+
+    pass

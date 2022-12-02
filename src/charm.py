@@ -80,9 +80,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.framework.observe(self.on.update_status, self._on_update_status)
 
         self.framework.observe(self.on.get_admin_secrets_action, self._on_get_admin_secrets_action)
-        self.framework.observe(self.on.start_service_action, self._on_start_service_action)
-        self.framework.observe(self.on.stop_service_action, self._on_stop_service_action)
-        self.framework.observe(self.on.restart_service_action, self._on_restart_service_action)
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
@@ -95,6 +92,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle leader election event."""
+        self.relation_store.put_object(Scope.APP, "service_state_by_unit", {self.unit_id: ""})
+
         if self.app_peers_data.get("security_index_initialised"):
             return
 
@@ -264,47 +263,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             chain = "\n".join(admin_secrets["chain"][::-1])
 
         event.set_results({"password": password if password else "", "chain": chain})
-
-    def _on_start_service_action(self, event: ActionEvent):
-        """Start the OpenSearch service from an action event."""
-        if self.opensearch.is_node_up():
-            event.set_results({"message": "OpenSearch is already started in this node."})
-            return
-
-        if not self._start_opensearch():
-            event.defer()
-            event.set_results(
-                {"message": "Something happened, the OpenSearch service will re-attempt a start."}
-            )
-            return
-
-        event.set_results({"message": "The OpenSearch service is starting."})
-
-    def _on_restart_service_action(self, event: ActionEvent):
-        """Restart the OpenSearch service from an action event."""
-        if not self._stop_opensearch():
-            event.set_results(
-                {"message": f"{ServiceStopFailed} -- check the logs for more details."}
-            )
-            return
-
-        if not self._start_opensearch():
-            event.defer()
-            event.set_results(
-                {"message": "Something happened, the OpenSearch service will re-attempt a start."}
-            )
-            return
-
-        event.set_results({"message": "The OpenSearch service is starting."})
-
-    def _on_stop_service_action(self, event: ActionEvent):
-        """Stop the OpenSearch service from an action event."""
-        if self._stop_opensearch():
-            event.set_results({"message": "The OpenSearch service is stopping..."})
-        else:
-            event.set_results(
-                {"message": f"{ServiceStopFailed} -- check the logs for more details."}
-            )
 
     def on_tls_conf_set(
         self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool

@@ -15,12 +15,12 @@ LIBPATCH = 1
 
 
 # Blocked statuses
-ServiceStopError = "An error occurred during the stop of the OpenSearch service. "
 WaitingToStart = "Waiting for OpenSearch to start..."
 InstallError = "Could not install OpenSearch."
 CertsExpirationError = "The certificates: {} need to be refreshed."
 WaitingForBusyShards = "The shards: {} need to complete building."
 AllocationExclusionFailed = "The exclusion of this node from the allocations failed."
+ServiceStartError = "An error occurred during the start of the OpenSearch service."
 ServiceStopped = "The OpenSearch service stopped."
 ServiceStopFailed = "An error occurred while attempting to stop the OpenSearch service."
 ServiceIsStopping = "The OpenSearch service is stopping."
