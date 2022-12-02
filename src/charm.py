@@ -170,12 +170,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 if exclusions_to_remove:
                     self.append_allocation_exclusion_to_remove(exclusions_to_remove)
 
-                service_op_unit_lock = data.get("service_unit_lock_acquired")
-                if service_op_unit_lock:
-                    self.app_peers_data["service_unit_lock_acquired"] = service_op_unit_lock
-                else:
-                    del self.app_peers_data["service_unit_lock_acquired"]
-
         # Restart node when cert renewal for the transport layer
         if self.unit_peers_data.get("must_reboot_node") == "True":
             try:
