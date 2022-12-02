@@ -14,14 +14,15 @@ from charms.opensearch.v0.constants_charm import (
     CertsExpirationError,
     InstallError,
     InstallProgress,
+    RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
+    ServiceStartError,
     ServiceStopFailed,
     ServiceStopped,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
     WaitingForBusyShards,
-    WaitingForOtherUnitServiceOps,
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import CertType
@@ -35,6 +36,7 @@ from charms.opensearch.v0.helper_security import (
 )
 from charms.opensearch.v0.opensearch_base_charm import (
     PEER,
+    SERVICE_MANAGER,
     OpenSearchBaseCharm,
     StatusCheckPattern,
 )
@@ -44,6 +46,7 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
+from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
@@ -56,6 +59,7 @@ from ops.charm import (
     StartEvent,
     UpdateStatusEvent,
 )
+from ops.framework import EventBase
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
@@ -81,6 +85,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         self.framework.observe(self.on.get_admin_secrets_action, self._on_get_admin_secrets_action)
 
+        self.service_manager = RollingOpsManager(
+            self, relation=SERVICE_MANAGER, callback=self._start_opensearch
+        )
+
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
         self.unit.status = MaintenanceStatus(InstallProgress)
@@ -92,8 +100,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle leader election event."""
-        self.relation_store.put_object(Scope.APP, "service_state_by_unit", {self.unit_id: ""})
-
         if self.app_peers_data.get("security_index_initialised"):
             return
 
@@ -132,25 +138,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         # Remove some config entries when cluster bootstrapped
         self._cleanup_conf_if_bootstrapped(nodes)
 
-        # start opensearch
-        if not self._start_opensearch():
-            event.defer()
-            return
-
-        # initialize the security index if the admin certs are written on disk
-        if self.unit.is_leader():
-            if self.app_peers_data.get("security_index_initialised") is None:
-                admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-                self._initialize_security_index(admin_secrets)
-                self.app_peers_data["security_index_initialised"] = "True"
-
-            self.app_peers_data["leader_ip"] = self.unit_ip
-
-        # store the exclusions that previously failed to be stored when no units online
-        if self.app_peers_data.get("remove_from_allocation_exclusions"):
-            self.opensearch.remove_allocation_exclusions(
-                self.app_peers_data["remove_from_allocation_exclusions"]
-            )
+        # request the start of opensearch
+        self.unit.status = WaitingStatus(RequestUnitServiceOps.format("start"))
+        self.on[self.service_manager.name].acquire_lock.emit(callback_override="_start_opensearch")
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """New node joining the cluster."""
@@ -324,62 +314,49 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         return self._are_all_tls_resources_stored()
 
-    def _start_opensearch(self) -> bool:
+    def _start_opensearch(self, event: EventBase) -> None:
         """Start OpenSearch if all resources configured."""
         if not self._can_service_start():
-            return False
-
-        if not self._acquire_service_lock():
-            return False
+            return event.defer()
 
         try:
             self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
             self.clear_status(WaitingToStart)
-
-            self._release_service_lock()
-
-            return True
         except OpenSearchStartError:
-            return False
+            self.unit.status = BlockedStatus(ServiceStartError)
+            event.defer()
+            return
 
-    def _stop_opensearch(self) -> bool:
-        """Stop OpenSearch if allowed."""
-        if not self._acquire_service_lock():
-            return False
+        # initialize the security index if the admin certs are written on disk
+        if self.unit.is_leader():
+            if self.app_peers_data.get("security_index_initialised") is None:
+                admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+                self._initialize_security_index(admin_secrets)
+                self.app_peers_data["security_index_initialised"] = "True"
 
+            self.app_peers_data["leader_ip"] = self.unit_ip
+
+        # store the exclusions that previously failed to be stored when no units online
+        if self.app_peers_data.get("remove_from_allocation_exclusions"):
+            self.opensearch.remove_allocation_exclusions(
+                self.app_peers_data["remove_from_allocation_exclusions"]
+            )
+
+    def _stop_opensearch(self, event: EventBase) -> None:
+        """Stop OpenSearch if possible."""
         try:
             self.unit.status = WaitingStatus(ServiceIsStopping)
             self.opensearch.stop()
             self.unit.status = WaitingStatus(ServiceStopped)
         except OpenSearchStopError:
             self.unit.status = BlockedStatus(ServiceStopFailed)
-            self._release_service_lock()
+            event.defer()
 
-    def _acquire_service_lock(self) -> bool:
-        """Attempt to acquire the service ops lock for this unit."""
-        unit_holding_lock = self.app_peers_data.get("service_unit_lock_acquired")
-        if unit_holding_lock and unit_holding_lock != self.unit_ip:
-            self.unit.status = WaitingStatus(WaitingForOtherUnitServiceOps)
-            return False
-
-        self.clear_status(WaitingForOtherUnitServiceOps)
-
-        if self.unit.is_leader():
-            self.app_peers_data["service_unit_lock_acquired"] = self.unit_ip
-        else:
-            self.unit_peers_data["service_unit_lock_acquired"] = self.unit_ip
-
-        return True
-
-    def _release_service_lock(self):
-        """Remove the ip of the current unit from unit or app peer relation data."""
-        if self.unit.is_leader():
-            del self.app_peers_data["service_unit_lock_acquired"]
-        else:
-            del self.unit_peers_data["service_unit_lock_acquired"]
-
-        self.clear_status(WaitingForOtherUnitServiceOps)
+    def _restart_opensearch(self, event: EventBase) -> None:
+        """Restart OpenSearch if possible."""
+        self._stop_opensearch(event)
+        self._start_opensearch(event)
 
     def _can_service_start(self):
         """Return if the opensearch service can start."""

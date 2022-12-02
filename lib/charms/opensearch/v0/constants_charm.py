@@ -29,6 +29,9 @@ TLSRelationBrokenError = (
     "Relation broken with the TLS Operator while TLS not fully configured. Stopping OpenSearch."
 )
 
+# Wait status
+RequestUnitServiceOps = "Requesting lock on operation: {}"
+
 # Maintenance statuses
 InstallProgress = "Installing OpenSearch..."
 SecurityIndexInitProgress = "Initializing the security index..."

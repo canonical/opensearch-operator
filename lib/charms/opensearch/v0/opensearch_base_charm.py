@@ -36,6 +36,7 @@ LIBPATCH = 1
 
 
 PEER = "opensearch-peers"
+SERVICE_MANAGER = "service"
 
 
 logger = logging.getLogger(__name__)
