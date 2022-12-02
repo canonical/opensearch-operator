@@ -3,13 +3,18 @@
 
 """Base class for the OpenSearch Operators."""
 import logging
+import random
 import re
-from typing import Dict, Type
+from typing import Dict, Set, Type
 
+from charms.opensearch.v0.constants_charm import (
+    AllocationExclusionFailed,
+    HorizontalScaleUpSuggest,
+)
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_databag import Scope, SecretStore
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.helper_networking import get_host_ip
+from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
@@ -17,7 +22,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
 from ops.charm import CharmBase
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -59,6 +64,43 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.secrets = SecretStore(self)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
+
+    def on_allocation_exclusion_add_failed(self):
+        """Callback for when the OpenSearch service fails stopping."""
+        self.unit.status = BlockedStatus(AllocationExclusionFailed)
+
+    def on_unassigned_shards(self, unassigned_shards: int):
+        """Called during node shutdown / horizontal scale-down if some shards left unassigned."""
+        self.app.status = MaintenanceStatus(HorizontalScaleUpSuggest.format(unassigned_shards))
+
+    def append_allocation_exclusion_to_remove(self, unit_name) -> None:
+        """Store a unit in the relation data bag, to be removed from the allocation exclusion."""
+        if not self.unit.is_leader():
+            self.unit_peers_data["remove_from_allocation_exclusions"] = unit_name
+            return
+
+        exclusions = set(
+            self.app_peers_data.get("remove_from_allocation_exclusions", "").split(",")
+        )
+        exclusions.add(unit_name)
+
+        self.app_peers_data["remove_from_allocation_exclusions"] = ",".join(exclusions)
+
+    def remove_allocation_exclusions(self, exclusions: Set[str]) -> None:
+        """Remove the allocation exclusions from the peer databag if existing."""
+        stored_exclusions = set(
+            self.app_peers_data.get("remove_from_allocation_exclusions", "").split(",")
+        )
+        exclusions_to_keep = ",".join(stored_exclusions - exclusions)
+
+        if self.unit.is_leader():
+            self.app_peers_data["remove_from_allocation_exclusions"] = exclusions_to_keep
+        else:
+            self.unit_peers_data["remove_from_allocation_exclusions"] = exclusions_to_keep
+
+    def get_allocation_exclusions(self) -> str:
+        """Retrieve the units that must be removed from the allocation exclusion."""
+        return self.app_peers_data.get("to_remove_from_allocation_exclusion", "")
 
     def on_tls_conf_set(
         self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
@@ -115,6 +157,12 @@ class OpenSearchBaseCharm(CharmBase):
     def unit_id(self) -> int:
         """ID of the current unit."""
         return int(self.unit.name.split("/")[1])
+
+    @property
+    def alternative_host(self) -> str:
+        """Return an alternative host (of another node) in case the current is offline."""
+        all_units_ips = units_ips(self, PEER)
+        return random.choice(list(all_units_ips.values()))
 
     def _get_relation_data(self, scope: Scope, relation_name: str) -> Dict[str, str]:
         """Relation data object."""

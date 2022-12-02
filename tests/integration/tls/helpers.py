@@ -24,8 +24,8 @@ async def check_security_index_initialised(ops_test: OpsTest, unit_ip: str) -> b
     """
     response = await http_request(
         ops_test,
-        f"https://{unit_ip}:9200/.opendistro_security",
         "HEAD",
+        f"https://{unit_ip}:9200/.opendistro_security",
         resp_status_code=True,
     )
     return response == 200
@@ -46,5 +46,5 @@ async def check_unit_tls_configured(ops_test: OpsTest, unit_ip: str, unit_name: 
     Returns:
         Whether the node is up: no TLS config issues and TLS on HTTP layer successful.
     """
-    response = await http_request(ops_test, f"https://{unit_ip}:9200", "GET")
+    response = await http_request(ops_test, "GET", f"https://{unit_ip}:9200")
     return response["name"] == unit_name

@@ -15,6 +15,9 @@ from charms.opensearch.v0.constants_charm import (
     InstallError,
     InstallProgress,
     SecurityIndexInitProgress,
+    ServiceIsStopping,
+    ServiceStopFailed,
+    ServiceStopped,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
     WaitingForBusyShards,
@@ -38,6 +41,7 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchHttpError,
     OpenSearchInstallError,
     OpenSearchStartError,
+    OpenSearchStopError,
 )
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
@@ -52,7 +56,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.main import main
-from ops.model import BlockedStatus, MaintenanceStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
 from opensearch import OpenSearchTarball
 
@@ -75,6 +79,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.framework.observe(self.on.update_status, self._on_update_status)
 
         self.framework.observe(self.on.get_admin_secrets_action, self._on_get_admin_secrets_action)
+        self.framework.observe(self.on.start_service_action, self._on_start_service_action)
+        self.framework.observe(self.on.stop_service_action, self._on_stop_service_action)
+        self.framework.observe(self.on.restart_service_action, self._on_restart_service_action)
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
@@ -109,9 +116,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             event.defer()
             return
 
-        # reset status to active if it was TLSNotFullyConfigured
-        self.clear_status(TLSNotFullyConfigured)
-
         # configure clients auth
         self.opensearch_config.set_client_auth()
 
@@ -142,6 +146,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
             self.app_peers_data["leader_ip"] = self.unit_ip
 
+        # store the exclusions that previously failed to be stored when no units online
+        if self.app_peers_data.get("remove_from_allocation_exclusions"):
+            self.opensearch.remove_allocation_exclusions(
+                self.app_peers_data["remove_from_allocation_exclusions"]
+            )
+
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """New node joining the cluster."""
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
@@ -162,7 +172,15 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self._store_tls_resources(CertType.APP_ADMIN, current_secrets, override_admin=False)
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
-        """Restart node when cert renewal for the transport layer."""
+        """Handle peer relation changes."""
+        if self.unit.is_leader():
+            data = event.relation.data.get(event.unit)
+            if data:
+                exclusions_to_remove = data.get("remove_from_allocation_exclusions")
+                if exclusions_to_remove:
+                    self.append_allocation_exclusion_to_remove(exclusions_to_remove)
+
+        # Restart node when cert renewal for the transport layer
         if self.unit_peers_data.get("must_reboot_node") == "True":
             try:
                 self.opensearch.restart()
@@ -239,6 +257,57 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             chain = "\n".join(admin_secrets["chain"][::-1])
 
         event.set_results({"password": password if password else "", "chain": chain})
+
+    def _on_start_service_action(self, event: ActionEvent):
+        """Start the OpenSearch service from an action event."""
+        if self.opensearch.is_node_up():
+            event.set_results({"message": "OpenSearch is already started in this node."})
+            return
+
+        if not self._start_opensearch():
+            event.defer()
+            event.set_results(
+                {"message": "Something happened, the OpenSearch service will re-attempt a start."}
+            )
+            return
+
+        event.set_results({"message": "The OpenSearch service is starting."})
+
+    def _on_restart_service_action(self, event: ActionEvent):
+        """Restart the OpenSearch service from an action event."""
+        try:
+            self.unit.status = MaintenanceStatus(ServiceIsStopping)
+            self.opensearch.stop()
+            self.unit.status = MaintenanceStatus(ServiceStopped)
+        except OpenSearchStopError as e:
+            logger.error(e)
+            event.set_results(
+                {"message": "An error occurred during the stop of the OpenSearch service."}
+            )
+            self.unit.status = BlockedStatus(ServiceStopFailed)
+            return
+
+        if not self._start_opensearch():
+            event.defer()
+            event.set_results(
+                {"message": "Something happened, the OpenSearch service will re-attempt a start."}
+            )
+            return
+
+        event.set_results({"message": "The OpenSearch service is starting."})
+
+    def _on_stop_service_action(self, event: ActionEvent):
+        """Stop the OpenSearch service from an action event."""
+        try:
+            self.unit.status = MaintenanceStatus(ServiceIsStopping)
+            self.opensearch.stop()
+            self.unit.status = WaitingStatus(ServiceStopped)
+            event.set_results({"message": "The OpenSearch service stopped."})
+        except OpenSearchStopError:
+            event.set_results(
+                {"message": "An error occurred during the stop of the OpenSearch service."}
+            )
+            self.unit.status = BlockedStatus(ServiceStopFailed)
 
     def on_tls_conf_set(
         self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
