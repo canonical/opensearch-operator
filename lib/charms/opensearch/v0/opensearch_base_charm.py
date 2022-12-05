@@ -12,7 +12,7 @@ from charms.opensearch.v0.constants_charm import (
     HorizontalScaleUpSuggest,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_databag import Scope, SecretStore
+from charms.opensearch.v0.helper_databag import Scope, SecretStore, Store
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
@@ -36,6 +36,7 @@ LIBPATCH = 1
 
 
 PEER = "opensearch-peers"
+SERVICE_MANAGER = "service"
 
 
 logger = logging.getLogger(__name__)
@@ -63,6 +64,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch = distro(self, PEER)
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.secrets = SecretStore(self)
+        self.relation_store = Store(self)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
 
     def on_allocation_exclusion_add_failed(self):

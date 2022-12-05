@@ -14,8 +14,10 @@ from charms.opensearch.v0.constants_charm import (
     CertsExpirationError,
     InstallError,
     InstallProgress,
+    RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
+    ServiceStartError,
     ServiceStopFailed,
     ServiceStopped,
     TLSNotFullyConfigured,
@@ -34,6 +36,7 @@ from charms.opensearch.v0.helper_security import (
 )
 from charms.opensearch.v0.opensearch_base_charm import (
     PEER,
+    SERVICE_MANAGER,
     OpenSearchBaseCharm,
     StatusCheckPattern,
 )
@@ -43,6 +46,7 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
+from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
@@ -55,6 +59,7 @@ from ops.charm import (
     StartEvent,
     UpdateStatusEvent,
 )
+from ops.framework import EventBase
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
@@ -79,9 +84,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.framework.observe(self.on.update_status, self._on_update_status)
 
         self.framework.observe(self.on.get_admin_secrets_action, self._on_get_admin_secrets_action)
-        self.framework.observe(self.on.start_service_action, self._on_start_service_action)
-        self.framework.observe(self.on.stop_service_action, self._on_stop_service_action)
-        self.framework.observe(self.on.restart_service_action, self._on_restart_service_action)
+
+        self.service_manager = RollingOpsManager(
+            self, relation=SERVICE_MANAGER, callback=self._start_opensearch
+        )
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
@@ -135,25 +141,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         # Set the configuration of the node
         self._set_node_conf(nodes)
 
-        # start opensearch
-        if not self._start_opensearch():
-            event.defer()
-            return
+        # Remove some config entries when cluster bootstrapped
+        self._cleanup_conf_if_bootstrapped(nodes)
 
-        # initialize the security index if the admin certs are written on disk
-        if self.unit.is_leader():
-            if self.app_peers_data.get("security_index_initialised") is None:
-                admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-                self._initialize_security_index(admin_secrets)
-                self.app_peers_data["security_index_initialised"] = "True"
-
-            self.app_peers_data["leader_ip"] = self.unit_ip
-
-        # store the exclusions that previously failed to be stored when no units online
-        if self.app_peers_data.get("remove_from_allocation_exclusions"):
-            self.opensearch.remove_allocation_exclusions(
-                self.app_peers_data["remove_from_allocation_exclusions"]
-            )
+        # request the start of opensearch
+        self.unit.status = WaitingStatus(RequestUnitServiceOps.format("start"))
+        self.on[self.service_manager.name].acquire_lock.emit(callback_override="_start_opensearch")
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """New node joining the cluster."""
@@ -261,57 +254,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         event.set_results({"password": password if password else "", "chain": chain})
 
-    def _on_start_service_action(self, event: ActionEvent):
-        """Start the OpenSearch service from an action event."""
-        if self.opensearch.is_node_up():
-            event.set_results({"message": "OpenSearch is already started in this node."})
-            return
-
-        if not self._start_opensearch():
-            event.defer()
-            event.set_results(
-                {"message": "Something happened, the OpenSearch service will re-attempt a start."}
-            )
-            return
-
-        event.set_results({"message": "The OpenSearch service is starting."})
-
-    def _on_restart_service_action(self, event: ActionEvent):
-        """Restart the OpenSearch service from an action event."""
-        try:
-            self.unit.status = MaintenanceStatus(ServiceIsStopping)
-            self.opensearch.stop()
-            self.unit.status = MaintenanceStatus(ServiceStopped)
-        except OpenSearchStopError as e:
-            logger.error(e)
-            event.set_results(
-                {"message": "An error occurred during the stop of the OpenSearch service."}
-            )
-            self.unit.status = BlockedStatus(ServiceStopFailed)
-            return
-
-        if not self._start_opensearch():
-            event.defer()
-            event.set_results(
-                {"message": "Something happened, the OpenSearch service will re-attempt a start."}
-            )
-            return
-
-        event.set_results({"message": "The OpenSearch service is starting."})
-
-    def _on_stop_service_action(self, event: ActionEvent):
-        """Stop the OpenSearch service from an action event."""
-        try:
-            self.unit.status = MaintenanceStatus(ServiceIsStopping)
-            self.opensearch.stop()
-            self.unit.status = WaitingStatus(ServiceStopped)
-            event.set_results({"message": "The OpenSearch service stopped."})
-        except OpenSearchStopError:
-            event.set_results(
-                {"message": "An error occurred during the stop of the OpenSearch service."}
-            )
-            self.unit.status = BlockedStatus(ServiceStopFailed)
-
     def on_tls_conf_set(
         self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
     ):
@@ -372,8 +314,55 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         return self._are_all_tls_resources_stored()
 
-    def _start_opensearch(self) -> bool:
+    def _start_opensearch(self, event: EventBase) -> None:
         """Start OpenSearch if all resources configured."""
+        if not self._can_service_start():
+            event.defer()
+            return
+
+        try:
+            self.unit.status = BlockedStatus(WaitingToStart)
+            self.opensearch.start()
+            self.clear_status(WaitingToStart)
+        except OpenSearchStartError as e:
+            logger.debug(e)
+            self.unit.status = BlockedStatus(ServiceStartError)
+            event.defer()
+            return
+
+        # initialize the security index if the admin certs are written on disk
+        if self.unit.is_leader():
+            if self.app_peers_data.get("security_index_initialised") is None:
+                admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+                self._initialize_security_index(admin_secrets)
+                self.app_peers_data["security_index_initialised"] = "True"
+
+            self.app_peers_data["leader_ip"] = self.unit_ip
+
+        # store the exclusions that previously failed to be stored when no units online
+        if self.app_peers_data.get("remove_from_allocation_exclusions"):
+            self.opensearch.remove_allocation_exclusions(
+                self.app_peers_data["remove_from_allocation_exclusions"]
+            )
+
+    def _stop_opensearch(self, event: EventBase) -> None:
+        """Stop OpenSearch if possible."""
+        try:
+            self.unit.status = WaitingStatus(ServiceIsStopping)
+            self.opensearch.stop()
+            self.unit.status = WaitingStatus(ServiceStopped)
+        except OpenSearchStopError as e:
+            logger.debug(e)
+            self.unit.status = BlockedStatus(ServiceStopFailed)
+            event.defer()
+
+    def _restart_opensearch(self, event: EventBase) -> None:
+        """Restart OpenSearch if possible."""
+        self._stop_opensearch(event)
+        self._start_opensearch(event)
+
+    def _can_service_start(self):
+        """Return if the opensearch service can start."""
         # if there are any missing system requirements leave
         missing_sys_reqs = self.opensearch.missing_sys_requirements()
         if len(missing_sys_reqs) > 0:
@@ -392,7 +381,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                     message = WaitingForBusyShards.format(
                         " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
                     )
-                    self.unit.status = BlockedStatus(message)
+                    self.unit.status = WaitingStatus(message)
                     return False
 
                 self.clear_status(WaitingForBusyShards, pattern=StatusCheckPattern.Interpolated)
@@ -401,14 +390,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 # meaning that it's a new cluster, so we can safely start the OpenSearch service
                 pass
 
-        try:
-            self.unit.status = BlockedStatus(WaitingToStart)
-            self.opensearch.start()
-            self.clear_status(WaitingToStart)
-
-            return True
-        except OpenSearchStartError:
-            return False
+        return True
 
     def _store_tls_resources(
         self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
@@ -486,14 +468,19 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         def fetch() -> List[Node]:
             """Fetches the list of nodes through HTTP."""
             host: Optional[str] = None
+            alt_hosts: Optional[List[str]] = None
 
             all_units_ips = units_ips(self, PEER).values()
             if all_units_ips:
-                host = next(iter(all_units_ips))  # get first value
+                all_hosts = list(all_units_ips)
+                host = all_hosts.pop(0)  # get first value
+                alt_hosts = all_hosts
 
             nodes: List[Node] = []
             if host is not None:
-                response = self.opensearch.request("GET", "/_nodes", host=host)
+                response = self.opensearch.request(
+                    "GET", "/_nodes", host=host, alt_hosts=alt_hosts
+                )
                 if "nodes" in response:
                     for obj in response["nodes"].values():
                         nodes.append(Node(obj["name"], obj["roles"], obj["ip"]))

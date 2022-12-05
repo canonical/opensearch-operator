@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.opensearch_base_charm import PEER
+from charms.opensearch.v0.opensearch_base_charm import PEER, SERVICE_MANAGER
 from charms.opensearch.v0.opensearch_distro import (
     OpenSearchHttpError,
     OpenSearchInstallError,
@@ -30,8 +30,7 @@ class TestCharm(unittest.TestCase):
         self.harness.begin()
         self.charm = self.harness.charm
         self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
-
-        self.opensearch = self.charm.opensearch
+        self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
 
     @patch("opensearch.OpenSearchTarball.install")
     def test_on_install(self, install):
@@ -73,14 +72,18 @@ class TestCharm(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_client_auth")
     @patch("charm.OpenSearchOperatorCharm._get_nodes")
     @patch("charm.OpenSearchOperatorCharm._set_node_conf")
-    @patch("charm.OpenSearchOperatorCharm._start_opensearch")
+    @patch("charm.OpenSearchOperatorCharm._cleanup_conf_if_bootstrapped")
+    @patch("charm.OpenSearchOperatorCharm._can_service_start")
+    @patch("opensearch.OpenSearchTarball.start")
     @patch("charm.OpenSearchOperatorCharm._initialize_security_index")
     @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
     def test_on_start(
         self,
         _initialize_admin_user,
         _initialize_security_index,
-        _start_opensearch,
+        start,
+        _can_service_start,
+        _cleanup_conf_if_bootstrapped,
         _set_node_conf,
         _get_nodes,
         set_client_auth,
@@ -109,17 +112,19 @@ class TestCharm(unittest.TestCase):
         # _get_nodes succeeds
         _is_tls_fully_configured.return_value = True
         _get_nodes.side_effect = None
-        _start_opensearch.return_value = False
+        _can_service_start.return_value = False
         self.charm.on.start.emit()
         _get_nodes.assert_called()
         _set_node_conf.assert_called_once()
+        _cleanup_conf_if_bootstrapped.assert_called_once()
         _initialize_security_index.assert_not_called()
 
         # initialisation of the security index
         del self.charm.app_peers_data["security_index_initialised"]
-        _start_opensearch.return_value = True
-        self.harness.set_leader()
+        _can_service_start.return_value = True
+        self.harness.set_leader(True)
         self.charm.on.start.emit()
+        start.assert_called_once()
         self.assertEqual(self.charm.app_peers_data["security_index_initialised"], "True")
         _initialize_security_index.assert_called_once()
 

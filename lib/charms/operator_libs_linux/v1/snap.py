@@ -82,7 +82,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 5
 
 
 def _cache_init(func):
@@ -885,7 +885,7 @@ def _wrap_snap_operations(
 
 
 def install_local(
-    self, filename: str, classic: Optional[bool] = False, dangerous: Optional[bool] = False
+    filename: str, classic: Optional[bool] = False, dangerous: Optional[bool] = False
 ) -> Snap:
     """Perform a snap operation.
 
@@ -901,9 +901,11 @@ def install_local(
         "snap",
         "install",
         filename,
-        "--classic" if classic else "",
-        "--dangerous" if dangerous else "",
     ]
+    if classic:
+        _cmd.append("--classic")
+    if dangerous:
+        _cmd.append("--dangerous")
     try:
         result = subprocess.check_output(_cmd, universal_newlines=True).splitlines()[0]
         snap_name, _ = result.split(" ", 1)
