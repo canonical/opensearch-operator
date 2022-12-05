@@ -311,13 +311,15 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     def _start_opensearch(self, event: EventBase) -> None:
         """Start OpenSearch if all resources configured."""
         if not self._can_service_start():
-            return event.defer()
+            event.defer()
+            return
 
         try:
             self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
             self.clear_status(WaitingToStart)
-        except OpenSearchStartError:
+        except OpenSearchStartError as e:
+            logger.debug(e)
             self.unit.status = BlockedStatus(ServiceStartError)
             event.defer()
             return
@@ -343,7 +345,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = WaitingStatus(ServiceIsStopping)
             self.opensearch.stop()
             self.unit.status = WaitingStatus(ServiceStopped)
-        except OpenSearchStopError:
+        except OpenSearchStopError as e:
+            logger.debug(e)
             self.unit.status = BlockedStatus(ServiceStopFailed)
             event.defer()
 

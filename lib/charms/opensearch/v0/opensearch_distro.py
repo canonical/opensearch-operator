@@ -286,7 +286,7 @@ class OpenSearchDistribution(ABC):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        primary_host = host if host else self.host
+        primary_host = host or self.host
         target_hosts = [primary_host]
         if alt_hosts:
             target_hosts.extend([alt_host for alt_host in alt_hosts if alt_host != primary_host])
