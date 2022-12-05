@@ -17,7 +17,6 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchDistribution,
     OpenSearchInstallError,
     OpenSearchMissingError,
-    OpenSearchRestartError,
     OpenSearchStartError,
     OpenSearchStopError,
     Paths,
@@ -70,7 +69,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             logger.error(f"Failed to start the opensearch.{self.SERVICE_NAME} service. \n{e}")
             raise OpenSearchStartError()
 
-    def stop(self):
+    def _stop_service(self):
         """Stop the snap exposed "daemon" service."""
         if not self._opensearch.present:
             raise OpenSearchMissingError()
@@ -80,17 +79,6 @@ class OpenSearchSnap(OpenSearchDistribution):
         except SnapError as e:
             logger.error(f"Failed to stop the opensearch.{self.SERVICE_NAME} service. \n{e}")
             raise OpenSearchStopError()
-
-    def restart(self):
-        """Restart the snap exposed "daemon" service."""
-        if not self._opensearch.present:
-            raise OpenSearchMissingError()
-
-        try:
-            self._opensearch.restart([self.SERVICE_NAME])
-        except SnapError as e:
-            logger.error(f"Failed to restart the opensearch.{self.SERVICE_NAME} service. \n{e}")
-            raise OpenSearchRestartError()
 
     def _build_paths(self) -> Paths:
         """Builds a Path object.
@@ -159,7 +147,7 @@ class OpenSearchTarball(OpenSearchDistribution):
         else:
             raise OpenSearchStartError()
 
-    def stop(self):
+    def _stop_service(self):
         """Stop opensearch."""
         self._run_cmd(
             "setpriv",
@@ -167,28 +155,14 @@ class OpenSearchTarball(OpenSearchDistribution):
         )
 
         retries = 0
-        while self.is_node_up() and retries < 3:
+        while retries < 3:
+            if not self.is_started():
+                return
+
             time.sleep(2)
             retries += 1
-        else:
-            raise OpenSearchStopError()
 
-        """
-        TODO:
-            Important! Before you stop a node, you should ensure that no indexing requests or
-            administration-related tasks are being made on the cluster. If you stop a node during
-            indexing, the cluster meta data might get corrupted and the cluster could become
-            non-operational (red color code). To ensure that no instances of PTSF_GENFEED are
-            running, check the Process Monitor. If all processes are finished, you may stop
-            all the nodes in a cluster and make the required modifications.
-            After completing the modifications, you may start all the nodes of the cluster."""
-
-    def restart(self):
-        """Restart opensearch."""
-        if self.is_started():
-            self.stop()
-
-        self.start()
+        raise OpenSearchStopError()
 
     def _build_paths(self) -> Paths:
         return Paths(
