@@ -6,12 +6,14 @@ import logging
 import re
 import sys
 import uuid
+from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from enum import Enum
 from io import StringIO
 from os.path import exists
 from typing import Dict, List
 
+from overrides import override
 from ruamel.yaml import YAML, CommentedSeq
 from ruamel.yaml.comments import CommentedSet
 
@@ -42,10 +44,11 @@ class OutputType(Enum):
         return self.value
 
 
-class YamlConfigSetter:
-    """Utility class for updating YAML config, supporting diverse object types and nestedness.
+class ConfigSetter(ABC):
+    """Base class for manipulating YAML Config, of multiple types and any depth level.
 
-    conf_setter = YamlConfigSetter()
+    conf_setter = YamlConfigSetter() or another config setter
+
     put("file.yml", "a.b", "new_name")
     put("file.yml", "a.b/c.obj/key3/key1.a/obj", {"a": "new_name_1", "b": ["hello", "world"]})
     put("file.yml", "a.b/c.arr.simple/[0]", "hello")
@@ -57,9 +60,73 @@ class YamlConfigSetter:
 
     def __init__(self, base_path: str = None):
         """base_path: if set, where to look for files relatively on "load/put/delete" methods."""
-        self.yaml = YAML()
         self.base_path = self.__clean_base_path(base_path)
 
+    @abstractmethod
+    def load(self, config_file: str) -> Dict[str, any]:
+        """Load the content of a YAML file."""
+        pass
+
+    @abstractmethod
+    def put(
+        self,
+        config_file: str,
+        key_path: str,
+        val: any,
+        sep="/",
+        output_type: OutputType = OutputType.file,
+        inline_array: bool = False,
+        output_file: str = None,
+    ) -> Dict[str, any]:
+        """Add or update the value of a key (or content of array at index / key) if it exists."""
+        pass
+
+    @abstractmethod
+    def delete(
+        self,
+        config_file: str,
+        key_path: str,
+        sep="/",
+        output_type: OutputType = OutputType.file,
+        output_file: str = None,
+    ) -> Dict[str, any]:
+        """Delete the value of a key (or content of array at index / key) if it exists."""
+        pass
+
+    @abstractmethod
+    def replace(
+        self,
+        config_file: str,
+        old_val: str,
+        new_val: any,
+        regex: bool = False,
+        output_type: OutputType = OutputType.file,
+        output_file: str = None,
+    ) -> None:
+        """Replace any substring in a text file."""
+        pass
+
+    @staticmethod
+    def __clean_base_path(base_path: str):
+        if base_path is None:
+            return ""
+
+        base_path = base_path.strip()
+        if not base_path.endswith("/"):
+            base_path = f"{base_path}/"
+
+        return base_path
+
+
+class YamlConfigSetter(ConfigSetter):
+    """Class for updating YAML config on the file system."""
+
+    def __init__(self, base_path: str = None):
+        """base_path: if set, where to look for files relatively on "load/put/delete" methods."""
+        super().__init__(base_path)
+        self.yaml = YAML()
+
+    @override
     def load(self, config_file: str) -> Dict[str, any]:
         """Load the content of a YAML file."""
         path = f"{self.base_path}{config_file}"
@@ -78,6 +145,7 @@ class YamlConfigSetter:
 
             return data
 
+    @override
     def put(
         self,
         config_file: str,
@@ -104,6 +172,7 @@ class YamlConfigSetter:
 
         return data
 
+    @override
     def delete(
         self,
         config_file: str,
@@ -125,6 +194,7 @@ class YamlConfigSetter:
 
         return data
 
+    @override
     def replace(
         self,
         config_file: str,
@@ -315,14 +385,3 @@ class YamlConfigSetter:
         ret = CommentedSeq()
         ret.fa.set_flow_style()
         return ret
-
-    @staticmethod
-    def __clean_base_path(base_path: str):
-        if base_path is None:
-            return ""
-
-        base_path = base_path.strip()
-        if not base_path.endswith("/"):
-            base_path = f"{base_path}/"
-
-        return base_path
