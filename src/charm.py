@@ -499,8 +499,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         """Set the configuration of the current node / unit."""
         roles = ClusterTopology.suggest_roles(nodes, self.app.planned_units())
 
-        print(f"\n\n\n{roles}\n\n\n")
-
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
 
