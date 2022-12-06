@@ -112,8 +112,8 @@ class TestCharm(unittest.TestCase):
         _get_nodes.side_effect = None
         _can_service_start.return_value = False
         self.charm.on.start.emit()
-        _get_nodes.assert_called()
-        _set_node_conf.assert_called_once()
+        _get_nodes.assert_not_called()
+        _set_node_conf.assert_not_called()
         _initialize_security_index.assert_not_called()
 
         # initialisation of the security index
@@ -121,6 +121,8 @@ class TestCharm(unittest.TestCase):
         _can_service_start.return_value = True
         self.harness.set_leader(True)
         self.charm.on.start.emit()
+        _get_nodes.assert_called()
+        _set_node_conf.assert_called()
         start.assert_called_once()
         self.assertEqual(self.charm.app_peers_data["security_index_initialised"], "True")
         _initialize_security_index.assert_called_once()

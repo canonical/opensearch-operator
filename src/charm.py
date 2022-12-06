@@ -131,16 +131,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         # configure clients auth
         self.opensearch_config.set_client_auth()
 
-        try:
-            # Retrieve the nodes of the cluster, needed to configure this node
-            nodes = self._get_nodes()
-        except OpenSearchHttpError:
-            event.defer()
-            return
-
-        # Set the configuration of the node
-        self._set_node_conf(nodes)
-
         # request the start of opensearch
         self.unit.status = WaitingStatus(RequestUnitServiceOps.format("start"))
         self.on[self.service_manager.name].acquire_lock.emit(callback_override="_start_opensearch")
@@ -324,6 +314,16 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if not self._can_service_start():
             event.defer()
             return
+
+        try:
+            # Retrieve the nodes of the cluster, needed to configure this node
+            nodes = self._get_nodes()
+        except OpenSearchHttpError:
+            event.defer()
+            return
+
+        # Set the configuration of the node
+        self._set_node_conf(nodes)
 
         try:
             self.unit.status = BlockedStatus(WaitingToStart)
