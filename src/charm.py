@@ -117,8 +117,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 # and the service started in between, put status back to active
                 self.clear_status(WaitingToStart)
 
+            # cleanup bootstrap conf in the node if existing
             if self.unit_peers_data.get("bootstrap_contributor"):
-                # cleanup bootstrap conf in the node
                 self._cleanup_bootstrap_conf_if_applies()
 
             return
@@ -140,9 +140,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         # Set the configuration of the node
         self._set_node_conf(nodes)
-
-        # Remove some config entries when cluster bootstrapped
-        self._cleanup_conf_if_bootstrapped(nodes)
 
         # request the start of opensearch
         self.unit.status = WaitingStatus(RequestUnitServiceOps.format("start"))
@@ -345,6 +342,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 self.app_peers_data["remove_from_allocation_exclusions"]
             )
 
+        # cleanup bootstrap conf in the node
+        if self.unit_peers_data.get("bootstrap_contributor"):
+            self._cleanup_bootstrap_conf_if_applies()
+
     def _stop_opensearch(self, event: EventBase) -> None:
         """Stop OpenSearch if possible."""
         try:
@@ -497,6 +498,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
         roles = ClusterTopology.suggest_roles(nodes, self.app.planned_units())
+
+        print(f"\n\n\n{roles}\n\n\n")
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
