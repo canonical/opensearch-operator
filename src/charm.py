@@ -173,6 +173,14 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 if exclusions_to_remove:
                     self.append_allocation_exclusion_to_remove(exclusions_to_remove)
 
+                if data.get("bootstrap_contributor"):
+                    contributor_count = int(
+                        self.app_peers_data.get("bootstrap_contributors_count", 0)
+                    )
+                    self.app_peers_data["bootstrap_contributors_count"] = str(
+                        contributor_count + 1
+                    )
+
         # Restart node when cert renewal for the transport layer
         if self.unit_peers_data.get("must_reboot_node") == "True":
             try:
@@ -510,7 +518,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             cms_in_bootstrap = int(self.app_peers_data.get("bootstrap_contributors_count", 0))
             if cms_in_bootstrap < self.app.planned_units():
                 contribute_to_bootstrap = True
-                self.app_peers_data["bootstrap_contributors_count"] = f"{cms_in_bootstrap + 1}"
+
+                if self.unit.is_leader():
+                    self.app_peers_data["bootstrap_contributors_count"] = f"{cms_in_bootstrap + 1}"
 
                 # indicates that this unit is part of the "initial cm nodes"
                 self.unit_peers_data["bootstrap_contributor"] = "True"
