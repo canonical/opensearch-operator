@@ -111,10 +111,16 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_start(self, event: StartEvent):
         """Triggered when on start. Set the right node role."""
-        if self.opensearch.is_started() and self.app_peers_data.get("security_index_initialised"):
-            # in the case where it was on WaitingToStart status, event got deferred
-            # and the service started in between, put status back to active
-            self.clear_status(WaitingToStart)
+        if self.opensearch.is_started():
+            if self.app_peers_data.get("security_index_initialised"):
+                # in the case where it was on WaitingToStart status, event got deferred
+                # and the service started in between, put status back to active
+                self.clear_status(WaitingToStart)
+
+            # cleanup bootstrap conf in the node if existing
+            if self.unit_peers_data.get("bootstrap_contributor"):
+                self._cleanup_bootstrap_conf_if_applies()
+
             return
 
         if not self._is_tls_fully_configured():
@@ -124,19 +130,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
         # configure clients auth
         self.opensearch_config.set_client_auth()
-
-        try:
-            # Retrieve the nodes of the cluster, needed to configure this node
-            nodes = self._get_nodes()
-        except OpenSearchHttpError:
-            event.defer()
-            return
-
-        # Set the configuration of the node
-        self._set_node_conf(nodes)
-
-        # Remove some config entries when cluster bootstrapped
-        self._cleanup_conf_if_bootstrapped(nodes)
 
         # request the start of opensearch
         self.unit.status = WaitingStatus(RequestUnitServiceOps.format("start"))
@@ -169,6 +162,14 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 exclusions_to_remove = data.get("remove_from_allocation_exclusions")
                 if exclusions_to_remove:
                     self.append_allocation_exclusion_to_remove(exclusions_to_remove)
+
+                if data.get("bootstrap_contributor"):
+                    contributor_count = int(
+                        self.app_peers_data.get("bootstrap_contributors_count", 0)
+                    )
+                    self.app_peers_data["bootstrap_contributors_count"] = str(
+                        contributor_count + 1
+                    )
 
         # Restart node when cert renewal for the transport layer
         if self.unit_peers_data.get("must_reboot_node") == "True":
@@ -315,6 +316,16 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
 
         try:
+            # Retrieve the nodes of the cluster, needed to configure this node
+            nodes = self._get_nodes()
+        except OpenSearchHttpError:
+            event.defer()
+            return
+
+        # Set the configuration of the node
+        self._set_node_conf(nodes)
+
+        try:
             self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
             self.clear_status(WaitingToStart)
@@ -338,6 +349,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.opensearch.remove_allocation_exclusions(
                 self.app_peers_data["remove_from_allocation_exclusions"]
             )
+
+        # cleanup bootstrap conf in the node
+        if self.unit_peers_data.get("bootstrap_contributor"):
+            self._cleanup_bootstrap_conf_if_applies()
 
     def _stop_opensearch(self, event: EventBase) -> None:
         """Stop OpenSearch if possible."""
@@ -490,13 +505,25 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
-        roles = ClusterTopology.suggest_roles(nodes)
+        roles = ClusterTopology.suggest_roles(nodes, self.app.planned_units())
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
+
+        contribute_to_bootstrap = False
         if "cluster_manager" in roles:
             cm_names.append(self.unit_name)
             cm_ips.append(self.unit_ip)
+
+            cms_in_bootstrap = int(self.app_peers_data.get("bootstrap_contributors_count", 0))
+            if cms_in_bootstrap < self.app.planned_units():
+                contribute_to_bootstrap = True
+
+                if self.unit.is_leader():
+                    self.app_peers_data["bootstrap_contributors_count"] = f"{cms_in_bootstrap + 1}"
+
+                # indicates that this unit is part of the "initial cm nodes"
+                self.unit_peers_data["bootstrap_contributor"] = "True"
 
         self.opensearch_config.set_node(
             self.app.name,
@@ -505,15 +532,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             roles,
             cm_names,
             cm_ips,
+            contribute_to_bootstrap,
         )
 
-    def _cleanup_conf_if_bootstrapped(self, nodes: List[Node]) -> None:
-        """Remove some conf props when cluster is bootstrapped."""
-        remaining_nodes_for_bootstrap = ClusterTopology.remaining_nodes_for_bootstrap(nodes)
-        if remaining_nodes_for_bootstrap == 0:
-            # this condition means that we just added the last required CM node
-            # the cluster is bootstrapped now, we need to clean up the conf on the CM nodes
-            self.opensearch_config.cleanup_conf_if_bootstrapped()
+    def _cleanup_bootstrap_conf_if_applies(self) -> None:
+        """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
+        self.opensearch_config.cleanup_bootstrap_conf()
 
 
 if __name__ == "__main__":

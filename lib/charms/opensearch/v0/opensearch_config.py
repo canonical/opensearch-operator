@@ -121,6 +121,7 @@ class OpenSearchConfig:
         roles: List[str],
         cm_names: List[str],
         cm_ips: List[str],
+        contribute_to_bootstrap: bool,
     ) -> None:
         """Set base config for each node in the cluster."""
         self._opensearch.config.put(self.CONFIG_YML, "cluster.name", f"{app_name}-{model_name}")
@@ -134,7 +135,7 @@ class OpenSearchConfig:
         if len(cm_ips) > 0:
             self._opensearch.config.put(self.CONFIG_YML, "discovery.seed_hosts", cm_ips)
 
-        if "cluster_manager" in roles and len(cm_ips) < 2:  # cluster NOT bootstrapped yet
+        if "cluster_manager" in roles and contribute_to_bootstrap:  # cluster NOT bootstrapped yet
             self._opensearch.config.put(
                 self.CONFIG_YML, "cluster.initial_cluster_manager_nodes", cm_names
             )
@@ -152,6 +153,6 @@ class OpenSearchConfig:
             self.CONFIG_YML, "plugins.security.ssl.transport.enforce_hostname_verification", True
         )
 
-    def cleanup_conf_if_bootstrapped(self):
+    def cleanup_bootstrap_conf(self):
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
