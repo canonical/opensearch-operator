@@ -49,6 +49,7 @@ class ClusterTopology:
             max_voters -= 1
 
         if max_managers > 3:
+            # for a cluster of +3 nodes, we want to have half of the nodes as CMs
             max_managers = max_managers // 2 + 1
 
         base_roles = ["data", "ingest", "ml", "coordinating_only"]

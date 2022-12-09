@@ -539,18 +539,6 @@ class OpenSearchBaseCharm(ABC, CharmBase):
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
         self.opensearch_config.cleanup_bootstrap_conf()
 
-    @abstractmethod
-    def _store_tls_resources(
-        self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
-    ):
-        """Write certificates and keys on disk."""
-        pass
-
-    @abstractmethod
-    def _are_all_tls_resources_stored(self):
-        """Check if all TLS resources are stored on disk."""
-        pass
-
     def on_allocation_exclusion_add_failed(self):
         """Callback for when the OpenSearch service fails stopping."""
         self.unit.status = BlockedStatus(AllocationExclusionFailed)
@@ -609,6 +597,28 @@ class OpenSearchBaseCharm(ABC, CharmBase):
         if condition:
             self.unit.status = ActiveStatus()
 
+    def _get_relation_data(self, scope: Scope, relation_name: str) -> Dict[str, str]:
+        """Relation data object."""
+        relation = self.model.get_relation(relation_name)
+        if relation is None:
+            return {}
+
+        relation_scope = self.app if scope == Scope.APP else self.unit
+
+        return relation.data[relation_scope]
+
+    @abstractmethod
+    def _store_tls_resources(
+        self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
+    ):
+        """Write certificates and keys on disk."""
+        pass
+
+    @abstractmethod
+    def _are_all_tls_resources_stored(self):
+        """Check if all TLS resources are stored on disk."""
+        pass
+
     @property
     def app_peers_data(self) -> Dict[str, str]:
         """Peer relation data object."""
@@ -639,13 +649,3 @@ class OpenSearchBaseCharm(ABC, CharmBase):
         """Return an alternative host (of another node) in case the current is offline."""
         all_units_ips = units_ips(self, PEER)
         return random.choice(list(all_units_ips.values()))
-
-    def _get_relation_data(self, scope: Scope, relation_name: str) -> Dict[str, str]:
-        """Relation data object."""
-        relation = self.model.get_relation(relation_name)
-        if relation is None:
-            return {}
-
-        relation_scope = self.app if scope == Scope.APP else self.unit
-
-        return relation.data[relation_scope]
