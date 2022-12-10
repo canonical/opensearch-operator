@@ -72,7 +72,6 @@ class TestCharm(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_client_auth")
     @patch("charm.OpenSearchOperatorCharm._get_nodes")
     @patch("charm.OpenSearchOperatorCharm._set_node_conf")
-    @patch("charm.OpenSearchOperatorCharm._cleanup_conf_if_bootstrapped")
     @patch("charm.OpenSearchOperatorCharm._can_service_start")
     @patch("opensearch.OpenSearchTarball.start")
     @patch("charm.OpenSearchOperatorCharm._initialize_security_index")
@@ -83,7 +82,6 @@ class TestCharm(unittest.TestCase):
         _initialize_security_index,
         start,
         _can_service_start,
-        _cleanup_conf_if_bootstrapped,
         _set_node_conf,
         _get_nodes,
         set_client_auth,
@@ -114,9 +112,8 @@ class TestCharm(unittest.TestCase):
         _get_nodes.side_effect = None
         _can_service_start.return_value = False
         self.charm.on.start.emit()
-        _get_nodes.assert_called()
-        _set_node_conf.assert_called_once()
-        _cleanup_conf_if_bootstrapped.assert_called_once()
+        _get_nodes.assert_not_called()
+        _set_node_conf.assert_not_called()
         _initialize_security_index.assert_not_called()
 
         # initialisation of the security index
@@ -124,6 +121,8 @@ class TestCharm(unittest.TestCase):
         _can_service_start.return_value = True
         self.harness.set_leader(True)
         self.charm.on.start.emit()
+        _get_nodes.assert_called()
+        _set_node_conf.assert_called()
         start.assert_called_once()
         self.assertEqual(self.charm.app_peers_data["security_index_initialised"], "True")
         _initialize_security_index.assert_called_once()

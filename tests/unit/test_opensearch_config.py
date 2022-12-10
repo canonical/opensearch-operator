@@ -145,6 +145,7 @@ class TestOpenSearchConfig(unittest.TestCase):
             ["cluster_manager", "data"],
             ["cm1"],
             ["10.10.10.10"],
+            True,
         )
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
         self.assertEqual(
@@ -164,7 +165,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         )
 
         # test cleanup_conf_if_bootstrapped
-        self.opensearch_config.cleanup_conf_if_bootstrapped()
+        self.opensearch_config.cleanup_bootstrap_conf()
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
         self.assertNotIn("cluster.initial_cluster_manager_nodes", opensearch_conf)
 
