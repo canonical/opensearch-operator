@@ -5,7 +5,7 @@
 import logging
 import random
 import re
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from datetime import datetime
 from typing import Dict, List, Optional, Set, Type
 
@@ -90,7 +90,7 @@ class StatusCheckPattern(BaseStrEnum):
     Interpolated = "interpolated"
 
 
-class OpenSearchBaseCharm(ABC, CharmBase):
+class OpenSearchBaseCharm(CharmBase):
     """Base class for OpenSearch charms."""
 
     def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
@@ -237,20 +237,12 @@ class OpenSearchBaseCharm(ABC, CharmBase):
         # See if the last check was made less than 6h ago, if yes - leave
         date_format = "%Y-%m-%d %H:%M:%S"
         last_cert_check = datetime.strptime(
-            self.unit_peers_data.get("certs_exp_checked_at", "1970-01-01 00:00"), date_format
+            self.unit_peers_data.get("certs_exp_checked_at", "1970-01-01 00:00:00"), date_format
         )
         if (datetime.now() - last_cert_check).seconds < 6 * 3600:
             return
 
-        transport_cert = self.secrets.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)["cert"]
-        http_cert = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)["cert"]
-        certs = {
-            CertType.UNIT_TRANSPORT: transport_cert,
-            CertType.UNIT_HTTP: http_cert,
-        }
-        if self.unit.is_leader():
-            admin_cert = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)["cert"]
-            certs[CertType.APP_ADMIN] = admin_cert
+        certs = self.secrets.get_unit_certificates()
 
         # keep certificates that are expiring in less than 24h
         for cert_type, cert in certs.items():

@@ -6,6 +6,7 @@
 import json
 from typing import Dict, Optional
 
+from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 
 # The unique Charmhub library identifier, never change it
@@ -104,4 +105,21 @@ class SecretStore(Store):
     For now, it is simply a base class for regular Relation data store
     """
 
-    pass
+    def get_unit_certificates(self) -> Dict[CertType, str]:
+        """Retrieve the list of certificates for this unit."""
+        certs = {}
+
+        transport_secrets = self.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)
+        if transport_secrets and "cert" in transport_secrets:
+            certs[CertType.UNIT_TRANSPORT] = transport_secrets["cert"]
+
+        http_secrets = self.get_object(Scope.UNIT, CertType.UNIT_HTTP.val)
+        if http_secrets and "cert" in http_secrets:
+            certs[CertType.UNIT_HTTP] = http_secrets["cert"]
+
+        if self._charm.unit.is_leader():
+            admin_secrets = self.get_object(Scope.APP, CertType.APP_ADMIN.val)
+            if admin_secrets and "cert" in admin_secrets:
+                certs[CertType.APP_ADMIN] = admin_secrets["cert"]
+
+        return certs
