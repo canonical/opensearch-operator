@@ -29,7 +29,11 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology, Node
-from charms.opensearch.v0.helper_databag import Scope, SecretStore, Store
+from charms.opensearch.v0.helper_databag import (
+    RelationDataStore,
+    Scope,
+    SecretsDataStore,
+)
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.helper_security import (
@@ -101,8 +105,8 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.opensearch = distro(self, PEER)
         self.opensearch_config = OpenSearchConfig(self.opensearch)
-        self.secrets = SecretStore(self)
-        self.relation_store = Store(self)
+        self.secrets = SecretsDataStore(self)
+        self.relation_store = RelationDataStore(self)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
 
         self.framework.observe(self.on.install, self._on_install)
