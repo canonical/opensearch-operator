@@ -164,7 +164,7 @@ class RelationDataStore(DataStore):
 
         value = data.get(key)
         if value is None:
-            return default or None
+            return default
 
         if not auto_casting:
             return value
