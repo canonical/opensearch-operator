@@ -6,10 +6,9 @@
 import unittest
 from unittest.mock import patch
 
-from ops.model import WaitingStatus, MaintenanceStatus, BlockedStatus
-
 from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.opensearch_base_charm import PEER
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm

@@ -76,7 +76,7 @@ class TestHelperDatabag(unittest.TestCase):
         self.assertTrue(self.peers_data.get(Scope.APP, "bool-missing-true", default=True))
         self.assertFalse(self.peers_data.get(Scope.APP, "bool-missing-false", default=False))
 
-        self.assertEqual(self.peers_data.get(Scope.UNIT, "int-missing", default=2), 2)
+        self.assertEqual(self.peers_data.get(Scope.APP, "int-missing", 2), 2)
         self.assertEqual(self.peers_data.get(Scope.UNIT, "float-missing", default=2.5), 2.5)
         self.assertEqual(self.peers_data.get(Scope.APP, "str-missing", default="str"), "str")
 
