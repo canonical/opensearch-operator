@@ -505,9 +505,7 @@ class OpenSearchBaseCharm(CharmBase):
             cm_names.append(self.unit_name)
             cm_ips.append(self.unit_ip)
 
-            cms_in_bootstrap = int(
-                self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
-            )
+            cms_in_bootstrap = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
             if cms_in_bootstrap < self.app.planned_units():
                 contribute_to_bootstrap = True
 
