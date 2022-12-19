@@ -5,7 +5,8 @@
 
 import json
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from ast import literal_eval
+from typing import Dict, Optional, Union
 
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -36,7 +37,7 @@ class DataStore(ABC):
         self._charm = charm
 
     @abstractmethod
-    def put(self, scope: Scope, key: str, value: Optional[str]) -> None:
+    def put(self, scope: Scope, key: str, value: Optional[any]) -> None:
         """Put string into the data store."""
         pass
 
@@ -48,7 +49,19 @@ class DataStore(ABC):
         pass
 
     @abstractmethod
-    def get(self, scope: Scope, key: str) -> Optional[str]:
+    def has(self, scope: Scope, key: str):
+        """Check if the said key is contained in the store."""
+        pass
+
+    @abstractmethod
+    def all(self, scope: Scope) -> Dict[str, str]:
+        """Get all content of a store."""
+        pass
+
+    @abstractmethod
+    def get(
+        self, scope: Scope, key: str, default: Optional[Union[int, float, str, bool]] = None
+    ) -> Optional[Union[int, float, str, bool]]:
         """Get string from the data store."""
         pass
 
@@ -63,32 +76,41 @@ class DataStore(ABC):
         pass
 
     @staticmethod
-    def put_or_delete(peers_data: Dict[str, str], key: str, value: Optional[str]):
-        """Put data into the relation data store or delete if value is None."""
+    def cast(str_val: str) -> Union[bool, int, float, str]:
+        """Cast a string to the corresponding primitive type."""
+        try:
+            typed_val = literal_eval(str_val.capitalize())
+            if type(typed_val) not in {bool, int, float, str}:
+                return str_val
+
+            return typed_val
+        except (ValueError, SyntaxError):
+            return str_val
+
+    @staticmethod
+    def put_or_delete(data: Dict[str, str], key: str, value: Optional[str]):
+        """Put data into the key/val data store or delete if value is None."""
         if value is None:
-            del peers_data[key]
+            del data[key]
             return
 
-        peers_data.update({key: value})
+        data.update({key: str(value)})
 
 
 class RelationDataStore(DataStore):
-    """Class representing a relation data store for a charm.
+    """Class representing a relation data store for a charm."""
 
-    Requires the following 2 properties on the charm:
-      - app_peers_data
-      - unit_peers_data
-    """
+    def __init__(self, charm, relation_name: str):
+        super(RelationDataStore, self).__init__(charm)
+        self.relation_name = relation_name
 
     @override
-    def put(self, scope: Scope, key: str, value: Optional[str]) -> None:
+    def put(self, scope: Scope, key: str, value: Optional[Union[any]]) -> None:
         """Put string into the relation data store."""
         if scope is None:
             raise ValueError("Scope undefined.")
 
-        data = self._charm.unit_peers_data
-        if scope == Scope.APP:
-            data = self._charm.app_peers_data
+        data = self._get_relation_data(scope)
 
         self.put_or_delete(data, key, value)
 
@@ -111,16 +133,43 @@ class RelationDataStore(DataStore):
         self.put(scope, key, payload_str)
 
     @override
-    def get(self, scope: Scope, key: str) -> Optional[str]:
+    def has(self, scope: Scope, key: str):
+        """Check if the said key is contained in the relation data."""
+        if scope is None:
+            raise ValueError("Scope undefined.")
+
+        return key in self._get_relation_data(scope)
+
+    @override
+    def all(self, scope: Scope) -> Dict[str, str]:
+        """Get all content of a store."""
+        if scope is None:
+            raise ValueError("Scope undefined.")
+
+        return self._get_relation_data(scope)
+
+    @override
+    def get(
+        self,
+        scope: Scope,
+        key: str,
+        default: Optional[Union[int, float, str, bool]] = None,
+        auto_casting: bool = True,
+    ) -> Optional[Union[int, float, str, bool]]:
         """Get string from the relation data store."""
         if scope is None:
             raise ValueError("Scope undefined.")
 
-        data = self._charm.unit_peers_data
-        if scope == Scope.APP:
-            data = self._charm.app_peers_data
+        data = self._get_relation_data(scope)
 
-        return data.get(key, None)
+        value = data.get(key)
+        if value is None:
+            return default or None
+
+        if not auto_casting:
+            return value
+
+        return self.cast(value)
 
     @override
     def get_object(self, scope: Scope, key: str) -> Optional[Dict[str, any]]:
@@ -135,6 +184,16 @@ class RelationDataStore(DataStore):
     def delete(self, scope: Scope, key: str):
         """Delete object from the relation data store."""
         self.put(scope, key, None)
+
+    def _get_relation_data(self, scope: Scope) -> Dict[str, str]:
+        """Relation data object."""
+        relation = self._charm.model.get_relation(self.relation_name)
+        if relation is None:
+            return {}
+
+        relation_scope = self._charm.app if scope == Scope.APP else self._charm.unit
+
+        return relation.data[relation_scope]
 
 
 class SecretsDataStore(RelationDataStore):

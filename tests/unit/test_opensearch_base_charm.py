@@ -36,6 +36,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         self.charm = self.harness.charm
         self.opensearch = self.charm.opensearch
+        self.peers_data = self.charm.peers_data
         self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
         self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
 
@@ -67,14 +68,14 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._initialize_admin_user")
     def test_on_leader_elected_index_initialised(self, _initialize_admin_user):
         # security_index_initialised
-        self.charm.app_peers_data["security_index_initialised"] = "True"
+        self.peers_data.put(Scope.APP, "security_index_initialised", True)
         self.harness.set_leader(True)
         self.charm.on.leader_elected.emit()
         _initialize_admin_user.assert_not_called()
 
         # admin_user_initialized
-        del self.charm.app_peers_data["security_index_initialised"]
-        self.charm.app_peers_data["admin_user_initialized"] = "True"
+        self.peers_data.delete(Scope.APP, "security_index_initialised")
+        self.peers_data.put(Scope.APP, "admin_user_initialized", True)
         self.charm.on.leader_elected.emit()
         _initialize_admin_user.assert_not_called()
 
@@ -99,13 +100,13 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         with patch(f"{self.OPENSEARCH_DISTRO}.is_started") as is_started:
             # test when setup complete
             is_started.return_value = True
-            self.charm.app_peers_data["security_index_initialised"] = "True"
+            self.peers_data.put(Scope.APP, "security_index_initialised", True)
             self.charm.on.start.emit()
             _is_tls_fully_configured.assert_not_called()
 
             # test when setup not complete
             is_started.return_value = False
-            del self.charm.app_peers_data["security_index_initialised"]
+            self.peers_data.delete(Scope.APP, "security_index_initialised")
             _is_tls_fully_configured.return_value = False
             self.charm.on.start.emit()
             set_client_auth.assert_not_called()
@@ -126,14 +127,14 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         with patch(f"{self.OPENSEARCH_DISTRO}.start") as start:
             # initialisation of the security index
-            del self.charm.app_peers_data["security_index_initialised"]
+            self.peers_data.delete(Scope.APP, "security_index_initialised")
             _can_service_start.return_value = True
             self.harness.set_leader(True)
             self.charm.on.start.emit()
             _get_nodes.assert_called()
             _set_node_conf.assert_called()
             start.assert_called_once()
-            self.assertEqual(self.charm.app_peers_data["security_index_initialised"], "True")
+            self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
             _initialize_security_index.assert_called_once()
 
     @patch(f"{BASE_LIB_PATH}.helper_security.cert_expiration_remaining_hours")
@@ -152,9 +153,11 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             # test when TLS relation is broken and cert is expiring soon
             get_relation.return_value = None
             is_node_up.return_value = True
-            self.charm.unit_peers_data["certs_exp_checked_at"] = (
-                datetime.now() - timedelta(hours=7)
-            ).strftime("%Y-%m-%d %H:%M:%S")
+            self.peers_data.put(
+                Scope.UNIT,
+                "certs_exp_checked_at",
+                (datetime.now() - timedelta(hours=7)).strftime("%Y-%m-%d %H:%M:%S"),
+            )
             self.charm.secrets.put_object(
                 Scope.UNIT, CertType.UNIT_TRANSPORT.val, {"cert": "transport"}
             )
@@ -164,17 +167,17 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
     def test_app_peers_data(self):
         """Test getting data from the app relation data bag."""
-        self.assertEqual(self.charm.app_peers_data, {})
+        self.assertEqual(self.peers_data.all(Scope.APP), {})
 
-        self.charm.app_peers_data["app-key"] = "app-val"
-        self.assertEqual(self.charm.app_peers_data["app-key"], "app-val")
+        self.peers_data.put(Scope.APP, "app-key", "app-val")
+        self.assertEqual(self.peers_data.get(Scope.APP, "app-key"), "app-val")
 
     def test_unit_peers_data(self):
         """Test getting data from the unit relation data bag."""
-        self.assertEqual(self.charm.unit_peers_data, {})
+        self.assertEqual(self.peers_data.all(Scope.UNIT), {})
 
-        self.charm.app_peers_data["unit-key"] = "unit-val"
-        self.assertEqual(self.charm.app_peers_data["unit-key"], "unit-val")
+        self.peers_data.put(Scope.UNIT, "unit-key", "unit-val")
+        self.assertEqual(self.peers_data.get(Scope.UNIT, "unit-key"), "unit-val")
 
     @patch_network_get("1.1.1.1")
     def test_unit_ip(self):

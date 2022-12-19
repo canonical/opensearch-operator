@@ -4,7 +4,6 @@
 """Base class for the OpenSearch Operators."""
 import logging
 import random
-import re
 from abc import abstractmethod
 from datetime import datetime
 from typing import Dict, List, Optional, Set, Type
@@ -28,13 +27,13 @@ from charms.opensearch.v0.constants_charm import (
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
+from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology, Node
 from charms.opensearch.v0.helper_databag import (
     RelationDataStore,
     Scope,
     SecretsDataStore,
 )
-from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.helper_security import (
     cert_expiration_remaining_hours,
@@ -64,7 +63,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import EventBase
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -84,16 +83,6 @@ SERVICE_MANAGER = "service"
 logger = logging.getLogger(__name__)
 
 
-class StatusCheckPattern(BaseStrEnum):
-    """Enum for types of status comparison."""
-
-    Equal = "equal"
-    Start = "start"
-    End = "end"
-    Contain = "contain"
-    Interpolated = "interpolated"
-
-
 class OpenSearchBaseCharm(CharmBase):
     """Base class for OpenSearch charms."""
 
@@ -105,9 +94,13 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.opensearch = distro(self, PEER)
         self.opensearch_config = OpenSearchConfig(self.opensearch)
-        self.secrets = SecretsDataStore(self)
-        self.relation_store = RelationDataStore(self)
+        self.peers_data = RelationDataStore(self, PEER)
+        self.secrets = SecretsDataStore(self, PEER)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
+        self.status = Status(self)
+        self.service_manager = RollingOpsManager(
+            self, relation=SERVICE_MANAGER, callback=self._start_opensearch
+        )
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
@@ -120,40 +113,36 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.framework.observe(self.on.get_admin_secrets_action, self._on_get_admin_secrets_action)
 
-        self.service_manager = RollingOpsManager(
-            self, relation=SERVICE_MANAGER, callback=self._start_opensearch
-        )
-
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
         self.unit.status = MaintenanceStatus(InstallProgress)
         try:
             self.opensearch.install()
-            self.clear_status(InstallProgress)
+            self.status.clear(InstallProgress)
         except OpenSearchInstallError:
             self.unit.status = BlockedStatus(InstallError)
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle leader election event."""
-        if self.app_peers_data.get("security_index_initialised"):
+        if self.peers_data.get(Scope.APP, "security_index_initialised"):
             return
 
-        if not self.app_peers_data.get("admin_user_initialized"):
+        if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             self.unit.status = MaintenanceStatus(AdminUserInitProgress)
             self._initialize_admin_user()
-            self.app_peers_data["admin_user_initialized"] = "True"
-            self.clear_status(AdminUserInitProgress)
+            self.peers_data.put(Scope.APP, "admin_user_initialized", True)
+            self.status.clear(AdminUserInitProgress)
 
     def _on_start(self, event: StartEvent):
         """Triggered when on start. Set the right node role."""
         if self.opensearch.is_started():
-            if self.app_peers_data.get("security_index_initialised"):
+            if self.peers_data.get(Scope.APP, "security_index_initialised"):
                 # in the case where it was on WaitingToStart status, event got deferred
                 # and the service started in between, put status back to active
-                self.clear_status(WaitingToStart)
+                self.status.clear(WaitingToStart)
 
             # cleanup bootstrap conf in the node if existing
-            if self.unit_peers_data.get("bootstrap_contributor"):
+            if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
                 self._cleanup_bootstrap_conf_if_applies()
 
             return
@@ -166,7 +155,7 @@ class OpenSearchBaseCharm(CharmBase):
         # configure clients auth
         self.opensearch_config.set_client_auth()
 
-        # request the start of opensearch
+        # request the start of OpenSearch
         self.unit.status = WaitingStatus(RequestUnitServiceOps.format("start"))
         self.on[self.service_manager.name].acquire_lock.emit(callback_override="_start_opensearch")
 
@@ -199,18 +188,18 @@ class OpenSearchBaseCharm(CharmBase):
                     self.append_allocation_exclusion_to_remove(exclusions_to_remove)
 
                 if data.get("bootstrap_contributor"):
-                    contributor_count = int(
-                        self.app_peers_data.get("bootstrap_contributors_count", 0)
+                    contributor_count = self.peers_data.get(
+                        Scope.APP, "bootstrap_contributors_count", 0
                     )
-                    self.app_peers_data["bootstrap_contributors_count"] = str(
-                        contributor_count + 1
+                    self.peers_data.put(
+                        Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                     )
 
         # Restart node when cert renewal for the transport layer
-        if self.unit_peers_data.get("must_reboot_node") == "True":
+        if self.peers_data.get(Scope.UNIT, "must_reboot_node"):
             try:
                 self.opensearch.restart()
-                del self.unit_peers_data["must_reboot_node"]
+                self.peers_data.delete(Scope.UNIT, "must_reboot_node")
             except OpenSearchStartError:
                 event.defer()
 
@@ -241,7 +230,8 @@ class OpenSearchBaseCharm(CharmBase):
         # See if the last check was made less than 6h ago, if yes - leave
         date_format = "%Y-%m-%d %H:%M:%S"
         last_cert_check = datetime.strptime(
-            self.unit_peers_data.get("certs_exp_checked_at", "1970-01-01 00:00:00"), date_format
+            self.peers_data.get(Scope.UNIT, "certs_exp_checked_at", "1970-01-01 00:00:00"),
+            date_format,
         )
         if (datetime.now() - last_cert_check).seconds < 6 * 3600:
             return
@@ -262,7 +252,9 @@ class OpenSearchBaseCharm(CharmBase):
             if certs.get(CertType.UNIT_TRANSPORT) is not None:
                 self._stop_opensearch(event)
 
-        self.unit_peers_data["certs_exp_checked_at"] = datetime.now().strftime(date_format)
+        self.peers_data.put(
+            Scope.UNIT, "certs_exp_checked_at", datetime.now().strftime(date_format)
+        )
 
     def _on_get_admin_secrets_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
@@ -304,7 +296,7 @@ class OpenSearchBaseCharm(CharmBase):
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
         if should_restart:
-            self.unit_peers_data["must_reboot_node"] = "True"
+            self.peers_data.put(Scope.UNIT, "must_reboot_node", True)
 
     def on_tls_relation_broken(self):
         """As long as all certificates are produced, we don't do anything."""
@@ -318,7 +310,7 @@ class OpenSearchBaseCharm(CharmBase):
     def _is_tls_fully_configured(self) -> bool:
         """Check if TLS fully configured meaning the admin user configured & 3 certs present."""
         # In case the initialisation of the admin user is not finished yet
-        if not self.app_peers_data.get("admin_user_initialized"):
+        if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             return False
 
         admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
@@ -354,7 +346,7 @@ class OpenSearchBaseCharm(CharmBase):
         try:
             self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
-            self.clear_status(WaitingToStart)
+            self.status.clear(WaitingToStart)
         except OpenSearchStartError as e:
             logger.debug(e)
             self.unit.status = BlockedStatus(ServiceStartError)
@@ -363,21 +355,21 @@ class OpenSearchBaseCharm(CharmBase):
 
         # initialize the security index if the admin certs are written on disk
         if self.unit.is_leader():
-            if self.app_peers_data.get("security_index_initialised") is None:
+            if not self.peers_data.get(Scope.APP, "security_index_initialised"):
                 admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
                 self._initialize_security_index(admin_secrets)
-                self.app_peers_data["security_index_initialised"] = "True"
+                self.peers_data.put(Scope.APP, "security_index_initialised", True)
 
-            self.app_peers_data["leader_ip"] = self.unit_ip
+            self.peers_data.put(Scope.APP, "leader_ip", self.unit_ip)
 
         # store the exclusions that previously failed to be stored when no units online
-        if self.app_peers_data.get("remove_from_allocation_exclusions"):
+        if self.peers_data.get(Scope.APP, "remove_from_allocation_exclusions"):
             self.opensearch.remove_allocation_exclusions(
-                self.app_peers_data["remove_from_allocation_exclusions"]
+                self.peers_data.get(Scope.APP, "remove_from_allocation_exclusions")
             )
 
         # cleanup bootstrap conf in the node
-        if self.unit_peers_data.get("bootstrap_contributor"):
+        if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
             self._cleanup_bootstrap_conf_if_applies()
 
     def _stop_opensearch(self, event: EventBase) -> None:
@@ -407,10 +399,10 @@ class OpenSearchBaseCharm(CharmBase):
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
         # overloading the cluster, units must be started one at a time. So we defer starting
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
-        if not self.unit.is_leader() and self.app_peers_data.get("leader_ip"):
+        if not self.unit.is_leader() and self.peers_data.get(Scope.APP, "leader_ip"):
             try:
                 busy_shards = ClusterState.busy_shards_by_unit(
-                    self.opensearch, self.app_peers_data.get("leader_ip")
+                    self.opensearch, self.peers_data.get(Scope.APP, "leader_ip")
                 )
                 if busy_shards:
                     message = WaitingForBusyShards.format(
@@ -419,7 +411,7 @@ class OpenSearchBaseCharm(CharmBase):
                     self.unit.status = WaitingStatus(message)
                     return False
 
-                self.clear_status(WaitingForBusyShards, pattern=StatusCheckPattern.Interpolated)
+                self.status.clear(WaitingForBusyShards, pattern=Status.CheckPattern.Interpolated)
             except OpenSearchHttpError:
                 # this means that the leader unit is not reachable (not started yet),
                 # meaning that it's a new cluster, so we can safely start the OpenSearch service
@@ -465,7 +457,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch.run_script(
             "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
         )
-        self.clear_status(SecurityIndexInitProgress)
+        self.status.clear(SecurityIndexInitProgress)
 
     def _get_nodes(self) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
@@ -495,7 +487,9 @@ class OpenSearchBaseCharm(CharmBase):
         try:
             return fetch()
         except OpenSearchHttpError:
-            if self.unit.is_leader() and not self.app_peers_data.get("security_index_initialised"):
+            if self.unit.is_leader() and not self.peers_data.get(
+                Scope.APP, "security_index_initialised"
+            ):
                 return []
             raise
 
@@ -511,15 +505,19 @@ class OpenSearchBaseCharm(CharmBase):
             cm_names.append(self.unit_name)
             cm_ips.append(self.unit_ip)
 
-            cms_in_bootstrap = int(self.app_peers_data.get("bootstrap_contributors_count", 0))
+            cms_in_bootstrap = int(
+                self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
+            )
             if cms_in_bootstrap < self.app.planned_units():
                 contribute_to_bootstrap = True
 
                 if self.unit.is_leader():
-                    self.app_peers_data["bootstrap_contributors_count"] = f"{cms_in_bootstrap + 1}"
+                    self.peers_data.put(
+                        Scope.APP, "bootstrap_contributors_count", cms_in_bootstrap + 1
+                    )
 
                 # indicates that this unit is part of the "initial cm nodes"
-                self.unit_peers_data["bootstrap_contributor"] = "True"
+                self.peers_data.put(Scope.UNIT, "bootstrap_contributor", True)
 
         self.opensearch_config.set_node(
             self.app.name,
@@ -546,62 +544,32 @@ class OpenSearchBaseCharm(CharmBase):
     def append_allocation_exclusion_to_remove(self, unit_name) -> None:
         """Store a unit in the relation data bag, to be removed from the allocation exclusion."""
         if not self.unit.is_leader():
-            self.unit_peers_data["remove_from_allocation_exclusions"] = unit_name
+            self.peers_data.put(Scope.UNIT, "remove_from_allocation_exclusions", unit_name)
             return
 
         exclusions = set(
-            self.app_peers_data.get("remove_from_allocation_exclusions", "").split(",")
+            self.peers_data.get(Scope.APP, "remove_from_allocation_exclusions", "").split(",")
         )
         exclusions.add(unit_name)
 
-        self.app_peers_data["remove_from_allocation_exclusions"] = ",".join(exclusions)
+        self.peers_data.put(Scope.APP, "remove_from_allocation_exclusions", ",".join(exclusions))
 
     def remove_allocation_exclusions(self, exclusions: Set[str]) -> None:
         """Remove the allocation exclusions from the peer databag if existing."""
         stored_exclusions = set(
-            self.app_peers_data.get("remove_from_allocation_exclusions", "").split(",")
+            self.peers_data.get(Scope.APP, "remove_from_allocation_exclusions", "").split(",")
         )
         exclusions_to_keep = ",".join(stored_exclusions - exclusions)
 
+        scope = Scope.UNIT
         if self.unit.is_leader():
-            self.app_peers_data["remove_from_allocation_exclusions"] = exclusions_to_keep
-        else:
-            self.unit_peers_data["remove_from_allocation_exclusions"] = exclusions_to_keep
+            scope = Scope.APP
+
+        self.peers_data.put(scope, "remove_from_allocation_exclusions", exclusions_to_keep)
 
     def get_allocation_exclusions(self) -> str:
         """Retrieve the units that must be removed from the allocation exclusion."""
-        return self.app_peers_data.get("to_remove_from_allocation_exclusion", "")
-
-    def clear_status(
-        self, status_message: str, pattern: StatusCheckPattern = StatusCheckPattern.Equal
-    ):
-        """Resets the unit status if it was previously blocked/maintenance with message."""
-        condition: bool
-        if pattern == StatusCheckPattern.Equal:
-            condition = self.unit.status.message == status_message
-        elif pattern == StatusCheckPattern.Start:
-            condition = self.unit.status.message.startswith(status_message)
-        elif pattern == StatusCheckPattern.End:
-            condition = self.unit.status.message.endswith(status_message)
-        elif pattern == StatusCheckPattern.Interpolated:
-            condition = (
-                re.fullmatch(status_message.replace("{}", "(?s:.*?)"), status_message) is not None
-            )
-        else:
-            condition = status_message in self.unit.status.message
-
-        if condition:
-            self.unit.status = ActiveStatus()
-
-    def _get_relation_data(self, scope: Scope, relation_name: str) -> Dict[str, str]:
-        """Relation data object."""
-        relation = self.model.get_relation(relation_name)
-        if relation is None:
-            return {}
-
-        relation_scope = self.app if scope == Scope.APP else self.unit
-
-        return relation.data[relation_scope]
+        return self.peers_data.get(Scope.APP, "to_remove_from_allocation_exclusion", "")
 
     @abstractmethod
     def _store_tls_resources(
@@ -614,16 +582,6 @@ class OpenSearchBaseCharm(CharmBase):
     def _are_all_tls_resources_stored(self):
         """Check if all TLS resources are stored on disk."""
         pass
-
-    @property
-    def app_peers_data(self) -> Dict[str, str]:
-        """Peer relation data object."""
-        return self._get_relation_data(Scope.APP, PEER)
-
-    @property
-    def unit_peers_data(self) -> Dict[str, str]:
-        """Peer relation data object."""
-        return self._get_relation_data(Scope.UNIT, PEER)
 
     @property
     def unit_ip(self) -> str:
