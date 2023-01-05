@@ -78,7 +78,23 @@ class ConfigSetter(ABC):
         inline_array: bool = False,
         output_file: str = None,
     ) -> Dict[str, any]:
-        """Add or update the value of a key (or content of array at index / key) if it exists."""
+        """Add or update the value of a key (or content of array at index / key) if it exists.
+
+        Args:
+            config_file (str): Path to the source config file
+            key_path (str): The path of the YAML key to target
+            val (any): The value to store for the passed key
+            sep (str): The separator / delimiter character to use in the key_path
+            output_type (OutputType): The type of output we're expecting from this operation,
+                i.e, set OutputType.all to have the output on both the console and target file
+            inline_array (bool): whether the operation should format arrays in:
+                - multiline fashion (false)
+                - between brackets (true)
+            output_file: Target file for the result config, by default same as config_file
+
+        Returns:
+            Dict[str, any]: The final version of the YAML config.
+        """
         pass
 
     @abstractmethod
@@ -90,7 +106,19 @@ class ConfigSetter(ABC):
         output_type: OutputType = OutputType.file,
         output_file: str = None,
     ) -> Dict[str, any]:
-        """Delete the value of a key (or content of array at index / key) if it exists."""
+        """Delete the value of a key (or content of array at index / key) if it exists.
+
+        Args:
+            config_file (str): Path to the source config file
+            key_path (str): The path of the YAML key to target
+            sep (str): The separator / delimiter character to use in the key_path
+            output_type (OutputType): The type of output we're expecting from this operation,
+                i.e, set OutputType.all to have the output on both the console and target file
+            output_file: Target file for the result config, by default same as config_file
+
+        Returns:
+            Dict[str, any]: The final version of the YAML config.
+        """
         pass
 
     @abstractmethod
@@ -103,7 +131,17 @@ class ConfigSetter(ABC):
         output_type: OutputType = OutputType.file,
         output_file: str = None,
     ) -> None:
-        """Replace any substring in a text file."""
+        """Replace any substring in a text file.
+
+        Args:
+            config_file (str): Path to the source config file
+            old_val (str): The value we wish to replace
+            new_val (any): The new value to replace old_val
+            regex (bool): Whether to treat old_val as a regex.
+            output_type (OutputType): The type of output we're expecting from this operation,
+                i.e, set OutputType.all to have the output on both the console and target file
+            output_file: Target file for the result config, by default same as config_file
+        """
         pass
 
     @staticmethod

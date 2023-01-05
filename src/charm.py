@@ -8,10 +8,14 @@ import logging
 from os.path import exists
 from typing import Dict
 
+from charms.opensearch.v0.constants_charm import InstallError, InstallProgress
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import to_pkcs8
 from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+from charms.opensearch.v0.opensearch_distro import OpenSearchInstallError
+from ops.charm import InstallEvent
 from ops.main import main
+from ops.model import BlockedStatus, MaintenanceStatus
 from overrides import override
 
 from opensearch import OpenSearchTarball
@@ -25,6 +29,17 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     def __init__(self, *args):
         super().__init__(*args, distro=OpenSearchTarball)  # OpenSearchSnap
 
+        self.framework.observe(self.on.install, self._on_install)
+
+    def _on_install(self, _: InstallEvent) -> None:
+        """Handle the install event."""
+        self.unit.status = MaintenanceStatus(InstallProgress)
+        try:
+            self.opensearch.install()
+            self.status.clear(InstallProgress)
+        except OpenSearchInstallError:
+            self.unit.status = BlockedStatus(InstallError)
+
     @override
     def _store_tls_resources(
         self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
@@ -33,10 +48,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         certs_dir = self.opensearch.paths.certs
 
         self.opensearch.write_file(
-            f"{certs_dir}/{cert_type.val}.key",
+            f"{certs_dir}/{cert_type}.key",
             to_pkcs8(secrets["key"], secrets.get("key-password")),
         )
-        self.opensearch.write_file(f"{certs_dir}/{cert_type.val}.cert", secrets["cert"])
+        self.opensearch.write_file(f"{certs_dir}/{cert_type}.cert", secrets["cert"])
         self.opensearch.write_file(f"{certs_dir}/root-ca.cert", secrets["ca"], override=False)
 
         if cert_type == CertType.APP_ADMIN:
@@ -52,7 +67,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         certs_dir = self.opensearch.paths.certs
         for cert_type in [CertType.APP_ADMIN, CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]:
             for extension in ["key", "cert"]:
-                if not exists(f"{certs_dir}/{cert_type.val}.{extension}"):
+                if not exists(f"{certs_dir}/{cert_type}.{extension}"):
                     return False
 
         return exists(f"{certs_dir}/chain.pem") and exists(f"{certs_dir}/root-ca.cert")

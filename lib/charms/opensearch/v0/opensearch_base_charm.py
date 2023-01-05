@@ -13,8 +13,6 @@ from charms.opensearch.v0.constants_charm import (
     AllocationExclusionFailed,
     CertsExpirationError,
     HorizontalScaleUpSuggest,
-    InstallError,
-    InstallProgress,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -43,7 +41,6 @@ from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import (
     OpenSearchDistribution,
     OpenSearchHttpError,
-    OpenSearchInstallError,
     OpenSearchStartError,
     OpenSearchStopError,
 )
@@ -55,7 +52,6 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
 from ops.charm import (
     ActionEvent,
     CharmBase,
-    InstallEvent,
     LeaderElectedEvent,
     RelationChangedEvent,
     RelationJoinedEvent,
@@ -102,7 +98,6 @@ class OpenSearchBaseCharm(CharmBase):
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
         )
 
-        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
 
@@ -112,15 +107,6 @@ class OpenSearchBaseCharm(CharmBase):
         self.framework.observe(self.on.update_status, self._on_update_status)
 
         self.framework.observe(self.on.get_admin_secrets_action, self._on_get_admin_secrets_action)
-
-    def _on_install(self, _: InstallEvent) -> None:
-        """Handle the install event."""
-        self.unit.status = MaintenanceStatus(InstallProgress)
-        try:
-            self.opensearch.install()
-            self.status.clear(InstallProgress)
-        except OpenSearchInstallError:
-            self.unit.status = BlockedStatus(InstallError)
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle leader election event."""

@@ -38,18 +38,20 @@ class Status:
         unit = self.charm.unit
 
         condition: bool
-        if pattern == Status.CheckPattern.Equal:
-            condition = unit.status.message == status_message
-        elif pattern == Status.CheckPattern.Start:
-            condition = unit.status.message.startswith(status_message)
-        elif pattern == Status.CheckPattern.End:
-            condition = unit.status.message.endswith(status_message)
-        elif pattern == Status.CheckPattern.Interpolated:
-            condition = (
-                re.fullmatch(status_message.replace("{}", "(?s:.*?)"), status_message) is not None
-            )
-        else:
-            condition = status_message in unit.status.message
+        match pattern:
+            case Status.CheckPattern.Equal:
+                condition = unit.status.message == status_message
+            case Status.CheckPattern.Start:
+                condition = unit.status.message.startswith(status_message)
+            case Status.CheckPattern.End:
+                condition = unit.status.message.endswith(status_message)
+            case Status.CheckPattern.Interpolated:
+                condition = (
+                    re.fullmatch(status_message.replace("{}", "(?s:.*?)"), status_message)
+                    is not None
+                )
+            case _:
+                condition = status_message in unit.status.message
 
         if condition:
             unit.status = ActiveStatus()
