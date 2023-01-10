@@ -4,6 +4,7 @@
 """Unit test for the helper_cluster library."""
 
 import unittest
+import uuid
 from unittest.mock import patch
 
 from charms.opensearch.v0.helper_networking import (
@@ -66,4 +67,4 @@ class TestHelperNetworking(unittest.TestCase):
     def test_is_reachable(self):
         """Test if host is reachable."""
         self.assertTrue(is_reachable("google.com", 80))
-        self.assertFalse(is_reachable("googl.comodo", 80))
+        self.assertFalse(is_reachable(uuid.uuid4().hex, 80))
