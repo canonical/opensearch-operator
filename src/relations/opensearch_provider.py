@@ -8,7 +8,7 @@ TODO add databag reference
 
 import logging
 
-from charms.data_platform_libs.v0.database_interfaces import DatabaseProvides
+from charms.data_platform_libs.v0.data_interfaces import DatabaseProvides
 from charms.opensearch.v0.constants_charm import ClientRelationName
 from ops.charm import CharmBase
 from ops.framework import Object

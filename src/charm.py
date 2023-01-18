@@ -62,9 +62,9 @@ from ops.charm import (
 from ops.framework import EventBase
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
-from relations.opensearch_provider import OpenSearchProvider
 
 from opensearch import OpenSearchTarball
+from relations.opensearch_provider import OpenSearchProvider
 
 logger = logging.getLogger(__name__)
 
