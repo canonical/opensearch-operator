@@ -9,8 +9,7 @@ This charm is meant to be used only for testing of the libraries in this reposit
 
 import logging
 
-# TODO update to new lib
-from charms.data_platform_libs.v0.database_requires import (
+from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
     DatabaseEndpointsChangedEvent,
     DatabaseRequires,
