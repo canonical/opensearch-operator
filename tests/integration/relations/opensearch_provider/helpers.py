@@ -5,6 +5,7 @@
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
+
 async def check_new_relation(ops_test: OpsTest):
     """Smoke test to check relation is online."""
     raise NotImplementedError

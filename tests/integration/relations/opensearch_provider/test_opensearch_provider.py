@@ -7,9 +7,9 @@ import logging
 import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
-from tests.integration.helpers.helpers import wait_for_relation_joined_between
 
 from tests.integration.helpers import APP_NAME, UNIT_IDS
+from tests.integration.helpers.helpers import wait_for_relation_joined_between
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +17,7 @@ CLIENT_APP_NAME = "application"
 NUM_UNITS = len(UNIT_IDS)
 
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
+
 
 @pytest.mark.abort_on_fail
 @pytest.mark.client_relation
@@ -38,7 +39,7 @@ async def test_database_relation_with_charm_libraries(
             application_name=APP_NAME,
             num_units=NUM_UNITS,
         ),
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=tls_config)
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=tls_config),
     )
 
     # Relate TLS to OpenSearch to set up TLS.
@@ -52,9 +53,7 @@ async def test_database_relation_with_charm_libraries(
             ops_test.model.wait_for_idle(
                 apps=[APP_NAME, TLS_CERTIFICATES_APP_NAME], status="active", timeout=600
             ),
-            ops_test.model.wait_for_idle(
-                apps=[CLIENT_APP_NAME], status="blocked", timeout=600
-            ),
+            ops_test.model.wait_for_idle(apps=[CLIENT_APP_NAME], status="blocked", timeout=600),
         )
 
     # Relate the charms and wait for them exchanging some connection data.
