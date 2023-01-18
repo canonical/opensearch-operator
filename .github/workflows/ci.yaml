@@ -28,6 +28,9 @@ jobs:
 
   integration-test-lxd-charm:
     name: Integration tests for the charm (lxd)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -42,11 +45,14 @@ jobs:
           sudo sysctl -w vm.max_map_count=262144
           sudo sysctl -w vm.swappiness=0
           sudo sysctl -w net.ipv4.tcp_retries2=5
-          
+
           tox -e charm-integration
 
   integration-test-lxd-tls:
     name: Integration tests for TLS (lxd)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -61,11 +67,14 @@ jobs:
           sudo sysctl -w vm.max_map_count=262144
           sudo sysctl -w vm.swappiness=0
           sudo sysctl -w net.ipv4.tcp_retries2=5
-          
+
           tox -e tls-integration
 
   integration-test-lxd-ha:
     name: Integration tests for HA (lxd)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -80,11 +89,14 @@ jobs:
           sudo sysctl -w vm.max_map_count=262144
           sudo sysctl -w vm.swappiness=0
           sudo sysctl -w net.ipv4.tcp_retries2=5
-          
+
           tox -e ha-integration
 
 #  integration-test-lxd-ha-service:
 #    name: Integration tests for HA - Service (lxd)
+#    needs:
+#      - lint
+#      - unit-test
 #    runs-on: ubuntu-22.04
 #    steps:
 #      - name: Checkout
