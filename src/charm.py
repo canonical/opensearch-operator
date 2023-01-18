@@ -62,6 +62,7 @@ from ops.charm import (
 from ops.framework import EventBase
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from relations.opensearch_provider import OpenSearchProvider
 
 from opensearch import OpenSearchTarball
 
@@ -88,6 +89,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.service_manager = RollingOpsManager(
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
         )
+        self.client_relation = OpenSearchProvider(self)
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
