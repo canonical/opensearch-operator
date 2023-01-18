@@ -3,7 +3,7 @@
 
 """OpenSearch client relation hooks & helpers.
 
-TODO add databag reference
+TODO add databag reference information
 """
 
 import logging
@@ -46,6 +46,17 @@ class OpenSearchProvider(Object):
 
     def _on_database_requested(self, _) -> None:
         """Handle client database-requested event."""
+        # check app is ready to roll
+        # application provides dbname, and extra-user-roles
+
+        # generate db
+        # generate user with roles
+
+        # Provide endpoints, password, read-only-endpoints, username, and version to application charm
+
+        # Not sure how certs are going to be shared?
 
     def _on_relation_broken(self, _) -> None:
         """Handle client relation-broken event."""
+        # check app is ready to roll
+        # deauth user

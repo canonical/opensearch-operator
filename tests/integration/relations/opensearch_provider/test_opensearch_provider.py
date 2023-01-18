@@ -8,7 +8,7 @@ import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import APP_NAME, UNIT_IDS
+from tests.integration.helpers import APP_NAME, UNIT_IDS, MODEL_CONFIG
 from tests.integration.relations.opensearch_provider.helpers import (
     wait_for_relation_joined_between,
 )
@@ -29,7 +29,7 @@ async def test_database_relation_with_charm_libraries(
     """Test basic functionality of database relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
-
+    await ops_test.model.set_config(MODEL_CONFIG)
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
