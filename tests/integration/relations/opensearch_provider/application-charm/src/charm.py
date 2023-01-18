@@ -105,7 +105,7 @@ class ApplicationCharm(CharmBase):
         raise NotImplementedError
 
     def connect_to_database(self) -> None:
-        """Creates a connection to database"""
+        """Creates a connection to database."""
         raise NotImplementedError
 
 
