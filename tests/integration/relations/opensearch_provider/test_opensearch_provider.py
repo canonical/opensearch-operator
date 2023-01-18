@@ -9,7 +9,9 @@ from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import APP_NAME, UNIT_IDS
-from tests.integration.relations.opensearch_provider.helpers import wait_for_relation_joined_between
+from tests.integration.relations.opensearch_provider.helpers import (
+    wait_for_relation_joined_between,
+)
 
 logger = logging.getLogger(__name__)
 
