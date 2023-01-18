@@ -73,13 +73,13 @@ class OpenSearchConfig:
         self._opensearch.config.put(
             self.CONFIG_YML,
             f"plugins.security.ssl.{target_conf_layer}.pemcert_filepath",
-            f"{self._opensearch.paths.certs_relative}/{cert_type.val}.cert",
+            f"{self._opensearch.paths.certs_relative}/{cert_type}.cert",
         )
 
         self._opensearch.config.put(
             self.CONFIG_YML,
             f"plugins.security.ssl.{target_conf_layer}.pemkey_filepath",
-            f"{self._opensearch.paths.certs_relative}/{cert_type.val}.key",
+            f"{self._opensearch.paths.certs_relative}/{cert_type}.key",
         )
 
         self._opensearch.config.put(

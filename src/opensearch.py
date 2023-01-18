@@ -23,6 +23,7 @@ from charms.opensearch.v0.opensearch_distro import (
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
+from overrides import override
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from utils import extract_tarball
@@ -39,6 +40,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         cache = snap.SnapCache()
         self._opensearch = cache["opensearch"]
 
+    @override
     def install(self):
         """Install opensearch from the snapcraft store."""
         if self._opensearch.present:
@@ -52,6 +54,7 @@ class OpenSearchSnap(OpenSearchDistribution):
 
         self._run_cmd("snap connect opensearch:process-control")
 
+    @override
     def start(self):
         """Start the snap exposed "daemon" service."""
         if not self._opensearch.present:
@@ -69,6 +72,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             logger.error(f"Failed to start the opensearch.{self.SERVICE_NAME} service. \n{e}")
             raise OpenSearchStartError()
 
+    @override
     def _stop_service(self):
         """Stop the snap exposed "daemon" service."""
         if not self._opensearch.present:
@@ -80,6 +84,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             logger.error(f"Failed to stop the opensearch.{self.SERVICE_NAME} service. \n{e}")
             raise OpenSearchStopError()
 
+    @override
     def _build_paths(self) -> Paths:
         """Builds a Path object.
 
@@ -108,6 +113,7 @@ class OpenSearchTarball(OpenSearchDistribution):
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True,
     )
+    @override
     def install(self):
         """Temporary (will be deleted later) - Download and Un-tar the opensearch distro."""
         try:
@@ -125,6 +131,7 @@ class OpenSearchTarball(OpenSearchDistribution):
         extract_tarball(tarball_path, self.paths.home)
         self._create_systemd_unit()
 
+    @override
     def start(self):
         """Start opensearch as a Daemon."""
         logger.debug("Starting opensearch.")
@@ -147,6 +154,7 @@ class OpenSearchTarball(OpenSearchDistribution):
         else:
             raise OpenSearchStartError()
 
+    @override
     def _stop_service(self):
         """Stop opensearch."""
         self._run_cmd(
@@ -164,6 +172,7 @@ class OpenSearchTarball(OpenSearchDistribution):
 
         raise OpenSearchStopError()
 
+    @override
     def _build_paths(self) -> Paths:
         return Paths(
             home="/etc/opensearch",

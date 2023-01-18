@@ -6,12 +6,14 @@ import logging
 import re
 import sys
 import uuid
+from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from enum import Enum
 from io import StringIO
 from os.path import exists
 from typing import Dict, List
 
+from overrides import override
 from ruamel.yaml import YAML, CommentedSeq
 from ruamel.yaml.comments import CommentedSet
 
@@ -42,10 +44,11 @@ class OutputType(Enum):
         return self.value
 
 
-class YamlConfigSetter:
-    """Utility class for updating YAML config, supporting diverse object types and nestedness.
+class ConfigSetter(ABC):
+    """Base class for manipulating YAML Config, of multiple types and any depth level.
 
-    conf_setter = YamlConfigSetter()
+    conf_setter = YamlConfigSetter() or another config setter
+
     put("file.yml", "a.b", "new_name")
     put("file.yml", "a.b/c.obj/key3/key1.a/obj", {"a": "new_name_1", "b": ["hello", "world"]})
     put("file.yml", "a.b/c.arr.simple/[0]", "hello")
@@ -57,9 +60,111 @@ class YamlConfigSetter:
 
     def __init__(self, base_path: str = None):
         """base_path: if set, where to look for files relatively on "load/put/delete" methods."""
-        self.yaml = YAML()
         self.base_path = self.__clean_base_path(base_path)
 
+    @abstractmethod
+    def load(self, config_file: str) -> Dict[str, any]:
+        """Load the content of a YAML file."""
+        pass
+
+    @abstractmethod
+    def put(
+        self,
+        config_file: str,
+        key_path: str,
+        val: any,
+        sep="/",
+        output_type: OutputType = OutputType.file,
+        inline_array: bool = False,
+        output_file: str = None,
+    ) -> Dict[str, any]:
+        """Add or update the value of a key (or content of array at index / key) if it exists.
+
+        Args:
+            config_file (str): Path to the source config file
+            key_path (str): The path of the YAML key to target
+            val (any): The value to store for the passed key
+            sep (str): The separator / delimiter character to use in the key_path
+            output_type (OutputType): The type of output we're expecting from this operation,
+                i.e, set OutputType.all to have the output on both the console and target file
+            inline_array (bool): whether the operation should format arrays in:
+                - multiline fashion (false)
+                - between brackets (true)
+            output_file: Target file for the result config, by default same as config_file
+
+        Returns:
+            Dict[str, any]: The final version of the YAML config.
+        """
+        pass
+
+    @abstractmethod
+    def delete(
+        self,
+        config_file: str,
+        key_path: str,
+        sep="/",
+        output_type: OutputType = OutputType.file,
+        output_file: str = None,
+    ) -> Dict[str, any]:
+        """Delete the value of a key (or content of array at index / key) if it exists.
+
+        Args:
+            config_file (str): Path to the source config file
+            key_path (str): The path of the YAML key to target
+            sep (str): The separator / delimiter character to use in the key_path
+            output_type (OutputType): The type of output we're expecting from this operation,
+                i.e, set OutputType.all to have the output on both the console and target file
+            output_file: Target file for the result config, by default same as config_file
+
+        Returns:
+            Dict[str, any]: The final version of the YAML config.
+        """
+        pass
+
+    @abstractmethod
+    def replace(
+        self,
+        config_file: str,
+        old_val: str,
+        new_val: any,
+        regex: bool = False,
+        output_type: OutputType = OutputType.file,
+        output_file: str = None,
+    ) -> None:
+        """Replace any substring in a text file.
+
+        Args:
+            config_file (str): Path to the source config file
+            old_val (str): The value we wish to replace
+            new_val (any): The new value to replace old_val
+            regex (bool): Whether to treat old_val as a regex.
+            output_type (OutputType): The type of output we're expecting from this operation,
+                i.e, set OutputType.all to have the output on both the console and target file
+            output_file: Target file for the result config, by default same as config_file
+        """
+        pass
+
+    @staticmethod
+    def __clean_base_path(base_path: str):
+        if base_path is None:
+            return ""
+
+        base_path = base_path.strip()
+        if not base_path.endswith("/"):
+            base_path = f"{base_path}/"
+
+        return base_path
+
+
+class YamlConfigSetter(ConfigSetter):
+    """Class for updating YAML config on the file system."""
+
+    def __init__(self, base_path: str = None):
+        """base_path: if set, where to look for files relatively on "load/put/delete" methods."""
+        super().__init__(base_path)
+        self.yaml = YAML()
+
+    @override
     def load(self, config_file: str) -> Dict[str, any]:
         """Load the content of a YAML file."""
         path = f"{self.base_path}{config_file}"
@@ -78,6 +183,7 @@ class YamlConfigSetter:
 
             return data
 
+    @override
     def put(
         self,
         config_file: str,
@@ -104,6 +210,7 @@ class YamlConfigSetter:
 
         return data
 
+    @override
     def delete(
         self,
         config_file: str,
@@ -125,6 +232,7 @@ class YamlConfigSetter:
 
         return data
 
+    @override
     def replace(
         self,
         config_file: str,
@@ -315,14 +423,3 @@ class YamlConfigSetter:
         ret = CommentedSeq()
         ret.fa.set_flow_style()
         return ret
-
-    @staticmethod
-    def __clean_base_path(base_path: str):
-        if base_path is None:
-            return ""
-
-        base_path = base_path.strip()
-        if not base_path.endswith("/"):
-            base_path = f"{base_path}/"
-
-        return base_path
