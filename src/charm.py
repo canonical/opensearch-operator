@@ -19,7 +19,6 @@ from ops.model import BlockedStatus, MaintenanceStatus
 from overrides import override
 
 from opensearch import OpenSearchTarball
-from relations.opensearch_provider import OpenSearchProvider
 
 logger = logging.getLogger(__name__)
 

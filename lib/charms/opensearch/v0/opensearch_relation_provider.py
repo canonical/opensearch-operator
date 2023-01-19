@@ -4,6 +4,9 @@
 """OpenSearch client relation hooks & helpers.
 
 TODO add databag reference information
+TODO move to charm lib
+
+Databag needs client credentials and client cert
 """
 
 import logging
@@ -48,15 +51,31 @@ class OpenSearchProvider(Object):
         """Handle client database-requested event."""
         # check app is ready to roll
         # application provides dbname, and extra-user-roles
+        # dbname is called index in opensearch, can we change field name?
+        # TLS cert can be provided by the client
 
         # generate db
         # generate user with roles
 
-        # Provide endpoints, password, read-only-endpoints, username, and version to application charm
+        # Provide endpoints, password, username, and version to application charm
+        # readonly endpoints are not necessary
 
-        # Not sure how certs are going to be shared?
+        # TODO don't do this now - for now, just generate one from TLS charm.
+        # if we don't receive a cert in databag, then generate one.
+
+        # Request unique cert from TLS charm of specific client type (todo), get from relation,
+        # send in relation data
+        # OR receive cert in action
+        # OR receive cert in http requests, and skip generating one
+
+        # FINAL
+        # Receive request for given permissions
+        # create TLS cert
+        # create user with those perms and cert
+        # provide user and TLS in relation
 
     def _on_relation_broken(self, _) -> None:
         """Handle client relation-broken event."""
         # check app is ready to roll
         # deauth user
+        # del cert

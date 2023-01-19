@@ -8,7 +8,6 @@ This charm is meant to be used only for testing of the libraries in this reposit
 """
 
 import logging
-from opensearchpy import OpenSearch
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -17,15 +16,7 @@ from charms.data_platform_libs.v0.data_interfaces import (
 )
 from ops.charm import ActionEvent, CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, Relation
-
-from charms.tls_certificates_interface.v1.tls_certificates import (
-    CertificateAvailableEvent,
-    CertificateExpiringEvent,
-    TLSCertificatesRequiresV1,
-    generate_csr,
-    generate_private_key,
-)
+from ops.model import ActiveStatus
 
 logger = logging.getLogger(__name__)
 
@@ -84,8 +75,6 @@ class ApplicationCharm(CharmBase):
         If backend relation exists, set status to blocked. If relation exists and is usable, set
         status to active.
         """
-
-        self.opensearch_client.
         raise NotImplementedError
 
     # First database events observers.
@@ -113,12 +102,6 @@ class ApplicationCharm(CharmBase):
     def _on_run_query_action(self, event: ActionEvent):
         """Runs queries."""
         raise NotImplementedError
-
-    def opensearch_client(self, relation: Relation) -> OpenSearch:
-        """Returns an opensearch connection object."""
-        databag = self.first_database.fetch_relation_data()[relation.id]
-        hosts =
-        return OpenSearch()
 
 
 if __name__ == "__main__":

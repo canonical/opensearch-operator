@@ -44,6 +44,7 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
+from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v1.tls_certificates import (
@@ -97,6 +98,8 @@ class OpenSearchBaseCharm(CharmBase):
         self.service_manager = RollingOpsManager(
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
         )
+
+        self.client_relation = OpenSearchProvider(self)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
