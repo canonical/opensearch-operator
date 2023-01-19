@@ -31,20 +31,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         super().__init__(*args, distro=OpenSearchTarball)  # OpenSearchSnap
 
         self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.leader_elected, self._on_leader_elected)
-        self.framework.observe(self.on.start, self._on_start)
-
-        self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
-        self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
-
-        self.framework.observe(self.on.update_status, self._on_update_status)
-
-        self.framework.observe(self.on.get_admin_secrets_action, self._on_get_admin_secrets_action)
-
-        self.service_manager = RollingOpsManager(
-            self, relation=SERVICE_MANAGER, callback=self._start_opensearch
-        )
-        self.client_relation = OpenSearchProvider(self)
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
