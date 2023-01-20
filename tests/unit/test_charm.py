@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 from charms.opensearch.v0.constants_tls import CertType
 from helpers import create_utf8_encoded_private_key
-from unit.test_opensearch_base_charm import TestOpenSearchBaseCharm
+from unit.lib.test_opensearch_base_charm import TestOpenSearchBaseCharm
 
 
 class TestCharm(TestOpenSearchBaseCharm):
