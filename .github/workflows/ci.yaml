@@ -17,6 +17,8 @@ jobs:
 
   unit-test:
     name: Unit tests
+    needs:
+      - lint
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -28,6 +30,8 @@ jobs:
 
   integration-test-lxd-charm:
     name: Integration tests for the charm (lxd)
+    needs:
+      - unit-test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -47,6 +51,8 @@ jobs:
 
   integration-test-lxd-tls:
     name: Integration tests for TLS (lxd)
+    needs:
+      - unit-test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -66,6 +72,8 @@ jobs:
 
   integration-test-lxd-ha:
     name: Integration tests for HA (lxd)
+    needs:
+      - unit-test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -104,6 +112,8 @@ jobs:
 
 #  integration-test-lxd-ha-service:
 #    name: Integration tests for HA - Service (lxd)
+#    needs:
+#      - unit-test
 #    runs-on: ubuntu-22.04
 #    steps:
 #      - name: Checkout
