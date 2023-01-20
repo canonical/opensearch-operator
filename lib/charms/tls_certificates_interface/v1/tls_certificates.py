@@ -758,6 +758,7 @@ def generate_private_key(
     return key_bytes
 
 
+
 def generate_csr(
     private_key: bytes,
     subject: str,
