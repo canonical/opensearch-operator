@@ -40,5 +40,5 @@ HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 
 # Relation Interfaces
-ClientRelationName = "opensearch_client"
+ClientRelationName = "opensearch-client"
 PeerRelationName = "opensearch-peers"

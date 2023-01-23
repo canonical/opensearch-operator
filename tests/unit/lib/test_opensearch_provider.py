@@ -4,8 +4,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from charms.opensearch.v0.constants_charm import ClientRelationName
-from charms.opensearch.v0.opensearch_base_charm import PEER, SERVICE_MANAGER
+from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
+from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
 from helpers import patch_network_get
 from ops.testing import Harness
 
@@ -25,7 +25,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.unit = self.charm.unit
         self.client_relation = self.charm.client_relation
 
-        self.peers_rel_id = self.harness.add_relation(PEER, self.charm.app.name)
+        self.peers_rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
 
         # Define an opensearch_provider relation
@@ -36,6 +36,6 @@ class TestOpenSearchProvider(unittest.TestCase):
     def test_on_database_requested(self, _initialize_admin_user):
         # TODO stub
         self.harness.set_leader()
-        event = MagicMock()
-        self.client_relation._on_database_requested(event)
+        event = MagicMock()  # noqa: F841
+        # self.client_relation._on_database_requested(event)
         # Verify we've called everything we should

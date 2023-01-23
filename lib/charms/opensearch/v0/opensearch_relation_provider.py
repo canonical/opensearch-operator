@@ -81,8 +81,8 @@ class OpenSearchProvider(Object):
             return
 
         # Retrieve the database name and extra user roles using the charm library.
-        index = event.database
-        extra_user_roles = event.extra_user_roles
+        # index = event.database
+        # extra_user_roles = event.extra_user_roles
         rel_id = event.relation.id
         username = self._relation_username(rel_id)
         password = generate_password()
@@ -91,7 +91,7 @@ class OpenSearchProvider(Object):
         # generate user with roles
 
         # Share the credentials and updated connection info with the client application.
-        self.database_provides.set_credentials(rel_id, user, password)
+        self.database_provides.set_credentials(rel_id, username, password)
         self.update_endpoints()
         self.database_provides.set_version(rel_id, self.opensearch.version())
 
