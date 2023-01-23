@@ -41,3 +41,4 @@ WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on 
 
 # Relation Interfaces
 ClientRelationName = "opensearch_client"
+PeerRelationName = "opensearch-peers"

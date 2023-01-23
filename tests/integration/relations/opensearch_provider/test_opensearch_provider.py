@@ -8,7 +8,7 @@ import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import APP_NAME, MODEL_CONFIG, UNIT_IDS
+from tests.integration.helpers import APP_NAME, MODEL_CONFIG, SERIES, UNIT_IDS
 from tests.integration.relations.opensearch_provider.helpers import (
     wait_for_relation_joined_between,
 )
@@ -37,9 +37,7 @@ async def test_database_relation_with_charm_libraries(
             application_name=CLIENT_APP_NAME,
         ),
         ops_test.model.deploy(
-            opensearch_charm,
-            application_name=APP_NAME,
-            num_units=NUM_UNITS,
+            opensearch_charm, application_name=APP_NAME, num_units=NUM_UNITS, series=SERIES
         ),
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=tls_config),
     )

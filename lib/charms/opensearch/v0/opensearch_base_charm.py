@@ -13,6 +13,7 @@ from charms.opensearch.v0.constants_charm import (
     AllocationExclusionFailed,
     CertsExpirationError,
     HorizontalScaleUpSuggest,
+    PeerRelationName,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -73,7 +74,6 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-PEER = "opensearch-peers"
 SERVICE_MANAGER = "service"
 
 
@@ -89,10 +89,10 @@ class OpenSearchBaseCharm(CharmBase):
         if distro is None:
             raise ValueError("The type of the opensearch distro must be specified.")
 
-        self.opensearch = distro(self, PEER)
+        self.opensearch = distro(self, PeerRelationName)
         self.opensearch_config = OpenSearchConfig(self.opensearch)
-        self.peers_data = RelationDataStore(self, PEER)
-        self.secrets = SecretsDataStore(self, PEER)
+        self.peers_data = RelationDataStore(self, PeerRelationName)
+        self.secrets = SecretsDataStore(self, PeerRelationName)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
         self.status = Status(self)
         self.service_manager = RollingOpsManager(
@@ -104,8 +104,12 @@ class OpenSearchBaseCharm(CharmBase):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
 
-        self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
-        self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
+        self.framework.observe(
+            self.on[PeerRelationName].relation_joined, self._on_peer_relation_joined
+        )
+        self.framework.observe(
+            self.on[PeerRelationName].relation_changed, self._on_peer_relation_changed
+        )
 
         self.framework.observe(self.on.update_status, self._on_update_status)
 
@@ -456,7 +460,7 @@ class OpenSearchBaseCharm(CharmBase):
             host: Optional[str] = None
             alt_hosts: Optional[List[str]] = None
 
-            all_units_ips = units_ips(self, PEER).values()
+            all_units_ips = units_ips(self, PeerRelationName).values()
             if all_units_ips:
                 all_hosts = list(all_units_ips)
                 host = all_hosts.pop(0)  # get first value
@@ -573,7 +577,7 @@ class OpenSearchBaseCharm(CharmBase):
     @property
     def unit_ip(self) -> str:
         """IP address of the current unit."""
-        return get_host_ip(self, PEER)
+        return get_host_ip(self, PeerRelationName)
 
     @property
     def unit_name(self) -> str:
@@ -588,5 +592,5 @@ class OpenSearchBaseCharm(CharmBase):
     @property
     def alternative_host(self) -> str:
         """Return an alternative host (of another node) in case the current is offline."""
-        all_units_ips = units_ips(self, PEER)
+        all_units_ips = units_ips(self, PeerRelationName)
         return random.choice(list(all_units_ips.values()))
