@@ -10,10 +10,12 @@ which are read/write.
 
 TODO add databag reference information
 TODO add tls
+TODO unit tests
 
 Databag needs client credentials and client cert
 """
 
+import json
 import logging
 
 from charms.data_platform_libs.v0.data_interfaces import (
@@ -23,8 +25,10 @@ from charms.data_platform_libs.v0.data_interfaces import (
 from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
 from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.helper_security import generate_password
+from charms.opensearch.v0.opensearch_users import create_role, create_user
 from ops.charm import CharmBase
 from ops.framework import Object
+from ops.model import BlockedStatus
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +66,7 @@ class OpenSearchProvider(Object):
         )
 
     def _relation_username(self, relation_id: int) -> str:
+        # Rename to something like app_name_id
         return f"{self.relation_name}_relation_{relation_id}_user"
 
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
@@ -80,15 +85,42 @@ class OpenSearchProvider(Object):
             event.defer()
             return
 
-        # Retrieve the database name and extra user roles using the charm library.
-        # index = event.database
-        # extra_user_roles = event.extra_user_roles
         rel_id = event.relation.id
         username = self._relation_username(rel_id)
-        password = generate_password()
 
-        # generate db client
+        try:
+            extra_user_roles = json.loads(event.extra_user_roles)
+            # TODO document that only default roles and action groups can be specified
+            roles = extra_user_roles.get("roles")
+            permissions = extra_user_roles.get("permissions")
+            action_groups = extra_user_roles.get("action_groups")
+
+        except json.decoder.JSONDecodeError:
+            # TODO document what a client application would need to provide to make this work.
+            self.charm.status = BlockedStatus(
+                "bad relation request - client application has not provided correctly formatted extra user roles. "
+            )
+            return
+
+        # create role mapping of all roles, new and default, and apply to new user.
+        if permissions or action_groups:
+            # combine agroups and perms into a new role of all perms given.
+            # TODO make new role with "username" as the name, combining permissions of action
+            # groups and permissions given.
+            create_role(
+                self.opensearch,
+                role_name=username,
+                permissions=permissions,
+                action_groups=action_groups,
+            )
+
+            # TODO Save role somewhere we can guarantee that we'll be able to delete it later.
+            roles.add(username)
+
         # generate user with roles
+        password = generate_password()
+        create_user(username, roles, password, with_cert=False)
+        # create mapping of users to roles
 
         # Share the credentials and updated connection info with the client application.
         self.database_provides.set_credentials(rel_id, username, password)
