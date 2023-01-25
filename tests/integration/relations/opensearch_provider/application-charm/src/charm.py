@@ -98,6 +98,7 @@ class ApplicationCharm(CharmBase):
     def smoke_check(self, relation_id) -> bool:
         try:
             self.relation_request(relation_id, "GET", "/_nodes")
+            # TODO check status
             return True
         except (OpenSearchHttpError, Exception) as e:
             logger.exception(e)
@@ -129,7 +130,7 @@ class ApplicationCharm(CharmBase):
         """Runs queries."""
         raise NotImplementedError
 
-    def request_relation(
+    def relation_request(
         self,
         relation_id: int,
         method: str,

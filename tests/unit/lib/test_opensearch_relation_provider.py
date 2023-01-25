@@ -39,3 +39,16 @@ class TestOpenSearchProvider(unittest.TestCase):
         event = MagicMock()  # noqa: F841
         # self.client_relation._on_database_requested(event)
         # Verify we've called everything we should
+        # assert 1 == 0
+
+    def test_on_relation_departed(self):
+        pass
+        # assert 1 == 0
+
+    def test_on_relation_broken(self):
+        pass
+        # assert 1 == 0
+
+    def test_update_endpoints(self):
+        pass
+        # assert 1 == 0

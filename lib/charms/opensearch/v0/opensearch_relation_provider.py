@@ -87,7 +87,7 @@ class OpenSearchProvider(Object):
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
         """Handle client database-requested event.
 
-        TODO @medib is this documentation correct?
+        TODO @medib is this documentation correct?o
         The read-only-endpoints field of DatabaseProvides is unused in this relation because this
         concept is irrelevant to OpenSearch - the application charm should be defining which nodes
         are readonly and which are read/write.
@@ -131,7 +131,7 @@ class OpenSearchProvider(Object):
 
         # generate user with roles
         password = generate_password()
-        create_user(username, roles, password, with_cert=False)
+        create_user(self.opensearch, username, roles, password)
 
         # Share the credentials and updated connection info with the client application.
         self.database_provides.set_credentials(rel_id, username, password)
@@ -154,8 +154,8 @@ class OpenSearchProvider(Object):
             return
 
         # deauth user and remove role if this relation is being removed.
-        remove_user(self._relation_username())
-        remove_role(self._relation_username())
+        remove_user(self.opensearch, self._relation_username())
+        remove_role(self.opensearch, self._relation_username())
 
     def update_endpoints(self, relation):
         """Updates endpoints in the databag for the given relation."""

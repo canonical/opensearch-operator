@@ -4,7 +4,7 @@
 """OpenSearch user helpers."""
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
@@ -21,24 +21,18 @@ def create_role(
 
     This method assumes the dicts provided are valid opensearch config. If not, we should probably
     raise an error of some kind.
-
-    TODO unit test
     """
-    permissions.update(action_groups)
     put_role_resp = opensearch.request(
         "PUT",
         f"/_plugins/_security/api/roles/{role_name}",
-        permissions,
+        {**permissions, **action_groups},
     )
     logger.debug(put_role_resp)
     assert put_role_resp.get("status") == "OK"
 
 
 def remove_role(opensearch: OpenSearchDistribution, role: str):
-    """Remove the given role from opensearch distribution.
-
-    TODO unit test
-    """
+    """Remove the given role from opensearch distribution."""
     resp = opensearch.request("DELETE", f"/_plugins/_security/api/roles/{role}")
     logger.debug(resp)
     assert resp.get("status") == "OK"
@@ -49,13 +43,8 @@ def create_user(
     username: str,
     roles: List[str],
     password: str,
-    hosts: Optional[List[str]],
-    with_cert: bool,
 ) -> None:
-    """Create or update user and assign the requested roles to the user.
-
-    TODO add unit test
-    """
+    """Create or update user and assign the requested roles to the user."""
     put_user_resp = opensearch.request(
         "PUT",
         f"/_plugins/_security/api/internalusers/{username}",
@@ -65,31 +54,11 @@ def create_user(
         },
     )
     logger.debug(put_user_resp)
-
-    if with_cert:
-        payload = {
-            "users": [username],
-            "opendistro_security_roles": roles,
-        }
-        if hosts is not None:
-            payload["hosts"] = hosts
-
-        put_role_mapping_resp = opensearch.request(
-            "PUT",
-            "/_plugins/_security/api/rolesmapping/",
-            payload,
-        )
-
-        logger.debug(put_role_mapping_resp)
-
     assert put_user_resp.get("status") == "CREATED"
 
 
 def remove_user(opensearch: OpenSearchDistribution, username: str):
-    """Remove the given user from opensearch distribution.
-
-    TODO unit test
-    """
+    """Remove the given user from opensearch distribution."""
     resp = opensearch.request("DELETE", f"/_plugins/_security/api/internalusers/{username}/")
     logger.debug(resp)
     assert resp.get("status") == "OK"
