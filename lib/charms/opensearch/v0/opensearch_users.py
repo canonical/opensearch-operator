@@ -34,6 +34,16 @@ def create_role(
     assert put_role_resp.get("status") == "OK"
 
 
+def remove_role(opensearch: OpenSearchDistribution, role: str):
+    """Remove the given role from opensearch distribution.
+
+    TODO unit test
+    """
+    resp = opensearch.request("DELETE", f"/_plugins/_security/api/roles/{role}")
+    logger.debug(resp)
+    assert resp.get("status") == "OK"
+
+
 def create_user(
     opensearch: OpenSearchDistribution,
     username: str,
@@ -75,19 +85,14 @@ def create_user(
     assert put_user_resp.get("status") == "CREATED"
 
 
-# def _on_delete_user(self, event: ActionEvent):
-#     """Delete a registered user if exists."""
-#     if not self.unit.is_leader():
-#         return
+def remove_user(opensearch: OpenSearchDistribution, username: str):
+    """Remove the given user from opensearch distribution.
 
-#     username = event.params.get("name")
-#     try:
-#         resp = self.opensearch.request(
-#             "DELETE", f"/_plugins/_security/api/internalusers/{username}/"
-#         )
-#         logger.debug(resp)
-#     except OpenSearchHttpError:
-#         event.defer()
+    TODO unit test
+    """
+    resp = opensearch.request("DELETE", f"/_plugins/_security/api/internalusers/{username}/")
+    logger.debug(resp)
+    assert resp.get("status") == "OK"
 
 
 # def oversee_users(self, departed_relation_id: Optional[int], event):

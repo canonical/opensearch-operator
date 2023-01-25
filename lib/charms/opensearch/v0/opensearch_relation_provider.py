@@ -23,12 +23,18 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseRequestedEvent,
 )
 from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
+from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.helper_security import generate_password
-from charms.opensearch.v0.opensearch_users import create_role, create_user
-from ops.charm import CharmBase
+from charms.opensearch.v0.opensearch_users import (
+    create_role,
+    create_user,
+    remove_role,
+    remove_user,
+)
+from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
 from ops.framework import Object
-from ops.model import BlockedStatus
+from ops.model import BlockedStatus, Relation
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +44,7 @@ class OpenSearchProvider(Object):
 
     Hook events observed:
         - database-requested
+        - relation-departed
         - relation-broken
     """
 
@@ -62,12 +69,20 @@ class OpenSearchProvider(Object):
             self.database_provides.on.database_requested, self._on_database_requested
         )
         self.framework.observe(
+            charm.on[self.relation_name].relation_departed, self._on_relation_departed
+        )
+        self.framework.observe(
             charm.on[self.relation_name].relation_broken, self._on_relation_broken
         )
 
-    def _relation_username(self, relation_id: int) -> str:
-        # Rename to something like app_name_id
-        return f"{self.relation_name}_relation_{relation_id}_user"
+    def _relation_username(self, relation: Relation) -> str:
+        return f"{self.relation_name}_{relation.id}_user"
+
+    def _depart_flag(self, relation: Relation):
+        return f"{self.relation_name}_{relation.id}_departing"
+
+    def _unit_departing(self, relation):
+        return self.charm.peers_data.get(Scope.UNIT, self._depart_flag(relation)) == "true"
 
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
         """Handle client database-requested event.
@@ -102,11 +117,8 @@ class OpenSearchProvider(Object):
             )
             return
 
-        # create role mapping of all roles, new and default, and apply to new user.
         if permissions or action_groups:
             # combine agroups and perms into a new role of all perms given.
-            # TODO make new role with "username" as the name, combining permissions of action
-            # groups and permissions given.
             create_role(
                 self.opensearch,
                 role_name=username,
@@ -120,22 +132,30 @@ class OpenSearchProvider(Object):
         # generate user with roles
         password = generate_password()
         create_user(username, roles, password, with_cert=False)
-        # create mapping of users to roles
 
         # Share the credentials and updated connection info with the client application.
         self.database_provides.set_credentials(rel_id, username, password)
         self.update_endpoints()
         self.database_provides.set_version(rel_id, self.opensearch.version())
 
-    def _on_relation_broken(self, _) -> None:
+    def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
+        """Check if this relation is being removed, and update the peer databag accordingly."""
+        if event.departing_unit == self.charm.unit:
+            self.charm.peers_data.put(Scope.UNIT, {self._depart_flag(event.relation): "true"})
+
+    def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle client relation-broken event."""
-        # TODO check whether this unit is being removed, or this relation. If the unit's being
-        # removed, do nothing, but if this relation is being removed, then continue.
-        if not self.unit.opensearch.is_node_up():
-            # TODO check whether to defer here.
+        if not self.unit.opensearch.is_node_up() or not self.unit.is_leader():
             return
 
-        # deauth user
+        if self._unit_departing(event.relation):
+            # This unit is being removed, so don't update the relation.
+            self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
+            return
+
+        # deauth user and remove role if this relation is being removed.
+        remove_user(self._relation_username())
+        remove_role(self._relation_username())
 
     def update_endpoints(self, relation):
         """Updates endpoints in the databag for the given relation."""
