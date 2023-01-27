@@ -59,7 +59,7 @@ async def test_database_relation_with_charm_libraries(
     # Relate the charms and wait for them exchanging some connection data.
     global client_relation
     client_relation = await ops_test.model.add_relation(
-        f"{APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:database"
+        f"{APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:first-database"
     )
 
     async with ops_test.fast_forward():

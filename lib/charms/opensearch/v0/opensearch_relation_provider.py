@@ -10,7 +10,6 @@ which are read/write.
 
 TODO add databag reference information
 TODO add tls
-TODO unit tests
 
 Databag needs client credentials and client cert
 """
@@ -87,36 +86,33 @@ class OpenSearchProvider(Object):
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
         """Handle client database-requested event.
 
-        TODO @medib is this documentation correct?o
+        TODO @medib is this documentation correct?
         The read-only-endpoints field of DatabaseProvides is unused in this relation because this
         concept is irrelevant to OpenSearch - the application charm should be defining which nodes
         are readonly and which are read/write.
         """
         if not self.unit.is_leader():
             return
-
-        # check app is ready to roll, defer if not
         if not self.opensearch.is_node_up():
             event.defer()
             return
 
-        rel_id = event.relation.id
-        username = self._relation_username(rel_id)
-
         try:
+            logger.error(event.extra_user_roles)
+            logger.error(json.loads(event.extra_user_roles))
             extra_user_roles = json.loads(event.extra_user_roles)
-            # TODO document that only default roles and action groups can be specified
-            roles = extra_user_roles.get("roles")
-            permissions = extra_user_roles.get("permissions")
-            action_groups = extra_user_roles.get("action_groups")
-
-        except json.decoder.JSONDecodeError:
+        except (json.decoder.JSONDecodeError, TypeError):
             # TODO document what a client application would need to provide to make this work.
-            self.charm.status = BlockedStatus(
+            self.unit.status = BlockedStatus(
                 "bad relation request - client application has not provided correctly formatted extra user roles. "
             )
             return
 
+        username = self._relation_username(event.relation)
+        # TODO document that only default roles and action groups can be specified
+        roles = extra_user_roles.get("roles")
+        permissions = extra_user_roles.get("permissions")
+        action_groups = extra_user_roles.get("action_groups")
         if permissions or action_groups:
             # combine agroups and perms into a new role of all perms given.
             create_role(
@@ -125,40 +121,40 @@ class OpenSearchProvider(Object):
                 permissions=permissions,
                 action_groups=action_groups,
             )
-
-            # TODO Save role somewhere we can guarantee that we'll be able to delete it later.
-            roles.add(username)
+            roles.append(username)
 
         # generate user with roles
         password = generate_password()
         create_user(self.opensearch, username, roles, password)
 
+        rel_id = event.relation.id
         # Share the credentials and updated connection info with the client application.
         self.database_provides.set_credentials(rel_id, username, password)
-        self.update_endpoints()
+        self.update_endpoints(event.relation)
         self.database_provides.set_version(rel_id, self.opensearch.version())
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
         if event.departing_unit == self.charm.unit:
-            self.charm.peers_data.put(Scope.UNIT, {self._depart_flag(event.relation): "true"})
+            self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), "true")
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle client relation-broken event."""
-        if not self.unit.opensearch.is_node_up() or not self.unit.is_leader():
+        if not self.opensearch.is_node_up() or not self.unit.is_leader():
             return
 
+        logger.error(self._unit_departing)
+        logger.error(self._unit_departing(event.relation))
         if self._unit_departing(event.relation):
             # This unit is being removed, so don't update the relation.
             self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
             return
 
-        # deauth user and remove role if this relation is being removed.
-        remove_user(self.opensearch, self._relation_username())
-        remove_role(self.opensearch, self._relation_username())
+        remove_user(self.opensearch, self._relation_username(event.relation))
+        remove_role(self.opensearch, self._relation_username(event.relation))
 
     def update_endpoints(self, relation):
         """Updates endpoints in the databag for the given relation."""
         port = self.opensearch.port
-        ips = [f"{ip}:{port}" for ip in units_ips(self.charm, PeerRelationName).values()]
-        self.database_provides.set_endpoints(relation.id, ",".join(ips))
+        endpoints = [f"{ip}:{port}" for ip in units_ips(self.charm, PeerRelationName).values()]
+        self.database_provides.set_endpoints(relation.id, ",".join(endpoints))
