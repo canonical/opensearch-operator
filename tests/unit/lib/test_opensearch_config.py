@@ -7,9 +7,9 @@ import unittest
 from typing import Dict
 from unittest.mock import Mock, patch
 
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
-from charms.opensearch.v0.opensearch_base_charm import PEER
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -24,7 +24,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         self.harness.begin()
 
         self.charm = self.harness.charm
-        self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
+        self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
 
         self.config_path = "tests/unit/resources/config"
         self.opensearch_yml = copy_file_content_to_tmp(self.config_path, "opensearch.yml")

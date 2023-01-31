@@ -430,3 +430,7 @@ class OpenSearchDistribution(ABC):
             missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
 
         return missing_requirements
+
+    def version(self) -> str:
+        """Returns the version number of this opensearch instance."""
+        return self.request("GET", "/").get("version").get("number")
