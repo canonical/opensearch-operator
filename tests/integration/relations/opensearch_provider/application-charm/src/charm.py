@@ -148,9 +148,16 @@ class ApplicationCharm(CharmBase):
         endpoints = databag.get("endpoints", "").split(",")
         if None in [username, password] or len(endpoints) == 0:
             raise OpenSearchHttpError
+        host = endpoints[0].split(":")[0]
         port = int(endpoints[0].split(":")[1])
         return self.request(
-            method, endpoint, port, username, password, payload=payload, hosts=endpoints
+            method,
+            endpoint,
+            port,
+            username,
+            password,
+            host,
+            payload=payload,
         )
 
     def request(
@@ -160,8 +167,8 @@ class ApplicationCharm(CharmBase):
         port: int,
         username: str,
         password: str,
+        host: str,
         payload: Optional[Dict[str, any]] = None,
-        hosts: Optional[List[str]] = None,
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request.
 
@@ -169,7 +176,7 @@ class ApplicationCharm(CharmBase):
             method: matching the known http methods.
             endpoint: relative to the base uri.
             payload: JSON / map body payload.
-            hosts: host of the nodes we wish to make a request on.
+            host: host of the node we wish to make a request on.
             port: the port for the server.
             username: the username to use for authentication
             password: the password for {username}
@@ -180,30 +187,19 @@ class ApplicationCharm(CharmBase):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        target_host: Optional[str] = None
-        for host_candidate in hosts:
-            # This is the part that I can't connect to
-            logger.error(f"trying to connect to {host_candidate}")
-            if is_reachable(host_candidate, port):
-                target_host = host_candidate
-                break
-
-        if not target_host:
-            logger.error("Hosts not reachable.")
-            raise OpenSearchHttpError()
-
-        # could I just ping this?
-        full_url = f"https://{target_host}:{port}/{endpoint}"
+        full_url = f"https://{host}:{port}/{endpoint}"
         try:
             with requests.Session() as s:
                 s.auth = (username, password)
+                request_kwargs = {
+                    "method": method.upper(),
+                    "url": full_url,
+                    "headers": {"Accept": "application/json", "Content-Type": "application/json"},
+                }
+                if payload:
+                    request_kwargs["data"] = json.dumps(payload)
 
-                resp = s.request(
-                    method=method.upper(),
-                    url=full_url,
-                    data=json.dumps(payload),
-                    headers={"Accept": "application/json", "Content-Type": "application/json"},
-                )
+                resp = s.request(**request_kwargs)
 
                 resp.raise_for_status()
         except requests.exceptions.RequestException as e:
@@ -220,7 +216,7 @@ class OpenSearchHttpError(Exception):
 def is_reachable(host: str, port: int) -> bool:
     """Attempting a socket connection to a host/port."""
     s = socket.socket()
-    s.settimeout(5)
+    s.settimeout(10)
     try:
         s.connect((host, port))
         return True
