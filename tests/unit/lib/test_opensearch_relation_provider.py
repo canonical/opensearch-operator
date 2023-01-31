@@ -43,8 +43,8 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_relation_provider.create_user")
     @patch("charms.opensearch.v0.opensearch_relation_provider.create_role")
     @patch(
-        "charms.opensearch.v0.opensearch_relation_provider.generate_password",
-        return_value="password",
+        "charms.opensearch.v0.opensearch_relation_provider.generate_hashed_password",
+        return_value=("hashed_pw", "password"),
     )
     @patch("charms.data_platform_libs.v0.data_interfaces.DatabaseProvides.set_credentials")
     @patch("charms.data_platform_libs.v0.data_interfaces.DatabaseProvides.set_version")
@@ -77,12 +77,12 @@ class TestOpenSearchProvider(unittest.TestCase):
         event.extra_user_roles = json.dumps(extra_user_roles)
         event.relation.id = 1
         username = self.client_relation._relation_username(event.relation)
-        password = _gen_pw.return_value
+        hashed_pw, password = _gen_pw.return_value
         self.client_relation._on_database_requested(event)
         # no permissions or action groups in extra_user_roles, so we aren't creating a new role.
         _create_role.assert_not_called()
         _create_user.assert_called_with(
-            self.charm.opensearch, username, extra_user_roles["roles"], password
+            self.charm.opensearch, username, extra_user_roles["roles"], hashed_pw
         )
         _set_credentials.assert_called_with(event.relation.id, username, password)
         # self.client_relation.datab
@@ -103,7 +103,7 @@ class TestOpenSearchProvider(unittest.TestCase):
             action_groups=extra_user_roles["action_groups"],
         )
         _create_user.assert_called_with(
-            self.charm.opensearch, username, extra_user_roles["roles"] + [username], password
+            self.charm.opensearch, username, extra_user_roles["roles"] + [username], hashed_pw
         )
         _set_credentials.assert_called_with(event.relation.id, username, password)
         _set_version.assert_called_with(event.relation.id, _opensearch_version())

@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from charms.opensearch.v0.opensearch_users import (
+    OpenSearchUserMgmtError,
     create_role,
     create_user,
     remove_role,
@@ -31,7 +32,7 @@ class TestOpenSearchUsers(unittest.TestCase):
             "action_groups": action_groups,
         }
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(OpenSearchUserMgmtError):
             create_role(**role_kwargs)
         request_args = (
             "PUT",
@@ -49,7 +50,7 @@ class TestOpenSearchUsers(unittest.TestCase):
         opensearch = MagicMock()
         opensearch.request.return_value = {"status": "not ok"}
         role_args = (opensearch, "role_name")
-        with pytest.raises(AssertionError):
+        with pytest.raises(OpenSearchUserMgmtError):
             remove_role(*role_args)
         request_args = ("DELETE", "/_plugins/_security/api/roles/role_name")
         opensearch.request.assert_called_with(*request_args)
@@ -63,20 +64,20 @@ class TestOpenSearchUsers(unittest.TestCase):
         opensearch = MagicMock()
         opensearch.request.return_value = {"status": "not ok"}
         roles = ["my_cool_role", "my_terrible_role"]
-        password = "pw"
+        hash_pw = "pw"
         user_kwargs = {
             "opensearch": opensearch,
             "username": "username",
             "roles": roles,
-            "password": password,
+            "hashed_pwd": hash_pw,
         }
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(OpenSearchUserMgmtError):
             create_user(**user_kwargs)
         request_args = (
             "PUT",
             "/_plugins/_security/api/internalusers/username",
-            {"password": password, "opendistro_security_roles": roles},
+            {"hash": hash_pw, "opendistro_security_roles": roles},
         )
         opensearch.request.assert_called_with(*request_args)
 
@@ -89,7 +90,7 @@ class TestOpenSearchUsers(unittest.TestCase):
         opensearch = MagicMock()
         opensearch.request.return_value = {"status": "not ok"}
         user_args = (opensearch, "username")
-        with pytest.raises(AssertionError):
+        with pytest.raises(OpenSearchUserMgmtError):
             remove_user(*user_args)
         request_args = ("DELETE", "/_plugins/_security/api/internalusers/username/")
         opensearch.request.assert_called_with(*request_args)

@@ -12,6 +12,7 @@ from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
     AllocationExclusionFailed,
     CertsExpirationError,
+    ClientRelationName,
     HorizontalScaleUpSuggest,
     PeerRelationName,
     RequestUnitServiceOps,
@@ -99,6 +100,7 @@ class OpenSearchBaseCharm(CharmBase):
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
         )
 
+        # TODO rename this to something_provider, since it's not really a relation object.
         self.client_relation = OpenSearchProvider(self)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
@@ -187,6 +189,8 @@ class OpenSearchBaseCharm(CharmBase):
                     self.peers_data.put(
                         Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                     )
+            for relation in self.model.relations.get(ClientRelationName, []):
+                self.client_relation.update_endpoints(relation)
 
         # Restart node when cert renewal for the transport layer
         if self.peers_data.get(Scope.UNIT, "must_reboot_node"):
@@ -416,7 +420,6 @@ class OpenSearchBaseCharm(CharmBase):
         """Change default password of Admin user."""
         hashed_pwd, pwd = generate_hashed_password()
         self.secrets.put(Scope.APP, "admin_password", pwd)
-
         self.opensearch.config.put(
             "opensearch-security/internal_users.yml",
             "admin",
@@ -424,6 +427,10 @@ class OpenSearchBaseCharm(CharmBase):
                 "hash": hashed_pwd,
                 "reserved": True,  # this protects this resource from being updated on the dashboard or rest api
                 "backend_roles": ["admin"],
+                "opendistro_security_roles": [
+                    "security_rest_api_access",
+                    "all_access",
+                ],  # TODO verify if both are necessary
                 "description": "Admin user",
             },
         )

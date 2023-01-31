@@ -304,6 +304,7 @@ class OpenSearchDistribution(ABC):
         full_url = f"https://{target_host}:{self.port}/{endpoint}"
         try:
             with requests.Session() as s:
+                # This is failing to authenticate correctly because we're not setting a TLS cert.
                 s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
 
                 resp = s.request(

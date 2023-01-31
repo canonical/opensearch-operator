@@ -1,14 +1,21 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""OpenSearch user helpers."""
+"""OpenSearch user helpers.
+
+TODO update tests
+"""
 
 import logging
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
 logger = logging.getLogger(__name__)
+
+
+class OpenSearchUserMgmtError(Exception):
+    """Base exception class for OpenSearch user management errors."""
 
 
 def create_role(
@@ -16,52 +23,110 @@ def create_role(
     role_name: str,
     permissions: Dict = {},
     action_groups: Dict = {},
-) -> None:
+) -> Dict[str, Any]:
     """Creates a role with the given permissions.
 
-    This method assumes the dicts provided are valid opensearch config. If not, we should probably
-    raise an error of some kind.
+    This method assumes the dicts provided are valid opensearch config. If not, raises
+    OpenSearchUserMgmtError.
+
+    Args:
+        opensearch: Opensearch distribution object, used to send requests
+        role_name: name of the role
+        permissions: A valid dict of existing opensearch permissions.
+        action_groups: A valid dict of existing opensearch action groups.
+
+    Raises:
+        OpenSearchUserMgmtError: If the role creation request fails.
+
+    Returns:
+        Output of the role creation request.
     """
     put_role_resp = opensearch.request(
         "PUT",
         f"/_plugins/_security/api/roles/{role_name}",
         {**permissions, **action_groups},
     )
+    # enable this role
     logger.debug(put_role_resp)
-    assert put_role_resp.get("status") == "OK"
+    if put_role_resp.get("status") != "OK":
+        raise OpenSearchUserMgmtError()
+    return put_role_resp
 
 
-def remove_role(opensearch: OpenSearchDistribution, role: str):
-    """Remove the given role from opensearch distribution."""
-    resp = opensearch.request("DELETE", f"/_plugins/_security/api/roles/{role}")
+def remove_role(opensearch: OpenSearchDistribution, role_name: str) -> Dict[str, Any]:
+    """Remove the given role from opensearch distribution.
+
+    Args:
+        opensearch: Opensearch distribution object, used to send requests
+        role_name: name of the role to be removed.
+
+    Raises:
+        OpenSearchUserMgmtError: If the request fails.
+
+    Returns:
+        Output of the request.
+    """
+    resp = opensearch.request("DELETE", f"/_plugins/_security/api/roles/{role_name}")
     logger.debug(resp)
-    assert resp.get("status") == "OK"
+    # check if I have to disable roles before removal
+    if resp.get("status") != "OK":
+        raise OpenSearchUserMgmtError()
+    return resp
 
 
 def create_user(
     opensearch: OpenSearchDistribution,
     username: str,
-    roles: List[str],
-    password: str,
-) -> None:
-    """Create or update user and assign the requested roles to the user."""
+    roles: List[str],  # TODO add default
+    hashed_pwd: str,
+) -> Dict[str, Any]:
+    """Create or update user and assign the requested roles to the user.
+
+    Args:
+        opensearch: Opensearch distribution object, used to send requests
+        username: name of the user to be created.
+        roles: list of roles to be applied to the user. These must already exist.
+        hashed_pwd: the hashed password for the user.
+
+    Raises:
+        OpenSearchUserMgmtError: If the request fails.
+
+    Returns:
+        Output of the request.
+    """
+    payload = {"hash": hashed_pwd}
+    if roles:
+        payload["opendistro_security_roles"] = roles
+
     put_user_resp = opensearch.request(
         "PUT",
         f"/_plugins/_security/api/internalusers/{username}",
-        {
-            "password": password,
-            "opendistro_security_roles": roles,
-        },
+        payload,
     )
     logger.debug(put_user_resp)
-    assert put_user_resp.get("status") == "CREATED"
+    if put_user_resp.get("status") != "CREATED":
+        raise OpenSearchUserMgmtError()
+    return put_user_resp
 
 
-def remove_user(opensearch: OpenSearchDistribution, username: str):
-    """Remove the given user from opensearch distribution."""
+def remove_user(opensearch: OpenSearchDistribution, username: str) -> Dict[str, Any]:
+    """Remove the given user from opensearch distribution.
+
+    Args:
+        opensearch: Opensearch distribution object, used to send requests
+        username: name of the user to be removed.
+
+    Raises:
+        OpenSearchUserMgmtError: If the request fails.
+
+    Returns:
+        Output of the request.
+    """
     resp = opensearch.request("DELETE", f"/_plugins/_security/api/internalusers/{username}/")
     logger.debug(resp)
-    assert resp.get("status") == "OK"
+    if resp.get("status") != "OK":
+        raise OpenSearchUserMgmtError()
+    return resp
 
 
 # def oversee_users(self, departed_relation_id: Optional[int], event):

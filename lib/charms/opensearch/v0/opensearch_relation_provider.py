@@ -24,8 +24,9 @@ from charms.data_platform_libs.v0.data_interfaces import (
 from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import units_ips
-from charms.opensearch.v0.helper_security import generate_password
+from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_users import (
+    OpenSearchUserMgmtError,
     create_role,
     create_user,
     remove_role,
@@ -98,8 +99,7 @@ class OpenSearchProvider(Object):
             return
 
         try:
-            logger.error(event.extra_user_roles)
-            logger.error(json.loads(event.extra_user_roles))
+            # TODO add a case for when extra_user_roles is empty
             extra_user_roles = json.loads(event.extra_user_roles)
         except (json.decoder.JSONDecodeError, TypeError):
             # TODO document what a client application would need to provide to make this work.
@@ -115,21 +115,32 @@ class OpenSearchProvider(Object):
         action_groups = extra_user_roles.get("action_groups")
         if permissions or action_groups:
             # combine agroups and perms into a new role of all perms given.
-            create_role(
-                self.opensearch,
-                role_name=username,
-                permissions=permissions,
-                action_groups=action_groups,
-            )
-            roles.append(username)
+            try:
+                create_role(
+                    self.opensearch,
+                    role_name=username,
+                    permissions=permissions,
+                    action_groups=action_groups,
+                )
+                roles.append(username)
+            except OpenSearchUserMgmtError:
+                self.unit.status = BlockedStatus("bad relation request - role creation failed.")
 
         # generate user with roles
-        password = generate_password()
-        create_user(self.opensearch, username, roles, password)
+        hashed_pwd, pwd = generate_hashed_password()
+        try:
+            create_user(
+                self.opensearch,
+                username,
+                roles,
+                hashed_pwd,
+            )
+        except OpenSearchUserMgmtError:
+            self.unit.status = BlockedStatus("bad relation request - user creation failed. ")
 
         rel_id = event.relation.id
         # Share the credentials and updated connection info with the client application.
-        self.database_provides.set_credentials(rel_id, username, password)
+        self.database_provides.set_credentials(rel_id, username, pwd)
         self.update_endpoints(event.relation)
         self.database_provides.set_version(rel_id, self.opensearch.version())
 
@@ -142,16 +153,16 @@ class OpenSearchProvider(Object):
         """Handle client relation-broken event."""
         if not self.opensearch.is_node_up() or not self.unit.is_leader():
             return
-
-        logger.error(self._unit_departing)
-        logger.error(self._unit_departing(event.relation))
         if self._unit_departing(event.relation):
             # This unit is being removed, so don't update the relation.
             self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
             return
 
-        remove_user(self.opensearch, self._relation_username(event.relation))
-        remove_role(self.opensearch, self._relation_username(event.relation))
+        try:
+            remove_user(self.opensearch, self._relation_username(event.relation))
+            remove_role(self.opensearch, self._relation_username(event.relation))
+        except OpenSearchUserMgmtError:
+            self.unit.status = BlockedStatus("bad relation request - user/role removal failed. ")
 
     def update_endpoints(self, relation):
         """Updates endpoints in the databag for the given relation."""

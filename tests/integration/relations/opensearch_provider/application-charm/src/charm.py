@@ -43,7 +43,7 @@ class ApplicationCharm(CharmBase):
         # (these events are defined in the database requires charm library).
         database_name = f'{self.app.name.replace("-", "_")}_first_database'
 
-        permissive_roles = json.dumps({"roles": ["all_access"]})
+        permissive_roles = json.dumps({"roles": ["readall"]})
         self.first_database = DatabaseRequires(
             self, "first-database", database_name, permissive_roles
         )
@@ -77,7 +77,9 @@ class ApplicationCharm(CharmBase):
     def _on_update_status(self, _) -> None:
         """Health check for database connection.
 
-        If backend relation exists and is usable, set status to active.
+        If backend relation exists and is
+            self.unit.status = ActiveStatus()
+        else: usable, set status to active.
         """
         if self.connection_check():
             self.unit.status = ActiveStatus()
@@ -98,18 +100,18 @@ class ApplicationCharm(CharmBase):
 
     def smoke_check(self, relation_id) -> bool:
         try:
-            self.relation_request(relation_id, "GET", "/_nodes")
-            # TODO check status
-            return True
+            resp = self.relation_request(relation_id, "GET", "/")
+            logger.info(resp)
+            return bool(resp)
         except (OpenSearchHttpError, Exception) as e:
-            logger.exception(e)
+            logger.error(e)
             return False
 
     # First database events observers.
     def _on_first_database_created(self, event: DatabaseCreatedEvent) -> None:
         """Event triggered when a database was created for this application."""
         # Retrieve the credentials using the charm library.
-        logger.info(f"first database credentials: {event.username} {event.password}")
+        logging.info(f"first database credentials: {event.username} {event.password}")
         self.unit.status = ActiveStatus("received database credentials of the first database")
 
     def _on_first_database_endpoints_changed(self, event: DatabaseEndpointsChangedEvent) -> None:
@@ -140,10 +142,13 @@ class ApplicationCharm(CharmBase):
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request to a specific relation."""
         databag = self.first_database.fetch_relation_data()[relation_id]
+        logging.error(databag)
         username = databag.get("username")
         password = databag.get("password")
-        endpoints = databag.get("endpoints").split(",")
-        port = endpoints[0].split(":")[1]
+        endpoints = databag.get("endpoints", "").split(",")
+        if None in [username, password] or len(endpoints) == 0:
+            raise OpenSearchHttpError
+        port = int(endpoints[0].split(":")[1])
         return self.request(
             method, endpoint, port, username, password, payload=payload, hosts=endpoints
         )
@@ -177,6 +182,8 @@ class ApplicationCharm(CharmBase):
 
         target_host: Optional[str] = None
         for host_candidate in hosts:
+            # This is the part that I can't connect to
+            logger.error(f"trying to connect to {host_candidate}")
             if is_reachable(host_candidate, port):
                 target_host = host_candidate
                 break
@@ -185,6 +192,7 @@ class ApplicationCharm(CharmBase):
             logger.error("Hosts not reachable.")
             raise OpenSearchHttpError()
 
+        # could I just ping this?
         full_url = f"https://{target_host}:{port}/{endpoint}"
         try:
             with requests.Session() as s:
