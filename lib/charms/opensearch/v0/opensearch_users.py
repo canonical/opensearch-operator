@@ -14,6 +14,10 @@ from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 logger = logging.getLogger(__name__)
 
 
+USER_ENDPOINT = "/_plugins/_security/api/internalusers"
+ROLE_ENDPOINT = "/_plugins/_security/api/roles"
+
+
 class OpenSearchUserMgmtError(Exception):
     """Base exception class for OpenSearch user management errors."""
 
@@ -43,7 +47,7 @@ def create_role(
     """
     put_role_resp = opensearch.request(
         "PUT",
-        f"/_plugins/_security/api/roles/{role_name}",
+        f"{ROLE_ENDPOINT}/{role_name}",
         {**permissions, **action_groups},
     )
     # enable this role
@@ -66,7 +70,7 @@ def remove_role(opensearch: OpenSearchDistribution, role_name: str) -> Dict[str,
     Returns:
         Output of the request.
     """
-    resp = opensearch.request("DELETE", f"/_plugins/_security/api/roles/{role_name}")
+    resp = opensearch.request("DELETE", f"{ROLE_ENDPOINT}/{role_name}")
     logger.debug(resp)
     # check if I have to disable roles before removal
     if resp.get("status") != "OK":
@@ -100,7 +104,7 @@ def create_user(
 
     put_user_resp = opensearch.request(
         "PUT",
-        f"/_plugins/_security/api/internalusers/{username}",
+        f"{USER_ENDPOINT}/{username}",
         payload,
     )
     logger.debug(put_user_resp)
@@ -122,59 +126,24 @@ def remove_user(opensearch: OpenSearchDistribution, username: str) -> Dict[str, 
     Returns:
         Output of the request.
     """
-    resp = opensearch.request("DELETE", f"/_plugins/_security/api/internalusers/{username}/")
+    resp = opensearch.request("DELETE", f"{USER_ENDPOINT}/{username}/")
     logger.debug(resp)
     if resp.get("status") != "OK":
         raise OpenSearchUserMgmtError()
     return resp
 
 
-# def oversee_users(self, departed_relation_id: Optional[int], event):
-#     """Oversees the users of the application.
+def patch_user(opensearch, user: str, patches: List[Dict[str, any]]) -> Dict[str, Any]:
+    """Applies patches to user.
 
-#     Function manages user relations by removing, updated, and creating
-#     users; and dropping databases when necessary.
-
-#     Args:
-#         departed_relation_id: When specified execution of functions
-#             makes sure to exclude the users and databases and remove
-#             them if necessary.
-#         event: relation event.
-
-#     When the function is executed in relation departed event, the departed
-#     relation is still on the list of all relations. Therefore, for proper
-#     work of the function, we need to exclude departed relation from the list.
-#     """
-#     with MongoDBConnection(self.charm.mongodb_config) as mongo:
-#         database_users = mongo.get_users()
-#         relation_users = self._get_users_from_relations(departed_relation_id)
-
-#         for username in database_users - relation_users:
-#             logger.info("Remove relation user: %s", username)
-#             mongo.drop_user(username)
-
-#         for username in relation_users - database_users:
-#             config = self._get_config(username, None)
-#             if config.database is None:
-#                 # We need to wait for the moment when the provider library
-#                 # set the database name into the relation.
-#                 continue
-#             logger.info("Create relation user: %s on %s", config.username, config.database)
-#             mongo.create_user(config)
-#             self._set_relation(config)
-
-#         for username in relation_users & database_users:
-#             config = self._get_config(username, None)
-#             logger.info("Update relation user: %s on %s", config.username, config.database)
-#             mongo.update_user(config)
-#             logger.info("Updating relation data according to diff")
-#             self._diff(event)
-
-#         if not self.charm.model.config["auto-delete"]:
-#             return
-
-#         database_dbs = mongo.get_databases()
-#         relation_dbs = self._get_databases_from_relations(departed_relation_id)
-#         for database in database_dbs - relation_dbs:
-#             logger.info("Drop database: %s", database)
-#             mongo.drop_database(database)
+    TODO docs and tests
+    """
+    patch_user_resp = opensearch.request(
+        "PATCH",
+        f"{USER_ENDPOINT}/{user}",
+        patches,
+    )
+    logger.debug(patch_user_resp)
+    if patch_user_resp.get("status") != "OK":
+        raise OpenSearchUserMgmtError()
+    return patch_user_resp

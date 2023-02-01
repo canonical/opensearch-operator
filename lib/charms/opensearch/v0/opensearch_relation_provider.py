@@ -29,6 +29,7 @@ from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserMgmtError,
     create_role,
     create_user,
+    patch_user,
     remove_role,
     remove_user,
 )
@@ -113,6 +114,10 @@ class OpenSearchProvider(Object):
         roles = extra_user_roles.get("roles")
         permissions = extra_user_roles.get("permissions")
         action_groups = extra_user_roles.get("action_groups")
+        # TODO these have been added for testing - remove before merge
+        # logger.error(roles)
+        # logger.error(permissions)
+        # logger.error(action_groups)
         if permissions or action_groups:
             # combine agroups and perms into a new role of all perms given.
             try:
@@ -134,6 +139,11 @@ class OpenSearchProvider(Object):
                 username,
                 roles,
                 hashed_pwd,
+            )
+            patch_user(
+                self.opensearch,
+                username,
+                [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
             )
         except OpenSearchUserMgmtError:
             self.unit.status = BlockedStatus("bad relation request - user creation failed. ")

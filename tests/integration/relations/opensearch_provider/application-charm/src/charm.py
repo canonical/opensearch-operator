@@ -9,7 +9,6 @@ This charm is meant to be used only for testing of the libraries in this reposit
 
 import json
 import logging
-import socket
 from typing import Dict, List, Optional, Union
 
 import requests
@@ -57,6 +56,8 @@ class ApplicationCharm(CharmBase):
         # Events related to the second database that is requested
         # (these events are defined in the database requires charm library).
         database_name = f'{self.app.name.replace("-", "_")}_second_database'
+        # TODO change this to include only permissions and action groups, and verify that we can
+        # create roles when necessary.
         restrictive_roles = "{}"
         self.second_database = DatabaseRequires(
             self, "second-database", database_name, restrictive_roles
@@ -110,7 +111,6 @@ class ApplicationCharm(CharmBase):
     # First database events observers.
     def _on_first_database_created(self, event: DatabaseCreatedEvent) -> None:
         """Event triggered when a database was created for this application."""
-        # Retrieve the credentials using the charm library.
         logging.info(f"first database credentials: {event.username} {event.password}")
         self.unit.status = ActiveStatus("received database credentials of the first database")
 
@@ -121,7 +121,6 @@ class ApplicationCharm(CharmBase):
     # Second database events observers.
     def _on_second_database_created(self, event: DatabaseCreatedEvent) -> None:
         """Event triggered when a database was created for this application."""
-        # Retrieve the credentials using the charm library.
         logger.info(f"second database credentials: {event.username} {event.password}")
         self.unit.status = ActiveStatus("received database credentials of the second database")
 
@@ -146,10 +145,13 @@ class ApplicationCharm(CharmBase):
         username = databag.get("username")
         password = databag.get("password")
         endpoints = databag.get("endpoints", "").split(",")
+
         if None in [username, password] or len(endpoints) == 0:
             raise OpenSearchHttpError
+
         host = endpoints[0].split(":")[0]
         port = int(endpoints[0].split(":")[1])
+
         return self.request(
             method,
             endpoint,
@@ -192,11 +194,12 @@ class ApplicationCharm(CharmBase):
             with requests.Session() as s:
                 s.auth = (username, password)
                 request_kwargs = {
+                    "verify": False,  # TODO this should be a cert once this relation has TLS.
                     "method": method.upper(),
                     "url": full_url,
                     "headers": {"Accept": "application/json", "Content-Type": "application/json"},
                 }
-                if payload:
+                if payload is not None:
                     request_kwargs["data"] = json.dumps(payload)
 
                 resp = s.request(**request_kwargs)
@@ -211,20 +214,6 @@ class ApplicationCharm(CharmBase):
 
 class OpenSearchHttpError(Exception):
     """Exception thrown when an OpenSearch REST call fails."""
-
-
-def is_reachable(host: str, port: int) -> bool:
-    """Attempting a socket connection to a host/port."""
-    s = socket.socket()
-    s.settimeout(10)
-    try:
-        s.connect((host, port))
-        return True
-    except Exception as e:
-        logger.error(e)
-        return False
-    finally:
-        s.close()
 
 
 if __name__ == "__main__":

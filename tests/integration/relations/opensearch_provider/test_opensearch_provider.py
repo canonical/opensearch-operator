@@ -54,7 +54,7 @@ async def test_database_relation_with_charm_libraries(
             ops_test.model.wait_for_idle(
                 apps=[APP_NAME, TLS_CERTIFICATES_APP_NAME], status="active", timeout=900
             ),
-            ops_test.model.wait_for_idle(apps=[CLIENT_APP_NAME], status="blocked", timeout=600),
+            ops_test.model.wait_for_idle(apps=[CLIENT_APP_NAME], status="blocked", timeout=900),
         )
 
     # Relate the charms and wait for them exchanging some connection data.

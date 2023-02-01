@@ -42,6 +42,7 @@ class TestOpenSearchProvider(unittest.TestCase):
     )
     @patch("charms.opensearch.v0.opensearch_relation_provider.create_user")
     @patch("charms.opensearch.v0.opensearch_relation_provider.create_role")
+    @patch("charms.opensearch.v0.opensearch_relation_provider.patch_user")
     @patch(
         "charms.opensearch.v0.opensearch_relation_provider.generate_hashed_password",
         return_value=("hashed_pw", "password"),
@@ -53,6 +54,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         _set_version,
         _set_credentials,
         _gen_pw,
+        _patch_user,
         _create_role,
         _create_user,
         _opensearch_version,
@@ -73,7 +75,8 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.client_relation._on_database_requested(event)
         self.assertIsInstance(self.unit.status, BlockedStatus)
 
-        extra_user_roles = {"roles": ["all_access"]}
+        roles = ["all_access"]
+        extra_user_roles = {"roles": roles}
         event.extra_user_roles = json.dumps(extra_user_roles)
         event.relation.id = 1
         username = self.client_relation._relation_username(event.relation)
@@ -81,15 +84,14 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.client_relation._on_database_requested(event)
         # no permissions or action groups in extra_user_roles, so we aren't creating a new role.
         _create_role.assert_not_called()
-        _create_user.assert_called_with(
-            self.charm.opensearch, username, extra_user_roles["roles"], hashed_pw
-        )
+        _create_user.assert_called_with(self.charm.opensearch, username, roles, hashed_pw)
+        patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}]
+        _patch_user.assert_called_with(self.charm.opensearch, username, patches)
         _set_credentials.assert_called_with(event.relation.id, username, password)
-        # self.client_relation.datab
         _set_version.assert_called_with(event.relation.id, _opensearch_version())
 
         extra_user_roles = {
-            "roles": ["all_access"],
+            "roles": roles,
             "permissions": ["cluster:admin/ingest/pipeline/delete"],
             "action_groups": ["get"],
         }
@@ -102,9 +104,10 @@ class TestOpenSearchProvider(unittest.TestCase):
             permissions=extra_user_roles["permissions"],
             action_groups=extra_user_roles["action_groups"],
         )
-        _create_user.assert_called_with(
-            self.charm.opensearch, username, extra_user_roles["roles"] + [username], hashed_pw
-        )
+        updated_roles = roles + [username]
+        _create_user.assert_called_with(self.charm.opensearch, username, updated_roles, hashed_pw)
+        patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": updated_roles}]
+        _patch_user.assert_called_with(self.charm.opensearch, username, patches)
         _set_credentials.assert_called_with(event.relation.id, username, password)
         _set_version.assert_called_with(event.relation.id, _opensearch_version())
 

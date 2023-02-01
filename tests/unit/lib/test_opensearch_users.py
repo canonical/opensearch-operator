@@ -11,6 +11,7 @@ from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserMgmtError,
     create_role,
     create_user,
+    patch_user,
     remove_role,
     remove_user,
 )
@@ -98,4 +99,19 @@ class TestOpenSearchUsers(unittest.TestCase):
         opensearch.request.reset_mock()
         opensearch.request.return_value = {"status": "OK"}
         remove_user(*user_args)
+        opensearch.request.assert_called_with(*request_args)
+
+    def test_patch_user(self):
+        opensearch = MagicMock()
+        opensearch.request.return_value = {"status": "not ok"}
+        patches = [{"test patch": "yep, looks like a test."}]
+        patch_args = (opensearch, "username", patches)
+        with pytest.raises(OpenSearchUserMgmtError):
+            patch_user(*patch_args)
+        request_args = ("PATCH", "/_plugins/_security/api/internalusers/username", patches)
+        opensearch.request.assert_called_with(*request_args)
+
+        opensearch.request.reset_mock()
+        opensearch.request.return_value = {"status": "OK"}
+        patch_user(*patch_args)
         opensearch.request.assert_called_with(*request_args)
