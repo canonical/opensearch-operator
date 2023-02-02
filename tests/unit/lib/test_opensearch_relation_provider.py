@@ -3,7 +3,7 @@
 
 import json
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
 from charms.opensearch.v0.helper_databag import Scope
@@ -38,7 +38,9 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
     @patch(
-        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version", return_value="1"
+        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
+        new_callable=PropertyMock,
+        return_value="1",
     )
     @patch("charms.opensearch.v0.opensearch_relation_provider.create_user")
     @patch("charms.opensearch.v0.opensearch_relation_provider.create_role")

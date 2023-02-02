@@ -152,7 +152,7 @@ class OpenSearchProvider(Object):
         # Share the credentials and updated connection info with the client application.
         self.database_provides.set_credentials(rel_id, username, pwd)
         self.update_endpoints(event.relation)
-        self.database_provides.set_version(rel_id, self.opensearch.version())
+        self.database_provides.set_version(rel_id, self.opensearch.version)
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
