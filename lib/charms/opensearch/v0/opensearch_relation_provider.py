@@ -114,10 +114,6 @@ class OpenSearchProvider(Object):
         roles = extra_user_roles.get("roles")
         permissions = extra_user_roles.get("permissions")
         action_groups = extra_user_roles.get("action_groups")
-        # TODO these have been added for testing - remove before merge
-        # logger.error(roles)
-        # logger.error(permissions)
-        # logger.error(action_groups)
         if permissions or action_groups:
             # combine agroups and perms into a new role of all perms given.
             try:
