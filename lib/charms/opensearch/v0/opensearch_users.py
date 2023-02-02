@@ -1,10 +1,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""OpenSearch user helpers.
-
-TODO update tests
-"""
+"""OpenSearch user helpers."""
 
 import logging
 from typing import Any, Dict, List
