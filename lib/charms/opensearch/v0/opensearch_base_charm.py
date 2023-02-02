@@ -100,7 +100,6 @@ class OpenSearchBaseCharm(CharmBase):
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
         )
 
-        # TODO rename this to something_provider, since it's not really a relation object.
         self.opensearch_provider = OpenSearchProvider(self)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
