@@ -38,3 +38,7 @@ SecurityIndexInitProgress = "Initializing the security index..."
 AdminUserInitProgress = "Configuring admin user..."
 HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
+
+# Relation Interfaces
+ClientRelationName = "opensearch-client"
+PeerRelationName = "opensearch-peers"
