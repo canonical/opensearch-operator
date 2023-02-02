@@ -6,13 +6,11 @@ import logging
 import random
 from abc import abstractmethod
 from datetime import datetime
-from typing import Dict, List, Optional, Set, Type
+from typing import Dict, List, Optional, Type
 
 from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
-    AllocationExclusionFailed,
     CertsExpirationError,
-    HorizontalScaleUpSuggest,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -348,9 +346,9 @@ class OpenSearchBaseCharm(CharmBase):
 
             self.peers_data.put(Scope.APP, "leader_ip", self.unit_ip)
 
-        # store the exclusions that previously failed to be stored when no units online
+        # remove the exclusions that previously failed to be stored when no units online
         if self.peers_data.get(Scope.APP, "remove_from_allocation_exclusions"):
-            self.opensearch.remove_allocation_exclusions(
+            self.opensearch.exclusions.remove_allocation_exclusions(
                 self.peers_data.get(Scope.APP, "remove_from_allocation_exclusions")
             )
 
@@ -516,44 +514,6 @@ class OpenSearchBaseCharm(CharmBase):
     def _cleanup_bootstrap_conf_if_applies(self) -> None:
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
         self.opensearch_config.cleanup_bootstrap_conf()
-
-    def on_allocation_exclusion_add_failed(self):
-        """Callback for when the OpenSearch service fails stopping."""
-        self.unit.status = BlockedStatus(AllocationExclusionFailed)
-
-    def on_unassigned_shards(self, unassigned_shards: int):
-        """Called during node shutdown / horizontal scale-down if some shards left unassigned."""
-        self.app.status = MaintenanceStatus(HorizontalScaleUpSuggest.format(unassigned_shards))
-
-    def append_allocation_exclusion_to_remove(self, unit_name) -> None:
-        """Store a unit in the relation data bag, to be removed from the allocation exclusion."""
-        if not self.unit.is_leader():
-            self.peers_data.put(Scope.UNIT, "remove_from_allocation_exclusions", unit_name)
-            return
-
-        exclusions = set(
-            self.peers_data.get(Scope.APP, "remove_from_allocation_exclusions", "").split(",")
-        )
-        exclusions.add(unit_name)
-
-        self.peers_data.put(Scope.APP, "remove_from_allocation_exclusions", ",".join(exclusions))
-
-    def remove_allocation_exclusions(self, exclusions: Set[str]) -> None:
-        """Remove the allocation exclusions from the peer databag if existing."""
-        stored_exclusions = set(
-            self.peers_data.get(Scope.APP, "remove_from_allocation_exclusions", "").split(",")
-        )
-        exclusions_to_keep = ",".join(stored_exclusions - exclusions)
-
-        scope = Scope.UNIT
-        if self.unit.is_leader():
-            scope = Scope.APP
-
-        self.peers_data.put(scope, "remove_from_allocation_exclusions", exclusions_to_keep)
-
-    def get_allocation_exclusions(self) -> str:
-        """Retrieve the units that must be removed from the allocation exclusion."""
-        return self.peers_data.get(Scope.APP, "to_remove_from_allocation_exclusion", "")
 
     @abstractmethod
     def _store_tls_resources(
