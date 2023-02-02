@@ -1,9 +1,9 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""OpenSearch user helpers.
+"""OpenSearch user helper functions.
 
-TODO update tests
+These functions wrap around some API calls used for user management.
 """
 
 import logging
