@@ -17,5 +17,5 @@ async def application_charm(ops_test: OpsTest):
 @pytest.mark.abort_on_fail
 @pytest.fixture(scope="module")
 async def opensearch_charm(ops_test: OpsTest):
-    """Build the pgbouncer charm."""
+    """Build the opensearch charm."""
     return await ops_test.build_charm(".")

@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 class OpenSearchProvider(Object):
-    """Defines functionality for the 'provides' side of the 'pgbouncer-client' relation.
+    """Defines functionality for the 'provides' side of the 'opensearch-client' relation.
 
     Hook events observed:
         - database-requested
@@ -43,7 +43,7 @@ class OpenSearchProvider(Object):
     """
 
     def __init__(self, charm: CharmBase, relation_name: str = ClientRelationName) -> None:
-        """Constructor for PgbouncerProvider object.
+        """Constructor for OpenSearchProvider object.
 
         Args:
             charm: the charm for which this relation is provided
