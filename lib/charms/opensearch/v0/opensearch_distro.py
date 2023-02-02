@@ -432,6 +432,17 @@ class OpenSearchDistribution(ABC):
 
         return missing_requirements
 
+    @property
     def version(self) -> str:
-        """Returns the version number of this opensearch instance."""
-        return self.request("GET", "/").get("version").get("number")
+        """Returns the version number of this opensearch instance.
+
+        Raises:
+            OpenSearchError if the GET request fails.
+        """
+        try:
+            return self.request("GET", "/").get("version").get("number")
+        except OpenSearchHttpError:
+            logger.error(
+                "failed to get root endpoint, implying that this node is offline. Retry once node is online."
+            )
+            raise OpenSearchError()

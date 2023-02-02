@@ -1,7 +1,10 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""OpenSearch user helpers."""
+"""OpenSearch user helper functions.
+
+These functions wrap around some API calls used for user management.
+"""
 
 import logging
 from typing import Any, Dict, List
@@ -133,7 +136,16 @@ def remove_user(opensearch: OpenSearchDistribution, username: str) -> Dict[str, 
 def patch_user(opensearch, user: str, patches: List[Dict[str, any]]) -> Dict[str, Any]:
     """Applies patches to user.
 
-    TODO docs and tests
+    Args:
+        opensearch: Opensearch distribution object, used to send requests
+        user: name of the user to be created.
+        patches: a list of patches to be applied to the user in question.
+
+    Raises:
+        OpenSearchUserMgmtError: If the request fails.
+
+    Returns:
+        Output of the request.
     """
     patch_user_resp = opensearch.request(
         "PATCH",
