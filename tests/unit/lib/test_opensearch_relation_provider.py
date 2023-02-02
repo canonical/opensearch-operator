@@ -42,9 +42,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         new_callable=PropertyMock,
         return_value="1",
     )
-    @patch("charms.opensearch.v0.opensearch_relation_provider.create_user")
-    @patch("charms.opensearch.v0.opensearch_relation_provider.create_role")
-    @patch("charms.opensearch.v0.opensearch_relation_provider.patch_user")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_user")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_role")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.patch_user")
     @patch(
         "charms.opensearch.v0.opensearch_relation_provider.generate_hashed_password",
         return_value=("hashed_pw", "password"),
@@ -131,8 +131,8 @@ class TestOpenSearchProvider(unittest.TestCase):
         )
 
     @patch("charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider._unit_departing")
-    @patch("charms.opensearch.v0.opensearch_relation_provider.remove_user")
-    @patch("charms.opensearch.v0.opensearch_relation_provider.remove_role")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_user")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_role")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
     @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
     def test_on_relation_broken(self, _, _is_node_up, _remove_role, _remove_user, _unit_departing):

@@ -25,14 +25,7 @@ from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelatio
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.helper_security import generate_hashed_password
-from charms.opensearch.v0.opensearch_users import (
-    OpenSearchUserMgmtError,
-    create_role,
-    create_user,
-    patch_user,
-    remove_role,
-    remove_user,
-)
+from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import BlockedStatus, Relation
@@ -62,6 +55,7 @@ class OpenSearchProvider(Object):
         self.unit = self.charm.unit
         self.app = self.charm.app
         self.opensearch = self.charm.opensearch
+        self.user_manager = self.charm.user_manager
 
         self.relation_name = relation_name
         self.database_provides = DatabaseProvides(self.charm, relation_name=self.relation_name)
@@ -117,7 +111,7 @@ class OpenSearchProvider(Object):
         if permissions or action_groups:
             # combine agroups and perms into a new role of all perms given.
             try:
-                create_role(
+                self.user_manager.create_role(
                     self.opensearch,
                     role_name=username,
                     permissions=permissions,
@@ -130,13 +124,13 @@ class OpenSearchProvider(Object):
         # generate user with roles
         hashed_pwd, pwd = generate_hashed_password()
         try:
-            create_user(
+            self.user_manager.create_user(
                 self.opensearch,
                 username,
                 roles,
                 hashed_pwd,
             )
-            patch_user(
+            self.user_manager.patch_user(
                 self.opensearch,
                 username,
                 [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
@@ -165,8 +159,8 @@ class OpenSearchProvider(Object):
             return
 
         try:
-            remove_user(self.opensearch, self._relation_username(event.relation))
-            remove_role(self.opensearch, self._relation_username(event.relation))
+            self.user_manager.remove_user(self.opensearch, self._relation_username(event.relation))
+            self.user_manager.remove_role(self.opensearch, self._relation_username(event.relation))
         except OpenSearchUserMgmtError:
             self.unit.status = BlockedStatus("bad relation request - user/role removal failed. ")
 

@@ -101,8 +101,8 @@ class OpenSearchBaseCharm(CharmBase):
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
         )
 
-        self.opensearch_provider = OpenSearchProvider(self)
         self.user_manager = OpenSearchUserManager(self.opensearch)
+        self.opensearch_provider = OpenSearchProvider(self)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
