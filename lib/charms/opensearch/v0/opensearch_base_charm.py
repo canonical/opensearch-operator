@@ -48,6 +48,7 @@ from charms.opensearch.v0.opensearch_distro import (
 )
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
+from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
@@ -101,6 +102,7 @@ class OpenSearchBaseCharm(CharmBase):
         )
 
         self.opensearch_provider = OpenSearchProvider(self)
+        self.user_manager = OpenSearchUserManager(self.opensearch)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
