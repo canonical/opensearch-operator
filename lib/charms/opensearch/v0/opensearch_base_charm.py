@@ -101,7 +101,7 @@ class OpenSearchBaseCharm(CharmBase):
         )
 
         # TODO rename this to something_provider, since it's not really a relation object.
-        self.client_relation = OpenSearchProvider(self)
+        self.opensearch_provider = OpenSearchProvider(self)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
@@ -190,7 +190,7 @@ class OpenSearchBaseCharm(CharmBase):
                         Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                     )
             for relation in self.model.relations.get(ClientRelationName, []):
-                self.client_relation.update_endpoints(relation)
+                self.opensearch_provider.update_endpoints(relation)
 
         # Restart node when cert renewal for the transport layer
         if self.peers_data.get(Scope.UNIT, "must_reboot_node"):
@@ -430,7 +430,7 @@ class OpenSearchBaseCharm(CharmBase):
                 "opendistro_security_roles": [
                     "security_rest_api_access",
                     "all_access",
-                ],  # TODO verify if both are necessary
+                ],
                 "description": "Admin user",
             },
         )

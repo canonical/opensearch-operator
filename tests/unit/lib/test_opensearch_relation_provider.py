@@ -26,7 +26,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.charm = self.harness.charm
         self.app = self.charm.app
         self.unit = self.charm.unit
-        self.client_relation = self.charm.client_relation
+        self.opensearch_provider = self.charm.opensearch_provider
 
         self.peers_rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
@@ -65,25 +65,25 @@ class TestOpenSearchProvider(unittest.TestCase):
     ):
         self.harness.set_leader(False)
         event = MagicMock()
-        self.client_relation._on_database_requested(event)
+        self.opensearch_provider._on_database_requested(event)
         _is_node_up.assert_not_called()
 
         self.harness.set_leader(True)
         _is_node_up.return_value = False
-        self.client_relation._on_database_requested(event)
+        self.opensearch_provider._on_database_requested(event)
         event.defer.assert_called()
 
         _is_node_up.return_value = True
-        self.client_relation._on_database_requested(event)
+        self.opensearch_provider._on_database_requested(event)
         self.assertIsInstance(self.unit.status, BlockedStatus)
 
         roles = ["all_access"]
         extra_user_roles = {"roles": roles}
         event.extra_user_roles = json.dumps(extra_user_roles)
         event.relation.id = 1
-        username = self.client_relation._relation_username(event.relation)
+        username = self.opensearch_provider._relation_username(event.relation)
         hashed_pw, password = _gen_pw.return_value
-        self.client_relation._on_database_requested(event)
+        self.opensearch_provider._on_database_requested(event)
         # no permissions or action groups in extra_user_roles, so we aren't creating a new role.
         _create_role.assert_not_called()
         _create_user.assert_called_with(self.charm.opensearch, username, roles, hashed_pw)
@@ -98,7 +98,7 @@ class TestOpenSearchProvider(unittest.TestCase):
             "action_groups": ["get"],
         }
         event.extra_user_roles = json.dumps(extra_user_roles)
-        self.client_relation._on_database_requested(event)
+        self.opensearch_provider._on_database_requested(event)
         # permissions and action groups are in extra_user_roles, so we create a new role.
         _create_role.assert_called_with(
             self.charm.opensearch,
@@ -116,16 +116,16 @@ class TestOpenSearchProvider(unittest.TestCase):
     def test_on_relation_departed(self):
         event = MagicMock()
         event.departing_unit = None
-        self.client_relation._on_relation_departed(event)
+        self.opensearch_provider._on_relation_departed(event)
         assert not self.charm.peers_data.get(
-            Scope.UNIT, self.client_relation._depart_flag(event.relation)
+            Scope.UNIT, self.opensearch_provider._depart_flag(event.relation)
         )
 
         event.departing_unit = self.unit
-        self.client_relation._on_relation_departed(event)
+        self.opensearch_provider._on_relation_departed(event)
         assert (
             self.charm.peers_data.get(
-                Scope.UNIT, self.client_relation._depart_flag(event.relation)
+                Scope.UNIT, self.opensearch_provider._depart_flag(event.relation)
             )
             is True
         )
@@ -137,26 +137,26 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
     def test_on_relation_broken(self, _, _is_node_up, _remove_role, _remove_user, _unit_departing):
         event = MagicMock()
-        depart_flag = self.client_relation._depart_flag(event.relation)
+        depart_flag = self.opensearch_provider._depart_flag(event.relation)
 
         self.harness.set_leader(False)
         _is_node_up.return_value = False
-        self.client_relation._on_relation_broken(event)
+        self.opensearch_provider._on_relation_broken(event)
         _remove_user.assert_not_called()
 
         self.harness.set_leader(True)
         _is_node_up.return_value = True
         _unit_departing.return_value = True
         self.charm.peers_data.put(Scope.UNIT, depart_flag, "true")
-        self.client_relation._on_relation_broken(event)
+        self.opensearch_provider._on_relation_broken(event)
         assert not self.charm.peers_data.get(Scope.UNIT, depart_flag)
         _remove_user.assert_not_called()
 
         _unit_departing.return_value = False
-        self.client_relation._on_relation_broken(event)
+        self.opensearch_provider._on_relation_broken(event)
         assert not self.charm.peers_data.get(Scope.UNIT, depart_flag)
 
-        relation_username = self.client_relation._relation_username(event.relation)
+        relation_username = self.opensearch_provider._relation_username(event.relation)
         _remove_user.assert_called_with(self.charm.opensearch, relation_username)
         _remove_role.assert_called_with(self.charm.opensearch, relation_username)
 
@@ -169,5 +169,5 @@ class TestOpenSearchProvider(unittest.TestCase):
         relation = MagicMock()
         relation.id = 1
         endpoints = [f"{ip}:{self.charm.opensearch.port}" for ip in _ips.return_value.values()]
-        self.client_relation.update_endpoints(relation)
+        self.opensearch_provider.update_endpoints(relation)
         _set_endpoints.assert_called_with(relation.id, ",".join(endpoints))

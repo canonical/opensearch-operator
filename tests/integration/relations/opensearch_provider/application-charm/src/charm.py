@@ -25,7 +25,6 @@ class ApplicationCharm(CharmBase):
     """Application charm that connects to database charms.
 
     Enters BlockedStatus if it cannot constantly reach the database.
-    TODO document what that means, and link to it here.
     """
 
     def __init__(self, *args):
