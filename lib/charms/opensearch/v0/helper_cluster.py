@@ -2,8 +2,8 @@
 # See LICENSE file for licensing details.
 
 """Utility classes and methods for getting cluster info, configuration info and suggestions."""
-
-from typing import Dict, List
+from random import choice
+from typing import Dict, List, Optional
 
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -42,6 +42,64 @@ class ClusterTopology:
         """
         nodes_by_roles = ClusterTopology.nodes_count_by_role(nodes)
 
+        max_cms, max_voters = ClusterTopology.max_cm_and_voter_nodes(planned_units)
+
+        base_roles = ["data", "ingest", "ml", "coordinating_only"]
+
+        if (
+            nodes_by_roles.get("cluster_manager", 0) + nodes_by_roles.get("voting_only", 0)
+            >= max_voters
+        ):
+            return base_roles
+
+        if nodes_by_roles.get("cluster_manager", 0) >= max_cms:
+            return base_roles + ["voting_only"]
+
+        return base_roles + ["cluster_manager"]
+
+    @staticmethod
+    def node_with_new_roles(remaining_nodes: List[Node]) -> Optional[Node]:
+        """Pick and recompute the roles of the best node to rebalance the cluster."""
+        max_cms, max_voters = ClusterTopology.max_cm_and_voter_nodes(len(remaining_nodes))
+        max_voting_only = max_voters - max_cms
+
+        nodes_by_roles = ClusterTopology.nodes_count_by_role(remaining_nodes)
+        current_cms = nodes_by_roles.get("cluster_manager", 0)
+        current_voting_only = nodes_by_roles.get("voting_only", 0)
+
+        # the nodes involved in the voting are intact, do nothing
+        if current_cms + current_voting_only == max_voters:
+            return None
+
+        nodes_by_roles = ClusterTopology.nodes_by_role(remaining_nodes)
+
+        if current_cms > max_cms:
+            # remove cm from a node
+            cm = choice(nodes_by_roles["cluster_manager"])
+            return Node(cm.name, [r for r in cm.roles if r != "cluster_manager"], cm.ip)
+
+        if current_voting_only > max_voting_only:
+            # remove voting_only from a node
+            voting_only = choice(nodes_by_roles["voting_only"])
+            return Node(
+                voting_only.name,
+                [r for r in voting_only.roles if r != "voting_only"],
+                voting_only.ip,
+            )
+
+        exclude_roles = {"cluster_manager", "voting_only"}
+        data = choice([node for node in nodes_by_roles["data"] if not exclude_roles & node.roles])
+
+        if current_cms < max_cms:
+            # add cm to a data node (that doesn't have voting_only)
+            return Node(data.name, list(data.roles.union({"cluster_manager"})), data.ip)
+
+        # add voting_only to a data node
+        return Node(data.name, list(data.roles.union({"voting_only"})), data.ip)
+
+    @staticmethod
+    def max_cm_and_voter_nodes(planned_units) -> (int, int):
+        """Get the max number of CMs and voters on a cluster."""
         max_managers = planned_units
         max_voters = planned_units
         if planned_units % 2 == 0:
@@ -52,18 +110,7 @@ class ClusterTopology:
             # for a cluster of +3 nodes, we want to have half of the nodes as CMs
             max_managers = max_managers // 2 + 1
 
-        base_roles = ["data", "ingest", "ml", "coordinating_only"]
-
-        if (
-            nodes_by_roles.get("cluster_manager", 0) + nodes_by_roles.get("voting_only", 0)
-            >= max_voters
-        ):
-            return base_roles
-
-        if nodes_by_roles.get("cluster_manager", 0) >= max_managers:
-            return base_roles + ["voting_only"]
-
-        return base_roles + ["cluster_manager"]
+        return max_managers, max_voters
 
     @staticmethod
     def get_cluster_managers_ips(nodes: List[Node]) -> List[str]:
@@ -94,6 +141,19 @@ class ClusterTopology:
                 if role not in result:
                     result[role] = 0
                 result[role] += 1
+
+        return result
+
+    @staticmethod
+    def nodes_by_role(nodes: List[Node]) -> Dict[str, List[Node]]:
+        """Get list of nodes by role."""
+        result = {}
+        for node in nodes:
+            for role in node.roles:
+                if role not in result:
+                    result[role] = []
+
+                result[role].append(node)
 
         return result
 
