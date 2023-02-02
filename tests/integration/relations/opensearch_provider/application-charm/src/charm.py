@@ -2,10 +2,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Application charm that connects to database charms.
-
-This charm is meant to be used only for testing of the libraries in this repository.
-"""
+"""Application charm that connects to opensearch using the opensearch-client relation."""
 
 import json
 import logging
@@ -27,7 +24,7 @@ logger = logging.getLogger(__name__)
 class ApplicationCharm(CharmBase):
     """Application charm that connects to database charms.
 
-    TODO Dies if relation is incorrectly configured
+    Enters BlockedStatus if it cannot constantly reach the database.
     TODO document what that means, and link to it here.
     """
 
@@ -35,7 +32,6 @@ class ApplicationCharm(CharmBase):
         super().__init__(*args)
 
         # Default charm events.
-        self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
         # Events related to the first database that is requested
@@ -58,9 +54,14 @@ class ApplicationCharm(CharmBase):
         database_name = f'{self.app.name.replace("-", "_")}_second_database'
         # TODO change this to include only permissions and action groups, and verify that we can
         # create roles when necessary.
-        restrictive_roles = "{}"
+        roles = {
+            "roles": ["readall"],
+            "permissions": ["TODO find some permissions", ""],
+            "action_groups": ["TODO find some action groups", ""],
+        }
+        complex_roles = json.dumps(roles)
         self.second_database = DatabaseRequires(
-            self, "second-database", database_name, restrictive_roles
+            self, "second-database", database_name, complex_roles
         )
         self.framework.observe(
             self.second_database.on.database_created, self._on_second_database_created
@@ -70,10 +71,6 @@ class ApplicationCharm(CharmBase):
         )
 
         self.framework.observe(self.on.run_query_action, self._on_run_query_action)
-
-    def _on_start(self, _) -> None:
-        """Only sets an Active status."""
-        self.unit.status = ActiveStatus()
 
     def _on_update_status(self, _) -> None:
         """Health check for database connection.
