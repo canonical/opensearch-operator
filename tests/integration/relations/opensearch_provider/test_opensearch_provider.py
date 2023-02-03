@@ -12,7 +12,8 @@ from pytest_operator.plugin import OpsTest
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
 from tests.integration.helpers import MODEL_CONFIG, SERIES, UNIT_IDS
 from tests.integration.relations.opensearch_provider.helpers import (
-    run_query_on_application_charm,
+    get_application_relation_data,
+    run_request_on_application_charm,
     wait_for_relation_joined_between,
 )
 
@@ -88,7 +89,7 @@ async def test_database_usage(ops_test: OpsTest):
     # data. Should I swap this to something else?
     payload = '{"director": "Burton, Tim", "genre": ["Comedy","Sci-Fi"], "year": 1996, "actor": ["Jack Nicholson","Pierce Brosnan","Sarah Jessica Parker"], "title": "Mars Attacks!"}'
     create_index_endpoint = "/domain-endpoint/movies/_doc/1"
-    run_create_index = await run_query_on_application_charm(
+    run_create_index = await run_request_on_application_charm(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         method="PUT",
@@ -99,15 +100,12 @@ async def test_database_usage(ops_test: OpsTest):
     )
     logging.error(json.loads(run_create_index))
 
-    # TODO make bulk data assignment
     # TODO I stole this from amazon's opensearch docs because I didn't want to write reams of test
     # data. Should I swap this to something else?
-    # curl -XPOST -u 'master-user:master-user-password' 'domain-endpoint/_bulk'
-    # --data-binary @bulk_movies.json -H 'Content-Type: application/json'
-    bulk_index_endpoint = "domain-endpoint/_bulk"
+    bulk_index_endpoint = "/domain-endpoint/_bulk"
     with open("tests/integration/relations/opensearch-provider.bulk_data.json") as bulk_data:
         bulk_payload = bulk_data.read()
-    run_bulk_create_index = await run_query_on_application_charm(
+    run_bulk_create_index = await run_request_on_application_charm(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         method="PUT",
@@ -121,7 +119,7 @@ async def test_database_usage(ops_test: OpsTest):
 
     #   curl -XGET -u 'master-user:master-user-password' 'domain-endpoint/movies/_search?q=mars'
     read_index_endpoint = "domain-endpoint/movies/_search?q=mars"
-    run_read_index = await run_query_on_application_charm(
+    run_read_index = await run_request_on_application_charm(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         method="GET",
@@ -138,7 +136,7 @@ async def test_database_usage(ops_test: OpsTest):
     assert results.get("hits", {}).get("total", {}).get("value") == 1
 
     read_index_endpoint = "domain-endpoint/movies/_search?q=rebel"
-    run_bulk_read_index = await run_query_on_application_charm(
+    run_bulk_read_index = await run_request_on_application_charm(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         method="GET",
@@ -156,24 +154,24 @@ async def test_database_usage(ops_test: OpsTest):
     assert results.get("hits", {}).get("total", {}).get("value") == 1
 
 
-# @pytest.mark.client_relation
-# async def test_database_version(ops_test: OpsTest):
-#     """Check version is accurate."""
-#     version_query = "SELECT version();"
-#     run_version_query = await run_sql_on_application_charm(
-#         ops_test,
-#         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
-#         query=version_query,
-#         dbname=APPLICATION_FIRST_DBNAME,
-#         relation_id=client_relation.id,
-#         relation_name=FIRST_DATABASE_RELATION_NAME,
-#     )
-#     # Get the version of the database and compare with the information that
-#     # was retrieved directly from the database.
-#     version = await get_application_relation_data(
-#         ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "version"
-#     )
-#     assert version in json.loads(run_version_query["results"])[0][0]
+@pytest.mark.client_relation
+async def test_database_version(ops_test: OpsTest):
+    """Check version is accurate."""
+    run_version_query = await run_request_on_application_charm(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        method="GET",
+        endpoint="/",
+        relation_id=client_relation.id,
+        relation_name=FIRST_DATABASE_RELATION_NAME,
+    )
+    # Get the version of the database and compare with the information that
+    # was retrieved directly from the database.
+    version = await get_application_relation_data(
+        ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "version"
+    )
+    logging.error(run_version_query)
+    assert version in run_version_query["results"]
 
 
 # @pytest.mark.client_relation
