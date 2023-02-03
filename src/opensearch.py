@@ -117,7 +117,7 @@ class OpenSearchTarball(OpenSearchDistribution):
         """Temporary (will be deleted later) - Download and Un-tar the opensearch distro."""
         try:
             response = requests.get(
-                "https://artifacts.opensearch.org/releases/bundle/opensearch/2.4.0/opensearch-2.4.0-linux-x64.tar.gz"
+                "https://artifacts.opensearch.org/releases/bundle/opensearch/2.4.1/opensearch-2.4.1-linux-x64.tar.gz"
             )
 
             tarball_path = "opensearch.tar.gz"
