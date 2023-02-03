@@ -230,3 +230,25 @@ async def check_cluster_formation_successful(
 
     registered_nodes = [node_desc["name"] for node_desc in response["nodes"].values()]
     return set(unit_names) == set(registered_nodes)
+
+
+async def scale_application(
+    ops_test: OpsTest, application_name: str, scale: int, expected_status="active", timeout=1000
+) -> None:
+    """Scale a given application to a specific unit count.
+
+    Args:
+        ops_test: The ops test framework instance
+        application_name: The name of the application
+        scale: The number of units to scale to
+        expected_status: the expected status of the application
+        timeout: how long in seconds to wait for the application to become idle.
+    """
+    await ops_test.model.applications[application_name].scale(scale)
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            apps=[application_name],
+            status=expected_status,
+            timeout=timeout,
+            wait_for_exact_units=scale,
+        )
