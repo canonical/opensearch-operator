@@ -112,7 +112,6 @@ class OpenSearchProvider(Object):
             # combine agroups and perms into a new role of all perms given.
             try:
                 self.user_manager.create_role(
-                    self.opensearch,
                     role_name=username,
                     permissions=permissions,
                     action_groups=action_groups,
@@ -125,13 +124,11 @@ class OpenSearchProvider(Object):
         hashed_pwd, pwd = generate_hashed_password()
         try:
             self.user_manager.create_user(
-                self.opensearch,
                 username,
                 roles,
                 hashed_pwd,
             )
             self.user_manager.patch_user(
-                self.opensearch,
                 username,
                 [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
             )
@@ -159,8 +156,8 @@ class OpenSearchProvider(Object):
             return
 
         try:
-            self.user_manager.remove_user(self.opensearch, self._relation_username(event.relation))
-            self.user_manager.remove_role(self.opensearch, self._relation_username(event.relation))
+            self.user_manager.remove_user(self._relation_username(event.relation))
+            self.user_manager.remove_role(self._relation_username(event.relation))
         except OpenSearchUserMgmtError:
             self.unit.status = BlockedStatus("bad relation request - user/role removal failed. ")
 

@@ -86,9 +86,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.opensearch_provider._on_database_requested(event)
         # no permissions or action groups in extra_user_roles, so we aren't creating a new role.
         _create_role.assert_not_called()
-        _create_user.assert_called_with(self.charm.opensearch, username, roles, hashed_pw)
+        _create_user.assert_called_with(username, roles, hashed_pw)
         patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}]
-        _patch_user.assert_called_with(self.charm.opensearch, username, patches)
+        _patch_user.assert_called_with(username, patches)
         _set_credentials.assert_called_with(event.relation.id, username, password)
         _set_version.assert_called_with(event.relation.id, _opensearch_version())
 
@@ -101,15 +101,14 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.opensearch_provider._on_database_requested(event)
         # permissions and action groups are in extra_user_roles, so we create a new role.
         _create_role.assert_called_with(
-            self.charm.opensearch,
             role_name=username,
             permissions=extra_user_roles["permissions"],
             action_groups=extra_user_roles["action_groups"],
         )
         updated_roles = roles + [username]
-        _create_user.assert_called_with(self.charm.opensearch, username, updated_roles, hashed_pw)
+        _create_user.assert_called_with(username, updated_roles, hashed_pw)
         patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": updated_roles}]
-        _patch_user.assert_called_with(self.charm.opensearch, username, patches)
+        _patch_user.assert_called_with(username, patches)
         _set_credentials.assert_called_with(event.relation.id, username, password)
         _set_version.assert_called_with(event.relation.id, _opensearch_version())
 
@@ -157,8 +156,8 @@ class TestOpenSearchProvider(unittest.TestCase):
         assert not self.charm.peers_data.get(Scope.UNIT, depart_flag)
 
         relation_username = self.opensearch_provider._relation_username(event.relation)
-        _remove_user.assert_called_with(self.charm.opensearch, relation_username)
-        _remove_role.assert_called_with(self.charm.opensearch, relation_username)
+        _remove_user.assert_called_with(relation_username)
+        _remove_role.assert_called_with(relation_username)
 
     @patch("charms.data_platform_libs.v0.data_interfaces.DatabaseProvides.set_endpoints")
     @patch(
