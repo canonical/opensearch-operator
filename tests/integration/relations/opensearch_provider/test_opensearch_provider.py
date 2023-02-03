@@ -8,7 +8,8 @@ import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import APP_NAME, MODEL_CONFIG, SERIES, UNIT_IDS
+from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
+from tests.integration.helpers import MODEL_CONFIG, SERIES, UNIT_IDS
 from tests.integration.relations.opensearch_provider.helpers import (
     wait_for_relation_joined_between,
 )
@@ -16,9 +17,11 @@ from tests.integration.relations.opensearch_provider.helpers import (
 logger = logging.getLogger(__name__)
 
 CLIENT_APP_NAME = "application"
-NUM_UNITS = len(UNIT_IDS)
-
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
+ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
+FIRST_DATABASE_RELATION_NAME = "first-database"
+
+NUM_UNITS = len(UNIT_IDS)
 
 
 @pytest.mark.abort_on_fail
@@ -37,7 +40,10 @@ async def test_database_relation_with_charm_libraries(
             application_name=CLIENT_APP_NAME,
         ),
         ops_test.model.deploy(
-            opensearch_charm, application_name=APP_NAME, num_units=NUM_UNITS, series=SERIES
+            opensearch_charm,
+            application_name=OPENSEARCH_APP_NAME,
+            num_units=NUM_UNITS,
+            series=SERIES,
         ),
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=tls_config),
     )
@@ -46,25 +52,28 @@ async def test_database_relation_with_charm_libraries(
     # NOTE in future we need to make sure we can deploy all relations simultaneously since this
     #      will happen simultaneously in bundles, but for now, make sure opensearch and TLS are
     #      active before adding client relation.
-    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    wait_for_relation_joined_between(ops_test, APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    async with ops_test.fast_forward():
-        await asyncio.gather(
-            # TODO why does this take so long?
-            ops_test.model.wait_for_idle(
-                apps=[APP_NAME, TLS_CERTIFICATES_APP_NAME], status="active", timeout=900
-            ),
-            ops_test.model.wait_for_idle(apps=[CLIENT_APP_NAME], status="blocked", timeout=900),
-        )
+    await ops_test.model.relate(OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    # async with ops_test.fast_forward():
+    #     await asyncio.gather(
+    #         # TODO why does this take so long?
+    #         ops_test.model.wait_for_idle(
+    #             apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
+    #             status="active",
+    #             timeout=900
+    #         ),
+    #         ops_test.model.wait_for_idle(apps=[CLIENT_APP_NAME], status="blocked", timeout=900),
+    #     )
 
     # Relate the charms and wait for them exchanging some connection data.
     global client_relation
     client_relation = await ops_test.model.add_relation(
-        f"{APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:first-database"
+        f"{OPENSEARCH_APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:first-database"
     )
+    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
 
     async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(timeout=600, status="active")
+        await ops_test.model.wait_for_idle(timeout=900, status="active")
 
 
 # Here be pgbouncer code
@@ -79,7 +88,7 @@ async def test_database_relation_with_charm_libraries(
 #         "INSERT INTO test(data) VALUES('some data');"
 #         "SELECT data FROM test;"
 #     )
-#     run_update_query = await run_sql_on_application_charm(
+#     run_update_query = await run_query_on_application_charm(
 #         ops_test,
 #         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
 #         query=update_query,
