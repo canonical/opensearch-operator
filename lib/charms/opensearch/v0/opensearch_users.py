@@ -7,7 +7,7 @@ These functions wrap around some API calls used for user management.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
@@ -33,7 +33,7 @@ class OpenSearchUserManager:
         role_name: str,
         permissions: Optional[Dict[str, str]],
         action_groups: Optional[Dict[str, str]],
-    ) -> Dict[str, Any]:
+    ) -> None:
         """Creates a role with the given permissions.
 
         This method assumes the dicts provided are valid opensearch config. If not, raises
@@ -58,7 +58,7 @@ class OpenSearchUserManager:
                 f"creating role {role_name} failed - response: {put_role_resp}"
             )
 
-    def remove_role(self, role_name: str) -> Dict[str, Any]:
+    def remove_role(self, role_name: str) -> None:
         """Remove the given role from opensearch distribution.
 
         Args:
@@ -72,12 +72,7 @@ class OpenSearchUserManager:
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing role {role_name} failed - response: {resp}")
 
-    def create_user(
-        self,
-        user_name: str,
-        roles: Optional[List[str]],
-        hashed_pwd: str,
-    ) -> Dict[str, Any]:
+    def create_user(self, user_name: str, roles: Optional[List[str]], hashed_pwd: str) -> None:
         """Create or update user and assign the requested roles to the user.
 
         Args:
@@ -103,7 +98,7 @@ class OpenSearchUserManager:
                 f"creating user {user_name} failed - response: {put_user_resp}"
             )
 
-    def remove_user(self, user_name: str) -> Dict[str, Any]:
+    def remove_user(self, user_name: str) -> None:
         """Remove the given user from opensearch distribution.
 
         Args:
@@ -117,7 +112,7 @@ class OpenSearchUserManager:
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing user {user_name} failed - response: {resp}")
 
-    def patch_user(self, user_name: str, patches: List[Dict[str, any]]) -> Dict[str, Any]:
+    def patch_user(self, user_name: str, patches: List[Dict[str, any]]) -> None:
         """Applies patches to user.
 
         Args:
