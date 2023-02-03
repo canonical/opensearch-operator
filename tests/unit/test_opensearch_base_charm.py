@@ -133,8 +133,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             _get_nodes.assert_called()
             _set_node_conf.assert_called()
             start.assert_called_once()
-            self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
             _initialize_security_index.assert_called_once()
+            self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
 
     @patch(f"{BASE_LIB_PATH}.helper_security.cert_expiration_remaining_hours")
     @patch("ops.model.Model.get_relation")

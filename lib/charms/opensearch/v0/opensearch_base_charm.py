@@ -387,7 +387,11 @@ class OpenSearchBaseCharm(CharmBase):
 
         if self.unit.is_leader():
             # initialize the security index if needed and if the admin certs are written on disk
-            self._initialize_security_index_if_needed()
+            if not self.peers_data.get(Scope.APP, "security_index_initialised"):
+                admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+                self._initialize_security_index(admin_secrets)
+                self.peers_data.put(Scope.APP, "security_index_initialised", True)
+
             self.peers_data.put(Scope.APP, "leader_ip", self.unit_ip)
 
         # Remove the exclusions that could not be removed when no units were online
@@ -460,16 +464,11 @@ class OpenSearchBaseCharm(CharmBase):
             },
         )
 
-    def _initialize_security_index_if_needed(self) -> None:
+    def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.
 
         IMPORTANT: must only run once per cluster, otherwise the index gets overrode
         """
-        if self.peers_data.get(Scope.APP, "security_index_initialised"):
-            return
-
-        admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-
         args = [
             f"-cd {self.opensearch.paths.conf}/opensearch-security/",
             f"-cn {self.app.name}-{self.model.name}",
@@ -488,8 +487,6 @@ class OpenSearchBaseCharm(CharmBase):
             "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
         )
         self.status.clear(SecurityIndexInitProgress)
-
-        self.peers_data.put(Scope.APP, "security_index_initialised", True)
 
     def _remove_previously_failed_exclusions(self) -> None:
         """Remove the exclusions that failed to be cleared when no units where online."""
