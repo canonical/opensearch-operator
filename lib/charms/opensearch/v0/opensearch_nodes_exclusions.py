@@ -36,7 +36,7 @@ class NodeExclusionInCharmOps:
     """Node exclusions related operations in the charm."""
 
     RemoveFromAllocExclusion = "remove_from_allocation_exclusions"
-    ShouldRemoveVotingExclusions = "remove_voting_exclusions"
+    RemoveVotingExclusions = "remove_voting_exclusions"
 
     def __init__(self, charm):
         self._charm = charm
@@ -55,7 +55,15 @@ class NodeExclusionInCharmOps:
             HorizontalScaleUpSuggest.format(unassigned_shards)
         )
 
-    def set_allocation_exclusion_for_removal(self, unit_name) -> None:
+    def set_voting_exclusions_for_removal(self) -> None:
+        """Store a flag in the relation data bag, to clear ALL voting exclusions."""
+        if not self._charm.unit.is_leader():
+            self._charm.peers_data.put(Scope.UNIT, self.RemoveVotingExclusions, True)
+            return
+
+        self._charm.peers_data.put(Scope.APP, self.RemoveVotingExclusions, True)
+
+    def set_allocation_exclusions_for_removal(self, unit_name) -> None:
         """Store a unit in the relation data bag, to be removed from the allocation exclusion."""
         if not self._charm.unit.is_leader():
             self._charm.peers_data.put(Scope.UNIT, self.RemoveFromAllocExclusion, unit_name)
@@ -68,13 +76,13 @@ class NodeExclusionInCharmOps:
 
         self._charm.peers_data.put(Scope.APP, self.RemoveFromAllocExclusion, ",".join(exclusions))
 
-    def set_voting_exclusions_for_removal(self) -> None:
-        """Store a flag in the relation data bag, to clear ALL voting exclusions."""
-        if not self._charm.unit.is_leader():
-            self._charm.peers_data.put(Scope.UNIT, self.ShouldRemoveVotingExclusions, True)
-            return
+    def clear_voting_exclusions(self) -> None:
+        """Remove the voting exclusions from the peer databag if existing."""
+        scope = Scope.UNIT
+        if self._charm.unit.is_leader():
+            scope = Scope.APP
 
-        self._charm.peers_data.put(Scope.APP, self.ShouldRemoveVotingExclusions, True)
+        self._charm.peers_data.delete(scope, self.RemoveVotingExclusions)
 
     def clear_allocation_exclusions(self, exclusions: Set[str]) -> None:
         """Remove the allocation exclusions from the peer databag if existing."""
@@ -113,23 +121,21 @@ class NodeExclusionOps:
                 self.in_charm.on_allocation_exclusion_add_failed()
                 raise
 
-    def remove_if_applies(self, unit_name: str, node_roles: List[str], host: Optional[str]):
+    def remove_if_applies(self, unit_name: str, host: Optional[str]):
         """Remove all (voting + current unit allocation) exclusions when applies."""
-        if "cluster_manager" in node_roles:
-            try:
-                # remove the voting exclusions back
-                self.remove_voting_exclusions(host)
-            except OpenSearchError:
-                # no node online, store in the app databag to exclude at a future unit start
-                self.in_charm.set_voting_exclusions_for_removal()
+        try:
+            # remove the voting exclusions back
+            self.remove_voting_exclusions(host)
+        except OpenSearchError:
+            # no node online, store in the app databag to exclude at a future unit start
+            self.in_charm.set_voting_exclusions_for_removal()
 
-        if "data" in node_roles:
-            try:
-                # remove the exclusion back
-                self.remove_allocation_exclusions(unit_name, host)
-            except OpenSearchError:
-                # no node online, store in the app databag to exclude at a future unit start
-                self.in_charm.set_allocation_exclusion_for_removal(unit_name)
+        try:
+            # remove the exclusion back
+            self.remove_allocation_exclusions(unit_name, host)
+        except OpenSearchError:
+            # no node online, store in the app databag to exclude at a future unit start
+            self.in_charm.set_allocation_exclusions_for_removal(unit_name)
 
     def add_voting_exclusion(self, node_name: str) -> None:
         """Include the current node in the CMs voting exclusions list of nodes."""
@@ -142,6 +148,14 @@ class NodeExclusionOps:
         except OpenSearchHttpError as e:
             logger.error(e)
             raise OpenSearchError()
+
+    def add_allocation_exclusions(
+        self, exclusions: Union[List[str], Set[str], str], host: Optional[str] = None
+    ):
+        """Register new allocation exclusions."""
+        exclusions = self.normalize_allocation_exclusions(exclusions)
+        existing_exclusions = self._fetch_allocation_exclusions(host)
+        self._put_allocation_exclusions(existing_exclusions.union(exclusions), host)
 
     def remove_voting_exclusions(self, host: Optional[str] = None) -> None:
         """Remove the voting exclusions of the whole."""
@@ -158,13 +172,8 @@ class NodeExclusionOps:
             logger.error(e)
             raise OpenSearchError()
 
-    def add_allocation_exclusions(
-        self, exclusions: Union[List[str], Set[str], str], host: Optional[str] = None
-    ):
-        """Register new allocation exclusions."""
-        exclusions = self.normalize_allocation_exclusions(exclusions)
-        existing_exclusions = self._fetch_allocation_exclusions(host)
-        self._put_allocation_exclusions(existing_exclusions.union(exclusions), host)
+        # remove these exclusions from the app data bag if any
+        self.in_charm.clear_voting_exclusions()
 
     def remove_allocation_exclusions(
         self, exclusions: Union[List[str], Set[str], str], host: Optional[str] = None

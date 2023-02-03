@@ -2,15 +2,18 @@
 # See LICENSE file for licensing details.
 
 """Base class for the OpenSearch Operators."""
+import json
 import logging
 import random
 from abc import abstractmethod
 from datetime import datetime
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Tuple, Type
 
 from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
     CertsExpirationError,
+    ClusterHealthRed,
+    ClusterHealthYellow,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -38,10 +41,12 @@ from charms.opensearch.v0.helper_security import (
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import (
     OpenSearchDistribution,
+    OpenSearchHAError,
     OpenSearchHttpError,
     OpenSearchStartError,
     OpenSearchStopError,
 )
+from charms.opensearch.v0.opensearch_nodes_exclusions import NodeExclusionInCharmOps
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v1.tls_certificates import (
@@ -54,6 +59,7 @@ from ops.charm import (
     RelationChangedEvent,
     RelationJoinedEvent,
     StartEvent,
+    StorageDetachingEvent,
     UpdateStatusEvent,
 )
 from ops.framework import EventBase
@@ -72,6 +78,7 @@ LIBPATCH = 1
 
 PEER = "opensearch-peers"
 SERVICE_MANAGER = "service"
+STORAGE_NAME = "opensearch-data"
 
 
 logger = logging.getLogger(__name__)
@@ -101,6 +108,9 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
+        self.framework.observe(
+            self.on[STORAGE_NAME].storage_detaching, self._on_opensearch_data_storage_detaching
+        )
 
         self.framework.observe(self.on.update_status, self._on_update_status)
 
@@ -162,15 +172,44 @@ class OpenSearchBaseCharm(CharmBase):
         # Store the "Admin" certificate, key and CA on the disk of the new unit
         self._store_tls_resources(CertType.APP_ADMIN, current_secrets, override_admin=False)
 
+    def _on_opensearch_data_storage_detaching(self, event: StorageDetachingEvent):
+        """Triggered when removing unit, Prior to the storage being detached."""
+        remaining_nodes = [node for node in self._get_nodes() if node.name != self.unit_name]
+
+        node_to_update = ClusterTopology.node_with_new_roles(remaining_nodes)
+        if node_to_update:
+            self.peers_data.put_object(Scope.UNIT, "updated-node-config", vars(node_to_update))
+
+        self._stop_opensearch(event)
+
+        # check cluster status
+        host, alt_hosts = self._hosts()
+        if not host and not alt_hosts:
+            raise OpenSearchHAError("No host is up in this cluster.")
+
+        response = self.opensearch.request(
+            "GET",
+            "/_cluster/health?wait_for_status=green&timeout=1m",
+            host=host,
+            alt_hosts=alt_hosts,
+        )
+        status = response["status"].lower()
+
+        if status == "green":
+            return
+
+        if status == "yellow":
+            self.app.status = BlockedStatus(ClusterHealthYellow)
+            return
+
+        raise OpenSearchHAError(ClusterHealthRed)
+
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
-        if self.unit.is_leader():
-            data = event.relation.data.get(event.unit)
-            if data:
-                exclusions_to_remove = data.get("remove_from_allocation_exclusions")
-                if exclusions_to_remove:
-                    self.append_allocation_exclusion_to_remove(exclusions_to_remove)
+        data = event.relation.data.get(event.unit)
 
+        if self.unit.is_leader():
+            if data:
                 if data.get("bootstrap_contributor"):
                     contributor_count = self.peers_data.get(
                         Scope.APP, "bootstrap_contributors_count", 0
@@ -179,13 +218,25 @@ class OpenSearchBaseCharm(CharmBase):
                         Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                     )
 
-        # Restart node when cert renewal for the transport layer
-        if self.peers_data.get(Scope.UNIT, "must_reboot_node"):
-            try:
-                self.opensearch.restart()
-                self.peers_data.delete(Scope.UNIT, "must_reboot_node")
-            except OpenSearchStartError:
-                event.defer()
+                in_charm_exclusions = self.opensearch.exclusions.in_charm
+
+                voting_exclusions = data.get(NodeExclusionInCharmOps.RemoveFromAllocExclusion)
+                if voting_exclusions:
+                    in_charm_exclusions.set_voting_exclusions_for_removal()
+                else:
+                    in_charm_exclusions.clear_voting_exclusions()
+
+                if data.get(NodeExclusionInCharmOps.RemoveFromAllocExclusion):
+                    in_charm_exclusions.set_allocation_exclusions_for_removal(self.unit_name)
+
+        updated_node_conf = data.get("updated-node-config")
+        if updated_node_conf:
+            node = json.loads(updated_node_conf)
+            if node.name == self.unit_name:
+                self._set_node_conf(self._get_nodes(), node.roles)
+                self.on[self.service_manager.name].acquire_lock.emit(
+                    callback_override="_restart_opensearch"
+                )
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
@@ -263,12 +314,6 @@ class OpenSearchBaseCharm(CharmBase):
         # Get the list of stored secrets for this cert
         current_secrets = self.secrets.get_object(scope, cert_type.val)
 
-        # In case of renewal of the unit transport layer cert - stop opensearch
-        should_restart = False
-        if renewal and cert_type == CertType.UNIT_TRANSPORT:
-            self.opensearch.stop()
-            should_restart = True
-
         # Store cert/key on disk - must happen after opensearch stop for transport certs renewal
         self._store_tls_resources(cert_type, current_secrets)
 
@@ -279,8 +324,11 @@ class OpenSearchBaseCharm(CharmBase):
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
-        if should_restart:
-            self.peers_data.put(Scope.UNIT, "must_reboot_node", True)
+        # In case of renewal of the unit transport layer cert - restart opensearch
+        if renewal and cert_type == CertType.UNIT_TRANSPORT:
+            self.on[self.service_manager.name].acquire_lock.emit(
+                callback_override="_restart_opensearch"
+            )
 
     def on_tls_relation_broken(self):
         """As long as all certificates are produced, we don't do anything."""
@@ -337,20 +385,13 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        # initialize the security index if the admin certs are written on disk
         if self.unit.is_leader():
-            if not self.peers_data.get(Scope.APP, "security_index_initialised"):
-                admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-                self._initialize_security_index(admin_secrets)
-                self.peers_data.put(Scope.APP, "security_index_initialised", True)
-
+            # initialize the security index if needed and if the admin certs are written on disk
+            self._initialize_security_index_if_needed()
             self.peers_data.put(Scope.APP, "leader_ip", self.unit_ip)
 
-        # remove the exclusions that previously failed to be stored when no units online
-        if self.peers_data.get(Scope.APP, "remove_from_allocation_exclusions"):
-            self.opensearch.exclusions.remove_allocation_exclusions(
-                self.peers_data.get(Scope.APP, "remove_from_allocation_exclusions")
-            )
+        # Remove the exclusions that could not be removed when no units were online
+        self._remove_previously_failed_exclusions()
 
         # cleanup bootstrap conf in the node
         if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
@@ -419,11 +460,16 @@ class OpenSearchBaseCharm(CharmBase):
             },
         )
 
-    def _initialize_security_index(self, admin_secrets: Dict[str, any]):
+    def _initialize_security_index_if_needed(self) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.
 
         IMPORTANT: must only run once per cluster, otherwise the index gets overrode
         """
+        if self.peers_data.get(Scope.APP, "security_index_initialised"):
+            return
+
+        admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
         args = [
             f"-cd {self.opensearch.paths.conf}/opensearch-security/",
             f"-cn {self.app.name}-{self.model.name}",
@@ -443,19 +489,26 @@ class OpenSearchBaseCharm(CharmBase):
         )
         self.status.clear(SecurityIndexInitProgress)
 
+        self.peers_data.put(Scope.APP, "security_index_initialised", True)
+
+    def _remove_previously_failed_exclusions(self) -> None:
+        """Remove the exclusions that failed to be cleared when no units where online."""
+        # Remove the voting exclusions for cluster_manager nodes
+        if self.peers_data.get(Scope.APP, NodeExclusionInCharmOps.RemoveVotingExclusions):
+            self.opensearch.exclusions.remove_voting_exclusions()
+
+        # Remove the nodes allocations exclusions for data
+        if self.peers_data.get(Scope.APP, NodeExclusionInCharmOps.RemoveFromAllocExclusion):
+            self.opensearch.exclusions.remove_allocation_exclusions(
+                self.peers_data.get(Scope.APP, NodeExclusionInCharmOps.RemoveFromAllocExclusion)
+            )
+
     def _get_nodes(self) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
 
         def fetch() -> List[Node]:
             """Fetches the list of nodes through HTTP."""
-            host: Optional[str] = None
-            alt_hosts: Optional[List[str]] = None
-
-            all_units_ips = units_ips(self, PEER).values()
-            if all_units_ips:
-                all_hosts = list(all_units_ips)
-                host = all_hosts.pop(0)  # get first value
-                alt_hosts = all_hosts
+            host, alt_hosts = self._hosts()
 
             nodes: List[Node] = []
             if host is not None:
@@ -477,9 +530,26 @@ class OpenSearchBaseCharm(CharmBase):
                 return []
             raise
 
-    def _set_node_conf(self, nodes: List[Node]) -> None:
+    def _hosts(self) -> Tuple[Optional[str], List[str]]:
+        """Fetch the hosts of this cluster, besides the current unit host."""
+        host: Optional[str] = None
+        alt_hosts: Optional[List[str]] = None
+
+        all_hosts = list(units_ips(self, PEER).values())
+        try:
+            all_hosts = all_hosts.remove(self.unit_ip)
+        except ValueError:
+            pass
+
+        if all_hosts:
+            host = all_hosts.pop(0)  # get first value
+            alt_hosts = all_hosts
+
+        return host, alt_hosts
+
+    def _set_node_conf(self, nodes: List[Node], roles: Optional[str] = None) -> None:
         """Set the configuration of the current node / unit."""
-        roles = ClusterTopology.suggest_roles(nodes, self.app.planned_units())
+        roles = roles or ClusterTopology.suggest_roles(nodes, self.app.planned_units())
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)

@@ -78,6 +78,10 @@ class OpenSearchHttpError(OpenSearchError):
     """Exception thrown when an OpenSearch REST call fails."""
 
 
+class OpenSearchHAError(OpenSearchError):
+    """Exception thrown when the HA of the OpenSearch charm is violated."""
+
+
 class Paths:
     """This class represents the group of Paths that need to be exposed."""
 
@@ -157,9 +161,7 @@ class OpenSearchDistribution(ABC):
         self._stop_service()
 
         # remove voting / allocation exclusions if applies, or defer until next unit up
-        self.exclusions.remove_if_applies(
-            self._charm.unit_name, roles, self._charm.alternative_host
-        )
+        self.exclusions.remove_if_applies(self._charm.unit_name, self._charm.alternative_host)
 
     @abstractmethod
     def _stop_service(self):

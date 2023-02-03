@@ -29,6 +29,10 @@ TLSNotFullyConfigured = "Waiting for TLS to be fully configured..."
 TLSRelationBrokenError = (
     "Relation broken with the TLS Operator while TLS not fully configured. Stopping OpenSearch."
 )
+ClusterHealthRed = "1 or more 'primary' shards are not assigned, please scale your application up."
+ClusterHealthYellow = (
+    "1 or more 'replica' shards are not assigned, please scale your application up."
+)
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
