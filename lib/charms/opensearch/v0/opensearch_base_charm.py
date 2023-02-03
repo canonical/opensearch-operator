@@ -207,27 +207,28 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
         data = event.relation.data.get(event.unit)
+        if not data:
+            return
 
         if self.unit.is_leader():
-            if data:
-                if data.get("bootstrap_contributor"):
-                    contributor_count = self.peers_data.get(
-                        Scope.APP, "bootstrap_contributors_count", 0
-                    )
-                    self.peers_data.put(
-                        Scope.APP, "bootstrap_contributors_count", contributor_count + 1
-                    )
+            if data.get("bootstrap_contributor"):
+                contributor_count = self.peers_data.get(
+                    Scope.APP, "bootstrap_contributors_count", 0
+                )
+                self.peers_data.put(
+                    Scope.APP, "bootstrap_contributors_count", contributor_count + 1
+                )
 
-                in_charm_exclusions = self.opensearch.exclusions.in_charm
+            in_charm_exclusions = self.opensearch.exclusions.in_charm
 
-                voting_exclusions = data.get(NodeExclusionInCharmOps.RemoveFromAllocExclusion)
-                if voting_exclusions:
-                    in_charm_exclusions.set_voting_exclusions_for_removal()
-                else:
-                    in_charm_exclusions.clear_voting_exclusions()
+            voting_exclusions = data.get(NodeExclusionInCharmOps.RemoveFromAllocExclusion)
+            if voting_exclusions:
+                in_charm_exclusions.set_voting_exclusions_for_removal()
+            else:
+                in_charm_exclusions.clear_voting_exclusions()
 
-                if data.get(NodeExclusionInCharmOps.RemoveFromAllocExclusion):
-                    in_charm_exclusions.set_allocation_exclusions_for_removal(self.unit_name)
+            if data.get(NodeExclusionInCharmOps.RemoveFromAllocExclusion):
+                in_charm_exclusions.set_allocation_exclusions_for_removal(self.unit_name)
 
         updated_node_conf = data.get("updated-node-config")
         if updated_node_conf:
