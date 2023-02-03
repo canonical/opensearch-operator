@@ -69,7 +69,7 @@ class ApplicationCharm(CharmBase):
             self.second_database.on.endpoints_changed, self._on_second_database_endpoints_changed
         )
 
-        self.framework.observe(self.on.run_query_action, self._on_run_query_action)
+        self.framework.observe(self.on.run_request_action, self._on_run_request_action)
 
     def _on_update_status(self, _) -> None:
         """Health check for database connection.
@@ -81,6 +81,7 @@ class ApplicationCharm(CharmBase):
         if self.connection_check():
             self.unit.status = ActiveStatus()
         else:
+            logger.error("connection check to opensearch charm failed")
             self.unit.status = BlockedStatus("No connection to opensearch charm")
 
     def connection_check(self) -> bool:
@@ -122,9 +123,39 @@ class ApplicationCharm(CharmBase):
         """Event triggered when the read/write endpoints of the database change."""
         logger.info(f"second database endpoints have been changed to: {event.endpoints}")
 
-    def _on_run_query_action(self, event: ActionEvent):
-        """Runs queries."""
-        raise NotImplementedError
+    def _on_run_request_action(self, event: ActionEvent):
+        """An action that allows us to run requests from this charm."""
+        logger.info(event.params)
+
+        relation_id = event.params["relation-id"]
+        relation_name = event.params["relation-name"]
+        if relation_name == self.first_database.relation_name:
+            relation = self.first_database
+        elif relation_name == self.second_database.relation_name:
+            relation = self.second_database
+        else:
+            event.fail(message="invalid relation name")
+
+        databag = relation.fetch_relation_data()[relation_id]
+
+        method = event.params["method"]
+        endpoint = event.params["query"]
+        payload = json.loads(event.params.get("payload"))
+
+        username = databag.get("username")
+        password = databag.get("password")
+        host = databag.get("endpoints").split(",")[0]
+        host_addr = host.split(":")[0]
+        port = host.split(":")[1]
+
+        logger.info(f"sending {method} request to {endpoint}")
+        try:
+            response = self.request(method, endpoint, port, username, password, host_addr, payload)
+        except OpenSearchHttpError as e:
+            response = [str(e)]
+        logger.info(response)
+
+        event.set_results({"results": json.dumps(response)})
 
     def relation_request(
         self,
@@ -203,7 +234,7 @@ class ApplicationCharm(CharmBase):
                 resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
-            raise OpenSearchHttpError()
+            raise OpenSearchHttpError(str(e))
 
         return resp.json()
 

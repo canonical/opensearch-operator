@@ -1,11 +1,26 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-run-query:
-  description: Runs a given query on the backend database.
+run-request:
+  description: Runs a given HTTP request on the backend database from a related charm
   params:
-    query:
-      description: query to run
+    method:
+      description: HTTP method to run
+      type: string
+    endpoint:
+      description: HTTP endpoint on which to run request
+      type: string
+    relation-id:
+      description: id of the relation under test
+      type: integer
+    relation-name:
+      description: name of the relation under test
+      type: string
+    payload:
+      description: JSON string to send to endpoint
       type: string
   required:
-  - query
+  - method
+  - endpoint
+  - relation-id
+  - relation-name

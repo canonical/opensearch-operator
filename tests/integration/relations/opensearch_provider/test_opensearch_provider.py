@@ -2,6 +2,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 import asyncio
+import json
 import logging
 
 import pytest
@@ -11,6 +12,7 @@ from pytest_operator.plugin import OpsTest
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
 from tests.integration.helpers import MODEL_CONFIG, SERIES, UNIT_IDS
 from tests.integration.relations.opensearch_provider.helpers import (
+    run_query_on_application_charm,
     wait_for_relation_joined_between,
 )
 
@@ -79,24 +81,79 @@ async def test_database_relation_with_charm_libraries(
 # Here be pgbouncer code
 
 
-# @pytest.mark.client_relation
-# async def test_database_usage(ops_test: OpsTest):
-#     """Check we can update and delete things."""
-#     update_query = (
-#         "DROP TABLE IF EXISTS test;"
-#         "CREATE TABLE test(data TEXT);"
-#         "INSERT INTO test(data) VALUES('some data');"
-#         "SELECT data FROM test;"
-#     )
-#     run_update_query = await run_query_on_application_charm(
-#         ops_test,
-#         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
-#         query=update_query,
-#         dbname=APPLICATION_FIRST_DBNAME,
-#         relation_id=client_relation.id,
-#         relation_name=FIRST_DATABASE_RELATION_NAME,
-#     )
-#     assert "some data" in json.loads(run_update_query["results"])[0]
+@pytest.mark.client_relation
+async def test_database_usage(ops_test: OpsTest):
+    """Check we can update and delete things."""
+    # TODO I stole this from amazon's opensearch docs because I didn't want to write reams of test
+    # data. Should I swap this to something else?
+    payload = '{"director": "Burton, Tim", "genre": ["Comedy","Sci-Fi"], "year": 1996, "actor": ["Jack Nicholson","Pierce Brosnan","Sarah Jessica Parker"], "title": "Mars Attacks!"}'
+    create_index_endpoint = "/domain-endpoint/movies/_doc/1"
+    run_create_index = await run_query_on_application_charm(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        method="PUT",
+        endpoint=create_index_endpoint,
+        payload=payload,
+        relation_id=client_relation.id,
+        relation_name=FIRST_DATABASE_RELATION_NAME,
+    )
+    logging.error(json.loads(run_create_index))
+
+    # TODO make bulk data assignment
+    # TODO I stole this from amazon's opensearch docs because I didn't want to write reams of test
+    # data. Should I swap this to something else?
+    # curl -XPOST -u 'master-user:master-user-password' 'domain-endpoint/_bulk'
+    # --data-binary @bulk_movies.json -H 'Content-Type: application/json'
+    bulk_index_endpoint = "domain-endpoint/_bulk"
+    with open("tests/integration/relations/opensearch-provider.bulk_data.json") as bulk_data:
+        bulk_payload = bulk_data.read()
+    run_bulk_create_index = await run_query_on_application_charm(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        method="PUT",
+        endpoint=bulk_index_endpoint,
+        payload=bulk_payload,
+        relation_id=client_relation.id,
+        relation_name=FIRST_DATABASE_RELATION_NAME,
+    )
+    # change assertion to "data written" or something
+    logging.error(json.loads(run_bulk_create_index["results"]))
+
+    #   curl -XGET -u 'master-user:master-user-password' 'domain-endpoint/movies/_search?q=mars'
+    read_index_endpoint = "domain-endpoint/movies/_search?q=mars"
+    run_read_index = await run_query_on_application_charm(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        method="GET",
+        endpoint=read_index_endpoint,
+        relation_id=client_relation.id,
+        relation_name=FIRST_DATABASE_RELATION_NAME,
+    )
+    results = json.loads(run_read_index["results"])[0]
+    logging.error(results)
+    assert results.get("timed_out") is False
+    assert results.get("_shards", {}).get("successful") == NUM_UNITS
+    assert results.get("_shards", {}).get("failed") == 0
+    assert results.get("_shards", {}).get("skipped") == 0
+    assert results.get("hits", {}).get("total", {}).get("value") == 1
+
+    read_index_endpoint = "domain-endpoint/movies/_search?q=rebel"
+    run_bulk_read_index = await run_query_on_application_charm(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        method="GET",
+        endpoint=read_index_endpoint,
+        relation_id=client_relation.id,
+        relation_name=FIRST_DATABASE_RELATION_NAME,
+    )
+    # TODO assert we're getting the correct value
+    results = json.loads(run_bulk_read_index["results"])[0]
+    logging.error(results)
+    assert results.get("timed_out") is False
+    assert results.get("_shards", {}).get("successful") == NUM_UNITS
+    assert results.get("_shards", {}).get("failed") == 0
+    assert results.get("_shards", {}).get("skipped") == 0
+    assert results.get("hits", {}).get("total", {}).get("value") == 1
 
 
 # @pytest.mark.client_relation
