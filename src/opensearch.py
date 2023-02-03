@@ -12,14 +12,13 @@ import os
 import time
 
 import requests
-from charms.opensearch.v0.opensearch_distro import (
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution, Paths
+from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
-    OpenSearchDistribution,
     OpenSearchInstallError,
     OpenSearchMissingError,
     OpenSearchStartError,
     OpenSearchStopError,
-    Paths,
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError

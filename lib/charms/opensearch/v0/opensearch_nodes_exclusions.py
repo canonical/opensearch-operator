@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Base class for OpenSearch node exclusions management."""
@@ -11,8 +11,7 @@ from charms.opensearch.v0.constants_charm import (
     VotingExclusionFailed,
 )
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.opensearch_distro import (
-    OpenSearchDistribution,
+from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
 )
@@ -101,7 +100,7 @@ class NodeExclusionInCharmOps:
 class NodeExclusionOps:
     """Class wrapping both Node Exclusions Operations and Callbacks related to the charm."""
 
-    def __init__(self, distro: OpenSearchDistribution, charm):
+    def __init__(self, distro, charm):
         self._distro = distro
         self.in_charm = NodeExclusionInCharmOps(charm)
 

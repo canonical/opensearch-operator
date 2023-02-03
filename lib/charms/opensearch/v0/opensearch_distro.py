@@ -19,6 +19,10 @@ import requests
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
+    OpenSearchHttpError,
+)
 from charms.opensearch.v0.opensearch_nodes_exclusions import NodeExclusionOps
 
 # The unique Charmhub library identifier, never change it
@@ -33,53 +37,6 @@ LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
-
-
-class OpenSearchError(Exception):
-    """Base exception class for OpenSearch errors."""
-
-
-class OpenSearchMissingError(OpenSearchError):
-    """Exception thrown when an action is attempted on OpenSearch when it's not installed."""
-
-
-class OpenSearchInstallError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to be installed."""
-
-
-class OpenSearchMissingSysReqError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to be installed."""
-
-    def __init__(self, missing_requirements: List[str]):
-        self.missing_requirements = missing_requirements
-
-
-class OpenSearchStartError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to start."""
-
-
-class OpenSearchStopError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to stop."""
-
-
-class OpenSearchRestartError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to restart."""
-
-
-class OpenSearchNotStartedError(OpenSearchError):
-    """Exception thrown when attempting an operation when the OpenSearch service is stopped."""
-
-
-class OpenSearchCmdError(OpenSearchError):
-    """Exception thrown when an OpenSearch bin command fails."""
-
-
-class OpenSearchHttpError(OpenSearchError):
-    """Exception thrown when an OpenSearch REST call fails."""
-
-
-class OpenSearchHAError(OpenSearchError):
-    """Exception thrown when the HA of the OpenSearch charm is violated."""
 
 
 class Paths:
