@@ -24,7 +24,7 @@ class Node:
 
     def __init__(self, name: str, roles: List[str], ip: str):
         self.name = name
-        self.roles = set(roles)
+        self.roles = list(set(roles))
         self.ip = ip
 
 
@@ -88,14 +88,14 @@ class ClusterTopology:
             )
 
         exclude_roles = {"cluster_manager", "voting_only"}
-        data = choice([node for node in nodes_by_roles["data"] if not exclude_roles & node.roles])
+        data = choice([node for node in nodes_by_roles["data"] if not exclude_roles & (set(node.roles))])
 
         if current_cms < max_cms:
             # add cm to a data node (that doesn't have voting_only)
-            return Node(data.name, list(data.roles.union({"cluster_manager"})), data.ip)
+            return Node(data.name, data.roles + ["cluster_manager"], data.ip)
 
         # add voting_only to a data node
-        return Node(data.name, list(data.roles.union({"voting_only"})), data.ip)
+        return Node(data.name, data.roles + ["voting_only"], data.ip)
 
     @staticmethod
     def max_cm_and_voter_nodes(planned_units) -> (int, int):

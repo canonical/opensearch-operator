@@ -178,6 +178,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         node_to_update = ClusterTopology.node_with_new_roles(remaining_nodes)
         if node_to_update:
+            logger.debug(f"Node to update: {node_to_update}")
             self.peers_data.put_object(Scope.UNIT, "updated-node-config", vars(node_to_update))
 
         self._stop_opensearch(event)
