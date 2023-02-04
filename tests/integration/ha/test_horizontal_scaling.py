@@ -85,7 +85,7 @@ async def test_horizontal_scale_up(ops_test: OpsTest) -> None:
     assert not shards_by_status.get("UNASSIGNED")
 
 
-@pytest.mark.ha_service_tests
+@pytest.mark.ha_tests
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_shards_realloc(ops_test: OpsTest) -> None:
     """Tests the shutdown of a node, and re-allocation of shards to a newly joined unit.
