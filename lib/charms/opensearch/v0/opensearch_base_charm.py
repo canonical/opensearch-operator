@@ -194,7 +194,11 @@ class OpenSearchBaseCharm(CharmBase):
         node_to_update = ClusterTopology.node_with_new_roles(remaining_nodes)
         if node_to_update:
             logger.debug(f"Node to update: {vars(node_to_update)}")
-            self.peers_data.put_object(Scope.UNIT, "updated-node-config", vars(node_to_update))
+            self.peers_data.put_object(
+                Scope.APP if self.unit.is_leader() else Scope.UNIT,
+                "updated-node-config",
+                vars(node_to_update),
+            )
 
         self._stop_opensearch(event)
 
@@ -229,7 +233,14 @@ class OpenSearchBaseCharm(CharmBase):
         if not data:
             return
 
+        updated_node_conf = data.get("updated-node-config")
+
         if self.unit.is_leader():
+            if updated_node_conf:
+                self.peers_data.put_object(Scope.APP, "updated-node-config", updated_node_conf)
+            else:
+                self.peers_data.delete(Scope.APP, "update-node-config")
+
             if data.get("bootstrap_contributor"):
                 contributor_count = self.peers_data.get(
                     Scope.APP, "bootstrap_contributors_count", 0
@@ -249,7 +260,7 @@ class OpenSearchBaseCharm(CharmBase):
             if data.get(NodeExclusionInCharmOps.RemoveFromAllocExclusion):
                 in_charm_exclusions.set_allocation_exclusions_for_removal(self.unit_name)
 
-        updated_node_conf = data.get("updated-node-config")
+        # Run restart node on the concerned unit
         if updated_node_conf:
             node = Node.from_dict(json.loads(updated_node_conf))
             if node.name == self.unit_name:
