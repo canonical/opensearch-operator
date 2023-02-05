@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Utility classes and methods for getting cluster info, configuration info and suggestions."""
+import logging
 from random import choice
 from typing import Dict, List, Optional
 
@@ -19,6 +20,9 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
+logger = logging.getLogger(__name__)
+
+
 class Node:
     """Data class representing a node in a cluster."""
 
@@ -26,6 +30,11 @@ class Node:
         self.name = name
         self.roles = list(set(roles))
         self.ip = ip
+
+    @staticmethod
+    def from_dict(input_dict):
+        """Create a new instance of this class from a json/dict repr."""
+        return Node(input_dict.get("name"), input_dict.get("roles"), input_dict.get("ip"))
 
 
 class ClusterTopology:
@@ -67,8 +76,16 @@ class ClusterTopology:
         current_cms = nodes_by_roles.get("cluster_manager", 0)
         current_voting_only = nodes_by_roles.get("voting_only", 0)
 
+        logger.debug(
+            f"\nNew {len(remaining_nodes)} topology:"
+            f"\n\t- max_cms: {max_cms}\n\t- current_cms: {current_cms}"
+            f"\n\t- max_voting_only: {max_voting_only}\n\t- current_voting_only: {current_voting_only}"
+            f"\n\t- current_data: {nodes_by_roles['data'] - current_cms - current_voting_only}"
+        )
+
         # the nodes involved in the voting are intact, do nothing
         if current_cms + current_voting_only == max_voters:
+            logger.debug("Suggesting NO changes to the nodes.")
             return None
 
         nodes_by_roles = ClusterTopology.nodes_by_role(remaining_nodes)
@@ -76,11 +93,13 @@ class ClusterTopology:
         if current_cms > max_cms:
             # remove cm from a node
             cm = choice(nodes_by_roles["cluster_manager"])
+            logger.debug(f"Suggesting - removal of 'CM': {cm.name}")
             return Node(cm.name, [r for r in cm.roles if r != "cluster_manager"], cm.ip)
 
         if current_voting_only > max_voting_only:
             # remove voting_only from a node
             voting_only = choice(nodes_by_roles["voting_only"])
+            logger.debug(f"Suggesting - removal of 'voting_only': {voting_only.name}")
             return Node(
                 voting_only.name,
                 [r for r in voting_only.roles if r != "voting_only"],
@@ -88,13 +107,17 @@ class ClusterTopology:
             )
 
         exclude_roles = {"cluster_manager", "voting_only"}
-        data = choice([node for node in nodes_by_roles["data"] if not exclude_roles & (set(node.roles))])
+        data = choice(
+            [node for node in nodes_by_roles["data"] if not exclude_roles & (set(node.roles))]
+        )
 
         if current_cms < max_cms:
             # add cm to a data node (that doesn't have voting_only)
+            logger.debug(f"Suggesting - Addition of 'CM' to data: {data.name}")
             return Node(data.name, data.roles + ["cluster_manager"], data.ip)
 
         # add voting_only to a data node
+        logger.debug(f"Suggesting - Addition of 'voting_only' to data: {data.name}")
         return Node(data.name, data.roles + ["voting_only"], data.ip)
 
     @staticmethod

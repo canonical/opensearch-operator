@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import json
 import logging
 import tempfile
 from pathlib import Path
@@ -179,7 +180,7 @@ async def http_request(
         resp = session.request(
             method=method,
             url=endpoint,
-            data=payload,
+            data=json.dumps(payload),
             verify=chain.name,
             headers={"Accept": "application/json", "Content-Type": "application/json"},
         )

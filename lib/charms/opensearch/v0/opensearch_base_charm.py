@@ -14,6 +14,7 @@ from charms.opensearch.v0.constants_charm import (
     CertsExpirationError,
     ClusterHealthRed,
     ClusterHealthYellow,
+    NoNodeUpInCluster,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -174,11 +175,25 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_opensearch_data_storage_detaching(self, event: StorageDetachingEvent):
         """Triggered when removing unit, Prior to the storage being detached."""
+
+        def _cluster_health(wait_for_green: bool) -> Dict[str, any]:
+            """Fetch the cluster health."""
+            endpoint = "/_cluster/health"
+            if wait_for_green:
+                endpoint = f"{endpoint}?wait_for_status=green&timeout=1m"
+
+            return self.opensearch.request(
+                "GET",
+                endpoint,
+                host=host,
+                alt_hosts=alt_hosts,
+            )
+
         remaining_nodes = [node for node in self._get_nodes() if node.name != self.unit_name]
 
         node_to_update = ClusterTopology.node_with_new_roles(remaining_nodes)
         if node_to_update:
-            logger.debug(f"Node to update: {node_to_update}")
+            logger.debug(f"Node to update: {vars(node_to_update)}")
             self.peers_data.put_object(Scope.UNIT, "updated-node-config", vars(node_to_update))
 
         self._stop_opensearch(event)
@@ -186,21 +201,24 @@ class OpenSearchBaseCharm(CharmBase):
         # check cluster status
         host, alt_hosts = self._hosts()
         if not host and not alt_hosts:
-            raise OpenSearchHAError("No host is up in this cluster.")
+            raise OpenSearchHAError(NoNodeUpInCluster)
 
-        response = self.opensearch.request(
-            "GET",
-            "/_cluster/health?wait_for_status=green&timeout=1m",
-            host=host,
-            alt_hosts=alt_hosts,
-        )
+        try:
+            response = _cluster_health(True)
+        except OpenSearchHttpError:
+            # it timed out, settle with current status
+            response = _cluster_health(False)
+
         status = response["status"].lower()
 
         if status == "green":
             return
 
         if status == "yellow":
-            self.app.status = BlockedStatus(ClusterHealthYellow)
+            if self.unit.is_leader():
+                self.app.status = BlockedStatus(ClusterHealthYellow)
+            else:
+                self.peers_data.put(Scope.UNIT, "health", "yellow")
             return
 
         raise OpenSearchHAError(ClusterHealthRed)
@@ -233,7 +251,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         updated_node_conf = data.get("updated-node-config")
         if updated_node_conf:
-            node = json.loads(updated_node_conf)
+            node = Node.from_dict(json.loads(updated_node_conf))
             if node.name == self.unit_name:
                 self._set_node_conf(self._get_nodes(), node.roles)
                 self.on[self.service_manager.name].acquire_lock.emit(

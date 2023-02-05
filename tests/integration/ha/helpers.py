@@ -51,7 +51,7 @@ async def create_dummy_indexes(ops_test: OpsTest, unit_ip: str, count: int = 5) 
         await http_request(
             ops_test,
             "PUT",
-            f"https://{unit_ip}:9200/index${index_id}",
+            f"https://{unit_ip}:9200/index_{index_id}",
             {"settings": {"index": {"number_of_shards": 3, "number_of_replicas": 2}}},
         )
 
@@ -63,11 +63,11 @@ async def create_dummy_indexes(ops_test: OpsTest, unit_ip: str, count: int = 5) 
 async def create_dummy_docs(ops_test: OpsTest, unit_ip: str, count: int = 5) -> None:
     """Store documents in the dummy indexes."""
     for index_id in range(count):
-        for doc_id in range(count):
+        for doc_id in range(count * 10):
             await http_request(
                 ops_test,
-                "POST",
-                f"https://{unit_ip}:9200/index${index_id}/_doc/${doc_id}",
+                "PUT",
+                f"https://{unit_ip}:9200/index_{index_id}/_doc/{doc_id}",
                 {
                     "ProductId": f"{1000 + doc_id}",
                     "Amount": f"{randint(10, 1000)}",
