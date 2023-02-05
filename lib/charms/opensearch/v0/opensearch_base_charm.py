@@ -233,11 +233,11 @@ class OpenSearchBaseCharm(CharmBase):
         if not data:
             return
 
-        updated_node_conf = data.get("updated-node-config")
-
         if self.unit.is_leader():
+            updated_node_conf = data.get("updated-node-config")
+            logger.debug(f"\n\n_on_peer_relation_changed // updated_node_conf // storing in app: \n{updated_node_conf}")
             if updated_node_conf:
-                self.peers_data.put_object(Scope.APP, "updated-node-config", updated_node_conf)
+                self.peers_data.put_object(Scope.APP, "updated-node-config", json.loads(updated_node_conf))
             else:
                 self.peers_data.delete(Scope.APP, "update-node-config")
 
@@ -261,13 +261,18 @@ class OpenSearchBaseCharm(CharmBase):
                 in_charm_exclusions.set_allocation_exclusions_for_removal(self.unit_name)
 
         # Run restart node on the concerned unit
+        updated_node_conf = self.peers_data.get_object(Scope.APP, "updated-node-config")
+        logger.debug(f"\n_on_peer_relation_changed // updated_node_conf // Loading from app: \n{updated_node_conf}")
         if updated_node_conf:
-            node = Node.from_dict(json.loads(updated_node_conf))
+            node = Node.from_dict(updated_node_conf)
             if node.name == self.unit_name:
+                logger.debug(f"Node To Change: {node.name} VS {self.unit_name} Current Node")
+                logger.debug(f"_on_peer_relation_changed // updated_node_conf // changing conf")
                 self._set_node_conf(self._get_nodes(), node.roles)
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
+                self.peers_data.delete(Scope.UNIT, "update-node-config")
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
