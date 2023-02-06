@@ -47,16 +47,15 @@ class OpenSearchUserManager:
         Raises:
             OpenSearchUserMgmtError: If the role creation request fails.
         """
-        put_role_resp = self.opensearch.request(
+        resp = self.opensearch.request(
             "PUT",
             f"{ROLE_ENDPOINT}/{role_name}",
             {**(permissions or {}), **(action_groups or {})},
         )
-        logger.debug(put_role_resp)
-        if put_role_resp.get("status") != "OK":
-            raise OpenSearchUserMgmtError(
-                f"creating role {role_name} failed - response: {put_role_resp}"
-            )
+        logger.debug(resp)
+        if resp.get("status") != "OK":
+            raise OpenSearchUserMgmtError(f"creating role {role_name} failed - response: {resp}")
+        return resp
 
     def remove_role(self, role_name: str) -> None:
         """Remove the given role from opensearch distribution.
@@ -71,6 +70,7 @@ class OpenSearchUserManager:
         logger.debug(resp)
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing role {role_name} failed - response: {resp}")
+        return resp
 
     def create_user(self, user_name: str, roles: Optional[List[str]], hashed_pwd: str) -> None:
         """Create or update user and assign the requested roles to the user.
@@ -87,16 +87,15 @@ class OpenSearchUserManager:
         if roles:
             payload["opendistro_security_roles"] = roles
 
-        put_user_resp = self.opensearch.request(
+        resp = self.opensearch.request(
             "PUT",
             f"{USER_ENDPOINT}/{user_name}",
             payload,
         )
-        logger.debug(put_user_resp)
-        if put_user_resp.get("status") != "CREATED":
-            raise OpenSearchUserMgmtError(
-                f"creating user {user_name} failed - response: {put_user_resp}"
-            )
+        logger.debug(resp)
+        if resp.get("status") != "CREATED":
+            raise OpenSearchUserMgmtError(f"creating user {user_name} failed - response: {resp}")
+        return resp
 
     def remove_user(self, user_name: str) -> None:
         """Remove the given user from opensearch distribution.
@@ -109,8 +108,10 @@ class OpenSearchUserManager:
         """
         resp = self.opensearch.request("DELETE", f"{USER_ENDPOINT}/{user_name}/")
         logger.debug(resp)
+        # TODO update to handle if the user doesn't exist
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing user {user_name} failed - response: {resp}")
+        return resp
 
     def patch_user(self, user_name: str, patches: List[Dict[str, any]]) -> None:
         """Applies patches to user.
@@ -122,13 +123,12 @@ class OpenSearchUserManager:
         Raises:
             OpenSearchUserMgmtError: If the request fails.
         """
-        patch_user_resp = self.opensearch.request(
+        resp = self.opensearch.request(
             "PATCH",
             f"{USER_ENDPOINT}/{user_name}",
             patches,
         )
-        logger.debug(patch_user_resp)
-        if patch_user_resp.get("status") != "OK":
-            raise OpenSearchUserMgmtError(
-                f"patching user {user_name} failed - response: {patch_user_resp}"
-            )
+        logger.debug(resp)
+        if resp.get("status") != "OK":
+            raise OpenSearchUserMgmtError(f"patching user {user_name} failed - response: {resp}")
+        return resp

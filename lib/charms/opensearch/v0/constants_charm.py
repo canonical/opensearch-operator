@@ -44,7 +44,6 @@ WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on 
 ClientRelationBadRoleRequestMessage = "bad relation request - client application has not provided correctly formatted extra user roles. "
 ClientRelationRoleCreationFailedMessage = "bad relation request - role creation failed."
 ClientRelationUserCreationFailedMessage = "bad relation request - user creation failed."
-ClientRelationUserDeletionFailedMessage = "bad relation request - user/role removal failed."
 
 
 # Relation Interfaces

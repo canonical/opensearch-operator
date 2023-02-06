@@ -204,13 +204,16 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
 
-        We want to periodically check for 2 things:
-        1- The system requirements are still met
-        2- every 6 hours check if certs are expiring soon (in 7 days),
+        We want to periodically check for 3 things:
+        1- Do we have users that need to be deleted, and if so we need to delete them.
+        2- The system requirements are still met
+        3- every 6 hours check if certs are expiring soon (in 7 days),
             as a safeguard in case relation broken. As there will be data loss
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
+        self.opensearch_provider.clear_zombie_users_and_roles()
+
         # if there are missing system requirements defer
         missing_sys_reqs = self.opensearch.missing_sys_requirements()
         if len(missing_sys_reqs) > 0:
