@@ -139,7 +139,7 @@ class ApplicationCharm(CharmBase):
         databag = relation.fetch_relation_data()[relation_id]
 
         method = event.params["method"]
-        endpoint = event.params["query"]
+        endpoint = event.params["endpoint"]
         payload = json.loads(event.params.get("payload"))
 
         username = databag.get("username")

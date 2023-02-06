@@ -97,7 +97,7 @@ async def test_database_usage(ops_test: OpsTest):
         relation_id=client_relation.id,
         relation_name=FIRST_DATABASE_RELATION_NAME,
     )
-    logging.error(json.loads(run_create_index))
+    logging.error(json.dumps(run_create_index))
 
     # TODO I stole this from amazon's opensearch docs because I didn't want to write reams of test
     # data. Should I swap this to something else?
@@ -114,7 +114,7 @@ async def test_database_usage(ops_test: OpsTest):
         relation_name=FIRST_DATABASE_RELATION_NAME,
     )
     # change assertion to "data written" or something
-    logging.error(json.loads(run_bulk_create_index["results"]))
+    logging.error(json.dumps(run_bulk_create_index["results"]))
 
     #   curl -XGET -u 'master-user:master-user-password' 'domain-endpoint/movies/_search?q=mars'
     read_index_endpoint = "domain-endpoint/movies/_search?q=mars"
@@ -144,7 +144,7 @@ async def test_database_usage(ops_test: OpsTest):
         relation_name=FIRST_DATABASE_RELATION_NAME,
     )
     # TODO assert we're getting the correct value
-    results = json.loads(run_bulk_read_index["results"])[0]
+    results = json.dumps(run_bulk_read_index["results"])[0]
     logging.error(results)
     assert results.get("timed_out") is False
     assert results.get("_shards", {}).get("successful") == NUM_UNITS
@@ -183,7 +183,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     )
 
     async with ops_test.fast_forward():
-        await asyncio.join(
+        await asyncio.gather(
             ops_test.model.wait_for_idle(status="active", apps=ALL_APPS),
             ops_test.model.wait_for_idle(status="blocked", apps=[SECONDARY_CLIENT_APP_NAME]),
         )
