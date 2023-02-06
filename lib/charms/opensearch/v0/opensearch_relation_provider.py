@@ -3,25 +3,45 @@
 
 """OpenSearch client relation hooks & helpers.
 
-TODO @medib is this documentation correct?
 The read-only-endpoints field of DatabaseProvides is unused in this relation because this concept
-is irrelevant to OpenSearch - the application charm should be defining which nodes are readonly and
-which are read/write.
+is irrelevant to OpenSearch. In this relation, the application charm should have control over node
+& index security policies, and therefore differentiating between types of network endpoints is
+unnecessary.
+
+When specifying user permissions for this relation, a client application must send this charm valid
+JSON containing the following fields:
+
+{
+    "roles": ["A list of default opensearch roles to apply"],
+    "permissions": ["A list of default opensearch permissions to apply"],
+    "action_groups": ["A list of default opensearch action groups to apply"],
+}
+
+A role will be created for the relation with the permissions and action groups applied, and these
+roles will be mapped to a dedicated user for the relation, which will be removed with the relation.
+Default security values can be found in the opensearch documentation here:
+https://opensearch.org/docs/latest/security/access-control/index/.
 
 TODO add databag reference information
 TODO add tls
-
-Databag needs client credentials and client cert
 """
 
 import json
 import logging
+from typing import Dict, List
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
     DatabaseRequestedEvent,
 )
-from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
+from charms.opensearch.v0.constants_charm import (
+    ClientRelationBadRoleRequestMessage,
+    ClientRelationName,
+    ClientRelationRoleCreationFailedMessage,
+    ClientRelationUserCreationFailedMessage,
+    ClientRelationUserDeletionFailedMessage,
+    PeerRelationName,
+)
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.helper_security import generate_hashed_password
@@ -42,14 +62,13 @@ class OpenSearchProvider(Object):
         - relation-broken
     """
 
-    def __init__(self, charm: CharmBase, relation_name: str = ClientRelationName) -> None:
+    def __init__(self, charm: CharmBase) -> None:
         """Constructor for OpenSearchProvider object.
 
         Args:
             charm: the charm for which this relation is provided
-            relation_name: the name of the relation
         """
-        super().__init__(charm, relation_name)
+        super().__init__(charm, ClientRelationName)
 
         self.charm = charm
         self.unit = self.charm.unit
@@ -57,7 +76,7 @@ class OpenSearchProvider(Object):
         self.opensearch = self.charm.opensearch
         self.user_manager = self.charm.user_manager
 
-        self.relation_name = relation_name
+        self.relation_name = ClientRelationName
         self.database_provides = DatabaseProvides(self.charm, relation_name=self.relation_name)
 
         self.framework.observe(
@@ -82,10 +101,10 @@ class OpenSearchProvider(Object):
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
         """Handle client database-requested event.
 
-        TODO @medib is this documentation correct?
         The read-only-endpoints field of DatabaseProvides is unused in this relation because this
-        concept is irrelevant to OpenSearch - the application charm should be defining which nodes
-        are readonly and which are read/write.
+        concept is irrelevant to OpenSearch. In this relation, the application charm should have
+        control over node & index security policies, and therefore differentiating between types of
+        network endpoints is unnecessary.
         """
         if not self.unit.is_leader():
             return
@@ -94,22 +113,46 @@ class OpenSearchProvider(Object):
             return
 
         try:
-            # TODO add a case for when extra_user_roles is empty
             extra_user_roles = json.loads(event.extra_user_roles)
-        except (json.decoder.JSONDecodeError, TypeError):
+        except (json.decoder.JSONDecodeError, TypeError) as err:
             # TODO document what a client application would need to provide to make this work.
-            self.unit.status = BlockedStatus(
-                "bad relation request - client application has not provided correctly formatted extra user roles. "
-            )
+            logger.error(err)
+            self.unit.status = BlockedStatus(ClientRelationBadRoleRequestMessage)
             return
 
         username = self._relation_username(event.relation)
-        # TODO document that only default roles and action groups can be specified
-        roles = extra_user_roles.get("roles")
-        permissions = extra_user_roles.get("permissions")
-        action_groups = extra_user_roles.get("action_groups")
+        hashed_pwd, pwd = generate_hashed_password()
+        try:
+            self.create_opensearch_users(username, hashed_pwd, extra_user_roles)
+        except OpenSearchUserMgmtError as err:
+            logger.error(err)
+            self.unit.status = BlockedStatus(str(err))
+            return
+
+        rel_id = event.relation.id
+        # Share the credentials and updated connection info with the client application.
+        self.database_provides.set_credentials(rel_id, username, pwd)
+        self.update_endpoints(event.relation)
+        self.database_provides.set_version(rel_id, self.opensearch.version)
+
+    def create_opensearch_users(
+        self, username: str, hashed_pwd: str, access_control: Dict[str, List[str]]
+    ):
+        """Creates necessary opensearch users and permissions for this relation.
+
+        Args:
+            username: Username to be created
+            hashed_pwd: the hash of the password to be assigned to the user
+            access_control: A dict of roles, permissions, and action groups to be applied to the
+                user. A new role will be created to contain the requested permissions and action
+                groups.
+        """
+        roles = access_control.get("roles")
+        permissions = access_control.get("permissions")
+        action_groups = access_control.get("action_groups")
+
         if permissions or action_groups:
-            # combine agroups and perms into a new role of all perms given.
+            # combine action groups and perms into a new role for this relation.
             try:
                 self.user_manager.create_role(
                     role_name=username,
@@ -118,28 +161,21 @@ class OpenSearchProvider(Object):
                 )
                 roles.append(username)
             except OpenSearchUserMgmtError:
-                self.unit.status = BlockedStatus("bad relation request - role creation failed.")
+                raise OpenSearchUserMgmtError(ClientRelationRoleCreationFailedMessage)
 
-        # generate user with roles
-        hashed_pwd, pwd = generate_hashed_password()
         try:
             self.user_manager.create_user(
                 username,
                 roles,
                 hashed_pwd,
             )
-            self.user_manager.patch_user(
-                username,
-                [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
-            )
+            if roles:
+                self.user_manager.patch_user(
+                    username,
+                    [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
+                )
         except OpenSearchUserMgmtError:
-            self.unit.status = BlockedStatus("bad relation request - user creation failed. ")
-
-        rel_id = event.relation.id
-        # Share the credentials and updated connection info with the client application.
-        self.database_provides.set_credentials(rel_id, username, pwd)
-        self.update_endpoints(event.relation)
-        self.database_provides.set_version(rel_id, self.opensearch.version)
+            raise OpenSearchUserMgmtError(ClientRelationUserCreationFailedMessage)
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
@@ -159,7 +195,7 @@ class OpenSearchProvider(Object):
             self.user_manager.remove_user(self._relation_username(event.relation))
             self.user_manager.remove_role(self._relation_username(event.relation))
         except OpenSearchUserMgmtError:
-            self.unit.status = BlockedStatus("bad relation request - user/role removal failed. ")
+            self.unit.status = BlockedStatus(ClientRelationUserDeletionFailedMessage)
 
     def update_endpoints(self, relation):
         """Updates endpoints in the databag for the given relation."""

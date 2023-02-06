@@ -8,8 +8,9 @@ from unittest.mock import MagicMock, PropertyMock, patch
 from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
+from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from helpers import patch_network_get
-from ops.model import BlockedStatus
+from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -42,9 +43,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         new_callable=PropertyMock,
         return_value="1",
     )
-    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_user")
-    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_role")
-    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.patch_user")
+    @patch(
+        "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.create_opensearch_users"
+    )
     @patch(
         "charms.opensearch.v0.opensearch_relation_provider.generate_hashed_password",
         return_value=("hashed_pw", "password"),
@@ -56,15 +57,17 @@ class TestOpenSearchProvider(unittest.TestCase):
         _set_version,
         _set_credentials,
         _gen_pw,
-        _patch_user,
-        _create_role,
-        _create_user,
+        _create_users,
         _opensearch_version,
         _is_node_up,
         _init_admin,
     ):
-        self.harness.set_leader(False)
         event = MagicMock()
+        event.relation.id = 1
+        username = self.opensearch_provider._relation_username(event.relation)
+        hashed_pw, password = _gen_pw.return_value
+
+        self.harness.set_leader(False)
         self.opensearch_provider._on_database_requested(event)
         _is_node_up.assert_not_called()
 
@@ -74,43 +77,59 @@ class TestOpenSearchProvider(unittest.TestCase):
         event.defer.assert_called()
 
         _is_node_up.return_value = True
+        event.extra_user_roles = None
         self.opensearch_provider._on_database_requested(event)
         self.assertIsInstance(self.unit.status, BlockedStatus)
 
-        roles = ["all_access"]
-        extra_user_roles = {"roles": roles}
-        event.extra_user_roles = json.dumps(extra_user_roles)
-        event.relation.id = 1
-        username = self.opensearch_provider._relation_username(event.relation)
-        hashed_pw, password = _gen_pw.return_value
+        event.extra_user_roles = json.dumps({"roles": ["role"]})
+        self.unit.status = ActiveStatus()
         self.opensearch_provider._on_database_requested(event)
+        # no permissions or action groups in extra_user_roles, so we aren't creating a new role.
+        _create_users.assert_called_with(username, hashed_pw, json.loads(event.extra_user_roles))
+        _set_credentials.assert_called_with(event.relation.id, username, password)
+        _set_version.assert_called_with(event.relation.id, _opensearch_version())
+        self.assertNotIsInstance(self.unit.status, BlockedStatus)
+        _set_credentials.reset_mock()
+        _set_version.reset_mock()
+
+        _create_users.side_effect = OpenSearchUserMgmtError()
+        self.opensearch_provider._on_database_requested(event)
+        self.assertIsInstance(self.unit.status, BlockedStatus)
+        _set_credentials.assert_not_called()
+        _set_version.assert_not_called()
+
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_user")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_role")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.patch_user")
+    def test_create_opensearch_users(self, _patch_user, _create_role, _create_user):
+        username = "username"
+        hashed_pw = "my_cool_hash"
+        roles = ["all_access"]
+        access_control = {"roles": roles}
+        patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}]
+
+        self.opensearch_provider.create_opensearch_users(username, hashed_pw, access_control)
         # no permissions or action groups in extra_user_roles, so we aren't creating a new role.
         _create_role.assert_not_called()
         _create_user.assert_called_with(username, roles, hashed_pw)
-        patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}]
         _patch_user.assert_called_with(username, patches)
-        _set_credentials.assert_called_with(event.relation.id, username, password)
-        _set_version.assert_called_with(event.relation.id, _opensearch_version())
 
-        extra_user_roles = {
+        # Assert we can create a user with roles, permissions, and action groups
+        access_control = {
             "roles": roles,
             "permissions": ["cluster:admin/ingest/pipeline/delete"],
             "action_groups": ["get"],
         }
-        event.extra_user_roles = json.dumps(extra_user_roles)
-        self.opensearch_provider._on_database_requested(event)
+        self.opensearch_provider.create_opensearch_users(username, hashed_pw, access_control)
         # permissions and action groups are in extra_user_roles, so we create a new role.
         _create_role.assert_called_with(
             role_name=username,
-            permissions=extra_user_roles["permissions"],
-            action_groups=extra_user_roles["action_groups"],
+            permissions=access_control["permissions"],
+            action_groups=access_control["action_groups"],
         )
-        updated_roles = roles + [username]
-        _create_user.assert_called_with(username, updated_roles, hashed_pw)
-        patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": updated_roles}]
+        _create_user.assert_called_with(username, roles, hashed_pw)
+        patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}]
         _patch_user.assert_called_with(username, patches)
-        _set_credentials.assert_called_with(event.relation.id, username, password)
-        _set_version.assert_called_with(event.relation.id, _opensearch_version())
 
     def test_on_relation_departed(self):
         event = MagicMock()
