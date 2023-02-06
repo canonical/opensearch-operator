@@ -159,7 +159,9 @@ class OpenSearchProvider(Object):
                     action_groups=action_groups,
                 )
                 roles.append(username)
-            except OpenSearchUserMgmtError:
+            except OpenSearchUserMgmtError as err:
+                logger.error(ClientRelationRoleCreationFailedMessage)
+                logger.error(err)
                 raise OpenSearchUserMgmtError(ClientRelationRoleCreationFailedMessage)
 
         try:
@@ -173,7 +175,9 @@ class OpenSearchProvider(Object):
                     username,
                     [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
                 )
-        except OpenSearchUserMgmtError:
+        except OpenSearchUserMgmtError as err:
+            logger.error(ClientRelationUserCreationFailedMessage)
+            logger.error(err)
             raise OpenSearchUserMgmtError(ClientRelationUserCreationFailedMessage)
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
@@ -190,7 +194,6 @@ class OpenSearchProvider(Object):
             self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
             return
 
-        # TODO test
         username = self._relation_username(event.relation)
         try:
             self.user_manager.remove_user(username)

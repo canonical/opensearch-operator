@@ -68,6 +68,7 @@ class OpenSearchUserManager:
         """
         resp = self.opensearch.request("DELETE", f"{ROLE_ENDPOINT}/{role_name}")
         logger.debug(resp)
+        # TODO handle if the role doesn't exist
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing role {role_name} failed - response: {resp}")
         return resp
