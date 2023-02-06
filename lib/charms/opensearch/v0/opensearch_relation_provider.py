@@ -159,7 +159,9 @@ class OpenSearchProvider(Object):
                     action_groups=action_groups,
                 )
                 roles.append(username)
-            except OpenSearchUserMgmtError:
+            except OpenSearchUserMgmtError as err:
+                logger.error(err)
+                logger.error(ClientRelationRoleCreationFailedMessage)
                 raise OpenSearchUserMgmtError(ClientRelationRoleCreationFailedMessage)
 
         try:
@@ -173,7 +175,9 @@ class OpenSearchProvider(Object):
                     username,
                     [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
                 )
-        except OpenSearchUserMgmtError:
+        except OpenSearchUserMgmtError as err:
+            logger.error(err)
+            logger.error(ClientRelationUserCreationFailedMessage)
             raise OpenSearchUserMgmtError(ClientRelationUserCreationFailedMessage)
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
