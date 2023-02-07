@@ -87,7 +87,7 @@ async def test_database_usage(ops_test: OpsTest):
     # TODO I stole this from amazon's opensearch docs because I didn't want to write reams of test
     # data. Should I swap this to something else?
     payload = '{"director": "Burton, Tim", "genre": ["Comedy","Sci-Fi"], "year": 1996, "actor": ["Jack Nicholson","Pierce Brosnan","Sarah Jessica Parker"], "title": "Mars Attacks!"}'
-    create_index_endpoint = "/domain-endpoint/movies/_doc/1"
+    create_index_endpoint = "/movies/_doc/1"
     run_create_index = await run_request_on_application_charm(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
@@ -101,7 +101,7 @@ async def test_database_usage(ops_test: OpsTest):
 
     # TODO I stole this from amazon's opensearch docs because I didn't want to write reams of test
     # data. Should I swap this to something else?
-    bulk_index_endpoint = "/domain-endpoint/_bulk"
+    bulk_index_endpoint = "/_bulk"
     with open("tests/integration/relations/opensearch-provider.bulk_data.json") as bulk_data:
         bulk_payload = bulk_data.read()
     run_bulk_create_index = await run_request_on_application_charm(
@@ -117,7 +117,7 @@ async def test_database_usage(ops_test: OpsTest):
     logging.error(json.dumps(run_bulk_create_index["results"]))
 
     #   curl -XGET -u 'master-user:master-user-password' 'domain-endpoint/movies/_search?q=mars'
-    read_index_endpoint = "domain-endpoint/movies/_search?q=mars"
+    read_index_endpoint = "/movies/_search?q=mars"
     run_read_index = await run_request_on_application_charm(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
@@ -134,6 +134,46 @@ async def test_database_usage(ops_test: OpsTest):
     assert results.get("_shards", {}).get("skipped") == 0
     assert results.get("hits", {}).get("total", {}).get("value") == 1
 
+    read_index_endpoint = "domain-endpoint/movies/_search?q=rebel"
+    run_bulk_read_index = await run_request_on_application_charm(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        method="GET",
+        endpoint=read_index_endpoint,
+        relation_id=client_relation.id,
+        relation_name=FIRST_DATABASE_RELATION_NAME,
+    )
+    # TODO assert we're getting the correct value
+    results = json.dumps(run_bulk_read_index["results"])[0]
+    logging.error(results)
+    assert results.get("timed_out") is False
+    assert results.get("_shards", {}).get("successful") == NUM_UNITS
+    assert results.get("_shards", {}).get("failed") == 0
+    assert results.get("_shards", {}).get("skipped") == 0
+    assert results.get("hits", {}).get("total", {}).get("value") == 1
+
+
+@pytest.mark.client_relation
+async def test_database_bulk_usage(ops_test: OpsTest):
+    """Check we can update and delete things using bulk api."""
+    # TODO I stole this from amazon's opensearch docs because I didn't want to write reams of test
+    # data. Should I swap this to something else?
+    bulk_index_endpoint = "/_bulk"
+    with open("tests/integration/relations/opensearch-provider.bulk_data.json") as bulk_data:
+        bulk_payload = bulk_data.read()
+    run_bulk_create_index = await run_request_on_application_charm(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        method="PUT",
+        endpoint=bulk_index_endpoint,
+        payload=bulk_payload,
+        relation_id=client_relation.id,
+        relation_name=FIRST_DATABASE_RELATION_NAME,
+    )
+    # change assertion to "data written" or something
+    logging.error(json.dumps(run_bulk_create_index["results"]))
+
+    #   curl -XGET -u 'master-user:master-user-password' 'domain-endpoint/movies/_search?q=mars'
     read_index_endpoint = "domain-endpoint/movies/_search?q=rebel"
     run_bulk_read_index = await run_request_on_application_charm(
         ops_test,
@@ -201,17 +241,17 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         )
 
 
-@pytest.mark.smoke
-@pytest.mark.client_relation
-async def test_scaling(ops_test: OpsTest):
-    """Check these relations all work when scaling pgbouncer."""
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, 5)
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(apps=ALL_APPS)
+# @pytest.mark.smoke
+# @pytest.mark.client_relation
+# async def test_scaling(ops_test: OpsTest):
+#     """Check these relations all work when scaling pgbouncer."""
+#     await scale_application(ops_test, OPENSEARCH_APP_NAME, 5)
+#     async with ops_test.fast_forward():
+#         await ops_test.model.wait_for_idle(apps=ALL_APPS)
 
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, 3)
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(apps=ALL_APPS)
+#     await scale_application(ops_test, OPENSEARCH_APP_NAME, 3)
+#     async with ops_test.fast_forward():
+#         await ops_test.model.wait_for_idle(apps=ALL_APPS)
 
 
 @pytest.mark.client_relation

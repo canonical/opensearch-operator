@@ -140,7 +140,8 @@ class ApplicationCharm(CharmBase):
 
         method = event.params["method"]
         endpoint = event.params["endpoint"]
-        payload = json.loads(event.params.get("payload"))
+        if payload := event.params.get("payload"):
+            payload = json.loads(payload)
 
         username = databag.get("username")
         password = databag.get("password")
@@ -199,6 +200,8 @@ class ApplicationCharm(CharmBase):
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request.
 
+        TODO swap this over to a more normal opensearch client
+
         Args:
             method: matching the known http methods.
             endpoint: relative to the base uri.
@@ -216,21 +219,20 @@ class ApplicationCharm(CharmBase):
 
         # add username and password if auth continues to fail
         full_url = f"https://{host}:{port}/{endpoint}"
+
+        request_kwargs = {
+            "verify": False,  # TODO this should be a cert once this relation has TLS.
+            "method": method.upper(),
+            "url": full_url,
+            "headers": {"Content-Type": "application/json"},
+        }
+        if payload:
+            request_kwargs["data"] = json.dumps(payload)
+            request_kwargs["headers"]["Accept"] = "application/json"
         try:
             with requests.Session() as s:
                 s.auth = (username, password)
-                request_kwargs = {
-                    "verify": False,  # TODO this should be a cert once this relation has TLS.
-                    "method": method.upper(),
-                    "url": full_url,
-                    "headers": {"Content-Type": "application/json"},
-                }
-                if payload is not None:
-                    request_kwargs["data"] = json.dumps(payload)
-                    request_kwargs["headers"]["Accept"] = "application/json"
-
                 resp = s.request(**request_kwargs)
-
                 resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")

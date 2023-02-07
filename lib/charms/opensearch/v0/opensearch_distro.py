@@ -302,18 +302,19 @@ class OpenSearchDistribution(ABC):
             raise OpenSearchHttpError()
 
         full_url = f"https://{target_host}:{self.port}/{endpoint}"
+        request_kwargs = {
+            "verify": f"{self.paths.certs}/chain.pem",
+            "method": method.upper(),
+            "url": full_url,
+            "headers": {"Content-Type": "application/json"},
+        }
+        if payload:
+            request_kwargs["data"] = json.dumps(payload)
+            request_kwargs["headers"]["Accept"] = "application/json"
         try:
             with requests.Session() as s:
                 s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
-
-                resp = s.request(
-                    method=method.upper(),
-                    url=full_url,
-                    data=json.dumps(payload),
-                    verify=f"{self.paths.certs}/chain.pem",
-                    headers={"Accept": "application/json", "Content-Type": "application/json"},
-                )
-
+                resp = s.request(**request_kwargs)
                 resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
