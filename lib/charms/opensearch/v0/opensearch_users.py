@@ -116,8 +116,9 @@ class OpenSearchUserManager:
             raise OpenSearchUserMgmtError(
                 "user name empty - sending a DELETE request to endpoint root isn't permitted"
             )
-
+        # TODO handle 404
         resp = self.opensearch.request("DELETE", f"{USER_ENDPOINT}/{user_name}")
+
         logger.debug(resp)
         # TODO update to handle if the user doesn't exist
         if resp.get("status") != "OK":

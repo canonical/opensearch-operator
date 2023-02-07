@@ -88,8 +88,6 @@ async def test_database_relation_with_charm_libraries(
 @pytest.mark.client_relation
 async def test_database_usage(ops_test: OpsTest):
     """Check we can update and delete things."""
-    # TODO I stole this from amazon's opensearch docs because I didn't want to write reams of test
-    # data. Should I swap this to something else?
     payload = '{"artist": "Vulfpeck", "genre": ["Funk","Jazz"], "year": 2015, "tracklist": ["Welcome to Vulf Records", "Back Pocket", "Funky Duck", "Rango II", "Game Winner", "Walkies", "Christmas in L.A.", "Conscious Club (Instrumental)", "Smile Meditation", "Guided Smile Meditation"], "title": "Thrill of the Arts"}'
     create_index_endpoint = "/albums/_doc/1"
     run_create_index = await run_request_on_application_charm(
@@ -124,11 +122,11 @@ async def test_database_usage(ops_test: OpsTest):
 @pytest.mark.client_relation
 async def test_database_bulk_usage(ops_test: OpsTest):
     """Check we can update and delete things using bulk api."""
-    # TODO I stole this from amazon's opensearch docs because I didn't want to write reams of test
-    # data. Should I swap this to something else?
     bulk_index_endpoint = "/_bulk"
-    with open("tests/integration/relations/opensearch-provider/bulk_data.json") as bulk_data:
+    with open("tests/integration/relations/opensearch_provider/bulk_data.json") as bulk_data:
+        logger.error(bulk_data)
         bulk_payload = bulk_data.read()
+    logger.error(bulk_payload)
     run_bulk_create_index = await run_request_on_application_charm(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
@@ -139,10 +137,9 @@ async def test_database_bulk_usage(ops_test: OpsTest):
         relation_name=FIRST_DATABASE_RELATION_NAME,
     )
     # change assertion to "data written" or something
-    logging.error(json.dumps(run_bulk_create_index["results"]))
+    logging.info(json.dumps(run_bulk_create_index["results"]))
 
-    #   curl -XGET -u 'master-user:master-user-password' 'domain-endpoint/movies/_search?q=mars'
-    read_index_endpoint = "/movies/_search?q=Jazz"
+    read_index_endpoint = "/albums/_search?q=vulfpeck"
     run_bulk_read_index = await run_request_on_application_charm(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,

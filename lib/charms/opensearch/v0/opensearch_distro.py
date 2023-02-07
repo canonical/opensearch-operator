@@ -306,11 +306,10 @@ class OpenSearchDistribution(ABC):
             "verify": f"{self.paths.certs}/chain.pem",
             "method": method.upper(),
             "url": full_url,
-            "headers": {"Content-Type": "application/json"},
+            "headers": {"Content-Type": "application/json", "Accept": "application/json"},
         }
-        if payload:
-            request_kwargs["data"] = json.dumps(payload)
-            request_kwargs["headers"]["Accept"] = "application/json"
+        request_kwargs["data"] = json.dumps(payload) if payload else None
+
         try:
             with requests.Session() as s:
                 s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
