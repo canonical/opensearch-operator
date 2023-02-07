@@ -37,8 +37,6 @@ from charms.data_platform_libs.v0.data_interfaces import (
 from charms.opensearch.v0.constants_charm import (
     ClientRelationBadRoleRequestMessage,
     ClientRelationName,
-    ClientRelationRoleCreationFailedMessage,
-    ClientRelationUserCreationFailedMessage,
     PeerRelationName,
 )
 from charms.opensearch.v0.helper_databag import Scope
@@ -95,7 +93,7 @@ class OpenSearchProvider(Object):
         return f"{self.relation_name}_{relation.id}_departing"
 
     def _unit_departing(self, relation):
-        return self.charm.peers_data.get(Scope.UNIT, self._depart_flag(relation)) == "true"
+        return self.charm.peers_data.get(Scope.UNIT, self._depart_flag(relation))
 
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
         """Handle client database-requested event.
@@ -161,8 +159,7 @@ class OpenSearchProvider(Object):
                 roles.append(username)
             except OpenSearchUserMgmtError as err:
                 logger.error(err)
-                logger.error(ClientRelationRoleCreationFailedMessage)
-                raise OpenSearchUserMgmtError(ClientRelationRoleCreationFailedMessage)
+                raise
 
         try:
             self.user_manager.create_user(
@@ -177,13 +174,12 @@ class OpenSearchProvider(Object):
                 )
         except OpenSearchUserMgmtError as err:
             logger.error(err)
-            logger.error(ClientRelationUserCreationFailedMessage)
-            raise OpenSearchUserMgmtError(ClientRelationUserCreationFailedMessage)
+            raise
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
         if event.departing_unit == self.charm.unit:
-            self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), "true")
+            self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle client relation-broken event."""
@@ -194,7 +190,6 @@ class OpenSearchProvider(Object):
             self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
             return
 
-        # TODO test
         username = self._relation_username(event.relation)
         try:
             self.user_manager.remove_user(username)

@@ -64,8 +64,13 @@ class OpenSearchUserManager:
             role_name: name of the role to be removed.
 
         Raises:
-            OpenSearchUserMgmtError: If the request fails.
+            OpenSearchUserMgmtError: If the request fails, or if role_name is empty
         """
+        if not role_name:
+            raise OpenSearchUserMgmtError(
+                "role name empty - sending a DELETE request to endpoint root isn't permitted"
+            )
+
         resp = self.opensearch.request("DELETE", f"{ROLE_ENDPOINT}/{role_name}")
         logger.debug(resp)
         if resp.get("status") != "OK":
@@ -104,8 +109,13 @@ class OpenSearchUserManager:
             user_name: name of the user to be removed.
 
         Raises:
-            OpenSearchUserMgmtError: If the request fails.
+            OpenSearchUserMgmtError: If the request fails, or if user_name is empty
         """
+        if not user_name:
+            raise OpenSearchUserMgmtError(
+                "user name empty - sending a DELETE request to endpoint root isn't permitted"
+            )
+
         resp = self.opensearch.request("DELETE", f"{USER_ENDPOINT}/{user_name}/")
         logger.debug(resp)
         # TODO update to handle if the user doesn't exist
