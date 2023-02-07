@@ -218,6 +218,8 @@ class OpenSearchProvider(Object):
             return
 
         zombie_users = set(self.charm.peers_data.get(Scope.APP, "zombie_users", "").split(","))
+        logger.error(zombie_users)
+        zombie_users.discard("")
         removed_users = set()
         for user in zombie_users:
             try:
