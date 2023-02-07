@@ -10,7 +10,11 @@ from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
-from tests.integration.helpers import MODEL_CONFIG, SERIES, UNIT_IDS, scale_application
+from tests.integration.helpers import (  # , scale_application
+    MODEL_CONFIG,
+    SERIES,
+    UNIT_IDS,
+)
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
     run_request_on_application_charm,
