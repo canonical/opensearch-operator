@@ -182,32 +182,32 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_role")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
     @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
-    def test_clear_zombie_users_and_roles(self, _, __, _remove_role, _remove_user):
+    def test_clear_lingering_users_and_roles(self, _, __, _remove_role, _remove_user):
         self.harness.set_leader(True)
-        self.charm.peers_data.put(Scope.APP, "zombie_users", "john,ringo,paul,MODOK")
-        self.charm.peers_data.put(Scope.APP, "zombie_roles", "guitarist,drummer,bassist,MODOK")
+        self.charm.peers_data.put(Scope.APP, "lingering_users", "john,ringo,paul,MODOK")
+        self.charm.peers_data.put(Scope.APP, "lingering_roles", "guitarist,drummer,bassist,MODOK")
 
         _remove_user.side_effect = OpenSearchUserMgmtError()
         _remove_role.side_effect = OpenSearchUserMgmtError()
-        self.opensearch_provider.clear_zombie_users_and_roles()
-        assert self.charm.peers_data.get(Scope.APP, "zombie_users") == "john,ringo,paul,MODOK"
+        self.opensearch_provider.clear_lingering_users_and_roles()
+        assert self.charm.peers_data.get(Scope.APP, "lingering_users") == "john,ringo,paul,MODOK"
         assert (
-            self.charm.peers_data.get(Scope.APP, "zombie_roles")
+            self.charm.peers_data.get(Scope.APP, "lingering_roles")
             == "guitarist,drummer,bassist,MODOK"
         )
 
         _remove_user.side_effect = None
-        self.opensearch_provider.clear_zombie_users_and_roles()
-        assert self.charm.peers_data.get(Scope.APP, "zombie_users") is None
+        self.opensearch_provider.clear_lingering_users_and_roles()
+        assert self.charm.peers_data.get(Scope.APP, "lingering_users") is None
         assert (
-            self.charm.peers_data.get(Scope.APP, "zombie_roles")
+            self.charm.peers_data.get(Scope.APP, "lingering_roles")
             == "guitarist,drummer,bassist,MODOK"
         )
 
         _remove_role.side_effect = None
-        self.opensearch_provider.clear_zombie_users_and_roles()
-        assert self.charm.peers_data.get(Scope.APP, "zombie_users") is None
-        assert self.charm.peers_data.get(Scope.APP, "zombie_roles") is None
+        self.opensearch_provider.clear_lingering_users_and_roles()
+        assert self.charm.peers_data.get(Scope.APP, "lingering_users") is None
+        assert self.charm.peers_data.get(Scope.APP, "lingering_roles") is None
 
     @patch("charms.data_platform_libs.v0.data_interfaces.DatabaseProvides.set_endpoints")
     @patch(

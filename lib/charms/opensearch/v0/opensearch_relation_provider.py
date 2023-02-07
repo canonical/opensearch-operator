@@ -37,8 +37,6 @@ from charms.data_platform_libs.v0.data_interfaces import (
 from charms.opensearch.v0.constants_charm import (
     ClientRelationBadRoleRequestMessage,
     ClientRelationName,
-    ClientRelationRoleCreationFailedMessage,
-    ClientRelationUserCreationFailedMessage,
     PeerRelationName,
 )
 from charms.opensearch.v0.helper_databag import Scope
@@ -95,7 +93,7 @@ class OpenSearchProvider(Object):
         return f"{self.relation_name}_{relation.id}_departing"
 
     def _unit_departing(self, relation):
-        return self.charm.peers_data.get(Scope.UNIT, self._depart_flag(relation)) == "true"
+        return self.charm.peers_data.get(Scope.UNIT, self._depart_flag(relation))
 
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
         """Handle client database-requested event.
@@ -160,9 +158,8 @@ class OpenSearchProvider(Object):
                 )
                 roles.append(username)
             except OpenSearchUserMgmtError as err:
-                logger.error(ClientRelationRoleCreationFailedMessage)
                 logger.error(err)
-                raise OpenSearchUserMgmtError(ClientRelationRoleCreationFailedMessage)
+                raise
 
         try:
             self.user_manager.create_user(
@@ -176,14 +173,13 @@ class OpenSearchProvider(Object):
                     [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
                 )
         except OpenSearchUserMgmtError as err:
-            logger.error(ClientRelationUserCreationFailedMessage)
             logger.error(err)
-            raise OpenSearchUserMgmtError(ClientRelationUserCreationFailedMessage)
+            raise
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
         if event.departing_unit == self.charm.unit:
-            self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), "true")
+            self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle client relation-broken event."""
@@ -199,26 +195,29 @@ class OpenSearchProvider(Object):
             self.user_manager.remove_user(username)
         except OpenSearchUserMgmtError as err:
             logger.error(f"failed to remove role {username}: {str(err)}")
-            zombie_users = self.charm.peers_data.get(Scope.APP, "zombie_users").split(",")
-            zombie_users.add(username)
-            self.charm.peers_data.put(Scope.APP, "zombie_users", ",".join(zombie_users))
+            lingering_users = self.charm.peers_data.get(Scope.APP, "lingering_users").split(",")
+            lingering_users.add(username)
+            self.charm.peers_data.put(Scope.APP, "lingering_users", ",".join(lingering_users))
 
         try:
             self.user_manager.remove_role(username)
         except OpenSearchUserMgmtError as err:
             logger.error(f"failed to remove role {username}: {str(err)}")
-            zombie_roles = self.charm.peers_data.get(Scope.APP, "zombie_roles").split(",")
-            zombie_roles.append(username)
-            self.charm.peers_data.put(Scope.APP, "zombie_roles", (zombie_roles))
+            lingering_roles = self.charm.peers_data.get(Scope.APP, "lingering_roles").split(",")
+            lingering_roles.append(username)
+            self.charm.peers_data.put(Scope.APP, "lingering_roles", (lingering_roles))
 
-    def clear_zombie_users_and_roles(self) -> None:
+    def clear_lingering_users_and_roles(self) -> None:
         """Remove users and roles that we failed to delete when removing a relation."""
         if not self.opensearch.is_node_up() or not self.unit.is_leader():
             return
 
-        zombie_users = set(self.charm.peers_data.get(Scope.APP, "zombie_users", "").split(","))
+        lingering_users = set(
+            self.charm.peers_data.get(Scope.APP, "lingering_users", "").split(",")
+        )
+        lingering_users.discard("")
         removed_users = set()
-        for user in zombie_users:
+        for user in lingering_users:
             try:
                 self.user_manager.remove_user(user)
                 logger.debug(f"user {user} removed")
@@ -228,12 +227,15 @@ class OpenSearchProvider(Object):
 
         if removed_users:
             self.charm.peers_data.put(
-                Scope.APP, "zombie_users", ",".join(list(zombie_users - removed_users))
+                Scope.APP, "lingering_users", ",".join(list(lingering_users - removed_users))
             )
 
-        zombie_roles = set(self.charm.peers_data.get(Scope.APP, "zombie_users", "").split(","))
+        lingering_roles = set(
+            self.charm.peers_data.get(Scope.APP, "lingering_roles", "").split(",")
+        )
+        lingering_roles.discard("")
         removed_roles = set()
-        for role in zombie_roles:
+        for role in lingering_roles:
             try:
                 self.user_manager.remove_role(role)
                 logger.error(f"role {role} removed")
@@ -242,7 +244,7 @@ class OpenSearchProvider(Object):
                 logger.error(f"failed to remove role {role}: {str(err)}")
         if removed_roles:
             self.charm.peers_data.put(
-                Scope.APP, "zombie_roles", ",".join(list(zombie_roles - removed_roles))
+                Scope.APP, "lingering_roles", ",".join(list(lingering_roles - removed_roles))
             )
 
     def update_endpoints(self, relation):
