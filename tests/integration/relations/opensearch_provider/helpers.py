@@ -91,7 +91,11 @@ async def run_request_on_application_charm(
     payload: str = None,
     timeout: int = 30,
 ):
-    """Runs the given sql query on the given application charm."""
+    """Runs the given request on the given application charm.
+
+    TODO json doesn't seem to work over actions, so payload is flaky.
+    TODO delete this method
+    """
     client_unit = ops_test.model.units.get(unit_name)
     params = {
         "method": method,
@@ -107,3 +111,36 @@ async def run_request_on_application_charm(
     result = await asyncio.wait_for(action.wait(), timeout)
     logging.info(f"request results: {result.results}")
     return result.results
+
+
+async def run_action(
+    ops_test, action_name: str, unit_name: str, timeout: int = 30, **action_kwargs
+):
+    """Runs the given action on the given unit."""
+    client_unit = ops_test.model.units.get(unit_name)
+    action = await client_unit.run_action(action_name, **action_kwargs)
+    result = await asyncio.wait_for(action.wait(), timeout)
+    logging.info(f"request results: {result.results}")
+    return result.results
+
+
+async def run_simple_put(ops_test, unit_name: str, relation_id: int):
+    return run_action(
+        ops_test, action_name="single-put", unit_name=unit_name, relation_id=relation_id
+    )
+
+
+async def run_bulk_put(ops_test, unit_name: str, relation_id: int):
+    return run_action(
+        ops_test, action_name="bulk-put", unit_name=unit_name, relation_id=relation_id
+    )
+
+
+async def run_get_from_index(ops_test, unit_name: str, relation_id: int, endpoint: str):
+    return run_action(
+        ops_test,
+        action_name="get-from-index",
+        unit_name=unit_name,
+        relation_id=relation_id,
+        endpoint=endpoint,
+    )

@@ -70,6 +70,9 @@ class ApplicationCharm(CharmBase):
         )
 
         self.framework.observe(self.on.run_request_action, self._on_run_request_action)
+        self.framework.observe(self.on.simple_put_action, self._on_simple_put_action)
+        self.framework.observe(self.on.bulk_put_action, self._on_bulk_put_action)
+        self.framework.observe(self.on.get_from_index_action, self._on_get_from_index_action)
 
     def _on_update_status(self, _) -> None:
         """Health check for database connection.
@@ -99,7 +102,6 @@ class ApplicationCharm(CharmBase):
     def smoke_check(self, relation_id) -> bool:
         try:
             resp = self.relation_request(relation_id, "GET", "/")
-            logger.info(resp)
             return bool(resp)
         except (OpenSearchHttpError, Exception) as e:
             logger.error(e)
@@ -123,8 +125,16 @@ class ApplicationCharm(CharmBase):
         """Event triggered when the read/write endpoints of the database change."""
         logger.info(f"second database endpoints have been changed to: {event.endpoints}")
 
+    # ==============
+    #  Action hooks
+    # ==============
+
     def _on_run_request_action(self, event: ActionEvent):
-        """An action that allows us to run requests from this charm."""
+        """An action that allows us to run requests from this charm.
+
+        TODO this action isn't suitable for opensearch because juju actions don't like json.
+        TODO delete
+        """
         logger.info(event.params)
 
         relation_id = event.params["relation-id"]
@@ -140,6 +150,7 @@ class ApplicationCharm(CharmBase):
 
         method = event.params["method"]
         endpoint = event.params["endpoint"]
+        logging.error(event.params.get("payload"))
         if payload := event.params.get("payload"):
             payload = json.loads(payload)
 
@@ -157,6 +168,87 @@ class ApplicationCharm(CharmBase):
         logger.info(response)
 
         event.set_results({"results": json.dumps(response)})
+
+    def _on_simple_put_action(self, event: ActionEvent):
+        logger.info(event.params)
+        relation = self.first_database
+        relation_id = event.params["relation-id"]
+        databag = relation.fetch_relation_data()[relation_id]
+        method = "PUT"
+        payload = '{"artist": "Vulfpeck", "genre": ["Funk","Jazz"], "title": "Thrill of the Arts"}'
+        endpoint = "/albums/_doc/1"
+
+        username = databag.get("username")
+        password = databag.get("password")
+        host = databag.get("endpoints").split(",")[0]
+        host_addr = host.split(":")[0]
+        port = host.split(":")[1]
+
+        logger.info(f"sending {method} request to {endpoint}")
+        try:
+            response = self.request(method, endpoint, port, username, password, host_addr, payload)
+        except OpenSearchHttpError as e:
+            response = [str(e)]
+        logger.info(response)
+
+        event.set_results({"results": json.dumps(response)})
+
+    def _on_bulk_put_action(self, event: ActionEvent):
+        logger.info(event.params)
+        relation = self.first_database
+        relation_id = event.params["relation-id"]
+        databag = relation.fetch_relation_data()[relation_id]
+        method = "PUT"
+        payload = """{ "index" : { "_index": "albums", "_id" : "2" } }
+{"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
+{ "index" : { "_index": "albums", "_id" : "3" } }
+{"artist": "Lydian Collective", "genre": ["Jazz"],  "title": "Adventure"}
+{ "index" : { "_index": "albums", "_id" : "4" } }
+{"artist": "Liquid Tension Experiment", "genre": ["Prog", "Metal"],  "title": "Liquid Tension Experiment 2"}
+"""
+        endpoint = "/_bulk"
+
+        username = databag.get("username")
+        password = databag.get("password")
+        host = databag.get("endpoints").split(",")[0]
+        host_addr = host.split(":")[0]
+        port = host.split(":")[1]
+
+        logger.info(f"sending {method} request to {endpoint}")
+        try:
+            response = self.request(method, endpoint, port, username, password, host_addr, payload)
+        except OpenSearchHttpError as e:
+            response = [str(e)]
+        logger.info(response)
+
+        event.set_results({"results": json.dumps(response)})
+
+    def _on_get_from_index_action(self, event: ActionEvent):
+        logger.info(event.params)
+        relation = self.first_database
+        relation_id = event.params["relation-id"]
+        databag = relation.fetch_relation_data()[relation_id]
+        method = "GET"
+        endpoint = event.params["endpoint"]
+
+        username = databag.get("username")
+        password = databag.get("password")
+        host = databag.get("endpoints").split(",")[0]
+        host_addr = host.split(":")[0]
+        port = host.split(":")[1]
+
+        logger.info(f"sending {method} request to {endpoint}")
+        try:
+            response = self.request(method, endpoint, port, username, password, host_addr)
+        except OpenSearchHttpError as e:
+            response = [str(e)]
+        logger.info(response)
+
+        event.set_results({"results": json.dumps(response)})
+
+    # =================================
+    #  Opensearch connection functions
+    # =================================
 
     def relation_request(
         self,
@@ -218,7 +310,7 @@ class ApplicationCharm(CharmBase):
             endpoint = endpoint[1:]
 
         # add username and password if auth continues to fail
-        full_url = f"https://{host}:{port}/{endpoint}"
+        full_url = f"https://{username}:{password}@{host}:{port}/{endpoint}"
 
         request_kwargs = {
             "verify": False,  # TODO this should be a cert once this relation has TLS.
@@ -231,7 +323,7 @@ class ApplicationCharm(CharmBase):
             request_kwargs["headers"]["Accept"] = "application/json"
         try:
             with requests.Session() as s:
-                s.auth = (username, password)
+                # s.auth = (username, password)
                 resp = s.request(**request_kwargs)
                 resp.raise_for_status()
         except requests.exceptions.RequestException as e:

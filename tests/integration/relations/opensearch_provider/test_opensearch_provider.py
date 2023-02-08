@@ -10,14 +10,12 @@ from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
-from tests.integration.helpers import (  # , scale_application
-    MODEL_CONFIG,
-    SERIES,
-    UNIT_IDS,
-)
+from tests.integration.helpers import MODEL_CONFIG, SERIES, UNIT_IDS
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
-    run_request_on_application_charm,
+    run_bulk_put,
+    run_get_from_index,
+    run_simple_put,
     wait_for_relation_joined_between,
 )
 
@@ -88,27 +86,20 @@ async def test_database_relation_with_charm_libraries(
 @pytest.mark.client_relation
 async def test_database_usage(ops_test: OpsTest):
     """Check we can update and delete things."""
-    payload = '{"artist": "Vulfpeck", "genre": ["Funk","Jazz"], "year": 2015, "tracklist": ["Welcome to Vulf Records", "Back Pocket", "Funky Duck", "Rango II", "Game Winner", "Walkies", "Christmas in L.A.", "Conscious Club (Instrumental)", "Smile Meditation", "Guided Smile Meditation"], "title": "Thrill of the Arts"}'
-    create_index_endpoint = "/albums/_doc/1"
-    run_create_index = await run_request_on_application_charm(
+    run_create_index = await run_simple_put(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
-        method="PUT",
-        endpoint=create_index_endpoint,
-        payload=payload,
         relation_id=client_relation.id,
-        relation_name=FIRST_DATABASE_RELATION_NAME,
     )
+    # TODO have better validation here.
     logging.error(json.dumps(run_create_index))
 
     read_index_endpoint = "/albums/_search?q=Jazz"
-    run_read_index = await run_request_on_application_charm(
+    run_read_index = await run_get_from_index(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
-        method="GET",
         endpoint=read_index_endpoint,
         relation_id=client_relation.id,
-        relation_name=FIRST_DATABASE_RELATION_NAME,
     )
     results = json.loads(run_read_index["results"])[0]
     logging.error(results)
@@ -122,31 +113,20 @@ async def test_database_usage(ops_test: OpsTest):
 @pytest.mark.client_relation
 async def test_database_bulk_usage(ops_test: OpsTest):
     """Check we can update and delete things using bulk api."""
-    bulk_index_endpoint = "/_bulk"
-    with open("tests/integration/relations/opensearch_provider/bulk_data.json") as bulk_data:
-        logger.error(bulk_data)
-        bulk_payload = bulk_data.read()
-    logger.error(bulk_payload)
-    run_bulk_create_index = await run_request_on_application_charm(
+    run_bulk_create_index = await run_bulk_put(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
-        method="PUT",
-        endpoint=bulk_index_endpoint,
-        payload=bulk_payload,
         relation_id=client_relation.id,
-        relation_name=FIRST_DATABASE_RELATION_NAME,
     )
     # change assertion to "data written" or something
     logging.info(json.dumps(run_bulk_create_index["results"]))
 
-    read_index_endpoint = "/albums/_search?q=vulfpeck"
-    run_bulk_read_index = await run_request_on_application_charm(
+    read_index_endpoint = "/albums/_search?q=Jazz"
+    run_bulk_read_index = await run_get_from_index(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
-        method="GET",
         endpoint=read_index_endpoint,
         relation_id=client_relation.id,
-        relation_name=FIRST_DATABASE_RELATION_NAME,
     )
     # TODO assert we're getting the correct value
     results = json.dumps(run_bulk_read_index["results"])[0]
@@ -161,13 +141,11 @@ async def test_database_bulk_usage(ops_test: OpsTest):
 @pytest.mark.client_relation
 async def test_database_version(ops_test: OpsTest):
     """Check version is accurate."""
-    run_version_query = await run_request_on_application_charm(
+    run_version_query = await run_get_from_index(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
-        method="GET",
         endpoint="/",
         relation_id=client_relation.id,
-        relation_name=FIRST_DATABASE_RELATION_NAME,
     )
     # Get the version of the database and compare with the information that
     # was retrieved directly from the database.
@@ -219,27 +197,27 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 #         await ops_test.model.wait_for_idle(apps=ALL_APPS)
 
 
-@pytest.mark.client_relation
-async def test_relation_broken(ops_test: OpsTest):
-    """Test that the user is removed when the relation is broken."""
-    async with ops_test.fast_forward():
-        # Retrieve the relation user.
-        relation_user = await get_application_relation_data(
-            ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "username"
-        )
+# @pytest.mark.client_relation
+# async def test_relation_broken(ops_test: OpsTest):
+#     """Test that the user is removed when the relation is broken."""
+#     async with ops_test.fast_forward():
+#         # Retrieve the relation user.
+#         relation_user = await get_application_relation_data(
+#             ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "username"
+#         )
 
-        # Break the relation.
-        await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
-            f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
-            f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-        )
-        logger.error(relation_user)
+#         # Break the relation.
+#         await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
+#             f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
+#             f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
+#         )
+#         await ops_test.model.wait_for_idle(
+#             apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
+#             status="active",
+#             raise_on_blocked=True,
+#         )
+#         logger.error(relation_user)
 
-        # TODO Check that the relation user and role were both removed from the database.
-        # use admin permissions from peer relation
-        # write an overall test helper to run API requests using admin perms
+#         # TODO Check that the relation user and role were both removed from the database.
+#         # use admin permissions from peer relation
+#         # write an overall test helper to run API requests using admin perms

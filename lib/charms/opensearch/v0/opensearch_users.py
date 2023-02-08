@@ -9,8 +9,8 @@ These functions wrap around some API calls used for user management.
 import logging
 from typing import Dict, List, Optional
 
+import requests
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
-from requests import HTTPError
 
 logger = logging.getLogger(__name__)
 
@@ -80,11 +80,11 @@ class OpenSearchUserManager:
 
         try:
             resp = self.opensearch.request("DELETE", f"{ROLE_ENDPOINT}/{role_name}")
-        except HTTPError as e:
+        except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 return {
                     "status": "OK",
-                    "response": "user does not exist, and therefore has not been removed",
+                    "response": "role does not exist, and therefore has not been removed",
                 }
 
         logger.debug(resp)
@@ -141,7 +141,7 @@ class OpenSearchUserManager:
 
         try:
             resp = self.opensearch.request("DELETE", f"{USER_ENDPOINT}/{user_name}")
-        except HTTPError as e:
+        except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 return {
                     "status": "OK",
