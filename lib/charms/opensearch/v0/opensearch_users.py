@@ -10,6 +10,7 @@ import logging
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from requests import HTTPError
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class OpenSearchUserManager:
         role_name: str,
         permissions: Optional[Dict[str, str]],
         action_groups: Optional[Dict[str, str]],
-    ) -> None:
+    ) -> Dict[str, any]:
         """Creates a role with the given permissions.
 
         This method assumes the dicts provided are valid opensearch config. If not, raises
@@ -46,6 +47,9 @@ class OpenSearchUserManager:
 
         Raises:
             OpenSearchUserMgmtError: If the role creation request fails.
+
+        Returns:
+            HTTP response to opensearch API request.
         """
         resp = self.opensearch.request(
             "PUT",
@@ -57,7 +61,7 @@ class OpenSearchUserManager:
             raise OpenSearchUserMgmtError(f"creating role {role_name} failed - response: {resp}")
         return resp
 
-    def remove_role(self, role_name: str) -> None:
+    def remove_role(self, role_name: str) -> Dict[str, any]:
         """Remove the given role from opensearch distribution.
 
         Args:
@@ -65,20 +69,32 @@ class OpenSearchUserManager:
 
         Raises:
             OpenSearchUserMgmtError: If the request fails, or if role_name is empty
+
+        Returns:
+            HTTP response to opensearch API request.
         """
         if not role_name:
             raise OpenSearchUserMgmtError(
                 "role name empty - sending a DELETE request to endpoint root isn't permitted"
             )
 
-        resp = self.opensearch.request("DELETE", f"{ROLE_ENDPOINT}/{role_name}")
+        try:
+            resp = self.opensearch.request("DELETE", f"{ROLE_ENDPOINT}/{role_name}")
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                return {
+                    "status": "OK",
+                    "response": "user does not exist, and therefore has not been removed",
+                }
+
         logger.debug(resp)
-        # TODO handle if the role doesn't exist
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing role {role_name} failed - response: {resp}")
         return resp
 
-    def create_user(self, user_name: str, roles: Optional[List[str]], hashed_pwd: str) -> None:
+    def create_user(
+        self, user_name: str, roles: Optional[List[str]], hashed_pwd: str
+    ) -> Dict[str, any]:
         """Create or update user and assign the requested roles to the user.
 
         Args:
@@ -88,6 +104,9 @@ class OpenSearchUserManager:
 
         Raises:
             OpenSearchUserMgmtError: If the request fails.
+
+        Returns:
+            HTTP response to opensearch API request.
         """
         payload = {"hash": hashed_pwd}
         if roles:
@@ -103,7 +122,7 @@ class OpenSearchUserManager:
             raise OpenSearchUserMgmtError(f"creating user {user_name} failed - response: {resp}")
         return resp
 
-    def remove_user(self, user_name: str) -> None:
+    def remove_user(self, user_name: str) -> Dict[str, any]:
         """Remove the given user from opensearch distribution.
 
         Args:
@@ -111,21 +130,30 @@ class OpenSearchUserManager:
 
         Raises:
             OpenSearchUserMgmtError: If the request fails, or if user_name is empty
+
+        Returns:
+            HTTP response to opensearch API request.
         """
         if not user_name:
             raise OpenSearchUserMgmtError(
                 "user name empty - sending a DELETE request to endpoint root isn't permitted"
             )
-        # TODO handle 404
-        resp = self.opensearch.request("DELETE", f"{USER_ENDPOINT}/{user_name}")
+
+        try:
+            resp = self.opensearch.request("DELETE", f"{USER_ENDPOINT}/{user_name}")
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                return {
+                    "status": "OK",
+                    "response": "user does not exist, and therefore has not been removed",
+                }
 
         logger.debug(resp)
-        # TODO update to handle if the user doesn't exist
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing user {user_name} failed - response: {resp}")
         return resp
 
-    def patch_user(self, user_name: str, patches: List[Dict[str, any]]) -> None:
+    def patch_user(self, user_name: str, patches: List[Dict[str, any]]) -> Dict[str, any]:
         """Applies patches to user.
 
         Args:
@@ -134,6 +162,9 @@ class OpenSearchUserManager:
 
         Raises:
             OpenSearchUserMgmtError: If the request fails.
+
+        Returns:
+            HTTP response to opensearch API request.
         """
         resp = self.opensearch.request(
             "PATCH",

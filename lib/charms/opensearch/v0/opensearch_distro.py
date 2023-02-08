@@ -279,6 +279,10 @@ class OpenSearchDistribution(ABC):
             payload: JSON / map body payload.
             host: host of the node we wish to make a request on, by default current host.
             alt_hosts: in case the default host is unreachable, fallback hosts
+
+        Raises:
+            requests.HTTPError if request runs successfully, but returns an error code
+            OpenSearchHttpError if request fails to run
         """
         if None in [endpoint, method]:
             raise ValueError("endpoint or method missing")
