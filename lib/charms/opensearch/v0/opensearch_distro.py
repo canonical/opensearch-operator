@@ -75,6 +75,9 @@ class OpenSearchCmdError(OpenSearchError):
 class OpenSearchHttpError(OpenSearchError):
     """Exception thrown when an OpenSearch REST call fails."""
 
+    def __init__(self, status_code: Optional[int] = None):
+        self.status_code = status_code
+
 
 class Paths:
     """This class represents the group of Paths that need to be exposed."""
@@ -321,7 +324,7 @@ class OpenSearchDistribution(ABC):
                 resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
-            raise OpenSearchHttpError()
+            raise OpenSearchHttpError(status_code=e.response.status_code)
 
         return resp.json()
 
