@@ -50,9 +50,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         "charms.opensearch.v0.opensearch_relation_provider.generate_hashed_password",
         return_value=("hashed_pw", "password"),
     )
-    @patch("charms.data_platform_libs.v0.data_interfaces.DatabaseProvides.set_credentials")
-    @patch("charms.data_platform_libs.v0.data_interfaces.DatabaseProvides.set_version")
-    def test_on_database_requested(
+    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_credentials")
+    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_version")
+    def test_on_index_requested(
         self,
         _set_version,
         _set_credentials,
@@ -68,22 +68,22 @@ class TestOpenSearchProvider(unittest.TestCase):
         hashed_pw, password = _gen_pw.return_value
 
         self.harness.set_leader(False)
-        self.opensearch_provider._on_database_requested(event)
+        self.opensearch_provider._on_index_requested(event)
         _is_node_up.assert_not_called()
 
         self.harness.set_leader(True)
         _is_node_up.return_value = False
-        self.opensearch_provider._on_database_requested(event)
+        self.opensearch_provider._on_index_requested(event)
         event.defer.assert_called()
 
         _is_node_up.return_value = True
         event.extra_user_roles = None
-        self.opensearch_provider._on_database_requested(event)
+        self.opensearch_provider._on_index_requested(event)
         self.assertIsInstance(self.unit.status, BlockedStatus)
 
         event.extra_user_roles = json.dumps({"roles": ["role"]})
         self.unit.status = ActiveStatus()
-        self.opensearch_provider._on_database_requested(event)
+        self.opensearch_provider._on_index_requested(event)
         # no permissions or action groups in extra_user_roles, so we aren't creating a new role.
         _create_users.assert_called_with(username, hashed_pw, json.loads(event.extra_user_roles))
         _set_credentials.assert_called_with(event.relation.id, username, password)
@@ -93,7 +93,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         _set_version.reset_mock()
 
         _create_users.side_effect = OpenSearchUserMgmtError()
-        self.opensearch_provider._on_database_requested(event)
+        self.opensearch_provider._on_index_requested(event)
         self.assertIsInstance(self.unit.status, BlockedStatus)
         _set_credentials.assert_not_called()
         _set_version.assert_not_called()
@@ -209,14 +209,14 @@ class TestOpenSearchProvider(unittest.TestCase):
         assert self.charm.peers_data.get(Scope.APP, "lingering_users") is None
         assert self.charm.peers_data.get(Scope.APP, "lingering_roles") is None
 
-    @patch("charms.data_platform_libs.v0.data_interfaces.DatabaseProvides.set_endpoints")
+    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.update_hosts")
     @patch(
         "charms.opensearch.v0.opensearch_relation_provider.units_ips",
         return_value={"1": "1.1.1.1", "2": "2.2.2.2"},
     )
-    def test_update_endpoints(self, _ips, _set_endpoints):
+    def test_update_hosts(self, _ips, _update_hosts):
         relation = MagicMock()
         relation.id = 1
-        endpoints = [f"{ip}:{self.charm.opensearch.port}" for ip in _ips.return_value.values()]
-        self.opensearch_provider.update_endpoints(relation)
-        _set_endpoints.assert_called_with(relation.id, ",".join(endpoints))
+        hosts = [f"{ip}:{self.charm.opensearch.port}" for ip in _ips.return_value.values()]
+        self.opensearch_provider.update_hosts(relation)
+        _update_hosts.assert_called_with(relation.id, ",".join(hosts))

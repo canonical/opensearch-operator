@@ -191,7 +191,7 @@ class OpenSearchBaseCharm(CharmBase):
                         Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                     )
             for relation in self.model.relations.get(ClientRelationName, []):
-                self.opensearch_provider.update_endpoints(relation)
+                self.opensearch_provider.update_hosts(relation)
 
         # Restart node when cert renewal for the transport layer
         if self.peers_data.get(Scope.UNIT, "must_reboot_node"):

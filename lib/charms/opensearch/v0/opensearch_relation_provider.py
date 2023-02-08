@@ -31,8 +31,8 @@ import logging
 from typing import Dict, List
 
 from charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseProvides,
-    DatabaseRequestedEvent,
+    IndexRequestedEvent,
+    OpenSearchProvides,
 )
 from charms.opensearch.v0.constants_charm import (
     ClientRelationBadRoleRequestMessage,
@@ -74,10 +74,10 @@ class OpenSearchProvider(Object):
         self.user_manager = self.charm.user_manager
 
         self.relation_name = ClientRelationName
-        self.database_provides = DatabaseProvides(self.charm, relation_name=self.relation_name)
+        self.opensearch_provides = OpenSearchProvides(self.charm, relation_name=self.relation_name)
 
         self.framework.observe(
-            self.database_provides.on.database_requested, self._on_database_requested
+            self.opensearch_provides.on.index_requested, self._on_index_requested
         )
         self.framework.observe(
             charm.on[self.relation_name].relation_departed, self._on_relation_departed
@@ -95,8 +95,8 @@ class OpenSearchProvider(Object):
     def _unit_departing(self, relation):
         return self.charm.peers_data.get(Scope.UNIT, self._depart_flag(relation))
 
-    def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
-        """Handle client database-requested event.
+    def _on_index_requested(self, event: IndexRequestedEvent) -> None:
+        """Handle client index-requested event.
 
         The read-only-endpoints field of DatabaseProvides is unused in this relation because this
         concept is irrelevant to OpenSearch. In this relation, the application charm should have
@@ -128,9 +128,9 @@ class OpenSearchProvider(Object):
 
         rel_id = event.relation.id
         # Share the credentials and updated connection info with the client application.
-        self.database_provides.set_credentials(rel_id, username, pwd)
-        self.update_endpoints(event.relation)
-        self.database_provides.set_version(rel_id, self.opensearch.version)
+        self.opensearch_provides.set_credentials(rel_id, username, pwd)
+        self.update_hosts(event.relation)
+        self.opensearch_provides.set_version(rel_id, self.opensearch.version)
 
     def create_opensearch_users(
         self, username: str, hashed_pwd: str, access_control: Dict[str, List[str]]
@@ -247,8 +247,8 @@ class OpenSearchProvider(Object):
                 Scope.APP, "lingering_roles", ",".join(list(lingering_roles - removed_roles))
             )
 
-    def update_endpoints(self, relation):
+    def update_hosts(self, relation):
         """Updates endpoints in the databag for the given relation."""
         port = self.opensearch.port
-        endpoints = [f"{ip}:{port}" for ip in units_ips(self.charm, PeerRelationName).values()]
-        self.database_provides.set_endpoints(relation.id, ",".join(endpoints))
+        hosts = [f"{ip}:{port}" for ip in units_ips(self.charm, PeerRelationName).values()]
+        self.opensearch_provides.update_hosts(relation.id, ",".join(hosts))

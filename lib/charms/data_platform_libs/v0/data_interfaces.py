@@ -1138,7 +1138,7 @@ class OpenSearchRequiresEvents(CharmEvents):
 class OpenSearchProvides(DataProvides):
     """Provider-side of the Kafka relation."""
 
-    on = KafkaProvidesEvents()
+    on = OpenSearchProvidesEvents()
 
     def __init__(self, charm: CharmBase, relation_name: str) -> None:
         super().__init__(charm, relation_name)
@@ -1157,8 +1157,8 @@ class OpenSearchProvides(DataProvides):
         if "index" in diff.added:
             self.on.topic_requested.emit(event.relation, app=event.app, unit=event.unit)
 
-    def set_hosts(self, relation_id: int, hosts: str) -> None:
-        """Set the bootstrap server in the application relation databag.
+    def update_hosts(self, relation_id: int, hosts: str) -> None:
+        """Set the hosts in the application relation databag.
 
         Args:
             relation_id: the identifier for a particular relation.
@@ -1166,11 +1166,28 @@ class OpenSearchProvides(DataProvides):
         """
         self._update_relation_data(relation_id, {"endpoints": hosts})
 
+    @property
+    def version(self) -> Optional[str]:
+        """Returns the version of the database.
+
+        Version as informed by the database daemon.
+        """
+        return self.relation.data[self.relation.app].get("version")
+
+    def set_version(self, relation_id: int, version: str) -> None:
+        """Set the database version in the application relation databag.
+
+        Args:
+            relation_id: the identifier for a particular relation.
+            version: database version.
+        """
+        self._update_relation_data(relation_id, {"version": version})
+
 
 class OpenSearchRequires(DataRequires):
     """Requires-side of the OpenSearch relation."""
 
-    on = KafkaRequiresEvents()
+    on = OpenSearchRequiresEvents()
 
     def __init__(self, charm, relation_name: str, index: str, extra_user_roles: str = None):
         """Manager of OpenSearch client relations."""
@@ -1182,6 +1199,7 @@ class OpenSearchRequires(DataRequires):
         """Event emitted when the application joins the OpenSearch relation."""
         # Sets both index and extra user roles in the relation if the roles are provided.
         # Otherwise, sets only the index.
+
         self._update_relation_data(
             event.relation.id,
             {
