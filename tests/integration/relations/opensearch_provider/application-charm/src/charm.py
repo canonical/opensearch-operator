@@ -70,17 +70,12 @@ class ApplicationCharm(CharmBase):
         )
 
         self.framework.observe(self.on.run_request_action, self._on_run_request_action)
-        self.framework.observe(self.on.simple_put_action, self._on_simple_put_action)
+        self.framework.observe(self.on.single_put_action, self._on_single_put_action)
         self.framework.observe(self.on.bulk_put_action, self._on_bulk_put_action)
         self.framework.observe(self.on.get_from_index_action, self._on_get_from_index_action)
 
     def _on_update_status(self, _) -> None:
-        """Health check for database connection.
-
-        If backend relation exists and is
-            self.unit.status = ActiveStatus()
-        else: usable, set status to active.
-        """
+        """Health check for database connection."""
         if self.connection_check():
             self.unit.status = ActiveStatus()
         else:
@@ -169,7 +164,7 @@ class ApplicationCharm(CharmBase):
 
         event.set_results({"results": json.dumps(response)})
 
-    def _on_simple_put_action(self, event: ActionEvent):
+    def _on_single_put_action(self, event: ActionEvent):
         logger.info(event.params)
         relation = self.first_database
         relation_id = event.params["relation-id"]
