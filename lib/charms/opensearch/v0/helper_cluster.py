@@ -6,6 +6,7 @@ import logging
 from random import choice
 from typing import Dict, List, Optional
 
+from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -21,20 +22,6 @@ LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
-
-
-class Node:
-    """Data class representing a node in a cluster."""
-
-    def __init__(self, name: str, roles: List[str], ip: str):
-        self.name = name
-        self.roles = list(set(roles))
-        self.ip = ip
-
-    @staticmethod
-    def from_dict(input_dict):
-        """Create a new instance of this class from a json/dict repr."""
-        return Node(input_dict.get("name"), input_dict.get("roles"), input_dict.get("ip"))
 
 
 class ClusterTopology:
@@ -140,7 +127,7 @@ class ClusterTopology:
         """Get the nodes of cluster manager eligible nodes."""
         result = []
         for node in nodes:
-            if "cluster_manager" in node.roles:
+            if node.is_cm_eligible():
                 result.append(node.ip)
 
         return result
@@ -150,7 +137,7 @@ class ClusterTopology:
         """Get the nodes of cluster manager eligible nodes."""
         result = []
         for node in nodes:
-            if "cluster_manager" in node.roles:
+            if node.is_cm_eligible():
                 result.append(node.name)
 
         return result
@@ -179,6 +166,27 @@ class ClusterTopology:
                 result[role].append(node)
 
         return result
+
+    @staticmethod
+    def nodes(
+        opensearch: OpenSearchDistribution,
+        use_localhost: bool = False,
+        hosts: Optional[List[str]] = None,
+    ) -> List[Node]:
+        """Get the list of nodes in a cluster."""
+        host: Optional[str] = None  # defaults to current unit ip
+        alt_hosts: Optional[List[str]] = None
+        if alt_hosts:
+            host, alt_hosts = hosts[0], hosts[1:]
+
+        nodes: List[Node] = []
+        if use_localhost or host:
+            response = opensearch.request("GET", "/_nodes", host=host, alt_hosts=alt_hosts)
+            if "nodes" in response:
+                for obj in response["nodes"].values():
+                    nodes.append(Node(obj["name"], obj["roles"], obj["ip"]))
+
+        return nodes
 
 
 class ClusterState:
@@ -214,3 +222,22 @@ class ClusterState:
             busy_shards[unit_name].append(shard["index"])
 
         return busy_shards
+
+    @staticmethod
+    def health(
+        opensearch: OpenSearchDistribution,
+        wait_for_green: bool,
+        host: Optional[str] = None,
+        alt_hosts: Optional[List[str]] = None,
+    ) -> Dict[str, any]:
+        """Fetch the cluster health."""
+        endpoint = "/_cluster/health"
+        if wait_for_green:
+            endpoint = f"{endpoint}?wait_for_status=green&timeout=1m"
+
+        return opensearch.request(
+            "GET",
+            endpoint,
+            host=host,
+            alt_hosts=alt_hosts,
+        )

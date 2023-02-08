@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Union
 
 import requests
+from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
@@ -23,7 +24,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchHttpError,
 )
-from charms.opensearch.v0.opensearch_nodes_exclusions import NodeExclusionOps
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -78,8 +78,6 @@ class OpenSearchDistribution(ABC):
         self._charm = charm
         self._peer_relation_name = peer_relation_name
 
-        self.exclusions = NodeExclusionOps(self, charm)
-
     @abstractmethod
     def install(self):
         """Install the package."""
@@ -98,27 +96,9 @@ class OpenSearchDistribution(ABC):
         self.start()
 
     def stop(self):
-        """Exclude the allocation of this node."""
-        roles = self.roles
-
-        # add voting and allocation exclusions if applies
-        self.exclusions.add_if_applies(self._charm.unit_name, roles)
-
-        try:
-            response = self.request("GET", "/_cluster/health?wait_for_status=green&timeout=1m")
-            unassigned_shards = response.get("unassigned_shards", 0)
-            if unassigned_shards > 0:
-                self.exclusions.in_charm.on_unassigned_shards(unassigned_shards)
-        except OpenSearchHttpError:
-            # this is not important, as the seeked action here is to simply inform the user
-            # of the shards state
-            pass
-
+        """Stop OpenSearch.."""
         # stop the opensearch service
         self._stop_service()
-
-        # remove voting / allocation exclusions if applies, or defer until next unit up
-        self.exclusions.remove_if_applies(self._charm.unit_name, self._charm.alternative_host)
 
     @abstractmethod
     def _stop_service(self):
@@ -315,6 +295,10 @@ class OpenSearchDistribution(ABC):
     def port(self) -> int:
         """Return Port of OpenSearch."""
         return 9200
+
+    def current(self) -> Node:
+        """Returns current Node."""
+        return Node(self._charm.unit_name, self.roles, self.host)
 
     @staticmethod
     def normalize_allocation_exclusions(exclusions: Union[List[str], Set[str], str]) -> Set[str]:
