@@ -197,27 +197,27 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 #         await ops_test.model.wait_for_idle(apps=ALL_APPS)
 
 
-# @pytest.mark.client_relation
-# async def test_relation_broken(ops_test: OpsTest):
-#     """Test that the user is removed when the relation is broken."""
-#     async with ops_test.fast_forward():
-#         # Retrieve the relation user.
-#         relation_user = await get_application_relation_data(
-#             ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "username"
-#         )
+@pytest.mark.client_relation
+async def test_relation_broken(ops_test: OpsTest):
+    """Test that the user is removed when the relation is broken."""
+    async with ops_test.fast_forward():
+        # Retrieve the relation user.
+        relation_user = await get_application_relation_data(
+            ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "username"
+        )
 
-#         # Break the relation.
-#         await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
-#             f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
-#             f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
-#         )
-#         await ops_test.model.wait_for_idle(
-#             apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
-#             status="active",
-#             raise_on_blocked=True,
-#         )
-#         logger.error(relation_user)
+        # Break the relation.
+        await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
+            f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
+            f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
+            status="active",
+            raise_on_blocked=True,
+        )
+        logger.error(relation_user)
 
-#         # TODO Check that the relation user and role were both removed from the database.
-#         # use admin permissions from peer relation
-#         # write an overall test helper to run API requests using admin perms
+        # TODO Check that the relation user and role were both removed from the database.
+        # use admin permissions from peer relation
+        # write an overall test helper to run API requests using admin perms
