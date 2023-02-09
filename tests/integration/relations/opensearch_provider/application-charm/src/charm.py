@@ -126,7 +126,7 @@ class ApplicationCharm(CharmBase):
     def _on_single_put_action(self, event: ActionEvent):
         logger.info(event.params)
         relation = self.first_database
-        relation_id = event.params["relation_id"]
+        relation_id = event.params["relation-id"]
         databag = relation.fetch_relation_data()[relation_id]
         method = "PUT"
         payload = {"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}
@@ -150,7 +150,7 @@ class ApplicationCharm(CharmBase):
     def _on_bulk_put_action(self, event: ActionEvent):
         logger.info(event.params)
         relation = self.first_database
-        relation_id = event.params["relation_id"]
+        relation_id = event.params["relation-id"]
         databag = relation.fetch_relation_data()[relation_id]
         method = "POST"
         payload = """{ "index" : { "_index": "albums", "_id" : "2" } }
@@ -180,7 +180,7 @@ class ApplicationCharm(CharmBase):
     def _on_get_from_index_action(self, event: ActionEvent):
         logger.info(event.params)
         relation = self.first_database
-        relation_id = event.params["relation_id"]
+        relation_id = event.params["relation-id"]
         databag = relation.fetch_relation_data()[relation_id]
         method = "GET"
         endpoint = event.params["endpoint"]

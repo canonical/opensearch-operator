@@ -109,5 +109,7 @@ async def run_get_from_index(ops_test, unit_name: str, relation_id: int, endpoin
         action_name="get-from-index",
         unit_name=unit_name,
         endpoint=endpoint,
+        # python can't have variable names with a hyphen, and Juju can't have action variables with
+        # an underscore, so this is a compromise.
         **{"relation-id": relation_id},
     )
