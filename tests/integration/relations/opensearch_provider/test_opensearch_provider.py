@@ -110,7 +110,7 @@ async def test_database_bulk_usage(ops_test: OpsTest):
         relation_id=client_relation.id,
     )
     # TODO assert we're getting the correct value
-    results = json.dumps(run_bulk_read_index["results"])
+    results = json.loads(run_bulk_read_index["results"])
     logging.error(results)
     assert results.get("timed_out") is False
     assert results.get("hits", {}).get("total", {}).get("value") == 3
