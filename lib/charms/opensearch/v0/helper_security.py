@@ -35,6 +35,16 @@ def generate_password() -> str:
     return "".join([secrets.choice(choices) for _ in range(32)])
 
 
+def hash_string(string: str) -> str:
+    """Hashes the given string.
+
+    TODO test
+    """
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(string.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
+
+
 def generate_hashed_password() -> Tuple[str, str]:
     """Generates a password and its bcrypt hash.
 
@@ -42,11 +52,7 @@ def generate_hashed_password() -> Tuple[str, str]:
         A hash and the original password
     """
     pwd = generate_password()
-
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(pwd.encode("utf-8"), salt)
-
-    return hashed.decode("utf-8"), pwd
+    return hash_string(pwd), pwd
 
 
 def cert_expiration_remaining_hours(cert: string) -> int:

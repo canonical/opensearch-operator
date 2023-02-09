@@ -12,6 +12,7 @@ from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
     AllocationExclusionFailed,
     CertsExpirationError,
+    ClientRelationName,
     HorizontalScaleUpSuggest,
     PeerRelationName,
     RequestUnitServiceOps,
@@ -45,6 +46,7 @@ from charms.opensearch.v0.opensearch_distro import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
+from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
@@ -100,6 +102,7 @@ class OpenSearchBaseCharm(CharmBase):
         )
 
         self.user_manager = OpenSearchUserManager(self.opensearch)
+        self.opensearch_provider = OpenSearchProvider(self)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
@@ -187,6 +190,8 @@ class OpenSearchBaseCharm(CharmBase):
                     self.peers_data.put(
                         Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                     )
+            for relation in self.model.relations.get(ClientRelationName, []):
+                self.opensearch_provider.update_endpoints(relation)
 
         # Restart node when cert renewal for the transport layer
         if self.peers_data.get(Scope.UNIT, "must_reboot_node"):
@@ -199,13 +204,16 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
 
-        We want to periodically check for 2 things:
-        1- The system requirements are still met
-        2- every 6 hours check if certs are expiring soon (in 7 days),
+        We want to periodically check for 3 things:
+        1- Do we have users that need to be deleted, and if so we need to delete them.
+        2- The system requirements are still met
+        3- every 6 hours check if certs are expiring soon (in 7 days),
             as a safeguard in case relation broken. As there will be data loss
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
+        self.opensearch_provider.clear_lingering_users_and_roles()
+
         # if there are missing system requirements defer
         missing_sys_reqs = self.opensearch.missing_sys_requirements()
         if len(missing_sys_reqs) > 0:
@@ -416,7 +424,6 @@ class OpenSearchBaseCharm(CharmBase):
         """Change default password of Admin user."""
         hashed_pwd, pwd = generate_hashed_password()
         self.secrets.put(Scope.APP, "admin_password", pwd)
-
         self.opensearch.config.put(
             "opensearch-security/internal_users.yml",
             "admin",
@@ -424,6 +431,10 @@ class OpenSearchBaseCharm(CharmBase):
                 "hash": hashed_pwd,
                 "reserved": True,  # this protects this resource from being updated on the dashboard or rest api
                 "backend_roles": ["admin"],
+                "opendistro_security_roles": [
+                    "security_rest_api_access",
+                    "all_access",
+                ],
                 "description": "Admin user",
             },
         )
