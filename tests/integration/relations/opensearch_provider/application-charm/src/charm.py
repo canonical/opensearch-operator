@@ -72,12 +72,7 @@ class ApplicationCharm(CharmBase):
         self.framework.observe(self.on.run_query_action, self._on_run_query_action)
 
     def _on_update_status(self, _) -> None:
-        """Health check for database connection.
-
-        If backend relation exists and is
-            self.unit.status = ActiveStatus()
-        else: usable, set status to active.
-        """
+        """Health check for database connection."""
         if self.connection_check():
             self.unit.status = ActiveStatus()
         else:
