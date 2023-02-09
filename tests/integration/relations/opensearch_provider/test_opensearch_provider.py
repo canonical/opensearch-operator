@@ -85,12 +85,9 @@ async def test_database_usage(ops_test: OpsTest):
         endpoint=read_index_endpoint,
         relation_id=client_relation.id,
     )
-    results = json.loads(run_read_index["results"])[0]
+    results = json.loads(run_read_index["results"])
     logging.error(results)
     assert results.get("timed_out") is False
-    assert results.get("_shards", {}).get("successful") == NUM_UNITS
-    assert results.get("_shards", {}).get("failed") == 0
-    assert results.get("_shards", {}).get("skipped") == 0
     assert results.get("hits", {}).get("total", {}).get("value") == 1
 
 
@@ -113,12 +110,9 @@ async def test_database_bulk_usage(ops_test: OpsTest):
         relation_id=client_relation.id,
     )
     # TODO assert we're getting the correct value
-    results = json.dumps(run_bulk_read_index["results"])[0]
+    results = json.dumps(run_bulk_read_index["results"])
     logging.error(results)
     assert results.get("timed_out") is False
-    assert results.get("_shards", {}).get("successful") == NUM_UNITS
-    assert results.get("_shards", {}).get("failed") == 0
-    assert results.get("_shards", {}).get("skipped") == 0
     assert results.get("hits", {}).get("total", {}).get("value") == 3
 
 

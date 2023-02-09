@@ -51,8 +51,7 @@ class ApplicationCharm(CharmBase):
         # Events related to the second database that is requested
         # (these events are defined in the database requires charm library).
         database_name = f'{self.app.name.replace("-", "_")}_second_database'
-        # TODO change this to include only permissions and action groups, and verify that we can
-        # create roles when necessary.
+        # TODO change this to use new permissions
         roles = {
             "roles": ["readall"],
             "permissions": ["TODO find some permissions", ""],
