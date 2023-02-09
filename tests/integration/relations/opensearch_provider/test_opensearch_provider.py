@@ -10,7 +10,13 @@ from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
-from tests.integration.helpers import MODEL_CONFIG, SERIES, UNIT_IDS, http_request
+from tests.integration.helpers import (
+    MODEL_CONFIG,
+    SERIES,
+    UNIT_IDS,
+    get_leader_unit_ip,
+    http_request,
+)
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
     run_bulk_put,
@@ -183,5 +189,8 @@ async def test_relation_broken(ops_test: OpsTest):
         )
         logger.error(relation_user)
 
-    users = await http_request(ops_test, "GET", "_plugins/_security/api/internalusers/")
+    leader_ip = await get_leader_unit_ip(ops_test)
+    users = await http_request(
+        ops_test, "GET", f"http://{leader_ip}:9200/_plugins/_security/api/internalusers/"
+    )
     assert relation_user not in users.keys()
