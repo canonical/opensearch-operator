@@ -93,13 +93,13 @@ async def run_action(
 
 async def run_simple_put(ops_test, unit_name: str, relation_id: int):
     return await run_action(
-        ops_test, action_name="single-put", unit_name=unit_name, relation_id=relation_id
+        ops_test, action_name="single-put", unit_name=unit_name, **{"relation-id": relation_id}
     )
 
 
 async def run_bulk_put(ops_test, unit_name: str, relation_id: int):
     return await run_action(
-        ops_test, action_name="bulk-put", unit_name=unit_name, relation_id=relation_id
+        ops_test, action_name="bulk-put", unit_name=unit_name, **{"relation-id": relation_id}
     )
 
 
@@ -108,6 +108,6 @@ async def run_get_from_index(ops_test, unit_name: str, relation_id: int, endpoin
         ops_test,
         action_name="get-from-index",
         unit_name=unit_name,
-        relation_id=relation_id,
         endpoint=endpoint,
+        **{"relation-id": relation_id},
     )
