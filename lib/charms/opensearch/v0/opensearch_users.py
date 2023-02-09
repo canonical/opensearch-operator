@@ -88,7 +88,7 @@ class OpenSearchUserManager:
                     "status": "OK",
                     "response": "role does not exist, and therefore has not been removed",
                 }
-
+                
         logger.debug(resp)
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing role {role_name} failed - response: {resp}")
@@ -151,6 +151,7 @@ class OpenSearchUserManager:
                 }
 
         logger.debug(resp)
+        # TODO update to handle if the user doesn't exist
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing user {user_name} failed - response: {resp}")
         return resp

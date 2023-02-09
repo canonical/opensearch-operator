@@ -29,7 +29,6 @@ FIRST_DATABASE_RELATION_NAME = "first-database"
 
 NUM_UNITS = len(UNIT_IDS)
 
-
 @pytest.mark.abort_on_fail
 @pytest.mark.client_relation
 async def test_database_relation_with_charm_libraries(

@@ -15,7 +15,6 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseRequires,
 )
 
-# from opensearchpy import OpenSearch
 from ops.charm import ActionEvent, CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
@@ -236,68 +235,6 @@ class ApplicationCharm(CharmBase):
             payload=payload,
         )
 
-    # def client_request(
-    #     self,
-    #     method: str,
-    #     endpoint: str,
-    #     port: int,
-    #     username: str,
-    #     password: str,
-    #     host: str,
-    #     payload: Optional[Dict[str, any]] = None,
-    # ) -> Union[Dict[str, any], List[any]]:
-    #     """Make an HTTP request.
-
-    #     TODO swap this over to a more normal opensearch client
-
-    #     Args:
-    #         method: matching the known http methods.
-    #         endpoint: relative to the base uri.
-    #         payload: JSON / map body payload.
-    #         host: host of the node we wish to make a request on.
-    #         port: the port for the server.
-    #         username: the username to use for authentication
-    #         password: the password for {username}
-    #     """
-    #     if None in [endpoint, method]:
-    #         raise ValueError("endpoint or method missing")
-
-    #     if endpoint.startswith("/"):
-    #         endpoint = endpoint[1:]
-
-    #     full_url = f"https://{host}:{port}/{endpoint}"
-
-    #     request_kwargs = {
-    #         "verify": False,  # TODO this should be a cert once this relation has TLS.
-    #         "method": method.upper(),
-    #         "url": full_url,
-    #         "headers": {"Content-Type": "application/json"},
-    #     }
-    #     if payload:
-    #         request_kwargs["data"] = json.dumps(payload)
-    #         request_kwargs["headers"]["Accept"] = "application/json"
-    #     try:
-    #         with requests.Session() as s:
-    #             s.auth = (username, password)
-    #             resp = s.request(**request_kwargs)
-    #             resp.raise_for_status()
-    #     except requests.exceptions.RequestException as e:
-    #         logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
-    #         raise OpenSearchHttpError(str(e))
-
-    #     auth = (username, password)
-    #     client = OpenSearch(
-    #         hosts=[{"host": host, "port": port}],
-    #         http_compress=True,  # enables gzip compression for request bodies. Does this matter?
-    #         http_auth=auth,
-    #         use_ssl=True,
-    #         verify_certs=False,
-    #         ssl_assert_hostname=False,
-    #         ssl_show_warn=False,
-    #     )
-
-    #     return resp.json()
-
     def request(
         self,
         method: str,
@@ -311,7 +248,6 @@ class ApplicationCharm(CharmBase):
         """Make an HTTP request.
 
         TODO swap this over to a more normal opensearch client
-
         Args:
             method: matching the known http methods.
             endpoint: relative to the base uri.

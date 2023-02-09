@@ -51,6 +51,7 @@ async def get_application_relation_data(
             f"no relation data could be grabbed on relation with endpoint {relation_name}"
         )
     return relation_data[0]["application-data"].get(key)
+ 
 
 
 def wait_for_relation_joined_between(
