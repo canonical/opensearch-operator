@@ -1115,7 +1115,7 @@ class OpenSearchRequiresEvent(RelationEvent):
 
 
 class IndexCreatedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
-    """Event emitted when a new topic is created for use on this relation."""
+    """Event emitted when a new index is created for use on this relation."""
 
 
 class HostsChangedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
@@ -1152,10 +1152,10 @@ class OpenSearchProvides(DataProvides):
         # Check which data has changed to emit customs events.
         diff = self._diff(event)
 
-        # Emit a topic requested event if the setup key (topic name and optional
+        # Emit a index requested event if the setup key (index name and optional
         # extra user roles) was added to the relation databag by the application.
         if "index" in diff.added:
-            self.on.topic_requested.emit(event.relation, app=event.app, unit=event.unit)
+            self.on.index_requested.emit(event.relation, app=event.app, unit=event.unit)
 
     def update_hosts(self, relation_id: int, hosts: str) -> None:
         """Set the hosts in the application relation databag.
