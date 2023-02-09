@@ -623,8 +623,9 @@ class OpenSearchBaseCharm(CharmBase):
         """Return an alternative host (of another node) in case the current is offline."""
         all_units_ips = units_ips(self, PEER)
         all_hosts = list(all_units_ips.values())
+        random.shuffle(all_hosts)
 
         if not all_hosts:
             return None
 
-        return random.choice([host for host in all_hosts if host != self.unit_ip])
+        return [host for host in all_hosts if host != self.unit_ip]

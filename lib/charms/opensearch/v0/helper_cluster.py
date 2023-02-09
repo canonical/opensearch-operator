@@ -198,13 +198,13 @@ class ClusterState:
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True,
     )
-    def shards(opensearch: OpenSearchDistribution, host: str = None) -> List[Dict[str, str]]:
+    def shards(opensearch: OpenSearchDistribution, host: Optional[str] = None) -> List[Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
         return opensearch.request("GET", "/_cat/shards", host=host)
 
     @staticmethod
     def busy_shards_by_unit(
-        opensearch: OpenSearchDistribution, host: str = None
+        opensearch: OpenSearchDistribution, host: Optional[str] = None
     ) -> Dict[str, List[str]]:
         """Get the busy shards of each index in the cluster."""
         shards = ClusterState.shards(opensearch, host)

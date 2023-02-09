@@ -58,7 +58,7 @@ class OpenSearchExclusions:
             self._charm.peers_data.put(self._scope, VOTING_TO_DELETE, True)
 
         if not self._delete_allocations():
-            logger.error("Failed to remove allocation exclusion: {self._node.name}.")
+            logger.error(f"Failed to remove allocation exclusion: {self._node.name}.")
             current_allocations = set(
                 self._charm.peers_data.get(self._scope, ALLOCS_TO_DELETE, "").split(",")
             )
@@ -111,7 +111,7 @@ class OpenSearchExclusions:
         """Register new allocation exclusions."""
         try:
             existing = self._fetch_allocations()
-            all_allocs = existing.union(allocations or self._node.name)
+            all_allocs = existing.union(allocations or {self._node.name})
             response = self._opensearch.request(
                 "PUT",
                 "/_cluster/settings",
@@ -126,7 +126,7 @@ class OpenSearchExclusions:
         """This removes the allocation exclusions if needed."""
         try:
             existing = self._fetch_allocations()
-            to_remove = set(allocs or self._node.name)
+            to_remove = set(allocs or [self._node.name])
 
             return self._add_allocations(existing - to_remove)
         except OpenSearchHttpError:
