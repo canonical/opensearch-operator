@@ -121,6 +121,7 @@ class ApplicationCharm(CharmBase):
     def _on_second_opensearch_hosts_changed(self, event: HostsChangedEvent) -> None:
         """Event triggered when the opensearch hosts change."""
         logger.info(f"second database endpoints have been changed to: {event.hosts}")
+
     def _on_run_query_action(self, event: ActionEvent):
         """Runs queries."""
         raise NotImplementedError
