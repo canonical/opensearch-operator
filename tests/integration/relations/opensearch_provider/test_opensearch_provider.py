@@ -10,7 +10,7 @@ from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
-from tests.integration.helpers import MODEL_CONFIG, SERIES, UNIT_IDS
+from tests.integration.helpers import MODEL_CONFIG, SERIES, UNIT_IDS, http_request
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
     run_bulk_put,
@@ -183,6 +183,5 @@ async def test_relation_broken(ops_test: OpsTest):
         )
         logger.error(relation_user)
 
-        # TODO Check that the relation user and role were both removed from the database.
-        # use admin permissions from peer relation
-        # write an overall test helper to run API requests using admin perms
+    users = await http_request(ops_test, "GET", "_plugins/_security/api/internalusers/")
+    assert relation_user not in users.keys()
