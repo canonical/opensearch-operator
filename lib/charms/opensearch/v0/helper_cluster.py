@@ -170,13 +170,13 @@ class ClusterTopology:
     @staticmethod
     def nodes(
         opensearch: OpenSearchDistribution,
-        use_localhost: bool = False,
+        use_localhost: bool,
         hosts: Optional[List[str]] = None,
     ) -> List[Node]:
         """Get the list of nodes in a cluster."""
         host: Optional[str] = None  # defaults to current unit ip
-        alt_hosts: Optional[List[str]] = None
-        if alt_hosts:
+        alt_hosts: Optional[List[str]] = hosts
+        if not use_localhost and hosts:
             host, alt_hosts = hosts[0], hosts[1:]
 
         nodes: List[Node] = []

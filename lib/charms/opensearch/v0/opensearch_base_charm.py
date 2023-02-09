@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Base class for the OpenSearch Operators."""
+import json
 import logging
 import random
 from abc import abstractmethod
@@ -219,11 +220,12 @@ class OpenSearchBaseCharm(CharmBase):
                 self.opensearch_exclusions.cleanup()
 
         # Run restart node on the concerned unit
-        updated_node_conf = self.peers_data.get_object(Scope.APP, "updated-node-config")
+        updated_node_conf = data.get("updated-node-config")
         if updated_node_conf:
-            node = Node.from_dict(updated_node_conf)
+            node = Node.from_dict(json.loads(updated_node_conf))
             if node.name == self.unit_name:
-                self._set_node_conf(self._get_nodes(), node.roles)
+                logger.info(f"Updating roles config of {self.unit.name}")
+                self._set_node_conf(self._get_nodes(True), node.roles)
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
@@ -240,7 +242,7 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         remaining_nodes = [
-            node for node in self._get_nodes() if node.name != event.departing_unit.name
+            node for node in self._get_nodes(True) if node.name != event.departing_unit.name
         ]
 
         node_to_update = ClusterTopology.node_with_new_roles(remaining_nodes)
@@ -539,7 +541,7 @@ class OpenSearchBaseCharm(CharmBase):
         )
         self.status.clear(SecurityIndexInitProgress)
 
-    def _get_nodes(self, use_localhost: bool = True) -> List[Node]:
+    def _get_nodes(self, use_localhost: bool) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
         try:
             return ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
