@@ -3,7 +3,6 @@
 
 """Base class for OpenSearch node exclusions management."""
 import logging
-from functools import cached_property
 from typing import List, Optional, Set
 
 from charms.opensearch.v0.helper_databag import Scope
@@ -148,7 +147,7 @@ class OpenSearchExclusions:
         finally:
             return allocation_exclusions
 
-    @cached_property
+    @property
     def _node(self) -> Node:
         """Returns current node."""
-        return self._opensearch.current()
+        return Node(self._charm.unit_name, self._charm.node_roles, self._charm.unit_ip)

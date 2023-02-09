@@ -100,6 +100,8 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.opensearch = distro(self, PEER)
         self.opensearch_config = OpenSearchConfig(self.opensearch)
+
+        self.node_roles: List[str] = []
         self.opensearch_exclusions = OpenSearchExclusions(self)
 
         self.peers_data = RelationDataStore(self, PEER)
@@ -287,10 +289,6 @@ class OpenSearchBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
             return
 
-        # if there are exclusions to be removed
-        if self.unit.is_leader():
-            self.opensearch_exclusions.cleanup()
-
         # If relation broken - leave
         if self.model.get_relation("certificates") is not None:
             return
@@ -298,6 +296,10 @@ class OpenSearchBaseCharm(CharmBase):
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
             return
+
+        # if there are exclusions to be removed
+        if self.unit.is_leader():
+            self.opensearch_exclusions.cleanup()
 
         # See if the last check was made less than 6h ago, if yes - leave
         date_format = "%Y-%m-%d %H:%M:%S"
@@ -431,12 +433,12 @@ class OpenSearchBaseCharm(CharmBase):
 
             self.peers_data.put(Scope.APP, "leader_ip", self.unit_ip)
 
-        # Remove the exclusions that could not be removed when no units were online
-        self.opensearch_exclusions.delete_current()
-
         # cleanup bootstrap conf in the node
         if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
             self._cleanup_bootstrap_conf_if_applies()
+
+        # Remove the exclusions that could not be removed when no units were online
+        self.opensearch_exclusions.delete_current()
 
     def _stop_opensearch(self, event: EventBase) -> None:
         """Stop OpenSearch if possible."""
@@ -547,6 +549,7 @@ class OpenSearchBaseCharm(CharmBase):
     def _set_node_conf(self, nodes: List[Node], roles: Optional[str] = None) -> None:
         """Set the configuration of the current node / unit."""
         roles = roles or ClusterTopology.suggest_roles(nodes, self.app.planned_units())
+        self.node_roles = roles
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
