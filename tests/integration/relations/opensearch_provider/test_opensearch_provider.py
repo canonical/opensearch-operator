@@ -168,19 +168,6 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         )
 
 
-# @pytest.mark.smoke
-# @pytest.mark.client_relation
-# async def test_scaling(ops_test: OpsTest):
-#     """Check these relations all work when scaling pgbouncer."""
-#     await scale_application(ops_test, OPENSEARCH_APP_NAME, 5)
-#     async with ops_test.fast_forward():
-#         await ops_test.model.wait_for_idle(apps=ALL_APPS)
-
-#     await scale_application(ops_test, OPENSEARCH_APP_NAME, 3)
-#     async with ops_test.fast_forward():
-#         await ops_test.model.wait_for_idle(apps=ALL_APPS)
-
-
 @pytest.mark.client_relation
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""

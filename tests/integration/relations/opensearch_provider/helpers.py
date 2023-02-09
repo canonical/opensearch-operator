@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import asyncio
-import json
 import logging
 from typing import Optional
 
@@ -79,38 +78,6 @@ def new_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str)
         if endpoint_one in endpoints and endpoint_two in endpoints:
             return True
     return False
-
-
-async def run_request_on_application_charm(
-    ops_test,
-    unit_name: str,
-    method: str,
-    endpoint: str,
-    relation_id: str,
-    relation_name: str,
-    payload: str = None,
-    timeout: int = 30,
-):
-    """Runs the given request on the given application charm.
-
-    TODO json doesn't seem to work over actions, so payload is flaky.
-    TODO delete this method
-    """
-    client_unit = ops_test.model.units.get(unit_name)
-    params = {
-        "method": method,
-        "endpoint": endpoint,
-        "relation-id": relation_id,
-        "relation-name": relation_name,
-    }
-    if payload:
-        params["payload"] = json.dumps(payload)
-    logging.info(f"running request: \n {endpoint}")
-    logging.info(params)
-    action = await client_unit.run_action("run-request", **params)
-    result = await asyncio.wait_for(action.wait(), timeout)
-    logging.info(f"request results: {result.results}")
-    return result.results
 
 
 async def run_action(

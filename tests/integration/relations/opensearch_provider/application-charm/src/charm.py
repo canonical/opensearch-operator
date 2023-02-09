@@ -69,7 +69,6 @@ class ApplicationCharm(CharmBase):
             self.second_database.on.endpoints_changed, self._on_second_database_endpoints_changed
         )
 
-        self.framework.observe(self.on.run_request_action, self._on_run_request_action)
         self.framework.observe(self.on.single_put_action, self._on_single_put_action)
         self.framework.observe(self.on.bulk_put_action, self._on_bulk_put_action)
         self.framework.observe(self.on.get_from_index_action, self._on_get_from_index_action)
@@ -124,46 +123,6 @@ class ApplicationCharm(CharmBase):
     #  Action hooks
     # ==============
 
-    def _on_run_request_action(self, event: ActionEvent):
-        """An action that allows us to run requests from this charm.
-
-        TODO this action isn't suitable for opensearch because juju actions don't like json.
-        TODO delete
-        """
-        logger.info(event.params)
-
-        relation_id = event.params["relation-id"]
-        relation_name = event.params["relation-name"]
-        if relation_name == self.first_database.relation_name:
-            relation = self.first_database
-        elif relation_name == self.second_database.relation_name:
-            relation = self.second_database
-        else:
-            event.fail(message="invalid relation name")
-
-        databag = relation.fetch_relation_data()[relation_id]
-
-        method = event.params["method"]
-        endpoint = event.params["endpoint"]
-        logging.error(event.params.get("payload"))
-        if payload := event.params.get("payload"):
-            payload = json.loads(payload)
-
-        username = databag.get("username")
-        password = databag.get("password")
-        host = databag.get("endpoints").split(",")[0]
-        host_addr = host.split(":")[0]
-        port = host.split(":")[1]
-
-        logger.info(f"sending {method} request to {endpoint}")
-        try:
-            response = self.request(method, endpoint, port, username, password, host_addr, payload)
-        except OpenSearchHttpError as e:
-            response = [str(e)]
-        logger.info(response)
-
-        event.set_results({"results": json.dumps(response)})
-
     def _on_single_put_action(self, event: ActionEvent):
         logger.info(event.params)
         relation = self.first_database
@@ -193,7 +152,7 @@ class ApplicationCharm(CharmBase):
         relation = self.first_database
         relation_id = event.params["relation_id"]
         databag = relation.fetch_relation_data()[relation_id]
-        method = "PUT"
+        method = "POST"
         payload = """{ "index" : { "_index": "albums", "_id" : "2" } }
 {"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
 { "index" : { "_index": "albums", "_id" : "3" } }
@@ -304,8 +263,7 @@ class ApplicationCharm(CharmBase):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        # add username and password if auth continues to fail
-        full_url = f"https://{username}:{password}@{host}:{port}/{endpoint}"
+        full_url = f"https://{host}:{port}/{endpoint}"
 
         request_kwargs = {
             "verify": False,  # TODO this should be a cert once this relation has TLS.
@@ -318,7 +276,7 @@ class ApplicationCharm(CharmBase):
             request_kwargs["headers"]["Accept"] = "application/json"
         try:
             with requests.Session() as s:
-                # s.auth = (username, password)
+                s.auth = (username, password)
                 resp = s.request(**request_kwargs)
                 resp.raise_for_status()
         except requests.exceptions.RequestException as e:
