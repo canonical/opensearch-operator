@@ -42,7 +42,7 @@ class ApplicationCharm(CharmBase):
             self, "first-database", database_name, permissive_roles
         )
         self.framework.observe(
-            self.first_opensearch.on.database_created, self._on_first_opensearch_created
+            self.first_opensearch.on.index_created, self._on_first_opensearch_created
         )
         self.framework.observe(
             self.first_opensearch.on.hosts_changed, self._on_first_opensearch_hosts_changed
@@ -63,7 +63,7 @@ class ApplicationCharm(CharmBase):
             self, "second-database", database_name, complex_roles
         )
         self.framework.observe(
-            self.second_opensearch.on.database_created, self._on_second_opensearch_created
+            self.second_opensearch.on.index_created, self._on_second_opensearch_created
         )
         self.framework.observe(
             self.second_opensearch.on.hosts_changed, self._on_second_opensearch_hosts_changed
