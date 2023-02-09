@@ -110,9 +110,9 @@ class OpenSearchExclusions:
 
     def _add_allocations(self, allocations: Optional[Set[str]] = None) -> bool:
         """Register new allocation exclusions."""
-        existing = self._fetch_allocations()
-        all_allocs = existing.union(allocations or self._node.name)
         try:
+            existing = self._fetch_allocations()
+            all_allocs = existing.union(allocations or self._node.name)
             response = self._opensearch.request(
                 "PUT",
                 "/_cluster/settings",
@@ -125,10 +125,13 @@ class OpenSearchExclusions:
 
     def _delete_allocations(self, allocs: Optional[List[str]] = None) -> bool:
         """This removes the allocation exclusions if needed."""
-        existing = self._fetch_allocations()
-        to_remove = set(allocs or self._node.name)
+        try:
+            existing = self._fetch_allocations()
+            to_remove = set(allocs or self._node.name)
 
-        return self._add_allocations(existing - to_remove)
+            return self._add_allocations(existing - to_remove)
+        except OpenSearchHttpError:
+            return False
 
     def _fetch_allocations(self) -> Set[str]:
         """Fetch the registered allocation exclusions."""

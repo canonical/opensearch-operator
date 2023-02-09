@@ -288,7 +288,8 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         # if there are exclusions to be removed
-        self.opensearch_exclusions.cleanup()
+        if self.unit.is_leader():
+            self.opensearch_exclusions.cleanup()
 
         # If relation broken - leave
         if self.model.get_relation("certificates") is not None:
