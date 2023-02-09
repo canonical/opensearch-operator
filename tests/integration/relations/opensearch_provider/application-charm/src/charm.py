@@ -10,9 +10,9 @@ from typing import Dict, List, Optional, Union
 
 import requests
 from charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseCreatedEvent,
-    DatabaseEndpointsChangedEvent,
-    DatabaseRequires,
+    HostsChangedEvent,
+    IndexCreatedEvent,
+    OpenSearchRequires,
 )
 from ops.charm import ActionEvent, CharmBase
 from ops.main import main
@@ -35,22 +35,22 @@ class ApplicationCharm(CharmBase):
 
         # Events related to the first database that is requested
         # (these events are defined in the database requires charm library).
-        database_name = f'{self.app.name.replace("-", "_")}_first_database'
+        database_name = f'{self.app.name.replace("-", "_")}_first_opensearch'
 
         permissive_roles = json.dumps({"roles": ["all_access"]})
-        self.first_database = DatabaseRequires(
+        self.first_opensearch = OpenSearchRequires(
             self, "first-database", database_name, permissive_roles
         )
         self.framework.observe(
-            self.first_database.on.database_created, self._on_first_database_created
+            self.first_opensearch.on.database_created, self._on_first_opensearch_created
         )
         self.framework.observe(
-            self.first_database.on.endpoints_changed, self._on_first_database_endpoints_changed
+            self.first_opensearch.on.hosts_changed, self._on_first_opensearch_hosts_changed
         )
 
         # Events related to the second database that is requested
         # (these events are defined in the database requires charm library).
-        database_name = f'{self.app.name.replace("-", "_")}_second_database'
+        database_name = f'{self.app.name.replace("-", "_")}_second_opensearch'
         # TODO change this to include only permissions and action groups, and verify that we can
         # create roles when necessary.
         roles = {
@@ -59,14 +59,14 @@ class ApplicationCharm(CharmBase):
             "action_groups": ["TODO find some action groups", ""],
         }
         complex_roles = json.dumps(roles)
-        self.second_database = DatabaseRequires(
+        self.second_opensearch = OpenSearchRequires(
             self, "second-database", database_name, complex_roles
         )
         self.framework.observe(
-            self.second_database.on.database_created, self._on_second_database_created
+            self.second_opensearch.on.database_created, self._on_second_opensearch_created
         )
         self.framework.observe(
-            self.second_database.on.endpoints_changed, self._on_second_database_endpoints_changed
+            self.second_opensearch.on.hosts_changed, self._on_second_opensearch_hosts_changed
         )
 
         self.framework.observe(self.on.run_query_action, self._on_run_query_action)
@@ -105,22 +105,22 @@ class ApplicationCharm(CharmBase):
             return False
 
     # First database events observers.
-    def _on_first_database_created(self, event: DatabaseCreatedEvent) -> None:
+    def _on_first_opensearch_created(self, event: IndexCreatedEvent) -> None:
         """Event triggered when a database was created for this application."""
         logging.info(f"first database credentials: {event.username} {event.password}")
 
-    def _on_first_database_endpoints_changed(self, event: DatabaseEndpointsChangedEvent) -> None:
-        """Event triggered when the read/write endpoints of the database change."""
-        logger.info(f"first database endpoints have been changed to: {event.endpoints}")
+    def _on_first_opensearch_hosts_changed(self, event: HostsChangedEvent) -> None:
+        """Event triggered when the opensearch hosts change."""
+        logger.info(f"first database endpoints have been changed to: {event.hosts}")
 
     # Second database events observers.
-    def _on_second_database_created(self, event: DatabaseCreatedEvent) -> None:
+    def _on_second_opensearch_created(self, event: IndexCreatedEvent) -> None:
         """Event triggered when a database was created for this application."""
         logger.info(f"second database credentials: {event.username} {event.password}")
 
-    def _on_second_database_endpoints_changed(self, event: DatabaseEndpointsChangedEvent) -> None:
-        """Event triggered when the read/write endpoints of the database change."""
-        logger.info(f"second database endpoints have been changed to: {event.endpoints}")
+    def _on_second_opensearch_hosts_changed(self, event: HostsChangedEvent) -> None:
+        """Event triggered when the opensearch hosts change."""
+        logger.info(f"second database endpoints have been changed to: {event.hosts}")
 
     def _on_run_query_action(self, event: ActionEvent):
         """Runs queries."""
@@ -134,17 +134,17 @@ class ApplicationCharm(CharmBase):
         payload: Optional[Dict[str, any]] = None,
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request to a specific relation."""
-        databag = self.first_database.fetch_relation_data()[relation_id]
+        databag = self.first_opensearch.fetch_relation_data()[relation_id]
         logging.error(databag)
         username = databag.get("username")
         password = databag.get("password")
-        endpoints = databag.get("endpoints", "").split(",")
+        hosts = databag.get("hosts", "").split(",")
 
-        if None in [username, password] or len(endpoints) == 0:
+        if None in [username, password] or len(hosts) == 0:
             raise OpenSearchHttpError
 
-        host = endpoints[0].split(":")[0]
-        port = int(endpoints[0].split(":")[1])
+        host = hosts[0].split(":")[0]
+        port = int(hosts[0].split(":")[1])
 
         return self.request(
             method,

@@ -1118,8 +1118,8 @@ class IndexCreatedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
     """Event emitted when a new topic is created for use on this relation."""
 
 
-class HostChangedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
-    """Event emitted when the host is changed."""
+class HostsChangedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
+    """Event emitted when hosts are changed."""
 
 
 class OpenSearchRequiresEvents(CharmEvents):
@@ -1129,7 +1129,7 @@ class OpenSearchRequiresEvents(CharmEvents):
     """
 
     index_created = EventSource(IndexCreatedEvent)
-    host_changed = EventSource(HostChangedEvent)
+    hosts_changed = EventSource(HostsChangedEvent)
 
 
 # OpenSearch Provides and Requires Objects

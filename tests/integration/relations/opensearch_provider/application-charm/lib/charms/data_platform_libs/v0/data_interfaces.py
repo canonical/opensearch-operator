@@ -1022,7 +1022,7 @@ class KafkaProvides(DataProvides):
 
         Args:
             relation_id: the identifier for a particular relation.
-            zookeeper_uris: comma-seperated list of ZooKeeper server uris.
+            zookeeper_uris: comma-separated list of ZooKeeper server uris.
         """
         self._update_relation_data(relation_id, {"zookeeper-uris": zookeeper_uris})
 
@@ -1069,12 +1069,169 @@ class KafkaRequires(DataRequires):
             # “endpoints_changed“ event if “topic_created“ is triggered.
             return
 
-        # Emit an endpoints (bootstap-server) changed event if the Kakfa endpoints
+        # Emit an endpoints (bootstrap-server) changed event if the Kakfa endpoints
         # added or changed this info in the relation databag.
         if "endpoints" in diff.added or "endpoints" in diff.changed:
             # Emit the default event (the one without an alias).
             logger.info("endpoints changed on %s", datetime.now())
             self.on.bootstrap_server_changed.emit(
+                event.relation, app=event.app, unit=event.unit
+            )  # here check if this is the right design
+            return
+
+
+# Opensearch related events
+
+
+class OpenSearchProvidesEvent(RelationEvent):
+    """Base class for OpenSearch events."""
+
+    @property
+    def index(self) -> Optional[str]:
+        """Returns the index that was requested."""
+        return self.relation.data[self.relation.app].get("index")
+
+
+class IndexRequestedEvent(OpenSearchProvidesEvent, ExtraRoleEvent):
+    """Event emitted when a new index is requested for use on this relation."""
+
+
+class OpenSearchProvidesEvents(CharmEvents):
+    """OpenSearch events.
+
+    This class defines the events that OpenSearch can emit.
+    """
+
+    index_requested = EventSource(IndexRequestedEvent)
+
+
+class OpenSearchRequiresEvent(RelationEvent):
+    """Base class for OpenSearch events."""
+
+    @property
+    def hosts(self) -> Optional[str]:
+        """Returns a a comma-separated list of opensearch hosts."""
+        return self.relation.data[self.relation.app].get("endpoints")
+
+
+class IndexCreatedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
+    """Event emitted when a new topic is created for use on this relation."""
+
+
+class HostsChangedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
+    """Event emitted when hosts are changed."""
+
+
+class OpenSearchRequiresEvents(CharmEvents):
+    """OpenSearch events.
+
+    This class defines the events that the Kafka can emit.
+    """
+
+    index_created = EventSource(IndexCreatedEvent)
+    hosts_changed = EventSource(HostsChangedEvent)
+
+
+# OpenSearch Provides and Requires Objects
+
+
+class OpenSearchProvides(DataProvides):
+    """Provider-side of the Kafka relation."""
+
+    on = OpenSearchProvidesEvents()
+
+    def __init__(self, charm: CharmBase, relation_name: str) -> None:
+        super().__init__(charm, relation_name)
+
+    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
+        """Event emitted when the relation has changed."""
+        # Only the leader should handle this event.
+        if not self.local_unit.is_leader():
+            return
+
+        # Check which data has changed to emit customs events.
+        diff = self._diff(event)
+
+        # Emit a topic requested event if the setup key (topic name and optional
+        # extra user roles) was added to the relation databag by the application.
+        if "index" in diff.added:
+            self.on.topic_requested.emit(event.relation, app=event.app, unit=event.unit)
+
+    def update_hosts(self, relation_id: int, hosts: str) -> None:
+        """Set the hosts in the application relation databag.
+
+        Args:
+            relation_id: the identifier for a particular relation.
+            hosts: the host addresses for opensearch nodes.
+        """
+        self._update_relation_data(relation_id, {"endpoints": hosts})
+
+    @property
+    def version(self) -> Optional[str]:
+        """Returns the version of the database.
+
+        Version as informed by the database daemon.
+        """
+        return self.relation.data[self.relation.app].get("version")
+
+    def set_version(self, relation_id: int, version: str) -> None:
+        """Set the database version in the application relation databag.
+
+        Args:
+            relation_id: the identifier for a particular relation.
+            version: database version.
+        """
+        self._update_relation_data(relation_id, {"version": version})
+
+
+class OpenSearchRequires(DataRequires):
+    """Requires-side of the OpenSearch relation."""
+
+    on = OpenSearchRequiresEvents()
+
+    def __init__(self, charm, relation_name: str, index: str, extra_user_roles: str = None):
+        """Manager of OpenSearch client relations."""
+        super().__init__(charm, relation_name, extra_user_roles)
+        self.charm = charm
+        self.index = index
+
+    def _on_relation_joined_event(self, event: RelationJoinedEvent) -> None:
+        """Event emitted when the application joins the OpenSearch relation."""
+        # Sets both index and extra user roles in the relation if the roles are provided.
+        # Otherwise, sets only the index.
+
+        self._update_relation_data(
+            event.relation.id,
+            {
+                "index": self.index,
+                "extra-user-roles": self.extra_user_roles,
+            }
+            if self.extra_user_roles is not None
+            else {"index": self.index},
+        )
+
+    def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
+        """Event emitted when the OpenSearch relation has changed."""
+        # Check which data has changed to emit customs events.
+        diff = self._diff(event)
+
+        # Check if the index is created
+        # (the OpenSearch charm shares the credentials).
+        if "username" in diff.added and "password" in diff.added:
+            # Emit the default event (the one without an alias).
+            logger.info("index created at %s", datetime.now())
+            self.on.index_created.emit(event.relation, app=event.app, unit=event.unit)
+
+            # To avoid unnecessary application restarts do not trigger
+            # “endpoints_changed“ event if “index_created“ is triggered.
+            return
+
+        # Emit an endpoints (hosts) changed event if the OpenSearch endpoints
+        # added or changed this info in the relation databag.
+        if "endpoints" in diff.added or "endpoints" in diff.changed:
+            # Emit the default event (the one without an alias).
+            logger.info("endpoints changed on %s", datetime.now())
+            self.on.hosts_changed.emit(
                 event.relation, app=event.app, unit=event.unit
             )  # here check if this is the right design
             return
