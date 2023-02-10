@@ -14,8 +14,8 @@ from tests.integration.helpers import (
     MODEL_CONFIG,
     SERIES,
     UNIT_IDS,
-    get_leader_unit_ip,
-    http_request,
+    # get_leader_unit_ip,
+    # http_request,
 )
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
@@ -182,7 +182,7 @@ async def test_relation_broken(ops_test: OpsTest):
             f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
             f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
         )
-        await asyncio.gather( 
+        await asyncio.gather(
             ops_test.model.wait_for_idle(
                 apps=[CLIENT_APP_NAME],
                 status="blocked",
@@ -193,7 +193,7 @@ async def test_relation_broken(ops_test: OpsTest):
                 raise_on_blocked=True,
             )
         )
-    # logger.error(relation_user)
+    logger.error(relation_user)
     # leader_ip = await get_leader_unit_ip(ops_test)
     # users = await http_request(
     #     ops_test, "GET", f"http://{leader_ip}:9200/_plugins/_security/api/internalusers/"
