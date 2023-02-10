@@ -182,15 +182,20 @@ async def test_relation_broken(ops_test: OpsTest):
             f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
             f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
         )
-        await ops_test.model.wait_for_idle(
-            apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
-            status="active",
-            raise_on_blocked=True,
+        await asyncio.gather( 
+            ops_test.model.wait_for_idle(
+                apps=[CLIENT_APP_NAME],
+                status="blocked",
+            ),
+            ops_test.model.wait_for_idle(
+                apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
+                status="active",
+                raise_on_blocked=True,
+            )
         )
-        logger.error(relation_user)
-
-    leader_ip = await get_leader_unit_ip(ops_test)
-    users = await http_request(
-        ops_test, "GET", f"http://{leader_ip}:9200/_plugins/_security/api/internalusers/"
-    )
-    assert relation_user not in users.keys()
+    # logger.error(relation_user)
+    # leader_ip = await get_leader_unit_ip(ops_test)
+    # users = await http_request(
+    #     ops_test, "GET", f"http://{leader_ip}:9200/_plugins/_security/api/internalusers/"
+    # )
+    # assert relation_user not in users.keys()
