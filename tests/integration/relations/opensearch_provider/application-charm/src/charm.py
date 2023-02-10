@@ -104,20 +104,20 @@ class ApplicationCharm(CharmBase):
     # First database events observers.
     def _on_first_opensearch_created(self, event: IndexCreatedEvent) -> None:
         """Event triggered when a database was created for this application."""
-        logging.info(f"first database credentials: {event.username} {event.password}")
+        logging.info(f"first opensearch credentials: {event.username} {event.password}")
 
     def _on_first_opensearch_hosts_changed(self, event: HostsChangedEvent) -> None:
         """Event triggered when the opensearch hosts change."""
-        logger.info(f"first database endpoints have been changed to: {event.hosts}")
+        logger.info(f"first opensearch endpoints have been changed to: {event.hosts}")
 
     # Second database events observers.
     def _on_second_opensearch_created(self, event: IndexCreatedEvent) -> None:
         """Event triggered when a database was created for this application."""
-        logger.info(f"second database credentials: {event.username} {event.password}")
+        logger.info(f"second opensearch credentials: {event.username} {event.password}")
 
     def _on_second_opensearch_hosts_changed(self, event: HostsChangedEvent) -> None:
         """Event triggered when the opensearch hosts change."""
-        logger.info(f"second database endpoints have been changed to: {event.hosts}")
+        logger.info(f"second opensearch endpoints have been changed to: {event.hosts}")
 
     # ==============
     #  Action hooks
@@ -125,9 +125,8 @@ class ApplicationCharm(CharmBase):
 
     def _on_single_put_action(self, event: ActionEvent):
         logger.info(event.params)
-        relation = self.first_database
         relation_id = event.params["relation-id"]
-        databag = relation.fetch_relation_data()[relation_id]
+        databag = self.first_opensearch.fetch_relation_data()[relation_id]
         method = "PUT"
         payload = {"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}
         endpoint = "/albums/_doc/1"
@@ -149,9 +148,8 @@ class ApplicationCharm(CharmBase):
 
     def _on_bulk_put_action(self, event: ActionEvent):
         logger.info(event.params)
-        relation = self.first_database
         relation_id = event.params["relation-id"]
-        databag = relation.fetch_relation_data()[relation_id]
+        databag = self.first_opensearch.fetch_relation_data()[relation_id]
         method = "POST"
         payload = """{ "index" : { "_index": "albums", "_id" : "2" } }
 {"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
@@ -179,9 +177,8 @@ class ApplicationCharm(CharmBase):
 
     def _on_get_from_index_action(self, event: ActionEvent):
         logger.info(event.params)
-        relation = self.first_database
         relation_id = event.params["relation-id"]
-        databag = relation.fetch_relation_data()[relation_id]
+        databag = self.first_opensearch.fetch_relation_data()[relation_id]
         method = "GET"
         endpoint = event.params["endpoint"]
 
