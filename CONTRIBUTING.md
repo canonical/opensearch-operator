@@ -37,7 +37,7 @@ tox -e fmt           # update your code according to linting rules
 tox -e lint          # code style
 tox -e unit          # unit tests
 tox -e integration   # integration tests
-tox                  # runs 'lint' and 'unit' environments
+tox                  # runs 'fmt', 'lint', and 'unit' environments
 ```
 
 ## Build charm
@@ -101,7 +101,7 @@ juju deploy -n 1 ./opensearch_ubuntu-22.04-amd64.charm --series jammy --show-log
 juju relate tls-certificates-operator opensearch
 ```
 
-**Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the TLS Certificates Operator [here](https://charmhub.io/tls-certificates-operator). 
+**Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the TLS Certificates Operator [here](https://charmhub.io/tls-certificates-operator).
 
 
 ## Canonical Contributor Agreement

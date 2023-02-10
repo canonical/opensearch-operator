@@ -29,11 +29,12 @@ CLIENT_APP_NAME = "application"
 SECONDARY_CLIENT_APP_NAME = "secondary-application"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
-FIRST_DATABASE_RELATION_NAME = "first-database"
+FIRST_DATABASE_RELATION_NAME = "first-index"
 
 NUM_UNITS = len(UNIT_IDS)
 
 
+@pytest.mark.dev
 @pytest.mark.abort_on_fail
 @pytest.mark.client_relation
 async def test_database_relation_with_charm_libraries(
@@ -62,7 +63,7 @@ async def test_database_relation_with_charm_libraries(
 
     global client_relation
     client_relation = await ops_test.model.add_relation(
-        f"{OPENSEARCH_APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:first-database"
+        f"{OPENSEARCH_APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:first-index"
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
 

@@ -35,11 +35,11 @@ class ApplicationCharm(CharmBase):
 
         # Events related to the first database that is requested
         # (these events are defined in the database requires charm library).
-        database_name = f'{self.app.name.replace("-", "_")}_first_opensearch'
+        index_name = f'{self.app.name.replace("-", "_")}_first_opensearch'
 
         permissive_roles = json.dumps({"roles": ["all_access"]})
         self.first_opensearch = OpenSearchRequires(
-            self, "first-database", database_name, permissive_roles
+            self, "first-index", index_name, permissive_roles
         )
         self.framework.observe(
             self.first_opensearch.on.index_created, self._on_first_opensearch_created
@@ -50,7 +50,7 @@ class ApplicationCharm(CharmBase):
 
         # Events related to the second database that is requested
         # (these events are defined in the database requires charm library).
-        database_name = f'{self.app.name.replace("-", "_")}_second_opensearch'
+        index_name = f'{self.app.name.replace("-", "_")}_second_opensearch'
         # TODO change this to include only permissions and action groups, and verify that we can
         # create roles when necessary.
         roles = {
@@ -60,7 +60,7 @@ class ApplicationCharm(CharmBase):
         }
         complex_roles = json.dumps(roles)
         self.second_opensearch = OpenSearchRequires(
-            self, "second-database", database_name, complex_roles
+            self, "second-index", index_name, complex_roles
         )
         self.framework.observe(
             self.second_opensearch.on.index_created, self._on_second_opensearch_created
@@ -83,8 +83,8 @@ class ApplicationCharm(CharmBase):
 
     def connection_check(self) -> bool:
         """Simple connection check to see if backend exists and we can connect to it."""
-        relations = self.model.relations.get("first-database", []) + self.model.relations.get(
-            "second-database", []
+        relations = self.model.relations.get("first-index", []) + self.model.relations.get(
+            "second-index", []
         )
         if len(relations) == 0:
             return False

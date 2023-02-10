@@ -1111,7 +1111,7 @@ class OpenSearchRequiresEvent(RelationEvent):
     @property
     def hosts(self) -> Optional[str]:
         """Returns a a comma-separated list of opensearch hosts."""
-        return self.relation.data[self.relation.app].get("endpoints")
+        return self.relation.data[self.relation.app].get("hosts")
 
 
 class IndexCreatedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
@@ -1164,7 +1164,7 @@ class OpenSearchProvides(DataProvides):
             relation_id: the identifier for a particular relation.
             hosts: the host addresses for opensearch nodes.
         """
-        self._update_relation_data(relation_id, {"endpoints": hosts})
+        self._update_relation_data(relation_id, {"hosts": hosts})
 
     @property
     def version(self) -> Optional[str]:
@@ -1226,11 +1226,11 @@ class OpenSearchRequires(DataRequires):
             # “endpoints_changed“ event if “index_created“ is triggered.
             return
 
-        # Emit an endpoints (hosts) changed event if the OpenSearch endpoints
-        # added or changed this info in the relation databag.
-        if "endpoints" in diff.added or "endpoints" in diff.changed:
+        # Emit a hosts changed event if the OpenSearch application added or changed this info in
+        # the relation databag.
+        if "hosts" in diff.added or "hosts" in diff.changed:
             # Emit the default event (the one without an alias).
-            logger.info("endpoints changed on %s", datetime.now())
+            logger.info("hosts changed on %s", datetime.now())
             self.on.hosts_changed.emit(
                 event.relation, app=event.app, unit=event.unit
             )  # here check if this is the right design
