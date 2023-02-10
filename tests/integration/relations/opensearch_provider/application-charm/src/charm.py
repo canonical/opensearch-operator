@@ -134,7 +134,7 @@ class ApplicationCharm(CharmBase):
 
         username = databag.get("username")
         password = databag.get("password")
-        host = databag.get("endpoints").split(",")[0]
+        host = databag.get("hosts").split(",")[0]
         host_addr = host.split(":")[0]
         port = host.split(":")[1]
 
@@ -164,7 +164,7 @@ class ApplicationCharm(CharmBase):
 
         username = databag.get("username")
         password = databag.get("password")
-        host = databag.get("endpoints").split(",")[0]
+        host = databag.get("hosts").split(",")[0]
         host_addr = host.split(":")[0]
         port = host.split(":")[1]
 
@@ -187,7 +187,7 @@ class ApplicationCharm(CharmBase):
 
         username = databag.get("username")
         password = databag.get("password")
-        host = databag.get("endpoints").split(",")[0]
+        host = databag.get("hosts").split(",")[0]
         host_addr = host.split(":")[0]
         port = host.split(":")[1]
 
