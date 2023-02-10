@@ -10,12 +10,10 @@ from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
-from tests.integration.helpers import (
+from tests.integration.helpers import (  # get_leader_unit_ip,; http_request,
     MODEL_CONFIG,
     SERIES,
     UNIT_IDS,
-    # get_leader_unit_ip,
-    # http_request,
 )
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
@@ -191,7 +189,7 @@ async def test_relation_broken(ops_test: OpsTest):
                 apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
                 status="active",
                 raise_on_blocked=True,
-            )
+            ),
         )
     logger.error(relation_user)
     # leader_ip = await get_leader_unit_ip(ops_test)
