@@ -10,7 +10,11 @@ from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
-from tests.integration.helpers import MODEL_CONFIG, SERIES, UNIT_IDS
+from tests.integration.helpers import (  # get_leader_unit_ip,; http_request,
+    MODEL_CONFIG,
+    SERIES,
+    UNIT_IDS,
+)
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
     run_bulk_put,
@@ -110,7 +114,7 @@ async def test_database_bulk_usage(ops_test: OpsTest):
         relation_id=client_relation.id,
     )
     # TODO assert we're getting the correct value
-    results = json.dumps(run_bulk_read_index["results"])
+    results = json.loads(run_bulk_read_index["results"])
     logging.error(results)
     assert results.get("timed_out") is False
     assert results.get("hits", {}).get("total", {}).get("value") == 3
@@ -176,13 +180,20 @@ async def test_relation_broken(ops_test: OpsTest):
             f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
             f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
         )
-        await ops_test.model.wait_for_idle(
-            apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
-            status="active",
-            raise_on_blocked=True,
+        await asyncio.gather(
+            ops_test.model.wait_for_idle(
+                apps=[CLIENT_APP_NAME],
+                status="blocked",
+            ),
+            ops_test.model.wait_for_idle(
+                apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
+                status="active",
+                raise_on_blocked=True,
+            ),
         )
-        logger.error(relation_user)
-
-        # TODO Check that the relation user and role were both removed from the database.
-        # use admin permissions from peer relation
-        # write an overall test helper to run API requests using admin perms
+    logger.error(relation_user)
+    # leader_ip = await get_leader_unit_ip(ops_test)
+    # users = await http_request(
+    #     ops_test, "GET", f"http://{leader_ip}:9200/_plugins/_security/api/internalusers/"
+    # )
+    # assert relation_user not in users.keys()
