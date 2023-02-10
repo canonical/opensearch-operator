@@ -1115,7 +1115,7 @@ class OpenSearchRequiresEvent(RelationEvent):
 
 
 class IndexCreatedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
-    """Event emitted when a new topic is created for use on this relation."""
+    """Event emitted when a new index is created for use on this relation."""
 
 
 class HostsChangedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
@@ -1136,7 +1136,7 @@ class OpenSearchRequiresEvents(CharmEvents):
 
 
 class OpenSearchProvides(DataProvides):
-    """Provider-side of the Kafka relation."""
+    """Provider-side of the OpenSearch relation."""
 
     on = OpenSearchProvidesEvents()
 
@@ -1152,10 +1152,10 @@ class OpenSearchProvides(DataProvides):
         # Check which data has changed to emit customs events.
         diff = self._diff(event)
 
-        # Emit a topic requested event if the setup key (topic name and optional
-        # extra user roles) was added to the relation databag by the application.
+        # Emit an index requested event if the setup key (index name and optional extra user roles)
+        # hhave been added to the relation databag by the application.
         if "index" in diff.added:
-            self.on.topic_requested.emit(event.relation, app=event.app, unit=event.unit)
+            self.on.index_requested.emit(event.relation, app=event.app, unit=event.unit)
 
     def update_hosts(self, relation_id: int, hosts: str) -> None:
         """Set the hosts in the application relation databag.
@@ -1223,7 +1223,7 @@ class OpenSearchRequires(DataRequires):
             self.on.index_created.emit(event.relation, app=event.app, unit=event.unit)
 
             # To avoid unnecessary application restarts do not trigger
-            # “endpoints_changed“ event if “index_created“ is triggered.
+            # “hosts_changed“ event if “index_created“ is triggered.
             return
 
         # Emit a hosts changed event if the OpenSearch application added or changed this info in
