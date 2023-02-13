@@ -209,14 +209,14 @@ class TestOpenSearchProvider(unittest.TestCase):
         assert self.charm.peers_data.get(Scope.APP, "lingering_users") is None
         assert self.charm.peers_data.get(Scope.APP, "lingering_roles") is None
 
-    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.update_hosts")
+    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_endpoints")
     @patch(
         "charms.opensearch.v0.opensearch_relation_provider.units_ips",
         return_value={"1": "1.1.1.1", "2": "2.2.2.2"},
     )
-    def test_update_hosts(self, _ips, _update_hosts):
+    def test_update_endpoints(self, _ips, _set_endpoints):
         relation = MagicMock()
         relation.id = 1
-        hosts = [f"{ip}:{self.charm.opensearch.port}" for ip in _ips.return_value.values()]
-        self.opensearch_provider.update_hosts(relation)
-        _update_hosts.assert_called_with(relation.id, ",".join(hosts))
+        endpoints = [f"{ip}:{self.charm.opensearch.port}" for ip in _ips.return_value.values()]
+        self.opensearch_provider.update_endpoints(relation)
+        _set_endpoints.assert_called_with(relation.id, ",".join(endpoints))

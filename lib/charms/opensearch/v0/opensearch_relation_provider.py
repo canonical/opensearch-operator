@@ -129,7 +129,7 @@ class OpenSearchProvider(Object):
         rel_id = event.relation.id
         # Share the credentials and updated connection info with the client application.
         self.opensearch_provides.set_credentials(rel_id, username, pwd)
-        self.update_hosts(event.relation)
+        self.update_endpoints(event.relation)
         self.opensearch_provides.set_version(rel_id, self.opensearch.version)
 
     def create_opensearch_users(
@@ -247,8 +247,8 @@ class OpenSearchProvider(Object):
                 Scope.APP, "lingering_roles", ",".join(list(lingering_roles - removed_roles))
             )
 
-    def update_hosts(self, relation):
+    def update_endpoints(self, relation):
         """Updates endpoints in the databag for the given relation."""
         port = self.opensearch.port
-        hosts = [f"{ip}:{port}" for ip in units_ips(self.charm, PeerRelationName).values()]
-        self.opensearch_provides.update_hosts(relation.id, ",".join(hosts))
+        endpoints = [f"{ip}:{port}" for ip in units_ips(self.charm, PeerRelationName).values()]
+        self.opensearch_provides.set_endpoints(relation.id, ",".join(endpoints))

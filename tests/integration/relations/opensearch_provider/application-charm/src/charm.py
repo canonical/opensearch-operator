@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Union
 
 import requests
 from charms.data_platform_libs.v0.data_interfaces import (
-    HostsChangedEvent,
+    DatabaseEndpointsChangedEvent,
     IndexCreatedEvent,
     OpenSearchRequires,
 )
@@ -45,7 +45,7 @@ class ApplicationCharm(CharmBase):
             self.first_opensearch.on.index_created, self._on_first_opensearch_created
         )
         self.framework.observe(
-            self.first_opensearch.on.hosts_changed, self._on_first_opensearch_hosts_changed
+            self.first_opensearch.on.endpoints_changed, self._on_first_opensearch_endpoints_changed
         )
 
         # Events related to the second database that is requested
@@ -66,7 +66,8 @@ class ApplicationCharm(CharmBase):
             self.second_opensearch.on.index_created, self._on_second_opensearch_created
         )
         self.framework.observe(
-            self.second_opensearch.on.hosts_changed, self._on_second_opensearch_hosts_changed
+            self.second_opensearch.on.endpoints_changed,
+            self._on_second_opensearch_endpoints_changed,
         )
 
         self.framework.observe(self.on.single_put_action, self._on_single_put_action)
@@ -106,18 +107,20 @@ class ApplicationCharm(CharmBase):
         """Event triggered when a database was created for this application."""
         logging.info(f"first opensearch credentials: {event.username} {event.password}")
 
-    def _on_first_opensearch_hosts_changed(self, event: HostsChangedEvent) -> None:
-        """Event triggered when the opensearch hosts change."""
-        logger.info(f"first opensearch endpoints have been changed to: {event.hosts}")
+    def _on_first_opensearch_endpoints_changed(self, event: DatabaseEndpointsChangedEvent) -> None:
+        """Event triggered when the opensearch endpoints change."""
+        logger.info(f"first opensearch endpoints have been changed to: {event.endpoints}")
 
     # Second database events observers.
     def _on_second_opensearch_created(self, event: IndexCreatedEvent) -> None:
         """Event triggered when a database was created for this application."""
         logger.info(f"second opensearch credentials: {event.username} {event.password}")
 
-    def _on_second_opensearch_hosts_changed(self, event: HostsChangedEvent) -> None:
-        """Event triggered when the opensearch hosts change."""
-        logger.info(f"second opensearch endpoints have been changed to: {event.hosts}")
+    def _on_second_opensearch_endpoints_changed(
+        self, event: DatabaseEndpointsChangedEvent
+    ) -> None:
+        """Event triggered when the opensearch endpoints change."""
+        logger.info(f"second opensearch endpoints have been changed to: {event.endpoints}")
 
     # ==============
     #  Action hooks
@@ -133,7 +136,7 @@ class ApplicationCharm(CharmBase):
 
         username = databag.get("username")
         password = databag.get("password")
-        host = databag.get("hosts").split(",")[0]
+        host = databag.get("endpoints").split(",")[0]
         host_addr = host.split(":")[0]
         port = host.split(":")[1]
 
@@ -162,7 +165,7 @@ class ApplicationCharm(CharmBase):
 
         username = databag.get("username")
         password = databag.get("password")
-        host = databag.get("hosts").split(",")[0]
+        host = databag.get("endpoints").split(",")[0]
         host_addr = host.split(":")[0]
         port = host.split(":")[1]
 
@@ -184,7 +187,7 @@ class ApplicationCharm(CharmBase):
 
         username = databag.get("username")
         password = databag.get("password")
-        host = databag.get("hosts").split(",")[0]
+        host = databag.get("endpoints").split(",")[0]
         host_addr = host.split(":")[0]
         port = host.split(":")[1]
 
@@ -213,7 +216,7 @@ class ApplicationCharm(CharmBase):
         logging.error(databag)
         username = databag.get("username")
         password = databag.get("password")
-        hosts = databag.get("hosts", "").split(",")
+        hosts = databag.get("endpoints", "").split(",")
 
         if None in [username, password] or len(hosts) == 0:
             raise OpenSearchHttpError

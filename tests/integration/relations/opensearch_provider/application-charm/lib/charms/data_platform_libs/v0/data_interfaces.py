@@ -659,7 +659,7 @@ class DatabaseRequiresEvent(RelationEvent):
     def uris(self) -> Optional[str]:
         """Returns the connection URIs.
 
-        MongoDB, Redis, OpenSearch.
+        MongoDB, Redis.
         """
         return self.relation.data[self.relation.app].get("uris")
 
@@ -1135,18 +1135,9 @@ class OpenSearchProvidesEvents(CharmEvents):
 class OpenSearchRequiresEvent(RelationEvent):
     """Base class for OpenSearch events."""
 
-    @property
-    def hosts(self) -> Optional[str]:
-        """Returns a a comma-separated list of opensearch hosts."""
-        return self.relation.data[self.relation.app].get("hosts")
-
 
 class IndexCreatedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
     """Event emitted when a new index is created for use on this relation."""
-
-
-class HostsChangedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
-    """Event emitted when hosts are changed."""
 
 
 class OpenSearchRequiresEvents(CharmEvents):
@@ -1156,13 +1147,13 @@ class OpenSearchRequiresEvents(CharmEvents):
     """
 
     index_created = EventSource(IndexCreatedEvent)
-    hosts_changed = EventSource(HostsChangedEvent)
+    endpoints_changed = EventSource(DatabaseEndpointsChangedEvent)
 
 
 # OpenSearch Provides and Requires Objects
 
 
-class OpenSearchProvides(DataProvides):
+class OpenSearchProvides(DatabaseProvides):
     """Provider-side of the OpenSearch relation."""
 
     on = OpenSearchProvidesEvents()
@@ -1184,34 +1175,8 @@ class OpenSearchProvides(DataProvides):
         if "index" in diff.added:
             self.on.index_requested.emit(event.relation, app=event.app, unit=event.unit)
 
-    def update_hosts(self, relation_id: int, hosts: str) -> None:
-        """Set the hosts in the application relation databag.
 
-        Args:
-            relation_id: the identifier for a particular relation.
-            hosts: the host addresses for opensearch nodes.
-        """
-        self._update_relation_data(relation_id, {"hosts": hosts})
-
-    @property
-    def version(self) -> Optional[str]:
-        """Returns the version of the database.
-
-        Version as informed by the database daemon.
-        """
-        return self.relation.data[self.relation.app].get("version")
-
-    def set_version(self, relation_id: int, version: str) -> None:
-        """Set the database version in the application relation databag.
-
-        Args:
-            relation_id: the identifier for a particular relation.
-            version: database version.
-        """
-        self._update_relation_data(relation_id, {"version": version})
-
-
-class OpenSearchRequires(DataRequires):
+class OpenSearchRequires(DatabaseRequires):
     """Requires-side of the OpenSearch relation."""
 
     on = OpenSearchRequiresEvents()
@@ -1250,15 +1215,15 @@ class OpenSearchRequires(DataRequires):
             self.on.index_created.emit(event.relation, app=event.app, unit=event.unit)
 
             # To avoid unnecessary application restarts do not trigger
-            # “hosts_changed“ event if “index_created“ is triggered.
+            # “endpoints_changed“ event if “index_created“ is triggered.
             return
 
-        # Emit a hosts changed event if the OpenSearch application added or changed this info in
-        # the relation databag.
-        if "hosts" in diff.added or "hosts" in diff.changed:
+        # Emit a endpoints changed event if the OpenSearch application added or changed this info
+        # in the relation databag.
+        if "endpoints" in diff.added or "endpoints" in diff.changed:
             # Emit the default event (the one without an alias).
-            logger.info("hosts changed on %s", datetime.now())
-            self.on.hosts_changed.emit(
+            logger.info("endpoints changed on %s", datetime.now())
+            self.on.endpoints_changed.emit(
                 event.relation, app=event.app, unit=event.unit
             )  # here check if this is the right design
             return
