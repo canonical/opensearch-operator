@@ -195,6 +195,8 @@ class OpenSearchProvider(Object):
             departed_relation_id: if this relation is departing, pass in the ID and its user will
                 be deleted.
         """
+        if not self.opensearch.is_node_up():
+            return
         relations = self.model.relations[self.relation_name]
         relation_users = set(
             [
