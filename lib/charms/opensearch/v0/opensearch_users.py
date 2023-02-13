@@ -184,19 +184,33 @@ class OpenSearchUserManager(Object):
         )
 
         app_users = relation_users | OpenSearchUsers
-        database_users = set(self.get_users().keys())
-        for username in database_users - app_users:
-            logger.info(f"Remove relation user: {username}")
-            try:
+        try:
+            database_users = set(self.get_users().keys())
+            for username in database_users - app_users:
+                logger.info(f"Remove relation user: {username}")
                 self.remove_user(username)
-            except OpenSearchUserMgmtError as err:
-                logger.error(f"failed to remove user {username}: {str(err)}")
+        except OpenSearchUserMgmtError:
+            logger.error("failed to get users")
+
+        # for username in database_users - app_users:
+        #     logger.info(f"Remove relation user: {username}")
+        #     try:
+        #         self.remove_user(username)
+        #     except OpenSearchUserMgmtError as err:
+        #         logger.error(f"failed to remove user {username}: {str(err)}")
 
         app_roles = relation_users | OpenSearchRoles
-        database_roles = set(self.get_roles().keys())
-        for role in database_roles - app_roles:
-            logger.info(f"Remove relation role: {role}")
-            try:
+        try:
+            database_roles = set(self.get_roles().keys())
+            for role in database_roles - app_roles:
+                logger.info(f"Remove relation role: {role}")
                 self.remove_role(role)
-            except OpenSearchUserMgmtError as err:
-                logger.error(f"failed to remove role {role}: {str(err)}")
+        except OpenSearchUserMgmtError:
+            logger.error("failed to get roles")
+
+        # for role in database_roles - app_roles:
+        #     logger.info(f"Remove relation role: {role}")
+        #     try:
+        #         self.remove_role(role)
+        #     except OpenSearchUserMgmtError as err:
+        #         logger.error(f"failed to remove role {role}: {str(err)}")
