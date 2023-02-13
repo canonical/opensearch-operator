@@ -31,7 +31,7 @@ Both the Requirer and the Provider need to adhere to criteria to be considered c
 
 - Is expected to provide an index name in the `index` field.
   - This index is NOT removed from the opensearch charm when the relation is removed.
-- Is expected to provide indentical values in the `index` field if several requirer units provide it in the relation.
+- Is expected to provide identical values in the `index` field if several requirer units provide it in the relation.
 - Is expected to have unique credentials for each relation. Therefore, different instances of the same Charm (juju applications) will have different relations with different credentials.
 - Is expected to have different relations with the same interface name if Requirer needs access to multiple opensearch charms.
 - Is expected to allow multiple different charmed applications to access the same index name.
