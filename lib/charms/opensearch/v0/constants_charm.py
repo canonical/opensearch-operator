@@ -47,3 +47,8 @@ ClientRelationBadRoleRequestMessage = "bad relation request - client application
 # Relation Interfaces
 ClientRelationName = "opensearch-client"
 PeerRelationName = "opensearch-peers"
+
+
+# Opensearch Users
+OpenSearchUsers = {"admin"}
+OpenSearchRoles = set()

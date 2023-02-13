@@ -101,7 +101,7 @@ class OpenSearchBaseCharm(CharmBase):
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
         )
 
-        self.user_manager = OpenSearchUserManager(self.opensearch)
+        self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
@@ -125,7 +125,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             self.unit.status = MaintenanceStatus(AdminUserInitProgress)
-            self._initialize_admin_user()
+            self._initialise_internal_users()
             self.peers_data.put(Scope.APP, "admin_user_initialized", True)
             self.status.clear(AdminUserInitProgress)
 
@@ -212,7 +212,7 @@ class OpenSearchBaseCharm(CharmBase):
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
-        self.opensearch_provider.remove_users_and_roles()
+        self.user_manager.remove_users_and_roles()
 
         # if there are missing system requirements defer
         missing_sys_reqs = self.opensearch.missing_sys_requirements()
@@ -420,10 +420,16 @@ class OpenSearchBaseCharm(CharmBase):
 
         return True
 
-    def _initialize_admin_user(self):
+    def _initialise_internal_users(self):
         """Change default password of Admin user."""
         hashed_pwd, pwd = generate_hashed_password()
         self.secrets.put(Scope.APP, "admin_password", pwd)
+
+        # delete default users
+        for user in self.opensearch.config.load("opensearch-security/internal_users.yml").keys():
+            if user != "_meta":
+                self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
+
         self.opensearch.config.put(
             "opensearch-security/internal_users.yml",
             "admin",

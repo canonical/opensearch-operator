@@ -9,7 +9,12 @@ These functions wrap around some API calls used for user management.
 import logging
 from typing import Dict, List, Optional
 
-from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.constants_charm import (
+    ClientRelationName,
+    OpenSearchRoles,
+    OpenSearchUsers,
+)
+from ops.framework import Object
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +27,14 @@ class OpenSearchUserMgmtError(Exception):
     """Base exception class for OpenSearch user management errors."""
 
 
-class OpenSearchUserManager:
+class OpenSearchUserManager(Object):
     """User management class for OpenSearch API."""
 
-    def __init__(self, opensearch: OpenSearchDistribution):
-        self.opensearch = opensearch
+    def __init__(self, charm):
+        super().__init__(charm, "OpenSearchUserManager")
+        self.charm = charm
+        self.unit = self.charm.unit
+        self.opensearch = self.charm.opensearch
 
     def get_roles(self) -> Dict[str, any]:
         """Gets list of roles.
@@ -34,10 +42,7 @@ class OpenSearchUserManager:
         Raises:
             OpenSearchUserMgmtError: If the request fails.
         """
-        resp = self.opensearch.request("GET", f"{ROLE_ENDPOINT}/")
-        if resp.get("status") != "OK":
-            raise OpenSearchUserMgmtError("failed to get roles")
-        return resp
+        return self.opensearch.request("GET", f"{ROLE_ENDPOINT}/")
 
     def create_role(
         self,
@@ -92,10 +97,7 @@ class OpenSearchUserManager:
         Raises:
             OpenSearchUserMgmtError: If the request fails.
         """
-        resp = self.opensearch.request("GET", f"{USER_ENDPOINT}/")
-        if resp.get("status") != "OK":
-            raise OpenSearchUserMgmtError("failed to get users")
-        return resp
+        return self.opensearch.request("GET", f"{USER_ENDPOINT}/")
 
     def create_user(
         self, user_name: str, roles: Optional[List[str]], hashed_pwd: str
@@ -161,3 +163,40 @@ class OpenSearchUserManager:
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"patching user {user_name} failed")
         return resp
+
+    def remove_users_and_roles(self, departed_relation_id: Optional[int] = None):
+        """Removes lingering relation users and roles from opensearch.
+
+        Args:
+            departed_relation_id: if a relation is departing, pass in the ID and its user will be
+                deleted.
+        """
+        if not self.opensearch.is_node_up() or not self.unit.is_leader():
+            return
+
+        relations = self.model.relations.get(ClientRelationName, [])
+        relation_users = set(
+            [
+                self._relation_username(relation)
+                for relation in relations
+                if relation.id != departed_relation_id
+            ]
+        )
+
+        app_users = relation_users | OpenSearchUsers
+        database_users = set(self.get_users().keys())
+        for username in database_users - app_users:
+            logger.info(f"Remove relation user: {username}")
+            try:
+                self.remove_user(username)
+            except OpenSearchUserMgmtError as err:
+                logger.error(f"failed to remove user {username}: {str(err)}")
+
+        app_roles = relation_users | OpenSearchRoles
+        database_roles = set(self.get_roles().keys())
+        for role in database_roles - app_roles:
+            logger.info(f"Remove relation role: {role}")
+            try:
+                self.remove_role(role)
+            except OpenSearchUserMgmtError as err:
+                logger.error(f"failed to remove role {role}: {str(err)}")

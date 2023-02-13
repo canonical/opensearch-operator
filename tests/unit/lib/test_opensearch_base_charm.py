@@ -57,27 +57,27 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             self.charm.on.install.emit()
             self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
-    @patch(f"{BASE_CHARM_CLASS}._initialize_admin_user")
-    def test_on_leader_elected(self, _initialize_admin_user):
+    @patch(f"{BASE_CHARM_CLASS}._initialise_internal_users")
+    def test_on_leader_elected(self, _initialise_internal_users):
         """Test on leader elected event."""
         self.harness.set_leader(True)
         self.charm.on.leader_elected.emit()
-        _initialize_admin_user.assert_called_once()
+        _initialise_internal_users.assert_called_once()
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
-    @patch(f"{BASE_CHARM_CLASS}._initialize_admin_user")
-    def test_on_leader_elected_index_initialised(self, _initialize_admin_user):
+    @patch(f"{BASE_CHARM_CLASS}._initialise_internal_users")
+    def test_on_leader_elected_index_initialised(self, _initialise_internal_users):
         # security_index_initialised
         self.peers_data.put(Scope.APP, "security_index_initialised", True)
         self.harness.set_leader(True)
         self.charm.on.leader_elected.emit()
-        _initialize_admin_user.assert_not_called()
+        _initialise_internal_users.assert_not_called()
 
         # admin_user_initialized
         self.peers_data.delete(Scope.APP, "security_index_initialised")
         self.peers_data.put(Scope.APP, "admin_user_initialized", True)
         self.charm.on.leader_elected.emit()
-        _initialize_admin_user.assert_not_called()
+        _initialise_internal_users.assert_not_called()
 
     @patch(f"{BASE_CHARM_CLASS}._is_tls_fully_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_client_auth")
@@ -85,10 +85,10 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._set_node_conf")
     @patch(f"{BASE_CHARM_CLASS}._can_service_start")
     @patch(f"{BASE_CHARM_CLASS}._initialize_security_index")
-    @patch(f"{BASE_CHARM_CLASS}._initialize_admin_user")
+    @patch(f"{BASE_CHARM_CLASS}._initialise_internal_users")
     def test_on_start(
         self,
-        _initialize_admin_user,
+        _initialise_internal_users,
         _initialize_security_index,
         _can_service_start,
         _set_node_conf,
@@ -139,9 +139,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
     @patch(f"{BASE_LIB_PATH}.helper_security.cert_expiration_remaining_hours")
     @patch("ops.model.Model.get_relation")
-    @patch(
-        "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.remove_users_and_roles"
-    )
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
     def test_on_update_status(self, _, get_relation, cert_expiration_remaining_hours):
         """Test on update status."""
         with patch(

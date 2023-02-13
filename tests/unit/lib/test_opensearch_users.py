@@ -18,8 +18,9 @@ from tests.helpers import patch_network_get
 @patch_network_get("1.1.1.1")
 class TestOpenSearchUserManager(unittest.TestCase):
     def setUp(self):
-        self.opensearch = MagicMock()
-        self.mgr = OpenSearchUserManager(self.opensearch)
+        self.charm = MagicMock()
+        self.opensearch = self.charm.opensearch
+        self.mgr = OpenSearchUserManager(self.charm)
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     def test_create_role(self, _request):

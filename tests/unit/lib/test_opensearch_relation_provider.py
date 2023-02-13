@@ -36,7 +36,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.client_rel_id = self.harness.add_relation(ClientRelationName, "application")
         self.harness.add_relation_unit(self.client_rel_id, "application/0")
 
-    @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
+    @patch("charm.OpenSearchOperatorCharm._initialise_internal_users")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
     @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
@@ -149,11 +149,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         )
 
     @patch("charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider._unit_departing")
-    @patch(
-        "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.remove_users_and_roles"
-    )
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
-    @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
+    @patch("charm.OpenSearchOperatorCharm._initialise_internal_users")
     def test_on_relation_broken(self, _, _is_node_up, _remove_users, _unit_departing):
         event = MagicMock()
         depart_flag = self.opensearch_provider._depart_flag(event.relation)

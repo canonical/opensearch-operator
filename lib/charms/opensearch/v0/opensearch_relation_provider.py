@@ -28,7 +28,7 @@ TODO add tls
 
 import json
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
@@ -186,41 +186,7 @@ class OpenSearchProvider(Object):
             self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
             return
 
-        self.remove_users_and_roles(event.relation.id)
-
-    def remove_users_and_roles(self, departed_relation_id: Optional[int] = None):
-        """Removes lingering relation users and roles from opensearch.
-
-        Args:
-            departed_relation_id: if this relation is departing, pass in the ID and its user will
-                be deleted.
-        """
-        if not self.opensearch.is_node_up():
-            return
-        relations = self.model.relations[self.relation_name]
-        relation_users = set(
-            [
-                self._relation_username(relation)
-                for relation in relations
-                if relation.id != departed_relation_id
-            ]
-        )
-
-        database_users = set(self.user_manager.get_users().keys())
-        for username in database_users - relation_users:
-            logger.info(f"Remove relation user: {username}")
-            try:
-                self.user_manager.remove_user(username)
-            except OpenSearchUserMgmtError as err:
-                logger.error(f"failed to remove user {username}: {str(err)}")
-
-        database_roles = set(self.user_manager.get_roles().keys())
-        for role in database_roles - relation_users:
-            logger.info(f"Remove relation role: {role}")
-            try:
-                self.user_manager.remove_role(role)
-            except OpenSearchUserMgmtError as err:
-                logger.error(f"failed to remove role {role}: {str(err)}")
+        self.user_manager.remove_users_and_roles(event.relation.id)
 
     def update_endpoints(self, relation):
         """Updates endpoints in the databag for the given relation."""
