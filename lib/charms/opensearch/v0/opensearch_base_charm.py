@@ -212,7 +212,7 @@ class OpenSearchBaseCharm(CharmBase):
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
-        self.opensearch_provider.clear_lingering_users_and_roles()
+        self.opensearch_provider.remove_users_and_roles()
 
         # if there are missing system requirements defer
         missing_sys_reqs = self.opensearch.missing_sys_requirements()

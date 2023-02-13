@@ -28,12 +28,23 @@ class OpenSearchUserManager:
     def __init__(self, opensearch: OpenSearchDistribution):
         self.opensearch = opensearch
 
+    def get_roles(self) -> Dict[str, any]:
+        """Gets list of roles.
+
+        Raises:
+            OpenSearchUserMgmtError: If the request fails.
+        """
+        resp = self.opensearch.request("GET", f"{ROLE_ENDPOINT}/")
+        if resp.get("status") != "OK":
+            raise OpenSearchUserMgmtError("failed to get roles")
+        return resp
+
     def create_role(
         self,
         role_name: str,
         permissions: Optional[Dict[str, str]],
         action_groups: Optional[Dict[str, str]],
-    ) -> None:
+    ) -> Dict[str, any]:
         """Creates a role with the given permissions.
 
         This method assumes the dicts provided are valid opensearch config. If not, raises
@@ -52,12 +63,11 @@ class OpenSearchUserManager:
             f"{ROLE_ENDPOINT}/{role_name}",
             {**(permissions or {}), **(action_groups or {})},
         )
-        logger.debug(resp)
         if resp.get("status") != "OK":
-            raise OpenSearchUserMgmtError(f"creating role {role_name} failed - response: {resp}")
+            raise OpenSearchUserMgmtError(f"creating role {role_name} failed")
         return resp
 
-    def remove_role(self, role_name: str) -> None:
+    def remove_role(self, role_name: str) -> Dict[str, any]:
         """Remove the given role from opensearch distribution.
 
         Args:
@@ -72,12 +82,24 @@ class OpenSearchUserManager:
             )
 
         resp = self.opensearch.request("DELETE", f"{ROLE_ENDPOINT}/{role_name}")
-        logger.debug(resp)
         if resp.get("status") != "OK":
-            raise OpenSearchUserMgmtError(f"removing role {role_name} failed - response: {resp}")
+            raise OpenSearchUserMgmtError(f"removing role {role_name} failed")
         return resp
 
-    def create_user(self, user_name: str, roles: Optional[List[str]], hashed_pwd: str) -> None:
+    def get_users(self) -> Dict[str, any]:
+        """Gets list of users.
+
+        Raises:
+            OpenSearchUserMgmtError: If the request fails.
+        """
+        resp = self.opensearch.request("GET", f"{USER_ENDPOINT}/")
+        if resp.get("status") != "OK":
+            raise OpenSearchUserMgmtError("failed to get users")
+        return resp
+
+    def create_user(
+        self, user_name: str, roles: Optional[List[str]], hashed_pwd: str
+    ) -> Dict[str, any]:
         """Create or update user and assign the requested roles to the user.
 
         Args:
@@ -97,12 +119,11 @@ class OpenSearchUserManager:
             f"{USER_ENDPOINT}/{user_name}",
             payload,
         )
-        logger.debug(resp)
         if resp.get("status") != "CREATED":
-            raise OpenSearchUserMgmtError(f"creating user {user_name} failed - response: {resp}")
+            raise OpenSearchUserMgmtError(f"creating user {user_name} failed")
         return resp
 
-    def remove_user(self, user_name: str) -> None:
+    def remove_user(self, user_name: str) -> Dict[str, any]:
         """Remove the given user from opensearch distribution.
 
         Args:
@@ -117,13 +138,12 @@ class OpenSearchUserManager:
             )
 
         resp = self.opensearch.request("DELETE", f"{USER_ENDPOINT}/{user_name}/")
-        logger.debug(resp)
         # TODO update to handle if the user doesn't exist
         if resp.get("status") != "OK":
-            raise OpenSearchUserMgmtError(f"removing user {user_name} failed - response: {resp}")
+            raise OpenSearchUserMgmtError(f"removing user {user_name} failed")
         return resp
 
-    def patch_user(self, user_name: str, patches: List[Dict[str, any]]) -> None:
+    def patch_user(self, user_name: str, patches: List[Dict[str, any]]) -> Dict[str, any]:
         """Applies patches to user.
 
         Args:
@@ -138,7 +158,6 @@ class OpenSearchUserManager:
             f"{USER_ENDPOINT}/{user_name}",
             patches,
         )
-        logger.debug(resp)
         if resp.get("status") != "OK":
-            raise OpenSearchUserMgmtError(f"patching user {user_name} failed - response: {resp}")
+            raise OpenSearchUserMgmtError(f"patching user {user_name} failed")
         return resp

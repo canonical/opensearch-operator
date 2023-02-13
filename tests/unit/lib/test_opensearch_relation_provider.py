@@ -149,18 +149,19 @@ class TestOpenSearchProvider(unittest.TestCase):
         )
 
     @patch("charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider._unit_departing")
-    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_user")
-    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_role")
+    @patch(
+        "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.remove_users_and_roles"
+    )
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
     @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
-    def test_on_relation_broken(self, _, _is_node_up, _remove_role, _remove_user, _unit_departing):
+    def test_on_relation_broken(self, _, _is_node_up, _remove_users, _unit_departing):
         event = MagicMock()
         depart_flag = self.opensearch_provider._depart_flag(event.relation)
 
         self.harness.set_leader(False)
         _is_node_up.return_value = False
         self.opensearch_provider._on_relation_broken(event)
-        _remove_user.assert_not_called()
+        _remove_users.assert_not_called()
 
         self.harness.set_leader(True)
         _is_node_up.return_value = True
@@ -168,46 +169,12 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.charm.peers_data.put(Scope.UNIT, depart_flag, "true")
         self.opensearch_provider._on_relation_broken(event)
         assert not self.charm.peers_data.get(Scope.UNIT, depart_flag)
-        _remove_user.assert_not_called()
+        _remove_users.assert_not_called()
 
         _unit_departing.return_value = False
         self.opensearch_provider._on_relation_broken(event)
         assert not self.charm.peers_data.get(Scope.UNIT, depart_flag)
-
-        relation_username = self.opensearch_provider._relation_username(event.relation)
-        _remove_user.assert_called_with(relation_username)
-        _remove_role.assert_called_with(relation_username)
-
-    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_user")
-    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_role")
-    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
-    @patch("charm.OpenSearchOperatorCharm._initialize_admin_user")
-    def test_clear_lingering_users_and_roles(self, _, __, _remove_role, _remove_user):
-        self.harness.set_leader(True)
-        self.charm.peers_data.put(Scope.APP, "lingering_users", "john,ringo,paul,MODOK")
-        self.charm.peers_data.put(Scope.APP, "lingering_roles", "guitarist,drummer,bassist,MODOK")
-
-        _remove_user.side_effect = OpenSearchUserMgmtError()
-        _remove_role.side_effect = OpenSearchUserMgmtError()
-        self.opensearch_provider.clear_lingering_users_and_roles()
-        assert self.charm.peers_data.get(Scope.APP, "lingering_users") == "john,ringo,paul,MODOK"
-        assert (
-            self.charm.peers_data.get(Scope.APP, "lingering_roles")
-            == "guitarist,drummer,bassist,MODOK"
-        )
-
-        _remove_user.side_effect = None
-        self.opensearch_provider.clear_lingering_users_and_roles()
-        assert self.charm.peers_data.get(Scope.APP, "lingering_users") is None
-        assert (
-            self.charm.peers_data.get(Scope.APP, "lingering_roles")
-            == "guitarist,drummer,bassist,MODOK"
-        )
-
-        _remove_role.side_effect = None
-        self.opensearch_provider.clear_lingering_users_and_roles()
-        assert self.charm.peers_data.get(Scope.APP, "lingering_users") is None
-        assert self.charm.peers_data.get(Scope.APP, "lingering_roles") is None
+        _remove_users.assert_called_with(event.relation.id)
 
     @patch("charms.data_platform_libs.v0.data_interfaces.DatabaseProvides.set_endpoints")
     @patch(

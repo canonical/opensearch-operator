@@ -140,11 +140,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_LIB_PATH}.helper_security.cert_expiration_remaining_hours")
     @patch("ops.model.Model.get_relation")
     @patch(
-        "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.clear_lingering_users_and_roles"
+        "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.remove_users_and_roles"
     )
-    def test_on_update_status(
-        self, _clear_lingerings, get_relation, cert_expiration_remaining_hours
-    ):
+    def test_on_update_status(self, _, get_relation, cert_expiration_remaining_hours):
         """Test on update status."""
         with patch(
             f"{self.OPENSEARCH_DISTRO}.missing_sys_requirements"
