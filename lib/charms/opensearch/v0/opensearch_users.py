@@ -7,7 +7,7 @@ These functions wrap around some API calls used for user management.
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
@@ -182,35 +182,33 @@ class OpenSearchUserManager(Object):
                 if relation.id != departed_relation_id
             ]
         )
+        self._remove_lingering_users(relation_users)
+        self._remove_lingering_roles(relation_users)
 
+    def _remove_lingering_users(self, relation_users: Set[str]):
         app_users = relation_users | OpenSearchUsers
         try:
             database_users = set(self.get_users().keys())
-            for username in database_users - app_users:
-                logger.info(f"Remove relation user: {username}")
-                self.remove_user(username)
         except OpenSearchUserMgmtError:
             logger.error("failed to get users")
+            return
 
-        # for username in database_users - app_users:
-        #     logger.info(f"Remove relation user: {username}")
-        #     try:
-        #         self.remove_user(username)
-        #     except OpenSearchUserMgmtError as err:
-        #         logger.error(f"failed to remove user {username}: {str(err)}")
+        for username in database_users - app_users:
+            try:
+                self.remove_user(username)
+            except OpenSearchUserMgmtError as err:
+                logger.error(f"failed to remove user {username}: {str(err)}")
 
-        app_roles = relation_users | OpenSearchRoles
+    def _remove_lingering_roles(self, relation_roles: Set[str]):
+        app_roles = relation_roles | OpenSearchRoles
         try:
             database_roles = set(self.get_roles().keys())
-            for role in database_roles - app_roles:
-                logger.info(f"Remove relation role: {role}")
-                self.remove_role(role)
         except OpenSearchUserMgmtError:
             logger.error("failed to get roles")
+            return
 
-        # for role in database_roles - app_roles:
-        #     logger.info(f"Remove relation role: {role}")
-        #     try:
-        #         self.remove_role(role)
-        #     except OpenSearchUserMgmtError as err:
-        #         logger.error(f"failed to remove role {role}: {str(err)}")
+        for role in database_roles - app_roles:
+            try:
+                self.remove_role(role)
+            except OpenSearchUserMgmtError as err:
+                logger.error(f"failed to remove role {role}: {str(err)}")
