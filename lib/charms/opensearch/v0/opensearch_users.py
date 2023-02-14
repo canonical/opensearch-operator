@@ -173,7 +173,7 @@ class OpenSearchUserManager(Object):
         relations = self.model.relations.get(ClientRelationName, [])
         relation_users = set(
             [
-                self._relation_username(relation)
+                f"{ClientRelationName}_{relation.id}"
                 for relation in relations
                 if relation.id != departed_relation_id
             ]
