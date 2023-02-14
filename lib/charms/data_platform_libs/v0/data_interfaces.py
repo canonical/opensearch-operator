@@ -1153,7 +1153,7 @@ class OpenSearchRequiresEvents(CharmEvents):
 # OpenSearch Provides and Requires Objects
 
 
-class OpenSearchProvides(DatabaseProvides):
+class OpenSearchProvides(DataProvides):
     """Provider-side of the OpenSearch relation."""
 
     on = OpenSearchProvidesEvents()
@@ -1171,12 +1171,39 @@ class OpenSearchProvides(DatabaseProvides):
         diff = self._diff(event)
 
         # Emit an index requested event if the setup key (index name and optional extra user roles)
-        # have been added to the relation databag by the application.
+        # hhave been added to the relation databag by the application.
         if "index" in diff.added:
             self.on.index_requested.emit(event.relation, app=event.app, unit=event.unit)
 
+    def set_endpoints(self, relation_id: int, endpoints: str) -> None:
+        """Set the endpoints in the application relation databag.
 
-class OpenSearchRequires(DatabaseRequires):
+        Args:
+            relation_id: the identifier for a particular relation.
+            endpoints: the endpoint addresses for opensearch nodes.
+        """
+        self._update_relation_data(relation_id, {"endpoints": endpoints})
+
+    @property
+    def version(self) -> Optional[str]:
+        """Returns the version of the database.
+
+        Version as informed by the database daemon.
+        """
+        return self.relation.data[self.relation.app].get("version")
+
+    def set_version(self, relation_id: int, version: str) -> None:
+        """Set the database version in the application relation databag.
+
+        Args:
+            relation_id: the identifier for a particular relation.
+            version: database version.
+        """
+        self._update_relation_data(relation_id, {"version": version})
+
+
+
+class OpenSearchRequires(DataRequires):
     """Requires-side of the OpenSearch relation."""
 
     on = OpenSearchRequiresEvents()
@@ -1191,16 +1218,11 @@ class OpenSearchRequires(DatabaseRequires):
         """Event emitted when the application joins the OpenSearch relation."""
         # Sets both index and extra user roles in the relation if the roles are provided.
         # Otherwise, sets only the index.
+        data = {"index": self.index}
+        if self.extra_user_roles is not None:
+            data["extra-user-roles"] = self.extra_user_roles
 
-        self._update_relation_data(
-            event.relation.id,
-            {
-                "index": self.index,
-                "extra-user-roles": self.extra_user_roles,
-            }
-            if self.extra_user_roles is not None
-            else {"index": self.index},
-        )
+        self._update_relation_data(event.relation.id, data)
 
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
         """Event emitted when the OpenSearch relation has changed."""
