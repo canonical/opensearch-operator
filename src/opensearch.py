@@ -6,7 +6,6 @@
 This class handles install / start / stop of opensearch services.
 It also exposes some properties and methods for interacting with an OpenSearch Installation
 """
-
 import logging
 import os
 import time
@@ -18,10 +17,12 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchInstallError,
     OpenSearchMissingError,
     OpenSearchStartError,
+    OpenSearchStartTimeoutError,
     OpenSearchStopError,
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
+from datetime import datetime
 from overrides import override
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -146,30 +147,29 @@ class OpenSearchTarball(OpenSearchDistribution):
         except OpenSearchCmdError:
             raise OpenSearchStartError()
 
-        retries = 0
-        while not self.is_started() and retries < 3:
-            time.sleep(2)
-            retries += 1
+        start = datetime.now()
+        while not self.is_started() and (datetime.now() - start).seconds < 15:
+            time.sleep(3)
         else:
-            raise OpenSearchStartError()
+            raise OpenSearchStartTimeoutError()
 
     @override
     def _stop_service(self):
         """Stop opensearch."""
-        self._run_cmd(
-            "setpriv",
-            "--clear-groups --reuid ubuntu --regid ubuntu -- sudo systemctl stop opensearch.service",
-        )
+        try:
+            self._run_cmd(
+                "setpriv",
+                "--clear-groups --reuid ubuntu --regid ubuntu -- sudo systemctl stop opensearch.service",
+            )
+        except OpenSearchCmdError:
+            logger.debug("Failed stopping the opensearch service.")
+            raise OpenSearchStopError()
 
-        retries = 0
-        while retries < 3:
-            if not self.is_started():
-                return
-
-            time.sleep(2)
-            retries += 1
-
-        raise OpenSearchStopError()
+        start = datetime.now()
+        while self.is_started() and (datetime.now() - start).seconds < 25:
+            time.sleep(3)
+        else:
+            raise OpenSearchStopError()
 
     @override
     def _build_paths(self) -> Paths:

@@ -147,6 +147,7 @@ class OpenSearchDistribution(ABC):
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
         resp_status_code: bool = False,
+        retries: int = 0,
     ) -> Union[Dict[str, any], List[any], int]:
         """Make an HTTP request.
 
@@ -157,45 +158,59 @@ class OpenSearchDistribution(ABC):
             host: host of the node we wish to make a request on, by default current host.
             alt_hosts: in case the default host is unreachable, fallback/alternative hosts.
             resp_status_code: whether to only return the HTTP code from the response.
+            retries: number of retries
         """
+        def reachable_full_endpoints() -> List[str]:
+            """Returns a list of reachable hosts."""
+            primary_host = host or self.host
+            target_hosts = [primary_host]
+            if alt_hosts:
+                target_hosts.extend([alt_host for alt_host in alt_hosts if alt_host != primary_host])
+
+            reachable: List[str] = []
+            for host_candidate in target_hosts:
+                if is_reachable(host_candidate, self.port):
+                    reachable.append(f"https://{host_candidate}:{self.port}/{endpoint}")
+
+            return reachable
+
+        def call(remaining_retries: int) -> requests.Response:
+            """Performs an HTTP request."""
+            if remaining_retries < 0:
+                raise OpenSearchHttpError()
+
+            urls = reachable_full_endpoints()
+            if not urls:
+                logger.error(f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable.")
+                raise OpenSearchHttpError()
+
+            try:
+                with requests.Session() as s:
+                    s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
+
+                    response = s.request(
+                        method=method.upper(),
+                        url=urls[0],
+                        data=json.dumps(payload),
+                        verify=f"{self.paths.certs}/chain.pem",
+                        headers={"Accept": "application/json", "Content-Type": "application/json"},
+                    )
+
+                    response.raise_for_status()
+
+                    return response
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Request {method} to {urls[0]} with payload: {payload} failed. "
+                             f"(Attempts left: {remaining_retries})\n{e}")
+                return call(remaining_retries - 1)
+
         if None in [endpoint, method]:
             raise ValueError("endpoint or method missing")
 
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        primary_host = host or self.host
-        target_hosts = [primary_host]
-        if alt_hosts:
-            target_hosts.extend([alt_host for alt_host in alt_hosts if alt_host != primary_host])
-
-        target_host: Optional[str] = None
-        for host_candidate in target_hosts:
-            if is_reachable(host_candidate, self.port):
-                target_host = host_candidate
-                break
-
-        if not target_host:
-            logger.error(f"Host {primary_host}:{self.port} and alternative_hosts not reachable.")
-            raise OpenSearchHttpError()
-
-        full_url = f"https://{target_host}:{self.port}/{endpoint}"
-        try:
-            with requests.Session() as s:
-                s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
-
-                resp = s.request(
-                    method=method.upper(),
-                    url=full_url,
-                    data=json.dumps(payload),
-                    verify=f"{self.paths.certs}/chain.pem",
-                    headers={"Accept": "application/json", "Content-Type": "application/json"},
-                )
-
-                resp.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
-            raise OpenSearchHttpError()
+        resp = call(retries)
 
         if resp_status_code:
             return resp.status_code

@@ -3,6 +3,7 @@
 
 """Base class for OpenSearch node exclusions management."""
 import logging
+from functools import cached_property
 from typing import List, Optional, Set
 
 from charms.opensearch.v0.helper_databag import Scope
@@ -53,19 +54,18 @@ class OpenSearchExclusions:
 
     def delete_current(self) -> None:
         """Delete Voting and alloc exclusions."""
-        if not self._delete_voting():
-            logger.error("Failed to remove voting exclusions - will re-attempt later.")
+        if (self._node.is_cm_eligible() or self._node.is_voting_only()) and not self._delete_voting():
             self._charm.peers_data.put(self._scope, VOTING_TO_DELETE, True)
 
-        if not self._delete_allocations():
-            logger.error(f"Failed to remove allocation exclusion: {self._node.name}.")
-            current_allocations = set(
-                self._charm.peers_data.get(self._scope, ALLOCS_TO_DELETE, "").split(",")
-            )
-            current_allocations.add(self._node.name)
-            self._charm.peers_data.put(
-                self._scope, ALLOCS_TO_DELETE, ",".join(current_allocations)
-            )
+        if self._node.is_data() and not self._delete_allocations():
+            current_allocations = self._charm.peers_data.get(self._scope, ALLOCS_TO_DELETE)
+            if current_allocations:
+                current_allocations = set(current_allocations.split(","))
+                if self._node.name in current_allocations:
+                    current_allocations.remove(self._node.name)
+                    self._charm.peers_data.put(
+                        self._scope, ALLOCS_TO_DELETE, ",".join(current_allocations)
+                    )
 
     def cleanup(self) -> None:
         """Delete all exclusions that failed to be deleted."""
@@ -82,11 +82,13 @@ class OpenSearchExclusions:
     def _add_voting(self) -> bool:
         """Include the current node in the CMs voting exclusions list of nodes."""
         try:
+            logger.debug(f"\n\n\n _add_voting exclusion: {self._node.name}")
             self._opensearch.request(
                 "POST",
                 f"/_cluster/voting_config_exclusions?node_names={self._node.name}&timeout=1m",
                 alt_hosts=self._charm.alt_hosts,
                 resp_status_code=True,
+                retries=3,
             )
             return True
         except OpenSearchHttpError:
@@ -107,11 +109,13 @@ class OpenSearchExclusions:
         except OpenSearchHttpError:
             return False
 
-    def _add_allocations(self, allocations: Optional[Set[str]] = None) -> bool:
+    def _add_allocations(self, allocations: Optional[Set[str]] = None, override: bool = False) -> bool:
         """Register new allocation exclusions."""
         try:
-            existing = self._fetch_allocations()
-            all_allocs = existing.union(allocations or {self._node.name})
+            existing = set() if override else self._fetch_allocations()
+            all_allocs = existing.union(
+                allocations if allocations is not None else {self._node.name}
+            )
             response = self._opensearch.request(
                 "PUT",
                 "/_cluster/settings",
@@ -126,9 +130,9 @@ class OpenSearchExclusions:
         """This removes the allocation exclusions if needed."""
         try:
             existing = self._fetch_allocations()
-            to_remove = set(allocs or [self._node.name])
-
-            return self._add_allocations(existing - to_remove)
+            to_remove = set(allocs if allocs is not None else [self._node.name])
+            res = self._add_allocations(existing - to_remove, override=True)
+            return res
         except OpenSearchHttpError:
             return False
 
@@ -140,14 +144,16 @@ class OpenSearchExclusions:
                 "GET", "/_cluster/settings", alt_hosts=self._charm.alt_hosts
             )
             exclusions = resp["persistent"]["cluster"]["routing"]["allocation"]["exclude"]["_name"]
-            allocation_exclusions = set(exclusions.split(","))
+            if exclusions:
+                allocation_exclusions = set(exclusions.split(","))
         except KeyError:
             # no allocation exclusion set
             pass
         finally:
             return allocation_exclusions
 
-    @property
+    @cached_property
     def _node(self) -> Node:
         """Returns current node."""
-        return Node(self._charm.unit_name, self._charm.node_roles, self._charm.unit_ip)
+        return Node(self._charm.unit_name, self._charm.opensearch.roles, self._charm.unit_ip)
+        # return Node(self._charm.unit_name, self._charm.node_roles, self._charm.unit_ip)

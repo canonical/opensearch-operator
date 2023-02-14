@@ -181,7 +181,7 @@ class ClusterTopology:
 
         nodes: List[Node] = []
         if use_localhost or host:
-            response = opensearch.request("GET", "/_nodes", host=host, alt_hosts=alt_hosts)
+            response = opensearch.request("GET", "/_nodes", host=host, alt_hosts=alt_hosts, retries=3)
             if "nodes" in response:
                 for obj in response["nodes"].values():
                     nodes.append(Node(obj["name"], obj["roles"], obj["ip"]))

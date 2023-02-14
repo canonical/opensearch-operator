@@ -38,8 +38,16 @@ class OpenSearchStartError(OpenSearchError):
     """Exception thrown when OpenSearch fails to start."""
 
 
+class OpenSearchStartTimeoutError(OpenSearchStartError):
+    """Exception thrown when OpenSearch takes too long to start."""
+
+
 class OpenSearchStopError(OpenSearchError):
     """Exception thrown when OpenSearch fails to stop."""
+
+
+class OpenSearchStopTimeoutError(OpenSearchStopError):
+    """Exception thrown when OpenSearch takes too long to stop."""
 
 
 class OpenSearchRestartError(OpenSearchError):
