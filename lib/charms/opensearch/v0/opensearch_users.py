@@ -9,11 +9,7 @@ These functions wrap around some API calls used for user management.
 import logging
 from typing import Dict, List, Optional, Set
 
-from charms.opensearch.v0.constants_charm import (
-    ClientRelationName,
-    OpenSearchRoles,
-    OpenSearchUsers,
-)
+from charms.opensearch.v0.constants_charm import ClientRelationName, OpenSearchUsers
 from ops.framework import Object
 
 logger = logging.getLogger(__name__)
@@ -183,7 +179,6 @@ class OpenSearchUserManager(Object):
             ]
         )
         self._remove_lingering_users(relation_users)
-        self._remove_lingering_roles(relation_users)
 
     def _remove_lingering_users(self, relation_users: Set[str]):
         app_users = relation_users | OpenSearchUsers
@@ -198,17 +193,3 @@ class OpenSearchUserManager(Object):
                 self.remove_user(username)
             except OpenSearchUserMgmtError as err:
                 logger.error(f"failed to remove user {username}: {str(err)}")
-
-    def _remove_lingering_roles(self, relation_roles: Set[str]):
-        app_roles = relation_roles | OpenSearchRoles
-        try:
-            database_roles = set(self.get_roles().keys())
-        except OpenSearchUserMgmtError:
-            logger.error("failed to get roles")
-            return
-
-        for role in database_roles - app_roles:
-            try:
-                self.remove_role(role)
-            except OpenSearchUserMgmtError as err:
-                logger.error(f"failed to remove role {role}: {str(err)}")
