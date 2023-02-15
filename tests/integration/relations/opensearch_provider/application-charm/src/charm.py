@@ -17,7 +17,7 @@ from ops.model import ActiveStatus, BlockedStatus
 logger = logging.getLogger(__name__)
 
 
-CERT_PATH = "/"
+CERT_PATH = "./test_cert.ca"
 
 
 class ApplicationCharm(CharmBase):
