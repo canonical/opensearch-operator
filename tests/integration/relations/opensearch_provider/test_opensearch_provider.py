@@ -168,6 +168,12 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 
 
 @pytest.mark.client_relation
+async def test_cert_rotation(ops_test: OpsTest):
+    """Test that we can rotate certs while preserving client relation connectivity."""
+    # TODO
+
+
+@pytest.mark.client_relation
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     async with ops_test.fast_forward():

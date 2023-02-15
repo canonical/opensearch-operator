@@ -1133,17 +1133,16 @@ class OpenSearchProvidesEvents(CharmEvents):
 
 
 class OpenSearchRequiresEvent(RelationEvent):
-    """Base class for OpenSearch events."""
+    """Base class for OpenSearch requirer events."""
 
 
 class IndexCreatedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
     """Event emitted when a new index is created for use on this relation."""
 
-
 class OpenSearchRequiresEvents(CharmEvents):
     """OpenSearch events.
 
-    This class defines the events that the Kafka can emit.
+    This class defines the events that the opensearch requirer can emit.
     """
 
     index_created = EventSource(IndexCreatedEvent)
@@ -1201,6 +1200,9 @@ class OpenSearchProvides(DataProvides):
         """
         self._update_relation_data(relation_id, {"version": version})
 
+    def set_ca(self, relation_id, ca: str) -> None:
+        """Sets the provider CA cert in the databag."""
+        self._update_relation_data(relation_id, {"ca": ca})
 
 
 class OpenSearchRequires(DataRequires):
