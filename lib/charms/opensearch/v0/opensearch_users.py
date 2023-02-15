@@ -10,6 +10,7 @@ import logging
 from typing import Dict, List, Optional, Set
 
 from charms.opensearch.v0.constants_charm import ClientRelationName, OpenSearchUsers
+from charms.opensearch.v0.opensearch_distro import OpenSearchHttpError
 from ops.framework import Object
 
 logger = logging.getLogger(__name__)
@@ -179,6 +180,7 @@ class OpenSearchUserManager(Object):
             ]
         )
         self._remove_lingering_users(relation_users)
+        self._remove_lingering_roles(relation_users)
 
     def _remove_lingering_users(self, relation_users: Set[str]):
         app_users = relation_users | OpenSearchUsers
@@ -191,5 +193,21 @@ class OpenSearchUserManager(Object):
         for username in database_users - app_users:
             try:
                 self.remove_user(username)
-            except OpenSearchUserMgmtError as err:
-                logger.error(f"failed to remove user {username}: {str(err)}")
+            except OpenSearchUserMgmtError:
+                logger.error(f"failed to remove user {username}")
+
+    def _remove_lingering_roles(self, roles: Set[str]):
+        try:
+            database_roles = set(self.get_roles().keys())
+        except (OpenSearchUserMgmtError, OpenSearchHttpError):
+            logger.error("failed to get roles")
+            return
+
+        for role in database_roles - roles:
+            if ClientRelationName not in role:
+                # This role was not created by this charm, so leave it alone
+                continue
+            try:
+                self.remove_role(role)
+            except OpenSearchUserMgmtError:
+                logger.error(f"failed to remove role {role}")
