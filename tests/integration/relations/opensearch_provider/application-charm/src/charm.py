@@ -9,7 +9,10 @@ import logging
 from typing import Dict, List, Optional, Union
 
 import requests
-from charms.data_platform_libs.v0.data_interfaces import OpenSearchRequires
+from charms.data_platform_libs.v0.data_interfaces import (
+    AuthenticationEvent,
+    OpenSearchRequires,
+)
 from ops.charm import ActionEvent, CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
@@ -41,8 +44,9 @@ class ApplicationCharm(CharmBase):
         self.first_opensearch = OpenSearchRequires(
             self, "first-index", index_name, permissive_roles
         )
+
         self.framework.observe(
-            self.first_opensearch.on.relation_changed, self._on_first_opensearch_relation_changed
+            self.first_opensearch.on.authentication_updated, self._on_authentication_updated
         )
 
         # Events related to the second database that is requested
@@ -92,12 +96,12 @@ class ApplicationCharm(CharmBase):
             logger.error(e)
             return False
 
-    def _on_first_opensearch_relation_changed(self, event):
-        """Check for TLS and store it when it arrives."""
-        databag = self.first_opensearch.fetch_relation_data()[event.relation.id]
-        ca = databag.get("ca", "")
+    def _on_authentication_updated(self, event: AuthenticationEvent):
+        if event.tls != "True":
+            return
+
         with open(CERT_PATH, "w") as f:
-            f.write(ca)
+            f.write(event.tls_ca)
 
     # ==============
     #  Action hooks

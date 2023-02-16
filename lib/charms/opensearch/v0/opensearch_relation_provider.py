@@ -172,13 +172,18 @@ class OpenSearchProvider(Object):
 
     def update_certs(self, relation_id, ca_chain=None):
         """Update TLS certs passed into this relation."""
+        if not self.unit.is_leader():
+            # We're updating app databags in this function, so it can't be called on follower
+            # units.
+            return
         if not ca_chain:
             try:
                 ca_chain = self.charm.secrets.get_object(Scope.APP, CertType.ADMIN.val).get("ca")
             except AttributeError:
                 # cert doesn't exist - presumably we don't yet have a TLS relation.
                 return
-        self.opensearch_provides.set_ca_chain(relation_id, ca_chain)
+        self.opensearch_provides.set_tls_ca(relation_id, ca_chain)
+        self.opensearch_provides.set_tls(relation_id, "True")
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
