@@ -20,7 +20,7 @@ from ops.model import ActiveStatus, BlockedStatus
 logger = logging.getLogger(__name__)
 
 
-CERT_PATH = "./test_cert.ca"
+CERT_PATH = "/tmp/test_cert.ca"
 
 
 class ApplicationCharm(CharmBase):
@@ -45,6 +45,9 @@ class ApplicationCharm(CharmBase):
             self, "first-index", index_name, permissive_roles
         )
 
+        self.framework.observe(
+            self.first_opensearch.on.index_created, self._on_authentication_updated
+        )
         self.framework.observe(
             self.first_opensearch.on.authentication_updated, self._on_authentication_updated
         )
@@ -100,6 +103,7 @@ class ApplicationCharm(CharmBase):
         if event.tls != "True":
             return
 
+        logger.error(f"writing cert to {CERT_PATH}.")
         with open(CERT_PATH, "w") as f:
             f.write(event.tls_ca)
 
