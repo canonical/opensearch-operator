@@ -3,6 +3,7 @@
 
 """Utility functions."""
 import tarfile
+import os
 
 
 def extract_tarball(tarball_path: str, extract_dir):
@@ -19,3 +20,5 @@ def extract_tarball(tarball_path: str, extract_dir):
 
     with tarfile.open(tarball_path) as tar:
         tar.extractall(extract_dir, members=fetch_members(tar))
+
+    os.remove(tarball_path)
