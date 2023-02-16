@@ -2,8 +2,8 @@
 # See LICENSE file for licensing details.
 
 """Utility functions."""
-import tarfile
 import os
+import tarfile
 
 
 def extract_tarball(tarball_path: str, extract_dir):
