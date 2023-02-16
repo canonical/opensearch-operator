@@ -54,7 +54,9 @@ class OpenSearchExclusions:
 
     def delete_current(self) -> None:
         """Delete Voting and alloc exclusions."""
-        if (self._node.is_cm_eligible() or self._node.is_voting_only()) and not self._delete_voting():
+        if (
+            self._node.is_cm_eligible() or self._node.is_voting_only()
+        ) and not self._delete_voting():
             self._charm.peers_data.put(self._scope, VOTING_TO_DELETE, True)
 
         if self._node.is_data() and not self._delete_allocations():
@@ -82,7 +84,6 @@ class OpenSearchExclusions:
     def _add_voting(self) -> bool:
         """Include the current node in the CMs voting exclusions list of nodes."""
         try:
-            logger.debug(f"\n\n\n _add_voting exclusion: {self._node.name}")
             self._opensearch.request(
                 "POST",
                 f"/_cluster/voting_config_exclusions?node_names={self._node.name}&timeout=1m",
@@ -109,7 +110,9 @@ class OpenSearchExclusions:
         except OpenSearchHttpError:
             return False
 
-    def _add_allocations(self, allocations: Optional[Set[str]] = None, override: bool = False) -> bool:
+    def _add_allocations(
+        self, allocations: Optional[Set[str]] = None, override: bool = False
+    ) -> bool:
         """Register new allocation exclusions."""
         try:
             existing = set() if override else self._fetch_allocations()
@@ -156,4 +159,3 @@ class OpenSearchExclusions:
     def _node(self) -> Node:
         """Returns current node."""
         return Node(self._charm.unit_name, self._charm.opensearch.roles, self._charm.unit_ip)
-        # return Node(self._charm.unit_name, self._charm.node_roles, self._charm.unit_ip)

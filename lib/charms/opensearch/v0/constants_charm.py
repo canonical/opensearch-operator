@@ -31,6 +31,9 @@ TLSRelationBrokenError = (
     "Relation broken with the TLS Operator while TLS not fully configured. Stopping OpenSearch."
 )
 NoNodeUpInCluster = "No node is up in this cluster."
+TooManyNodesRemoved = (
+    "Too many nodes being removed at the same time, please scale your application up."
+)
 ClusterHealthRed = "1 or more 'primary' shards are not assigned, please scale your application up."
 ClusterHealthYellow = (
     "1 or more 'replica' shards are not assigned, please scale your application up."

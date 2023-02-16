@@ -9,6 +9,7 @@ import os
 import pathlib
 import socket
 import subprocess
+import time
 from abc import ABC, abstractmethod
 from functools import cached_property
 from os.path import exists
@@ -19,7 +20,11 @@ import requests
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
+from charms.opensearch.v0.helper_networking import (
+    get_host_ip,
+    is_reachable,
+    reachable_hosts,
+)
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchHttpError,
@@ -139,13 +144,14 @@ class OpenSearchDistribution(ABC):
 
         self._run_cmd(f"{script_path}", args)
 
-    def request(
+    def request(  # noqa
         self,
         method: str,
         endpoint: str,
-        payload: Optional[Dict[str, any]] = None,
+        payload: Optional[Union[str, Dict[str, any]]] = None,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
+        check_hosts_reach: bool = True,
         resp_status_code: bool = False,
         retries: int = 0,
     ) -> Union[Dict[str, any], List[any], int]:
@@ -157,51 +163,69 @@ class OpenSearchDistribution(ABC):
             payload: JSON / map body payload.
             host: host of the node we wish to make a request on, by default current host.
             alt_hosts: in case the default host is unreachable, fallback/alternative hosts.
+            check_hosts_reach: if true, performs a ping for each host
             resp_status_code: whether to only return the HTTP code from the response.
             retries: number of retries
         """
-        def reachable_full_endpoints() -> List[str]:
+
+        def full_urls() -> List[str]:
             """Returns a list of reachable hosts."""
             primary_host = host or self.host
             target_hosts = [primary_host]
             if alt_hosts:
-                target_hosts.extend([alt_host for alt_host in alt_hosts if alt_host != primary_host])
+                target_hosts.extend(
+                    [alt_host for alt_host in alt_hosts if alt_host != primary_host]
+                )
 
-            reachable: List[str] = []
-            for host_candidate in target_hosts:
-                if is_reachable(host_candidate, self.port):
-                    reachable.append(f"https://{host_candidate}:{self.port}/{endpoint}")
+            if not check_hosts_reach:
+                return target_hosts
 
-            return reachable
+            return [
+                f"https://{host_candidate}:{self.port}/{endpoint}"
+                for host_candidate in reachable_hosts(target_hosts)
+            ]
 
         def call(remaining_retries: int) -> requests.Response:
             """Performs an HTTP request."""
             if remaining_retries < 0:
                 raise OpenSearchHttpError()
 
-            urls = reachable_full_endpoints()
+            urls = full_urls()
             if not urls:
-                logger.error(f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable.")
+                logger.error(
+                    f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
+                )
                 raise OpenSearchHttpError()
 
             try:
                 with requests.Session() as s:
                     s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
 
-                    response = s.request(
-                        method=method.upper(),
-                        url=urls[0],
-                        data=json.dumps(payload),
-                        verify=f"{self.paths.certs}/chain.pem",
-                        headers={"Accept": "application/json", "Content-Type": "application/json"},
-                    )
+                    request_kwargs = {
+                        "method": method.upper(),
+                        "url": urls[0],
+                        "verify": f"{self.paths.certs}/chain.pem",
+                        "headers": {
+                            "Accept": "application/json",
+                            "Content-Type": "application/json",
+                        },
+                    }
+                    if payload:
+                        request_kwargs["data"] = (
+                            json.dumps(payload) if isinstance(payload, dict) else payload
+                        )
+
+                    response = s.request(**request_kwargs)
 
                     response.raise_for_status()
 
                     return response
             except requests.exceptions.RequestException as e:
-                logger.error(f"Request {method} to {urls[0]} with payload: {payload} failed. "
-                             f"(Attempts left: {remaining_retries})\n{e}")
+                logger.error(
+                    f"Request {method} to {urls[0]} with payload: {payload} failed. "
+                    f"(Attempts left: {remaining_retries})\n{e}"
+                )
+                time.sleep(0.5)
                 return call(remaining_retries - 1)
 
         if None in [endpoint, method]:

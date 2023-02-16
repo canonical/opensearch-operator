@@ -9,6 +9,7 @@ It also exposes some properties and methods for interacting with an OpenSearch I
 import logging
 import os
 import time
+from datetime import datetime
 
 import requests
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution, Paths
@@ -22,7 +23,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
-from datetime import datetime
 from overrides import override
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -148,7 +148,7 @@ class OpenSearchTarball(OpenSearchDistribution):
             raise OpenSearchStartError()
 
         start = datetime.now()
-        while not self.is_started() and (datetime.now() - start).seconds < 15:
+        while not self.is_started() and (datetime.now() - start).seconds < 45:
             time.sleep(3)
         else:
             raise OpenSearchStartTimeoutError()
@@ -157,19 +157,14 @@ class OpenSearchTarball(OpenSearchDistribution):
     def _stop_service(self):
         """Stop opensearch."""
         try:
-            self._run_cmd(
-                "setpriv",
-                "--clear-groups --reuid ubuntu --regid ubuntu -- sudo systemctl stop opensearch.service",
-            )
+            self._run_cmd("sudo systemctl stop opensearch.service")
         except OpenSearchCmdError:
             logger.debug("Failed stopping the opensearch service.")
             raise OpenSearchStopError()
 
         start = datetime.now()
-        while self.is_started() and (datetime.now() - start).seconds < 25:
+        while self.is_started() and (datetime.now() - start).seconds < 60:
             time.sleep(3)
-        else:
-            raise OpenSearchStopError()
 
     @override
     def _build_paths(self) -> Paths:

@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Cluster-related data structures / model classes."""
+import json
 from typing import List
 
 
@@ -29,7 +30,23 @@ class Node:
 
         return False
 
+    def __eq__(self, other):
+        """Implement equality."""
+        if other is None:
+            return False
+
+        return (
+            self.name == other.name
+            and sorted(self.roles) == sorted(other.roles)
+            and self.ip == other.ip
+        )
+
     @staticmethod
     def from_dict(input_dict):
         """Create a new instance of this class from a json/dict repr."""
         return Node(input_dict.get("name"), input_dict.get("roles"), input_dict.get("ip"))
+
+    @staticmethod
+    def from_str(input_str_dict):
+        """Create a new instance of this class from a stringified json/dict repr."""
+        return Node.from_dict(json.loads(input_str_dict))

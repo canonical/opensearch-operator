@@ -89,12 +89,10 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._can_service_start")
     @patch(f"{BASE_CHARM_CLASS}._initialize_security_index")
     @patch(f"{BASE_CHARM_CLASS}._initialize_admin_user")
-    # @patch(
-    #     f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.current",
-    #     new_callable=PropertyMock, return_value=
-    # )
+    @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
     def test_on_start(
         self,
+        request,
         _initialize_admin_user,
         _initialize_security_index,
         _can_service_start,

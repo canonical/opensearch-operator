@@ -68,3 +68,7 @@ class OpenSearchHttpError(OpenSearchError):
 
 class OpenSearchHAError(OpenSearchError):
     """Exception thrown when the HA of the OpenSearch charm is violated."""
+
+
+class OpenSearchScaleDownError(OpenSearchError):
+    """Exception thrown when a scale-down event is not safe."""

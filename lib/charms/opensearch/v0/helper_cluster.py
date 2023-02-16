@@ -55,20 +55,13 @@ class ClusterTopology:
 
     @staticmethod
     def node_with_new_roles(remaining_nodes: List[Node]) -> Optional[Node]:
-        """Pick and recompute the roles of the best node to rebalance the cluster."""
+        """Pick and recompute the roles of the best node to re-balance the cluster."""
         max_cms, max_voters = ClusterTopology.max_cm_and_voter_nodes(len(remaining_nodes))
         max_voting_only = max_voters - max_cms
 
         nodes_by_roles = ClusterTopology.nodes_count_by_role(remaining_nodes)
         current_cms = nodes_by_roles.get("cluster_manager", 0)
         current_voting_only = nodes_by_roles.get("voting_only", 0)
-
-        logger.debug(
-            f"\nNew {len(remaining_nodes)} topology:"
-            f"\n\t- max_cms: {max_cms}\n\t- current_cms: {current_cms}"
-            f"\n\t- max_voting_only: {max_voting_only}\n\t- current_voting_only: {current_voting_only}"
-            f"\n\t- current_data: {nodes_by_roles['data'] - current_cms - current_voting_only}"
-        )
 
         # the nodes involved in the voting are intact, do nothing
         if current_cms + current_voting_only == max_voters:
@@ -181,7 +174,9 @@ class ClusterTopology:
 
         nodes: List[Node] = []
         if use_localhost or host:
-            response = opensearch.request("GET", "/_nodes", host=host, alt_hosts=alt_hosts, retries=3)
+            response = opensearch.request(
+                "GET", "/_nodes", host=host, alt_hosts=alt_hosts, retries=3
+            )
             if "nodes" in response:
                 for obj in response["nodes"].values():
                     nodes.append(Node(obj["name"], obj["roles"], obj["ip"]))
@@ -198,7 +193,9 @@ class ClusterState:
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True,
     )
-    def shards(opensearch: OpenSearchDistribution, host: Optional[str] = None) -> List[Dict[str, str]]:
+    def shards(
+        opensearch: OpenSearchDistribution, host: Optional[str] = None
+    ) -> List[Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
         return opensearch.request("GET", "/_cat/shards", host=host)
 
