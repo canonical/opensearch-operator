@@ -66,7 +66,7 @@ jobs:
 
   integration-test-lxd-ha:
     name: Integration tests for HA (lxd)
-    runs-on: [self-hosted, linux, X64, ubuntu-22.04, virtual-machine, two-xlarge]
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -74,6 +74,8 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
       - name: Run integration tests
         run: |
           # set sysctl values in case the cloudinit-userdata not applied
