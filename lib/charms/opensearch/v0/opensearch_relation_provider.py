@@ -182,7 +182,7 @@ class OpenSearchProvider(Object):
             except AttributeError:
                 # cert doesn't exist - presumably we don't yet have a TLS relation.
                 return
-        self.opensearch_provides.set_tls_ca(relation_id, ca_chain)
+        self.opensearch_provides.set_tls_ca(relation_id, "\n".join(ca_chain[::-1]))
         self.opensearch_provides.set_tls(relation_id, "True")
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
