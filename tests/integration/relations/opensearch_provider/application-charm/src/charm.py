@@ -69,7 +69,7 @@ class ApplicationCharm(CharmBase):
 
         self.framework.observe(self.on.single_put_action, self._on_single_put_action)
         self.framework.observe(self.on.bulk_put_action, self._on_bulk_put_action)
-        self.framework.observe(self.on.get_from_index_action, self._on_get_from_index_action)
+        self.framework.observe(self.on.get_request_action, self._on_get_request_action)
 
     def _on_update_status(self, _) -> None:
         """Health check for database connection."""
@@ -172,7 +172,7 @@ class ApplicationCharm(CharmBase):
 
         event.set_results({"results": json.dumps(response)})
 
-    def _on_get_from_index_action(self, event: ActionEvent):
+    def _on_get_request_action(self, event: ActionEvent):
         logger.info(event.params)
         relation_id = event.params["relation-id"]
         databag = self.first_opensearch.fetch_relation_data()[relation_id]
@@ -262,14 +262,13 @@ class ApplicationCharm(CharmBase):
             "verify": CERT_PATH,
             "method": method.upper(),
             "url": full_url,
-            "headers": {"Content-Type": "application/json"},
+            "headers": {"Content-Type": "application/json", "Accept": "application/json"},
         }
 
         if payload:
             if isinstance(payload, dict):
                 payload = json.dumps(payload)
             request_kwargs["data"] = payload
-            request_kwargs["headers"]["Accept"] = "application/json"
         try:
             with requests.Session() as s:
                 s.auth = (username, password)

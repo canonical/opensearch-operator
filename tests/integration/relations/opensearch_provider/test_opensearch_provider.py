@@ -10,15 +10,17 @@ from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
-from tests.integration.helpers import (  # get_leader_unit_ip,; http_request,
+from tests.integration.helpers import (
     MODEL_CONFIG,
     SERIES,
     UNIT_IDS,
+    get_leader_unit_ip,
+    http_request,
 )
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
     run_bulk_put,
-    run_get_from_index,
+    run_get_request,
     run_simple_put,
     wait_for_relation_joined_between,
 )
@@ -84,7 +86,7 @@ async def test_database_usage(ops_test: OpsTest):
     logging.error(json.dumps(run_create_index))
 
     read_index_endpoint = "/albums/_search?q=Jazz"
-    run_read_index = await run_get_from_index(
+    run_read_index = await run_get_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         endpoint=read_index_endpoint,
@@ -108,7 +110,7 @@ async def test_database_bulk_usage(ops_test: OpsTest):
     logging.info(json.dumps(run_bulk_create_index["results"]))
 
     read_index_endpoint = "/albums/_search?q=Jazz"
-    run_bulk_read_index = await run_get_from_index(
+    run_bulk_read_index = await run_get_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         endpoint=read_index_endpoint,
@@ -124,7 +126,7 @@ async def test_database_bulk_usage(ops_test: OpsTest):
 @pytest.mark.client_relation
 async def test_database_version(ops_test: OpsTest):
     """Check version is accurate."""
-    run_version_query = await run_get_from_index(
+    run_version_query = await run_get_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         endpoint="/",
@@ -133,7 +135,7 @@ async def test_database_version(ops_test: OpsTest):
     # Get the version of the database and compare with the information that
     # was retrieved directly from the database.
     version = await get_application_relation_data(
-        ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "version"
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "version"
     )
     logging.error(run_version_query)
     assert version in run_version_query["results"]
@@ -179,28 +181,32 @@ async def test_relation_broken(ops_test: OpsTest):
     async with ops_test.fast_forward():
         # Retrieve the relation user.
         relation_user = await get_application_relation_data(
-            ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "username"
+            ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "username"
         )
 
-        # Break the relation.
-        await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
-            f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
-            f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
-        )
+    # Break the relation.
+    await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
+        f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
+        f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
+    )
+    async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.wait_for_idle(
                 apps=[CLIENT_APP_NAME],
                 status="blocked",
             ),
             ops_test.model.wait_for_idle(
-                apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
+                apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
                 status="active",
                 raise_on_blocked=True,
             ),
         )
     logger.error(relation_user)
-    # leader_ip = await get_leader_unit_ip(ops_test)
-    # users = await http_request(
-    #     ops_test, "GET", f"http://{leader_ip}:9200/_plugins/_security/api/internalusers/"
-    # )
-    # assert relation_user not in users.keys()
+    leader_ip = await get_leader_unit_ip(ops_test)
+    users = await http_request(
+        ops_test,
+        "GET",
+        f"https://{leader_ip}:9200/_plugins/_security/api/internalusers/",
+        verify=False,
+    )
+    assert relation_user not in users.keys()
