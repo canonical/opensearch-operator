@@ -67,8 +67,6 @@ class ApplicationCharm(CharmBase):
             self, "second-index", index_name, complex_roles
         )
 
-        self.framework.observe(self.on.single_put_action, self._on_single_put_action)
-        self.framework.observe(self.on.bulk_put_action, self._on_bulk_put_action)
         self.framework.observe(self.on.run_request_action, self._on_run_request_action)
 
     def _on_update_status(self, _) -> None:
