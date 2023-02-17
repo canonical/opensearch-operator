@@ -170,12 +170,6 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 
 
 @pytest.mark.client_relation
-async def test_cert_rotation(ops_test: OpsTest):
-    """Test that we can rotate certs while preserving client relation connectivity."""
-    # TODO
-
-
-@pytest.mark.client_relation
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     async with ops_test.fast_forward():
@@ -201,7 +195,6 @@ async def test_relation_broken(ops_test: OpsTest):
                 raise_on_blocked=True,
             ),
         )
-    logger.error(relation_user)
     leader_ip = await get_leader_unit_ip(ops_test)
     users = await http_request(
         ops_test,
@@ -209,4 +202,6 @@ async def test_relation_broken(ops_test: OpsTest):
         f"https://{leader_ip}:9200/_plugins/_security/api/internalusers/",
         verify=False,
     )
+    logger.error(relation_user)
+    logger.error(users)
     assert relation_user not in users.keys()
