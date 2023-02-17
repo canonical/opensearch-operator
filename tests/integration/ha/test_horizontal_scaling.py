@@ -21,6 +21,7 @@ from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.charm_tests
 @pytest.mark.ha_tests
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
