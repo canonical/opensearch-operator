@@ -20,7 +20,7 @@ from tests.integration.helpers import (
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
     run_bulk_put,
-    run_get_from_index,
+    run_get_request,
     run_simple_put,
     wait_for_relation_joined_between,
 )
