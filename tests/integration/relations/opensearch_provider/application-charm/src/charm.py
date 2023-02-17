@@ -265,7 +265,7 @@ class ApplicationCharm(CharmBase):
         full_url = f"https://{host}:{port}/{endpoint}"
 
         request_kwargs = {
-            "verify": False,  # TODO this should be a cert once this relation has TLS.
+            "verify": False,  # TODO this should be a path to a cert once this relation has TLS.
             "method": method.upper(),
             "url": full_url,
             "headers": {"Content-Type": "application/json", "Accept": "application/json"},
