@@ -70,7 +70,7 @@ class ApplicationCharm(CharmBase):
 
         self.framework.observe(self.on.single_put_action, self._on_single_put_action)
         self.framework.observe(self.on.bulk_put_action, self._on_bulk_put_action)
-        self.framework.observe(self.on.get_request_action, self._on_get_request_action)
+        self.framework.observe(self.on.run_request_action, self._on_run_request_action)
 
     def _on_update_status(self, _) -> None:
         """Health check for database connection."""
@@ -121,68 +121,16 @@ class ApplicationCharm(CharmBase):
     # ==============
     #  Action hooks
     # ==============
-
-    def _on_single_put_action(self, event: ActionEvent):
+    def _on_run_request_action(self, event: ActionEvent):
         logger.info(event.params)
         relation = self.first_database
         relation_id = event.params["relation-id"]
         databag = relation.fetch_relation_data()[relation_id]
-        method = "PUT"
-        payload = {"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}
-        endpoint = "/albums/_doc/1"
-
-        username = databag.get("username")
-        password = databag.get("password")
-        host = databag.get("endpoints").split(",")[0]
-        host_addr = host.split(":")[0]
-        port = host.split(":")[1]
-
-        logger.info(f"sending {method} request to {endpoint}")
-        try:
-            response = self.request(method, endpoint, port, username, password, host_addr, payload)
-        except OpenSearchHttpError as e:
-            response = [str(e)]
-        logger.info(response)
-
-        event.set_results({"results": json.dumps(response)})
-
-    def _on_bulk_put_action(self, event: ActionEvent):
-        logger.info(event.params)
-        relation = self.first_database
-        relation_id = event.params["relation-id"]
-        databag = relation.fetch_relation_data()[relation_id]
-        method = "POST"
-        payload = """{ "index" : { "_index": "albums", "_id" : "2" } }
-{"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
-{ "index" : { "_index": "albums", "_id" : "3" } }
-{"artist": "Lydian Collective", "genre": ["Jazz"],  "title": "Adventure"}
-{ "index" : { "_index": "albums", "_id" : "4" } }
-{"artist": "Liquid Tension Experiment", "genre": ["Prog", "Metal"],  "title": "Liquid Tension Experiment 2"}
-"""
-        endpoint = "/_bulk"
-
-        username = databag.get("username")
-        password = databag.get("password")
-        host = databag.get("endpoints").split(",")[0]
-        host_addr = host.split(":")[0]
-        port = host.split(":")[1]
-
-        logger.info(f"sending {method} request to {endpoint}")
-        try:
-            response = self.request(method, endpoint, port, username, password, host_addr, payload)
-        except OpenSearchHttpError as e:
-            response = [str(e)]
-        logger.info(response)
-
-        event.set_results({"results": json.dumps(response)})
-
-    def _on_get_request_action(self, event: ActionEvent):
-        logger.info(event.params)
-        relation = self.first_database
-        relation_id = event.params["relation-id"]
-        databag = relation.fetch_relation_data()[relation_id]
-        method = "GET"
+        method = event.params["method"]
         endpoint = event.params["endpoint"]
+        payload = event.params.get("payload", None)
+        if payload:
+            payload = payload.replace("\\", "")
 
         username = databag.get("username")
         password = databag.get("password")
@@ -192,7 +140,7 @@ class ApplicationCharm(CharmBase):
 
         logger.info(f"sending {method} request to {endpoint}")
         try:
-            response = self.request(method, endpoint, port, username, password, host_addr)
+            response = self.request(method, endpoint, port, username, password, host_addr, payload)
         except OpenSearchHttpError as e:
             response = [str(e)]
         logger.info(response)
@@ -271,8 +219,6 @@ class ApplicationCharm(CharmBase):
         }
 
         if payload:
-            if isinstance(payload, dict):
-                payload = json.dumps(payload)
             request_kwargs["data"] = payload
         try:
             with requests.Session() as s:

@@ -1,28 +1,18 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-single-put:
-  description: runs a simple put request for testing first-database relation
+run_request:
+  description: runs request on first-database relation
   params:
     relation_id:
       description: id of the relation under test
       type: integer
-
-bulk-put:
-  description: runs a bulk put request for testing first-database relation
-  params:
-    relation_id:
-      description: id of the relation under test
-      type: integer
-
-get-request:
-  description: Runs a GET request on first-database relation
-  params:
-    endpoint:
-      description: HTTP endpoint where we're sending our GET request
+    method:
+      description: HTTP method to run
       type: string
-    relation_id:
-      description: id of the relation under test
-      type: integer
+    payload:
+      description: fully escaped payload to be sent in bulk
+      type: string
   required:
-  - endpoint
+    - relation_id
+    - method
