@@ -10,10 +10,12 @@ from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
-from tests.integration.helpers import (  # get_leader_unit_ip,; http_request,
+from tests.integration.helpers import (
     MODEL_CONFIG,
     SERIES,
     UNIT_IDS,
+    get_leader_unit_ip,
+    http_request,
 )
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
@@ -176,25 +178,29 @@ async def test_relation_broken(ops_test: OpsTest):
             ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "username"
         )
 
-        # Break the relation.
-        await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
-            f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
-            f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
-        )
+    # Break the relation.
+    await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
+        f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
+        f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
+    )
+    async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.wait_for_idle(
                 apps=[CLIENT_APP_NAME],
                 status="blocked",
             ),
             ops_test.model.wait_for_idle(
-                apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME],
+                apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
                 status="active",
                 raise_on_blocked=True,
             ),
         )
     logger.error(relation_user)
-    # leader_ip = await get_leader_unit_ip(ops_test)
-    # users = await http_request(
-    #     ops_test, "GET", f"http://{leader_ip}:9200/_plugins/_security/api/internalusers/"
-    # )
-    # assert relation_user not in users.keys()
+    leader_ip = await get_leader_unit_ip(ops_test)
+    users = await http_request(
+        ops_test,
+        "GET",
+        f"https://{leader_ip}:9200/_plugins/_security/api/internalusers/",
+        verify=False,
+    )
+    assert relation_user not in users.keys()
