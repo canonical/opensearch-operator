@@ -20,7 +20,7 @@ from tests.integration.helpers import (
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
     run_bulk_put,
-    run_get_from_index,
+    run_get_request,
     run_simple_put,
     wait_for_relation_joined_between,
 )
@@ -85,7 +85,7 @@ async def test_database_usage(ops_test: OpsTest):
     logging.error(json.dumps(run_create_index))
 
     read_index_endpoint = "/albums/_search?q=Jazz"
-    run_read_index = await run_get_from_index(
+    run_read_index = await run_get_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         endpoint=read_index_endpoint,
@@ -109,7 +109,7 @@ async def test_database_bulk_usage(ops_test: OpsTest):
     logging.info(json.dumps(run_bulk_create_index["results"]))
 
     read_index_endpoint = "/albums/_search?q=Jazz"
-    run_bulk_read_index = await run_get_from_index(
+    run_bulk_read_index = await run_get_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         endpoint=read_index_endpoint,
@@ -125,7 +125,7 @@ async def test_database_bulk_usage(ops_test: OpsTest):
 @pytest.mark.client_relation
 async def test_database_version(ops_test: OpsTest):
     """Check version is accurate."""
-    run_version_query = await run_get_from_index(
+    run_version_query = await run_get_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         endpoint="/",
@@ -134,7 +134,7 @@ async def test_database_version(ops_test: OpsTest):
     # Get the version of the database and compare with the information that
     # was retrieved directly from the database.
     version = await get_application_relation_data(
-        ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "version"
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "version"
     )
     logging.error(run_version_query)
     assert version in run_version_query["results"]
@@ -173,7 +173,7 @@ async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
     relation_user = await get_application_relation_data(
-        ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "username"
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "username"
     )
 
     # Break the relation.
