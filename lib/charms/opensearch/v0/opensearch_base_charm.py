@@ -506,37 +506,38 @@ class OpenSearchBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
             return False
 
-        # if self.peers_data.get(Scope.APP, "unit-busy-starting", False):
-        #     return False
+        if self.unit.is_leader():
+            return True
+
+        if not self.peers_data.get(Scope.APP, "security_index_initialised", False):
+            return False
+
+        if not self.peers_data.get(Scope.APP, "leader_ip"):
+            return False
 
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
         # overloading the cluster, units must be started one at a time. So we defer starting
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
-        if not self.unit.is_leader():
-            if not self.peers_data.get(Scope.APP, "security_index_initialised", False):
+        try:
+            busy_shards = ClusterState.busy_shards_by_unit(
+                self.opensearch, self.peers_data.get(Scope.APP, "leader_ip")
+            )
+            if busy_shards:
+                message = WaitingForBusyShards.format(
+                    " - ".join(
+                        [f"{key}/{','.join(val)}" for key, val in busy_shards.items()]
+                    )
+                )
+                self.unit.status = WaitingStatus(message)
                 return False
 
-            if self.peers_data.get(Scope.APP, "leader_ip"):
-                try:
-                    busy_shards = ClusterState.busy_shards_by_unit(
-                        self.opensearch, self.peers_data.get(Scope.APP, "leader_ip")
-                    )
-                    if busy_shards:
-                        message = WaitingForBusyShards.format(
-                            " - ".join(
-                                [f"{key}/{','.join(val)}" for key, val in busy_shards.items()]
-                            )
-                        )
-                        self.unit.status = WaitingStatus(message)
-                        return False
-
-                    self.status.clear(
-                        WaitingForBusyShards, pattern=Status.CheckPattern.Interpolated
-                    )
-                except OpenSearchHttpError:
-                    # this means that the leader unit is not reachable (not started yet),
-                    # meaning it's a new cluster, so we can safely start the OpenSearch service
-                    pass
+            self.status.clear(
+                WaitingForBusyShards, pattern=Status.CheckPattern.Interpolated
+            )
+        except OpenSearchHttpError:
+            # this means that the leader unit is not reachable (not started yet),
+            # meaning it's a new cluster, so we can safely start the OpenSearch service
+            pass
 
         return True
 
