@@ -4,8 +4,8 @@ on:
   pull_request:
 
 jobs:
-  lint:
-    name: Lint
+  lint-and-unit-test:
+    name: Lint & Unit Test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -14,45 +14,13 @@ jobs:
         run: python3 -m pip install tox
       - name: Run linters
         run: tox -e lint
-
-  unit-test:
-    name: Unit tests
-    needs:
-      - lint
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install dependencies
-        run: python -m pip install tox
       - name: Run tests
         run: tox -e unit
-
-  integration-test-lxd-charm:
-    name: Integration tests for the charm (lxd)
-    needs:
-      - unit-test
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: lxd
-      - name: Run integration tests
-        run: |
-          # set sysctl values in case the cloudinit-userdata not applied
-          sudo sysctl -w vm.max_map_count=262144
-          sudo sysctl -w vm.swappiness=0
-          sudo sysctl -w net.ipv4.tcp_retries2=5
-
-          tox -e charm-integration
 
   integration-test-lxd-tls:
     name: Integration tests for TLS (lxd)
     needs:
-      - unit-test
+      - lint-and-unit-test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -73,7 +41,7 @@ jobs:
   integration-test-lxd-ha:
     name: Integration tests for HA (lxd)
     needs:
-      - unit-test
+      - lint-and-unit-test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -96,7 +64,7 @@ jobs:
     runs-on: ubuntu-22.04
     # Commented out while this is still in dev.
     # needs:
-    #   - unit-test
+    #   - lint-and-unit-test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -113,23 +81,3 @@ jobs:
 
           tox -e client-integration
 
-#  integration-test-lxd-ha-service:
-#    name: Integration tests for HA - Service (lxd)
-#    needs:
-#      - unit-test
-#    runs-on: ubuntu-22.04
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#      - name: Setup operator environment
-#        uses: charmed-kubernetes/actions-operator@main
-#        with:
-#          provider: lxd
-#      - name: Run integration tests
-#        run: |
-#          # set sysctl values in case the cloudinit-userdata not applied
-#          sudo sysctl -w vm.max_map_count=262144
-#          sudo sysctl -w vm.swappiness=0
-#          sudo sysctl -w net.ipv4.tcp_retries2=5
-#
-#          tox -e ha-service-integration
