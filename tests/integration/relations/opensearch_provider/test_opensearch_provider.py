@@ -210,7 +210,6 @@ async def test_relation_broken(ops_test: OpsTest):
                 raise_on_blocked=True,
             ),
         )
-    logger.error(relation_user)
     leader_ip = await get_leader_unit_ip(ops_test)
     users = await http_request(
         ops_test,
@@ -218,4 +217,6 @@ async def test_relation_broken(ops_test: OpsTest):
         f"https://{leader_ip}:9200/_plugins/_security/api/internalusers/",
         verify=False,
     )
+    logger.error(relation_user)
+    logger.error(users)
     assert relation_user not in users.keys()
