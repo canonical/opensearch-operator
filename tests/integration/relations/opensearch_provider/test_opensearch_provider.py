@@ -86,7 +86,7 @@ async def test_database_usage(ops_test: OpsTest):
     logging.error(json.dumps(run_create_index))
 
     read_index_endpoint = "/albums/_search?q=Jazz"
-    run_read_index = await run_get_from_index(
+    run_read_index = await run_get_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         endpoint=read_index_endpoint,
@@ -110,7 +110,7 @@ async def test_database_bulk_usage(ops_test: OpsTest):
     logging.info(json.dumps(run_bulk_create_index["results"]))
 
     read_index_endpoint = "/albums/_search?q=Jazz"
-    run_bulk_read_index = await run_get_from_index(
+    run_bulk_read_index = await run_get_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         endpoint=read_index_endpoint,
@@ -126,7 +126,7 @@ async def test_database_bulk_usage(ops_test: OpsTest):
 @pytest.mark.client_relation
 async def test_database_version(ops_test: OpsTest):
     """Check version is accurate."""
-    run_version_query = await run_get_from_index(
+    run_version_query = await run_get_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         endpoint="/",
