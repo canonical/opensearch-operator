@@ -133,7 +133,7 @@ async def test_database_version(ops_test: OpsTest):
     # Get the version of the database and compare with the information that
     # was retrieved directly from the database.
     version = await get_application_relation_data(
-        ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "version"
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "version"
     )
     logging.error(run_version_query)
     assert version in run_version_query["results"]
@@ -173,7 +173,7 @@ async def test_relation_broken(ops_test: OpsTest):
     async with ops_test.fast_forward():
         # Retrieve the relation user.
         relation_user = await get_application_relation_data(
-            ops_test, CLIENT_APP_NAME, FIRST_DATABASE_RELATION_NAME, "username"
+            ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "username"
         )
 
         # Break the relation.

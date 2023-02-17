@@ -13,7 +13,7 @@ from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 async def get_application_relation_data(
     ops_test: OpsTest,
-    application_name: str,
+    unit_name: str,
     relation_name: str,
     key: str,
     relation_id: str = None,
@@ -22,7 +22,7 @@ async def get_application_relation_data(
 
     Args:
         ops_test: The ops test framework instance
-        application_name: The name of the application
+        unit_name: The name of the unit
         relation_name: name of the relation to get connection data from
         key: key of data to be retrieved
         relation_id: id of the relation to get connection data from
@@ -36,7 +36,6 @@ async def get_application_relation_data(
             or if there is no data for the particular relation endpoint
             and/or alias.
     """
-    unit_name = f"{application_name}/0"
     raw_data = (await ops_test.juju("show-unit", unit_name))[1]
     if not raw_data:
         raise ValueError(f"no unit info could be grabbed for {unit_name}")
@@ -103,10 +102,10 @@ async def run_bulk_put(ops_test, unit_name: str, relation_id: int):
     )
 
 
-async def run_get_from_index(ops_test, unit_name: str, relation_id: int, endpoint: str):
+async def run_get_request(ops_test, unit_name: str, relation_id: int, endpoint: str):
     return await run_action(
         ops_test,
-        action_name="get-from-index",
+        action_name="get-request",
         unit_name=unit_name,
         endpoint=endpoint,
         # python can't have variable names with a hyphen, and Juju can't have action variables with
