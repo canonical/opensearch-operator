@@ -100,7 +100,7 @@ async def run_request(
         kwargs["payload"] = payload
     return await run_action(
         ops_test,
-        action_name="single-put",
+        action_name="run-request",
         unit_name=unit_name,
         method=method,
         endpoint=endpoint,
