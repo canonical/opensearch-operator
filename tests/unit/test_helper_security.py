@@ -53,6 +53,11 @@ class TestHelperSecurity(unittest.TestCase):
         self.assertTrue(re.match("^\\$2[ayb]\\$.{56}$", hash_1))
         self.assertTrue(re.match("^\\$2[ayb]\\$.{56}$", hash_2))
 
+        hash_1, password_1 = generate_hashed_password("test")
+        hash_2, password_2 = generate_hashed_password("test")
+        self.assertEqual(password_1, password_2)
+        self.assertNotEqual(hash_1, hash_2)
+
     def test_cert_expiration_remaining_hours(self):
         """Test the evaluation of the correct expiration date in hours."""
         expected_exp_date = datetime.now() + timedelta(days=1)

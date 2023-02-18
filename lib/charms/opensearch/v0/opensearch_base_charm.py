@@ -40,6 +40,7 @@ from charms.opensearch.v0.helper_security import (
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import (
     OpenSearchDistribution,
+    OpenSearchError,
     OpenSearchHttpError,
     OpenSearchStartError,
     OpenSearchStopError,
@@ -106,7 +107,8 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.framework.observe(self.on.update_status, self._on_update_status)
 
-        self.framework.observe(self.on.get_admin_secrets_action, self._on_get_admin_secrets_action)
+        self.framework.observe(self.on.set_password_action, self._on_set_password_action)
+        self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
     def _on_leader_elected(self, _: LeaderElectedEvent):
         """Handle leader election event."""
@@ -242,16 +244,40 @@ class OpenSearchBaseCharm(CharmBase):
             Scope.UNIT, "certs_exp_checked_at", datetime.now().strftime(date_format)
         )
 
-    def _on_get_admin_secrets_action(self, event: ActionEvent):
+    def _on_set_password_action(self, event: ActionEvent):
+        """Set new admin password from user input or generate if not passed."""
+        if not self.unit.is_leader():
+            event.fail("The action can be run only on leader unit.")
+            return
+
+        if event.params.get("username") != "admin":
+            event.fail("Only the 'admin' username is allowed for this action.")
+            return
+
+        try:
+            self._initialize_admin_user(event.params.get("password"))
+        except OpenSearchError as e:
+            event.fail(f"Failed changing the password: {e}")
+
+    def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
-        password = self.secrets.get(Scope.APP, "admin_password")
+        if event.params.get("username") != "admin":
+            event.fail("Only the 'admin' username is allowed for this action.")
+            return
 
-        chain = ""
-        admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if admin_secrets and admin_secrets.get("chain"):
-            chain = "\n".join(admin_secrets["chain"][::-1])
+        if not self._is_tls_fully_configured():
+            event.fail(f"admin user or TLS certificates not configured yet.")
+            return
 
-        event.set_results({"password": password if password else "", "chain": chain})
+        admin_password = self.secrets.get(Scope.APP, "admin_password")
+        admin_cert = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        ca_chain = "\n".join(admin_cert["chain"][::-1])
+
+        event.set_results({
+            "username": event.params.get("username"),
+            "password": admin_password,
+            "ca_chain": ca_chain,
+        })
 
     def on_tls_conf_set(
         self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
@@ -405,21 +431,40 @@ class OpenSearchBaseCharm(CharmBase):
 
         return True
 
-    def _initialize_admin_user(self):
+    def _initialize_admin_user(self, pwd: Optional[str] = None):
         """Change default password of Admin user."""
-        hashed_pwd, pwd = generate_hashed_password()
-        self.secrets.put(Scope.APP, "admin_password", pwd)
+        is_update = pwd is not None
+        hashed_pwd, pwd = generate_hashed_password(pwd)
 
-        self.opensearch.config.put(
-            "opensearch-security/internal_users.yml",
-            "admin",
-            {
-                "hash": hashed_pwd,
-                "reserved": True,  # this protects this resource from being updated on the dashboard or rest api
-                "backend_roles": ["admin"],
-                "description": "Admin user",
-            },
-        )
+        if is_update:
+            # TODO replace with user_manager.patch_user()
+            resp = self.opensearch.request(
+                "PATCH",
+                f"/_plugins/_security/api/internalusers/admin",
+                [{
+                    "op": "replace", "path": "/hash", "value": [hashed_pwd]
+                }],
+            )
+            logger.debug(f"Patch admin user response: {resp}")
+            if resp.get("status") != "OK":
+                raise OpenSearchError(f"{resp}")
+        else:
+            # reserved: False, prevents this resource from being update-protected from:
+            # updates made on the dashboard or the rest api.
+            # we grant the admin user all opensearch access + security_rest_api_access
+            self.opensearch.config.put(
+                "opensearch-security/internal_users.yml",
+                "admin",
+                {
+                    "hash": hashed_pwd,
+                    "reserved": False,
+                    "roles": ["all_access", "security_rest_api_access"],
+                    "backend_roles": ["admin"],
+                    "description": "Admin user",
+                },
+            )
+
+        self.secrets.put(Scope.APP, "admin_password", pwd)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]):
         """Run the security_admin script, it creates and initializes the opendistro_security index.

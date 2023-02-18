@@ -153,6 +153,13 @@ class OpenSearchConfig:
             self.CONFIG_YML, "plugins.security.ssl.transport.enforce_hostname_verification", True
         )
 
+        # security plugin rest API access
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            "plugins.security.restapi.roles_enabled",
+            ["all_access", "security_rest_api_access"]
+        )
+
     def cleanup_bootstrap_conf(self):
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
