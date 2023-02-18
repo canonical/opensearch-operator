@@ -9,15 +9,26 @@ import os
 import pathlib
 import socket
 import subprocess
+import time
 from abc import ABC, abstractmethod
+from functools import cached_property
 from os.path import exists
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Union
 
 import requests
+from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
+from charms.opensearch.v0.helper_networking import (
+    get_host_ip,
+    is_reachable,
+    reachable_hosts,
+)
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
+    OpenSearchHttpError,
+)
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -31,49 +42,6 @@ LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
-
-
-class OpenSearchError(Exception):
-    """Base exception class for OpenSearch errors."""
-
-
-class OpenSearchMissingError(OpenSearchError):
-    """Exception thrown when an action is attempted on OpenSearch when it's not installed."""
-
-
-class OpenSearchInstallError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to be installed."""
-
-
-class OpenSearchMissingSysReqError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to be installed."""
-
-    def __init__(self, missing_requirements: List[str]):
-        self.missing_requirements = missing_requirements
-
-
-class OpenSearchStartError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to start."""
-
-
-class OpenSearchStopError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to stop."""
-
-
-class OpenSearchRestartError(OpenSearchError):
-    """Exception thrown when OpenSearch fails to restart."""
-
-
-class OpenSearchNotStartedError(OpenSearchError):
-    """Exception thrown when attempting an operation when the OpenSearch service is stopped."""
-
-
-class OpenSearchCmdError(OpenSearchError):
-    """Exception thrown when an OpenSearch bin command fails."""
-
-
-class OpenSearchHttpError(OpenSearchError):
-    """Exception thrown when an OpenSearch REST call fails."""
 
 
 class Paths:
@@ -133,87 +101,9 @@ class OpenSearchDistribution(ABC):
         self.start()
 
     def stop(self):
-        """Exclude the allocation of this node."""
-        try:
-            self.add_allocation_exclusions(self._charm.unit_name)
-        except OpenSearchError:
-            self._charm.on_allocation_exclusion_add_failed()
-            raise
-
-        try:
-            response = self.request("GET", "/_cluster/health?wait_for_status=green&timeout=60s")
-            unassigned_shards = response.get("unassigned_shards", 0)
-            if unassigned_shards > 0:
-                self._charm.on_unassigned_shards(unassigned_shards)
-        except OpenSearchHttpError:
-            # this is not important, as the seeked action here is to simply inform the user
-            # of the shards state
-            pass
-
+        """Stop OpenSearch.."""
         # stop the opensearch service
         self._stop_service()
-
-        if self._charm.alternative_host:
-            try:
-                # remove the exclusion back
-                self.remove_allocation_exclusions(
-                    self._charm.unit_name, self._charm.alternative_host
-                )
-                return
-            except OpenSearchError:
-                # will re-attempt on a future unit start
-                pass
-
-        # no node online, store in the app databag to exclude at a future start
-        self._charm.append_allocation_exclusion_to_remove(self._charm.unit_name)
-
-    def add_allocation_exclusions(
-        self, exclusions: Union[List[str], Set[str], str], host: str = None
-    ):
-        """Register new allocation exclusions."""
-        exclusions = self.normalize_allocation_exclusions(exclusions)
-        existing_exclusions = self._fetch_allocation_exclusions(host)
-        self._put_allocation_exclusions(existing_exclusions.union(exclusions), host)
-
-    def remove_allocation_exclusions(
-        self, exclusions: Union[List[str], Set[str], str], host: str = None
-    ):
-        """This removes the allocation exclusions if needed."""
-        if exclusions:
-            exclusions = self.normalize_allocation_exclusions(exclusions)
-            existing_exclusions = self._fetch_allocation_exclusions(host)
-            self._put_allocation_exclusions(existing_exclusions - exclusions, host)
-
-        # remove these exclusions from the app data bag if any
-        self._charm.remove_allocation_exclusions(exclusions)
-
-    def _put_allocation_exclusions(self, exclusions: Set[str], host: str = None):
-        """Updates the cluster settings with the new allocation exclusions."""
-        try:
-            response = self.request(
-                "PUT",
-                "/_cluster/settings",
-                {"transient": {"cluster.routing.allocation.exclude._name": ",".join(exclusions)}},
-                host=host,
-            )
-            if not response.get("acknowledged"):
-                raise OpenSearchError(f"Allocation exclusion failed for: {exclusions}")
-        except OpenSearchHttpError as e:
-            logger.error(e)
-            raise OpenSearchError()
-
-    def _fetch_allocation_exclusions(self, host: str = None) -> Set[str]:
-        """Fetch the registered allocation exclusions."""
-        allocation_exclusions = set()
-        try:
-            resp = self.request("GET", "/_cluster/settings", host=host)
-            exclusions = resp["transient"]["cluster"]["routing"]["allocation"]["exclude"]["_name"]
-            allocation_exclusions = set(exclusions.split(","))
-        except KeyError:
-            # no allocation exclusion set
-            pass
-        finally:
-            return allocation_exclusions
 
     @abstractmethod
     def _stop_service(self):
@@ -240,15 +130,6 @@ class OpenSearchDistribution(ABC):
             logger.exception(e)
             return False
 
-    @property
-    def node_id(self) -> str:
-        """Get the OpenSearch node id corresponding to the current unit."""
-        nodes = self.request("GET", "/_nodes").get("nodes")
-
-        for node_id, node in nodes.items():
-            if node["name"] == self._charm.unit_name:
-                return node_id
-
     def run_bin(self, bin_script_name: str, args: str = None):
         """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin."""
         script_path = f"{self.paths.home}/bin/{bin_script_name}"
@@ -263,14 +144,17 @@ class OpenSearchDistribution(ABC):
 
         self._run_cmd(f"{script_path}", args)
 
-    def request(
+    def request(  # noqa
         self,
         method: str,
         endpoint: str,
-        payload: Optional[Dict[str, any]] = None,
+        payload: Optional[Union[str, Dict[str, any]]] = None,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
-    ) -> Union[Dict[str, any], List[any]]:
+        check_hosts_reach: bool = True,
+        resp_status_code: bool = False,
+        retries: int = 0,
+    ) -> Union[Dict[str, any], List[any], int]:
         """Make an HTTP request.
 
         Args:
@@ -278,46 +162,82 @@ class OpenSearchDistribution(ABC):
             endpoint: relative to the base uri.
             payload: JSON / map body payload.
             host: host of the node we wish to make a request on, by default current host.
-            alt_hosts: in case the default host is unreachable, fallback hosts
+            alt_hosts: in case the default host is unreachable, fallback/alternative hosts.
+            check_hosts_reach: if true, performs a ping for each host
+            resp_status_code: whether to only return the HTTP code from the response.
+            retries: number of retries
         """
+
+        def full_urls() -> List[str]:
+            """Returns a list of reachable hosts."""
+            primary_host = host or self.host
+            target_hosts = [primary_host]
+            if alt_hosts:
+                target_hosts.extend(
+                    [alt_host for alt_host in alt_hosts if alt_host != primary_host]
+                )
+
+            if not check_hosts_reach:
+                return target_hosts
+
+            return [
+                f"https://{host_candidate}:{self.port}/{endpoint}"
+                for host_candidate in reachable_hosts(target_hosts)
+            ]
+
+        def call(remaining_retries: int) -> requests.Response:
+            """Performs an HTTP request."""
+            if remaining_retries < 0:
+                raise OpenSearchHttpError()
+
+            urls = full_urls()
+            if not urls:
+                logger.error(
+                    f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
+                )
+                raise OpenSearchHttpError()
+
+            try:
+                with requests.Session() as s:
+                    s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
+
+                    request_kwargs = {
+                        "method": method.upper(),
+                        "url": urls[0],
+                        "verify": f"{self.paths.certs}/chain.pem",
+                        "headers": {
+                            "Accept": "application/json",
+                            "Content-Type": "application/json",
+                        },
+                    }
+                    if payload:
+                        request_kwargs["data"] = (
+                            json.dumps(payload) if isinstance(payload, dict) else payload
+                        )
+
+                    response = s.request(**request_kwargs)
+
+                    response.raise_for_status()
+
+                    return response
+            except requests.exceptions.RequestException as e:
+                logger.error(
+                    f"Request {method} to {urls[0]} with payload: {payload} failed. "
+                    f"(Attempts left: {remaining_retries})\n{e}"
+                )
+                time.sleep(0.5)
+                return call(remaining_retries - 1)
+
         if None in [endpoint, method]:
             raise ValueError("endpoint or method missing")
 
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        primary_host = host or self.host
-        target_hosts = [primary_host]
-        if alt_hosts:
-            target_hosts.extend([alt_host for alt_host in alt_hosts if alt_host != primary_host])
+        resp = call(retries)
 
-        target_host: Optional[str] = None
-        for host_candidate in target_hosts:
-            if is_reachable(host_candidate, self.port):
-                target_host = host_candidate
-                break
-
-        if not target_host:
-            logger.error(f"Host {primary_host}:{self.port} and alternative_hosts not reachable.")
-            raise OpenSearchHttpError()
-
-        full_url = f"https://{target_host}:{self.port}/{endpoint}"
-        try:
-            with requests.Session() as s:
-                s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
-
-                resp = s.request(
-                    method=method.upper(),
-                    url=full_url,
-                    data=json.dumps(payload),
-                    verify=f"{self.paths.certs}/chain.pem",
-                    headers={"Accept": "application/json", "Content-Type": "application/json"},
-                )
-
-                resp.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
-            raise OpenSearchHttpError()
+        if resp_status_code:
+            return resp.status_code
 
         return resp.json()
 
@@ -385,6 +305,21 @@ class OpenSearchDistribution(ABC):
         os.environ["OPENSEARCH_TMPDIR"] = self.paths.tmp
         os.environ["OPENSEARCH_PLUGINS"] = self.paths.plugins
 
+    @cached_property
+    def node_id(self) -> str:
+        """Get the OpenSearch node id corresponding to the current unit."""
+        nodes = self.request("GET", "/_nodes").get("nodes")
+
+        for n_id, node in nodes.items():
+            if node["name"] == self._charm.unit_name:
+                return n_id
+
+    @property
+    def roles(self) -> List[str]:
+        """Get the list of the roles assigned to this node."""
+        nodes = self.request("GET", f"/_nodes/{self.node_id}")
+        return nodes["nodes"][self.node_id]["roles"]
+
     @property
     def host(self) -> str:
         """Host IP address of the current node."""
@@ -399,6 +334,10 @@ class OpenSearchDistribution(ABC):
     def port(self) -> int:
         """Return Port of OpenSearch."""
         return 9200
+
+    def current(self) -> Node:
+        """Returns current Node."""
+        return Node(self._charm.unit_name, self.roles, self.host)
 
     @staticmethod
     def normalize_allocation_exclusions(exclusions: Union[List[str], Set[str], str]) -> Set[str]:
