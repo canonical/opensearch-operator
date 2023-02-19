@@ -35,7 +35,9 @@ MODEL_CONFIG = {
 logger = logging.getLogger(__name__)
 
 
-async def run_action(ops_test: OpsTest, unit_id: int, action_name: str) -> Dict[str, str]:
+async def run_action(
+    ops_test: OpsTest, unit_id: int, action_name: str, params: Optional[Dict[str, any]] = None
+) -> Dict[str, str]:
     """Run a charm action.
 
     Returns:
@@ -43,19 +45,19 @@ async def run_action(ops_test: OpsTest, unit_id: int, action_name: str) -> Dict[
     """
     unit_name = ops_test.model.applications[APP_NAME].units[unit_id].name
 
-    action = await ops_test.model.units.get(unit_name).run_action(action_name)
+    action = await ops_test.model.units.get(unit_name).run_action(action_name, **(params or {}))
     action = await action.wait()
     return action.results
 
 
-async def get_admin_secrets(ops_test: OpsTest) -> Dict[str, str]:
+async def get_admin_secrets(ops_test: OpsTest, unit_id: int = 0) -> Dict[str, str]:
     """Use the charm action to retrieve the admin password and chain.
 
     Returns:
         Dict with the admin and cert chain stored on the peer relation databag.
     """
     # can retrieve from any unit running unit, so we pick the first
-    return await run_action(ops_test, 0, "get-admin-secrets")
+    return await run_action(ops_test, unit_id, "get-password")
 
 
 def get_application_unit_names(ops_test: OpsTest) -> List[str]:
@@ -156,6 +158,7 @@ async def http_request(
     endpoint: str,
     payload: Optional[Union[str, Dict[str, any]]] = None,
     resp_status_code: bool = False,
+    user_password: Optional[str] = None,
 ):
     """Makes an HTTP request.
 
@@ -165,6 +168,7 @@ async def http_request(
         endpoint: the url to be called.
         payload: the body of the request if any.
         resp_status_code: whether to only return the http response code.
+        user_password: use alternative password than the admin one in the secrets.
 
     Returns:
         A json object.
@@ -173,10 +177,10 @@ async def http_request(
 
     # fetch the cluster info from the endpoint of this unit
     with requests.Session() as session, tempfile.NamedTemporaryFile(mode="w+") as chain:
-        chain.write(admin_secrets["chain"])
+        chain.write(admin_secrets["ca_chain"])
         chain.seek(0)
 
-        session.auth = ("admin", admin_secrets["password"])
+        session.auth = ("admin", user_password or admin_secrets["password"])
 
         request_kwargs = {
             "method": method.upper(),

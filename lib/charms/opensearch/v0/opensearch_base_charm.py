@@ -46,8 +46,8 @@ from charms.opensearch.v0.helper_security import (
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchHAError,
     OpenSearchError,
+    OpenSearchHAError,
     OpenSearchHttpError,
     OpenSearchScaleDownError,
     OpenSearchStartError,
@@ -327,12 +327,15 @@ class OpenSearchBaseCharm(CharmBase):
             event.fail("The action can be run only on leader unit.")
             return
 
+        user_name = event.params.get("username")
         if event.params.get("username") != "admin":
             event.fail("Only the 'admin' username is allowed for this action.")
             return
 
         try:
             self._initialize_admin_user(event.params.get("password"))
+            password = self.secrets.get(Scope.APP, "admin_password")
+            event.set_results({f"{user_name}-password": password})
         except OpenSearchError as e:
             event.fail(f"Failed changing the password: {e}")
 
@@ -343,18 +346,20 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         if not self._is_tls_fully_configured():
-            event.fail(f"admin user or TLS certificates not configured yet.")
+            event.fail("admin user or TLS certificates not configured yet.")
             return
 
         admin_password = self.secrets.get(Scope.APP, "admin_password")
         admin_cert = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         ca_chain = "\n".join(admin_cert["chain"][::-1])
 
-        event.set_results({
-            "username": event.params.get("username"),
-            "password": admin_password,
-            "ca_chain": ca_chain,
-        })
+        event.set_results(
+            {
+                "username": event.params.get("username"),
+                "password": admin_password,
+                "ca_chain": ca_chain,
+            }
+        )
 
     def on_tls_conf_set(
         self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
@@ -550,16 +555,12 @@ class OpenSearchBaseCharm(CharmBase):
             )
             if busy_shards:
                 message = WaitingForBusyShards.format(
-                    " - ".join(
-                        [f"{key}/{','.join(val)}" for key, val in busy_shards.items()]
-                    )
+                    " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
                 )
                 self.unit.status = WaitingStatus(message)
                 return False
 
-            self.status.clear(
-                WaitingForBusyShards, pattern=Status.CheckPattern.Interpolated
-            )
+            self.status.clear(WaitingForBusyShards, pattern=Status.CheckPattern.Interpolated)
         except OpenSearchHttpError:
             # this means that the leader unit is not reachable (not started yet),
             # meaning it's a new cluster, so we can safely start the OpenSearch service
@@ -576,10 +577,8 @@ class OpenSearchBaseCharm(CharmBase):
             # TODO replace with user_manager.patch_user()
             resp = self.opensearch.request(
                 "PATCH",
-                f"/_plugins/_security/api/internalusers/admin",
-                [{
-                    "op": "replace", "path": "/hash", "value": [hashed_pwd]
-                }],
+                "/_plugins/_security/api/internalusers/admin",
+                [{"op": "replace", "path": "/hash", "value": [hashed_pwd]}],
             )
             logger.debug(f"Patch admin user response: {resp}")
             if resp.get("status") != "OK":

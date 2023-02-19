@@ -157,7 +157,7 @@ class OpenSearchConfig:
         self._opensearch.config.put(
             self.CONFIG_YML,
             "plugins.security.restapi.roles_enabled",
-            ["all_access", "security_rest_api_access"]
+            ["all_access", "security_rest_api_access"],
         )
 
     def cleanup_bootstrap_conf(self):
