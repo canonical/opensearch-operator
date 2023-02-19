@@ -15,7 +15,7 @@ from tests.integration.helpers import (
     get_application_unit_ids,
     get_leader_unit_id,
     http_request,
-    run_action,
+    run_action, get_leader_unit_ip,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
@@ -61,6 +61,9 @@ async def test_get_admin_password_action(ops_test: OpsTest) -> None:
         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=2
     )
 
+    leader_ip = await get_leader_unit_ip(ops_test)
+    test_url = f"https://{leader_ip}:9200/"
+
     # 2. run the action after finishing the config of TLS
     result = await get_admin_secrets(ops_test)
     assert result.get("username") == "admin"
@@ -68,7 +71,7 @@ async def test_get_admin_password_action(ops_test: OpsTest) -> None:
     assert result.get("ca-chain")
 
     # parse_output fields non-null + make http request success
-    http_resp_code = await http_request(ops_test, "GET", "/", resp_status_code=True)
+    http_resp_code = await http_request(ops_test, "GET", test_url, resp_status_code=True)
     assert http_resp_code == 200
 
     # 3. test retrieving password from non-supported user
@@ -80,6 +83,9 @@ async def test_get_admin_password_action(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_rotate_admin_password_action(ops_test: OpsTest) -> None:
     """Test the rotation and change of admin password."""
+    leader_ip = await get_leader_unit_ip(ops_test)
+    test_url = f"https://{leader_ip}:9200/"
+
     leader_id = await get_leader_unit_id(ops_test)
     non_leader_id = [
         unit_id for unit_id in get_application_unit_ids(ops_test) if unit_id != leader_id
@@ -100,11 +106,11 @@ async def test_rotate_admin_password_action(ops_test: OpsTest) -> None:
     assert password1
     assert password1 == (await get_admin_secrets(ops_test, leader_id))["password"]
 
-    http_resp_code = await http_request(ops_test, "GET", "/", resp_status_code=True)
+    http_resp_code = await http_request(ops_test, "GET", test_url, resp_status_code=True)
     assert http_resp_code == 200
 
     http_resp_code = await http_request(
-        ops_test, "GET", "/", resp_status_code=True, user_password=password0
+        ops_test, "GET", test_url, resp_status_code=True, user_password=password0
     )
     assert http_resp_code == 401
 
@@ -113,10 +119,10 @@ async def test_rotate_admin_password_action(ops_test: OpsTest) -> None:
     password2 = result.get("admin-password")
     assert password2
 
-    http_resp_code = await http_request(ops_test, "GET", "/", resp_status_code=True)
+    http_resp_code = await http_request(ops_test, "GET", test_url, resp_status_code=True)
     assert http_resp_code == 200
 
     http_resp_code = await http_request(
-        ops_test, "GET", "/", resp_status_code=True, user_password=password1
+        ops_test, "GET", test_url, resp_status_code=True, user_password=password1
     )
     assert http_resp_code == 401
