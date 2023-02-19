@@ -357,7 +357,7 @@ class OpenSearchBaseCharm(CharmBase):
             {
                 "username": event.params.get("username"),
                 "password": admin_password,
-                "ca_chain": ca_chain,
+                "ca-chain": ca_chain,
             }
         )
 
@@ -593,7 +593,6 @@ class OpenSearchBaseCharm(CharmBase):
                 {
                     "hash": hashed_pwd,
                     "reserved": False,
-                    "roles": ["all_access", "security_rest_api_access"],
                     "backend_roles": ["admin"],
                     "description": "Admin user",
                 },
