@@ -42,6 +42,7 @@ from charms.opensearch.v0.helper_networking import (
 from charms.opensearch.v0.helper_security import (
     cert_expiration_remaining_hours,
     generate_hashed_password,
+    generate_password,
 )
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -332,8 +333,9 @@ class OpenSearchBaseCharm(CharmBase):
             event.fail("Only the 'admin' username is allowed for this action.")
             return
 
+        password = event.params.get("password") or generate_password()
         try:
-            self._initialize_admin_user(event.params.get("password"))
+            self._initialize_admin_user(password)
             password = self.secrets.get(Scope.APP, "admin_password")
             event.set_results({f"{user_name}-password": password})
         except OpenSearchError as e:
@@ -578,7 +580,7 @@ class OpenSearchBaseCharm(CharmBase):
             resp = self.opensearch.request(
                 "PATCH",
                 "/_plugins/_security/api/internalusers/admin",
-                [{"op": "replace", "path": "/hash", "value": [hashed_pwd]}],
+                [{"op": "replace", "path": "/hash", "value": hashed_pwd}],
             )
             logger.debug(f"Patch admin user response: {resp}")
             if resp.get("status") != "OK":

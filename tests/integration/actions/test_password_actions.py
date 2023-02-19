@@ -45,9 +45,8 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 async def test_get_admin_password_action(ops_test: OpsTest) -> None:
     """Test the retrieval of admin secrets."""
     # 1. run the action prior to finishing the config of TLS
-    result = await get_admin_secrets(ops_test)
-    print(result)
-    # expect error message
+    result = await run_action(ops_test, 0, "get-password")
+    assert result.status == "failed"
 
     # Deploy TLS Certificates operator.
     config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
@@ -66,7 +65,7 @@ async def test_get_admin_password_action(ops_test: OpsTest) -> None:
     result = await get_admin_secrets(ops_test)
     assert result.get("username") == "admin"
     assert result.get("password")
-    assert result.get("ca_chain")
+    assert result.get("ca-chain")
 
     # parse_output fields non-null + make http request success
     http_resp_code = await http_request(ops_test, "GET", "/", resp_status_code=True)
@@ -74,7 +73,7 @@ async def test_get_admin_password_action(ops_test: OpsTest) -> None:
 
     # 3. test retrieving password from non-supported user
     result = await run_action(ops_test, 0, "get-password", {"username": "non-existent"})
-    # expect failure
+    assert result.status == "failed"
 
 
 @pytest.mark.actions_tests
@@ -88,11 +87,11 @@ async def test_rotate_admin_password_action(ops_test: OpsTest) -> None:
 
     # 1. run the action on a non_leader unit.
     result = await run_action(ops_test, non_leader_id, "set-password")
-    # result fail
+    assert result.status == "failed"
 
     # 2. run the action with the wrong username
     result = await run_action(ops_test, leader_id, "set-password", {"username": "wrong-user"})
-    # result fail
+    assert result.status == "failed"
 
     # 3. change password and verify the new password works and old password not
     password0 = (await get_admin_secrets(ops_test, leader_id))["password"]

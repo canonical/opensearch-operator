@@ -5,6 +5,7 @@ import json
 import logging
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Dict, List, Optional, Union
 
 import requests
@@ -37,17 +38,18 @@ logger = logging.getLogger(__name__)
 
 async def run_action(
     ops_test: OpsTest, unit_id: int, action_name: str, params: Optional[Dict[str, any]] = None
-) -> Dict[str, str]:
+) -> SimpleNamespace:
     """Run a charm action.
 
     Returns:
-        Dict with the parameters returned from the completed action.
+        A SimpleNamespace with "status, response (results)"
     """
     unit_name = ops_test.model.applications[APP_NAME].units[unit_id].name
 
     action = await ops_test.model.units.get(unit_name).run_action(action_name, **(params or {}))
     action = await action.wait()
-    return action.results
+
+    return SimpleNamespace(status=action.status or "completed", response=action.results)
 
 
 async def get_admin_secrets(ops_test: OpsTest, unit_id: int = 0) -> Dict[str, str]:
@@ -57,7 +59,7 @@ async def get_admin_secrets(ops_test: OpsTest, unit_id: int = 0) -> Dict[str, st
         Dict with the admin and cert chain stored on the peer relation databag.
     """
     # can retrieve from any unit running unit, so we pick the first
-    return await run_action(ops_test, unit_id, "get-password")
+    return (await run_action(ops_test, unit_id, "get-password")).response
 
 
 def get_application_unit_names(ops_test: OpsTest) -> List[str]:
