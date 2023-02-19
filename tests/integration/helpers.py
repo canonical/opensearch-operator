@@ -179,7 +179,7 @@ async def http_request(
 
     # fetch the cluster info from the endpoint of this unit
     with requests.Session() as session, tempfile.NamedTemporaryFile(mode="w+") as chain:
-        chain.write(admin_secrets["ca_chain"])
+        chain.write(admin_secrets["ca-chain"])
         chain.seek(0)
 
         session.auth = ("admin", user_password or admin_secrets["password"])
