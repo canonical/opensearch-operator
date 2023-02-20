@@ -10,7 +10,7 @@ from unittest.mock import patch
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.opensearch_base_charm import PEER, SERVICE_MANAGER
-from charms.opensearch.v0.opensearch_distro import (
+from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchInstallError,
 )
@@ -23,7 +23,6 @@ from tests.helpers import patch_network_get
 
 @patch_network_get("1.1.1.1")
 class TestOpenSearchBaseCharm(unittest.TestCase):
-
     BASE_LIB_PATH = "charms.opensearch.v0"
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
     OPENSEARCH_DISTRO = ""
