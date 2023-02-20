@@ -113,6 +113,9 @@ class OpenSearchTLS(Object):
         old_cert = secrets.get("cert", None)
         renewal = old_cert is not None and old_cert != event.certificate
 
+        logger.error(scope)
+        logger.error(cert_type)
+
         self.charm.secrets.put_object(
             scope,
             cert_type.val,
