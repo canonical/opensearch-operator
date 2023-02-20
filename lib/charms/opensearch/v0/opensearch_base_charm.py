@@ -280,12 +280,17 @@ class OpenSearchBaseCharm(CharmBase):
         finally:
             # release lock
             if self.alt_hosts:
-                try:
-                    self.opensearch.request("DELETE", "/.ops_stop", alt_hosts=self.alt_hosts)
-                except OpenSearchHttpError:
-                    # ignore, this just means the cleanup happened before but event got deferred
-                    # because of another error
-                    pass
+                resp_code = self.opensearch.request(
+                    "DELETE",
+                    "/.ops_stop",
+                    alt_hosts=self.alt_hosts,
+                    resp_status_code=True,
+                    retries=3,
+                )
+                # ignore 404, it means the index is not found and this just means that
+                # the cleanup happened before but event got deferred because of another error
+                if resp_code >= 400 and resp_code != 404:
+                    raise OpenSearchHttpError("Failed to remove 'ops_stop' lock index.")
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.

@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Union
 
 import requests
+from requests import HTTPError
+
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_databag import Scope
@@ -185,9 +187,14 @@ class OpenSearchDistribution(ABC):
                 for host_candidate in reachable_hosts(target_hosts)
             ]
 
-        def call(remaining_retries: int) -> requests.Response:
+        def call(
+            remaining_retries: int, return_failed_resp: bool, error_response: Optional[requests.Response] = None
+        ) -> requests.Response:
             """Performs an HTTP request."""
             if remaining_retries < 0:
+                if return_failed_resp and error_response:
+                    return error_response
+
                 raise OpenSearchHttpError()
 
             urls = full_urls()
@@ -225,8 +232,10 @@ class OpenSearchDistribution(ABC):
                     f"Request {method} to {urls[0]} with payload: {payload} failed. "
                     f"(Attempts left: {remaining_retries})\n{e}"
                 )
-                time.sleep(0.5)
-                return call(remaining_retries - 1)
+                time.sleep(1)
+                return call(
+                    remaining_retries - 1, return_failed_resp, e.response if isinstance(e, HTTPError) else None
+                )
 
         if None in [endpoint, method]:
             raise ValueError("endpoint or method missing")
@@ -234,7 +243,7 @@ class OpenSearchDistribution(ABC):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        resp = call(retries)
+        resp = call(retries, resp_status_code)
 
         if resp_status_code:
             return resp.status_code
