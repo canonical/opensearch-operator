@@ -75,7 +75,7 @@ async def test_database_relation_with_charm_libraries(
 @pytest.mark.client_relation
 async def test_database_usage(ops_test: OpsTest):
     """Check we can update and delete things."""
-    run_create_index = await run_request(
+    await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         relation_id=client_relation.id,
@@ -85,8 +85,6 @@ async def test_database_usage(ops_test: OpsTest):
             '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
         ),
     )
-    # TODO have better validation here.
-    logging.error(json.dumps(run_create_index))
 
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_read_index = await run_request(
@@ -97,9 +95,12 @@ async def test_database_usage(ops_test: OpsTest):
         relation_id=client_relation.id,
     )
     results = json.loads(run_read_index["results"])
-    logging.error(results)
+    logging.info(results)
     assert results.get("timed_out") is False
     assert results.get("hits", {}).get("total", {}).get("value") == 1
+    assert (
+        results.get("hits", {}).get("hits", [{}])[0].get("_source", {}).get("artist") == "Vulfpeck"
+    )
 
 
 @pytest.mark.client_relation
@@ -112,7 +113,7 @@ async def test_database_bulk_usage(ops_test: OpsTest):
 { "index" : { "_index": "albums", "_id" : "4" } }
 {"artist": "Liquid Tension Experiment", "genre": ["Prog", "Metal"],  "title": "Liquid Tension Experiment 2"}
 """
-    run_bulk_create_index = await run_request(
+    await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         relation_id=client_relation.id,
@@ -120,8 +121,6 @@ async def test_database_bulk_usage(ops_test: OpsTest):
         endpoint="/_bulk",
         payload=re.escape(bulk_payload),
     )
-    # change assertion to "data written" or something
-    logging.info(json.dumps(run_bulk_create_index["results"]))
 
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_bulk_read_index = await run_request(
@@ -133,9 +132,13 @@ async def test_database_bulk_usage(ops_test: OpsTest):
     )
     # TODO assert we're getting the correct value
     results = json.loads(run_bulk_read_index["results"])
-    logging.error(results)
+    logging.info(results)
     assert results.get("timed_out") is False
     assert results.get("hits", {}).get("total", {}).get("value") == 3
+    artists = [
+        hit.get("_source", {}).get("artist") for hit in results.get("hits", {}).get("hits", [{}])
+    ]
+    assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
 @pytest.mark.client_relation
