@@ -148,7 +148,7 @@ class OpenSearchTarball(OpenSearchDistribution):
             raise OpenSearchStartError()
 
         start = datetime.now()
-        while not self.is_started() and (datetime.now() - start).seconds < 45:
+        while not self.is_started() and (datetime.now() - start).seconds < 60:
             time.sleep(3)
         else:
             raise OpenSearchStartTimeoutError()

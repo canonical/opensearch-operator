@@ -271,7 +271,6 @@ class OpenSearchBaseCharm(CharmBase):
 
             # check cluster status
             if not self.alt_hosts:
-                self.app.status = BlockedStatus(ClusterHealthRed)
                 raise OpenSearchHAError(NoNodeUpInCluster)
 
             health = self._apply_cluster_health(wait_for_green_first=True)
