@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Union
 
 import requests
-from requests import HTTPError
 
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
@@ -31,6 +30,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchHttpError,
 )
+from requests import HTTPError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
