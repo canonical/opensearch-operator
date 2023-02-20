@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Union
 
 import requests
-
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_databag import Scope
@@ -188,7 +187,9 @@ class OpenSearchDistribution(ABC):
             ]
 
         def call(
-            remaining_retries: int, return_failed_resp: bool, error_response: Optional[requests.Response] = None
+            remaining_retries: int,
+            return_failed_resp: bool,
+            error_response: Optional[requests.Response] = None,
         ) -> requests.Response:
             """Performs an HTTP request."""
             if remaining_retries < 0:
@@ -234,7 +235,9 @@ class OpenSearchDistribution(ABC):
                 )
                 time.sleep(1)
                 return call(
-                    remaining_retries - 1, return_failed_resp, e.response if isinstance(e, HTTPError) else None
+                    remaining_retries - 1,
+                    return_failed_resp,
+                    e.response if isinstance(e, HTTPError) else None,
                 )
 
         if None in [endpoint, method]:

@@ -529,16 +529,12 @@ class OpenSearchBaseCharm(CharmBase):
             )
             if busy_shards:
                 message = WaitingForBusyShards.format(
-                    " - ".join(
-                        [f"{key}/{','.join(val)}" for key, val in busy_shards.items()]
-                    )
+                    " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
                 )
                 self.unit.status = WaitingStatus(message)
                 return False
 
-            self.status.clear(
-                WaitingForBusyShards, pattern=Status.CheckPattern.Interpolated
-            )
+            self.status.clear(WaitingForBusyShards, pattern=Status.CheckPattern.Interpolated)
         except OpenSearchHttpError:
             # this means that the leader unit is not reachable (not started yet),
             # meaning it's a new cluster, so we can safely start the OpenSearch service
