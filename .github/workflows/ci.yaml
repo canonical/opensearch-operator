@@ -81,6 +81,23 @@ jobs:
           sudo sysctl -w net.ipv4.tcp_retries2=5
           
           tox -e ha-integration
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
+
+  integration-test-lxd-actions:
+    name: Integration tests for the charm exposed actions (lxd)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+      - name: Run integration tests
+        run: |
+          # set sysctl values in case the cloudinit-userdata not applied
+          sudo sysctl -w vm.max_map_count=262144
+          sudo sysctl -w vm.swappiness=0
+          sudo sysctl -w net.ipv4.tcp_retries2=5
+          
+          tox -e actions-integration
+
