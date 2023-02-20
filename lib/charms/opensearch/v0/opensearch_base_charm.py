@@ -153,7 +153,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             self.unit.status = MaintenanceStatus(AdminUserInitProgress)
-            self._initialize_admin_user()
+            self._put_admin_user()
             self.peers_data.put(Scope.APP, "admin_user_initialized", True)
             self.status.clear(AdminUserInitProgress)
 
@@ -340,7 +340,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         password = event.params.get("password") or generate_password()
         try:
-            self._initialize_admin_user(password)
+            self._put_admin_user(password)
             password = self.secrets.get(Scope.APP, "admin_password")
             event.set_results({f"{user_name}-password": password})
         except OpenSearchError as e:
@@ -575,8 +575,8 @@ class OpenSearchBaseCharm(CharmBase):
 
         return True
 
-    def _initialize_admin_user(self, pwd: Optional[str] = None):
-        """Change default password of Admin user."""
+    def _put_admin_user(self, pwd: Optional[str] = None):
+        """Change password of Admin user."""
         is_update = pwd is not None
         hashed_pwd, pwd = generate_hashed_password(pwd)
 
