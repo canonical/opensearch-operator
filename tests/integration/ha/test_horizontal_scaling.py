@@ -125,9 +125,7 @@ async def test_safe_scale_down_shards_realloc(ops_test: OpsTest) -> None:
     print(await cluster_allocation(ops_test, leader_unit_ip))
 
     # remove the service in the chosen unit
-    # await run_action(ops_test, unit_id_to_stop, "stop-service")
     await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
-    # await ops_test.model.applications[APP_NAME].add_unit(count=-1)
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
     )
