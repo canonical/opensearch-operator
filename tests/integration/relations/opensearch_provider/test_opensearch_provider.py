@@ -75,7 +75,11 @@ async def test_database_relation_with_charm_libraries(
 
 @pytest.mark.client_relation
 async def test_database_usage(ops_test: OpsTest):
-    """Check we can update and delete things."""
+    """Check we can update and delete things.
+
+    The client application authenticates using the cert provided in the database; if this is
+    invalid for any reason, the test will fail, so this test implicitly verifies that TLS works.
+    """
     run_create_index = await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
