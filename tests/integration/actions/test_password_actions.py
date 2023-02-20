@@ -14,8 +14,9 @@ from tests.integration.helpers import (
     get_admin_secrets,
     get_application_unit_ids,
     get_leader_unit_id,
+    get_leader_unit_ip,
     http_request,
-    run_action, get_leader_unit_ip,
+    run_action,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
