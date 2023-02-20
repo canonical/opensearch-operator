@@ -180,6 +180,7 @@ class OpenSearchProvider(Object):
             try:
                 logger.error(self.charm.secrets)
                 logger.error(self.charm.secrets.all(Scope.APP))
+                logger.error(self.charm.secrets.all(Scope.UNIT))
                 logger.error(self.charm.secrets.get_object(Scope.APP, CertType.ADMIN.val))
                 logger.error(
                     self.charm.secrets.get_object(Scope.APP, CertType.ADMIN.val).get("ca")
