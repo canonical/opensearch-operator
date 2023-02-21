@@ -75,6 +75,9 @@ class OpenSearchCmdError(OpenSearchError):
 class OpenSearchHttpError(OpenSearchError):
     """Exception thrown when an OpenSearch REST call fails."""
 
+    def __init__(self, status_code: Optional[int] = None):
+        self.status_code = status_code
+
 
 class Paths:
     """This class represents the group of Paths that need to be exposed."""
@@ -279,6 +282,10 @@ class OpenSearchDistribution(ABC):
             payload: JSON / map body payload.
             host: host of the node we wish to make a request on, by default current host.
             alt_hosts: in case the default host is unreachable, fallback hosts
+
+        Raises:
+            requests.HTTPError if request runs successfully, but returns an error code
+            OpenSearchHttpError if request fails to run
         """
         if None in [endpoint, method]:
             raise ValueError("endpoint or method missing")
@@ -302,19 +309,22 @@ class OpenSearchDistribution(ABC):
             raise OpenSearchHttpError()
 
         full_url = f"https://{target_host}:{self.port}/{endpoint}"
+        request_kwargs = {
+            "verify": f"{self.paths.certs}/chain.pem",
+            "method": method.upper(),
+            "url": full_url,
+            "headers": {"Content-Type": "application/json", "Accept": "application/json"},
+            "data": json.dumps(payload) if payload else None,
+        }
+
         try:
             with requests.Session() as s:
                 s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
-
-                resp = s.request(
-                    method=method.upper(),
-                    url=full_url,
-                    data=json.dumps(payload),
-                    verify=f"{self.paths.certs}/chain.pem",
-                    headers={"Accept": "application/json", "Content-Type": "application/json"},
-                )
-
+                resp = s.request(**request_kwargs)
                 resp.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
+            raise OpenSearchHttpError(e.response.status_code)
         except requests.exceptions.RequestException as e:
             logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
             raise OpenSearchHttpError()

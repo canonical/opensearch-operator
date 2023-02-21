@@ -18,8 +18,9 @@ from tests.helpers import patch_network_get
 @patch_network_get("1.1.1.1")
 class TestOpenSearchUserManager(unittest.TestCase):
     def setUp(self):
-        self.opensearch = MagicMock()
-        self.mgr = OpenSearchUserManager(self.opensearch)
+        self.charm = MagicMock()
+        self.opensearch = self.charm.opensearch
+        self.mgr = OpenSearchUserManager(self.charm)
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     def test_create_role(self, _request):
@@ -91,7 +92,7 @@ class TestOpenSearchUserManager(unittest.TestCase):
         user_name = "username"
         with pytest.raises(OpenSearchUserMgmtError):
             self.mgr.remove_user(user_name)
-        request_args = ("DELETE", "/_plugins/_security/api/internalusers/username/")
+        request_args = ("DELETE", "/_plugins/_security/api/internalusers/username")
         self.opensearch.request.assert_called_with(*request_args)
 
         self.opensearch.request.reset_mock()

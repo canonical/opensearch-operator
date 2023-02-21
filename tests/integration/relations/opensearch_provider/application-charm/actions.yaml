@@ -1,11 +1,19 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-run-query:
-  description: Runs a given query on the backend database.
+run-request:
+  description: runs request on first-database relation
   params:
-    query:
-      description: query to run
+    relation-id:
+      description: id of the relation under test
+      type: integer
+    method:
+      description: HTTP method to run
+      type: string
+    payload:
+      description: fully escaped payload to be sent in bulk
+
       type: string
   required:
-  - query
+    - relation-id
+    - method
