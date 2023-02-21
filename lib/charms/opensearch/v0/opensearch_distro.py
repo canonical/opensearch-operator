@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Base class for Opensearch distributions."""
@@ -430,3 +430,18 @@ class OpenSearchDistribution(ABC):
             missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
 
         return missing_requirements
+
+    @property
+    def version(self) -> str:
+        """Returns the version number of this opensearch instance.
+
+        Raises:
+            OpenSearchError if the GET request fails.
+        """
+        try:
+            return self.request("GET", "/").get("version").get("number")
+        except OpenSearchHttpError:
+            logger.error(
+                "failed to get root endpoint, implying that this node is offline. Retry once node is online."
+            )
+            raise OpenSearchError()
