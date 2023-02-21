@@ -50,7 +50,7 @@ charmcraft pack
 
 ### Deploy
 
-OpenSearch has a set of system requirements to correctly function, you can find the list [here](https://opensearch.org/docs/2.3/opensearch/install/important-settings/).
+OpenSearch has a set of system requirements to correctly function, you can find the list [here](https://opensearch.org/docs/2.4/opensearch/install/important-settings/).
 To set those settings using cloudinit-userdata:
 ```bash
 # Create a cloudinit-userdata file, to set the required system settings of opensearch.
@@ -65,9 +65,7 @@ EOF
 ```
 or in a single machine:
 ```
-sudo sysctl -w vm.max_map_count=262144
-sudo sysctl -w vm.swappiness=0
-sudo sysctl -w net.ipv4.tcp_retries2=5
+sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
 ```
 
 
@@ -101,7 +99,7 @@ juju deploy -n 1 ./opensearch_ubuntu-22.04-amd64.charm --series jammy --show-log
 juju relate tls-certificates-operator opensearch
 ```
 
-**Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the TLS Certificates Operator [here](https://charmhub.io/tls-certificates-operator). 
+**Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the TLS Certificates Operator [here](https://charmhub.io/tls-certificates-operator).
 
 
 ## Canonical Contributor Agreement
