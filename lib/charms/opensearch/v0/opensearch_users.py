@@ -24,12 +24,12 @@ class OpenSearchUserMgmtError(Exception):
     """Base exception class for OpenSearch user management errors."""
 
 
-class OpenSearchUserManager(Object):
+class OpenSearchUserManager:
     """User management class for OpenSearch API."""
 
     def __init__(self, charm):
-        super().__init__(charm, "OpenSearchUserManager")
         self.charm = charm
+        self.model = charm.model
         self.unit = self.charm.unit
         self.opensearch = self.charm.opensearch
 
