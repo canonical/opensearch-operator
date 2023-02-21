@@ -109,7 +109,6 @@ class ApplicationCharm(CharmBase):
             )
             if not tls_ca:
                 event.defer()  # We're waiting until we get a CA.
-
         logger.error(f"writing cert to {CERT_PATH}.")
         with open(CERT_PATH, "w") as f:
             f.write(tls_ca)
@@ -120,7 +119,7 @@ class ApplicationCharm(CharmBase):
 
     def _on_run_request_action(self, event: ActionEvent):
         logger.info(event.params)
-        relation = self.first_database
+        relation = self.first_opensearch
         relation_id = event.params["relation-id"]
         databag = relation.fetch_relation_data()[relation_id]
         method = event.params["method"]
