@@ -120,7 +120,6 @@ class ApplicationCharm(CharmBase):
         """Event triggered when the opensearch endpoints change."""
         logger.info(f"second opensearch endpoints have been changed to: {event.endpoints}")
 
-
     # ==============
     #  Action hooks
     # ==============
@@ -147,7 +146,7 @@ class ApplicationCharm(CharmBase):
         except OpenSearchHttpError as e:
             response = [str(e)]
         logger.info(response)
-        
+
         event.set_results({"results": json.dumps(response)})
 
     # =================================

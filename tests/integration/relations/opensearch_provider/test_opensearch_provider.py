@@ -194,6 +194,7 @@ async def test_relation_broken(ops_test: OpsTest):
     # Retrieve the relation user.
     relation_user = await get_application_relation_data(
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "username"
+    )
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
             status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
