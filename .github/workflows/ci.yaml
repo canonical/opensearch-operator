@@ -20,6 +20,8 @@ jobs:
     needs:
       - lint
     runs-on: ubuntu-22.04
+    needs:
+      - lint
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -33,6 +35,8 @@ jobs:
     needs:
       - unit-test
     runs-on: ubuntu-22.04
+    needs:
+      - unit-test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -54,6 +58,8 @@ jobs:
     needs:
       - unit-test
     runs-on: ubuntu-22.04
+    needs:
+      - unit-test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -75,6 +81,8 @@ jobs:
     needs:
       - unit-test
     runs-on: ubuntu-22.04
+    needs:
+      - unit-test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -118,6 +126,8 @@ jobs:
 #    needs:
 #      - unit-test
 #    runs-on: ubuntu-22.04
+#     needs:
+#       - unit-test
 #    steps:
 #      - name: Checkout
 #        uses: actions/checkout@v3
@@ -131,5 +141,5 @@ jobs:
 #          sudo sysctl -w vm.max_map_count=262144
 #          sudo sysctl -w vm.swappiness=0
 #          sudo sysctl -w net.ipv4.tcp_retries2=5
-#
+
 #          tox -e ha-service-integration
