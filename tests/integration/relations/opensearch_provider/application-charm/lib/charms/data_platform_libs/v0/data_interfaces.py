@@ -1176,7 +1176,7 @@ class OpenSearchProvides(DataProvides):
         diff = self._diff(event)
 
         # Emit an index requested event if the setup key (index name and optional extra user roles)
-        # hhave been added to the relation databag by the application.
+        # have been added to the relation databag by the application.
         if "index" in diff.added:
             self.on.index_requested.emit(event.relation, app=event.app, unit=event.unit)
 

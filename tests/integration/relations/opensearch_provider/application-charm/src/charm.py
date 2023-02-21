@@ -117,10 +117,11 @@ class ApplicationCharm(CharmBase):
     # ==============
     #  Action hooks
     # ==============
+    
     def _on_run_request_action(self, event: ActionEvent):
         logger.info(event.params)
         relation_id = event.params["relation-id"]
-        databag = self.first_opensearch.fetch_relation_data()[relation_id]
+        databag = self.first_index.fetch_relation_data()[relation_id]
         method = event.params["method"]
         endpoint = event.params["endpoint"]
         payload = event.params.get("payload", None)

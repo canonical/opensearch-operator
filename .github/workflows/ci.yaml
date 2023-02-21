@@ -4,7 +4,7 @@ on:
   pull_request:
 
 jobs:
-  lint-and-unit-test:
+  lint:
     name: Lint & Unit Test
     runs-on: ubuntu-22.04
     steps:
@@ -20,7 +20,8 @@ jobs:
   integration-test-lxd-tls:
     name: Integration tests for TLS (lxd)
     needs:
-      - lint-and-unit-test
+      - lint
+      - unit-test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -56,7 +57,6 @@ jobs:
   #         sudo sysctl -w vm.max_map_count=262144
   #         sudo sysctl -w vm.swappiness=0
   #         sudo sysctl -w net.ipv4.tcp_retries2=5
-
   #         tox -e ha-integration
 
   integration-test-client-relation:
@@ -64,7 +64,8 @@ jobs:
     runs-on: ubuntu-22.04
     # Commented out while this is still in dev.
     # needs:
-    #   - lint-and-unit-test
+    #   - lint
+    #   - unit-test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
