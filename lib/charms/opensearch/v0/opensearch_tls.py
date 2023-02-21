@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.opensearch_distro import OpenSearchError
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiringEvent,
