@@ -114,11 +114,10 @@ class ApplicationCharm(CharmBase):
         with open(CERT_PATH, "w") as f:
             f.write(tls_ca)
 
-
     # ==============
     #  Action hooks
     # ==============
-    
+
     def _on_run_request_action(self, event: ActionEvent):
         logger.info(event.params)
         relation = self.first_database
@@ -142,7 +141,7 @@ class ApplicationCharm(CharmBase):
         except OpenSearchHttpError as e:
             response = [str(e)]
         logger.info(response)
-        
+
         event.set_results({"results": json.dumps(response)})
 
     # =================================
