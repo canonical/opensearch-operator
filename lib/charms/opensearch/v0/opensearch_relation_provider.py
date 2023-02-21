@@ -178,19 +178,21 @@ class OpenSearchProvider(Object):
             return
         if not ca_chain:
             try:
-                logger.error(self.charm.secrets)
                 logger.error(self.charm.secrets.all(Scope.APP))
-                logger.error(self.charm.secrets.get(Scope.APP, CertType.ADMIN.val))
-                logger.error(self.charm.secrets.get_object(Scope.APP, CertType.ADMIN.val))
+                logger.error(CertType.APP_ADMIN.val)
+                logger.error(self.charm.secrets.get(Scope.APP, CertType.APP_ADMIN.val))
+                logger.error(self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val))
                 logger.error(
-                    self.charm.secrets.get_object(Scope.APP, CertType.ADMIN.val).get("chain")
+                    self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val).get("chain")
                 )
-                ca_chain = self.charm.secrets.get_object(Scope.APP, CertType.ADMIN.val).get(
-                    "chain"
+                logger.error(
+                    self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val).get("ca")
                 )
-            except AttributeError as e:
+                ca_chain = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val).get(
+                    "ca"
+                )
+            except AttributeError:
                 # cert doesn't exist - presumably we don't yet have a TLS relation.
-                logger.error(e)
                 return
         self.opensearch_provides.set_tls_ca(relation_id, "\n".join(ca_chain[::-1]))
         self.opensearch_provides.set_tls(relation_id, "True")
