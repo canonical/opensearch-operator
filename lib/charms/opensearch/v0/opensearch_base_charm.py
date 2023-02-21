@@ -358,7 +358,9 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         password = self.secrets.get(Scope.APP, f"{user_name}_password")
-        cert = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)  # replace later with new user certs
+        cert = self.secrets.get_object(
+            Scope.APP, CertType.APP_ADMIN.val
+        )  # replace later with new user certs
         ca_chain = "\n".join(cert["chain"][::-1])
 
         event.set_results(
