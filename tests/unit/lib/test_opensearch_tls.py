@@ -7,9 +7,9 @@ import unittest
 from unittest import mock
 from unittest.mock import MagicMock, Mock, patch
 
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.opensearch_base_charm import PEER
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -26,7 +26,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.harness.begin()
 
         self.charm = self.harness.charm
-        self.harness.add_relation(PEER, self.charm.app.name)
+        self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.harness.add_relation(TLS_RELATION, self.charm.app.name)
 
         self.secret_store = self.charm.secrets

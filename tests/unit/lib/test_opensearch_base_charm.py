@@ -7,9 +7,10 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.opensearch_base_charm import PEER, SERVICE_MANAGER
+from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
 from charms.opensearch.v0.opensearch_distro import (
     OpenSearchHttpError,
     OpenSearchInstallError,
@@ -23,7 +24,6 @@ from tests.helpers import patch_network_get
 
 @patch_network_get("1.1.1.1")
 class TestOpenSearchBaseCharm(unittest.TestCase):
-
     BASE_LIB_PATH = "charms.opensearch.v0"
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
     OPENSEARCH_DISTRO = ""
@@ -37,7 +37,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.charm = self.harness.charm
         self.opensearch = self.charm.opensearch
         self.peers_data = self.charm.peers_data
-        self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
+        self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
 
         self.OPENSEARCH_DISTRO = (
