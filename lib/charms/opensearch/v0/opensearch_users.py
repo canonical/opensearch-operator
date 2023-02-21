@@ -11,7 +11,6 @@ from typing import Dict, List, Optional, Set
 
 from charms.opensearch.v0.constants_charm import ClientRelationName, OpenSearchUsers
 from charms.opensearch.v0.opensearch_distro import OpenSearchHttpError
-from ops.framework import Object
 
 logger = logging.getLogger(__name__)
 
