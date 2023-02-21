@@ -334,21 +334,22 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         user_name = event.params.get("username")
-        if event.params.get("username") != "admin":
+        if user_name != "admin":
             event.fail("Only the 'admin' username is allowed for this action.")
             return
 
         password = event.params.get("password") or generate_password()
         try:
             self._put_admin_user(password)
-            password = self.secrets.get(Scope.APP, "admin_password")
+            password = self.secrets.get(Scope.APP, f"{user_name}_password")
             event.set_results({f"{user_name}-password": password})
         except OpenSearchError as e:
             event.fail(f"Failed changing the password: {e}")
 
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
-        if event.params.get("username") != "admin":
+        user_name = event.params.get("username")
+        if user_name != "admin":
             event.fail("Only the 'admin' username is allowed for this action.")
             return
 
@@ -356,14 +357,14 @@ class OpenSearchBaseCharm(CharmBase):
             event.fail("admin user or TLS certificates not configured yet.")
             return
 
-        admin_password = self.secrets.get(Scope.APP, "admin_password")
-        admin_cert = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        ca_chain = "\n".join(admin_cert["chain"][::-1])
+        password = self.secrets.get(Scope.APP, f"{user_name}_password")
+        cert = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)  # replace later with new user certs
+        ca_chain = "\n".join(cert["chain"][::-1])
 
         event.set_results(
             {
-                "username": event.params.get("username"),
-                "password": admin_password,
+                "username": user_name,
+                "password": password,
                 "ca-chain": ca_chain,
             }
         )
