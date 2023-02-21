@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Unit test for the helper_cluster library."""
@@ -23,7 +23,6 @@ from tests.helpers import patch_network_get
 
 @patch_network_get("1.1.1.1")
 class TestOpenSearchBaseCharm(unittest.TestCase):
-
     BASE_LIB_PATH = "charms.opensearch.v0"
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
     OPENSEARCH_DISTRO = ""
