@@ -120,14 +120,15 @@ class ApplicationCharm(CharmBase):
         """Event triggered when the opensearch endpoints change."""
         logger.info(f"second opensearch endpoints have been changed to: {event.endpoints}")
 
+
     # ==============
     #  Action hooks
     # ==============
-
     def _on_run_request_action(self, event: ActionEvent):
         logger.info(event.params)
+        relation = self.first_database
         relation_id = event.params["relation-id"]
-        databag = self.first_opensearch.fetch_relation_data()[relation_id]
+        databag = relation.fetch_relation_data()[relation_id]
         method = event.params["method"]
         endpoint = event.params["endpoint"]
         payload = event.params.get("payload", None)
@@ -146,7 +147,7 @@ class ApplicationCharm(CharmBase):
         except OpenSearchHttpError as e:
             response = [str(e)]
         logger.info(response)
-
+        
         event.set_results({"results": json.dumps(response)})
 
     # =================================
