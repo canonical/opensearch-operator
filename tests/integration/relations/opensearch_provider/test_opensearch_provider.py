@@ -4,6 +4,7 @@
 import asyncio
 import json
 import logging
+import re
 
 import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
@@ -19,9 +20,7 @@ from tests.integration.helpers import (
 )
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
-    run_bulk_put,
-    run_get_request,
-    run_simple_put,
+    run_request,
     wait_for_relation_joined_between,
 )
 
@@ -76,58 +75,79 @@ async def test_database_relation_with_charm_libraries(
 @pytest.mark.client_relation
 async def test_database_usage(ops_test: OpsTest):
     """Check we can update and delete things."""
-    run_create_index = await run_simple_put(
+    await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         relation_id=client_relation.id,
+        method="PUT",
+        endpoint="/albums/_doc/1",
+        payload=re.escape(
+            '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
+        ),
     )
-    # TODO have better validation here.
-    logging.error(json.dumps(run_create_index))
 
     read_index_endpoint = "/albums/_search?q=Jazz"
-    run_read_index = await run_get_request(
+    run_read_index = await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         endpoint=read_index_endpoint,
+        method="GET",
         relation_id=client_relation.id,
     )
     results = json.loads(run_read_index["results"])
-    logging.error(results)
+    logging.info(results)
     assert results.get("timed_out") is False
     assert results.get("hits", {}).get("total", {}).get("value") == 1
+    assert (
+        results.get("hits", {}).get("hits", [{}])[0].get("_source", {}).get("artist") == "Vulfpeck"
+    )
 
 
 @pytest.mark.client_relation
 async def test_database_bulk_usage(ops_test: OpsTest):
     """Check we can update and delete things using bulk api."""
-    run_bulk_create_index = await run_bulk_put(
+    bulk_payload = """{ "index" : { "_index": "albums", "_id" : "2" } }
+{"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
+{ "index" : { "_index": "albums", "_id" : "3" } }
+{"artist": "Lydian Collective", "genre": ["Jazz"],  "title": "Adventure"}
+{ "index" : { "_index": "albums", "_id" : "4" } }
+{"artist": "Liquid Tension Experiment", "genre": ["Prog", "Metal"],  "title": "Liquid Tension Experiment 2"}
+"""
+    await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         relation_id=client_relation.id,
+        method="POST",
+        endpoint="/_bulk",
+        payload=re.escape(bulk_payload),
     )
-    # change assertion to "data written" or something
-    logging.info(json.dumps(run_bulk_create_index["results"]))
 
     read_index_endpoint = "/albums/_search?q=Jazz"
-    run_bulk_read_index = await run_get_request(
+    run_bulk_read_index = await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         endpoint=read_index_endpoint,
+        method="GET",
         relation_id=client_relation.id,
     )
     # TODO assert we're getting the correct value
     results = json.loads(run_bulk_read_index["results"])
-    logging.error(results)
+    logging.info(results)
     assert results.get("timed_out") is False
     assert results.get("hits", {}).get("total", {}).get("value") == 3
+    artists = [
+        hit.get("_source", {}).get("artist") for hit in results.get("hits", {}).get("hits", [{}])
+    ]
+    assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
 @pytest.mark.client_relation
 async def test_database_version(ops_test: OpsTest):
     """Check version is accurate."""
-    run_version_query = await run_get_request(
+    run_version_query = await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        method="GET",
         endpoint="/",
         relation_id=client_relation.id,
     )
@@ -194,7 +214,6 @@ async def test_relation_broken(ops_test: OpsTest):
                 raise_on_blocked=True,
             ),
         )
-    logger.error(relation_user)
     leader_ip = await get_leader_unit_ip(ops_test)
     users = await http_request(
         ops_test,
@@ -202,4 +221,6 @@ async def test_relation_broken(ops_test: OpsTest):
         f"https://{leader_ip}:9200/_plugins/_security/api/internalusers/",
         verify=False,
     )
+    logger.error(relation_user)
+    logger.error(users)
     assert relation_user not in users.keys()

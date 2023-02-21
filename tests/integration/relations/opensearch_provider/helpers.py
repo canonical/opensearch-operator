@@ -90,25 +90,19 @@ async def run_action(
     return result.results
 
 
-async def run_simple_put(ops_test, unit_name: str, relation_id: int):
-    return await run_action(
-        ops_test, action_name="single-put", unit_name=unit_name, **{"relation-id": relation_id}
-    )
-
-
-async def run_bulk_put(ops_test, unit_name: str, relation_id: int):
-    return await run_action(
-        ops_test, action_name="bulk-put", unit_name=unit_name, **{"relation-id": relation_id}
-    )
-
-
-async def run_get_request(ops_test, unit_name: str, relation_id: int, endpoint: str):
+async def run_request(
+    ops_test, unit_name: str, relation_id: int, method: str, endpoint: str, payload: str = None
+):
+    # python can't have variable names with a hyphen, and Juju can't have action variables with an
+    # underscore, so this is a compromise.
+    kwargs = {"relation-id": relation_id}
+    if payload:
+        kwargs["payload"] = payload
     return await run_action(
         ops_test,
-        action_name="get-request",
+        action_name="run-request",
         unit_name=unit_name,
+        method=method,
         endpoint=endpoint,
-        # python can't have variable names with a hyphen, and Juju can't have action variables with
-        # an underscore, so this is a compromise.
-        **{"relation-id": relation_id},
+        **kwargs,
     )

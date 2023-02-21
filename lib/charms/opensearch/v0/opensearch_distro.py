@@ -314,17 +314,20 @@ class OpenSearchDistribution(ABC):
             "method": method.upper(),
             "url": full_url,
             "headers": {"Content-Type": "application/json", "Accept": "application/json"},
+            "data": json.dumps(payload) if payload else None,
         }
-        request_kwargs["data"] = json.dumps(payload) if payload else None
 
         try:
             with requests.Session() as s:
                 s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
                 resp = s.request(**request_kwargs)
                 resp.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
+            raise OpenSearchHttpError(e.response.status_code)
         except requests.exceptions.RequestException as e:
             logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
-            raise OpenSearchHttpError(status_code=e.response.status_code)
+            raise OpenSearchHttpError()
 
         return resp.json()
 
