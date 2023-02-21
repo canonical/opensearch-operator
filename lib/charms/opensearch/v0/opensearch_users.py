@@ -204,7 +204,7 @@ class OpenSearchUserManager(Object):
             return
 
         for role in database_roles - roles:
-            if ClientRelationName not in role:
+            if not role.startswith(f"{ClientRelationName}_"):
                 # This role was not created by this charm, so leave it alone
                 continue
             try:
