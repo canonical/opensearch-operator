@@ -17,6 +17,27 @@ jobs:
       - name: Run tests
         run: tox -e unit
 
+  integration-test-lxd-charm:
+    name: Integration tests for the charm (lxd)
+    needs:
+      - lint
+      - unit-test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+      - name: Run integration tests
+        run: |
+          # set sysctl values in case the cloudinit-userdata not applied
+          sudo sysctl -w vm.max_map_count=262144
+          sudo sysctl -w vm.swappiness=0
+          sudo sysctl -w net.ipv4.tcp_retries2=5
+          tox -e charm-integration
+
   integration-test-lxd-tls:
     name: Integration tests for TLS (lxd)
     needs:
