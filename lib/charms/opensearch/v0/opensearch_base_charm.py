@@ -12,6 +12,7 @@ from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
     AllocationExclusionFailed,
     CertsExpirationError,
+    ClientRelationName,
     HorizontalScaleUpSuggest,
     PeerRelationName,
     RequestUnitServiceOps,
