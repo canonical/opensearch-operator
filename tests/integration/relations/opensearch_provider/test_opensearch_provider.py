@@ -36,7 +36,6 @@ FIRST_DATABASE_RELATION_NAME = "first-index"
 NUM_UNITS = len(UNIT_IDS)
 
 
-@pytest.mark.dev
 @pytest.mark.abort_on_fail
 @pytest.mark.client_relation
 async def test_database_relation_with_charm_libraries(

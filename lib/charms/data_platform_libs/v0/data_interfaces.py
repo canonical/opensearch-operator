@@ -1171,7 +1171,7 @@ class OpenSearchProvides(DataProvides):
         diff = self._diff(event)
 
         # Emit an index requested event if the setup key (index name and optional extra user roles)
-        # hhave been added to the relation databag by the application.
+        # have been added to the relation databag by the application.
         if "index" in diff.added:
             self.on.index_requested.emit(event.relation, app=event.app, unit=event.unit)
 
@@ -1208,7 +1208,7 @@ class OpenSearchRequires(DataRequires):
 
     on = OpenSearchRequiresEvents()
 
-    def __init__(self, charm, relation_name: str, index: str, extra_user_roles: str = None):
+    def __init__(self, charm, relation_name: str, index: str, extra_user_roles: Optional[str] = None):
         """Manager of OpenSearch client relations."""
         super().__init__(charm, relation_name, extra_user_roles)
         self.charm = charm
@@ -1219,7 +1219,7 @@ class OpenSearchRequires(DataRequires):
         # Sets both index and extra user roles in the relation if the roles are provided.
         # Otherwise, sets only the index.
         data = {"index": self.index}
-        if self.extra_user_roles is not None:
+        if self.extra_user_roles:
             data["extra-user-roles"] = self.extra_user_roles
 
         self._update_relation_data(event.relation.id, data)
