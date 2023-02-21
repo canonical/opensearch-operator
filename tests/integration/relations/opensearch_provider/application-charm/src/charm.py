@@ -51,8 +51,7 @@ class ApplicationCharm(CharmBase):
         # Events related to the second database that is requested
         # (these events are defined in the database requires charm library).
         database_name = f'{self.app.name.replace("-", "_")}_second_database'
-        # TODO change this to include only permissions and action groups, and verify that we can
-        # create roles when necessary.
+        # TODO change this to use new permissions
         roles = {
             "roles": ["readall"],
             "permissions": ["TODO find some permissions", ""],
@@ -69,18 +68,14 @@ class ApplicationCharm(CharmBase):
             self.second_database.on.endpoints_changed, self._on_second_database_endpoints_changed
         )
 
-        self.framework.observe(self.on.run_query_action, self._on_run_query_action)
+        self.framework.observe(self.on.run_request_action, self._on_run_request_action)
 
     def _on_update_status(self, _) -> None:
-        """Health check for database connection.
-
-        If backend relation exists and is
-            self.unit.status = ActiveStatus()
-        else: usable, set status to active.
-        """
+        """Health check for database connection."""
         if self.connection_check():
             self.unit.status = ActiveStatus()
         else:
+            logger.error("connection check to opensearch charm failed")
             self.unit.status = BlockedStatus("No connection to opensearch charm")
 
     def connection_check(self) -> bool:
@@ -98,7 +93,6 @@ class ApplicationCharm(CharmBase):
     def smoke_check(self, relation_id) -> bool:
         try:
             resp = self.relation_request(relation_id, "GET", "/")
-            logger.info(resp)
             return bool(resp)
         except (OpenSearchHttpError, Exception) as e:
             logger.error(e)
@@ -122,9 +116,38 @@ class ApplicationCharm(CharmBase):
         """Event triggered when the read/write endpoints of the database change."""
         logger.info(f"second database endpoints have been changed to: {event.endpoints}")
 
-    def _on_run_query_action(self, event: ActionEvent):
-        """Runs queries."""
-        raise NotImplementedError
+    # ==============
+    #  Action hooks
+    # ==============
+    def _on_run_request_action(self, event: ActionEvent):
+        logger.info(event.params)
+        relation = self.first_database
+        relation_id = event.params["relation-id"]
+        databag = relation.fetch_relation_data()[relation_id]
+        method = event.params["method"]
+        endpoint = event.params["endpoint"]
+        payload = event.params.get("payload", None)
+        if payload:
+            payload = payload.replace("\\", "")
+
+        username = databag.get("username")
+        password = databag.get("password")
+        host = databag.get("endpoints").split(",")[0]
+        host_addr = host.split(":")[0]
+        port = host.split(":")[1]
+
+        logger.info(f"sending {method} request to {endpoint}")
+        try:
+            response = self.request(method, endpoint, port, username, password, host_addr, payload)
+        except OpenSearchHttpError as e:
+            response = [str(e)]
+        logger.info(response)
+
+        event.set_results({"results": json.dumps(response)})
+
+    # =================================
+    #  Opensearch connection functions
+    # =================================
 
     def relation_request(
         self,
@@ -168,6 +191,7 @@ class ApplicationCharm(CharmBase):
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request.
 
+        TODO swap this over to a more normal opensearch client
         Args:
             method: matching the known http methods.
             endpoint: relative to the base uri.
@@ -183,27 +207,25 @@ class ApplicationCharm(CharmBase):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        # add username and password if auth continues to fail
         full_url = f"https://{host}:{port}/{endpoint}"
+
+        request_kwargs = {
+            "verify": False,  # TODO this should be a path to a cert once this relation has TLS.
+            "method": method.upper(),
+            "url": full_url,
+            "headers": {"Content-Type": "application/json", "Accept": "application/json"},
+        }
+
+        if payload:
+            request_kwargs["data"] = payload
         try:
             with requests.Session() as s:
                 s.auth = (username, password)
-                request_kwargs = {
-                    "verify": False,  # TODO this should be a cert once this relation has TLS.
-                    "method": method.upper(),
-                    "url": full_url,
-                    "headers": {"Content-Type": "application/json"},
-                }
-                if payload is not None:
-                    request_kwargs["data"] = json.dumps(payload)
-                    request_kwargs["headers"]["Accept"] = "application/json"
-
                 resp = s.request(**request_kwargs)
-
                 resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             logger.error(f"Request {method} to {full_url} with payload: {payload} failed. \n{e}")
-            raise OpenSearchHttpError()
+            raise OpenSearchHttpError(str(e))
 
         return resp.json()
 
