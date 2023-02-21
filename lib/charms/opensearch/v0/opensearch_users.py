@@ -9,11 +9,8 @@ These functions wrap around some API calls used for user management.
 import logging
 from typing import Dict, List, Optional, Set
 
-from charms.opensearch.v0.opensearch_distro import (
-    OpenSearchDistribution,
-    OpenSearchHttpError,
-)
 from charms.opensearch.v0.constants_charm import ClientRelationName, OpenSearchUsers
+from charms.opensearch.v0.opensearch_distro import OpenSearchHttpError
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +166,7 @@ class OpenSearchUserManager:
                     "status": "OK",
                     "response": "user does not exist, and therefore has not been removed",
                 }
-            else: 
+            else:
                 raise
 
         logger.debug(resp)
