@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Helpers for security related operations, such as password generation etc."""
@@ -25,6 +25,13 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
+def hash_string(string: str) -> str:
+    """Hashes the given string."""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(string.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
+
+
 def generate_password() -> str:
     """Generate a random password string.
 
@@ -35,18 +42,14 @@ def generate_password() -> str:
     return "".join([secrets.choice(choices) for _ in range(32)])
 
 
-def generate_hashed_password() -> Tuple[str, str]:
+def generate_hashed_password(pwd: Optional[str] = None) -> Tuple[str, str]:
     """Generates a password and its bcrypt hash.
 
     Returns:
         A hash and the original password
     """
-    pwd = generate_password()
-
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(pwd.encode("utf-8"), salt)
-
-    return hashed.decode("utf-8"), pwd
+    pwd = pwd or generate_password()
+    return hash_string(pwd), pwd
 
 
 def cert_expiration_remaining_hours(cert: string) -> int:

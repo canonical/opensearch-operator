@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Helpers for networking related operations."""
@@ -54,6 +54,9 @@ def units_ips(charm: CharmBase, peer_relation_name: str) -> Dict[str, str]:
     for unit in charm.model.get_relation(peer_relation_name).units:
         unit_id = unit.name.split("/")[1]
         unit_ip_map[unit_id] = unit_ip(charm, unit, peer_relation_name)
+
+    # Sometimes the above command doesn't get the current node, so ensure we get this unit's ip.
+    unit_ip_map[charm.unit.name.split("/")[1]] = get_host_ip(charm, peer_relation_name)
 
     return unit_ip_map
 

@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Unit test for the helper_cluster library."""
@@ -6,8 +6,8 @@
 import unittest
 from unittest.mock import patch
 
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.opensearch_base_charm import PEER
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -21,7 +21,7 @@ class TestHelperDatabag(unittest.TestCase):
         self.harness.begin()
 
         self.charm = self.harness.charm
-        self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
+        self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.secret_store = self.charm.secrets
         self.peers_data = self.charm.peers_data
 

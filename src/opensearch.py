@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """In this class we manage opensearch distributions specific to the VM charm.
@@ -157,7 +157,7 @@ class OpenSearchTarball(OpenSearchDistribution):
     def _stop_service(self):
         """Stop opensearch."""
         try:
-            self._run_cmd("sudo systemctl stop opensearch.service")
+            self._run_cmd("systemctl stop opensearch.service")
         except OpenSearchCmdError:
             logger.debug("Failed stopping the opensearch service.")
             raise OpenSearchStopError()

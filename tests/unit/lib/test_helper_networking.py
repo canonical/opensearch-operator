@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Unit test for the helper_cluster library."""
@@ -7,6 +7,7 @@ import unittest
 import uuid
 from unittest.mock import patch
 
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
     get_hostname_by_unit,
@@ -14,7 +15,6 @@ from charms.opensearch.v0.helper_networking import (
     unit_ip,
     units_ips,
 )
-from charms.opensearch.v0.opensearch_base_charm import PEER
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -30,11 +30,11 @@ class TestHelperNetworking(unittest.TestCase):
         self.harness.begin()
 
         self.charm = self.harness.charm
-        self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
+        self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
 
     def test_get_host_ip(self):
         """Test host IP value."""
-        self.assertEqual(get_host_ip(self.charm, PEER), "1.1.1.1")
+        self.assertEqual(get_host_ip(self.charm, PeerRelationName), "1.1.1.1")
 
     def test_get_hostname_by_unit(self):
         """Test the dns name returned."""
@@ -45,7 +45,7 @@ class TestHelperNetworking(unittest.TestCase):
 
     def test_unit_ip(self):
         """Test the unit IP value."""
-        self.assertEqual(unit_ip(self.charm, self.charm.unit, PEER), "1.1.1.1")
+        self.assertEqual(unit_ip(self.charm, self.charm.unit, PeerRelationName), "1.1.1.1")
 
     def test_units_ips(self):
         """Test all units IPs."""
@@ -61,7 +61,8 @@ class TestHelperNetworking(unittest.TestCase):
         )
 
         self.assertDictEqual(
-            units_ips(self.charm, PEER), {"0": "1.1.1.1", "1": "2.2.2.2", "2": "3.3.3.3"}
+            units_ips(self.charm, PeerRelationName),
+            {"0": "1.1.1.1", "1": "2.2.2.2", "2": "3.3.3.3"},
         )
 
     def test_is_reachable(self):

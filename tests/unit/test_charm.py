@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 from charms.opensearch.v0.constants_tls import CertType
 from helpers import create_utf8_encoded_private_key
-from unit.test_opensearch_base_charm import TestOpenSearchBaseCharm
+from unit.lib.test_opensearch_base_charm import TestOpenSearchBaseCharm
 
 
 class TestCharm(TestOpenSearchBaseCharm):

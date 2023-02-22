@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Base class for the OpenSearch Operators."""
@@ -12,9 +12,12 @@ from typing import Dict, List, Optional, Type
 from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
     CertsExpirationError,
+    ClientRelationName,
     ClusterHealthRed,
     ClusterHealthYellow,
+    HorizontalScaleUpSuggest,
     NoNodeUpInCluster,
+    PeerRelationName,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -42,10 +45,13 @@ from charms.opensearch.v0.helper_networking import (
 from charms.opensearch.v0.helper_security import (
     cert_expiration_remaining_hours,
     generate_hashed_password,
+    generate_password,
 )
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchError,
     OpenSearchHAError,
     OpenSearchHttpError,
     OpenSearchScaleDownError,
@@ -58,7 +64,9 @@ from charms.opensearch.v0.opensearch_nodes_exclusions import (
     VOTING_TO_DELETE,
     OpenSearchExclusions,
 )
+from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
+from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
@@ -89,7 +97,6 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-PEER = "opensearch-peers"
 SERVICE_MANAGER = "service"
 STORAGE_NAME = "opensearch-data"
 
@@ -106,36 +113,37 @@ class OpenSearchBaseCharm(CharmBase):
         if distro is None:
             raise ValueError("The type of the opensearch distro must be specified.")
 
-        self.opensearch = distro(self, PEER)
+        self.opensearch = distro(self, PeerRelationName)
         self.opensearch_config = OpenSearchConfig(self.opensearch)
-
-        self.node_roles: List[str] = []
         self.opensearch_exclusions = OpenSearchExclusions(self)
-
-        self.peers_data = RelationDataStore(self, PEER)
-        self.secrets = SecretsDataStore(self, PEER)
-
+        self.peers_data = RelationDataStore(self, PeerRelationName)
+        self.secrets = SecretsDataStore(self, PeerRelationName)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
-
         self.status = Status(self)
 
         self.service_manager = RollingOpsManager(
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
         )
+        self.user_manager = OpenSearchUserManager(self)
+        self.opensearch_provider = OpenSearchProvider(self)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
+        self.framework.observe(self.on.update_status, self._on_update_status)
 
-        self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
-        self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
-        self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
+        self.framework.observe(
+            self.on[PeerRelationName].relation_joined, self._on_peer_relation_joined
+        )
+        self.framework.observe(
+            self.on[PeerRelationName].relation_changed, self._on_peer_relation_changed
+        )
+        self.framework.observe(self.on[PeerRelationName].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(
             self.on[STORAGE_NAME].storage_detaching, self._on_opensearch_data_storage_detaching
         )
 
-        self.framework.observe(self.on.update_status, self._on_update_status)
-
-        self.framework.observe(self.on.get_admin_secrets_action, self._on_get_admin_secrets_action)
+        self.framework.observe(self.on.set_password_action, self._on_set_password_action)
+        self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
@@ -150,7 +158,10 @@ class OpenSearchBaseCharm(CharmBase):
 
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             self.unit.status = MaintenanceStatus(AdminUserInitProgress)
-            self._initialize_admin_user()
+            # User config is currently in a default state, which contains multiple insecure default
+            # users. Purge the user list before initialising the users the charm requires.
+            self._purge_users()
+            self._put_admin_user()
             self.peers_data.put(Scope.APP, "admin_user_initialized", True)
             self.status.clear(AdminUserInitProgress)
 
@@ -219,6 +230,9 @@ class OpenSearchBaseCharm(CharmBase):
                 self.peers_data.put(
                     Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                 )
+
+            for relation in self.model.relations.get(ClientRelationName, []):
+                self.opensearch_provider.update_endpoints(relation)
 
             if data.get(VOTING_TO_DELETE) or data.get(ALLOCS_TO_DELETE):
                 self.opensearch_exclusions.cleanup()
@@ -294,13 +308,16 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
 
-        We want to periodically check for 2 things:
-        1- The system requirements are still met
-        2- every 6 hours check if certs are expiring soon (in 7 days),
+        We want to periodically check for 3 things:
+        1- Do we have users that need to be deleted, and if so we need to delete them.
+        2- The system requirements are still met
+        3- every 6 hours check if certs are expiring soon (in 7 days),
             as a safeguard in case relation broken. As there will be data loss
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
+        self.user_manager.remove_users_and_roles()
+
         # if there are missing system requirements defer
         missing_sys_reqs = self.opensearch.missing_sys_requirements()
         if len(missing_sys_reqs) > 0:
@@ -323,16 +340,49 @@ class OpenSearchBaseCharm(CharmBase):
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
 
-    def _on_get_admin_secrets_action(self, event: ActionEvent):
+    def _on_set_password_action(self, event: ActionEvent):
+        """Set new admin password from user input or generate if not passed."""
+        if not self.unit.is_leader():
+            event.fail("The action can be run only on leader unit.")
+            return
+
+        user_name = event.params.get("username")
+        if user_name != "admin":
+            event.fail("Only the 'admin' username is allowed for this action.")
+            return
+
+        password = event.params.get("password") or generate_password()
+        try:
+            self._put_admin_user(password)
+            password = self.secrets.get(Scope.APP, f"{user_name}_password")
+            event.set_results({f"{user_name}-password": password})
+        except OpenSearchError as e:
+            event.fail(f"Failed changing the password: {e}")
+
+    def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
-        password = self.secrets.get(Scope.APP, "admin_password")
+        user_name = event.params.get("username")
+        if user_name != "admin":
+            event.fail("Only the 'admin' username is allowed for this action.")
+            return
 
-        chain = ""
-        admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if admin_secrets and admin_secrets.get("chain"):
-            chain = "\n".join(admin_secrets["chain"][::-1])
+        if not self._is_tls_fully_configured():
+            event.fail("admin user or TLS certificates not configured yet.")
+            return
 
-        event.set_results({"password": password if password else "", "chain": chain})
+        password = self.secrets.get(Scope.APP, f"{user_name}_password")
+        cert = self.secrets.get_object(
+            Scope.APP, CertType.APP_ADMIN.val
+        )  # replace later with new user certs
+        ca_chain = "\n".join(cert["chain"][::-1])
+
+        event.set_results(
+            {
+                "username": user_name,
+                "password": password,
+                "ca-chain": ca_chain,
+            }
+        )
 
     def on_tls_conf_set(
         self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
@@ -541,21 +591,50 @@ class OpenSearchBaseCharm(CharmBase):
 
         return True
 
-    def _initialize_admin_user(self):
-        """Change default password of Admin user."""
-        hashed_pwd, pwd = generate_hashed_password()
-        self.secrets.put(Scope.APP, "admin_password", pwd)
+    def _purge_users(self):
+        """Removes all users from internal_users yaml config.
 
-        self.opensearch.config.put(
-            "opensearch-security/internal_users.yml",
-            "admin",
-            {
-                "hash": hashed_pwd,
-                "reserved": True,  # this protects this resource from being updated on the dashboard or rest api
-                "backend_roles": ["admin"],
-                "description": "Admin user",
-            },
-        )
+        This is to be used when starting up the charm, to remove unnecessary default users.
+        """
+        for user in self.opensearch.config.load("opensearch-security/internal_users.yml").keys():
+            if user != "_meta":
+                self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
+
+    def _put_admin_user(self, pwd: Optional[str] = None):
+        """Change password of Admin user."""
+        is_update = pwd is not None
+        hashed_pwd, pwd = generate_hashed_password(pwd)
+
+        if is_update:
+            # TODO replace with user_manager.patch_user()
+            resp = self.opensearch.request(
+                "PATCH",
+                "/_plugins/_security/api/internalusers/admin",
+                [{"op": "replace", "path": "/hash", "value": hashed_pwd}],
+            )
+            logger.debug(f"Patch admin user response: {resp}")
+            if resp.get("status") != "OK":
+                raise OpenSearchError(f"{resp}")
+        else:
+            # reserved: False, prevents this resource from being update-protected from:
+            # updates made on the dashboard or the rest api.
+            # we grant the admin user all opensearch access + security_rest_api_access
+            self.opensearch.config.put(
+                "opensearch-security/internal_users.yml",
+                "admin",
+                {
+                    "hash": hashed_pwd,
+                    "reserved": False,
+                    "backend_roles": ["admin"],
+                    "opendistro_security_roles": [
+                        "security_rest_api_access",
+                        "all_access",
+                    ],
+                    "description": "Admin user",
+                },
+            )
+
+        self.secrets.put(Scope.APP, "admin_password", pwd)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.
@@ -736,7 +815,7 @@ class OpenSearchBaseCharm(CharmBase):
     @property
     def unit_ip(self) -> str:
         """IP address of the current unit."""
-        return get_host_ip(self, PEER)
+        return get_host_ip(self, PeerRelationName)
 
     @property
     def unit_name(self) -> str:

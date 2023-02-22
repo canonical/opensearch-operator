@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Class for Setting configuration in opensearch config files."""
@@ -35,6 +35,7 @@ class OpenSearchConfig:
     def set_client_auth(self):
         """Configure TLS and basic http for clients."""
         # The security plugin will accept TLS client certs if certs but doesn't require them
+        # TODO this may be set to REQUIRED if we want to ensure certs provided by the client app
         self._opensearch.config.put(
             self.CONFIG_YML, "plugins.security.ssl.http.clientauth_mode", "OPTIONAL"
         )
@@ -151,6 +152,19 @@ class OpenSearchConfig:
         self._opensearch.config.put(self.CONFIG_YML, "plugins.security.ssl.http.enabled", True)
         self._opensearch.config.put(
             self.CONFIG_YML, "plugins.security.ssl.transport.enforce_hostname_verification", True
+        )
+
+        # security plugin rest API access
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            "plugins.security.restapi.roles_enabled",
+            ["all_access", "security_rest_api_access"],
+        )
+        # to use the PUT and PATCH methods of the security rest API
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            "plugins.security.unsupported.restapi.allow_securityconfig_modification",
+            True,
         )
 
     def cleanup_bootstrap_conf(self):
