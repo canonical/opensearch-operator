@@ -181,9 +181,9 @@ async def http_request(
     with requests.Session() as session, tempfile.NamedTemporaryFile(mode="w+") as chain:
         chain.write(admin_secrets["ca-chain"])
         chain.seek(0)
-        
+
         session.auth = ("admin", user_password or admin_secrets["password"])
-        
+
         request_kwargs = {
             "method": method,
             "url": endpoint,
