@@ -1076,7 +1076,7 @@ class KafkaRequires(DataRequires):
                 "topic": self.topic,
                 "extra-user-roles": self.extra_user_roles,
             }
-            if self.extra_user_roles is not None
+            if not self.extra_user_roles
             else {"topic": self.topic},
         )
 
@@ -1218,7 +1218,7 @@ class OpenSearchRequires(DataRequires):
         # Sets both index and extra user roles in the relation if the roles are provided.
         # Otherwise, sets only the index.
         data = {"index": self.index}
-        if self.extra_user_roles is not None:
+        if not self.extra_user_roles:
             data["extra-user-roles"] = self.extra_user_roles
 
         self._update_relation_data(event.relation.id, data)
