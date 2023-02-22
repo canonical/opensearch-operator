@@ -6,20 +6,20 @@
 This class handles install / start / stop of opensearch services.
 It also exposes some properties and methods for interacting with an OpenSearch Installation
 """
-
 import logging
 import os
 import time
+from datetime import datetime
 
 import requests
-from charms.opensearch.v0.opensearch_distro import (
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution, Paths
+from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
-    OpenSearchDistribution,
     OpenSearchInstallError,
     OpenSearchMissingError,
     OpenSearchStartError,
+    OpenSearchStartTimeoutError,
     OpenSearchStopError,
-    Paths,
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
@@ -118,7 +118,7 @@ class OpenSearchTarball(OpenSearchDistribution):
         """Temporary (will be deleted later) - Download and Un-tar the opensearch distro."""
         try:
             response = requests.get(
-                "https://artifacts.opensearch.org/releases/bundle/opensearch/2.4.0/opensearch-2.4.0-linux-x64.tar.gz"
+                "https://artifacts.opensearch.org/releases/bundle/opensearch/2.4.1/opensearch-2.4.1-linux-x64.tar.gz"
             )
 
             tarball_path = "opensearch.tar.gz"
@@ -147,30 +147,24 @@ class OpenSearchTarball(OpenSearchDistribution):
         except OpenSearchCmdError:
             raise OpenSearchStartError()
 
-        retries = 0
-        while not self.is_started() and retries < 3:
-            time.sleep(2)
-            retries += 1
+        start = datetime.now()
+        while not self.is_started() and (datetime.now() - start).seconds < 60:
+            time.sleep(3)
         else:
-            raise OpenSearchStartError()
+            raise OpenSearchStartTimeoutError()
 
     @override
     def _stop_service(self):
         """Stop opensearch."""
-        self._run_cmd(
-            "setpriv",
-            "--clear-groups --reuid ubuntu --regid ubuntu -- sudo systemctl stop opensearch.service",
-        )
+        try:
+            self._run_cmd("systemctl stop opensearch.service")
+        except OpenSearchCmdError:
+            logger.debug("Failed stopping the opensearch service.")
+            raise OpenSearchStopError()
 
-        retries = 0
-        while retries < 3:
-            if not self.is_started():
-                return
-
-            time.sleep(2)
-            retries += 1
-
-        raise OpenSearchStopError()
+        start = datetime.now()
+        while self.is_started() and (datetime.now() - start).seconds < 60:
+            time.sleep(3)
 
     @override
     def _build_paths(self) -> Paths:
