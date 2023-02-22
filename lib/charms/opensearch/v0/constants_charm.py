@@ -48,3 +48,16 @@ SecurityIndexInitProgress = "Initializing the security index..."
 AdminUserInitProgress = "Configuring admin user..."
 HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
+
+# Client Relation Statuses
+ClientRelationBadRoleRequestMessage = "bad relation request - client application has not provided correctly formatted extra user roles. "
+
+
+# Relation Interfaces
+ClientRelationName = "opensearch-client"
+PeerRelationName = "opensearch-peers"
+
+
+# Opensearch Users
+OpenSearchUsers = {"admin"}
+OpenSearchRoles = set()
