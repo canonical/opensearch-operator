@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """In this class we manage certificates relation.
@@ -94,9 +94,9 @@ class OpenSearchTLS(Object):
         self._request_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
         self._request_certificate(Scope.UNIT, CertType.UNIT_HTTP)
 
-    def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
+    def _on_tls_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Notify the charm that the relation is broken."""
-        self.charm.on_tls_relation_broken(event)
+        self.charm.on_tls_relation_broken()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Enable TLS when TLS certificate available."""

@@ -1,15 +1,14 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Unit test for the helper_cluster library."""
 
 import unittest
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_base_charm import PEER, SERVICE_MANAGER
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
@@ -36,9 +35,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         self.charm = self.harness.charm
         self.opensearch = self.charm.opensearch
-        self.opensearch.current = MagicMock()
-        self.opensearch.current.return_value = Node("cm1", ["cluster_manager", "data"], "1.1.1.1")
-
         self.peers_data = self.charm.peers_data
         self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
         self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
@@ -92,7 +88,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
     def test_on_start(
         self,
-        request,
         _put_admin_user,
         _initialize_security_index,
         _can_service_start,
@@ -139,8 +134,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             _get_nodes.assert_called()
             _set_node_conf.assert_called()
             start.assert_called_once()
-            _initialize_security_index.assert_called_once()
             self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
+            _initialize_security_index.assert_called_once()
 
     @patch(f"{BASE_LIB_PATH}.helper_security.cert_expiration_remaining_hours")
     @patch("ops.model.Model.get_relation")
