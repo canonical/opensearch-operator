@@ -19,7 +19,9 @@ WaitingToStart = "Waiting for OpenSearch to start..."
 InstallError = "Could not install OpenSearch."
 CertsExpirationError = "The certificates: {} need to be refreshed."
 WaitingForBusyShards = "The shards: {} need to complete building."
+ExclusionFailed = "The {} exclusion(s) of this node failed."
 AllocationExclusionFailed = "The exclusion of this node from the allocations failed."
+VotingExclusionFailed = "The exclusion of this node from the voting list failed."
 ServiceStartError = "An error occurred during the start of the OpenSearch service."
 ServiceStopped = "The OpenSearch service stopped."
 ServiceStopFailed = "An error occurred while attempting to stop the OpenSearch service."
@@ -27,6 +29,14 @@ ServiceIsStopping = "The OpenSearch service is stopping."
 TLSNotFullyConfigured = "Waiting for TLS to be fully configured..."
 TLSRelationBrokenError = (
     "Relation broken with the TLS Operator while TLS not fully configured. Stopping OpenSearch."
+)
+NoNodeUpInCluster = "No node is up in this cluster."
+TooManyNodesRemoved = (
+    "Too many nodes being removed at the same time, please scale your application up."
+)
+ClusterHealthRed = "1 or more 'primary' shards are not assigned, please scale your application up."
+ClusterHealthYellow = (
+    "1 or more 'replica' shards are not assigned, please scale your application up."
 )
 
 # Wait status
@@ -38,7 +48,6 @@ SecurityIndexInitProgress = "Initializing the security index..."
 AdminUserInitProgress = "Configuring admin user..."
 HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
-
 
 # Client Relation Statuses
 ClientRelationBadRoleRequestMessage = "bad relation request - client application has not provided correctly formatted extra user roles. "

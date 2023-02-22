@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Utility functions."""
+import os
 import tarfile
 
 
@@ -19,3 +20,5 @@ def extract_tarball(tarball_path: str, extract_dir):
 
     with tarfile.open(tarball_path) as tar:
         tar.extractall(extract_dir, members=fetch_members(tar))
+
+    os.remove(tarball_path)

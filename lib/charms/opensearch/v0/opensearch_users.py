@@ -170,7 +170,6 @@ class OpenSearchUserManager:
                 raise
 
         logger.debug(resp)
-        # TODO update to handle if the user doesn't exist
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing user {user_name} failed")
         return resp
