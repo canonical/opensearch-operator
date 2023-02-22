@@ -38,14 +38,14 @@ class TestOpenSearchUserManager(unittest.TestCase):
         request_args = (
             "PUT",
             "/_plugins/_security/api/roles/role_name",
-            {**permissions, **action_groups},
         )
-        self.opensearch.request.assert_called_with(*request_args)
+        payload = {**permissions, **action_groups}
+        self.opensearch.request.assert_called_with(*request_args, payload=payload)
 
         self.opensearch.request.reset_mock()
         self.opensearch.request.return_value = {"status": "OK"}
         self.mgr.create_role(**role_kwargs)
-        self.opensearch.request.assert_called_with(*request_args)
+        self.opensearch.request.assert_called_with(*request_args, payload=payload)
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     def test_remove_role(self, _request):
@@ -77,14 +77,14 @@ class TestOpenSearchUserManager(unittest.TestCase):
         request_args = (
             "PUT",
             "/_plugins/_security/api/internalusers/username",
-            {"hash": hash_pw, "opendistro_security_roles": roles},
         )
-        self.opensearch.request.assert_called_with(*request_args)
+        payload = {"hash": hash_pw, "opendistro_security_roles": roles}
+        self.opensearch.request.assert_called_with(*request_args, payload=payload)
 
         self.opensearch.request.reset_mock()
         self.opensearch.request.return_value = {"status": "CREATED"}
         self.mgr.create_user(**user_kwargs)
-        self.opensearch.request.assert_called_with(*request_args)
+        self.opensearch.request.assert_called_with(*request_args, payload=payload)
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     def test_remove_user(self, _request):
