@@ -155,6 +155,7 @@ async def http_request(
     endpoint: str,
     payload: Optional[Dict[str, any]] = None,
     resp_status_code: bool = False,
+    verify=True,
 ):
     """Makes an HTTP request.
 
@@ -175,14 +176,18 @@ async def http_request(
         chain.write(admin_secrets["chain"])
         chain.seek(0)
 
+        request_kwargs = {
+            "method": method,
+            "url": endpoint,
+            "headers": {"Accept": "application/json", "Content-Type": "application/json"},
+        }
+        if payload:
+            request_kwargs["data"] = payload
+
+        request_kwargs["verify"] = chain.name if verify else False
+
         session.auth = ("admin", admin_secrets["password"])
-        resp = session.request(
-            method=method,
-            url=endpoint,
-            data=payload,
-            verify=chain.name,
-            headers={"Accept": "application/json", "Content-Type": "application/json"},
-        )
+        resp = session.request(**request_kwargs)
 
         if resp_status_code:
             return resp.status_code
