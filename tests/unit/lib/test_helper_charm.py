@@ -6,8 +6,8 @@
 import unittest
 from unittest.mock import patch
 
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_charm import Status
-from charms.opensearch.v0.opensearch_base_charm import PEER
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 
@@ -22,7 +22,7 @@ class TestHelperDatabag(unittest.TestCase):
         self.harness.begin()
 
         self.charm = self.harness.charm
-        self.rel_id = self.harness.add_relation(PEER, self.charm.app.name)
+        self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.status = self.charm.status
 
     def test_clear_status(self):

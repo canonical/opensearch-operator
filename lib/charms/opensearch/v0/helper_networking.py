@@ -4,7 +4,7 @@
 """Helpers for networking related operations."""
 import logging
 import socket
-from typing import Dict
+from typing import Dict, List
 
 from ops.charm import CharmBase
 from ops.model import Unit
@@ -55,6 +55,9 @@ def units_ips(charm: CharmBase, peer_relation_name: str) -> Dict[str, str]:
         unit_id = unit.name.split("/")[1]
         unit_ip_map[unit_id] = unit_ip(charm, unit, peer_relation_name)
 
+    # Sometimes the above command doesn't get the current node, so ensure we get this unit's ip.
+    unit_ip_map[charm.unit.name.split("/")[1]] = get_host_ip(charm, peer_relation_name)
+
     return unit_ip_map
 
 
@@ -70,3 +73,13 @@ def is_reachable(host: str, port: int) -> bool:
         return False
     finally:
         s.close()
+
+
+def reachable_hosts(hosts: List[str]) -> List[str]:
+    """Returns a list of reachable hosts."""
+    reachable: List[str] = []
+    for host_candidate in hosts:
+        if is_reachable(host_candidate, 9200):
+            reachable.append(host_candidate)
+
+    return reachable

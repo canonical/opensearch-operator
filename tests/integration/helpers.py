@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import json
 import logging
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import requests
 import yaml
@@ -153,7 +154,7 @@ async def http_request(
     ops_test: OpsTest,
     method: str,
     endpoint: str,
-    payload: Optional[Dict[str, any]] = None,
+    payload: Optional[Union[str, Dict[str, any]]] = None,
     resp_status_code: bool = False,
     verify=True,
 ):
@@ -185,7 +186,6 @@ async def http_request(
             request_kwargs["data"] = payload
 
         request_kwargs["verify"] = chain.name if verify else False
-
         session.auth = ("admin", admin_secrets["password"])
         resp = session.request(**request_kwargs)
 
