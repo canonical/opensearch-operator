@@ -35,6 +35,7 @@ class OpenSearchConfig:
     def set_client_auth(self):
         """Configure TLS and basic http for clients."""
         # The security plugin will accept TLS client certs if certs but doesn't require them
+        # TODO this may be set to REQUIRED if we want to ensure certs provided by the client app
         self._opensearch.config.put(
             self.CONFIG_YML, "plugins.security.ssl.http.clientauth_mode", "OPTIONAL"
         )

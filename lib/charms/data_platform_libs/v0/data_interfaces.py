@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2022 Canonical Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -280,7 +280,8 @@ exchanged in the relation databag.
 
 import json
 import logging
-from abc import ABC, ABCMeta, abstractmethod
+import os
+from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime
 from typing import List, Optional
@@ -292,7 +293,7 @@ from ops.charm import (
     RelationEvent,
     RelationJoinedEvent,
 )
-from ops.framework import EventSource, Object, _Metaclass
+from ops.framework import EventSource, Object
 from ops.model import Relation
 
 # The unique Charmhub library identifier, never change it
@@ -303,10 +304,9 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 4
 
 logger = logging.getLogger(__name__)
-
 
 Diff = namedtuple("Diff", "added changed deleted")
 Diff.__doc__ = """
@@ -349,16 +349,10 @@ def diff(event: RelationChangedEvent, bucket: str) -> Diff:
     return Diff(added, changed, deleted)
 
 
-class _AbstractMetaclass(ABCMeta, _Metaclass):
-    """Meta class."""
-
-    pass
-
-
 # Base DataProvides and DataRequires
 
 
-class DataProvides(Object, ABC, metaclass=_AbstractMetaclass):
+class DataProvides(Object, ABC):
     """Base provides-side of the data products relation."""
 
     def __init__(self, charm: CharmBase, relation_name: str) -> None:
@@ -464,7 +458,7 @@ class DataProvides(Object, ABC, metaclass=_AbstractMetaclass):
         self._update_relation_data(relation_id, {"tls_ca": tls_ca})
 
 
-class DataRequires(Object, ABC, metaclass=_AbstractMetaclass):
+class DataRequires(Object, ABC):
     """Requires-side of the relation."""
 
     def __init__(
@@ -501,11 +495,18 @@ class DataRequires(Object, ABC, metaclass=_AbstractMetaclass):
 
         This function can be used to retrieve data from a relation
         in the charm code when outside an event callback.
+        Function cannot be used in `*-relation-broken` events and will raise an exception.
 
         Returns:
             a dict of the values stored in the relation data bag
                 for all relation instances (indexed by the relation ID).
         """
+        if "-relation-broken" in os.environ.get("JUJU_HOOK_NAME", ""):
+            # read more in https://bugs.launchpad.net/juju/+bug/1960934
+            raise RuntimeError(
+                "`fetch_relation_data` cannot be used in `*-relation-broken` events"
+            )
+
         data = {}
         for relation in self.relations:
             data[relation.id] = {
@@ -544,6 +545,32 @@ class DataRequires(Object, ABC, metaclass=_AbstractMetaclass):
     def relations(self) -> List[Relation]:
         """The list of Relation instances associated with this relation_name."""
         return list(self.charm.model.relations[self.relation_name])
+
+    @staticmethod
+    def _is_resource_created_for_relation(relation: Relation):
+        return (
+            "username" in relation.data[relation.app] and "password" in relation.data[relation.app]
+        )
+
+    def is_resource_created(self, relation_id: Optional[int] = None) -> bool:
+        """Check if the resource has been created.
+
+        This function can be used to check if the Provider answered with data in the charm code
+        when outside an event callback.
+
+        Args:
+            relation_id (int, optional): When provided the check is done only for the relation id
+                provided, otherwise the check is done for all relations
+
+        Returns:
+            True or False
+        """
+        if relation_id:
+            return self._is_resource_created_for_relation(self.relations[relation_id])
+        else:
+            return all(
+                [self._is_resource_created_for_relation(relation) for relation in self.relations]
+            )
 
 
 # General events

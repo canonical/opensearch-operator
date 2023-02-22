@@ -12,7 +12,9 @@ from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
     AllocationExclusionFailed,
     CertsExpirationError,
+    ClientRelationName,
     HorizontalScaleUpSuggest,
+    PeerRelationName,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -46,7 +48,9 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
+from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
+from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
@@ -74,7 +78,6 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-PEER = "opensearch-peers"
 SERVICE_MANAGER = "service"
 
 
@@ -90,21 +93,27 @@ class OpenSearchBaseCharm(CharmBase):
         if distro is None:
             raise ValueError("The type of the opensearch distro must be specified.")
 
-        self.opensearch = distro(self, PEER)
+        self.opensearch = distro(self, PeerRelationName)
         self.opensearch_config = OpenSearchConfig(self.opensearch)
-        self.peers_data = RelationDataStore(self, PEER)
-        self.secrets = SecretsDataStore(self, PEER)
+        self.peers_data = RelationDataStore(self, PeerRelationName)
+        self.secrets = SecretsDataStore(self, PeerRelationName)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
         self.status = Status(self)
         self.service_manager = RollingOpsManager(
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
         )
+        self.user_manager = OpenSearchUserManager(self)
+        self.opensearch_provider = OpenSearchProvider(self)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
 
-        self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
-        self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
+        self.framework.observe(
+            self.on[PeerRelationName].relation_joined, self._on_peer_relation_joined
+        )
+        self.framework.observe(
+            self.on[PeerRelationName].relation_changed, self._on_peer_relation_changed
+        )
 
         self.framework.observe(self.on.update_status, self._on_update_status)
 
@@ -118,6 +127,9 @@ class OpenSearchBaseCharm(CharmBase):
 
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             self.unit.status = MaintenanceStatus(AdminUserInitProgress)
+            # User config is currently in a default state, which contains multiple insecure default
+            # users. Purge the user list before initialising the users the charm requires.
+            self._purge_users()
             self._put_admin_user()
             self.peers_data.put(Scope.APP, "admin_user_initialized", True)
             self.status.clear(AdminUserInitProgress)
@@ -184,6 +196,9 @@ class OpenSearchBaseCharm(CharmBase):
                         Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                     )
 
+            for relation in self.model.relations.get(ClientRelationName, []):
+                self.opensearch_provider.update_endpoints(relation)
+
         # Restart node when cert renewal for the transport layer
         if self.peers_data.get(Scope.UNIT, "must_reboot_node"):
             try:
@@ -195,13 +210,16 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
 
-        We want to periodically check for 2 things:
-        1- The system requirements are still met
-        2- every 6 hours check if certs are expiring soon (in 7 days),
+        We want to periodically check for 3 things:
+        1- Do we have users that need to be deleted, and if so we need to delete them.
+        2- The system requirements are still met
+        3- every 6 hours check if certs are expiring soon (in 7 days),
             as a safeguard in case relation broken. As there will be data loss
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
+        self.user_manager.remove_users_and_roles()
+
         # if there are missing system requirements defer
         missing_sys_reqs = self.opensearch.missing_sys_requirements()
         if len(missing_sys_reqs) > 0:
@@ -441,6 +459,15 @@ class OpenSearchBaseCharm(CharmBase):
 
         return True
 
+    def _purge_users(self):
+        """Removes all users from internal_users yaml config.
+
+        This is to be used when starting up the charm, to remove unnecessary default users.
+        """
+        for user in self.opensearch.config.load("opensearch-security/internal_users.yml").keys():
+            if user != "_meta":
+                self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
+
     def _put_admin_user(self, pwd: Optional[str] = None):
         """Change password of Admin user."""
         is_update = pwd is not None
@@ -467,6 +494,10 @@ class OpenSearchBaseCharm(CharmBase):
                     "hash": hashed_pwd,
                     "reserved": False,
                     "backend_roles": ["admin"],
+                    "opendistro_security_roles": [
+                        "security_rest_api_access",
+                        "all_access",
+                    ],
                     "description": "Admin user",
                 },
             )
@@ -505,7 +536,7 @@ class OpenSearchBaseCharm(CharmBase):
             host: Optional[str] = None
             alt_hosts: Optional[List[str]] = None
 
-            all_units_ips = units_ips(self, PEER).values()
+            all_units_ips = units_ips(self, PeerRelationName).values()
             if all_units_ips:
                 all_hosts = list(all_units_ips)
                 host = all_hosts.pop(0)  # get first value
@@ -622,7 +653,7 @@ class OpenSearchBaseCharm(CharmBase):
     @property
     def unit_ip(self) -> str:
         """IP address of the current unit."""
-        return get_host_ip(self, PEER)
+        return get_host_ip(self, PeerRelationName)
 
     @property
     def unit_name(self) -> str:
@@ -637,5 +668,5 @@ class OpenSearchBaseCharm(CharmBase):
     @property
     def alternative_host(self) -> str:
         """Return an alternative host (of another node) in case the current is offline."""
-        all_units_ips = units_ips(self, PEER)
+        all_units_ips = units_ips(self, PeerRelationName)
         return random.choice(list(all_units_ips.values()))

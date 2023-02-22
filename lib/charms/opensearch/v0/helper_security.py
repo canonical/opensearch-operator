@@ -25,6 +25,13 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
+def hash_string(string: str) -> str:
+    """Hashes the given string."""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(string.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
+
+
 def generate_password() -> str:
     """Generate a random password string.
 
@@ -41,12 +48,8 @@ def generate_hashed_password(pwd: Optional[str] = None) -> Tuple[str, str]:
     Returns:
         A hash and the original password
     """
-    pwd = pwd or generate_password()
-
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(pwd.encode("utf-8"), salt)
-
-    return hashed.decode("utf-8"), pwd
+    pwd = generate_password()
+    return hash_string(pwd), pwd
 
 
 def cert_expiration_remaining_hours(cert: string) -> int:
