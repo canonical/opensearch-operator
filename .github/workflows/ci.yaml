@@ -45,6 +45,7 @@ jobs:
       fail-fast: false
       matrix:
         tox-environments:
+          - charm-integration
           - tls-integration
 #          - ha-integration
           - client-integration
@@ -83,7 +84,7 @@ jobs:
           sudo sysctl -w vm.max_map_count=262144
           sudo sysctl -w vm.swappiness=0
           sudo sysctl -w net.ipv4.tcp_retries2=5
-        
+
           tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
