@@ -85,7 +85,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._can_service_start")
     @patch(f"{BASE_CHARM_CLASS}._initialize_security_index")
     @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
-    @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
     def test_on_start(
         self,
         _put_admin_user,
