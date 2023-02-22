@@ -110,6 +110,7 @@ class OpenSearchProvider(Object):
             return
 
         try:
+            logger.error(event.extra_user_roles)
             extra_user_roles = json.loads(event.extra_user_roles)
         except (json.decoder.JSONDecodeError, TypeError) as err:
             # TODO document what a client application would need to provide to make this work.

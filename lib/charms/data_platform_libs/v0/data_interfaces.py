@@ -1076,7 +1076,7 @@ class KafkaRequires(DataRequires):
                 "topic": self.topic,
                 "extra-user-roles": self.extra_user_roles,
             }
-            if not self.extra_user_roles
+            if self.extra_user_roles is not None
             else {"topic": self.topic},
         )
 
