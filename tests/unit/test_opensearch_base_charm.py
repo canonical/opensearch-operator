@@ -10,7 +10,7 @@ from unittest.mock import patch
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.opensearch_base_charm import PEER, SERVICE_MANAGER
-from charms.opensearch.v0.opensearch_distro import (
+from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchInstallError,
 )

@@ -38,8 +38,8 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
 )
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
-from charms.opensearch.v0.opensearch_distro import (
-    OpenSearchDistribution,
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchStartError,
     OpenSearchStopError,

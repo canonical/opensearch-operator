@@ -33,25 +33,27 @@ class Status:
     def __init__(self, charm):
         self.charm = charm
 
-    def clear(self, status_message: str, pattern: CheckPattern = CheckPattern.Equal):
+    def clear(
+        self, status_message: str, pattern: CheckPattern = CheckPattern.Equal, app: bool = False
+    ):
         """Resets the unit status if it was previously blocked/maintenance with message."""
-        unit = self.charm.unit
+        context = self.charm.app if app else self.charm.unit
 
         condition: bool
         match pattern:
             case Status.CheckPattern.Equal:
-                condition = unit.status.message == status_message
+                condition = context.status.message == status_message
             case Status.CheckPattern.Start:
-                condition = unit.status.message.startswith(status_message)
+                condition = context.status.message.startswith(status_message)
             case Status.CheckPattern.End:
-                condition = unit.status.message.endswith(status_message)
+                condition = context.status.message.endswith(status_message)
             case Status.CheckPattern.Interpolated:
                 condition = (
                     re.fullmatch(status_message.replace("{}", "(?s:.*?)"), status_message)
                     is not None
                 )
             case _:
-                condition = status_message in unit.status.message
+                condition = status_message in context.status.message
 
         if condition:
-            unit.status = ActiveStatus()
+            context.status = ActiveStatus()
