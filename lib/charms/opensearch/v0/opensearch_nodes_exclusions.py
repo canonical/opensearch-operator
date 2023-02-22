@@ -61,13 +61,15 @@ class OpenSearchExclusions:
 
         if self._node.is_data() and not self._delete_allocations():
             current_allocations = self._charm.peers_data.get(self._scope, ALLOCS_TO_DELETE)
-            if current_allocations:
-                current_allocations = set(current_allocations.split(","))
-                if self._node.name in current_allocations:
-                    current_allocations.remove(self._node.name)
-                    self._charm.peers_data.put(
-                        self._scope, ALLOCS_TO_DELETE, ",".join(current_allocations)
-                    )
+            if not current_allocations:
+                return
+
+            current_allocations = set(current_allocations.split(","))
+            if self._node.name in current_allocations:
+                current_allocations.remove(self._node.name)
+                self._charm.peers_data.put(
+                    self._scope, ALLOCS_TO_DELETE, ",".join(current_allocations)
+                )
 
     def cleanup(self) -> None:
         """Delete all exclusions that failed to be deleted."""
