@@ -471,7 +471,7 @@ class OpenSearchBaseCharm(CharmBase):
                 },
             )
 
-            self.secrets.put(Scope.APP, "admin_password", pwd)
+        self.secrets.put(Scope.APP, "admin_password", pwd)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]):
         """Run the security_admin script, it creates and initializes the opendistro_security index.
