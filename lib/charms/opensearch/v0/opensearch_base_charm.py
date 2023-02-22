@@ -124,7 +124,10 @@ class OpenSearchBaseCharm(CharmBase):
 
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             self.unit.status = MaintenanceStatus(AdminUserInitProgress)
-            self._initialise_internal_users()
+            # User config is currently in a default state, which contains multiple insecure default
+            # users. Purge the user list before initialising the users the charm requires.
+            self._purge_users()
+            self._initialize_admin_user()
             self.peers_data.put(Scope.APP, "admin_user_initialized", True)
             self.status.clear(AdminUserInitProgress)
 
@@ -420,15 +423,19 @@ class OpenSearchBaseCharm(CharmBase):
 
         return True
 
-    def _initialise_internal_users(self):
-        """Change default password of Admin user."""
-        hashed_pwd, pwd = generate_hashed_password()
-        self.secrets.put(Scope.APP, "admin_password", pwd)
+    def _purge_users(self):
+        """Removes all users from internal_users yaml config.
 
-        # delete default users
+        This is to be used when starting up the charm, to remove unnecessary default users.
+        """
         for user in self.opensearch.config.load("opensearch-security/internal_users.yml").keys():
             if user != "_meta":
                 self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
+
+    def _initialize_admin_user(self):
+        """Change default password of Admin user."""
+        hashed_pwd, pwd = generate_hashed_password()
+        self.secrets.put(Scope.APP, "admin_password", pwd)
 
         self.opensearch.config.put(
             "opensearch-security/internal_users.yml",
