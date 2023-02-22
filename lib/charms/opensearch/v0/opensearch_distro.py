@@ -120,6 +120,11 @@ class OpenSearchDistribution(ABC):
 
         return reachable
 
+    @abstractmethod
+    def is_failed(self) -> bool:
+        """Check if OpenSearch daemon has failed."""
+        pass
+
     def is_node_up(self) -> bool:
         """Get status of current node. This assumes OpenSearch is Running."""
         if not self.is_started():

@@ -26,6 +26,7 @@ from charms.opensearch.v0.constants_charm import (
     TLSRelationBrokenError,
     TooManyNodesRemoved,
     WaitingForBusyShards,
+    WaitingForSpecificBusyShards,
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
@@ -318,16 +319,10 @@ class OpenSearchBaseCharm(CharmBase):
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
-        self.user_manager.remove_users_and_roles()
-
         # if there are missing system requirements defer
         missing_sys_reqs = self.opensearch.missing_sys_requirements()
         if len(missing_sys_reqs) > 0:
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
-            return
-
-        # If relation broken - leave
-        if self.model.get_relation("certificates") is not None:
             return
 
         # if node already shutdown - leave
@@ -338,6 +333,12 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
             self._apply_cluster_health()
+
+        self.user_manager.remove_users_and_roles()
+
+        # If relation broken - leave
+        if self.model.get_relation("certificates") is not None:
+            return
 
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
@@ -459,6 +460,13 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
+        if self.peers_data.get(Scope.UNIT, "starting", False) and self.opensearch.is_failed():
+            self.peers_data.delete(Scope.UNIT, "starting")
+            event.defer()
+            return
+
+        self.unit.status = WaitingStatus(WaitingToStart)
+
         rel = self.model.get_relation(PeerRelationName)
         for unit in rel.units.union({self.unit}):
             if rel.data[unit].get("starting") == "True":
@@ -485,11 +493,9 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         try:
-            self.unit.status = BlockedStatus(WaitingToStart)
             self.opensearch.start()
-            self.status.clear(WaitingToStart)
-
             self._post_start_init()
+            self.status.clear(WaitingToStart)
         except OpenSearchStartTimeoutError:
             event.defer()
         except OpenSearchStartError:
@@ -527,7 +533,7 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
-        if not self.opensearch.is_started():
+        if not self.opensearch.is_node_up():
             return
 
         self.unit.status = WaitingStatus(ServiceIsStopping)
@@ -550,6 +556,7 @@ class OpenSearchBaseCharm(CharmBase):
             except OpenSearchStopError as e:
                 logger.error(e)
                 event.defer()
+                self.unit.status = WaitingStatus(ServiceIsStopping)
                 return
 
         self._start_opensearch(event)
@@ -579,13 +586,15 @@ class OpenSearchBaseCharm(CharmBase):
                 self.opensearch, self.peers_data.get(Scope.APP, "leader_ip")
             )
             if busy_shards:
-                message = WaitingForBusyShards.format(
+                message = WaitingForSpecificBusyShards.format(
                     " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
                 )
                 self.unit.status = WaitingStatus(message)
                 return False
 
-            self.status.clear(WaitingForBusyShards, pattern=Status.CheckPattern.Interpolated)
+            self.status.clear(
+                WaitingForSpecificBusyShards, pattern=Status.CheckPattern.Interpolated
+            )
         except OpenSearchHttpError:
             # this means that the leader unit is not reachable (not started yet),
             # meaning it's a new cluster, so we can safely start the OpenSearch service
@@ -676,7 +685,6 @@ class OpenSearchBaseCharm(CharmBase):
     def _set_node_conf(self, nodes: List[Node], roles: Optional[List[str]] = None) -> None:
         """Set the configuration of the current node / unit."""
         computed_roles = roles or ClusterTopology.suggest_roles(nodes, self.app.planned_units())
-        self.node_roles = computed_roles
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
@@ -734,6 +742,7 @@ class OpenSearchBaseCharm(CharmBase):
         if not node_conf_update_unit:  # already emitted update / restart directive
             self.peers_data.put_object(Scope.UNIT, "update-node-config", node_conf_update_app)
 
+        self.unit.status = WaitingStatus(WaitingToStart)
         self.on[self.service_manager.name].acquire_lock.emit(
             callback_override="_restart_opensearch"
         )
@@ -752,19 +761,32 @@ class OpenSearchBaseCharm(CharmBase):
             response = ClusterState.health(self.opensearch, False, alt_hosts=self.alt_hosts)
 
         status = response["status"].lower()
-        status_messages_mapping = {
-            "red": ClusterHealthRed,
-            "yellow": ClusterHealthYellow,
-        }
-        if status in status_messages_mapping and self.unit.is_leader():
-            self.app.status = BlockedStatus(status_messages_mapping[status])
-        else:
+        if not self.unit.is_leader():
+            # this is needed in case the leader is in an error state and doesn't
+            # report the status itself
             self.peers_data.put(Scope.UNIT, "health", status)
-            if status == "green" and self.unit.is_leader():
-                self.status.clear(ClusterHealthRed, app=True)
-                self.status.clear(ClusterHealthYellow, app=True)
+            return status
 
-        return status
+        # cluster health is green
+        if status == "green":
+            self.status.clear(ClusterHealthRed, app=True)
+            self.status.clear(ClusterHealthYellow, app=True)
+            return "green"
+
+        # some primary shards are unassigned
+        if status == "red":
+            self.app.status = BlockedStatus(ClusterHealthRed)
+            return "red"
+
+        # some replica shards are unassigned
+        shards_by_state = ClusterState.shards_by_state(self.opensearch)
+        busy_shards = shards_by_state.get("INITIALIZING", 0) + shards_by_state.get("RELOCATING", 0)
+        self.app.status = (
+            BlockedStatus(ClusterHealthYellow)
+            if busy_shards == 0
+            else WaitingStatus(WaitingForBusyShards)
+        )
+        return "yellow"
 
     def _check_certs_expiration(self, event: UpdateStatusEvent) -> None:
         """Checks the certificates' expiration."""

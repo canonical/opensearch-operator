@@ -200,6 +200,19 @@ class ClusterState:
         return opensearch.request("GET", "/_cat/shards", host=host)
 
     @staticmethod
+    def shards_by_state(opensearch: OpenSearchDistribution) -> Dict[str, List[str]]:
+        """Get the shards count by state."""
+        shards = ClusterState.shards(opensearch)
+
+        shards_state_map = {}
+        for shard in shards:
+            state = shard.get("state")
+
+            shards_state_map[state] = shards_state_map.get(state, 0) + 1
+
+        return shards_state_map
+
+    @staticmethod
     def busy_shards_by_unit(
         opensearch: OpenSearchDistribution, host: Optional[str] = None
     ) -> Dict[str, List[str]]:
