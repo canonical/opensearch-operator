@@ -1,6 +1,7 @@
 name: Tests
 on:
   workflow_call:
+  pull_request:
 
 jobs:
   lint:
@@ -17,6 +18,8 @@ jobs:
   unit-test:
     name: Unit tests
     runs-on: ubuntu-22.04
+    needs:
+      - lint
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -28,6 +31,8 @@ jobs:
   integration-test-lxd-charm:
     name: Integration tests for the charm (lxd)
     runs-on: ubuntu-22.04
+    needs:
+      - unit-test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -41,12 +46,14 @@ jobs:
           sudo sysctl -w vm.max_map_count=262144
           sudo sysctl -w vm.swappiness=0
           sudo sysctl -w net.ipv4.tcp_retries2=5
-          
+
           tox -e charm-integration
 
   integration-test-lxd-tls:
     name: Integration tests for TLS (lxd)
     runs-on: ubuntu-22.04
+    needs:
+      - unit-test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -60,12 +67,14 @@ jobs:
           sudo sysctl -w vm.max_map_count=262144
           sudo sysctl -w vm.swappiness=0
           sudo sysctl -w net.ipv4.tcp_retries2=5
-          
+
           tox -e tls-integration
 
   integration-test-lxd-ha:
     name: Integration tests for HA (lxd)
     runs-on: ubuntu-22.04
+    needs:
+      - unit-test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -81,6 +90,3 @@ jobs:
           sudo sysctl -w net.ipv4.tcp_retries2=5
           
           tox -e ha-integration
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3

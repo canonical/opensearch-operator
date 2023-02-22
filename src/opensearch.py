@@ -148,7 +148,7 @@ class OpenSearchTarball(OpenSearchDistribution):
             raise OpenSearchStartError()
 
         start = datetime.now()
-        while not self.is_started() and (datetime.now() - start).seconds < 45:
+        while not self.is_started() and (datetime.now() - start).seconds < 60:
             time.sleep(3)
         else:
             raise OpenSearchStartTimeoutError()
@@ -157,7 +157,7 @@ class OpenSearchTarball(OpenSearchDistribution):
     def _stop_service(self):
         """Stop opensearch."""
         try:
-            self._run_cmd("sudo systemctl stop opensearch.service")
+            self._run_cmd("systemctl stop opensearch.service")
         except OpenSearchCmdError:
             logger.debug("Failed stopping the opensearch service.")
             raise OpenSearchStopError()

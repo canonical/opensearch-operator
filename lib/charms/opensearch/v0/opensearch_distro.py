@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Base class for Opensearch distributions."""
@@ -27,6 +27,7 @@ from charms.opensearch.v0.helper_networking import (
 )
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
+    OpenSearchError,
     OpenSearchHttpError,
 )
 from requests import HTTPError
@@ -102,9 +103,87 @@ class OpenSearchDistribution(ABC):
         self.start()
 
     def stop(self):
-        """Stop OpenSearch.."""
+        """Exclude the allocation of this node."""
+        try:
+            self.add_allocation_exclusions(self._charm.unit_name)
+        except OpenSearchError:
+            self._charm.on_allocation_exclusion_add_failed()
+            raise
+
+        try:
+            response = self.request("GET", "/_cluster/health?wait_for_status=green&timeout=60s")
+            unassigned_shards = response.get("unassigned_shards", 0)
+            if unassigned_shards > 0:
+                self._charm.on_unassigned_shards(unassigned_shards)
+        except OpenSearchHttpError:
+            # this is not important, as the seeked action here is to simply inform the user
+            # of the shards state
+            pass
+
         # stop the opensearch service
         self._stop_service()
+
+        if self._charm.alternative_host:
+            try:
+                # remove the exclusion back
+                self.remove_allocation_exclusions(
+                    self._charm.unit_name, self._charm.alternative_host
+                )
+                return
+            except OpenSearchError:
+                # will re-attempt on a future unit start
+                pass
+
+        # no node online, store in the app databag to exclude at a future start
+        self._charm.append_allocation_exclusion_to_remove(self._charm.unit_name)
+
+    def add_allocation_exclusions(
+        self, exclusions: Union[List[str], Set[str], str], host: str = None
+    ):
+        """Register new allocation exclusions."""
+        exclusions = self.normalize_allocation_exclusions(exclusions)
+        existing_exclusions = self._fetch_allocation_exclusions(host)
+        self._put_allocation_exclusions(existing_exclusions.union(exclusions), host)
+
+    def remove_allocation_exclusions(
+        self, exclusions: Union[List[str], Set[str], str], host: str = None
+    ):
+        """This removes the allocation exclusions if needed."""
+        if exclusions:
+            exclusions = self.normalize_allocation_exclusions(exclusions)
+            existing_exclusions = self._fetch_allocation_exclusions(host)
+            self._put_allocation_exclusions(existing_exclusions - exclusions, host)
+
+        # remove these exclusions from the app data bag if any
+        self._charm.remove_allocation_exclusions(exclusions)
+
+    def _put_allocation_exclusions(self, exclusions: Set[str], host: str = None):
+        """Updates the cluster settings with the new allocation exclusions."""
+        try:
+            response = self.request(
+                "PUT",
+                "/_cluster/settings",
+                {"transient": {"cluster.routing.allocation.exclude._name": ",".join(exclusions)}},
+                host=host,
+            )
+            if not response.get("acknowledged"):
+                raise OpenSearchError(f"Allocation exclusion failed for: {exclusions}")
+        except OpenSearchHttpError as e:
+            logger.error(e)
+            raise OpenSearchError()
+
+    def _fetch_allocation_exclusions(self, host: str = None) -> Set[str]:
+        """Fetch the registered allocation exclusions."""
+        allocation_exclusions = set()
+        try:
+            resp = self.request("GET", "/_cluster/settings", host=host)
+            exclusions = resp["transient"]["cluster"]["routing"]["allocation"]["exclude"]["_name"]
+            allocation_exclusions = set(exclusions.split(","))
+        except KeyError:
+            # no allocation exclusion set
+            pass
+        finally:
+            return allocation_exclusions
 
     @abstractmethod
     def _stop_service(self):
@@ -381,3 +460,18 @@ class OpenSearchDistribution(ABC):
             missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
 
         return missing_requirements
+
+    @property
+    def version(self) -> str:
+        """Returns the version number of this opensearch instance.
+
+        Raises:
+            OpenSearchError if the GET request fails.
+        """
+        try:
+            return self.request("GET", "/").get("version").get("number")
+        except OpenSearchHttpError:
+            logger.error(
+                "failed to get root endpoint, implying that this node is offline. Retry once node is online."
+            )
+            raise OpenSearchError()
