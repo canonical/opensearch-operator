@@ -59,7 +59,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
-    def test_on_leader_elected(self, _put_admin_user):
+    def test_on_leader_elected(self, _put_admin_user, _purge_users):
         """Test on leader elected event."""
         self.harness.set_leader(True)
         self.charm.on.leader_elected.emit()
@@ -69,7 +69,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
-    def test_on_leader_elected_index_initialised(self, _put_admin_user):
+    def test_on_leader_elected_index_initialised(self, _put_admin_user, _purge_users):
         # security_index_initialised
         self.peers_data.put(Scope.APP, "security_index_initialised", True)
         self.harness.set_leader(True)

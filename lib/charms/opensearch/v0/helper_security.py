@@ -48,7 +48,7 @@ def generate_hashed_password(pwd: Optional[str] = None) -> Tuple[str, str]:
     Returns:
         A hash and the original password
     """
-    pwd = generate_password()
+    pwd = pwd or generate_password()
     return hash_string(pwd), pwd
 
 
