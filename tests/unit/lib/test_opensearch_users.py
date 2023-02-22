@@ -107,10 +107,10 @@ class TestOpenSearchUserManager(unittest.TestCase):
         patch_args = ("username", patches)
         with pytest.raises(OpenSearchUserMgmtError):
             self.mgr.patch_user(*patch_args)
-        request_args = ("PATCH", "/_plugins/_security/api/internalusers/username", patches)
-        self.opensearch.request.assert_called_with(*request_args)
+        request_args = ("PATCH", "/_plugins/_security/api/internalusers/username")
+        self.opensearch.request.assert_called_with(*request_args, payload=patches)
 
         self.opensearch.request.reset_mock()
         self.opensearch.request.return_value = {"status": "OK"}
         self.mgr.patch_user(*patch_args)
-        self.opensearch.request.assert_called_with(*request_args)
+        self.opensearch.request.assert_called_with(*request_args, payload=patches)

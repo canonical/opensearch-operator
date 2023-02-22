@@ -154,7 +154,7 @@ class OpenSearchUserManager:
         resp = self.opensearch.request(
             "PATCH",
             f"{USER_ENDPOINT}/{user_name}",
-            patches,
+            payload=patches,
         )
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"patching user {user_name} failed")
