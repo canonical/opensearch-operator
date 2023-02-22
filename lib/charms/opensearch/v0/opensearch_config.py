@@ -159,10 +159,17 @@ class OpenSearchConfig:
             ["all_access", "security_rest_api_access"],
         )
 
+        # security plugin rest API access
         self._opensearch.config.put(
             self.CONFIG_YML,
             "plugins.security.restapi.roles_enabled",
             ["all_access", "security_rest_api_access"],
+        )
+        # to use the PUT and PATCH methods of the security rest API
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            "plugins.security.unsupported.restapi.allow_securityconfig_modification",
+            True,
         )
 
     def cleanup_bootstrap_conf(self):

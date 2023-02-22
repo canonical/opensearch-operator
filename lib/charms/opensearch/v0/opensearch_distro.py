@@ -228,7 +228,7 @@ class OpenSearchDistribution(ABC):
         self,
         method: str,
         endpoint: str,
-        payload: Optional[Union[str, Dict[str, any]]] = None,
+        payload: Optional[Union[str, Dict[str, any], List[Dict[str, any]]]] = None,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
         check_hosts_reach: bool = True,
@@ -240,7 +240,7 @@ class OpenSearchDistribution(ABC):
         Args:
             method: matching the known http methods.
             endpoint: relative to the base uri.
-            payload: JSON / map body payload.
+            payload: str, JSON obj or array body payload.
             host: host of the node we wish to make a request on, by default current host.
             alt_hosts: in case the default host is unreachable, fallback/alternative hosts.
             check_hosts_reach: if true, performs a ping for each host
@@ -303,7 +303,7 @@ class OpenSearchDistribution(ABC):
                     }
                     if payload:
                         request_kwargs["data"] = (
-                            json.dumps(payload) if isinstance(payload, dict) else payload
+                            json.dumps(payload) if not isinstance(payload, str) else payload
                         )
 
                     response = s.request(**request_kwargs)
