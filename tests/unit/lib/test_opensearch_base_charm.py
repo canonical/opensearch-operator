@@ -7,11 +7,10 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
-from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.models import Node
-from charms.opensearch.v0.opensearch_base_charm import PEER, SERVICE_MANAGER
+from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER, PeerRelationName
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchInstallError,
@@ -96,8 +95,10 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._initialize_security_index")
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
+    @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
     def test_on_start(
         self,
+        request,
         _put_admin_user,
         _purge_users,
         _initialize_security_index,

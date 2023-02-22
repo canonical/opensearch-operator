@@ -15,7 +15,6 @@ from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
     ClusterHealthRed,
     ClusterHealthYellow,
-    HorizontalScaleUpSuggest,
     NoNodeUpInCluster,
     PeerRelationName,
     RequestUnitServiceOps,
@@ -48,7 +47,6 @@ from charms.opensearch.v0.helper_security import (
     generate_password,
 )
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
-from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
@@ -137,7 +135,9 @@ class OpenSearchBaseCharm(CharmBase):
         self.framework.observe(
             self.on[PeerRelationName].relation_changed, self._on_peer_relation_changed
         )
-        self.framework.observe(self.on[PeerRelationName].relation_departed, self._on_peer_relation_departed)
+        self.framework.observe(
+            self.on[PeerRelationName].relation_departed, self._on_peer_relation_departed
+        )
         self.framework.observe(
             self.on[STORAGE_NAME].storage_detaching, self._on_opensearch_data_storage_detaching
         )
@@ -264,7 +264,9 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):
         """Triggered when removing unit, Prior to the storage being detached."""
         # we currently block the scale down if majority removed
-        if self.app.planned_units() < math.ceil(len(self.model.get_relation(PEER).units) / 2):
+        if self.app.planned_units() < math.ceil(
+            len(self.model.get_relation(PeerRelationName).units) / 2
+        ):
             self.unit.status = BlockedStatus(TooManyNodesRemoved)
             raise OpenSearchScaleDownError(TooManyNodesRemoved)
 
@@ -457,7 +459,7 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        rel = self.model.get_relation(PEER)
+        rel = self.model.get_relation(PeerRelationName)
         for unit in rel.units.union({self.unit}):
             if rel.data[unit].get("starting") == "True":
                 event.defer()
@@ -830,7 +832,7 @@ class OpenSearchBaseCharm(CharmBase):
     @property
     def alt_hosts(self) -> Optional[List[str]]:
         """Return an alternative host (of another node) in case the current is offline."""
-        all_units_ips = units_ips(self, PEER)
+        all_units_ips = units_ips(self, PeerRelationName)
         all_hosts = list(all_units_ips.values())
         random.shuffle(all_hosts)
 
