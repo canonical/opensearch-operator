@@ -144,7 +144,7 @@ async def test_database_bulk_usage(ops_test: OpsTest):
 @pytest.mark.client_relation
 async def test_database_version(ops_test: OpsTest):
     """Check version is accurate."""
-    run_version_query = await run_request(
+    run_version_request = await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         method="GET",
@@ -156,8 +156,10 @@ async def test_database_version(ops_test: OpsTest):
     version = await get_application_relation_data(
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "version"
     )
-    logging.error(run_version_query)
-    assert version in run_version_query["results"]
+    logging.info(run_version_request)
+    logging.info(version)
+    results = json.loads(run_version_request["results"])
+    assert version == results.get("version", {}).get("number")
 
 
 @pytest.mark.client_relation

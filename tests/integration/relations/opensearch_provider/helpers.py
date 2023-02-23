@@ -45,7 +45,7 @@ async def get_application_relation_data(
     if relation_id:
         # Filter the data based on the relation id.
         relation_data = [v for v in relation_data if v["relation-id"] == relation_id]
-    if len(relation_data) == 0:
+    if not relation_data:
         raise ValueError(
             f"no relation data could be grabbed on relation with endpoint {relation_name}"
         )

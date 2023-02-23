@@ -83,7 +83,7 @@ class ApplicationCharm(CharmBase):
         relations = self.model.relations.get("first-database", []) + self.model.relations.get(
             "second-database", []
         )
-        if len(relations) == 0:
+        if not relations:
             return False
         for relation in relations:
             if not self.smoke_check(relation.id):
@@ -92,8 +92,8 @@ class ApplicationCharm(CharmBase):
 
     def smoke_check(self, relation_id) -> bool:
         try:
-            resp = self.relation_request(relation_id, "GET", "/")
-            return bool(resp)
+            self.relation_request(relation_id, "GET", "/")
+            return True
         except (OpenSearchHttpError, Exception) as e:
             logger.error(e)
             return False
@@ -133,12 +133,13 @@ class ApplicationCharm(CharmBase):
         username = databag.get("username")
         password = databag.get("password")
         host = databag.get("endpoints").split(",")[0]
-        host_addr = host.split(":")[0]
-        port = host.split(":")[1]
+        host_addr, port = host.split(":")
 
         logger.info(f"sending {method} request to {endpoint}")
         try:
-            response = self.request(method, endpoint, port, username, password, host_addr, payload)
+            response = self.request(
+                method, endpoint, int(port), username, password, host_addr, payload
+            )
         except OpenSearchHttpError as e:
             response = [str(e)]
         logger.info(response)
@@ -166,13 +167,12 @@ class ApplicationCharm(CharmBase):
         if None in [username, password] or len(endpoints) == 0:
             raise OpenSearchHttpError
 
-        host = endpoints[0].split(":")[0]
-        port = int(endpoints[0].split(":")[1])
+        host, port = endpoints[0].split(":")
 
         return self.request(
             method,
             endpoint,
-            port,
+            int(port),
             username,
             password,
             host,
@@ -217,8 +217,10 @@ class ApplicationCharm(CharmBase):
             "headers": {"Content-Type": "application/json", "Accept": "application/json"},
         }
 
-        if payload:
+        if isinstance(payload, str):
             request_kwargs["data"] = payload
+        if isinstance(payload, dict):
+            request_kwargs["data"] = json.dumps(payload)
         try:
             with requests.Session() as s:
                 s.auth = (username, password)

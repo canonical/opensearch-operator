@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import json
 import logging
 import tempfile
 from pathlib import Path
@@ -189,8 +190,10 @@ async def http_request(
             "url": endpoint,
             "headers": {"Accept": "application/json", "Content-Type": "application/json"},
         }
-        if payload:
+        if isinstance(payload, str):
             request_kwargs["data"] = payload
+        if isinstance(payload, dict):
+            request_kwargs["data"] = json.dumps(payload)
 
         request_kwargs["verify"] = chain.name if verify else False
         resp = session.request(**request_kwargs)
