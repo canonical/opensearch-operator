@@ -5,7 +5,6 @@
 import json
 from typing import List
 
-
 # The unique Charmhub library identifier, never change it
 LIBID = "6007e8030e4542e6b189e2873c8fbfef"
 
