@@ -448,7 +448,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         return self._are_all_tls_resources_stored()
 
-    def _start_opensearch(self, event: EventBase) -> None:  # noqa
+    def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch if all resources configured."""
         if self.opensearch.is_started():
             self._post_start_init()
