@@ -524,9 +524,9 @@ class OpenSearchBaseCharm(CharmBase):
         # Remove the 'starting' flag on the unit
         self.peers_data.delete(Scope.UNIT, "starting")
 
-        # set "last-update-node-config flag" to the latest applied "config", to prevent further updates
         current_update_node_conf = self.peers_data.get_object(Scope.UNIT, "update-node-config")
         if current_update_node_conf:
+            # set "last-update-node-config" to the latest applied config to prevent further updates
             self.peers_data.put_object(
                 Scope.UNIT, "last-update-node-config", current_update_node_conf
             )
