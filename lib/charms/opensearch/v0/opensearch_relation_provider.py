@@ -43,7 +43,12 @@ from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
-from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
+from ops.charm import (
+    CharmBase,
+    RelationBrokenEvent,
+    RelationChangedEvent,
+    RelationDepartedEvent,
+)
 from ops.framework import Object
 from ops.model import BlockedStatus, Relation
 
@@ -173,8 +178,12 @@ class OpenSearchProvider(Object):
             logger.error(err)
             raise
 
+    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
+        self.update_endpoints(event.relation)
+
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
+        self.update_endpoints(event.relation)
         if event.departing_unit == self.charm.unit:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
 
