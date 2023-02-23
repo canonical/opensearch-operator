@@ -1223,7 +1223,7 @@ class OpenSearchRequires(DataRequires):
         # Sets both index and extra user roles in the relation if the roles are provided.
         # Otherwise, sets only the index.
         data = {"index": self.index}
-        if self.extra_user_roles is not None:
+        if self.extra_user_roles:
             data["extra-user-roles"] = self.extra_user_roles
 
         self._update_relation_data(event.relation.id, data)

@@ -34,7 +34,12 @@ from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
-from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
+from ops.charm import (
+    CharmBase,
+    RelationBrokenEvent,
+    RelationChangedEvent,
+    RelationDepartedEvent,
+)
 from ops.framework import Object
 from ops.model import BlockedStatus, Relation
 
@@ -102,6 +107,7 @@ class OpenSearchProvider(Object):
             return
 
         try:
+            logger.error(event.extra_user_roles)
             extra_user_roles = json.loads(event.extra_user_roles)
         except (json.decoder.JSONDecodeError, TypeError) as err:
             # TODO document what a client application would need to provide to make this work.
@@ -177,16 +183,6 @@ class OpenSearchProvider(Object):
             return
         if not ca_chain:
             try:
-                logger.error(self.charm.secrets.all(Scope.APP))
-                logger.error(CertType.APP_ADMIN.val)
-                logger.error(self.charm.secrets.get(Scope.APP, CertType.APP_ADMIN.val))
-                logger.error(self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val))
-                logger.error(
-                    self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val).get("chain")
-                )
-                logger.error(
-                    self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val).get("ca")
-                )
                 ca_chain = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val).get(
                     "chain"
                 )
@@ -196,8 +192,12 @@ class OpenSearchProvider(Object):
         self.opensearch_provides.set_tls_ca(relation_id, "\n".join(ca_chain[::-1]))
         self.opensearch_provides.set_tls(relation_id, "True")
 
+    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
+        self.update_endpoints(event.relation)
+
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
+        self.update_endpoints(event.relation)
         if event.departing_unit == self.charm.unit:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
 

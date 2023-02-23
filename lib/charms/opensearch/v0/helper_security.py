@@ -36,22 +36,19 @@ def generate_password() -> str:
 
 
 def hash_string(string: str) -> str:
-    """Hashes the given string.
-
-    TODO test
-    """
+    """Hashes the given string."""
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(string.encode("utf-8"), salt)
     return hashed.decode("utf-8")
 
 
-def generate_hashed_password() -> Tuple[str, str]:
+def generate_hashed_password(pwd: Optional[str] = None) -> Tuple[str, str]:
     """Generates a password and its bcrypt hash.
 
     Returns:
         A hash and the original password
     """
-    pwd = generate_password()
+    pwd = pwd or generate_password()
     return hash_string(pwd), pwd
 
 
