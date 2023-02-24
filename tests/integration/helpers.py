@@ -192,7 +192,7 @@ async def http_request(
         }
         if isinstance(payload, str):
             request_kwargs["data"] = payload
-        if isinstance(payload, dict):
+        elif isinstance(payload, dict):
             request_kwargs["data"] = json.dumps(payload)
 
         request_kwargs["verify"] = chain.name if verify else False

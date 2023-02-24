@@ -219,7 +219,7 @@ class ApplicationCharm(CharmBase):
 
         if isinstance(payload, str):
             request_kwargs["data"] = payload
-        if isinstance(payload, dict):
+        elif isinstance(payload, dict):
             request_kwargs["data"] = json.dumps(payload)
         try:
             with requests.Session() as s:
