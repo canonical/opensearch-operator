@@ -188,13 +188,13 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag."""
 
-    async def get_num_of_endpoints(ops_test: OpsTest) -> int:
+    async def get_num_of_endpoints() -> int:
         endpoints = await get_application_relation_data(
             ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "endpoints"
         )
         return len(endpoints.split(","))
 
-    def get_num_of_units(ops_test: OpsTest) -> int:
+    def get_num_of_units() -> int:
         return len(ops_test.model.applications[CLIENT_APP_NAME].units)
 
     assert await get_num_of_endpoints() == get_num_of_units()
