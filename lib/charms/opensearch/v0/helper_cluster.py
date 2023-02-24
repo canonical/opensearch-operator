@@ -54,6 +54,17 @@ class ClusterTopology:
         return base_roles + ["cluster_manager"]
 
     @staticmethod
+    def recompute_nodes_conf(nodes: List[Node]) -> Dict[str, Node]:
+        """Recompute the configuration of all the nodes."""
+        nodes_by_name = dict([(node.name, node) for node in nodes])
+
+        updated_node = ClusterTopology.node_with_new_roles(nodes)
+        if updated_node:
+            nodes_by_name[updated_node.name] = updated_node
+
+        return nodes_by_name
+
+    @staticmethod
     def node_with_new_roles(remaining_nodes: List[Node]) -> Optional[Node]:
         """Pick and recompute the roles of the best node to re-balance the cluster."""
         max_cms, max_voters = ClusterTopology.max_cm_and_voter_nodes(len(remaining_nodes))
