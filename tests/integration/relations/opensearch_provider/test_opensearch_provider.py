@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 
 import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
@@ -121,6 +122,9 @@ async def test_database_bulk_usage(ops_test: OpsTest):
         endpoint="/_bulk",
         payload=re.escape(bulk_payload),
     )
+
+    # Wait so we aren't writing data and requesting it straight away
+    time.sleep(1)
 
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_bulk_read_index = await run_request(
