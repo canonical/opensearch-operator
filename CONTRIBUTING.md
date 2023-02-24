@@ -65,9 +65,7 @@ EOF
 ```
 or in a single machine:
 ```
-sudo sysctl -w vm.max_map_count=262144
-sudo sysctl -w vm.swappiness=0
-sudo sysctl -w net.ipv4.tcp_retries2=5
+sudo sysctl -w vm.max_map_count=262144 -w vm.swappiness=0 -w net.ipv4.tcp_retries2=5
 ```
 
 
