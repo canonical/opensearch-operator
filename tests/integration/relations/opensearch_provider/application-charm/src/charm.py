@@ -104,7 +104,7 @@ class ApplicationCharm(CharmBase):
         logging.info(f"first database credentials: {event.username} {event.password}")
 
     def _on_first_database_endpoints_changed(self, event: DatabaseEndpointsChangedEvent) -> None:
-        """Event triggered when the read/write endpoints of the database change."""
+        """Event triggered when the opensearch endpoints change."""
         logger.info(f"first database endpoints have been changed to: {event.endpoints}")
 
     # Second database events observers.
@@ -113,7 +113,7 @@ class ApplicationCharm(CharmBase):
         logger.info(f"second database credentials: {event.username} {event.password}")
 
     def _on_second_database_endpoints_changed(self, event: DatabaseEndpointsChangedEvent) -> None:
-        """Event triggered when the read/write endpoints of the database change."""
+        """Event triggered when the opensearch endpoints change."""
         logger.info(f"second database endpoints have been changed to: {event.endpoints}")
 
     # ==============
