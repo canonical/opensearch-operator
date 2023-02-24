@@ -94,8 +94,8 @@ class ApplicationCharm(CharmBase):
 
     def smoke_check(self, relation_id) -> bool:
         try:
-            resp = self.relation_request(relation_id, "GET", "/")
-            return bool(resp)
+            self.relation_request(relation_id, "GET", "/")
+            return True
         except (OpenSearchHttpError, Exception) as e:
             logger.error(e)
             return False
@@ -137,12 +137,13 @@ class ApplicationCharm(CharmBase):
         username = databag.get("username")
         password = databag.get("password")
         host = databag.get("endpoints").split(",")[0]
-        host_addr = host.split(":")[0]
-        port = host.split(":")[1]
+        host_addr, port = host.split(":")
 
         logger.info(f"sending {method} request to {endpoint}")
         try:
-            response = self.request(method, endpoint, port, username, password, host_addr, payload)
+            response = self.request(
+                method, endpoint, int(port), username, password, host_addr, payload
+            )
         except OpenSearchHttpError as e:
             response = [str(e)]
         logger.info(response)
@@ -170,13 +171,12 @@ class ApplicationCharm(CharmBase):
         if None in [username, password] or len(hosts) == 0:
             raise OpenSearchHttpError
 
-        host = hosts[0].split(":")[0]
-        port = int(hosts[0].split(":")[1])
+        host, port = hosts[0].split(":")
 
         return self.request(
             method,
             endpoint,
-            port,
+            int(port),
             username,
             password,
             host,
@@ -220,8 +220,10 @@ class ApplicationCharm(CharmBase):
             "headers": {"Content-Type": "application/json", "Accept": "application/json"},
         }
 
-        if payload:
+        if isinstance(payload, str):
             request_kwargs["data"] = payload
+        elif isinstance(payload, dict):
+            request_kwargs["data"] = json.dumps(payload)
         try:
             with requests.Session() as s:
                 s.auth = (username, password)

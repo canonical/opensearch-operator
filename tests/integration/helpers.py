@@ -188,11 +188,12 @@ async def http_request(
             "url": endpoint,
             "headers": {"Accept": "application/json", "Content-Type": "application/json"},
         }
-        request_kwargs["verify"] = chain.name if verify else False
-        if payload:
-            request_kwargs["data"] = json.dumps(payload) if isinstance(payload, dict) else payload
+        if isinstance(payload, str):
+            request_kwargs["data"] = payload
+        elif isinstance(payload, dict):
+            request_kwargs["data"] = json.dumps(payload)
 
-        session.auth = ("admin", user_password or admin_secrets["password"])
+        request_kwargs["verify"] = chain.name if verify else False
         resp = session.request(**request_kwargs)
 
         if resp_status_code:
