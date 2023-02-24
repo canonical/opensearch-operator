@@ -538,7 +538,9 @@ class OpenSearchBaseCharm(CharmBase):
                 return
 
         # retrieve the updated conf if exists
-        new_conf = self.peers_data.get_object(Scope.APP, "nodes_config", {}).get(self.unit_name)
+        new_conf = (self.peers_data.get_object(Scope.APP, "nodes_config") or {}).get(
+            self.unit_name
+        )
         if new_conf:
             new_conf = Node.from_dict(new_conf)
 
