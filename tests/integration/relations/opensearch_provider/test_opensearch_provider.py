@@ -17,6 +17,7 @@ from tests.integration.helpers import (
     UNIT_IDS,
     get_leader_unit_ip,
     http_request,
+    scale_application,
 )
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
@@ -30,17 +31,15 @@ CLIENT_APP_NAME = "application"
 SECONDARY_CLIENT_APP_NAME = "secondary-application"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
-FIRST_DATABASE_RELATION_NAME = "first-index"
+FIRST_RELATION_NAME = "first-index"
 
 NUM_UNITS = len(UNIT_IDS)
 
 
 @pytest.mark.abort_on_fail
 @pytest.mark.client_relation
-async def test_database_relation_with_charm_libraries(
-    ops_test: OpsTest, application_charm, opensearch_charm
-):
-    """Test basic functionality of database relation interface."""
+async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_charm):
+    """Test basic functionality of relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
     await ops_test.model.set_config(MODEL_CONFIG)
@@ -73,7 +72,7 @@ async def test_database_relation_with_charm_libraries(
 
 
 @pytest.mark.client_relation
-async def test_database_usage(ops_test: OpsTest):
+async def test_index_use(ops_test: OpsTest):
     """Check we can update and delete things."""
     await run_request(
         ops_test,
@@ -104,7 +103,7 @@ async def test_database_usage(ops_test: OpsTest):
 
 
 @pytest.mark.client_relation
-async def test_database_bulk_usage(ops_test: OpsTest):
+async def test_bulk_index_usage(ops_test: OpsTest):
     """Check we can update and delete things using bulk api."""
     bulk_payload = """{ "index" : { "_index": "albums", "_id" : "2" } }
 {"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
@@ -142,8 +141,8 @@ async def test_database_bulk_usage(ops_test: OpsTest):
 
 
 @pytest.mark.client_relation
-async def test_database_version(ops_test: OpsTest):
-    """Check version is accurate."""
+async def test_version(ops_test: OpsTest):
+    """Check version reported in the databag is consistent with the version on the charm."""
     run_version_query = await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
@@ -151,10 +150,8 @@ async def test_database_version(ops_test: OpsTest):
         endpoint="/",
         relation_id=client_relation.id,
     )
-    # Get the version of the database and compare with the information that
-    # was retrieved directly from the database.
     version = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "version"
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "version"
     )
     logging.error(run_version_query)
     assert version in run_version_query["results"]
@@ -162,7 +159,7 @@ async def test_database_version(ops_test: OpsTest):
 
 @pytest.mark.client_relation
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
-    """Test that two different applications can connect to the database."""
+    """Test that multiple applications can connect to opensearch."""
     # Deploy secondary application.
     await ops_test.model.deploy(
         application_charm,
@@ -175,10 +172,9 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
             ops_test.model.wait_for_idle(status="blocked", apps=[SECONDARY_CLIENT_APP_NAME]),
         )
 
-    # Relate the new application with the database
-    # and wait for them exchanging some connection data.
+    # Relate the new application and wait for them to exchange connection data.
     await ops_test.model.add_relation(
-        f"{SECONDARY_CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", OPENSEARCH_APP_NAME
+        f"{SECONDARY_CLIENT_APP_NAME}:{FIRST_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, SECONDARY_CLIENT_APP_NAME)
 
@@ -189,11 +185,33 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 
 
 @pytest.mark.client_relation
+async def test_scaling(ops_test: OpsTest):
+    """Test that scaling correctly updates endpoints in databag."""
+
+    async def get_num_of_endpoints(ops_test: OpsTest) -> int:
+        endpoints = await get_application_relation_data(
+            ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "endpoints"
+        )
+        return len(endpoints.split(","))
+
+    def get_num_of_units(ops_test: OpsTest) -> int:
+        return len(ops_test.model.applications[CLIENT_APP_NAME].units)
+
+    assert await get_num_of_endpoints() == get_num_of_units()
+
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() + 1)
+    assert await get_num_of_endpoints() == get_num_of_units()
+
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() - 1)
+    assert await get_num_of_endpoints() == get_num_of_units()
+
+
+@pytest.mark.client_relation
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
     relation_user = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "username"
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
     )
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
@@ -203,7 +221,7 @@ async def test_relation_broken(ops_test: OpsTest):
     # Break the relation.
     await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
         f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
-        f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
+        f"{CLIENT_APP_NAME}:{FIRST_RELATION_NAME}",
     )
     async with ops_test.fast_forward():
         await asyncio.gather(
