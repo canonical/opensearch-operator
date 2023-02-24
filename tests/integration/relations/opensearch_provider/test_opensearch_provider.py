@@ -195,7 +195,7 @@ async def test_scaling(ops_test: OpsTest):
         return len(endpoints.split(","))
 
     def get_num_of_units() -> int:
-        return len(ops_test.model.applications[CLIENT_APP_NAME].units)
+        return len(ops_test.model.applications[OPENSEARCH_APP_NAME].units)
 
     assert await get_num_of_endpoints() == get_num_of_units()
 
