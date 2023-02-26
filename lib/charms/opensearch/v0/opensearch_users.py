@@ -62,7 +62,7 @@ class OpenSearchUserManager:
         resp = self.opensearch.request(
             "PUT",
             f"{ROLE_ENDPOINT}/{role_name}",
-            {**(permissions or {}), **(action_groups or {})},
+            payload={**(permissions or {}), **(action_groups or {})},
         )
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"creating role {role_name} failed")
@@ -115,7 +115,7 @@ class OpenSearchUserManager:
         resp = self.opensearch.request(
             "PUT",
             f"{USER_ENDPOINT}/{user_name}",
-            payload,
+            payload=payload,
         )
         if resp.get("status") != "CREATED":
             raise OpenSearchUserMgmtError(f"creating user {user_name} failed")
@@ -154,7 +154,7 @@ class OpenSearchUserManager:
         resp = self.opensearch.request(
             "PATCH",
             f"{USER_ENDPOINT}/{user_name}",
-            patches,
+            payload=patches,
         )
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"patching user {user_name} failed")
