@@ -439,9 +439,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         return self._are_all_tls_resources_stored()
 
-    def _start_opensearch(  # noqa: C901
-        self, event: EventBase, conf: Optional[Node] = None
-    ) -> None:
+    def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if self.opensearch.is_started():
             self._post_start_init()
@@ -473,7 +471,7 @@ class OpenSearchBaseCharm(CharmBase):
             nodes = self._get_nodes(False)
 
             # Set the configuration of the node
-            self._set_node_conf(nodes, conf)
+            self._set_node_conf(nodes)
         except OpenSearchHttpError:
             event.defer()
             self.peers_data.delete(Scope.UNIT, "starting")
@@ -539,14 +537,7 @@ class OpenSearchBaseCharm(CharmBase):
                 self.unit.status = WaitingStatus(ServiceIsStopping)
                 return
 
-        # retrieve the updated conf if exists
-        new_conf = (self.peers_data.get_object(Scope.APP, "nodes_config") or {}).get(
-            self.unit_name
-        )
-        if new_conf:
-            new_conf = Node.from_dict(new_conf)
-
-        self._start_opensearch(event, conf=new_conf)
+        self._start_opensearch(event)
 
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""
@@ -669,10 +660,20 @@ class OpenSearchBaseCharm(CharmBase):
                 return []
             raise
 
-    def _set_node_conf(self, nodes: List[Node], conf: Optional[Node] = None) -> None:
+    def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
+        # retrieve the updated conf if exists
+        update_conf = (self.peers_data.get_object(Scope.APP, "nodes_config") or {}).get(
+            self.unit_name
+        )
+        if update_conf:
+            update_conf = Node.from_dict(update_conf)
+
+        # set default generated roles, or the ones passed in the updated conf
         computed_roles = (
-            conf.roles if conf else ClusterTopology.suggest_roles(nodes, self.app.planned_units())
+            update_conf.roles
+            if update_conf
+            else ClusterTopology.suggest_roles(nodes, self.app.planned_units())
         )
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
