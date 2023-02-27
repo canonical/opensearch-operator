@@ -85,7 +85,7 @@ class ApplicationCharm(CharmBase):
         relations = self.model.relations.get("first-index", []) + self.model.relations.get(
             "second-index", []
         )
-        if len(relations) == 0:
+        if not relations:
             return False
         for relation in relations:
             if not self.smoke_check(relation.id):
@@ -168,7 +168,7 @@ class ApplicationCharm(CharmBase):
         password = databag.get("password")
         hosts = databag.get("endpoints", "").split(",")
 
-        if None in [username, password] or len(hosts) == 0:
+        if None in [username, password] or not hosts:
             raise OpenSearchHttpError
 
         host, port = hosts[0].split(":")

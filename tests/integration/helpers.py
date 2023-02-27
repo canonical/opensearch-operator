@@ -193,6 +193,8 @@ async def http_request(
         elif isinstance(payload, dict):
             request_kwargs["data"] = json.dumps(payload)
 
+        session.auth = ("admin", user_password or admin_secrets["password"])
+
         request_kwargs["verify"] = chain.name if verify else False
         resp = session.request(**request_kwargs)
 

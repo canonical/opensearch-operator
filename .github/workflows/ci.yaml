@@ -44,9 +44,7 @@ jobs:
       - name: Run integration tests
         run: |
           # set sysctl values in case the cloudinit-userdata not applied
-          sudo sysctl -w vm.max_map_count=262144
-          sudo sysctl -w vm.swappiness=0
-          sudo sysctl -w net.ipv4.tcp_retries2=5
+          sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
           tox -e charm-integration
 
   integration-test-lxd-tls:
@@ -65,9 +63,7 @@ jobs:
       - name: Run integration tests
         run: |
           # set sysctl values in case the cloudinit-userdata not applied
-          sudo sysctl -w vm.max_map_count=262144
-          sudo sysctl -w vm.swappiness=0
-          sudo sysctl -w net.ipv4.tcp_retries2=5
+          sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
 
           tox -e tls-integration
 
@@ -87,9 +83,7 @@ jobs:
       - name: Run integration tests
         run: |
           # set sysctl values in case the cloudinit-userdata not applied
-          sudo sysctl -w vm.max_map_count=262144
-          sudo sysctl -w vm.swappiness=0
-          sudo sysctl -w net.ipv4.tcp_retries2=5
+          sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
 
           tox -e ha-integration
 
@@ -109,7 +103,5 @@ jobs:
       - name: Run integration tests
         run: |
           # set sysctl values in case the cloudinit-userdata not applied
-          sudo sysctl -w vm.max_map_count=262144
-          sudo sysctl -w vm.swappiness=0
-          sudo sysctl -w net.ipv4.tcp_retries2=5
+          sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
           tox -e client-integration
