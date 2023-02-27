@@ -15,6 +15,17 @@ from charms.opensearch.v0.opensearch_distro import OpenSearchHttpError
 logger = logging.getLogger(__name__)
 
 
+# The unique Charmhub library identifier, never change it
+LIBID = "f9da4353bd314b86acfdfa444a9517c9"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
+
+
 USER_ENDPOINT = "/_plugins/_security/api/internalusers"
 ROLE_ENDPOINT = "/_plugins/_security/api/roles"
 

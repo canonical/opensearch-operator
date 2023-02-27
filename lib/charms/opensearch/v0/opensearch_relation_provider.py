@@ -43,6 +43,16 @@ from ops.charm import (
 from ops.framework import Object
 from ops.model import BlockedStatus, Relation
 
+# The unique Charmhub library identifier, never change it
+LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
+
 logger = logging.getLogger(__name__)
 
 
