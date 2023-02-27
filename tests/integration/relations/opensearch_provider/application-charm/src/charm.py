@@ -10,8 +10,7 @@ from typing import Dict, List, Optional, Union
 
 import requests
 from charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseEndpointsChangedEvent,
-    IndexCreatedEvent,
+    AuthenticationEvent,
     OpenSearchRequires,
 )
 from ops.charm import ActionEvent, CharmBase
@@ -19,6 +18,9 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
 
 logger = logging.getLogger(__name__)
+
+
+CERT_PATH = "/tmp/test_cert.ca"
 
 
 class ApplicationCharm(CharmBase):
@@ -37,37 +39,32 @@ class ApplicationCharm(CharmBase):
         # (these events are defined in the database requires charm library).
         index_name = f'{self.app.name.replace("-", "_")}_first_opensearch'
 
+        # TODO change this to be "admin"
         permissive_roles = json.dumps({"roles": ["all_access"]})
         self.first_opensearch = OpenSearchRequires(
             self, "first-index", index_name, permissive_roles
         )
+
         self.framework.observe(
-            self.first_opensearch.on.index_created, self._on_first_opensearch_created
+            self.first_opensearch.on.index_created, self._on_authentication_updated
         )
         self.framework.observe(
-            self.first_opensearch.on.endpoints_changed, self._on_first_opensearch_endpoints_changed
+            self.first_opensearch.on.authentication_updated, self._on_authentication_updated
         )
 
         # Events related to the second database that is requested
         # (these events are defined in the database requires charm library).
         index_name = f'{self.app.name.replace("-", "_")}_second_opensearch'
-        # TODO change this to include only permissions and action groups, and verify that we can
-        # create roles when necessary.
-        roles = {
-            "roles": ["readall"],
-            "permissions": ["TODO find some permissions", ""],
-            "action_groups": ["TODO find some action groups", ""],
-        }
-        complex_roles = json.dumps(roles)
+        # TODO change this to be "default"
+        complex_roles = json.dumps(
+            {
+                "roles": ["readall"],
+                "permissions": ["TODO find some permissions", ""],
+                "action_groups": ["TODO find some action groups", ""],
+            }
+        )
         self.second_opensearch = OpenSearchRequires(
             self, "second-index", index_name, complex_roles
-        )
-        self.framework.observe(
-            self.second_opensearch.on.index_created, self._on_second_opensearch_created
-        )
-        self.framework.observe(
-            self.second_opensearch.on.endpoints_changed,
-            self._on_second_opensearch_endpoints_changed,
         )
 
         self.framework.observe(self.on.run_request_action, self._on_run_request_action)
@@ -100,29 +97,26 @@ class ApplicationCharm(CharmBase):
             logger.error(e)
             return False
 
-    # First database events observers.
-    def _on_first_opensearch_created(self, event: IndexCreatedEvent) -> None:
-        """Event triggered when a database was created for this application."""
-        logging.info(f"first opensearch credentials: {event.username} {event.password}")
+    def _on_authentication_updated(self, event: AuthenticationEvent):
+        logger.error(event)
+        if event.tls != "True":
+            return
 
-    def _on_first_opensearch_endpoints_changed(self, event: DatabaseEndpointsChangedEvent) -> None:
-        """Event triggered when the opensearch endpoints change."""
-        logger.info(f"first opensearch endpoints have been changed to: {event.endpoints}")
-
-    # Second database events observers.
-    def _on_second_opensearch_created(self, event: IndexCreatedEvent) -> None:
-        """Event triggered when a database was created for this application."""
-        logger.info(f"second opensearch credentials: {event.username} {event.password}")
-
-    def _on_second_opensearch_endpoints_changed(
-        self, event: DatabaseEndpointsChangedEvent
-    ) -> None:
-        """Event triggered when the opensearch endpoints change."""
-        logger.info(f"second opensearch endpoints have been changed to: {event.endpoints}")
+        tls_ca = event.tls_ca
+        if not tls_ca:
+            tls_ca = self.first_opensearch.fetch_relation_data()[event.relation.id].get(
+                "tls_ca", None
+            )
+            if not tls_ca:
+                event.defer()  # We're waiting until we get a CA.
+        logger.error(f"writing cert to {CERT_PATH}.")
+        with open(CERT_PATH, "w") as f:
+            f.write(tls_ca)
 
     # ==============
     #  Action hooks
     # ==============
+
     def _on_run_request_action(self, event: ActionEvent):
         logger.info(event.params)
         relation = self.first_opensearch
@@ -214,7 +208,7 @@ class ApplicationCharm(CharmBase):
         full_url = f"https://{host}:{port}/{endpoint}"
 
         request_kwargs = {
-            "verify": False,  # TODO this should be a path to a cert once this relation has TLS.
+            "verify": CERT_PATH,
             "method": method.upper(),
             "url": full_url,
             "headers": {"Content-Type": "application/json", "Accept": "application/json"},

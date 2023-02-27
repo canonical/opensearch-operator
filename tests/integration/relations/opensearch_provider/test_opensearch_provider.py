@@ -72,9 +72,12 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
         await ops_test.model.wait_for_idle(timeout=1200, status="active")
 
 
-@pytest.mark.client_relation
-async def test_index_use(ops_test: OpsTest):
-    """Check we can update and delete things."""
+async def test_database_usage(ops_test: OpsTest):
+    """Check we can update and delete things.
+
+    The client application authenticates using the cert provided in the database; if this is
+    invalid for any reason, the test will fail, so this test implicitly verifies that TLS works.
+    """
     await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,

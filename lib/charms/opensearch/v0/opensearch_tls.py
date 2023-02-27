@@ -99,7 +99,10 @@ class OpenSearchTLS(Object):
         self.charm.on_tls_relation_broken(event)
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
-        """Enable TLS when TLS certificate available."""
+        """Enable TLS when TLS certificate available.
+
+        CertificateAvailableEvents fire whenever a new certificate is created by the TLS charm.
+        """
         try:
             scope, cert_type, secrets = self._find_secret(event.certificate_signing_request, "csr")
             logger.debug(f"{scope.val}.{cert_type.val} TLS certificate available.")
@@ -120,6 +123,9 @@ class OpenSearchTLS(Object):
             },
             merge=True,
         )
+
+        for relation in self.charm.opensearch_provider.relations:
+            self.charm.opensearch_provider.update_certs(relation.id, event.chain)
 
         try:
             self.charm.on_tls_conf_set(event, scope, cert_type, renewal)

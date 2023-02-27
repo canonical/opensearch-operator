@@ -1132,8 +1132,8 @@ class OpenSearchProvidesEvents(CharmEvents):
     index_requested = EventSource(IndexRequestedEvent)
 
 
-class OpenSearchRequiresEvent(RelationEvent):
-    """Base class for OpenSearch events."""
+class OpenSearchRequiresEvent(DatabaseRequiresEvent):
+    """Base class for OpenSearch requirer events."""
 
 
 class IndexCreatedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
@@ -1143,11 +1143,12 @@ class IndexCreatedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
 class OpenSearchRequiresEvents(CharmEvents):
     """OpenSearch events.
 
-    This class defines the events that the Kafka can emit.
+    This class defines the events that the opensearch requirer can emit.
     """
 
     index_created = EventSource(IndexCreatedEvent)
     endpoints_changed = EventSource(DatabaseEndpointsChangedEvent)
+    authentication_updated = EventSource(AuthenticationEvent)
 
 
 # OpenSearch Provides and Requires Objects
@@ -1202,7 +1203,6 @@ class OpenSearchProvides(DataProvides):
         self._update_relation_data(relation_id, {"version": version})
 
 
-
 class OpenSearchRequires(DataRequires):
     """Requires-side of the OpenSearch relation."""
 
@@ -1225,7 +1225,10 @@ class OpenSearchRequires(DataRequires):
         self._update_relation_data(event.relation.id, data)
 
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
-        """Event emitted when the OpenSearch relation has changed."""
+        """Event emitted when the OpenSearch relation has changed.
+
+        This event triggers individual custom events depending on the changing relation.
+        """
         # Check which data has changed to emit customs events.
         diff = self._diff(event)
 
@@ -1233,11 +1236,20 @@ class OpenSearchRequires(DataRequires):
         # (the OpenSearch charm shares the credentials).
         if "username" in diff.added and "password" in diff.added:
             # Emit the default event (the one without an alias).
-            logger.info("index created at %s", datetime.now())
+            logger.info("index created at: %s", datetime.now())
             self.on.index_created.emit(event.relation, app=event.app, unit=event.unit)
 
             # To avoid unnecessary application restarts do not trigger
-            # “endpoints_changed“ event if “index_created“ is triggered.
+            # “endpoints_changed“ or "authentication_updated" event if “index_created“ is
+            # triggered.
+            return
+
+        # Check if authentication has updated, emit event if so
+        updates = {"password", "tls", "tls-ca"}
+        if len(set(diff._asdict().keys()) - updates) < len(diff):
+            logger.info("authentication updated at: %s", datetime.now())
+            self.on.authentication_updated.emit(event.relation, app=event.app, unit=event.unit)
+
             return
 
         # Emit a endpoints changed event if the OpenSearch application added or changed this info
