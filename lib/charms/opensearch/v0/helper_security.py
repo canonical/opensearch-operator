@@ -25,6 +25,13 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
+def hash_string(string: str) -> str:
+    """Hashes the given string."""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(string.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
+
+
 def generate_password() -> str:
     """Generate a random password string.
 
@@ -33,13 +40,6 @@ def generate_password() -> str:
     """
     choices = string.ascii_letters + string.digits
     return "".join([secrets.choice(choices) for _ in range(32)])
-
-
-def hash_string(string: str) -> str:
-    """Hashes the given string."""
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(string.encode("utf-8"), salt)
-    return hashed.decode("utf-8")
 
 
 def generate_hashed_password(pwd: Optional[str] = None) -> Tuple[str, str]:

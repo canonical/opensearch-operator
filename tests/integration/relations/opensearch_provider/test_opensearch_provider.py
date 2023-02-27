@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 
 import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
@@ -124,6 +125,9 @@ async def test_bulk_index_usage(ops_test: OpsTest):
         payload=re.escape(bulk_payload),
     )
 
+    # Wait so we aren't writing data and requesting it straight away
+    time.sleep(1)
+
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_bulk_read_index = await run_request(
         ops_test,
@@ -146,7 +150,7 @@ async def test_bulk_index_usage(ops_test: OpsTest):
 @pytest.mark.client_relation
 async def test_version(ops_test: OpsTest):
     """Check version reported in the databag is consistent with the version on the charm."""
-    run_version_query = await run_request(
+    run_version_request = await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
         method="GET",
@@ -156,8 +160,10 @@ async def test_version(ops_test: OpsTest):
     version = await get_application_relation_data(
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "version"
     )
-    logging.error(run_version_query)
-    assert version in run_version_query["results"]
+    logging.info(run_version_request)
+    logging.info(version)
+    results = json.loads(run_version_request["results"])
+    assert version == results.get("version", {}).get("number")
 
 
 @pytest.mark.client_relation

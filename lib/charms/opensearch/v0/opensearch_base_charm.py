@@ -195,8 +195,6 @@ class OpenSearchBaseCharm(CharmBase):
                     self.peers_data.put(
                         Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                     )
-            for relation in self.model.relations.get(ClientRelationName, []):
-                self.opensearch_provider.update_endpoints(relation)
 
             for relation in self.model.relations.get(ClientRelationName, []):
                 self.opensearch_provider.update_endpoints(relation)
