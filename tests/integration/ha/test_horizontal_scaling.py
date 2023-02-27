@@ -87,6 +87,10 @@ async def test_horizontal_scale_up(ops_test: OpsTest) -> None:
     assert not shards_by_status.get("RELOCATING")
     assert not shards_by_status.get("UNASSIGNED")
 
+    # check roles, expecting all nodes to be cm_eligible
+    nodes = await all_nodes(ops_test, leader_unit_ip)
+    assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == 3
+
 
 @pytest.mark.ha_tests
 @pytest.mark.abort_on_fail
@@ -184,7 +188,7 @@ async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest) -> None:
     The goal of this test is to make sure that roles are automatically recalculated after
     a scale-down event.
     """
-    # scale up by 2 unit
+    # scale up by 1 unit
     await ops_test.model.applications[APP_NAME].add_unit(count=1)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], timeout=1000, wait_for_exact_units=5)
 
@@ -192,6 +196,7 @@ async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest) -> None:
 
     # fetch all nodes
     nodes = await all_nodes(ops_test, leader_unit_ip)
+    assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == 5
 
     # pick a cluster manager node to remove
     unit_id_to_stop = [
@@ -204,9 +209,10 @@ async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest) -> None:
     await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(apps=[APP_NAME], timeout=1000, wait_for_exact_units=4)
 
-    # fetch nodes, we expect to have a "voting only" node removed to keep the quorum
+    # fetch nodes, we expect to have a "cm" node, reconfigured to be "data only" to keep the quorum
     new_nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert ClusterTopology.nodes_count_by_role(new_nodes)["voting_only"] == 1
+    assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == 3
+    assert ClusterTopology.nodes_count_by_role(new_nodes)["data"] == 4
 
     # scale-down: remove another cm unit
     unit_id_to_stop = [
@@ -218,7 +224,7 @@ async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest) -> None:
     # status="blocked"
     await ops_test.model.wait_for_idle(apps=[APP_NAME], timeout=1000, wait_for_exact_units=3)
 
-    # fetch nodes, we expect to have a "voting only" node removed to keep the quorum
+    # fetch nodes, we expect to have all nodes "cluster_manager" to keep the quorum
     new_nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == 1
-    assert ClusterTopology.nodes_count_by_role(new_nodes).get("voting_only", 0) == 0
+    assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == 3
+    assert ClusterTopology.nodes_count_by_role(new_nodes)["data"] == 3
