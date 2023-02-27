@@ -717,14 +717,12 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         new_node_conf = nodes_config.get(self.unit_name)
-        if not new_node_conf:
-            return
-
-        new_node_conf = Node.from_dict(new_node_conf)
-        current_conf = self.opensearch_config.load_node()
-        if sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles):
-            # no conf change (roles for now)
-            return
+        if new_node_conf:
+            new_node_conf = Node.from_dict(new_node_conf)
+            current_conf = self.opensearch_config.load_node()
+            if sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles):
+                # no conf change (roles for now)
+                return
 
         self.unit.status = WaitingStatus(WaitingToStart)
         self.on[self.service_manager.name].acquire_lock.emit(
