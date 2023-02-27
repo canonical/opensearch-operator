@@ -717,9 +717,7 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         new_node_conf = nodes_config.get(self.unit_name)
-        if not new_node_conf and (
-            not self.opensearch.is_node_up() or self.peers_data.get(Scope.UNIT, "starting", False)
-        ):
+        if not new_node_conf and not self.opensearch.is_node_up():
             # the conf could not be computed / broadcasted, because this node is
             # "starting" and is not online "yet" - either barely being configured (i.e. TLS)
             # or waiting to start.
