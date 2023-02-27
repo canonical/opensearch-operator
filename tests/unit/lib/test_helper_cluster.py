@@ -14,21 +14,20 @@ from charm import OpenSearchOperatorCharm
 
 class TestHelperCluster(unittest.TestCase):
     base_roles = ["data", "ingest", "ml", "coordinating_only"]
-    voting_only_roles = base_roles + ["voting_only"]
     cm_roles = base_roles + ["cluster_manager"]
 
     def cluster_5_nodes_conf(self) -> List[Node]:
-        """Returns the expected config of a 5 nodes cluster."""
+        """Returns the expected config of a 5 "planned" nodes cluster."""
         return [
-            Node("cm1", self.base_roles + ["cluster_manager"], "0.0.0.1"),
-            Node("cm2", self.base_roles + ["cluster_manager"], "0.0.0.2"),
-            Node("cm3", self.base_roles + ["cluster_manager"], "0.0.0.3"),
-            Node("voting1", self.base_roles + ["voting_only"], "0.0.0.4"),
-            Node("voting2", self.base_roles + ["voting_only"], "0.0.0.5"),
+            Node("cm1", self.cm_roles, "0.0.0.1"),
+            Node("cm2", self.cm_roles, "0.0.0.2"),
+            Node("cm3", self.cm_roles, "0.0.0.3"),
+            Node("cm4", self.cm_roles, "0.0.0.4"),
+            Node("cm5", self.cm_roles, "0.0.0.5"),
         ]
 
     def cluster_6_nodes_conf(self):
-        """Returns the expected config of a 5 nodes cluster."""
+        """Returns the expected config of a 6 "planned" nodes cluster."""
         nodes = self.cluster_5_nodes_conf()
         nodes.append(Node("data1", self.base_roles, "0.0.0.6"))
         return nodes
@@ -44,45 +43,28 @@ class TestHelperCluster(unittest.TestCase):
 
     def test_topology_roles_suggestion_odd_number_of_planned_units(self):
         """Test the suggestion of roles for a new node and odd numbers of planned units."""
-        cluster_5_conf = self.cluster_5_nodes_conf()
         planned_units = 5
+        cluster_5_conf = self.cluster_5_nodes_conf()
 
         self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units), self.cm_roles)
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles(cluster_5_conf[:1], planned_units), self.cm_roles
-        )
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles(cluster_5_conf[:2], planned_units), self.cm_roles
-        )
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles(cluster_5_conf[:3], planned_units),
-            self.voting_only_roles,
-        )
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles(cluster_5_conf[:-1], planned_units),
-            self.voting_only_roles,
-        )
+        for start_index in range(1, 5):
+            self.assertCountEqual(
+                ClusterTopology.suggest_roles(cluster_5_conf[:1], planned_units), self.cm_roles
+            )
 
     def test_topology_roles_suggestion_even_number_of_planned_units(self):
         """Test the suggestion of roles for a new node and even numbers of planned units."""
         cluster_6_conf = self.cluster_6_nodes_conf()
+
         planned_units = 6
 
         self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units), self.cm_roles)
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles(cluster_6_conf[:1], planned_units), self.cm_roles
-        )
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles(cluster_6_conf[:2], planned_units), self.cm_roles
-        )
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles(cluster_6_conf[:3], planned_units),
-            self.voting_only_roles,
-        )
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles(cluster_6_conf[:4], planned_units),
-            self.voting_only_roles,
-        )
+        for start_index in range(1, 5):
+            self.assertCountEqual(
+                ClusterTopology.suggest_roles(cluster_6_conf[:start_index], planned_units),
+                self.cm_roles,
+            )
+
         self.assertCountEqual(
             ClusterTopology.suggest_roles(cluster_6_conf[:-1], planned_units), self.base_roles
         )
@@ -98,20 +80,13 @@ class TestHelperCluster(unittest.TestCase):
         self.assertEqual(computed_node_to_change.name, "data1")
         self.assertCountEqual(computed_node_to_change.roles, self.cm_roles)
 
-        # remove a voting only node
-        computed_node_to_change = ClusterTopology.node_with_new_roles(
-            [node for node in cluster_conf if node.name != "voting1"]
-        )
-        self.assertEqual(computed_node_to_change.name, "data1")
-        self.assertCountEqual(computed_node_to_change.roles, self.voting_only_roles)
-
         # remove a data node
         computed_node_to_change = ClusterTopology.node_with_new_roles(
             [node for node in cluster_conf if node.name != "data1"]
         )
         self.assertIsNone(computed_node_to_change)
 
-    def test_node_with_new_roles_in_cluster_5(self):
+    def test_auto_recompute_node_roles_in_cluster_5(self):
         """Test the automatic suggestion of new roles to an existing node."""
         cluster_conf = self.cluster_5_nodes_conf()
 
@@ -119,34 +94,20 @@ class TestHelperCluster(unittest.TestCase):
         computed_node_to_change = ClusterTopology.node_with_new_roles(
             [node for node in cluster_conf if node.name != "cm1"]
         )
-        self.assertTrue(computed_node_to_change.name.startswith("voting"))
         self.assertCountEqual(computed_node_to_change.roles, self.base_roles)
-
-        # remove a voting only node
-        computed_node_to_change = ClusterTopology.node_with_new_roles(
-            [node for node in cluster_conf if node.name != "voting1"]
-        )
-        self.assertEqual(computed_node_to_change.name, "voting2")
-        self.assertCountEqual(computed_node_to_change.roles, self.base_roles)
-
-        # remove a data node
-        computed_node_to_change = ClusterTopology.node_with_new_roles(
-            [node for node in cluster_conf if node.name != "data1"]
-        )
-        self.assertIsNone(computed_node_to_change)
 
     def test_topology_get_cluster_managers_ips(self):
         """Test correct retrieval of cm ips from a list of nodes."""
         self.assertCountEqual(
             ClusterTopology.get_cluster_managers_ips(self.cluster_5_nodes_conf()),
-            ["0.0.0.1", "0.0.0.2", "0.0.0.3"],
+            ["0.0.0.1", "0.0.0.2", "0.0.0.3", "0.0.0.4", "0.0.0.5"],
         )
 
     def test_topology_get_cluster_managers_names(self):
         """Test correct retrieval of cm ips from a list of nodes."""
         self.assertCountEqual(
             ClusterTopology.get_cluster_managers_names(self.cluster_5_nodes_conf()),
-            ["cm1", "cm2", "cm3"],
+            ["cm1", "cm2", "cm3", "cm4", "cm5"],
         )
 
     def test_topology_nodes_count_by_role(self):
@@ -154,12 +115,11 @@ class TestHelperCluster(unittest.TestCase):
         self.assertDictEqual(
             ClusterTopology.nodes_count_by_role(self.cluster_6_nodes_conf()),
             {
-                "cluster_manager": 3,
-                "voting_only": 2,
-                "data": 6,
-                "ml": 6,
+                "cluster_manager": 5,
                 "coordinating_only": 6,
+                "data": 6,
                 "ingest": 6,
+                "ml": 6,
             },
         )
 
