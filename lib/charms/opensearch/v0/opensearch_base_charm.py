@@ -709,14 +709,6 @@ class OpenSearchBaseCharm(CharmBase):
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
         self.opensearch_config.cleanup_bootstrap_conf()
 
-    def _compute_and_broadcast_updated_topology(self, current_nodes: Optional[List[Node]]):
-        """Compute cluster topology and broadcast node configs (roles for now) to change if any."""
-        if not current_nodes:
-            return
-
-        updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
-        self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
-
     def _reconfigure_and_restart_unit_if_needed(self):
         """Reconfigure the current unit if a new config was computed for it, then restart."""
         nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
@@ -737,6 +729,14 @@ class OpenSearchBaseCharm(CharmBase):
         self.on[self.service_manager.name].acquire_lock.emit(
             callback_override="_restart_opensearch"
         )
+
+    def _compute_and_broadcast_updated_topology(self, current_nodes: Optional[List[Node]]):
+        """Compute cluster topology and broadcast node configs (roles for now) to change if any."""
+        if not current_nodes:
+            return
+
+        updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
+        self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
 
     def _apply_cluster_health(self, wait_for_green_first: bool = False) -> str:
         """Fetch cluster health and set it on the app status."""
