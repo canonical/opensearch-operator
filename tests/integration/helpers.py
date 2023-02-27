@@ -188,11 +188,14 @@ async def http_request(
             "url": endpoint,
             "headers": {"Accept": "application/json", "Content-Type": "application/json"},
         }
-        request_kwargs["verify"] = chain.name if verify else False
-        if payload:
-            request_kwargs["data"] = json.dumps(payload) if isinstance(payload, dict) else payload
+        if isinstance(payload, str):
+            request_kwargs["data"] = payload
+        elif isinstance(payload, dict):
+            request_kwargs["data"] = json.dumps(payload)
 
         session.auth = ("admin", user_password or admin_secrets["password"])
+
+        request_kwargs["verify"] = chain.name if verify else False
         resp = session.request(**request_kwargs)
 
         if resp_status_code:
@@ -241,3 +244,27 @@ async def check_cluster_formation_successful(
 
     registered_nodes = [node_desc["name"] for node_desc in response["nodes"].values()]
     return set(unit_names) == set(registered_nodes)
+
+
+async def scale_application(ops_test: OpsTest, application_name: str, count: int) -> None:
+    """Scale a given application to a specific unit count.
+
+    Args:
+        ops_test: The ops test framework instance
+        application_name: The name of the application
+        count: The desired number of units to scale to
+    """
+    application = ops_test.model.applications[application_name]
+    change = count - len(application.units)
+    if change > 0:
+        await application.add_units(change)
+    elif change < 0:
+        units = [unit.name for unit in application.units[0:-change]]
+        await application.destroy_units(*units)
+    else:
+        return
+
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            apps=[application_name], status="active", timeout=1000, wait_for_exact_units=count
+        )
