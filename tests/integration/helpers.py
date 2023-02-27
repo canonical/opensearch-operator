@@ -160,6 +160,7 @@ async def http_request(
     endpoint: str,
     payload: Optional[Union[str, Dict[str, any]]] = None,
     resp_status_code: bool = False,
+    verify=True,
     user_password: Optional[str] = None,
 ):
     """Makes an HTTP request.
@@ -185,14 +186,16 @@ async def http_request(
         session.auth = ("admin", user_password or admin_secrets["password"])
 
         request_kwargs = {
-            "method": method.upper(),
+            "method": method,
             "url": endpoint,
-            "verify": chain.name,
             "headers": {"Accept": "application/json", "Content-Type": "application/json"},
         }
-        if payload:
-            request_kwargs["data"] = json.dumps(payload) if isinstance(payload, dict) else payload
+        if isinstance(payload, str):
+            request_kwargs["data"] = payload
+        elif isinstance(payload, dict):
+            request_kwargs["data"] = json.dumps(payload)
 
+        request_kwargs["verify"] = chain.name if verify else False
         resp = session.request(**request_kwargs)
 
         if resp_status_code:
