@@ -718,8 +718,8 @@ class OpenSearchBaseCharm(CharmBase):
 
         new_node_conf = nodes_config.get(self.unit_name)
         if not new_node_conf and self.peers_data.get(Scope.UNIT, "starting", False):
-            # the conf could not be computed, because this node is "starting"
-            # and is not online "yet".
+            # the conf could not be computed / broadcasted, because this node is
+            # "starting" and is not online "yet".
             return
 
         if new_node_conf:
