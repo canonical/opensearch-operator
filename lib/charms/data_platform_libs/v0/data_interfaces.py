@@ -1126,8 +1126,6 @@ class IndexRequestedEvent(OpenSearchProvidesEvent, ExtraRoleEvent):
 class OpenSearchProvidesEvents(CharmEvents):
     """OpenSearch events.
 
-    # TODO maybe rename this, it's hard to read
-
     This class defines the events that OpenSearch can emit.
     """
 
@@ -1144,8 +1142,6 @@ class IndexCreatedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
 
 class OpenSearchRequiresEvents(CharmEvents):
     """OpenSearch events.
-
-    # TODO maybe rename this, it's hard to read
 
     This class defines the events that the opensearch requirer can emit.
     """
