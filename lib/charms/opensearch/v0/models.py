@@ -1,9 +1,19 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Cluster-related data structures / model classes."""
 import json
 from typing import List
+
+# The unique Charmhub library identifier, never change it
+LIBID = "6007e8030e4542e6b189e2873c8fbfef"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 
 class Node:
