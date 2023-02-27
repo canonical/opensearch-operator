@@ -197,23 +197,25 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag."""
 
-    async def get_num_of_endpoints() -> int:
+    async def get_num_of_endpoints(app_name: str) -> int:
         endpoints = await get_application_relation_data(
-            ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "endpoints"
+            ops_test, f"{app_name}/0", FIRST_RELATION_NAME, "endpoints"
         )
         return len(endpoints.split(","))
 
     def get_num_of_units() -> int:
         return len(ops_test.model.applications[OPENSEARCH_APP_NAME].units)
 
-    assert await get_num_of_endpoints() == get_num_of_units()
+    assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units()
+    assert await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
 
     await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() + 1)
-    assert await get_num_of_endpoints() == get_num_of_units()
+    assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units()
+    assert await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
 
     await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() - 1)
-    assert await get_num_of_endpoints() == get_num_of_units()
-
+    assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units()
+    assert await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
 
 @pytest.mark.client_relation
 async def test_relation_broken(ops_test: OpsTest):

@@ -157,7 +157,6 @@ class ApplicationCharm(CharmBase):
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request to a specific relation."""
         databag = self.first_opensearch.fetch_relation_data()[relation_id]
-        logging.error(databag)
         username = databag.get("username")
         password = databag.get("password")
         hosts = databag.get("endpoints", "").split(",")
