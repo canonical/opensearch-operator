@@ -72,6 +72,7 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
         await ops_test.model.wait_for_idle(timeout=1200, status="active")
 
 
+@pytest.mark.client_relation
 async def test_database_usage(ops_test: OpsTest):
     """Check we can update and delete things.
 
