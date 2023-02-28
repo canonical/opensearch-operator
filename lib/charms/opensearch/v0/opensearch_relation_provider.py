@@ -8,15 +8,6 @@ is irrelevant to OpenSearch. In this relation, the application charm should have
 & index security policies, and therefore differentiating between types of network endpoints is
 unnecessary.
 
-When specifying user permissions for this relation, a client application must send this charm valid
-JSON containing the following fields:
-
-{
-    "roles": ["A list of default opensearch roles to apply"],
-    "permissions": ["A list of default opensearch permissions to apply"],
-    "action_groups": ["A list of default opensearch action groups to apply"],
-}
-
 A role will be created for the relation with the permissions and action groups applied, and these
 roles will be mapped to a dedicated user for the relation, which will be removed with the relation.
 Default security values can be found in the opensearch documentation here:
