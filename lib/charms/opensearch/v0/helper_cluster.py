@@ -69,12 +69,17 @@ class ClusterTopology:
             logger.debug(f"Suggesting - removal of 'CM': {cm.name}")
             return Node(cm.name, [r for r in cm.roles if r != "cluster_manager"], cm.ip)
 
-        # add cm to a data only (non cm) node
-        data_only_nodes = [node for node in nodes_by_roles["data"] if "cluster_manager" not in node.roles]
+        # when cm count smaller than expected
+        data_only_nodes = [
+            node for node in nodes_by_roles["data"] if "cluster_manager" not in node.roles
+        ]
+
+        # no data-only node available to change, leave
         if not data_only_nodes:
             logger.debug("Suggesting NO changes to the nodes.")
             return None
 
+        # add cm to a data only (non cm) node
         data = choice(data_only_nodes)
         logger.debug(f"Suggesting - Addition of 'CM' to data: {data.name}")
         return Node(data.name, data.roles + ["cluster_manager"], data.ip)
