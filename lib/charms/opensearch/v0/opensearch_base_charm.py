@@ -39,7 +39,9 @@ from charms.opensearch.v0.helper_databag import (
 )
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
+    is_reachable,
     reachable_hosts,
+    unit_ip,
     units_ips,
 )
 from charms.opensearch.v0.helper_security import (
@@ -76,6 +78,7 @@ from ops.charm import (
     LeaderElectedEvent,
     RelationBrokenEvent,
     RelationChangedEvent,
+    RelationCreatedEvent,
     RelationDepartedEvent,
     RelationJoinedEvent,
     StartEvent,
@@ -130,6 +133,9 @@ class OpenSearchBaseCharm(CharmBase):
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
+        self.framework.observe(
+            self.on[PeerRelationName].relation_created, self._on_peer_relation_created
+        )
         self.framework.observe(
             self.on[PeerRelationName].relation_joined, self._on_peer_relation_joined
         )
@@ -192,8 +198,8 @@ class OpenSearchBaseCharm(CharmBase):
         self.unit.status = WaitingStatus(RequestUnitServiceOps.format("start"))
         self.on[self.service_manager.name].acquire_lock.emit(callback_override="_start_opensearch")
 
-    def _on_peer_relation_joined(self, event: RelationJoinedEvent):
-        """New node joining the cluster."""
+    def _on_peer_relation_created(self, event: RelationCreatedEvent):
+        """Event received by the new node joining the cluster."""
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
         # In the case of the first units before TLS is initialized
@@ -210,6 +216,30 @@ class OpenSearchBaseCharm(CharmBase):
 
         # Store the "Admin" certificate, key and CA on the disk of the new unit
         self._store_tls_resources(CertType.APP_ADMIN, current_secrets, override_admin=False)
+
+    def _on_peer_relation_joined(self, event: RelationJoinedEvent):
+        """Event received by all units when a new node joins the cluster."""
+        if not self.unit.is_leader():
+            return
+
+        if (
+            not self.peers_data.get(Scope.APP, "security_index_initialised")
+            or not self.opensearch.is_node_up()
+        ):
+            return
+
+        new_unit_host = unit_ip(self, event.unit, PeerRelationName)
+        if not is_reachable(new_unit_host, self.opensearch.port):
+            event.defer()
+            return
+
+        try:
+            nodes = self._get_nodes(True)
+        except OpenSearchHttpError:
+            event.defer()
+            return
+
+        self._compute_and_broadcast_updated_topology(nodes)
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
@@ -721,11 +751,6 @@ class OpenSearchBaseCharm(CharmBase):
             # the conf could not be computed / broadcasted, because this node is
             # "starting" and is not online "yet" - either barely being configured (i.e. TLS)
             # or waiting to start.
-            return
-
-        if not new_node_conf and self.peers_data.get(Scope.UNIT, "starting", False):
-            # the conf could not be computed / broadcasted, because this node is
-            # "starting" and is not online "yet".
             return
 
         if new_node_conf:

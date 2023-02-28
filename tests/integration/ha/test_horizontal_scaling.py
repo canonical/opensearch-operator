@@ -186,7 +186,9 @@ async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest) -> None:
     """
     # scale up by 2 unit
     await ops_test.model.applications[APP_NAME].add_unit(count=1)
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], timeout=1000, wait_for_exact_units=5)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=5
+    )
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
 
