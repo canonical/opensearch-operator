@@ -246,13 +246,16 @@ async def check_cluster_formation_successful(
     return set(unit_names) == set(registered_nodes)
 
 
-async def scale_application(ops_test: OpsTest, application_name: str, count: int, timeout=1000) -> None:
+async def scale_application(
+    ops_test: OpsTest, application_name: str, count: int, timeout=1000
+) -> None:
     """Scale a given application to a specific unit count.
 
     Args:
         ops_test: The ops test framework instance
         application_name: The name of the application
         count: The desired number of units to scale to
+        timeout: Time to wait for application to become stable
     """
     application = ops_test.model.applications[application_name]
     change = count - len(application.units)
