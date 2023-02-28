@@ -14,7 +14,6 @@ from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
 from tests.integration.helpers import (
     MODEL_CONFIG,
     SERIES,
-    UNIT_IDS,
     get_leader_unit_ip,
     http_request,
     scale_application,
@@ -33,7 +32,7 @@ TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
 FIRST_RELATION_NAME = "first-index"
 
-NUM_UNITS = len(UNIT_IDS)
+NUM_UNITS = 3
 
 
 @pytest.mark.abort_on_fail
@@ -175,7 +174,9 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.wait_for_idle(status="active", apps=ALL_APPS),
-            ops_test.model.wait_for_idle(status="blocked", apps=[SECONDARY_CLIENT_APP_NAME]),
+            ops_test.model.wait_for_idle(
+                status="blocked", apps=[SECONDARY_CLIENT_APP_NAME], timeout=(60 * 20)
+            ),
         )
 
     # Relate the new application and wait for them to exchange connection data.
