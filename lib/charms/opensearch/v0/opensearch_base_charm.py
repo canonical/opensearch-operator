@@ -496,6 +496,7 @@ class OpenSearchBaseCharm(CharmBase):
             self.opensearch.start()
             self._post_start_init()
             self.status.clear(WaitingToStart)
+            self.service_manager.
         except OpenSearchStartTimeoutError:
             event.defer()
         except OpenSearchStartError:
@@ -530,6 +531,9 @@ class OpenSearchBaseCharm(CharmBase):
             self.peers_data.put_object(
                 Scope.UNIT, "last-update-node-config", current_update_node_conf
             )
+
+        # remove start lock
+        Lock(self.service_manager).release
 
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""

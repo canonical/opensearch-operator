@@ -61,7 +61,7 @@ omit the successful units from a subsequent run-action call.)
 """
 import logging
 from enum import Enum
-from typing import AnyStr, Callable, Optional
+from typing import AnyStr, Callable, Optional, Union
 
 from ops.charm import ActionEvent, CharmBase, RelationChangedEvent
 from ops.framework import EventBase, Object
@@ -276,11 +276,14 @@ class RollingOpsManager(Object):
         charm.on.define_event("{}_acquire_lock".format(self.name), AcquireLock)
         charm.on.define_event("{}_process_locks".format(self.name), ProcessLocks)
 
-        # Watch those events (plus the built in relation event).
-        self.framework.observe(charm.on[self.name].relation_changed, self._on_relation_changed)
+        # Watch those events
         self.framework.observe(charm.on[self.name].acquire_lock, self._on_acquire_lock)
         self.framework.observe(charm.on[self.name].run_with_lock, self._on_run_with_lock)
         self.framework.observe(charm.on[self.name].process_locks, self._on_process_locks)
+
+        # Observe events where we need to update locks
+        self.framework.observe(charm.on[self.name].relation_changed, self._update_locks)
+        self.framework.observe(charm.on.leader_elected, self._update_locks)
 
     def _callback(self: CharmBase, event: EventBase) -> None:
         """Placeholder for the function that actually runs our event.
@@ -288,11 +291,14 @@ class RollingOpsManager(Object):
         """
         raise NotImplementedError
 
-    def _on_relation_changed(self: CharmBase, event: RelationChangedEvent):
+    def _update_locks(self: CharmBase, event: Union[RelationChangedEvent, LeaderElectedEvent]):
         """Process relation changed.
+
         First, determine whether this unit has been granted a lock. If so, emit a RunWithLock
-        event.
-        Then, if we are the leader, fire off a process locks event.
+        event. Then, if we are the leader, fire off a process locks event.
+
+        If a leader is removed before the chain of events finishes, the new leader never receives
+        a ProcessLocks event. To get around this, call this function on LeaderElected.
         """
         lock = Lock(self)
 
