@@ -177,8 +177,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     )
 
     await ops_test.model.block_until(
-        lambda: ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active",
-        timeout=1000
+        lambda: ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", timeout=1000
     )
 
     async with ops_test.fast_forward():
