@@ -49,7 +49,8 @@ class TestHelperCluster(unittest.TestCase):
         self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units), self.cm_roles)
         for start_index in range(1, 5):
             self.assertCountEqual(
-                ClusterTopology.suggest_roles(cluster_5_conf[:start_index], planned_units), self.cm_roles
+                ClusterTopology.suggest_roles(cluster_5_conf[:start_index], planned_units),
+                self.cm_roles,
             )
 
     def test_topology_roles_suggestion_even_number_of_planned_units(self):
