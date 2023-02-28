@@ -63,7 +63,7 @@ import logging
 from enum import Enum
 from typing import AnyStr, Callable, Optional, Union
 
-from ops.charm import ActionEvent, CharmBase, RelationChangedEvent
+from ops.charm import ActionEvent, CharmBase, RelationChangedEvent, LeaderElectedEvent
 from ops.framework import EventBase, Object
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
