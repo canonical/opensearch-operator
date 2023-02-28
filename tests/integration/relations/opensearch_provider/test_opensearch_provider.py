@@ -11,6 +11,7 @@ import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
+from tests.integration.ha.helpers import get_shards_by_state
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
 from tests.integration.helpers import (
     MODEL_CONFIG,
@@ -207,6 +208,11 @@ async def test_relation_broken(ops_test: OpsTest):
         f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
         f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
     )
+
+    # TODO figuring out why we're entering a yellow state
+    leader_ip = await get_leader_unit_ip(ops_test)
+    logger.error(await get_shards_by_state(ops_test, leader_ip))
+
     async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.wait_for_idle(
@@ -219,7 +225,7 @@ async def test_relation_broken(ops_test: OpsTest):
                 raise_on_blocked=True,
             ),
         )
-    leader_ip = await get_leader_unit_ip(ops_test)
+
     users = await http_request(
         ops_test,
         "GET",
