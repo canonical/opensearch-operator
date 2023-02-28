@@ -5,7 +5,6 @@ import asyncio
 import json
 import logging
 import re
-import time
 
 import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
@@ -73,10 +72,10 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
 
 
 @pytest.mark.client_relation
-async def test_database_usage(ops_test: OpsTest):
+async def test_index_usage(ops_test: OpsTest):
     """Check we can update and delete things.
 
-    The client application authenticates using the cert provided in the database; if this is
+    The client application authenticates using the cert provided in the index; if this is
     invalid for any reason, the test will fail, so this test implicitly verifies that TLS works.
     """
     await run_request(
@@ -125,9 +124,6 @@ async def test_bulk_index_usage(ops_test: OpsTest):
         endpoint="/_bulk",
         payload=re.escape(bulk_payload),
     )
-
-    # Wait so we aren't writing data and requesting it straight away
-    time.sleep(5)
 
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_bulk_read_index = await run_request(
@@ -213,8 +209,6 @@ async def test_scaling(ops_test: OpsTest):
     await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() + 1)
     assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units()
     assert await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
-
-    time.sleep(10)
 
     await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() - 1)
     assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units()
