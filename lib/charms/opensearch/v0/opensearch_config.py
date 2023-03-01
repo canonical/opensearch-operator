@@ -32,6 +32,10 @@ class OpenSearchConfig:
     def __init__(self, opensearch: OpenSearchDistribution):
         self._opensearch = opensearch
 
+    def load_node(self):
+        """Load the opensearch.yml config of the node."""
+        return self._opensearch.config.load(self.CONFIG_YML)
+
     def set_client_auth(self):
         """Configure TLS and basic http for clients."""
         # The security plugin will accept TLS client certs if certs but doesn't require them
@@ -154,10 +158,17 @@ class OpenSearchConfig:
             self.CONFIG_YML, "plugins.security.ssl.transport.enforce_hostname_verification", True
         )
 
+        # security plugin rest API access
         self._opensearch.config.put(
             self.CONFIG_YML,
             "plugins.security.restapi.roles_enabled",
             ["all_access", "security_rest_api_access"],
+        )
+        # to use the PUT and PATCH methods of the security rest API
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            "plugins.security.unsupported.restapi.allow_securityconfig_modification",
+            True,
         )
 
     def cleanup_bootstrap_conf(self):

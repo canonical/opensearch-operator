@@ -42,13 +42,13 @@ def generate_password() -> str:
     return "".join([secrets.choice(choices) for _ in range(32)])
 
 
-def generate_hashed_password() -> Tuple[str, str]:
+def generate_hashed_password(pwd: Optional[str] = None) -> Tuple[str, str]:
     """Generates a password and its bcrypt hash.
 
     Returns:
         A hash and the original password
     """
-    pwd = generate_password()
+    pwd = pwd or generate_password()
     return hash_string(pwd), pwd
 
 

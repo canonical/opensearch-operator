@@ -5,12 +5,12 @@
 
 import unittest
 from datetime import datetime, timedelta
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
+from charms.opensearch.v0.models import Node
+from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER, PeerRelationName
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchInstallError,
@@ -36,6 +36,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         self.charm = self.harness.charm
         self.opensearch = self.charm.opensearch
+        self.opensearch.current = MagicMock()
+        self.opensearch.current.return_value = Node("cm1", ["cluster_manager", "data"], "1.1.1.1")
+
         self.peers_data = self.charm.peers_data
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
@@ -58,30 +61,30 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
-    @patch(f"{BASE_CHARM_CLASS}._initialize_admin_user")
-    def test_on_leader_elected(self, _initialize_admin_user, _purge_users):
+    @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
+    def test_on_leader_elected(self, _put_admin_user, _purge_users):
         """Test on leader elected event."""
         self.harness.set_leader(True)
         self.charm.on.leader_elected.emit()
-        _initialize_admin_user.assert_called_once()
+        _put_admin_user.assert_called_once()
         _purge_users.assert_called_once()
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
-    @patch(f"{BASE_CHARM_CLASS}._initialize_admin_user")
-    def test_on_leader_elected_index_initialised(self, _initialize_admin_user, _purge_users):
+    @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
+    def test_on_leader_elected_index_initialised(self, _put_admin_user, _purge_users):
         # security_index_initialised
         self.peers_data.put(Scope.APP, "security_index_initialised", True)
         self.harness.set_leader(True)
         self.charm.on.leader_elected.emit()
-        _initialize_admin_user.assert_not_called()
+        _put_admin_user.assert_not_called()
         _purge_users.assert_not_called()
 
         # admin_user_initialized
         self.peers_data.delete(Scope.APP, "security_index_initialised")
         self.peers_data.put(Scope.APP, "admin_user_initialized", True)
         self.charm.on.leader_elected.emit()
-        _initialize_admin_user.assert_not_called()
+        _put_admin_user.assert_not_called()
         _purge_users.assert_not_called()
 
     @patch(f"{BASE_CHARM_CLASS}._is_tls_fully_configured")
@@ -91,10 +94,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._can_service_start")
     @patch(f"{BASE_CHARM_CLASS}._initialize_security_index")
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
-    @patch(f"{BASE_CHARM_CLASS}._initialize_admin_user")
+    @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
+    @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
     def test_on_start(
         self,
-        _initialize_admin_user,
+        request,
+        _put_admin_user,
         _purge_users,
         _initialize_security_index,
         _can_service_start,
@@ -141,8 +146,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             _get_nodes.assert_called()
             _set_node_conf.assert_called()
             start.assert_called_once()
-            self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
             _initialize_security_index.assert_called_once()
+            self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
 
     @patch(f"{BASE_LIB_PATH}.helper_security.cert_expiration_remaining_hours")
     @patch("ops.model.Model.get_relation")

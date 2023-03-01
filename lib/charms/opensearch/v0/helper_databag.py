@@ -128,7 +128,7 @@ class RelationDataStore(DataStore):
 
         payload_str = None
         if value is not None:
-            payload_str = json.dumps(value)
+            payload_str = json.dumps(value, default=vars)
 
         self.put(scope, key, payload_str)
 
