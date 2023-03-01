@@ -73,6 +73,10 @@ async def test_database_relation_with_charm_libraries(
         # This test shouldn't take so long
         await ops_test.model.wait_for_idle(timeout=1200, status="active")
 
+    assert ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", vars(
+        ops_test.model.applications[OPENSEARCH_APP_NAME]
+    )
+
 
 @pytest.mark.client_relation
 async def test_database_usage(ops_test: OpsTest):
@@ -170,6 +174,7 @@ async def test_database_version(ops_test: OpsTest):
 @pytest.mark.client_relation
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
+    logger.error(vars(ops_test.model.applications[OPENSEARCH_APP_NAME]))
     # Deploy secondary application.
     await ops_test.model.deploy(
         application_charm,
@@ -193,6 +198,9 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         await ops_test.model.wait_for_idle(
             status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
         )
+    assert ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", vars(
+        ops_test.model.applications[OPENSEARCH_APP_NAME]
+    )
 
 
 @pytest.mark.client_relation
@@ -202,6 +210,11 @@ async def test_relation_broken(ops_test: OpsTest):
     relation_user = await get_application_relation_data(
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "username"
     )
+
+    logger.error(vars(ops_test.model.applications[OPENSEARCH_APP_NAME]))
+
+    leader_ip = await get_leader_unit_ip(ops_test)
+    logger.error(await get_shards_by_state(ops_test, leader_ip))
 
     await ops_test.model.block_until(
         lambda: ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", timeout=1000
