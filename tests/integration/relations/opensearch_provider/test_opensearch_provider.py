@@ -73,6 +73,10 @@ async def test_database_relation_with_charm_libraries(
         # This test shouldn't take so long
         await ops_test.model.wait_for_idle(apps=ALL_APPS, timeout=1200, status="active")
 
+    # await ops_test.model.block_until(
+    #     lambda: ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", timeout=1000
+    # )
+
 
 @pytest.mark.client_relation
 async def test_database_usage(ops_test: OpsTest):
