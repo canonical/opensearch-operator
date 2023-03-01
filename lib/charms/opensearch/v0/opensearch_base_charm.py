@@ -809,6 +809,7 @@ class OpenSearchBaseCharm(CharmBase):
         if status == "green":
             self.status.clear(ClusterHealthRed, app=True)
             self.status.clear(ClusterHealthYellow, app=True)
+            self.status.clear(WaitingForBusyShards, app=True)
             return "green"
 
         # some primary shards are unassigned
