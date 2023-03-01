@@ -55,6 +55,16 @@ LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 
+# The unique Charmhub library identifier, never change it
+LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
+
 
 class OpenSearchProvider(Object):
     """Defines functionality for the 'provides' side of the 'opensearch-client' relation.

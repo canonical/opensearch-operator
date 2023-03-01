@@ -339,7 +339,10 @@ class OpenSearchDistribution(ABC):
     @property
     def roles(self) -> List[str]:
         """Get the list of the roles assigned to this node."""
-        nodes = self.request("GET", f"/_nodes/{self.node_id}")
+        try:
+            nodes = self.request("GET", f"/_nodes/{self.node_id}")
+        except OpenSearchHttpError:
+            return []
         return nodes["nodes"][self.node_id]["roles"]
 
     @property
