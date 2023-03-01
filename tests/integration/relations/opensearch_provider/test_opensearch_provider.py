@@ -71,7 +71,7 @@ async def test_database_relation_with_charm_libraries(
 
     async with ops_test.fast_forward():
         # This test shouldn't take so long
-        await ops_test.model.wait_for_idle(timeout=1200, status="active")
+        await ops_test.model.wait_for_idle(apps=ALL_APPS, timeout=1200, status="active")
 
     assert ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", vars(
         ops_test.model.applications[OPENSEARCH_APP_NAME]
