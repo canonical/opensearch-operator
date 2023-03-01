@@ -4,7 +4,7 @@
 """Utility classes and methods for getting cluster info, configuration info and suggestions."""
 import logging
 from random import choice
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
