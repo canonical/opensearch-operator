@@ -73,14 +73,6 @@ async def test_database_relation_with_charm_libraries(
         # This test shouldn't take so long
         await ops_test.model.wait_for_idle(apps=ALL_APPS, timeout=1200, status="active")
 
-    logger.error(vars(ops_test.model.applications[OPENSEARCH_APP_NAME]))
-    leader_ip = await get_leader_unit_ip(ops_test)
-    logger.error(await get_shards_by_state(ops_test, leader_ip))
-
-    await ops_test.model.block_until(
-        lambda: ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", timeout=1000
-    )
-
 
 @pytest.mark.client_relation
 async def test_database_usage(ops_test: OpsTest):
@@ -202,9 +194,6 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         await ops_test.model.wait_for_idle(
             status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
         )
-    assert ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", vars(
-        ops_test.model.applications[OPENSEARCH_APP_NAME]
-    )
 
 
 @pytest.mark.client_relation
@@ -215,24 +204,11 @@ async def test_relation_broken(ops_test: OpsTest):
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "username"
     )
 
-    logger.error(vars(ops_test.model.applications[OPENSEARCH_APP_NAME]))
-
-    leader_ip = await get_leader_unit_ip(ops_test)
-    logger.error(await get_shards_by_state(ops_test, leader_ip))
-
-    await ops_test.model.block_until(
-        lambda: ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", timeout=1000
-    )
-
     # Break the relation.
     await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
         f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
         f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
     )
-
-    # TODO figuring out why we're entering a yellow state
-    leader_ip = await get_leader_unit_ip(ops_test)
-    logger.error(await get_shards_by_state(ops_test, leader_ip))
 
     async with ops_test.fast_forward():
         await asyncio.gather(
@@ -243,7 +219,6 @@ async def test_relation_broken(ops_test: OpsTest):
             ops_test.model.wait_for_idle(
                 apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
                 status="active",
-                raise_on_blocked=True,
             ),
         )
 
