@@ -176,10 +176,6 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         application_name=SECONDARY_CLIENT_APP_NAME,
     )
 
-    await ops_test.model.block_until(
-        lambda: ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", timeout=1000
-    )
-
     async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.wait_for_idle(status="active", apps=ALL_APPS),
@@ -205,6 +201,10 @@ async def test_relation_broken(ops_test: OpsTest):
     # Retrieve the relation user.
     relation_user = await get_application_relation_data(
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "username"
+    )
+
+    await ops_test.model.block_until(
+        lambda: ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", timeout=1000
     )
 
     # Break the relation.
