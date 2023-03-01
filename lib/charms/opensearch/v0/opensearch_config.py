@@ -32,6 +32,10 @@ class OpenSearchConfig:
     def __init__(self, opensearch: OpenSearchDistribution):
         self._opensearch = opensearch
 
+    def load_node(self):
+        """Load the opensearch.yml config of the node."""
+        return self._opensearch.config.load(self.CONFIG_YML)
+
     def set_client_auth(self):
         """Configure TLS and basic http for clients."""
         # The security plugin will accept TLS client certs if certs but doesn't require them
