@@ -77,6 +77,10 @@ async def test_database_relation_with_charm_libraries(
     leader_ip = await get_leader_unit_ip(ops_test)
     logger.error(await get_shards_by_state(ops_test, leader_ip))
 
+    await ops_test.model.block_until(
+        lambda: ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", timeout=1000
+    )
+
 
 @pytest.mark.client_relation
 async def test_database_usage(ops_test: OpsTest):
