@@ -16,8 +16,8 @@ This tutorial assumes a basic understanding of the following:
 ### Minimum requirements
 Before we start, make sure your machine meets the following requirements:
 - Ubuntu 20.04 (Focal) or later.
-- 8GB of RAM.
-- 2 CPU cores.
+- 16GB of RAM.
+- 4 CPU cores.
 - At least 20GB of available storage.
 - Access to the internet for downloading the required snaps and charms.
 
@@ -211,7 +211,7 @@ Machine  State    Address       Inst id        Series  AZ  Message
 ---
 
 ## Connecting to OpenSearch
-> **!** *Disclaimer: this part of the tutorial accesses MongoDB via the `admin` user. **Do not** directly interface with the admin user in a production environment. In a production environment [always create a separate user](https://www.mongodb.com/docs/manual/tutorial/create-users/) and connect to MongoDB with that user instead. Later in the section covering Relations we will cover how to access MongoDB without the admin user.*
+> **!** *Disclaimer: this part of the tutorial accesses OpenSearch via the `admin` user. **Do not** directly interface with the admin user in a production environment. In a production environment [always create a separate user](https://www.mongodb.com/docs/manual/tutorial/create-users/) and connect to MongoDB with that user instead. Later in the section covering Relations we will cover how to access MongoDB without the admin user.*
 
 The first action most users take after installing MongoDB is accessing MongoDB. The easiest way to do this is via the MongoDB shell, with `mongosh`. You can read more about the MongoDB shell [here](https://www.mongodb.com/docs/mongodb-shell/). For this part of the Tutorial we will access MongoDB via  `mongosh`. Fortunately there is no need to install the Mongo shell, as `mongosh` is already installed on the units hosting the Charmed MongoDB application.
 
