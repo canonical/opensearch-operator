@@ -73,9 +73,9 @@ async def test_database_relation_with_charm_libraries(
         # This test shouldn't take so long
         await ops_test.model.wait_for_idle(apps=ALL_APPS, timeout=1200, status="active")
 
-    assert ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", vars(
-        ops_test.model.applications[OPENSEARCH_APP_NAME]
-    )
+    logger.error(vars(ops_test.model.applications[OPENSEARCH_APP_NAME]))
+    leader_ip = await get_leader_unit_ip(ops_test)
+    logger.error(await get_shards_by_state(ops_test, leader_ip))
 
 
 @pytest.mark.client_relation

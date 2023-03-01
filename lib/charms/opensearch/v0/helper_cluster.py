@@ -4,7 +4,7 @@
 """Utility classes and methods for getting cluster info, configuration info and suggestions."""
 import logging
 from random import choice
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -96,7 +96,7 @@ class ClusterTopology:
         return Node(data.name, data.roles + ["cluster_manager"], data.ip)
 
     @staticmethod
-    def max_cluster_manager_nodes(planned_units) -> (int, int):
+    def max_cluster_manager_nodes(planned_units) -> Tuple(int, int):
         """Get the max number of CM nodes in a cluster."""
         max_managers = planned_units
         if planned_units % 2 == 0:
