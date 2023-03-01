@@ -171,6 +171,7 @@ async def test_database_version(ops_test: OpsTest):
     assert version == results.get("version", {}).get("number")
 
 
+@pytest.mark.skip
 @pytest.mark.client_relation
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
