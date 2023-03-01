@@ -31,44 +31,48 @@ class ClusterTopology:
     def suggest_roles(nodes: List[Node], planned_units: int) -> List[str]:
         """Get roles for a Node.
 
-        For now, we don't allow to end-user control roles.
-        The logic here is:
-            — Half of the nodes should be CM-eligible.
-            — All others should not participate in the voting to speedup voting time.
-        """
-        nodes_by_roles = ClusterTopology.nodes_count_by_role(nodes)
+        This method should be read in the context of a "rolling" start -
+        only 1 unit at a time will call this.
 
-        max_cms, max_voters = ClusterTopology.max_cm_and_voter_nodes(planned_units)
+        For now, we don't allow to end-user control roles.
+        The logic here is, if number of planned units is:
+            — odd: "all" the nodes are cm_eligible nodes.
+            — even: "all - 1" are cm_eligible and 1 data node.
+        """
+        max_cms = ClusterTopology.max_cluster_manager_nodes(planned_units)
 
         base_roles = ["data", "ingest", "ml", "coordinating_only"]
 
-        if (
-            nodes_by_roles.get("cluster_manager", 0) + nodes_by_roles.get("voting_only", 0)
-            >= max_voters
-        ):
+        nodes_by_roles = ClusterTopology.nodes_count_by_role(nodes)
+        if nodes_by_roles.get("cluster_manager", 0) == max_cms:
             return base_roles
-
-        if nodes_by_roles.get("cluster_manager", 0) >= max_cms:
-            return base_roles + ["voting_only"]
 
         return base_roles + ["cluster_manager"]
 
     @staticmethod
+    def recompute_nodes_conf(nodes: List[Node]) -> Dict[str, Node]:
+        """Recompute the configuration of all the nodes."""
+        nodes_by_name = dict([(node.name, node) for node in nodes])
+
+        updated_node = ClusterTopology.node_with_new_roles(nodes)
+        if updated_node:
+            nodes_by_name[updated_node.name] = updated_node
+
+        return nodes_by_name
+
+    @staticmethod
     def node_with_new_roles(remaining_nodes: List[Node]) -> Optional[Node]:
         """Pick and recompute the roles of the best node to re-balance the cluster."""
-        max_cms, max_voters = ClusterTopology.max_cm_and_voter_nodes(len(remaining_nodes))
-        max_voting_only = max_voters - max_cms
-
-        nodes_by_roles = ClusterTopology.nodes_count_by_role(remaining_nodes)
-        current_cms = nodes_by_roles.get("cluster_manager", 0)
-        current_voting_only = nodes_by_roles.get("voting_only", 0)
-
-        # the nodes involved in the voting are intact, do nothing
-        if current_cms + current_voting_only == max_voters:
-            logger.debug("Suggesting NO changes to the nodes.")
-            return None
+        max_cms = ClusterTopology.max_cluster_manager_nodes(len(remaining_nodes))
 
         nodes_by_roles = ClusterTopology.nodes_by_role(remaining_nodes)
+        nodes_count_by_roles = ClusterTopology.nodes_count_by_role(remaining_nodes)
+        current_cms = nodes_count_by_roles.get("cluster_manager", 0)
+
+        # the nodes involved in the voting are intact, do nothing
+        if current_cms == max_cms:
+            logger.debug("Suggesting NO changes to the nodes.")
+            return None
 
         if current_cms > max_cms:
             # remove cm from a node
@@ -76,44 +80,29 @@ class ClusterTopology:
             logger.debug(f"Suggesting - removal of 'CM': {cm.name}")
             return Node(cm.name, [r for r in cm.roles if r != "cluster_manager"], cm.ip)
 
-        if current_voting_only > max_voting_only:
-            # remove voting_only from a node
-            voting_only = choice(nodes_by_roles["voting_only"])
-            logger.debug(f"Suggesting - removal of 'voting_only': {voting_only.name}")
-            return Node(
-                voting_only.name,
-                [r for r in voting_only.roles if r != "voting_only"],
-                voting_only.ip,
-            )
+        # when cm count smaller than expected
+        data_only_nodes = [
+            node for node in nodes_by_roles["data"] if "cluster_manager" not in node.roles
+        ]
 
-        exclude_roles = {"cluster_manager", "voting_only"}
-        data = choice(
-            [node for node in nodes_by_roles["data"] if not exclude_roles & (set(node.roles))]
-        )
+        # no data-only node available to change, leave
+        if not data_only_nodes:
+            logger.debug("Suggesting NO changes to the nodes.")
+            return None
 
-        if current_cms < max_cms:
-            # add cm to a data node (that doesn't have voting_only)
-            logger.debug(f"Suggesting - Addition of 'CM' to data: {data.name}")
-            return Node(data.name, data.roles + ["cluster_manager"], data.ip)
-
-        # add voting_only to a data node
-        logger.debug(f"Suggesting - Addition of 'voting_only' to data: {data.name}")
-        return Node(data.name, data.roles + ["voting_only"], data.ip)
+        # add cm to a data only (non cm) node
+        data = choice(data_only_nodes)
+        logger.debug(f"Suggesting - Addition of 'CM' to data: {data.name}")
+        return Node(data.name, data.roles + ["cluster_manager"], data.ip)
 
     @staticmethod
-    def max_cm_and_voter_nodes(planned_units) -> (int, int):
-        """Get the max number of CMs and voters on a cluster."""
+    def max_cluster_manager_nodes(planned_units) -> (int, int):
+        """Get the max number of CM nodes in a cluster."""
         max_managers = planned_units
-        max_voters = planned_units
         if planned_units % 2 == 0:
             max_managers -= 1
-            max_voters -= 1
 
-        if max_managers > 3:
-            # for a cluster of +3 nodes, we want to have half of the nodes as CMs
-            max_managers = max_managers // 2 + 1
-
-        return max_managers, max_voters
+        return max_managers
 
     @staticmethod
     def get_cluster_managers_ips(nodes: List[Node]) -> List[str]:

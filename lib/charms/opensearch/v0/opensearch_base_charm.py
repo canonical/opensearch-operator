@@ -39,7 +39,9 @@ from charms.opensearch.v0.helper_databag import (
 )
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
+    is_reachable,
     reachable_hosts,
+    unit_ip,
     units_ips,
 )
 from charms.opensearch.v0.helper_security import (
@@ -76,6 +78,7 @@ from ops.charm import (
     LeaderElectedEvent,
     RelationBrokenEvent,
     RelationChangedEvent,
+    RelationCreatedEvent,
     RelationDepartedEvent,
     RelationJoinedEvent,
     StartEvent,
@@ -130,6 +133,9 @@ class OpenSearchBaseCharm(CharmBase):
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
+        self.framework.observe(
+            self.on[PeerRelationName].relation_created, self._on_peer_relation_created
+        )
         self.framework.observe(
             self.on[PeerRelationName].relation_joined, self._on_peer_relation_joined
         )
@@ -192,8 +198,8 @@ class OpenSearchBaseCharm(CharmBase):
         self.unit.status = WaitingStatus(RequestUnitServiceOps.format("start"))
         self.on[self.service_manager.name].acquire_lock.emit(callback_override="_start_opensearch")
 
-    def _on_peer_relation_joined(self, event: RelationJoinedEvent):
-        """New node joining the cluster."""
+    def _on_peer_relation_created(self, event: RelationCreatedEvent):
+        """Event received by the new node joining the cluster."""
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
         # In the case of the first units before TLS is initialized
@@ -210,6 +216,30 @@ class OpenSearchBaseCharm(CharmBase):
 
         # Store the "Admin" certificate, key and CA on the disk of the new unit
         self._store_tls_resources(CertType.APP_ADMIN, current_secrets, override_admin=False)
+
+    def _on_peer_relation_joined(self, event: RelationJoinedEvent):
+        """Event received by all units when a new node joins the cluster."""
+        if not self.unit.is_leader():
+            return
+
+        if (
+            not self.peers_data.get(Scope.APP, "security_index_initialised")
+            or not self.opensearch.is_node_up()
+        ):
+            return
+
+        new_unit_host = unit_ip(self, event.unit, PeerRelationName)
+        if not is_reachable(new_unit_host, self.opensearch.port):
+            event.defer()
+            return
+
+        try:
+            nodes = self._get_nodes(True)
+        except OpenSearchHttpError:
+            event.defer()
+            return
+
+        self._compute_and_broadcast_updated_topology(nodes)
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
@@ -239,7 +269,7 @@ class OpenSearchBaseCharm(CharmBase):
                 self.opensearch_exclusions.cleanup()
 
         # Run restart node on the concerned unit
-        self._restart_unit_with_conf_if_needed()
+        self._reconfigure_and_restart_unit_if_needed()
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
@@ -252,15 +282,6 @@ class OpenSearchBaseCharm(CharmBase):
             if node.name != event.departing_unit.name.replace("/", "-")
         ]
         self._compute_and_broadcast_updated_topology(remaining_nodes)
-
-    def _compute_and_broadcast_updated_topology(self, current_nodes: Optional[List[Node]]):
-        """Compute cluster topology and broadcast role to change if any."""
-        if not current_nodes:
-            return
-
-        node_to_update = ClusterTopology.node_with_new_roles(current_nodes)
-        if node_to_update:
-            self.peers_data.put_object(Scope.APP, "update-node-config", vars(node_to_update))
 
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):
         """Triggered when removing unit, Prior to the storage being detached."""
@@ -449,7 +470,7 @@ class OpenSearchBaseCharm(CharmBase):
         return self._are_all_tls_resources_stored()
 
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
-        """Start OpenSearch if all resources configured."""
+        """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if self.opensearch.is_started():
             self._post_start_init()
             self.status.clear(WaitingToStart)
@@ -475,18 +496,12 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.peers_data.put(Scope.UNIT, "starting", True)
 
-        updated_node_conf: Optional[Node] = None
-        if self.peers_data.has(Scope.UNIT, "update-node-config"):
-            updated_node_conf = Node.from_dict(
-                self.peers_data.get_object(Scope.UNIT, "update-node-config")
-            )
-
         try:
             # Retrieve the nodes of the cluster, needed to configure this node
             nodes = self._get_nodes(False)
 
             # Set the configuration of the node
-            self._set_node_conf(nodes, updated_node_conf.roles if updated_node_conf else None)
+            self._set_node_conf(nodes)
         except OpenSearchHttpError:
             event.defer()
             self.peers_data.delete(Scope.UNIT, "starting")
@@ -523,13 +538,6 @@ class OpenSearchBaseCharm(CharmBase):
 
         # Remove the 'starting' flag on the unit
         self.peers_data.delete(Scope.UNIT, "starting")
-
-        current_update_node_conf = self.peers_data.get_object(Scope.UNIT, "update-node-config")
-        if current_update_node_conf:
-            # set "last-update-node-config" to the latest applied config to prevent further updates
-            self.peers_data.put_object(
-                Scope.UNIT, "last-update-node-config", current_update_node_conf
-            )
 
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
@@ -682,9 +690,21 @@ class OpenSearchBaseCharm(CharmBase):
                 return []
             raise
 
-    def _set_node_conf(self, nodes: List[Node], roles: Optional[List[str]] = None) -> None:
+    def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
-        computed_roles = roles or ClusterTopology.suggest_roles(nodes, self.app.planned_units())
+        # retrieve the updated conf if exists
+        update_conf = (self.peers_data.get_object(Scope.APP, "nodes_config") or {}).get(
+            self.unit_name
+        )
+        if update_conf:
+            update_conf = Node.from_dict(update_conf)
+
+        # set default generated roles, or the ones passed in the updated conf
+        computed_roles = (
+            update_conf.roles
+            if update_conf
+            else ClusterTopology.suggest_roles(nodes, self.app.planned_units())
+        )
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
@@ -720,32 +740,38 @@ class OpenSearchBaseCharm(CharmBase):
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
         self.opensearch_config.cleanup_bootstrap_conf()
 
-    def _restart_unit_with_conf_if_needed(self):
-        """Trigger a restart event on the current unit if a recomputed conf was passed."""
-        node_conf_update_app = self.peers_data.get_object(Scope.APP, "update-node-config")
-        if not node_conf_update_app:
+    def _reconfigure_and_restart_unit_if_needed(self):
+        """Reconfigure the current unit if a new config was computed for it, then restart."""
+        nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
+        if not nodes_config:
             return
 
-        node = Node.from_dict(node_conf_update_app)
-        if node.name != self.unit_name:
+        new_node_conf = nodes_config.get(self.unit_name)
+        if not new_node_conf and not self.opensearch.is_node_up():
+            # the conf could not be computed / broadcasted, because this node is
+            # "starting" and is not online "yet" - either barely being configured (i.e. TLS)
+            # or waiting to start.
             return
 
-        prev_update_node = self.peers_data.get_object(Scope.UNIT, "last-update-node-config")
-        if prev_update_node:
-            prev_update_node = Node.from_dict(prev_update_node)
-
-        # already updated
-        if node == prev_update_node:
-            return
-
-        node_conf_update_unit = self.peers_data.get_object(Scope.UNIT, "update-node-config")
-        if not node_conf_update_unit:  # already emitted update / restart directive
-            self.peers_data.put_object(Scope.UNIT, "update-node-config", node_conf_update_app)
+        if new_node_conf:
+            new_node_conf = Node.from_dict(new_node_conf)
+            current_conf = self.opensearch_config.load_node()
+            if sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles):
+                # no conf change (roles for now)
+                return
 
         self.unit.status = WaitingStatus(WaitingToStart)
         self.on[self.service_manager.name].acquire_lock.emit(
             callback_override="_restart_opensearch"
         )
+
+    def _compute_and_broadcast_updated_topology(self, current_nodes: Optional[List[Node]]):
+        """Compute cluster topology and broadcast node configs (roles for now) to change if any."""
+        if not current_nodes:
+            return
+
+        updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
+        self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
 
     def _apply_cluster_health(self, wait_for_green_first: bool = False) -> str:
         """Fetch cluster health and set it on the app status."""
