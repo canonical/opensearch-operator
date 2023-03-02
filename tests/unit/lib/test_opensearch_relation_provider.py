@@ -157,6 +157,7 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charm.OpenSearchOperatorCharm._purge_users")
     def test_on_relation_broken(self, _, __, _is_node_up, _remove_users, _unit_departing):
         event = MagicMock()
+        event.relation.id = 0
         depart_flag = self.opensearch_provider._depart_flag(event.relation)
 
         self.harness.set_leader(False)

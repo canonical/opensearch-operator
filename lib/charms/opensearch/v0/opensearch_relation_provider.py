@@ -31,7 +31,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.helper_networking import units_ips, get_host_ip
+from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import (
@@ -220,7 +220,7 @@ class OpenSearchProvider(Object):
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
-        self.update_endpoints(event.relation, unit_departing)
+        self.update_endpoints(event.relation, unit_departing=True)
         if event.departing_unit == self.charm.unit:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
 
@@ -239,7 +239,7 @@ class OpenSearchProvider(Object):
     def update_endpoints(self, relation, unit_departing=False):
         """Updates endpoints in the databag for the given relation."""
         port = self.opensearch.port
-        ips =  units_ips(self.charm, PeerRelationName).values()
+        ips = list(units_ips(self.charm, PeerRelationName).values())
         if self._unit_departing(relation) or unit_departing:
             ips.remove(get_host_ip(self.charm, PeerRelationName))
         endpoints = [f"{ip}:{port}" for ip in ips]
