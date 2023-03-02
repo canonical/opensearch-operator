@@ -10,7 +10,6 @@ import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.helpers import get_shards_by_state
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
 from tests.integration.helpers import (
     MODEL_CONFIG,
