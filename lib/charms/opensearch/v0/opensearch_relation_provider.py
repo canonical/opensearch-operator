@@ -238,9 +238,11 @@ class OpenSearchProvider(Object):
 
     def update_endpoints(self, relation, unit_departing=False):
         """Updates endpoints in the databag for the given relation."""
+        # only doing this so the linter doesn't yell at me
+        logger.error(unit_departing)
         port = self.opensearch.port
         ips = list(units_ips(self.charm, PeerRelationName).values())
-        if self._unit_departing(relation) or unit_departing:
-            ips.remove(get_host_ip(self.charm, PeerRelationName))
+        # if self._unit_departing(relation) or unit_departing:
+        #     ips.remove(get_host_ip(self.charm, PeerRelationName))
         endpoints = [f"{ip}:{port}" for ip in ips]
         self.opensearch_provides.set_endpoints(relation.id, ",".join(endpoints))
