@@ -36,7 +36,6 @@ NUM_UNITS = 3
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.client_relation
 async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_charm):
     """Test basic functionality of relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
@@ -70,7 +69,6 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
         await ops_test.model.wait_for_idle(apps=ALL_APPS, timeout=1200, status="active")
 
 
-@pytest.mark.client_relation
 async def test_index_usage(ops_test: OpsTest):
     """Check we can update and delete things.
 
@@ -105,7 +103,6 @@ async def test_index_usage(ops_test: OpsTest):
     )
 
 
-@pytest.mark.client_relation
 async def test_bulk_index_usage(ops_test: OpsTest):
     """Check we can update and delete things using bulk api."""
     bulk_payload = """{ "index" : { "_index": "albums", "_id" : "2" } }
@@ -143,7 +140,6 @@ async def test_bulk_index_usage(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
-@pytest.mark.client_relation
 async def test_version(ops_test: OpsTest):
     """Check version reported in the databag is consistent with the version on the charm."""
     run_version_request = await run_request(
@@ -162,8 +158,6 @@ async def test_version(ops_test: OpsTest):
     assert version == results.get("version", {}).get("number")
 
 
-@pytest.mark.skip
-@pytest.mark.client_relation
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
     logger.error(vars(ops_test.model.applications[OPENSEARCH_APP_NAME]))
@@ -193,7 +187,6 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         )
 
 
-@pytest.mark.client_relation
 async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag."""
 
@@ -218,7 +211,6 @@ async def test_scaling(ops_test: OpsTest):
     assert await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
 
 
-@pytest.mark.client_relation
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
