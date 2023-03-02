@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 
 
-@pytest.mark.tls_tests
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
@@ -57,7 +56,6 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.tls_tests
 @pytest.mark.abort_on_fail
 async def test_security_index_initialised(ops_test: OpsTest) -> None:
     """Test that the security index is well initialised."""
@@ -66,7 +64,6 @@ async def test_security_index_initialised(ops_test: OpsTest) -> None:
     assert await check_security_index_initialised(ops_test, leader_unit_ip)
 
 
-@pytest.mark.tls_tests
 @pytest.mark.abort_on_fail
 async def test_tls_configured(ops_test: OpsTest) -> None:
     """Test that TLS is enabled when relating to the TLS Certificates Operator."""
@@ -74,7 +71,6 @@ async def test_tls_configured(ops_test: OpsTest) -> None:
         assert await check_unit_tls_configured(ops_test, unit_ip, unit_name)
 
 
-@pytest.mark.tls_tests
 @pytest.mark.abort_on_fail
 async def test_cluster_formation_after_tls(ops_test: OpsTest) -> None:
     """Test that the cluster formation is successful after TLS setup."""
