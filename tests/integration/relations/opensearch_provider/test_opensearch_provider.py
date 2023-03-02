@@ -173,7 +173,6 @@ async def test_database_version(ops_test: OpsTest):
 @pytest.mark.client_relation
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
-    logger.error(vars(ops_test.model.applications[OPENSEARCH_APP_NAME]))
     # Deploy secondary application.
     await ops_test.model.deploy(
         application_charm,
