@@ -240,6 +240,7 @@ class OpenSearchProvider(Object):
         """Updates endpoints in the databag for the given relation."""
         # only doing this so the linter doesn't yell at me
         logger.error(unit_departing)
+        logger.error(get_host_ip(self.charm, PeerRelationName))
         port = self.opensearch.port
         ips = list(units_ips(self.charm, PeerRelationName).values())
         # if self._unit_departing(relation) or unit_departing:
