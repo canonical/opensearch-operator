@@ -96,7 +96,7 @@ class ClusterTopology:
         return Node(data.name, data.roles + ["cluster_manager"], data.ip)
 
     @staticmethod
-    def max_cluster_manager_nodes(planned_units) -> (int, int):
+    def max_cluster_manager_nodes(planned_units) -> int:
         """Get the max number of CM nodes in a cluster."""
         max_managers = planned_units
         if planned_units % 2 == 0:

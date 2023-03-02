@@ -311,7 +311,7 @@ class OpenSearchBaseCharm(CharmBase):
             if not self.alt_hosts:
                 raise OpenSearchHAError(NoNodeUpInCluster)
 
-            health = self._apply_cluster_health(wait_for_green_first=True)
+            health = self._apply_cluster_health(wait_for_green_first=True, use_localhost=False)
             if health == "red":
                 raise OpenSearchHAError(ClusterHealthRed)
         finally:
@@ -773,18 +773,30 @@ class OpenSearchBaseCharm(CharmBase):
         updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
         self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
 
-    def _apply_cluster_health(self, wait_for_green_first: bool = False) -> str:
+    def _apply_cluster_health(
+        self, wait_for_green_first: bool = False, use_localhost: bool = True
+    ) -> str:
         """Fetch cluster health and set it on the app status."""
         response: Optional[Dict[str, any]] = None
         if wait_for_green_first:
             try:
-                response = ClusterState.health(self.opensearch, True, alt_hosts=self.alt_hosts)
+                response = ClusterState.health(
+                    self.opensearch,
+                    True,
+                    host=self.unit_ip if use_localhost else None,
+                    alt_hosts=self.alt_hosts,
+                )
             except OpenSearchHttpError:
                 # it timed out, settle with current status, fetched next without the 1min wait
                 pass
 
         if not response:
-            response = ClusterState.health(self.opensearch, False, alt_hosts=self.alt_hosts)
+            response = ClusterState.health(
+                self.opensearch,
+                False,
+                host=self.unit_ip if use_localhost else None,
+                alt_hosts=self.alt_hosts,
+            )
 
         status = response["status"].lower()
         if not self.unit.is_leader():
@@ -797,6 +809,7 @@ class OpenSearchBaseCharm(CharmBase):
         if status == "green":
             self.status.clear(ClusterHealthRed, app=True)
             self.status.clear(ClusterHealthYellow, app=True)
+            self.status.clear(WaitingForBusyShards, app=True)
             return "green"
 
         # some primary shards are unassigned

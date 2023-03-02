@@ -8,15 +8,6 @@ is irrelevant to OpenSearch. In this relation, the application charm should have
 & index security policies, and therefore differentiating between types of network endpoints is
 unnecessary.
 
-When specifying user permissions for this relation, a client application must send this charm valid
-JSON containing the following fields:
-
-{
-    "roles": ["A list of default opensearch roles to apply"],
-    "permissions": ["A list of default opensearch permissions to apply"],
-    "action_groups": ["A list of default opensearch action groups to apply"],
-}
-
 A role will be created for the relation with the permissions and action groups applied, and these
 roles will be mapped to a dedicated user for the relation, which will be removed with the relation.
 Default security values can be found in the opensearch documentation here:
@@ -48,6 +39,16 @@ from ops.framework import Object
 from ops.model import BlockedStatus, Relation
 
 logger = logging.getLogger(__name__)
+
+# The unique Charmhub library identifier, never change it
+LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 
 class OpenSearchProvider(Object):
@@ -143,6 +144,9 @@ class OpenSearchProvider(Object):
             access_control: A dict of roles, permissions, and action groups to be applied to the
                 user. A new role will be created to contain the requested permissions and action
                 groups.
+
+        Raises:
+            OpenSearchUserMgmtError if user creation fails
         """
         roles = access_control.get("roles")
         permissions = access_control.get("permissions")
