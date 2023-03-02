@@ -175,8 +175,9 @@ class OpenSearchDistribution(ABC):
             retries: number of retries
 
         Raises:
-            requests.HTTPError if request runs successfully, but returns an error code
-            OpenSearchHttpError if request fails to run
+            ValueError if method or endpoint are missing
+            OpenSearchHttpError if hosts are unreachable
+            requests.HTTPError if connection to opensearch fails
         """
 
         def full_urls() -> List[str]:

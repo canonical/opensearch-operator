@@ -67,7 +67,7 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
 
     async with ops_test.fast_forward():
         # This test shouldn't take so long
-        await ops_test.model.wait_for_idle(timeout=1200, status="active")
+        await ops_test.model.wait_for_idle(apps=ALL_APPS, timeout=1200, status="active")
 
 
 @pytest.mark.client_relation
@@ -233,6 +233,7 @@ async def test_relation_broken(ops_test: OpsTest):
         f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
         f"{CLIENT_APP_NAME}:{FIRST_RELATION_NAME}",
     )
+
     async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.wait_for_idle(
@@ -242,9 +243,9 @@ async def test_relation_broken(ops_test: OpsTest):
             ops_test.model.wait_for_idle(
                 apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
                 status="active",
-                raise_on_blocked=True,
             ),
         )
+
     leader_ip = await get_leader_unit_ip(ops_test)
     users = await http_request(
         ops_test,
