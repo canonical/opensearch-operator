@@ -163,6 +163,9 @@ class OpenSearchProvider(Object):
             access_control: A dict of roles, permissions, and action groups to be applied to the
                 user. A new role will be created to contain the requested permissions and action
                 groups.
+
+        Raises:
+            OpenSearchUserMgmtError if user creation fails
         """
         roles = access_control.get("roles")
         permissions = access_control.get("permissions")
