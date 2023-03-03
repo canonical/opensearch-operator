@@ -1,12 +1,25 @@
 # Charmed MongoDB tutorial
 The Charmed OpenSearch Operator delivers automated operations management from [day 0 to day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/) on the [OpenSearch](https://github.com/opensearch-project/OpenSearch/) document database. It is an open source, end-to-end, production-ready data platform [on top of Juju](https://juju.is/). This tutorial will cover the following:
-- [Set up your environment using LXD and Juju.](#setting-up-your-environment)
-- [Deploy OpenSearch using a single command.](#deploy-charmed-opensearch)
-- [Enable secure transactions with TLS.](#transport-layer-security-tls)
-- [Integrate other applications with OpenSearch using Juju Relations.](#relations)
-- [Access the REST API and query indices.](#connecting-to-opensearch)
-- [Replicate your OpenSearch cluster to add High Availability.](#scale-charmed-opensearch)
-- [Change the admin password.](#passwords)
+- [Charmed MongoDB tutorial](#charmed-mongodb-tutorial)
+    - [Minimum requirements](#minimum-requirements)
+  - [Setting up your environment](#setting-up-your-environment)
+    - [Prepare LXD](#prepare-lxd)
+    - [Install and prepare Juju](#install-and-prepare-juju)
+    - [Setting Kernel Parameters](#setting-kernel-parameters)
+  - [Deploy Charmed OpenSearch](#deploy-charmed-opensearch)
+  - [Transport Layer Security (TLS)](#transport-layer-security-tls)
+    - [Configure TLS](#configure-tls)
+    - [Enable TLS](#enable-tls)
+  - [Relations](#relations)
+    - [Relate to OpenSearch](#relate-to-opensearch)
+    - [Create and Access OpenSearch Indices](#create-and-access-opensearch-indices)
+    - [Remove the user](#remove-the-user)
+  - [Scale Charmed OpenSearch](#scale-charmed-opensearch)
+    - [Remove replicas](#remove-replicas)
+  - [Next Steps](#next-steps)
+    - [Remove Charmed OpenSearch and Juju](#remove-charmed-opensearch-and-juju)
+    - [License:](#license)
+    - [Trademark Notice](#trademark-notice)
 
 This tutorial assumes a basic understanding of the following:
 - Basic linux terminal commands.
@@ -217,7 +230,7 @@ Relations, or what Juju documentation [describes as Integrations](https://juju.i
 The best way to create a user and password for manual use (i.e. connecting to opensearch directly using `curl`, which is what we'll be doing later) is to add a relation between Charmed Opensearch and the [Data Integrator Charm](https://charmhub.io/data-integrator). This is a bare-bones charm that allows for central management of database users, providing support for different kinds of data platforms (e.g. MongoDB, MySQL, PostgreSQL, Kafka, etc) with a consistent, opinionated and robust user experience. In order to deploy the Data Integrator Charm we can use the command `juju deploy` we have learned above:
 
 ```shell
-juju deploy data-integrator --channel edge --config index-name=test-index
+juju deploy data-integrator --channel edge --config index-name=test-index --config extra-user-roles=admin
 ```
 The expected output:
 ```
@@ -227,10 +240,10 @@ Deploying "data-integrator" from charm-hub charm "data-integrator"...
 
 Wait for the data-integrator charm to reach an active idle state, which shouldn't take too long.
 
-### Relate to MongoDB
+### Relate to OpenSearch
 Now that the Database Integrator Charm has been set up, we can relate it to Charmed OpenSearch. This will automatically create a username, password, and CA cert for the Database Integrator Charm. Relate the two applications with:
 ```shell
-juju relate data-integrator mongodb
+juju relate data-integrator opensearch
 ```
 Wait for `juju status --watch 1s` to show:
 ```
@@ -243,7 +256,7 @@ data-integrator               active      1  data-integrator      edge       3  
 opensearch                    active      2  opensearch           dpe/edge   96  no
 
 Unit                    Workload  Agent  Machine  Public address  Ports      Message
-data-integrator/0*      active    idle   5        10.23.62.216               received mongodb credentials
+data-integrator/0*      active    idle   5        10.23.62.216               received opensearch credentials
 opensearch/0*           active    idle   0        10.23.62.156
 
 Machine  State    Address       Inst id        Series  AZ  Message
@@ -274,276 +287,206 @@ This should output something like: TODO VERIFY
     started: 2022-12-06 10:33:24 +0000 UTC
 ```
 
-Save the ca-cert, username, and password.
+Save the ca-cert, username, and password, because you'll need them in the next section.
 
-### Access the related database
-Notice that in the previous step when you typed `juju run-action data-integrator/leader get-credentials --wait` the command not only outputted the username, password, and database, but also outputted the URI. This means you do not have to generate the URI yourself. To connect to this URI first ssh into `mongodb/0`:
-```shell
-juju ssh mongodb/0
-```
-Then access `mongosh` with the URI that you copied above:
+### Create and Access OpenSearch Indices
 
-```shell
-mongosh "<uri copied from juju run-action data-integrator/leader get-credentials --wait>"
-```
-*Note: be sure you wrap the URI in `"` with no trailing whitespace*.
+You can access the opensearch REST API any way you prefer, but in this tutorial we're going to use `curl`. Get the IP of an opensearch node from the output of `juju status` (any of the nodes should work fine), and store the CA cert in a local file. Run the following command, swapping the values where necessary:
 
-You will now be in the mongo shell as the user created for this relation. When you relate two applications Charmed MongoDB automatically sets up a user and database for you. Enter `db.getName()` into the MongoDB shell, this will output:
-```shell
-test-database
-```
-This is the name of the database we specified when we first deployed the `data-integrator` charm. To create a collection in the "test-database" and then show the collection enter:
-```shell
-db.createCollection("test-collection")
-show collections
-```
-Now insert a document into this database:
-```shell
-db.test_collection.insertOne(
-  {
-    First_Name: "Jammy",
-    Last_Name: "Jellyfish",
-  })
-```
-You can verify this document was inserted by running:
-```shell
-db.test_collection.find()
+```bash
+# TODO test this with data-integrator output
+curl --cacert demo-ca.chain -XGET https://username:password@opensearch_ip:9200/
 ```
 
-Now exit the MongoDB shell by typing:
-```shell
-exit
+Sending a `GET` request to this `/` endpoint should return some basic information about your opensearch deployment, which should look something like this:
+
+```json
+{
+  "name" : "opensearch-1",
+  "cluster_name" : "opensearch-test-opensearch-provider-tk22",
+  "cluster_uuid" : "JH6o9FPSS0OU5jz_xcHmQg",
+  "version" : {
+    "distribution" : "opensearch",
+    "number" : "2.4.1",
+    "build_type" : "tar",
+    "build_hash" : "f2f809ea280ffba217451da894a5899f1cec02ab",
+    "build_date" : "2022-12-12T22:17:42.341124910Z",
+    "build_snapshot" : false,
+    "lucene_version" : "9.4.2",
+    "minimum_wire_compatibility_version" : "7.10.0",
+    "minimum_index_compatibility_version" : "7.0.0"
+  },
+  "tagline" : "The OpenSearch Project: https://opensearch.org/"
+}
 ```
-Now you should be back in the host of Charmed MongoDB (`mongodb/0`). To exit this host type:
-```shell
-exit
+
+If this command fails, ensure the opensearch units are all in an active-idle state you've configured the data-integrator charm to set `extra_user_roles=admin`.
+
+The command we just ran used the `--cacert` flag to pass in the ca chain generated by the TLS operator, ensuring secure transmission between our local machine and the opensearch node. To recap, the CA chain is generated by the TLS operator, and is passed over to the opensearch charm, which provides this cert in its databag to any application that relates to it. using the `opensearch-client` relation interface. When developing charms that relate to the opensearch operator, ensure you use this cert to authenticate communication.
+
+To add some data, run the following command:
+
+```bash
+curl --cacert test-ca.chain \
+  -XPOST https://username:password@opensearch_ip:9200/albums/_doc/1 \
+  -d '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}' \
+  -H 'Content-Type: application/json'
 ```
-You should now be shell you started in where you can interact with Juju and LXD.
+This command uses the same authentication to sent a `POST` request to the same node as before, but it sends a specific JSON payload to a specific document address. The output should look something like this:
+
+```json
+{
+  "_index":"albums",
+  "_id":"1",
+  "_version":2,
+  "result":"updated",
+  "_shards": {
+    "total":2,
+    "successful":2,
+    "failed":0
+  },
+  "_seq_no":4,
+  "_primary_term":1
+}
+```
+
+Note the `"failed":0` response, under `"_shards"`.
+
+Use the following command to query this document:
+
+```bash
+curl --cacert test-ca.chain -XGET https://username:password@opensearch_ip:9200/albums/_doc/1
+```
+
+This query should output something like the following:
+
+```json
+{
+  "_index":"albums",
+  "_id":"1",
+  "_version":2,
+  "_seq_no":4,
+  "_primary_term":1,
+  "found":true,
+  "_source":{
+    "artist": "Vulfpeck",
+    "genre": ["Funk", "Jazz"],
+    "title": "Thrill of the Arts"
+  }
+}
+```
+
+To add data in bulk using the [OpenSearch Bulk API](https://opensearch.org/docs/latest/api-reference/document-apis/bulk/), copy and paste the following data into a file called `bulk-albums.json`, ensuring that you keep the newline at the end of the file:
+
+```json
+{ "index" : { "_index": "albums", "_id" : "2" } }
+{"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
+{ "index" : { "_index": "albums", "_id" : "3" } }
+{"artist": "Lydian Collective", "genre": ["Jazz"],  "title": "Adventure"}
+{ "index" : { "_index": "albums", "_id" : "4" } }
+{"artist": "Rush", "genre": ["Prog"],  "title": "Moving Pictures"}
+
+```
+
+Then, to send this data to the bulk endpoint, run the following command:
+
+```bash
+curl --cacert test-ca.chain -XPOST https://username:password@opensearch_ip:9200/_bulk --data-binary @bulk-albums.json  -H 'Content-Type: application/json'
+```
+
+To test this command worked, we can run a search query for Jazz in our albums index, using the following command:
+```bash
+curl --cacert test-ca.chain -XGET https://username:password@opensearch_ip:9200/albums/_search?q=Jazz
+```
+
+This should return a JSON response with all the Jazz albums in the index:
+
+```json
+{
+  "took": 35,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 3,
+      "relation": "eq"
+    },
+    "max_score": 0.4121628,
+    "hits": [{
+      "_index": "albums",
+      "_id": "1",
+      "_score": 0.4121628,
+      "_source": {
+        "artist": "Vulfpeck",
+        "genre": ["Funk", "Jazz"],
+        "title": "Thrill of the Arts"
+      }
+    }, {
+      "_index": "albums",
+      "_id": "2",
+      "_score": 0.4121628,
+      "_source": {
+        "artist": "Herbie Hancock",
+        "genre": ["Jazz"],
+        "title": "Head Hunters"
+      }
+    }, {
+      "_index": "albums",
+      "_id": "3",
+      "_score": 0.4121628,
+      "_source": {
+        "artist": "Lydian Collective",
+        "genre": ["Jazz"],
+        "title": "Adventure"
+      }
+    }]
+  }
+}
+```
 
 ### Remove the user
 To remove the user, remove the relation. Removing the relation automatically removes the user that was created when the relation was created. Enter the following to remove the relation:
 ```shell
-juju remove-relation mongodb data-integrator
+juju remove-relation opensearch data-integrator
 ```
 
-Now try again to connect to the same URI you just used in [Access the related database](#access-the-related-database):
-```shell
-juju ssh mongodb/0
-mongosh "<uri copied from juju run-action data-integrator/leader get-credentials --wait>"
-```
-*Note: be sure you wrap the URI in `"` with no trailing whitespace*.
+Now try again to connect in the same way as the previous section
 
-This will output an error message:
+```bash
+# TODO test this with data-integrator output
+curl --cacert demo-ca.chain -XGET https://username:password@opensearch_ip:9200/
 ```
-Current Mongosh Log ID: 638f5ffbdbd9ec94c2e58456
-Connecting to:    mongodb://<credentials>@10.23.62.38,10.23.62.219/mongodb?replicaSet=mongodb&authSource=admin&appName=mongosh+1.6.1
-MongoServerError: Authentication failed.
-```
-As this user no longer exists. This is expected as `juju remove-relation mongodb data-integrator` also removes the user.
 
-Now exit the MongoDB shell by typing:
-```shell
-exit
+This should output something like the following error:
 ```
-Now you should be back in the host of Charmed MongoDB (`mongodb/0`). To exit this host type:
-```shell
-exit
+Unauthorized
 ```
-You should now be shell you started in where you can interact with Juju and LXD.
 
-If you wanted to recreate this user all you would need to do is relate the the two applications again:
+If you wanted to recreate this user all you would need to do is relate the the two applications and run the same action on data-integrator to get the same credentials:
 ```shell
-juju relate data-integrator mongodb
-```
-Re-relating generates a new password for this user, and therefore a new URI you can see the new URI with:
-```shell
+juju relate data-integrator opensearch
 juju run-action data-integrator/leader get-credentials --wait
 ```
-Save the result listed with `uris:`.
 
-You can connect to the database with this new URI:
-```shell
-juju ssh mongodb/0
-mongosh "<uri copied from juju run-action data-integrator/leader get-credentials --wait>"
-```
-*Note: be sure you wrap the URI in `"` with no trailing whitespace*.
-
-From there if you enter `db.test_collection.find()` you will see all of your original documents are still present in the database.
-
-
----
-
-## Connecting to OpenSearch
-> **!** *Disclaimer: this part of the tutorial accesses OpenSearch via the `admin` user. **Do not** directly interface with the admin user in a production environment. In a production environment [always create a separate user](https://www.mongodb.com/docs/manual/tutorial/create-users/) and connect to MongoDB with that user instead. Later in the section covering Relations we will cover how to access MongoDB without the admin user.*
-
-The first action most users take after installing MongoDB is accessing MongoDB. The easiest way to do this is via the MongoDB shell, with `mongosh`. You can read more about the MongoDB shell [here](https://www.mongodb.com/docs/mongodb-shell/). For this part of the Tutorial we will access MongoDB via  `mongosh`. Fortunately there is no need to install the Mongo shell, as `mongosh` is already installed on the units hosting the Charmed MongoDB application.
-
-### MongoDB URI
-Connecting to the database requires a Uniform Resource Identifier (URI), MongoDB expects a [MongoDB specific URI](https://www.mongodb.com/docs/manual/reference/connection-string/). The URI for MongoDB contains information which is used to authenticate us to the database. We use a URI of the format:
-```shell
-mongodb://<username>:<password>@<hosts>/<database name>?replicaSet=<replica set name>
+You can connect to the database with this new username and password:
+```bash
+curl --cacert test-ca.chain -XGET https://new_username:new_password@opensearch_ip:9200/albums/_search?q=Jazz
 ```
 
-Connecting via the URI requires that you know the values for `username`, `password`, `hosts`, `database name`, and the `replica set name`. We will show you how to retrieve the necessary fields and set them to environment variables.
+Note that the data in our index has not changed.
 
-**Retrieving the username:** In this case, we are using the `admin` user to connect to MongoDB. Use `admin` as the username:
-```shell
-export DB_USERNAME="admin"
-```
-
-**Retrieving the password:** The password can be retrieved by running the `get-password` action on the Charmed MongoDB application:
-```shell
-juju run-action mongodb/leader get-password --wait
-```
-Running the command should output:
-```yaml
-unit-mongodb-0:
-  UnitId: mongodb/0
-  id: "2"
-  results:
-    admin-password: <password>
-  status: completed
-  timing:
-    completed: 2022-12-02 11:30:01 +0000 UTC
-    enqueued: 2022-12-02 11:29:57 +0000 UTC
-    started: 2022-12-02 11:30:01 +0000 UTC
-```
-Use the password under the result: `admin-password`:
-```shell
-export DB_PASSWORD=$(juju run-action mongodb/leader get-password --wait | grep admin-password|  awk '{print $2}')
-```
-
-**Retrieving the hosts:** The hosts are the units hosting the MongoDB application. The host’s IP address can be found with `juju status`:
-```
-Model     Controller         Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo    localhost/localhost  2.9.37   unsupported  11:31:16Z
-
-App      Version  Status  Scale  Charm    Channel   Rev  Exposed  Message
-mongodb           active      1  mongodb  dpe/edge   96  no       Replica set primary
-
-Unit        Workload  Agent  Machine  Public address  Ports      Message
-mongodb/0*  active    idle   0        <host IP>    27017/tcp  Replica set primary
-
-Machine  State    Address       Inst id        Series  AZ  Message
-0        started  10.23.62.156  juju-d35d30-0  focal       Running
-
-```
-Set the variable `HOST_IP` to the IP address for `mongodb/0`:
-```shell
-export HOST_IP=$(juju run --unit mongodb/0 -- hostname -I | xargs)
-```
-
-**Retrieving the database name:** In this case we are connecting to the `admin` database. Use `admin` as the database name. Once we access the database via the MongoDB URI, we will create a `test-db` database to store data.
-```shell
-export DB_NAME="admin"
-```
-
-**Retrieving the replica set name:** The replica set name is the name of the application on Juju hosting MongoDB. The application name in this tutorial is `mongodb`. Use `mongodb` as the replica set name.
-```shell
-export REPL_SET_NAME="mongodb"
-```
-
-### Generate the MongoDB URI
-Now that we have the necessary fields to connect to the URI, we can connect to MongoDB with `mongosh` via the URI. We can create the URI with:
-```shell
-export URI=mongodb://$DB_USERNAME:$DB_PASSWORD@$HOST_IP/$DB_NAME?replicaSet=$REPL_SET_NAME
-```
-Now view and save the output of the URI:
-```shell
-echo $URI
-```
-
-### Connect via MongoDB URI
-As said earlier, `mongosh` is already installed in Charmed MongoDB. To access the unit hosting Charmed MongoDB, ssh into it:
-```shell
-juju ssh mongodb/0
-```
-*Note if at any point you'd like to leave the unit hosting Charmed MongoDB, enter* `exit`.
-
-While `ssh`d into `mongodb/0`, we can access `mongosh`, using the URI that we saved in the step [Generate the MongoDB URI](#generate-the-mongodb-uri).
-```shell
-mongosh <saved URI>
-```
-
-You should now see:
-```
-Current Mongosh Log ID: 6389e2adec352d5447551ae0
-Connecting to:    mongodb://<credentials>@10.23.62.156/admin?replicaSet=mongodb&appName=mongosh+1.6.1
-Using MongoDB:    5.0.14
-Using Mongosh:    1.6.1
-
-For mongosh info see: https://docs.mongodb.com/mongodb-shell/
-
-
-To help improve our products, anonymous usage data is collected and sent to MongoDB periodically (https://www.mongodb.com/legal/privacy-policy).
-You can opt-out by running the disableTelemetry() command.
-
-------
-   The server generated these startup warnings when booting
-   2022-12-02T11:24:05.416+00:00: Using the XFS filesystem is strongly recommended with the WiredTiger storage engine. See http://dochub.mongodb.org/core/prodnotes-filesystem
-------
-
-------
-   Enable MongoDB's free cloud-based monitoring service, which will then receive and display
-   metrics about your deployment (disk utilization, CPU, operation statistics, etc).
-
-   The monitoring data will be available on a MongoDB website with a unique URL accessible to you
-   and anyone you share the URL with. MongoDB may use this information to make product
-   improvements and to suggest MongoDB products and deployment options to you.
-
-   To enable free monitoring, run the following command: db.enableFreeMonitoring()
-   To permanently disable this reminder, run the following command: db.disableFreeMonitoring()
-------
-
-mongodb [primary] admin>
-```
-
-You can now interact with MongoDB directly using any [MongoDB commands](https://www.mongodb.com/docs/manual/reference/command/). For example entering `show dbs` should output something like:
-```
-admin   172.00 KiB
-config  120.00 KiB
-local   404.00 KiB
-```
-Now that we have access to MongoDB we can create a database named `test-db`. To create this database enter:
-```shell
-use test-db
-```
-Now lets create a user called `testUser` with read/write access to the database `test-db` that we just created. Enter:
-```shell
-db.createUser({
-  user: "testUser",
-  pwd: "password",
-  roles: [
-    { role: "readWrite", db: "test-db" }
-  ]
-})
-```
-You can verify that you added the user correctly by entering the command `show users` into the mongo shell. This will output:
-```json
-[
-  {
-    _id: 'test-db.testUser',
-    userId: new UUID("6e841e28-b1bc-4719-bf42-ba4b164fc546"),
-    user: 'testUser',
-    db: 'test-db',
-    roles: [ { role: 'readWrite', db: 'test-db' } ],
-    mechanisms: [ 'SCRAM-SHA-1', 'SCRAM-SHA-256' ]
-  }
-]
-```
-Feel free to test out any other MongoDB commands. When you’re ready to leave the MongoDB shell you can just type `exit`. Once you've typed `exit` you will be back in the host of Charmed MongoDB (`mongodb/0`). Exit this host by once again typing `exit`. Now you will be in your original shell where you first started the tutorial; here you can interact with Juju and LXD.
-
-*Note: if you accidentally exit one more time you will leave your terminal session and all of the environment variables used in the URI will be removed. If this happens redefine these variables as described in the section that describes how to [create the MongoDB URI](#mongodb-uri).*
+<!-- FIXME this currently fails due to a bug. -->
+Also, note that the certificate does not change across relations. To create a new CA cert, remove the relation between opensearch and the tls-certificates operator, wait for opensearch to enter a blocked status, then recreate the relation. Run the get-credentials action on the data-integrator charm again to get the new credentials, and test them again with the above search request.
 
 ---
 
 ## Scale Charmed OpenSearch
-Replication is a popular feature of MongoDB; replicas copy data making a database highly available. This means the application can provide self-healing capabilities in case one MongoDB replica fails.
 
-> **!** *Disclaimer: this tutorial hosts replicas all on the same machine, this should not be done in a production environment. To enable high availability in a production environment, replicas should be hosted on different servers to [maintain isolation](https://canonical.com/blog/database-high-availability).*
-
-
-### Add replicas
 You can add two replicas to your deployed MongoDB application with:
 ```shell
 juju add-unit mongodb -n 2
@@ -554,21 +497,21 @@ You can now watch the replica set add these replicas with: `juju status --watch 
 Model     Controller         Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo    localhost/localhost  2.9.37   unsupported  14:42:04Z
 
-App      Version  Status  Scale  Charm    Channel   Rev  Exposed  Message
-mongodb           active      3  mongodb  dpe/edge   96  no       Replica set primary
+App      Version  Status  Scale  Charm       Channel   Rev  Exposed  Message
+opensearch        active      3  opensearch  dpe/edge   96  no       Replica set primary
 
-Unit        Workload  Agent  Machine  Public address  Ports      Message
-mongodb/0*  active    idle   0        10.23.62.156    27017/tcp  Replica set primary
-mongodb/1   active    idle   1        10.23.62.55     27017/tcp  Replica set secondary
-mongodb/2   active    idle   2        10.23.62.243    27017/tcp  Replica set secondary
+Unit           Workload  Agent  Machine  Public address  Ports      Message
+opensearch/0*  active    idle   0        10.23.62.156
+opensearch/1   active    idle   1        10.23.62.55
+opensearch/2   active    idle   2        10.23.62.243
 
 Machine  State    Address       Inst id        Series  AZ  Message
-0        started  10.23.62.156  juju-d35d30-0  focal       Running
-1        started  10.23.62.55   juju-d35d30-1  focal       Running
-2        started  10.23.62.243  juju-d35d30-2  focal       Running
+0        started  10.23.62.156  juju-d35d30-0  jammy       Running
+1        started  10.23.62.55   juju-d35d30-1  jammy       Running
+2        started  10.23.62.243  juju-d35d30-2  jammy       Running
 ```
 
-You can trust that Charmed MongoDB added these replicas correctly. But if you wanted to verify the replicas got added correctly you could connect to MongoDB via `mongosh`. Since your replica set has 2 additional hosts you will need to update the hosts in your URI. You can retrieve these host IPs with:
+You can trust that Charmed OpenSearch added these replicas correctly. But if you wanted to verify the replicas got added correctly you could connect to MongoDB via `mongosh`. Since your replica set has 2 additional hosts you will need to update the hosts in your URI. You can retrieve these host IPs with:
 ```shell
 export HOST_IP_1=$(juju run --unit mongodb/1 -- hostname -I | xargs)
 export HOST_IP_2=$(juju run --unit mongodb/2 -- hostname -I | xargs)
@@ -711,15 +654,6 @@ Now type `rs.status()` and you should see your replica set configuration. It sho
 }
 ```
 
-Now exit the MongoDB shell by typing:
-```shell
-exit
-```
-Now you should be back in the host of Charmed MongoDB (`mongodb/0`). To exit this host type:
-```shell
-exit
-```
-You should now be shell you started in where you can interact with Juju and LXD.
 
 ### Remove replicas
 Removing a unit from the application, scales the replicas down. Before we scale down the replicas, list all the units with `juju status`, here you will see three units `mongodb/0`, `mongodb/1`, and `mongodb/2`. Each of these units hosts a MongoDB replica. To remove the replica hosted on the unit `mongodb/2` enter:
@@ -749,95 +683,16 @@ As previously mentioned you can trust that Charmed MongoDB removed this replica 
 
 ---
 
-## Passwords
-When we accessed MongoDB earlier in this tutorial, we needed to include a password in the URI. Passwords help to secure our database and are essential for security. Over time it is a good practice to change the password frequently. Here we will go through setting and changing the password for the admin user.
-
-### Retrieve the admin password
-As previously mentioned, the admin password can be retrieved by running the `get-password` action on the Charmed MongoDB application:
-```shell
-juju run-action mongodb/leader get-password --wait
-```
-Running the command should output:
-```yaml
-unit-mongodb-0:
-  UnitId: mongodb/0
-  id: "2"
-  results:
-    admin-password: <password>
-  status: completed
-  timing:
-    completed: 2022-12-02 11:30:01 +0000 UTC
-    enqueued: 2022-12-02 11:29:57 +0000 UTC
-    started: 2022-12-02 11:30:01 +0000 UTC
-```
-The admin password is under the result: `admin-password`.
-
-
-### Rotate the admin password
-You can change the admin password to a new random password by entering:
-```shell
-juju run-action mongodb/leader set-password --wait
-```
-Running the command should output:
-```yaml
-unit-mongodb-0:
-  UnitId: mongodb/0
-  id: "4"
-  results:
-    admin-password: <new password>
-  status: completed
-  timing:
-    completed: 2022-12-02 14:53:30 +0000 UTC
-    enqueued: 2022-12-02 14:53:25 +0000 UTC
-    started: 2022-12-02 14:53:28 +0000 UTC
-```
-The admin password is under the result: `admin-password`. It should be different from your previous password.
-
-*Note when you change the admin password you will also need to update the admin password the in MongoDB URI; as the old password will no longer be valid.* Update the DB password used in the URI and update the URI:
-```shell
-export DB_PASSWORD=$(juju run-action mongodb/leader get-password --wait | grep admin-password|  awk '{print $2}')
-export URI=mongodb://$DB_USERNAME:$DB_PASSWORD@$HOST_IP/$DB_NAME?replicaSet=$REPL_SET_NAME
-```
-
-### Set the admin password
-You can change the admin password to a specific password by entering:
-```shell
-juju run-action mongodb/leader set-password password=<password> --wait
-```
-Running the command should output:
-```yaml
-unit-mongodb-0:
-  UnitId: mongodb/0
-  id: "4"
-  results:
-    admin-password: <password>
-  status: completed
-  timing:
-    completed: 2022-12-02 14:53:30 +0000 UTC
-    enqueued: 2022-12-02 14:53:25 +0000 UTC
-    started: 2022-12-02 14:53:28 +0000 UTC
-```
-The admin password under the result: `admin-password` should match whatever you passed in when you entered the command.
-
-*Note that when you change the admin password you will also need to update the admin password in the MongoDB URI, as the old password will no longer be valid.* To update the DB password used in the URI:
-```shell
-export DB_PASSWORD=$(juju run-action mongodb/leader get-password --wait | grep admin-password|  awk '{print $2}')
-export URI=mongodb://$DB_USERNAME:$DB_PASSWORD@$HOST_IP/$DB_NAME?replicaSet=$REPL_SET_NAME
-```
-
----
-
 ## Next Steps
-In this tutorial we've successfully deployed MongoDB, added/removed replicas, added/removed users to/from the database, and even enabled and disabled TLS. You may now keep your Charmed MongoDB deployment running and write to the database or remove it entirely using the steps in [Remove Charmed MongoDB and Juju](#remove-charmed-mongodb-and-juju). If you're looking for what to do next you can:
-- Run [Charmed MongoDB on Kubernetes](https://github.com/canonical/mongodb-k8s-operator).
-- Check out our Charmed offerings of [PostgreSQL](https://charmhub.io/postgresql?channel=edge) and [Kafka](https://charmhub.io/kafka?channel=edge).
+In this tutorial we've successfully deployed OpenSearch, added/removed replicas, added/removed users to/from the database, and even enabled and disabled TLS. You may now keep your Charmed MongoDB deployment running and write to the database or remove it entirely using the steps in [Remove Charmed Opensearch and Juju](#remove-charmed-opensearch-and-juju). If you're looking for what to do next you can:
+- Check out other charms on [charmhub.io](https://charmhub.io/)
 - Read about [High Availability Best Practices](https://canonical.com/blog/database-high-availability)
-- [Report](https://github.com/canonical/mongodb-operator/issues) any problems you encountered.
+- [Report](https://github.com/canonical/opensearch-operator/issues) any problems you encountered.
 - [Give us your feedback](https://chat.charmhub.io/charmhub/channels/data-platform).
-- [Contribute to the code base](https://github.com/canonical/mongodb-operator)
+- [Contribute to the code base](https://github.com/canonical/opensearch-operator)
 
-### Remove Charmed MongoDB and Juju
-If you're done using Charmed MongoDB and Juju and would like to free up resources on your machine, you can remove Charmed MongoDB and Juju. *Warning: when you remove Charmed MongoDB as shown below you will lose all the data in MongoDB. Further, when you remove Juju as shown below you will lose access to any other applications you have hosted on Juju.*
+### Remove Charmed OpenSearch and Juju
+*Warning: when you remove Charmed OpenSearch as shown below you will lose all the data in your cluster. Furthermore, when you remove Juju as shown below you will lose access to any other applications you have hosted on Juju.*
 
 To remove Charmed MongoDB and the model it is hosted on run the command:
 ```shell
@@ -855,7 +710,7 @@ sudo snap remove juju --purge
 ```
 
 ### License:
-The Charmed MongoDB Operator is distributed under the Apache Software License, version 2.0. It [installs/operates/depends on] [MongoDB Community Edition](https://github.com/mongodb/mongo), which is licensed under the Server Side Public License (SSPL).
+The Charmed OpenSearch Operator is distributed under the Apache Software License, version 2.0. It [installs/operates/depends on] [OpenSearch Community Edition](https://github.com/opensearch-project/OpenSearch/), which is licensed under the Apache Software License, version 2.0.
 
 ### Trademark Notice
-MongoDB' is a trademark or registered trademark of MongoDB Inc. Other trademarks are property of their respective owners.
+OpenSearch is a registered trademark of Amazon Web Services. Other trademarks are property of their respective owners.
