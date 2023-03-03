@@ -84,10 +84,12 @@ class ApplicationCharm(CharmBase):
         )
         if not relations:
             return False
+        connected = True
         for relation in relations:
             if not self.smoke_check(relation.id):
-                return False
-        return True
+                connected = False
+                logger.error(f"relation {relation} didn't connect")
+        return connected
 
     def smoke_check(self, relation_id) -> bool:
         try:

@@ -52,7 +52,6 @@ from charms.opensearch.v0.helper_security import (
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHAError,
     OpenSearchHttpError,
@@ -473,11 +472,8 @@ class OpenSearchBaseCharm(CharmBase):
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if self.opensearch.is_started():
-            try:
-                self._post_start_init()
-                self.status.clear(WaitingToStart)
-            except OpenSearchCmdError:
-                event.defer()
+            self._post_start_init()
+            self.status.clear(WaitingToStart)
             return
 
         if not self._can_service_start():

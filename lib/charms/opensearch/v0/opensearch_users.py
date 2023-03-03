@@ -49,7 +49,10 @@ class OpenSearchUserManager:
         Raises:
             OpenSearchUserMgmtError: If the request fails.
         """
-        return self.opensearch.request("GET", f"{ROLE_ENDPOINT}/")
+        try:
+            return self.opensearch.request("GET", f"{ROLE_ENDPOINT}/")
+        except OpenSearchHttpError:
+            raise OpenSearchUserMgmtError()
 
     def create_role(
         self,
@@ -121,7 +124,10 @@ class OpenSearchUserManager:
         Raises:
             OpenSearchUserMgmtError: If the request fails.
         """
-        return self.opensearch.request("GET", f"{USER_ENDPOINT}/")
+        try:
+            return self.opensearch.request("GET", f"{USER_ENDPOINT}/")
+        except OpenSearchHttpError:
+            raise OpenSearchUserMgmtError()
 
     def create_user(
         self, user_name: str, roles: Optional[List[str]], hashed_pwd: str

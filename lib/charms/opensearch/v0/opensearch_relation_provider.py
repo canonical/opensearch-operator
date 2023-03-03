@@ -31,7 +31,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
+from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import (
@@ -127,7 +127,6 @@ class OpenSearchProvider(Object):
             return
 
         try:
-            logger.error(event.extra_user_roles)
             extra_user_roles = json.loads(event.extra_user_roles)
         except (json.decoder.JSONDecodeError, TypeError) as err:
             # TODO document what a client application would need to provide to make this work.
@@ -220,13 +219,12 @@ class OpenSearchProvider(Object):
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
-        self.update_endpoints(event.relation, unit_departing=True)
-        if event.departing_unit == self.charm.unit:
+        departing = event.departing_unit == self.charm.unit
+        if departing:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle client relation-broken event."""
-        self.update_endpoints(event.relation)
         if not self.unit.is_leader():
             return
         if self._unit_departing(event.relation):
@@ -236,14 +234,12 @@ class OpenSearchProvider(Object):
 
         self.user_manager.remove_users_and_roles(event.relation.id)
 
-    def update_endpoints(self, relation, unit_departing=False):
+    def update_endpoints(self, relation):
         """Updates endpoints in the databag for the given relation."""
         # only doing this so the linter doesn't yell at me
-        logger.error(unit_departing)
-        logger.error(get_host_ip(self.charm, PeerRelationName))
+
         port = self.opensearch.port
         ips = list(units_ips(self.charm, PeerRelationName).values())
-        # if self._unit_departing(relation) or unit_departing:
-        #     ips.remove(get_host_ip(self.charm, PeerRelationName))
+        logger.error(ips)
         endpoints = [f"{ip}:{port}" for ip in ips]
         self.opensearch_provides.set_endpoints(relation.id, ",".join(endpoints))
