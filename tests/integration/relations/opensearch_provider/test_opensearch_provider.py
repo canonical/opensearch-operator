@@ -202,11 +202,11 @@ async def test_scaling(ops_test: OpsTest):
     assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units()
     assert await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
 
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() + 1)
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() - 1)
     assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units()
     assert await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
 
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() - 1)
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() + 1)
     assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units()
     assert await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
 
