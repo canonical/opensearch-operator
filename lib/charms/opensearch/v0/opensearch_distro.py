@@ -173,6 +173,11 @@ class OpenSearchDistribution(ABC):
             check_hosts_reach: if true, performs a ping for each host
             resp_status_code: whether to only return the HTTP code from the response.
             retries: number of retries
+
+        Raises:
+            ValueError if method or endpoint are missing
+            OpenSearchHttpError if hosts are unreachable
+            requests.HTTPError if connection to opensearch fails
         """
 
         def full_urls() -> List[str]:

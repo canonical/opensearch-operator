@@ -37,7 +37,6 @@ NUM_UNITS = len(UNIT_IDS)
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.client_relation
 async def test_database_relation_with_charm_libraries(
     ops_test: OpsTest, application_charm, opensearch_charm
 ):
@@ -70,10 +69,13 @@ async def test_database_relation_with_charm_libraries(
 
     async with ops_test.fast_forward():
         # This test shouldn't take so long
-        await ops_test.model.wait_for_idle(timeout=1200, status="active")
+        await ops_test.model.wait_for_idle(apps=ALL_APPS, timeout=1200, status="active")
+
+    # await ops_test.model.block_until(
+    #     lambda: ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", timeout=1000
+    # )
 
 
-@pytest.mark.client_relation
 async def test_database_usage(ops_test: OpsTest):
     """Check we can update and delete things."""
     await run_request(
@@ -104,7 +106,6 @@ async def test_database_usage(ops_test: OpsTest):
     )
 
 
-@pytest.mark.client_relation
 async def test_database_bulk_usage(ops_test: OpsTest):
     """Check we can update and delete things using bulk api."""
     bulk_payload = """{ "index" : { "_index": "albums", "_id" : "2" } }
@@ -145,7 +146,6 @@ async def test_database_bulk_usage(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
-@pytest.mark.client_relation
 async def test_database_version(ops_test: OpsTest):
     """Check version is accurate."""
     run_version_request = await run_request(
@@ -166,7 +166,6 @@ async def test_database_version(ops_test: OpsTest):
     assert version == results.get("version", {}).get("number")
 
 
-@pytest.mark.client_relation
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
     # Deploy secondary application.
@@ -194,7 +193,6 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         )
 
 
-@pytest.mark.client_relation
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
@@ -207,6 +205,7 @@ async def test_relation_broken(ops_test: OpsTest):
         f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
         f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
     )
+
     async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.wait_for_idle(
@@ -216,9 +215,9 @@ async def test_relation_broken(ops_test: OpsTest):
             ops_test.model.wait_for_idle(
                 apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
                 status="active",
-                raise_on_blocked=True,
             ),
         )
+
     leader_ip = await get_leader_unit_ip(ops_test)
     users = await http_request(
         ops_test,

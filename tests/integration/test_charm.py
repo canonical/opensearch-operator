@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_NUM_UNITS = 2
 
 
-@pytest.mark.charm_tests
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -42,7 +41,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(wait_for_exact_units=DEFAULT_NUM_UNITS)
 
 
-@pytest.mark.charm_tests
 @pytest.mark.abort_on_fail
 async def test_status(ops_test: OpsTest) -> None:
     """Verifies that the application and unit are active."""
@@ -52,7 +50,6 @@ async def test_status(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == DEFAULT_NUM_UNITS
 
 
-@pytest.mark.charm_tests
 @pytest.mark.abort_on_fail
 async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     """Test the retrieval of admin secrets."""
@@ -91,7 +88,6 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     assert result.status == "failed"
 
 
-@pytest.mark.charm_tests
 @pytest.mark.abort_on_fail
 async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
     """Test the rotation and change of admin password."""
