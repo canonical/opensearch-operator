@@ -229,6 +229,7 @@ class OpenSearchProvider(Object):
         self.update_endpoints(event.relation)
         if not self.unit.is_leader():
             return
+        self.update_endpoints(event.relation)
         if self._unit_departing(event.relation):
             # This unit is being removed, so don't update the relation.
             self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
@@ -238,8 +239,6 @@ class OpenSearchProvider(Object):
 
     def update_endpoints(self, relation):
         """Updates endpoints in the databag for the given relation."""
-        self.update_endpoints(event.relation)
-
         port = self.opensearch.port
         ips = list(units_ips(self.charm, PeerRelationName).values())
         logger.error(ips)
