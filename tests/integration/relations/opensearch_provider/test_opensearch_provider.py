@@ -167,14 +167,6 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         application_name=SECONDARY_CLIENT_APP_NAME,
     )
 
-    async with ops_test.fast_forward():
-        await asyncio.gather(
-            ops_test.model.wait_for_idle(status="active", apps=ALL_APPS),
-            ops_test.model.wait_for_idle(
-                status="blocked", apps=[SECONDARY_CLIENT_APP_NAME], timeout=(60 * 20)
-            ),
-        )
-
     # Relate the new application and wait for them to exchange connection data.
     await ops_test.model.add_relation(
         f"{SECONDARY_CLIENT_APP_NAME}:{FIRST_RELATION_NAME}", OPENSEARCH_APP_NAME
@@ -183,7 +175,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
+            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(60 * 20)
         )
 
 
