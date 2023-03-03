@@ -472,8 +472,11 @@ class OpenSearchBaseCharm(CharmBase):
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if self.opensearch.is_started():
-            self._post_start_init()
-            self.status.clear(WaitingToStart)
+            try:
+                self._post_start_init()
+                self.status.clear(WaitingToStart)
+            except OpenSearchHttpError:
+                event.defer()
             return
 
         if not self._can_service_start():

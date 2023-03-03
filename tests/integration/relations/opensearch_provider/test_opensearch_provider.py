@@ -274,3 +274,34 @@ async def test_relation_broken(ops_test: OpsTest):
     logger.error(relation_user)
     logger.error(users)
     assert relation_user not in users.keys()
+
+
+async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
+    """Verify that if we recreate a relation, we can access the same index."""
+    client_relation = await ops_test.model.add_relation(
+        f"{OPENSEARCH_APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:first-index"
+    )
+    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
+
+    async with ops_test.fast_forward():
+        # This test shouldn't take so long
+        await ops_test.model.wait_for_idle(
+            apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=1200, status="active"
+        )
+
+    read_index_endpoint = "/albums/_search?q=Jazz"
+    run_bulk_read_index = await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        endpoint=read_index_endpoint,
+        method="GET",
+        relation_id=client_relation.id,
+    )
+    results = json.loads(run_bulk_read_index["results"])
+    logging.info(results)
+    assert results.get("timed_out") is False
+    assert results.get("hits", {}).get("total", {}).get("value") == 3
+    artists = [
+        hit.get("_source", {}).get("artist") for hit in results.get("hits", {}).get("hits", [{}])
+    ]
+    assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
