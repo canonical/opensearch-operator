@@ -220,11 +220,13 @@ class OpenSearchProvider(Object):
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
         departing = event.departing_unit == self.charm.unit
+        self.update_endpoints(event.relation)
         if departing:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle client relation-broken event."""
+        self.update_endpoints(event.relation)
         if not self.unit.is_leader():
             return
         if self._unit_departing(event.relation):
@@ -236,7 +238,7 @@ class OpenSearchProvider(Object):
 
     def update_endpoints(self, relation):
         """Updates endpoints in the databag for the given relation."""
-        # only doing this so the linter doesn't yell at me
+        self.update_endpoints(event.relation)
 
         port = self.opensearch.port
         ips = list(units_ips(self.charm, PeerRelationName).values())
