@@ -11,6 +11,7 @@ import socket
 import subprocess
 import time
 from abc import ABC, abstractmethod
+from datetime import datetime
 from functools import cached_property
 from os.path import exists
 from pathlib import Path
@@ -29,6 +30,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHttpError,
+    OpenSearchStartTimeoutError,
 )
 from requests import HTTPError
 
@@ -85,15 +87,23 @@ class OpenSearchDistribution(ABC):
         self._charm = charm
         self._peer_relation_name = peer_relation_name
 
-    @abstractmethod
     def install(self):
         """Install the package."""
         pass
 
-    @abstractmethod
     def start(self):
         """Start the opensearch service."""
-        pass
+        if self.is_started():
+            return
+
+        # start the opensearch service
+        self._start_service()
+
+        start = datetime.now()
+        while not self.is_node_up() and (datetime.now() - start).seconds < 75:
+            time.sleep(3)
+        else:
+            raise OpenSearchStartTimeoutError()
 
     def restart(self):
         """Restart the opensearch service."""
@@ -103,9 +113,18 @@ class OpenSearchDistribution(ABC):
         self.start()
 
     def stop(self):
-        """Stop OpenSearch.."""
+        """Stop OpenSearch."""
         # stop the opensearch service
         self._stop_service()
+
+        start = datetime.now()
+        while self.is_started() and (datetime.now() - start).seconds < 60:
+            time.sleep(3)
+
+    @abstractmethod
+    def _start_service(self):
+        """Start the opensearch service."""
+        pass
 
     @abstractmethod
     def _stop_service(self):

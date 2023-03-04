@@ -18,7 +18,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchInstallError,
     OpenSearchMissingError,
     OpenSearchStartError,
-    OpenSearchStartTimeoutError,
     OpenSearchStopError,
 )
 from charms.operator_libs_linux.v1 import snap
@@ -35,6 +34,8 @@ logger = logging.getLogger(__name__)
 class OpenSearchSnap(OpenSearchDistribution):
     """Snap distribution of opensearch, only overrides properties and logic proper to the snap."""
 
+    _BASE_SNAP_DIR = "/var/snap/opensearch/current"
+
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
 
@@ -49,22 +50,19 @@ class OpenSearchSnap(OpenSearchDistribution):
 
         try:
             self._opensearch.ensure(snap.SnapState.Latest, channel="edge")
+            self._opensearch.connect("opensearch:process-control")
         except SnapError as e:
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()
 
-        self._run_cmd("snap connect opensearch:process-control")
-
     @override
-    def start(self):
+    def _start_service(self):
         """Start the snap exposed "daemon" service."""
         if not self._opensearch.present:
             raise OpenSearchMissingError()
 
         if self._opensearch.services[self.SERVICE_NAME]["active"]:
-            logger.info(
-                f"Not doing anything, the opensearch.{self.SERVICE_NAME} service is already started."
-            )
+            logger.info(f"The opensearch.{self.SERVICE_NAME} service is already started.")
             return
 
         try:
@@ -85,6 +83,14 @@ class OpenSearchSnap(OpenSearchDistribution):
             logger.error(f"Failed to stop the opensearch.{self.SERVICE_NAME} service. \n{e}")
             raise OpenSearchStopError()
 
+    def is_failed(self) -> bool:
+        """Check if snap service failed."""
+        if not self._opensearch.present:
+            raise OpenSearchMissingError()
+
+        # TODO: replace with is_failed from lib once PR made to the lib.
+        return _systemctl("is-failed", "snap.opensearch.daemon.service", quiet=True)
+
     @override
     def _build_paths(self) -> Paths:
         """Builds a Path object.
@@ -94,12 +100,12 @@ class OpenSearchSnap(OpenSearchDistribution):
           - OPENSEARCH_CONF: writeable by root or snap_daemon ($SNAP_COMMON) where config files are
         """
         return Paths(
-            home="/var/snap/opensearch/current",
-            conf="/var/snap/opensearch/common/config",
-            data="/var/snap/opensearch/common/data",
-            logs="/var/snap/opensearch/common/logs",
-            jdk="/var/snap/opensearch/current/jdk",
-            tmp="/var/snap/opensearch/common/tmp",
+            home=f"{self._BASE_SNAP_DIR}/current",
+            conf=f"{self._BASE_SNAP_DIR}/common/config",
+            data=f"{self._BASE_SNAP_DIR}/common/data",
+            logs=f"{self._BASE_SNAP_DIR}/common/logs",
+            jdk=f"{self._BASE_SNAP_DIR}/current/jdk",
+            tmp=f"{self._BASE_SNAP_DIR}/common/tmp",
         )
 
 
@@ -117,10 +123,9 @@ class OpenSearchTarball(OpenSearchDistribution):
     @override
     def install(self):
         """Temporary (will be deleted later) - Download and Un-tar the opensearch distro."""
+        url = "https://artifacts.opensearch.org/releases/bundle/opensearch/2.6.0/opensearch-2.6.0-linux-x64.tar.gz"
         try:
-            response = requests.get(
-                "https://artifacts.opensearch.org/releases/bundle/opensearch/2.4.1/opensearch-2.4.1-linux-x64.tar.gz"
-            )
+            response = requests.get(url)
 
             tarball_path = "opensearch.tar.gz"
             with open(tarball_path, "wb") as f:
@@ -133,12 +138,8 @@ class OpenSearchTarball(OpenSearchDistribution):
         self._create_systemd_unit()
 
     @override
-    def start(self):
-        """Start opensearch as a Daemon."""
-        logger.debug("Starting opensearch.")
-        if self.is_started():
-            return
-
+    def _start_service(self):
+        """Start opensearch."""
         try:
             self._setup_linux_perms()
             self._run_cmd(
@@ -147,18 +148,6 @@ class OpenSearchTarball(OpenSearchDistribution):
             )
         except OpenSearchCmdError:
             raise OpenSearchStartError()
-
-        start = datetime.now()
-        while not self.is_node_up() and (datetime.now() - start).seconds < 75:
-            time.sleep(3)
-        else:
-            raise OpenSearchStartTimeoutError()
-
-    @override
-    def is_failed(self) -> bool:
-        """Check if the opensearch daemon has failed."""
-        # TODO: replace with is_failed from lib once PR made to the lib.
-        return _systemctl("is-failed", "opensearch.service", quiet=True)
 
     @override
     def _stop_service(self):
@@ -172,6 +161,12 @@ class OpenSearchTarball(OpenSearchDistribution):
         start = datetime.now()
         while self.is_started() and (datetime.now() - start).seconds < 60:
             time.sleep(3)
+
+    @override
+    def is_failed(self) -> bool:
+        """Check if the opensearch daemon has failed."""
+        # TODO: replace with is_failed from lib once PR made to the lib.
+        return _systemctl("is-failed", "opensearch.service", quiet=True)
 
     @override
     def _build_paths(self) -> Paths:
