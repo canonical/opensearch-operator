@@ -121,7 +121,7 @@ async def test_bulk_index_usage(ops_test: OpsTest):
         endpoint="/_bulk",
         payload=re.escape(bulk_payload),
     )
-    
+
     # Wait so we aren't writing data and requesting it straight away
     time.sleep(1)
 
