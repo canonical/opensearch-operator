@@ -1185,14 +1185,6 @@ class OpenSearchProvides(DataProvides):
         """
         self._update_relation_data(relation_id, {"endpoints": endpoints})
 
-    @property
-    def version(self) -> Optional[str]:
-        """Returns the version of the database.
-
-        Version as informed by the database daemon.
-        """
-        return self.relation.data[self.relation.app].get("version")
-
     def set_version(self, relation_id: int, version: str) -> None:
         """Set the database version in the application relation databag.
 

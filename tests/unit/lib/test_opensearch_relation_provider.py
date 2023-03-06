@@ -61,8 +61,8 @@ class TestOpenSearchProvider(unittest.TestCase):
         _create_users,
         _opensearch_version,
         _is_node_up,
-        _init_admin,
-        _purge_users,
+        _,
+        __,
     ):
         event = MagicMock()
         event.relation.id = 1
@@ -133,7 +133,8 @@ class TestOpenSearchProvider(unittest.TestCase):
         patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}]
         _patch_user.assert_called_with(username, patches)
 
-    def test_on_relation_departed(self):
+    @patch("charms.opensearch.v0.opensearch_relation_provider.unit_ip", return_value="1.1.1.2")
+    def test_on_relation_departed(self, _):
         event = MagicMock()
         event.departing_unit = None
         self.opensearch_provider._on_relation_departed(event)
@@ -183,7 +184,10 @@ class TestOpenSearchProvider(unittest.TestCase):
         "charms.opensearch.v0.opensearch_relation_provider.units_ips",
         return_value={"1": "1.1.1.1", "2": "2.2.2.2"},
     )
-    def test_update_endpoints(self, _ips, _set_endpoints):
+    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
+    @patch("charm.OpenSearchOperatorCharm._purge_users")
+    def test_update_endpoints(self, _, __, _ips, _set_endpoints):
+        self.harness.set_leader(True)
         relation = MagicMock()
         relation.id = 1
         endpoints = [f"{ip}:{self.charm.opensearch.port}" for ip in _ips.return_value.values()]

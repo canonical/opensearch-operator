@@ -18,7 +18,7 @@ TODO add databag reference information
 
 import json
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional, Set
 
 from charms.data_platform_libs.v0.data_interfaces import (
     IndexRequestedEvent,
@@ -31,7 +31,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.helper_networking import units_ips
+from charms.opensearch.v0.helper_networking import unit_ip, units_ips
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import (
@@ -219,6 +219,10 @@ class OpenSearchProvider(Object):
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
+        self.update_endpoints(
+            event.relation,
+            omit_endpoints={unit_ip(self.charm, event.departing_unit, PeerRelationName)},
+        )
         departing = event.departing_unit == self.charm.unit
         if departing:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
@@ -234,10 +238,19 @@ class OpenSearchProvider(Object):
 
         self.user_manager.remove_users_and_roles(event.relation.id)
 
-    def update_endpoints(self, relation):
+    def update_endpoints(self, relation: Relation, omit_endpoints: Optional[Set[str]] = None):
         """Updates endpoints in the databag for the given relation."""
+        # we can only set endpoints if we're the leader
+        if not self.unit.is_leader():
+            return
+
+        if not omit_endpoints:
+            omit_endpoints = set()
+
         port = self.opensearch.port
-        ips = list(units_ips(self.charm, PeerRelationName).values())
-        logger.error(ips)
-        endpoints = [f"{ip}:{port}" for ip in ips]
-        self.opensearch_provides.set_endpoints(relation.id, ",".join(endpoints))
+        ips = set(units_ips(self.charm, PeerRelationName).values())
+        endpoints = ",".join([f"{ip}:{port}" for ip in ips - omit_endpoints])
+        databag_endpoints = relation.data[relation.app].get("endpoints")
+
+        if endpoints and endpoints != databag_endpoints:
+            self.opensearch_provides.set_endpoints(relation.id, endpoints)
