@@ -39,7 +39,7 @@ class ApplicationCharm(CharmBase):
         # (these events are defined in the database requires charm library).
         index_name = f'{self.app.name.replace("-", "_")}_first_opensearch'
 
-        # TODO change this to be "admin"
+        # TODO change this to "admin"
         permissive_roles = json.dumps({"roles": ["all_access"]})
         self.first_opensearch = OpenSearchRequires(
             self, "first-index", index_name, permissive_roles
