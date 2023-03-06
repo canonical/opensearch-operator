@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2022 Canonical Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1200,7 +1200,9 @@ class OpenSearchRequires(DataRequires):
 
     on = OpenSearchRequiresEvents()
 
-    def __init__(self, charm, relation_name: str, index: str, extra_user_roles: str = None):
+    def __init__(
+        self, charm, relation_name: str, index: str, extra_user_roles: Optional[str] = None
+    ):
         """Manager of OpenSearch client relations."""
         super().__init__(charm, relation_name, extra_user_roles)
         self.charm = charm

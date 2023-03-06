@@ -182,7 +182,7 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_endpoints")
     @patch(
         "charms.opensearch.v0.opensearch_relation_provider.units_ips",
-        return_value={"1": "1.1.1.1", "2": "2.2.2.2"},
+        return_value={"1": "1.1.1.1"},
     )
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
