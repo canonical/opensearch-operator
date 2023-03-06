@@ -5,7 +5,7 @@
 import shutil
 import unittest
 from typing import Dict
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
@@ -17,8 +17,7 @@ from tests.helpers import copy_file_content_to_tmp
 
 
 class TestOpenSearchConfig(unittest.TestCase):
-    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
-    def setUp(self, _create_directories) -> None:
+    def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()

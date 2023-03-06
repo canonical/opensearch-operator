@@ -5,7 +5,7 @@
 import tempfile
 from os import listdir
 from os.path import isfile, join
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from charms.opensearch.v0.constants_tls import CertType
 from helpers import create_utf8_encoded_private_key
@@ -13,8 +13,7 @@ from unit.lib.test_opensearch_base_charm import TestOpenSearchBaseCharm
 
 
 class TestCharm(TestOpenSearchBaseCharm):
-    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
-    def setUp(self, _create_directories):
+    def setUp(self):
         super().setUp()
 
     def test_store_tls_resources(self):

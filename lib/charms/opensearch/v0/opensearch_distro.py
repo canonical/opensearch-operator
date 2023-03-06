@@ -14,7 +14,6 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 from os.path import exists
-from pathlib import Path
 from typing import Dict, List, Optional, Set, Union
 
 import requests
@@ -80,7 +79,6 @@ class OpenSearchDistribution(ABC):
 
     def __init__(self, charm, peer_relation_name: str):
         self.paths = self._build_paths()
-        self._create_directories()
         self._set_env_variables()
 
         self.config = YamlConfigSetter(base_path=self.paths.conf)
@@ -333,11 +331,6 @@ class OpenSearchDistribution(ABC):
     def _build_paths(self) -> Paths:
         """Build the Paths object."""
         pass
-
-    def _create_directories(self) -> None:
-        """Create the directories defined in self.paths."""
-        for dir_path in self.paths.__dict__.values():
-            Path(dir_path).mkdir(parents=True, exist_ok=True)
 
     def _set_env_variables(self):
         """Set the necessary environment variables."""

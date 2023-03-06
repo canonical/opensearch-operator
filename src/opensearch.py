@@ -10,6 +10,7 @@ import logging
 import os
 import time
 from datetime import datetime
+from pathlib import Path
 
 import requests
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution, Paths
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 class OpenSearchSnap(OpenSearchDistribution):
     """Snap distribution of opensearch, only overrides properties and logic proper to the snap."""
 
-    _BASE_SNAP_DIR = "/var/snap/opensearch/current"
+    _BASE_SNAP_DIR = "/var/snap/opensearch"
 
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
@@ -50,7 +51,7 @@ class OpenSearchSnap(OpenSearchDistribution):
 
         try:
             self._opensearch.ensure(snap.SnapState.Latest, channel="edge")
-            self._opensearch.connect("opensearch:process-control")
+            self._opensearch.connect("process-control")
         except SnapError as e:
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()
@@ -88,7 +89,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         if not self._opensearch.present:
             raise OpenSearchMissingError()
 
-        # TODO: replace with is_failed from lib once PR made to the lib.
+        # TODO: replace with is_failed from lib once PR made to the lib upstream.
         return _systemctl("is-failed", "snap.opensearch.daemon.service", quiet=True)
 
     @override
@@ -114,6 +115,7 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
+        self._create_directories()
 
     @retry(
         stop=stop_after_attempt(3),
@@ -165,7 +167,7 @@ class OpenSearchTarball(OpenSearchDistribution):
     @override
     def is_failed(self) -> bool:
         """Check if the opensearch daemon has failed."""
-        # TODO: replace with is_failed from lib once PR made to the lib.
+        # TODO: replace with is_failed from lib once PR made to the lib upstream.
         return _systemctl("is-failed", "opensearch.service", quiet=True)
 
     @override
@@ -178,6 +180,11 @@ class OpenSearchTarball(OpenSearchDistribution):
             jdk="/etc/opensearch/jdk",
             tmp="/mnt/opensearch/tmp",
         )
+
+    def _create_directories(self) -> None:
+        """Create the directories defined in self.paths."""
+        for dir_path in self.paths.__dict__.values():
+            Path(dir_path).mkdir(parents=True, exist_ok=True)
 
     def _setup_linux_perms(self):
         """Create ubuntu:ubuntu user:group."""
