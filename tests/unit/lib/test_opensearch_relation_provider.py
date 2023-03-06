@@ -181,15 +181,15 @@ class TestOpenSearchProvider(unittest.TestCase):
 
     @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_endpoints")
     @patch(
-        "charms.opensearch.v0.opensearch_relation_provider.units_ips",
-        return_value={"1": "1.1.1.1"},
+        "charms.opensearch.v0.opensearch_relation_provider.reachable_hosts",
+        return_value=["1.1.1.1"],
     )
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_update_endpoints(self, _, __, _ips, _set_endpoints):
+    def test_update_endpoints(self, _, __, _hosts, _set_endpoints):
         self.harness.set_leader(True)
         relation = MagicMock()
         relation.id = 1
-        endpoints = [f"{ip}:{self.charm.opensearch.port}" for ip in _ips.return_value.values()]
+        endpoints = [f"{ip}:{self.charm.opensearch.port}" for ip in _hosts.return_value]
         self.opensearch_provider.update_endpoints(relation)
         _set_endpoints.assert_called_with(relation.id, ",".join(endpoints))

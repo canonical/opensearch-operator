@@ -848,8 +848,8 @@ class OpenSearchBaseCharm(CharmBase):
         certs = self.secrets.get_unit_certificates()
 
         # keep certificates that are expiring in less than 24h
-        for cert_type, cert in dict(certs.items()):
-            hours = cert_expiration_remaining_hours(cert)
+        for cert_type in list(certs.keys()):
+            hours = cert_expiration_remaining_hours(certs[cert_type])
             if hours > 24 * 7:
                 del certs[cert_type]
 

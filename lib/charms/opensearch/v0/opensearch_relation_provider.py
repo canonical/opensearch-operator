@@ -31,7 +31,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.helper_networking import units_ips
+from charms.opensearch.v0.helper_networking import reachable_hosts, units_ips
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import (
@@ -248,7 +248,7 @@ class OpenSearchProvider(Object):
             omit_endpoints = set()
 
         port = self.opensearch.port
-        ips = set(units_ips(self.charm, PeerRelationName).values())
+        ips = set(reachable_hosts(units_ips(self.charm, PeerRelationName).values()))
         endpoints = ",".join([f"{ip}:{port}" for ip in ips - omit_endpoints])
         databag_endpoints = relation.data[relation.app].get("endpoints")
 
