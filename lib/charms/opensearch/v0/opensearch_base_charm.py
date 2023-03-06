@@ -355,6 +355,9 @@ class OpenSearchBaseCharm(CharmBase):
             self.opensearch_exclusions.cleanup()
             self._apply_cluster_health()
 
+        for relation in self.model.relations.get(ClientRelationName, []):
+            self.opensearch_provider.update_endpoints(relation)
+
         self.user_manager.remove_users_and_roles()
 
         # If relation broken - leave
@@ -845,7 +848,7 @@ class OpenSearchBaseCharm(CharmBase):
         certs = self.secrets.get_unit_certificates()
 
         # keep certificates that are expiring in less than 24h
-        for cert_type, cert in certs.copy().items():
+        for cert_type, cert in dict(certs.items()):
             hours = cert_expiration_remaining_hours(cert)
             if hours > 24 * 7:
                 del certs[cert_type]

@@ -133,8 +133,8 @@ class TestOpenSearchProvider(unittest.TestCase):
         patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}]
         _patch_user.assert_called_with(username, patches)
 
-    @patch("charms.opensearch.v0.opensearch_relation_provider.unit_ip", return_value="1.1.1.2")
-    def test_on_relation_departed(self, _):
+    # @patch("charms.opensearch.v0.opensearch_relation_provider.unit_ip", return_value="1.1.1.2")
+    def test_on_relation_departed(self):
         event = MagicMock()
         event.departing_unit = None
         self.opensearch_provider._on_relation_departed(event)

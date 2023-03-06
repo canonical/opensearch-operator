@@ -31,7 +31,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.helper_networking import unit_ip, units_ips
+from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import (
@@ -219,10 +219,10 @@ class OpenSearchProvider(Object):
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
-        self.update_endpoints(
-            event.relation,
-            omit_endpoints={unit_ip(self.charm, event.departing_unit, PeerRelationName)},
-        )
+        # self.update_endpoints(
+        #     event.relation,
+        #     omit_endpoints={unit_ip(self.charm, event.departing_unit, PeerRelationName)},
+        # )
         departing = event.departing_unit == self.charm.unit
         if departing:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
