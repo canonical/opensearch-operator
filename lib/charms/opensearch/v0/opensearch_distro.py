@@ -2,11 +2,12 @@
 # See LICENSE file for licensing details.
 
 """Base class for Opensearch distributions."""
-
+import grp
 import json
 import logging
 import os
 import pathlib
+import pwd
 import socket
 import subprocess
 import time
@@ -292,6 +293,10 @@ class OpenSearchDistribution(ABC):
 
         with open(path, mode="w") as f:
             f.write(data)
+
+        uid = pwd.getpwnam("snap_daemon").pw_uid
+        gid = grp.getgrnam("root").gr_gid
+        os.chown(path, uid, gid)
 
     @staticmethod
     def _run_cmd(command: str, args: str = None):
