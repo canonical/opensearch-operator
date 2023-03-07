@@ -147,8 +147,11 @@ class OpenSearchDistribution(ABC):
         if not self.is_started():
             return False
 
-        resp_code = self.request("GET", "/_nodes", resp_status_code=True)
-        return resp_code < 400
+        try:
+            resp_code = self.request("GET", "/_nodes", resp_status_code=True)
+            return resp_code < 400
+        except OpenSearchHttpError:
+            return False
 
     def run_bin(self, bin_script_name: str, args: str = None):
         """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin."""
