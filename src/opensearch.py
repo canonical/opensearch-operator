@@ -6,8 +6,10 @@
 This class handles install / start / stop of opensearch services.
 It also exposes some properties and methods for interacting with an OpenSearch Installation
 """
+import grp
 import logging
 import os
+import pwd
 import time
 from datetime import datetime
 from pathlib import Path
@@ -108,6 +110,14 @@ class OpenSearchSnap(OpenSearchDistribution):
             jdk=f"{self._BASE_SNAP_DIR}/current/jdk",
             tmp=f"{self._BASE_SNAP_DIR}/common/tmp",
         )
+
+    def write_file(self, path: str, data: str, override: bool = True):
+        """Snap implementation of the write_file."""
+        super().write_file(path, data, override=override)
+
+        uid = pwd.getpwnam("snap_daemon").pw_uid
+        gid = grp.getgrnam("root").gr_gid
+        os.chown(path, uid, gid)
 
 
 class OpenSearchTarball(OpenSearchDistribution):
