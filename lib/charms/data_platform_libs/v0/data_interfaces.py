@@ -1,4 +1,4 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -280,7 +280,6 @@ exchanged in the relation databag.
 
 import json
 import logging
-import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime
@@ -304,7 +303,9 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 7
+
+PYDEPS = ["ops>=2.0.0"]
 
 logger = logging.getLogger(__name__)
 
@@ -501,12 +502,6 @@ class DataRequires(Object, ABC):
             a dict of the values stored in the relation data bag
                 for all relation instances (indexed by the relation ID).
         """
-        if "-relation-broken" in os.environ.get("JUJU_HOOK_NAME", ""):
-            # read more in https://bugs.launchpad.net/juju/+bug/1960934
-            raise RuntimeError(
-                "`fetch_relation_data` cannot be used in `*-relation-broken` events"
-            )
-
         data = {}
         for relation in self.relations:
             data[relation.id] = {
@@ -544,7 +539,19 @@ class DataRequires(Object, ABC):
     @property
     def relations(self) -> List[Relation]:
         """The list of Relation instances associated with this relation_name."""
-        return list(self.charm.model.relations[self.relation_name])
+        return [
+            relation
+            for relation in self.charm.model.relations[self.relation_name]
+            if self._is_relation_active(relation)
+        ]
+
+    @staticmethod
+    def _is_relation_active(relation: Relation):
+        try:
+            _ = repr(relation.data)
+            return True
+        except RuntimeError:
+            return False
 
     @staticmethod
     def _is_resource_created_for_relation(relation: Relation):
@@ -564,12 +571,28 @@ class DataRequires(Object, ABC):
 
         Returns:
             True or False
+
+        Raises:
+            IndexError: If relation_id is provided but that relation does not exist
         """
-        if relation_id:
-            return self._is_resource_created_for_relation(self.relations[relation_id])
+        if relation_id is not None:
+            try:
+                relation = [relation for relation in self.relations if relation.id == relation_id][
+                    0
+                ]
+                return self._is_resource_created_for_relation(relation)
+            except IndexError:
+                raise IndexError(f"relation id {relation_id} cannot be accessed")
         else:
-            return all(
-                [self._is_resource_created_for_relation(relation) for relation in self.relations]
+            return (
+                all(
+                    [
+                        self._is_resource_created_for_relation(relation)
+                        for relation in self.relations
+                    ]
+                )
+                if self.relations
+                else False
             )
 
 

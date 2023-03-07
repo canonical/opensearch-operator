@@ -18,7 +18,7 @@ from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus
 from overrides import override
 
-from opensearch import OpenSearchTarball
+from opensearch import OpenSearchSnap
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     """This class represents the machine charm for OpenSearch."""
 
     def __init__(self, *args):
-        super().__init__(*args, distro=OpenSearchTarball)  # OpenSearchSnap
+        super().__init__(*args, distro=OpenSearchSnap)  # OpenSearchTarball
 
         self.framework.observe(self.on.install, self._on_install)
 
