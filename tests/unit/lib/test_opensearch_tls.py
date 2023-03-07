@@ -18,9 +18,8 @@ from tests.helpers import create_utf8_encoded_private_key, patch_network_get
 
 @patch_network_get("1.1.1.1")
 class TestOpenSearchTLS(unittest.TestCase):
-    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
-    def setUp(self, _create_directories, _put_admin_user) -> None:
+    def setUp(self, _put_admin_user) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()

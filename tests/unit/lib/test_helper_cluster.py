@@ -32,8 +32,7 @@ class TestHelperCluster(unittest.TestCase):
         nodes.append(Node("data1", self.base_roles, "0.0.0.6"))
         return nodes
 
-    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
-    def setUp(self, _create_directories) -> None:
+    def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()

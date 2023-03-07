@@ -18,8 +18,7 @@ from charm import OpenSearchOperatorCharm
 
 @patch_network_get("1.1.1.1")
 class TestOpenSearchProvider(unittest.TestCase):
-    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
-    def setUp(self, _mkdirs):
+    def setUp(self):
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()

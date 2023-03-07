@@ -28,8 +28,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
     OPENSEARCH_DISTRO = ""
 
-    @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution._create_directories")
-    def setUp(self, _create_directories) -> None:
+    def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
