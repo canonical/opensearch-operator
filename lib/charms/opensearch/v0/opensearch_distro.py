@@ -150,7 +150,7 @@ class OpenSearchDistribution(ABC):
         try:
             resp_code = self.request("GET", "/_nodes", resp_status_code=True)
             return resp_code < 400
-        except OpenSearchHttpError:
+        except (OpenSearchHttpError, Exception):
             return False
 
     def run_bin(self, bin_script_name: str, args: str = None):
