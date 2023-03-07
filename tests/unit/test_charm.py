@@ -17,7 +17,9 @@ class TestCharm(TestOpenSearchBaseCharm):
         super().setUp()
 
     @patch("os.chown")
-    def test_store_tls_resources(self, os_chown):
+    @patch("pwd.getpwnam")
+    @patch("grp.getgrnam")
+    def test_store_tls_resources(self, grp_getgrnam, pwd_getpwnam, os_chown):
         """Test the storing of TLS resources."""
         self.opensearch.paths = MagicMock()
 
@@ -62,7 +64,9 @@ class TestCharm(TestOpenSearchBaseCharm):
             )
 
     @patch("os.chown")
-    def test_are_all_tls_resources_stored(self, os_chown):
+    @patch("pwd.getpwnam")
+    @patch("grp.getgrnam")
+    def test_are_all_tls_resources_stored(self, grp_getgrnam, pwd_getpwnam, os_chown):
         """Test if all TLS resources are successfully stored."""
         self.opensearch.paths = MagicMock()
 
