@@ -1176,6 +1176,17 @@ class OpenSearchProvides(DataProvides):
         if "index" in diff.added:
             self.on.index_requested.emit(event.relation, app=event.app, unit=event.unit)
 
+    def set_index(self, relation_id: int, index: str) -> None:
+        """Set the index in the application relation databag.
+
+        Args:
+            relation_id: the identifier for a particular relation.
+            index: the index as it is _created_ on the provider charm. This needn't match the
+                requested index, and can be used to present a different index name if, for example,
+                the requested index is invalid.
+        """
+        self._update_relation_data(relation_id, {"index": index})
+
     def set_endpoints(self, relation_id: int, endpoints: str) -> None:
         """Set the endpoints in the application relation databag.
 
