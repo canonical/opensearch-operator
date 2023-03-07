@@ -5,7 +5,7 @@
 import tempfile
 from os import listdir
 from os.path import isfile, join
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from charms.opensearch.v0.constants_tls import CertType
 from helpers import create_utf8_encoded_private_key
@@ -16,7 +16,8 @@ class TestCharm(TestOpenSearchBaseCharm):
     def setUp(self):
         super().setUp()
 
-    def test_store_tls_resources(self):
+    @patch("os.chown")
+    def test_store_tls_resources(self, os_chown):
         """Test the storing of TLS resources."""
         self.opensearch.paths = MagicMock()
 
@@ -60,7 +61,8 @@ class TestCharm(TestOpenSearchBaseCharm):
                 ],
             )
 
-    def test_are_all_tls_resources_stored(self):
+    @patch("os.chown")
+    def test_are_all_tls_resources_stored(self, os_chown):
         """Test if all TLS resources are successfully stored."""
         self.opensearch.paths = MagicMock()
 
