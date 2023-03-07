@@ -19,6 +19,8 @@ TODO add tls
 
 import json
 import logging
+from dataclasses import dataclass
+from enum import Enum
 from typing import Dict, List
 
 from charms.data_platform_libs.v0.data_interfaces import (
@@ -49,6 +51,52 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
+
+
+class ExtraUserRole:
+    def __init__(self, extra_user_roles: str, index: str):
+        self.index = index
+        try:
+            self.permissions = ExtraUserRolePermissions[extra_user_roles.upper()]
+        except TypeError:
+            logger.error("invalid extra_user_roles parameter supplied to relation")
+            raise
+
+class ExtraUserRolePermissions(Enum):
+    """An enum of user types and their associated permissions."""
+
+    # Default user has CRUD in a specific index. Update index_patterns to include the index.
+    DEFAULT = {
+        "cluster_permissions": ["cluster_monitor"],
+        "index_permissions": [
+            {
+                "index_patterns": [],
+                "dls": "",
+                "fls": [],
+                "masked_fields": [],
+                "allowed_actions": [
+                    "indices_monitor",
+                    "create_index",
+                    "crud",
+                    "data_access",
+                    "indices:data/read/search",
+                    "indices:admin/create",
+                ],
+            }
+        ],
+    }
+
+    # Admin user has control over:
+    # - creating multiple indices
+    # - creating and deleting users and assigning their access controls
+    # - Removing indices they have created
+    # - Node roles
+    ADMIN = {}
+
+    def set_index(self, index_name: str):
+        """Set these permissions for a specific index."""
+        for perm_set in self["index_permissions"]:
+            perm_set["index_patterns"] = index_name
 
 
 class OpenSearchProvider(Object):
@@ -110,18 +158,10 @@ class OpenSearchProvider(Object):
             event.defer()
             return
 
-        try:
-            extra_user_roles = json.loads(event.extra_user_roles)
-        except (json.decoder.JSONDecodeError, TypeError) as err:
-            # TODO document what a client application would need to provide to make this work.
-            logger.error(err)
-            self.unit.status = BlockedStatus(ClientRelationBadRoleRequestMessage)
-            return
-
         username = self._relation_username(event.relation)
         hashed_pwd, pwd = generate_hashed_password()
         try:
-            self.create_opensearch_users(username, hashed_pwd, extra_user_roles)
+            self.create_opensearch_users(username, hashed_pwd, event.index, user_roles)
         except OpenSearchUserMgmtError as err:
             logger.error(err)
             self.unit.status = BlockedStatus(str(err))
@@ -134,7 +174,7 @@ class OpenSearchProvider(Object):
         self.database_provides.set_version(rel_id, self.opensearch.version)
 
     def create_opensearch_users(
-        self, username: str, hashed_pwd: str, access_control: Dict[str, List[str]]
+        self, username: str, hashed_pwd: str, index: str, extra_user_roles: ExtraUserRolePermissions
     ):
         """Creates necessary opensearch users and permissions for this relation.
 
@@ -148,30 +188,21 @@ class OpenSearchProvider(Object):
         Raises:
             OpenSearchUserMgmtError if user creation fails
         """
-        roles = access_control.get("roles")
-        permissions = access_control.get("permissions")
-        action_groups = access_control.get("action_groups")
-
-        if permissions or action_groups:
-            # combine action groups and perms into a new role for this relation.
-            try:
-                self.user_manager.create_role(
-                    role_name=username,
-                    permissions=permissions,
-                    action_groups=action_groups,
-                )
-                roles.append(username)
-            except OpenSearchUserMgmtError as err:
-                logger.error(err)
-                raise
-
+        # TODO this might be setting the values inside the enum?
+        extra_user_roles.set_index(index)
         try:
-            self.user_manager.create_user(username, roles, hashed_pwd)
-            if roles:
-                self.user_manager.patch_user(
-                    username,
-                    [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
-                )
+            # Create a new role for this relation, encapsulating the permissions we care about. We
+            # can't create a "default" and an "admin" role once because the permissions need to be
+            # set to this relation's specific index.
+            self.user_manager.create_role(
+                role_name=username,
+                permissions=extra_user_roles.value,
+            )
+            self.user_manager.create_user(username, [username], hashed_pwd)
+            self.user_manager.patch_user(
+                username,
+                [{"op": "replace", "path": "/opendistro_security_roles", "value": [username]}],
+            )
         except OpenSearchUserMgmtError as err:
             logger.error(err)
             raise
