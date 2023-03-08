@@ -49,7 +49,10 @@ class OpenSearchUserManager:
         Raises:
             OpenSearchUserMgmtError: If the request fails.
         """
-        return self.opensearch.request("GET", f"{ROLE_ENDPOINT}/")
+        try:
+            return self.opensearch.request("GET", f"{ROLE_ENDPOINT}/")
+        except OpenSearchHttpError:
+            raise OpenSearchUserMgmtError()
 
     def create_role(
         self,
@@ -69,6 +72,9 @@ class OpenSearchUserManager:
 
         Raises:
             OpenSearchUserMgmtError: If the role creation request fails.
+
+        Returns:
+            HTTP response to opensearch API request.
         """
         resp = self.opensearch.request(
             "PUT",
@@ -87,13 +93,27 @@ class OpenSearchUserManager:
 
         Raises:
             OpenSearchUserMgmtError: If the request fails, or if role_name is empty
+
+        Returns:
+            HTTP response to opensearch API request.
         """
         if not role_name:
             raise OpenSearchUserMgmtError(
                 "role name empty - sending a DELETE request to endpoint root isn't permitted"
             )
 
-        resp = self.opensearch.request("DELETE", f"{ROLE_ENDPOINT}/{role_name}")
+        try:
+            resp = self.opensearch.request("DELETE", f"{ROLE_ENDPOINT}/{role_name}")
+        except OpenSearchHttpError as e:
+            if e.status_code == 404:
+                return {
+                    "status": "OK",
+                    "response": "role does not exist, and therefore has not been removed",
+                }
+            else:
+                raise
+
+        logger.debug(resp)
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing role {role_name} failed")
         return resp
@@ -104,7 +124,10 @@ class OpenSearchUserManager:
         Raises:
             OpenSearchUserMgmtError: If the request fails.
         """
-        return self.opensearch.request("GET", f"{USER_ENDPOINT}/")
+        try:
+            return self.opensearch.request("GET", f"{USER_ENDPOINT}/")
+        except OpenSearchHttpError:
+            raise OpenSearchUserMgmtError()
 
     def create_user(
         self, user_name: str, roles: Optional[List[str]], hashed_pwd: str
@@ -118,6 +141,9 @@ class OpenSearchUserManager:
 
         Raises:
             OpenSearchUserMgmtError: If the request fails.
+
+        Returns:
+            HTTP response to opensearch API request.
         """
         payload = {"hash": hashed_pwd}
         if roles:
@@ -140,14 +166,27 @@ class OpenSearchUserManager:
 
         Raises:
             OpenSearchUserMgmtError: If the request fails, or if user_name is empty
+
+        Returns:
+            HTTP response to opensearch API request.
         """
         if not user_name:
             raise OpenSearchUserMgmtError(
                 "user name empty - sending a DELETE request to endpoint root isn't permitted"
             )
 
-        resp = self.opensearch.request("DELETE", f"{USER_ENDPOINT}/{user_name}/")
-        # TODO update to handle if the user doesn't exist
+        try:
+            resp = self.opensearch.request("DELETE", f"{USER_ENDPOINT}/{user_name}")
+        except OpenSearchHttpError as e:
+            if e.status_code == 404:
+                return {
+                    "status": "OK",
+                    "response": "user does not exist, and therefore has not been removed",
+                }
+            else:
+                raise
+
+        logger.debug(resp)
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing user {user_name} failed")
         return resp
@@ -161,6 +200,9 @@ class OpenSearchUserManager:
 
         Raises:
             OpenSearchUserMgmtError: If the request fails.
+
+        Returns:
+            HTTP response to opensearch API request.
         """
         resp = self.opensearch.request(
             "PATCH",

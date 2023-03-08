@@ -13,19 +13,24 @@
 # limitations under the License.
 
 """This library enables "rolling" operations across units of a charmed Application.
+
 For example, a charm author might use this library to implement a "rolling restart", in
 which all units in an application restart their workload, but no two units execute the
 restart at the same time.
+
 To implement the rolling restart, a charm author would do the following:
+
 1. Add a peer relation called 'restart' to a charm's `metadata.yaml`:
 ```yaml
 peers:
     restart:
         interface: rolling_op
 ```
+
 Import this library into src/charm.py, and initialize a RollingOpsManager in the Charm's
 `__init__`. The Charm should also define a callback routine, which will be executed when
 a unit holds the distributed lock:
+
 src/charm.py
 ```python
 # ...
@@ -41,29 +46,35 @@ class SomeCharm(...):
     def _restart(self, event):
         systemd.service_restart('foo')
 ```
+
 To kick off the rolling restart, emit this library's AcquireLock event. The simplest way
 to do so would be with an action, though it might make sense to acquire the lock in
 response to another event.
+
 ```python
     def _on_trigger_restart(self, event):
         self.charm.on[self.restart_manager.name].acquire_lock.emit()
 ```
+
 In order to trigger the restart, a human operator would execute the following command on
 the CLI:
+
 ```
 juju run-action some-charm/0 some-charm/1 <... some-charm/n> restart
 ```
+
 Note that all units that plan to restart must receive the action and emit the aquire
 event. Any units that do not run their acquire handler will be left out of the rolling
 restart. (An operator might take advantage of this fact to recover from a failed rolling
 operation without restarting workloads that were able to successfully restart -- simply
 omit the successful units from a subsequent run-action call.)
+
 """
 import logging
 from enum import Enum
-from typing import AnyStr, Callable, Optional
+from typing import AnyStr, Callable, Optional, Union
 
-from ops.charm import ActionEvent, CharmBase, RelationChangedEvent
+from ops.charm import ActionEvent, CharmBase, LeaderElectedEvent, RelationChangedEvent
 from ops.framework import EventBase, Object
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
@@ -77,7 +88,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 
 class LockNoRelationError(Exception):
@@ -88,7 +99,9 @@ class LockNoRelationError(Exception):
 
 class LockState(Enum):
     """Possible states for our Distributed lock.
+
     Note that there are two states set on the unit, and two on the application.
+
     """
 
     ACQUIRE = "acquire"
@@ -99,31 +112,40 @@ class LockState(Enum):
 
 class Lock:
     """A class that keeps track of a single asynchronous lock.
+
     Warning: a Lock has permission to update relation data, which means that there are
     side effects to invoking the .acquire, .release and .grant methods. Running any one of
     them will trigger a RelationChanged event, once per transition from one internal
     status to another.
+
     This class tracks state across the cloud by implementing a peer relation
     interface. There are two parts to the interface:
+
     1) The data on a unit's peer relation (defined in metadata.yaml.) Each unit can update
        this data. The only meaningful values are "acquire", and "release", which represent
        a request to acquire the lock, and a request to release the lock, respectively.
+
     2) The application data in the relation. This tracks whether the lock has been
        "granted", Or has been released (and reverted to idle). There are two valid states:
        "granted" or None.  If a lock is in the "granted" state, a unit should emit a
        RunWithLocks event and then release the lock.
+
        If a lock is in "None", this means that a unit has not yet requested the lock, or
        that the request has been completed.
+
     In more detail, here is the relation structure:
+
     relation.data:
         <unit n>:
             status: 'acquire|release'
         <application>:
            <unit n>: 'granted|None'
+
     Note that this class makes no attempts to timestamp the locks and thus handle multiple
     requests in a row. If a unit re-requests a lock before being granted the lock, the
     lock will simply stay in the "acquire" state. If a unit wishes to clear its lock, it
     simply needs to call lock.release().
+
     """
 
     def __init__(self, manager, unit=None):
@@ -138,10 +160,13 @@ class Lock:
     @property
     def _state(self) -> LockState:
         """Return an appropriate state.
+
         Note that the state exists in the unit's relation data, and the application
         relation data, so we have to be careful about what our states mean.
+
         Unit state can only be in "acquire", "release", "None" (None means unset)
         Application state can only be in "granted" or "None" (None means unset or released)
+
         """
         unit_state = LockState(self.relation.data[self.unit].get("state", LockState.IDLE.value))
         app_state = LockState(
@@ -161,6 +186,7 @@ class Lock:
     @_state.setter
     def _state(self, state: LockState):
         """Set the given state.
+
         Since we update the relation data, this may fire off a RelationChanged event.
         """
         if state == LockState.ACQUIRE:
@@ -239,9 +265,11 @@ class AcquireLock(EventBase):
         self.callback_override = callback_override or ""
 
     def snapshot(self):
+        """Returns a snapshot of the callback override."""
         return {"callback_override": self.callback_override}
 
     def restore(self, snapshot):
+        """Sets the callback override."""
         self.callback_override = snapshot["callback_override"]
 
 
@@ -256,6 +284,7 @@ class RollingOpsManager(Object):
 
     def __init__(self, charm: CharmBase, relation: AnyStr, callback: Callable):
         """Register our custom events.
+
         params:
             charm: the charm we are attaching this to.
             relation: an identifier, by convention based on the name of the relation in the
@@ -276,23 +305,32 @@ class RollingOpsManager(Object):
         charm.on.define_event("{}_acquire_lock".format(self.name), AcquireLock)
         charm.on.define_event("{}_process_locks".format(self.name), ProcessLocks)
 
-        # Watch those events (plus the built in relation event).
-        self.framework.observe(charm.on[self.name].relation_changed, self._on_relation_changed)
+        # Watch those events
         self.framework.observe(charm.on[self.name].acquire_lock, self._on_acquire_lock)
         self.framework.observe(charm.on[self.name].run_with_lock, self._on_run_with_lock)
         self.framework.observe(charm.on[self.name].process_locks, self._on_process_locks)
 
+        # Observe events where we need to update locks
+        self.framework.observe(charm.on[self.name].relation_changed, self._update_locks)
+        self.framework.observe(charm.on.leader_elected, self._update_locks)
+
     def _callback(self: CharmBase, event: EventBase) -> None:
         """Placeholder for the function that actually runs our event.
+
         Usually overridden in the init.
         """
         raise NotImplementedError
 
-    def _on_relation_changed(self: CharmBase, event: RelationChangedEvent):
-        """Process relation changed.
+    def _update_locks(self: CharmBase, _):
+        """Update Locks.
+
         First, determine whether this unit has been granted a lock. If so, emit a RunWithLock
         event.
+
         Then, if we are the leader, fire off a process locks event.
+
+        If a leader is removed before the chain of events finishes, the new leader never receives
+        a ProcessLocks event. To get around this, call this function on LeaderElected.
         """
         lock = Lock(self)
 
@@ -307,7 +345,9 @@ class RollingOpsManager(Object):
 
     def _on_process_locks(self: CharmBase, event: ProcessLocks):
         """Process locks.
+
         Runs only on the leader. Updates the status of all locks.
+
         """
         if not self.model.unit.is_leader():
             return

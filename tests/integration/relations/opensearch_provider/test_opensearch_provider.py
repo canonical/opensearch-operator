@@ -15,9 +15,9 @@ from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
 from tests.integration.helpers import (
     MODEL_CONFIG,
     SERIES,
-    UNIT_IDS,
     get_leader_unit_ip,
     http_request,
+    scale_application,
 )
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
@@ -31,16 +31,14 @@ CLIENT_APP_NAME = "application"
 SECONDARY_CLIENT_APP_NAME = "secondary-application"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
-FIRST_DATABASE_RELATION_NAME = "first-database"
+FIRST_RELATION_NAME = "first-index"
 
-NUM_UNITS = len(UNIT_IDS)
+NUM_UNITS = 3
 
 
 @pytest.mark.abort_on_fail
-async def test_database_relation_with_charm_libraries(
-    ops_test: OpsTest, application_charm, opensearch_charm
-):
-    """Test basic functionality of database relation interface."""
+async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_charm):
+    """Test basic functionality of relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
     await ops_test.model.set_config(MODEL_CONFIG)
@@ -63,7 +61,7 @@ async def test_database_relation_with_charm_libraries(
 
     global client_relation
     client_relation = await ops_test.model.add_relation(
-        f"{OPENSEARCH_APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:first-database"
+        f"{OPENSEARCH_APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:first-index"
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
 
@@ -71,13 +69,13 @@ async def test_database_relation_with_charm_libraries(
         # This test shouldn't take so long
         await ops_test.model.wait_for_idle(apps=ALL_APPS, timeout=1200, status="active")
 
-    # await ops_test.model.block_until(
-    #     lambda: ops_test.model.applications[OPENSEARCH_APP_NAME].status == "active", timeout=1000
-    # )
 
+async def test_index_usage(ops_test: OpsTest):
+    """Check we can update and delete things.
 
-async def test_database_usage(ops_test: OpsTest):
-    """Check we can update and delete things."""
+    The client application authenticates using the cert provided in the index; if this is
+    invalid for any reason, the test will fail, so this test implicitly verifies that TLS works.
+    """
     await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
@@ -106,7 +104,7 @@ async def test_database_usage(ops_test: OpsTest):
     )
 
 
-async def test_database_bulk_usage(ops_test: OpsTest):
+async def test_bulk_index_usage(ops_test: OpsTest):
     """Check we can update and delete things using bulk api."""
     bulk_payload = """{ "index" : { "_index": "albums", "_id" : "2" } }
 {"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
@@ -146,8 +144,8 @@ async def test_database_bulk_usage(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
-async def test_database_version(ops_test: OpsTest):
-    """Check version is accurate."""
+async def test_version(ops_test: OpsTest):
+    """Check version reported in the databag is consistent with the version on the charm."""
     run_version_request = await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
@@ -155,10 +153,8 @@ async def test_database_version(ops_test: OpsTest):
         endpoint="/",
         relation_id=client_relation.id,
     )
-    # Get the version of the database and compare with the information that
-    # was retrieved directly from the database.
     version = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "version"
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "version"
     )
     logging.info(run_version_request)
     logging.info(version)
@@ -174,36 +170,90 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         application_name=SECONDARY_CLIENT_APP_NAME,
     )
 
-    async with ops_test.fast_forward():
-        await asyncio.gather(
-            ops_test.model.wait_for_idle(status="active", apps=ALL_APPS),
-            ops_test.model.wait_for_idle(status="blocked", apps=[SECONDARY_CLIENT_APP_NAME]),
-        )
-
-    # Relate the new application with the database
-    # and wait for them exchanging some connection data.
+    # Relate the new application and wait for them to exchange connection data.
     await ops_test.model.add_relation(
-        f"{SECONDARY_CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", OPENSEARCH_APP_NAME
+        f"{SECONDARY_CLIENT_APP_NAME}:{FIRST_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, SECONDARY_CLIENT_APP_NAME)
 
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
+            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(60 * 20)
+        )
+
+
+async def test_scaling(ops_test: OpsTest):
+    """Test that scaling correctly updates endpoints in databag.
+
+    scale_application also contains a wait_for_idle check, including checking for active status.
+    """
+
+    async def rel_endpoints(app_name) -> str:
+        return await get_application_relation_data(
+            ops_test, f"{app_name}/0", FIRST_RELATION_NAME, "endpoints"
+        )
+
+    async def get_num_of_endpoints(app_name: str) -> int:
+        return len((await rel_endpoints(app_name)).split(","))
+
+    def get_num_of_units() -> int:
+        return len(ops_test.model.applications[OPENSEARCH_APP_NAME].units)
+
+    # Test things are already working fine
+    assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units(), await rel_endpoints(
+        CLIENT_APP_NAME
+    )
+    assert (
+        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
+    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME)
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
             status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
         )
+
+    # Test scale down
+    # FIXME scale down seems to set endpoints to the removed unit, not the remaining units.
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() - 1)
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
+        )
+    assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units(), await rel_endpoints(
+        CLIENT_APP_NAME
+    )
+    assert (
+        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
+    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME)
+
+    # test scale back up again
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() + 1)
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
+        )
+    assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units(), await rel_endpoints(
+        CLIENT_APP_NAME
+    )
+    assert (
+        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
+    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME)
 
 
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
     relation_user = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_DATABASE_RELATION_NAME, "username"
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
     )
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
+        )
 
     # Break the relation.
     await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
         f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
-        f"{CLIENT_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
+        f"{CLIENT_APP_NAME}:{FIRST_RELATION_NAME}",
     )
 
     async with ops_test.fast_forward():
@@ -228,3 +278,34 @@ async def test_relation_broken(ops_test: OpsTest):
     logger.error(relation_user)
     logger.error(users)
     assert relation_user not in users.keys()
+
+
+async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
+    """Verify that if we recreate a relation, we can access the same index."""
+    client_relation = await ops_test.model.add_relation(
+        f"{OPENSEARCH_APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:first-index"
+    )
+    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
+
+    async with ops_test.fast_forward():
+        # This test shouldn't take so long
+        await ops_test.model.wait_for_idle(
+            apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=1200, status="active"
+        )
+
+    read_index_endpoint = "/albums/_search?q=Jazz"
+    run_bulk_read_index = await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        endpoint=read_index_endpoint,
+        method="GET",
+        relation_id=client_relation.id,
+    )
+    results = json.loads(run_bulk_read_index["results"])
+    logging.info(results)
+    assert results.get("timed_out") is False
+    assert results.get("hits", {}).get("total", {}).get("value") == 3
+    artists = [
+        hit.get("_source", {}).get("artist") for hit in results.get("hits", {}).get("hits", [{}])
+    ]
+    assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}

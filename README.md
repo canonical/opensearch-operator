@@ -18,7 +18,7 @@ Bootstrap a [lxd controller](https://juju.is/docs/olm/lxd#heading--create-a-cont
 juju add-model opensearch
 ```
 
-Configure the system settings required by [OpenSearch](https://opensearch.org/docs/2.3/opensearch/install/important-settings/), 
+Configure the system settings required by [OpenSearch](https://opensearch.org/docs/2.3/opensearch/install/important-settings/),
 we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model.
 ```
 cat <<EOF > cloudinit-userdata.yaml
@@ -34,9 +34,7 @@ juju model-config ./cloudinit-userdata.yaml
 ```
 or in a single machine:
 ```
-sudo sysctl -w vm.max_map_count=262144
-sudo sysctl -w vm.swappiness=0
-sudo sysctl -w net.ipv4.tcp_retries2=5
+sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
 ```
 
 ### Basic Usage
@@ -55,10 +53,10 @@ Supported [relations](https://juju.is/docs/olm/relations):
 The Charmed OpenSearch Operator also supports TLS encryption on the HTTP and Transport layers. TLS is enabled by default:
 
 ```shell
-# Deploy the TLS Certificates Operator. 
+# Deploy the TLS Certificates Operator.
 juju deploy tls-certificates-operator --channel=edge
 # Add the necessary configurations for TLS.
-juju config tls-certificates-operator generate-self-signed-certificates="true" ca-common-name="Test CA" 
+juju config tls-certificates-operator generate-self-signed-certificates="true" ca-common-name="Test CA"
 # Enable TLS via relation.
 juju relate opensearch tls-certificates-operator
 # Disable TLS by removing relation.
