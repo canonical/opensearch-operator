@@ -22,7 +22,7 @@ async def get_application_relation_data(
 
     Args:
         ops_test: The ops test framework instance
-        application_name: The name of the application
+        unit_name: The name of the unit
         relation_name: name of the relation to get connection data from
         key: key of data to be retrieved
         relation_id: id of the relation to get connection data from

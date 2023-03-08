@@ -159,7 +159,7 @@ class OpenSearchTarball(OpenSearchDistribution):
                 "--clear-groups --reuid ubuntu --regid ubuntu -- sudo systemctl start opensearch.service",
             )
         except OpenSearchCmdError:
-            raise OpenSearchStartError()
+            raise OpenSearchStartError
 
     @override
     def _stop_service(self):

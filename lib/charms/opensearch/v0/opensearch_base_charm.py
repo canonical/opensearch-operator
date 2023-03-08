@@ -332,7 +332,7 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
 
-        We want to periodically check for 3 things:
+        We want to periodically check for the following:
         1- Do we have users that need to be deleted, and if so we need to delete them.
         2- The system requirements are still met
         3- every 6 hours check if certs are expiring soon (in 7 days),
@@ -354,6 +354,9 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
             self._apply_cluster_health()
+
+        for relation in self.model.relations.get(ClientRelationName, []):
+            self.opensearch_provider.update_endpoints(relation)
 
         self.user_manager.remove_users_and_roles()
 
@@ -472,8 +475,11 @@ class OpenSearchBaseCharm(CharmBase):
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if self.opensearch.is_started():
-            self._post_start_init()
-            self.status.clear(WaitingToStart)
+            try:
+                self._post_start_init()
+                self.status.clear(WaitingToStart)
+            except OpenSearchHttpError:
+                event.defer()
             return
 
         if not self._can_service_start():
@@ -842,8 +848,8 @@ class OpenSearchBaseCharm(CharmBase):
         certs = self.secrets.get_unit_certificates()
 
         # keep certificates that are expiring in less than 24h
-        for cert_type, cert in certs.items():
-            hours = cert_expiration_remaining_hours(cert)
+        for cert_type in list(certs.keys()):
+            hours = cert_expiration_remaining_hours(certs[cert_type])
             if hours > 24 * 7:
                 del certs[cert_type]
 

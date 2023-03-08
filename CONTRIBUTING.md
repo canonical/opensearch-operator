@@ -63,13 +63,11 @@ cloudinit-userdata: |
     - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
 EOF
 ```
+
 or in a single machine:
 ```
-sudo sysctl -w vm.max_map_count=262144
-sudo sysctl -w vm.swappiness=0
-sudo sysctl -w net.ipv4.tcp_retries2=5
+sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
 ```
-
 
 Then create a new model and set the previously generated file in it.
 ```bash
@@ -101,7 +99,7 @@ juju deploy -n 1 ./opensearch_ubuntu-22.04-amd64.charm --series jammy --show-log
 juju relate tls-certificates-operator opensearch
 ```
 
-**Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the TLS Certificates Operator [here](https://charmhub.io/tls-certificates-operator). 
+**Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the TLS Certificates Operator [here](https://charmhub.io/tls-certificates-operator).
 
 
 ## Canonical Contributor Agreement

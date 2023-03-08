@@ -49,9 +49,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         "charms.opensearch.v0.opensearch_relation_provider.generate_hashed_password",
         return_value=("hashed_pw", "password"),
     )
-    @patch("charms.data_platform_libs.v0.data_interfaces.DatabaseProvides.set_credentials")
-    @patch("charms.data_platform_libs.v0.data_interfaces.DatabaseProvides.set_version")
-    def test_on_database_requested(
+    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_credentials")
+    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_version")
+    def test_on_index_requested(
         self,
         _set_version,
         _set_credentials,
@@ -68,19 +68,19 @@ class TestOpenSearchProvider(unittest.TestCase):
         hashed_pw, password = _gen_pw.return_value
 
         self.harness.set_leader(False)
-        self.opensearch_provider._on_database_requested(event)
+        self.opensearch_provider._on_index_requested(event)
         _is_node_up.assert_not_called()
 
         self.harness.set_leader(True)
         _is_node_up.return_value = False
-        self.opensearch_provider._on_database_requested(event)
+        self.opensearch_provider._on_index_requested(event)
         event.defer.assert_called()
 
         _is_node_up.return_value = True
         event.extra_user_roles = "admin"
         event.index = "test_index"
         self.unit.status = ActiveStatus()
-        self.opensearch_provider._on_database_requested(event)
+        self.opensearch_provider._on_index_requested(event)
         _create_users.assert_called_with(username, hashed_pw, event.index, event.extra_user_roles)
         _set_credentials.assert_called_with(event.relation.id, username, password)
         _set_version.assert_called_with(event.relation.id, _opensearch_version())
@@ -89,7 +89,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         _set_version.reset_mock()
 
         _create_users.side_effect = OpenSearchUserMgmtError()
-        self.opensearch_provider._on_database_requested(event)
+        self.opensearch_provider._on_index_requested(event)
         self.assertIsInstance(self.unit.status, BlockedStatus)
         _set_credentials.assert_not_called()
         _set_version.assert_not_called()
@@ -118,6 +118,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         _create_user.assert_called_with(username, roles, hashed_pw)
         _patch_user.assert_called_with(username, patches)
 
+    # @patch("charms.opensearch.v0.opensearch_relation_provider.unit_ip", return_value="1.1.1.2")
     def test_on_relation_departed(self):
         event = MagicMock()
         event.departing_unit = None
@@ -142,6 +143,7 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charm.OpenSearchOperatorCharm._purge_users")
     def test_on_relation_broken(self, _, __, _is_node_up, _remove_users, _unit_departing):
         event = MagicMock()
+        event.relation.id = 0
         depart_flag = self.opensearch_provider._depart_flag(event.relation)
 
         self.harness.set_leader(False)
@@ -162,14 +164,17 @@ class TestOpenSearchProvider(unittest.TestCase):
         assert not self.charm.peers_data.get(Scope.UNIT, depart_flag)
         _remove_users.assert_called_with(event.relation.id)
 
-    @patch("charms.data_platform_libs.v0.data_interfaces.DatabaseProvides.set_endpoints")
-    @patch(
-        "charms.opensearch.v0.opensearch_relation_provider.units_ips",
-        return_value={"1": "1.1.1.1", "2": "2.2.2.2"},
-    )
-    def test_update_endpoints(self, _ips, _set_endpoints):
+    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_endpoints")
+    @patch("charm.OpenSearchOperatorCharm._get_nodes")
+    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
+    @patch("charm.OpenSearchOperatorCharm._purge_users")
+    def test_update_endpoints(self, _, __, _nodes, _set_endpoints):
+        self.harness.set_leader(True)
+        node = MagicMock()
+        node.ip = "4.4.4.4"
+        _nodes.return_value = [node]
         relation = MagicMock()
         relation.id = 1
-        endpoints = [f"{ip}:{self.charm.opensearch.port}" for ip in _ips.return_value.values()]
+        endpoints = [f"{node.ip}:{self.charm.opensearch.port}" for node in _nodes.return_value]
         self.opensearch_provider.update_endpoints(relation)
         _set_endpoints.assert_called_with(relation.id, ",".join(endpoints))
