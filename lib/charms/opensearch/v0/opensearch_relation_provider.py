@@ -14,18 +14,16 @@ Default security values can be found in the opensearch documentation here:
 https://opensearch.org/docs/latest/security/access-control/index/.
 
 """
-
 import logging
+from copy import deepcopy
 from enum import Enum
+from typing import Dict
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
     DatabaseRequestedEvent,
 )
-from charms.opensearch.v0.constants_charm import (
-    ClientRelationName,
-    PeerRelationName,
-)
+from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.helper_security import generate_hashed_password
@@ -47,24 +45,16 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-class ExtraUserRole:
-    def __init__(self, extra_user_roles: str, index: str):
-        self.index = index
-        try:
-            self.permissions = ExtraUserRolePermissions[extra_user_roles.upper()]
-        except TypeError:
-            logger.error("invalid extra_user_roles parameter supplied to relation")
-            raise
-
 class ExtraUserRolePermissions(Enum):
     """An enum of user types and their associated permissions."""
 
-    # Default user has CRUD in a specific index. Update index_patterns to include the index.
+    # Default user has CRUD in a specific index. Update index_patterns to include the index to
+    # which these permissions are applied.
     DEFAULT = {
         "cluster_permissions": ["cluster_monitor"],
         "index_permissions": [
             {
-                "index_patterns": [TODO index name goes here],
+                "index_patterns": [],
                 "dls": "",
                 "fls": [],
                 "masked_fields": [],
@@ -86,11 +76,6 @@ class ExtraUserRolePermissions(Enum):
     # - Removing indices they have created
     # - Node roles
     ADMIN = {}
-
-    def set_index(self, index_name: str):
-        """Set these permissions for a specific index."""
-        for perm_set in self["index_permissions"]:
-            perm_set["index_patterns"] = index_name
 
 
 class OpenSearchProvider(Object):
@@ -154,8 +139,9 @@ class OpenSearchProvider(Object):
 
         username = self._relation_username(event.relation)
         hashed_pwd, pwd = generate_hashed_password()
+        extra_user_roles = event.extra_user_roles if event.extra_user_roles else "default"
         try:
-            self.create_opensearch_users(username, hashed_pwd, event.index, user_roles)
+            self.create_opensearch_users(username, hashed_pwd, event.index, extra_user_roles)
         except OpenSearchUserMgmtError as err:
             logger.error(err)
             self.unit.status = BlockedStatus(str(err))
@@ -168,38 +154,64 @@ class OpenSearchProvider(Object):
         self.database_provides.set_version(rel_id, self.opensearch.version)
 
     def create_opensearch_users(
-        self, username: str, hashed_pwd: str, index: str, extra_user_roles: ExtraUserRolePermissions
+        self,
+        username: str,
+        hashed_pwd: str,
+        index: str,
+        extra_user_roles: str,
     ):
         """Creates necessary opensearch users and permissions for this relation.
 
         Args:
             username: Username to be created
             hashed_pwd: the hash of the password to be assigned to the user
-            access_control: A dict of roles, permissions, and action groups to be applied to the
-                user. A new role will be created to contain the requested permissions and action
-                groups.
+            index: the index to which the users must be granted access
+            extra_user_roles: the level of permissions that the user should be given.
 
         Raises:
             OpenSearchUserMgmtError if user creation fails
         """
-        # TODO this might be setting the values inside the enum?
-        extra_user_roles.set_index(index)
         try:
             # Create a new role for this relation, encapsulating the permissions we care about. We
             # can't create a "default" and an "admin" role once because the permissions need to be
             # set to this relation's specific index.
             self.user_manager.create_role(
                 role_name=username,
-                permissions=extra_user_roles.value,
+                permissions=self.get_extra_user_role_permissions(extra_user_roles, index),
             )
-            self.user_manager.create_user(username, [username], hashed_pwd)
+            roles = [username]
+            self.user_manager.create_user(username, roles, hashed_pwd)
             self.user_manager.patch_user(
                 username,
-                [{"op": "replace", "path": "/opendistro_security_roles", "value": [username]}],
+                [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
             )
         except OpenSearchUserMgmtError as err:
             logger.error(err)
             raise
+
+    def get_extra_user_role_permissions(self, extra_user_roles: str, index: str) -> Dict[str, any]:
+        """Get relation role permissions from the extra_user_roles field.
+
+        Args:
+            extra_user_roles: role requested by the requirer unit, provided in relation databag.
+                This needs to be one of "admin" or "default", or it will be set to "default".
+                TODO should this fail and raise an error instead so provider charm authors can
+                guarantee they're getting the perms they expect?
+            index: if these permissions are index-specific, they will be assigned to this index.
+
+        Returns:
+            A dict containing the required permissions for the requested role.
+        """
+        logger.error(ExtraUserRolePermissions._member_names_)
+        if extra_user_roles.upper() not in ExtraUserRolePermissions._member_names_:
+            extra_user_roles = "default"
+
+        permissions = deepcopy(ExtraUserRolePermissions[extra_user_roles.upper()])
+
+        # TODO verify if this needs to be applied to admin role. Probably does.
+        if extra_user_roles == "default":
+            for perm_set in permissions["index_permissions"]:
+                perm_set["index_patterns"] = [index]
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""

@@ -37,10 +37,7 @@ class ApplicationCharm(CharmBase):
         # (these events are defined in the database requires charm library).
         database_name = f'{self.app.name.replace("-", "_")}_first_database'
 
-        permissive_roles = json.dumps({"roles": ["all_access"]})
-        self.first_database = DatabaseRequires(
-            self, "first-database", database_name, permissive_roles
-        )
+        self.first_database = DatabaseRequires(self, "first-database", database_name, "")
         self.framework.observe(
             self.first_database.on.database_created, self._on_first_database_created
         )
@@ -51,16 +48,8 @@ class ApplicationCharm(CharmBase):
         # Events related to the second database that is requested
         # (these events are defined in the database requires charm library).
         database_name = f'{self.app.name.replace("-", "_")}_second_database'
-        # TODO change this to use new permissions
-        roles = {
-            "roles": ["readall"],
-            "permissions": ["TODO find some permissions", ""],
-            "action_groups": ["TODO find some action groups", ""],
-        }
-        complex_roles = json.dumps(roles)
-        self.second_database = DatabaseRequires(
-            self, "second-database", database_name, complex_roles
-        )
+
+        self.second_database = DatabaseRequires(self, "second-database", database_name, "admin")
         self.framework.observe(
             self.second_database.on.database_created, self._on_second_database_created
         )
