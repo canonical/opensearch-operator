@@ -39,7 +39,7 @@ class ApplicationCharm(CharmBase):
         # (these events are defined in the database requires charm library).
         index_name = f'{self.app.name.replace("-", "_")}_first_opensearch'
 
-        self.first_database = OpenSearchRequires(self, "first-index", index_name, "")
+        self.first_opensearch = OpenSearchRequires(self, "first-index", index_name, "")
 
         self.framework.observe(
             self.first_opensearch.on.index_created, self._on_authentication_updated

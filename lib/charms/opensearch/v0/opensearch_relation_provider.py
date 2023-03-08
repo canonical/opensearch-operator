@@ -3,6 +3,9 @@
 
 """OpenSearch client relation hooks & helpers.
 
+See this link for a detailed spec:
+https://github.com/canonical/charm-relation-interfaces/tree/main/interfaces/opensearch_client/v0
+
 The read-only-endpoints field of DatabaseProvides is unused in this relation because this concept
 is irrelevant to OpenSearch. In this relation, the application charm should have control over node
 & index security policies, and therefore differentiating between types of network endpoints is
@@ -49,16 +52,6 @@ LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 
-# The unique Charmhub library identifier, never change it
-LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
-
-# Increment this major API version when introducing breaking changes
-LIBAPI = 0
-
-# Increment this PATCH version before using `charmcraft publish-lib` or reset
-# to 0 if you are raising the major API version
-LIBPATCH = 1
-
 
 class ExtraUserRolePermissions(Enum):
     """An enum of user types and their associated permissions."""
@@ -90,7 +83,40 @@ class ExtraUserRolePermissions(Enum):
     # - creating and deleting users and assigning their access controls
     # - Removing indices they have created
     # - Node roles
-    ADMIN = {}
+    ADMIN = {
+        "description": "Allow full admin access ",
+        "index_permissions": [
+            {
+                "index_patterns": ["*"],
+                "fls": [],
+                "masked_fields": [],
+                "allowed_actions": [
+                    "cluster_all",
+                    "indices_all",
+                    "crud",
+                ],
+            }
+        ],
+        # "tenant_permissions": [
+        #     {
+        #         "tenant_patterns": ["*"],
+        #         "allowed_actions": [
+        #             "kibana_all_write",
+        #             "kibana_all_read",
+        #         ],
+        #     }
+        # ],
+        "cluster_permissions": [
+            "indices_all",
+            "cluster_all",
+            "crud",
+            # "kibana_all_read",
+            # "kibana_all_write",
+            "manage",
+            "indices:admin/*",
+            "cluster:admin/*",
+        ],
+    }
 
 
 class OpenSearchProvider(Object):
