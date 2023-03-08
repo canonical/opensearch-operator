@@ -1,7 +1,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import json
 import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
@@ -60,8 +59,8 @@ class TestOpenSearchProvider(unittest.TestCase):
         _create_users,
         _opensearch_version,
         _is_node_up,
-        _init_admin,
-        _purge_users,
+        _,
+        __,
     ):
         event = MagicMock()
         event.relation.id = 1
@@ -78,15 +77,11 @@ class TestOpenSearchProvider(unittest.TestCase):
         event.defer.assert_called()
 
         _is_node_up.return_value = True
-        event.extra_user_roles = None
-        self.opensearch_provider._on_database_requested(event)
-        self.assertIsInstance(self.unit.status, BlockedStatus)
-
-        event.extra_user_roles = json.dumps({"roles": ["role"]})
+        event.extra_user_roles = "admin"
+        event.index = "test_index"
         self.unit.status = ActiveStatus()
         self.opensearch_provider._on_database_requested(event)
-        # no permissions or action groups in extra_user_roles, so we aren't creating a new role.
-        _create_users.assert_called_with(username, hashed_pw, json.loads(event.extra_user_roles))
+        _create_users.assert_called_with(username, hashed_pw, event.index, event.extra_user_roles)
         _set_credentials.assert_called_with(event.relation.id, username, password)
         _set_version.assert_called_with(event.relation.id, _opensearch_version())
         self.assertNotIsInstance(self.unit.status, BlockedStatus)
@@ -105,31 +100,22 @@ class TestOpenSearchProvider(unittest.TestCase):
     def test_create_opensearch_users(self, _patch_user, _create_role, _create_user):
         username = "username"
         hashed_pw = "my_cool_hash"
-        roles = ["all_access"]
-        access_control = {"roles": roles}
+        extra_user_roles = "admin"
+        index = "test_index"
+        roles = [username]
         patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}]
 
-        self.opensearch_provider.create_opensearch_users(username, hashed_pw, access_control)
-        # no permissions or action groups in extra_user_roles, so we aren't creating a new role.
-        _create_role.assert_not_called()
-        _create_user.assert_called_with(username, roles, hashed_pw)
-        _patch_user.assert_called_with(username, patches)
-
-        # Assert we can create a user with roles, permissions, and action groups
-        access_control = {
-            "roles": roles,
-            "permissions": ["cluster:admin/ingest/pipeline/delete"],
-            "action_groups": ["get"],
-        }
-        self.opensearch_provider.create_opensearch_users(username, hashed_pw, access_control)
+        self.opensearch_provider.create_opensearch_users(
+            username, hashed_pw, index, extra_user_roles
+        )
         # permissions and action groups are in extra_user_roles, so we create a new role.
         _create_role.assert_called_with(
             role_name=username,
-            permissions=access_control["permissions"],
-            action_groups=access_control["action_groups"],
+            permissions=self.opensearch_provider.get_extra_user_role_permissions(
+                extra_user_roles, index
+            ),
         )
         _create_user.assert_called_with(username, roles, hashed_pw)
-        patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}]
         _patch_user.assert_called_with(username, patches)
 
     def test_on_relation_departed(self):
