@@ -27,11 +27,9 @@ from charms.data_platform_libs.v0.data_interfaces import (
 from charms.opensearch.v0.constants_charm import (
     ClientRelationBadRoleRequestMessage,
     ClientRelationName,
-    PeerRelationName,
 )
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.helper_networking import reachable_hosts, units_ips
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import (
