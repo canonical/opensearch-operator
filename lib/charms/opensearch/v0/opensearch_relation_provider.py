@@ -244,7 +244,6 @@ class OpenSearchProvider(Object):
             omit_endpoints = set()
 
         port = self.opensearch.port
-        ips = set(reachable_hosts(units_ips(self.charm, PeerRelationName).values()))
         ips = set([node.ip for node in self.charm._get_nodes(use_localhost=True)])
         endpoints = ",".join([f"{ip}:{port}" for ip in ips - omit_endpoints])
         databag_endpoints = relation.data[relation.app].get("endpoints")
