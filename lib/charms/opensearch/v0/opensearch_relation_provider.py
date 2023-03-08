@@ -13,22 +13,16 @@ roles will be mapped to a dedicated user for the relation, which will be removed
 Default security values can be found in the opensearch documentation here:
 https://opensearch.org/docs/latest/security/access-control/index/.
 
-TODO add databag reference information
-TODO add tls
 """
 
-import json
 import logging
-from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
     DatabaseRequestedEvent,
 )
 from charms.opensearch.v0.constants_charm import (
-    ClientRelationBadRoleRequestMessage,
     ClientRelationName,
     PeerRelationName,
 )
@@ -70,7 +64,7 @@ class ExtraUserRolePermissions(Enum):
         "cluster_permissions": ["cluster_monitor"],
         "index_permissions": [
             {
-                "index_patterns": [],
+                "index_patterns": [TODO index name goes here],
                 "dls": "",
                 "fls": [],
                 "masked_fields": [],
