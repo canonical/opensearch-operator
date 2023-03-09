@@ -57,8 +57,8 @@ class OpenSearchUserManager:
     def create_role(
         self,
         role_name: str,
-        permissions: Optional[Dict[str, str]],
-        action_groups: Optional[Dict[str, str]],
+        permissions: Optional[Dict[str, str]] = None,
+        action_groups: Optional[Dict[str, str]] = None,
     ) -> Dict[str, any]:
         """Creates a role with the given permissions.
 
@@ -81,8 +81,8 @@ class OpenSearchUserManager:
             f"{ROLE_ENDPOINT}/{role_name}",
             payload={**(permissions or {}), **(action_groups or {})},
         )
-        if resp.get("status") != "OK":
-            raise OpenSearchUserMgmtError(f"creating role {role_name} failed")
+        # if resp.get("status") != "OK":
+        #     raise OpenSearchUserMgmtError(f"creating role {role_name} failed")
         return resp
 
     def remove_role(self, role_name: str) -> Dict[str, any]:

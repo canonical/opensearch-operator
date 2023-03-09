@@ -18,7 +18,6 @@ https://opensearch.org/docs/latest/security/access-control/index/.
 
 """
 import logging
-from copy import deepcopy
 from enum import Enum
 from typing import Dict, Optional, Set
 
@@ -30,6 +29,7 @@ from charms.opensearch.v0.constants_charm import ClientRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_security import generate_hashed_password
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import (
     CharmBase,
@@ -175,9 +175,22 @@ class OpenSearchProvider(Object):
         """
         if not self.unit.is_leader():
             return
-        if not self.opensearch.is_node_up():
+        if not self.opensearch.is_node_up() or not event.index:
             event.defer()
             return
+
+        # TODO extract to opensearch_index lib?
+        try:
+            resp = self.opensearch.request("PUT", event.index)
+            if resp.get("status") != "OK":
+                raise OpenSearchUserMgmtError(f"creating index {event.index} failed")
+        except OpenSearchHttpError as e:
+            if not (
+                e.response_code == 400
+                and e.response_body.get("error", {}).get("type")
+                == "resource_already_exists_exception"
+            ):
+                raise
 
         username = self._relation_username(event.relation)
         hashed_pwd, pwd = generate_hashed_password()
@@ -246,16 +259,16 @@ class OpenSearchProvider(Object):
         Returns:
             A dict containing the required permissions for the requested role.
         """
-        logger.error(ExtraUserRolePermissions._member_names_)
         if extra_user_roles.upper() not in ExtraUserRolePermissions._member_names_:
             extra_user_roles = "default"
 
-        permissions = deepcopy(ExtraUserRolePermissions[extra_user_roles.upper()])
+        permissions = ExtraUserRolePermissions[extra_user_roles.upper()].value
 
-        # TODO verify if this needs to be applied to admin role. Probably does.
         if extra_user_roles == "default":
             for perm_set in permissions["index_permissions"]:
                 perm_set["index_patterns"] = [index]
+
+        return permissions
 
     def update_certs(self, relation_id, ca_chain=None):
         """Update TLS certs passed into this relation.
