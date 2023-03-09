@@ -109,7 +109,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         """
         return Paths(
             home=f"{self._BASE_SNAP_DIR}/current",
-            conf=f"{self._BASE_SNAP_DIR}/common/config",
+            conf=f"{self._BASE_SNAP_DIR}/current/config",
             data=f"{self._BASE_SNAP_DIR}/common/data",
             logs=f"{self._BASE_SNAP_DIR}/common/logs",
             jdk=f"{self._BASE_SNAP_DIR}/current/jdk",
