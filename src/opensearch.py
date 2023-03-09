@@ -38,6 +38,8 @@ class OpenSearchSnap(OpenSearchDistribution):
     """Snap distribution of opensearch, only overrides properties and logic proper to the snap."""
 
     _BASE_SNAP_DIR = "/var/snap/opensearch"
+    _SNAP_DATA = f"{_BASE_SNAP_DIR}/current"
+    _SNAP_COMMON = f"{_BASE_SNAP_DIR}/common"
 
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
@@ -108,12 +110,12 @@ class OpenSearchSnap(OpenSearchDistribution):
           - OPENSEARCH_CONF: writeable by root or snap_daemon ($SNAP_COMMON) where config files are
         """
         return Paths(
-            home=f"{self._BASE_SNAP_DIR}/current",
-            conf=f"{self._BASE_SNAP_DIR}/current/config",
-            data=f"{self._BASE_SNAP_DIR}/common/data",
-            logs=f"{self._BASE_SNAP_DIR}/common/logs",
-            jdk=f"{self._BASE_SNAP_DIR}/current/jdk",
-            tmp=f"{self._BASE_SNAP_DIR}/common/tmp",
+            home=f"{self._SNAP_DATA}",
+            conf=f"{self._SNAP_DATA}/config",
+            data=f"{self._SNAP_COMMON}/data",
+            logs=f"{self._SNAP_COMMON}/logs",
+            jdk=f"{self._SNAP_DATA}/jdk",
+            tmp=f"{self._SNAP_COMMON}/tmp",
         )
 
     def write_file(self, path: str, data: str, override: bool = True):
