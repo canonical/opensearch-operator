@@ -70,23 +70,19 @@ class ApplicationCharm(CharmBase):
         )
         if not relations:
             return False
+
         connected = True
         for relation in relations:
-            if not self.smoke_check(relation.id):
-                connected = False
+            try:
+                self.relation_request(relation.name, relation.id, "GET", "/")
+            except (OpenSearchHttpError, Exception) as e:
+                logger.error(e)
                 logger.error(f"relation {relation} didn't connect")
+                connected = False
+
         return connected
 
-    def smoke_check(self, relation_id) -> bool:
-        try:
-            self.relation_request(relation_id, "GET", "/")
-            return True
-        except (OpenSearchHttpError, Exception) as e:
-            logger.error(e)
-            return False
-
     def _on_authentication_updated(self, event: AuthenticationEvent):
-        logger.error(event)
         if event.tls != "True":
             return
 
@@ -138,13 +134,18 @@ class ApplicationCharm(CharmBase):
 
     def relation_request(
         self,
+        relation_name: str,
         relation_id: int,
         method: str,
         endpoint: str,
         payload: Optional[Dict[str, any]] = None,
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request to a specific relation."""
-        databag = self.first_opensearch.fetch_relation_data()[relation_id]
+        if relation_name = "first-index":
+            relation = self.first_opensearch
+        elif relation_name = "second-index"
+            relation = self.second_opensearch
+        databag = relation.fetch_relation_data()[relation_id]
         username = databag.get("username")
         password = databag.get("password")
         hosts = databag.get("endpoints", "").split(",")

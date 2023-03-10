@@ -182,8 +182,6 @@ class OpenSearchProvider(Object):
         # TODO extract to opensearch_index lib?
         try:
             resp = self.opensearch.request("PUT", event.index)
-            if resp.get("status") != "OK":
-                raise OpenSearchUserMgmtError(f"creating index {event.index} failed")
         except OpenSearchHttpError as e:
             if not (
                 e.response_code == 400
