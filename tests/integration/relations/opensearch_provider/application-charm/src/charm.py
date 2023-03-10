@@ -35,11 +35,10 @@ class ApplicationCharm(CharmBase):
         # Default charm events.
         self.framework.observe(self.on.update_status, self._on_update_status)
 
-        # Events related to the first database that is requested
-        # (these events are defined in the database requires charm library).
-        index_name = f'{self.app.name.replace("-", "_")}_first_opensearch'
-
-        self.first_opensearch = OpenSearchRequires(self, "first-index", index_name, "")
+        # Events related to the first database that is requested (these events are defined in the
+        # database requires charm library).
+        # Albums index is used in integration test
+        self.first_opensearch = OpenSearchRequires(self, "first-index", "albums", "")
 
         self.framework.observe(
             self.first_opensearch.on.index_created, self._on_authentication_updated
@@ -51,9 +50,17 @@ class ApplicationCharm(CharmBase):
         # Events related to the second index that is requested
         # (these events are defined in the database requires charm library).
         index_name = f'{self.app.name.replace("-", "_")}_second_opensearch'
-        self.second_opensearch = OpenSearchRequires(self, "second-index", index_name, "admin")
+        self.second_opensearch = OpenSearchRequires(self, "second-index", index_name, "")
+
+        self.admin_opensearch = OpenSearchRequires(self, "admin", "admin-index", "admin")
 
         self.framework.observe(self.on.run_request_action, self._on_run_request_action)
+
+        self.relations = {
+            "first-index": self.first_opensearch,
+            "second-index": self.first_opensearch,
+            "admin": self.admin_opensearch,
+        }
 
     def _on_update_status(self, _) -> None:
         """Health check for index connection."""
@@ -103,7 +110,7 @@ class ApplicationCharm(CharmBase):
 
     def _on_run_request_action(self, event: ActionEvent):
         logger.info(event.params)
-        relation = self.first_opensearch
+        relation = self.relations[event.params["relation_name"]]
         relation_id = event.params["relation-id"]
         databag = relation.fetch_relation_data()[relation_id]
         method = event.params["method"]
@@ -141,10 +148,7 @@ class ApplicationCharm(CharmBase):
         payload: Optional[Dict[str, any]] = None,
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request to a specific relation."""
-        if relation_name = "first-index":
-            relation = self.first_opensearch
-        elif relation_name = "second-index"
-            relation = self.second_opensearch
+        relation = self.relations[relation_name]
         databag = relation.fetch_relation_data()[relation_id]
         username = databag.get("username")
         password = databag.get("password")

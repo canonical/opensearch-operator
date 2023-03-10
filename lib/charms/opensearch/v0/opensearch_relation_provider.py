@@ -97,21 +97,10 @@ class ExtraUserRolePermissions(Enum):
                 ],
             }
         ],
-        # "tenant_permissions": [
-        #     {
-        #         "tenant_patterns": ["*"],
-        #         "allowed_actions": [
-        #             "kibana_all_write",
-        #             "kibana_all_read",
-        #         ],
-        #     }
-        # ],
         "cluster_permissions": [
             "indices_all",
             "cluster_all",
             "crud",
-            # "kibana_all_read",
-            # "kibana_all_write",
             "manage",
             "indices:admin/*",
             "cluster:admin/*",
@@ -181,7 +170,7 @@ class OpenSearchProvider(Object):
 
         # TODO extract to opensearch_index lib?
         try:
-            resp = self.opensearch.request("PUT", event.index)
+            self.opensearch.request("PUT", event.index)
         except OpenSearchHttpError as e:
             if not (
                 e.response_code == 400

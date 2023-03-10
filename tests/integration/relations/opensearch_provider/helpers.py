@@ -91,11 +91,17 @@ async def run_action(
 
 
 async def run_request(
-    ops_test, unit_name: str, relation_id: int, method: str, endpoint: str, payload: str = None
+    ops_test,
+    unit_name: str,
+    relation_name: str,
+    relation_id: int,
+    method: str,
+    endpoint: str,
+    payload: str = None,
 ):
     # python can't have variable names with a hyphen, and Juju can't have action variables with an
     # underscore, so this is a compromise.
-    kwargs = {"relation-id": relation_id}
+    kwargs = {"relation-id": relation_id, "relation-name": relation_name}
     if payload:
         kwargs["payload"] = payload
     return await run_action(

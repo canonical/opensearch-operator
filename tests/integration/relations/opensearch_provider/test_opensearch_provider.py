@@ -79,6 +79,7 @@ async def test_index_usage(ops_test: OpsTest):
     await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        relation_name=client_relation.name,
         relation_id=client_relation.id,
         method="PUT",
         endpoint="/albums/_doc/1",
@@ -94,6 +95,7 @@ async def test_index_usage(ops_test: OpsTest):
         endpoint=read_index_endpoint,
         method="GET",
         relation_id=client_relation.id,
+        relation_name=client_relation.name,
     )
     results = json.loads(run_read_index["results"])
     logging.info(results)
@@ -116,6 +118,7 @@ async def test_bulk_index_usage(ops_test: OpsTest):
     await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        relation_name=client_relation.name,
         relation_id=client_relation.id,
         method="POST",
         endpoint="/_bulk",
@@ -132,6 +135,7 @@ async def test_bulk_index_usage(ops_test: OpsTest):
         endpoint=read_index_endpoint,
         method="GET",
         relation_id=client_relation.id,
+        relation_name=client_relation.name,
     )
     # TODO assert we're getting the correct value
     results = json.loads(run_bulk_read_index["results"])
@@ -152,6 +156,7 @@ async def test_version(ops_test: OpsTest):
         method="GET",
         endpoint="/",
         relation_id=client_relation.id,
+        relation_name=client_relation.name,
     )
     version = await get_application_relation_data(
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "version"
@@ -171,7 +176,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     )
 
     # Relate the new application and wait for them to exchange connection data.
-    await ops_test.model.add_relation(
+    second_client_relation = await ops_test.model.add_relation(
         f"{SECONDARY_CLIENT_APP_NAME}:{FIRST_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, SECONDARY_CLIENT_APP_NAME)
@@ -180,6 +185,34 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         await ops_test.model.wait_for_idle(
             status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(60 * 20)
         )
+
+    # Test that the permissions are respected between relations by running the same request as
+    # before, but expecting it to fail.
+    read_index_endpoint = "/albums/_search?q=Jazz"
+    run_read_index = await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        endpoint=read_index_endpoint,
+        method="GET",
+        relation_id=second_client_relation.id,
+        relation_name=second_client_relation.name,
+    )
+    results = json.loads(run_read_index["results"])
+    logging.info(results)
+    assert "403 Client Error: Forbidden for url:" in results.get("results", [""])
+
+
+async def test_admin_permissions(ops_test: OpsTest):
+    """TODO test admin permissions behave the way we want.
+
+    admin-only actions include:
+    - creating new users
+    - creating multiple indices
+    - removing indices they've created
+    - set cluster roles.
+
+    TODO check that basic users can't do these things.
+    """
 
 
 async def test_scaling(ops_test: OpsTest):
@@ -212,7 +245,6 @@ async def test_scaling(ops_test: OpsTest):
         )
 
     # Test scale down
-    # FIXME scale down seems to set endpoints to the removed unit, not the remaining units.
     await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() - 1)
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
@@ -275,8 +307,8 @@ async def test_relation_broken(ops_test: OpsTest):
         f"https://{leader_ip}:9200/_plugins/_security/api/internalusers/",
         verify=False,
     )
-    logger.error(relation_user)
-    logger.error(users)
+    logger.info(relation_user)
+    logger.info(users)
     assert relation_user not in users.keys()
 
 
