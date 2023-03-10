@@ -222,7 +222,9 @@ class OpenSearchDistribution(ABC):
                 if return_failed_resp and error_response:
                     return error_response
 
-                raise OpenSearchHttpError()
+                raise OpenSearchHttpError(
+                    response_body=error_response.text, response_code=error_response.status_code
+                )
 
             urls = full_urls()
             if not urls:

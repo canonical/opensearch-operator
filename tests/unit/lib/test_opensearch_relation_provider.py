@@ -43,6 +43,10 @@ class TestOpenSearchProvider(unittest.TestCase):
         return_value="1",
     )
     @patch(
+        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request",
+        return_value={"status": "OK"},
+    )
+    @patch(
         "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.create_opensearch_users"
     )
     @patch(
@@ -57,6 +61,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         _set_credentials,
         _gen_pw,
         _create_users,
+        _request,
         _opensearch_version,
         _is_node_up,
         _,

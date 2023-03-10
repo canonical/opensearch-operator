@@ -2,7 +2,8 @@
 # See LICENSE file for licensing details.
 
 """File containing all OpenSearch related exceptions."""
-from typing import List
+import json
+from typing import List, Optional
 
 # The unique Charmhub library identifier, never change it
 LIBID = "9e5bbab8a2bb475d83252500481351b2"
@@ -64,6 +65,10 @@ class OpenSearchCmdError(OpenSearchError):
 
 class OpenSearchHttpError(OpenSearchError):
     """Exception thrown when an OpenSearch REST call fails."""
+
+    def __init__(self, response_body: Optional[str] = None, response_code: Optional[int] = None):
+        self.response_body = json.loads(response_body) if response_body else None
+        self.response_code = response_code
 
 
 class OpenSearchHAError(OpenSearchError):
