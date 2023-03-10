@@ -32,6 +32,8 @@ SECONDARY_CLIENT_APP_NAME = "secondary-application"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
 FIRST_RELATION_NAME = "first-index"
+SECOND_RELATION_NAME = "second-index"
+ADMIN_RELATION_NAME = "admin"
 
 NUM_UNITS = 3
 
@@ -79,7 +81,7 @@ async def test_index_usage(ops_test: OpsTest):
     await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
-        relation_name=client_relation.name,
+        relation_name="first-index",
         relation_id=client_relation.id,
         method="PUT",
         endpoint="/albums/_doc/1",
@@ -95,7 +97,7 @@ async def test_index_usage(ops_test: OpsTest):
         endpoint=read_index_endpoint,
         method="GET",
         relation_id=client_relation.id,
-        relation_name=client_relation.name,
+        relation_name="first-index",
     )
     results = json.loads(run_read_index["results"])
     logging.info(results)
@@ -118,7 +120,7 @@ async def test_bulk_index_usage(ops_test: OpsTest):
     await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
-        relation_name=client_relation.name,
+        relation_name="first-index",
         relation_id=client_relation.id,
         method="POST",
         endpoint="/_bulk",
@@ -135,7 +137,7 @@ async def test_bulk_index_usage(ops_test: OpsTest):
         endpoint=read_index_endpoint,
         method="GET",
         relation_id=client_relation.id,
-        relation_name=client_relation.name,
+        relation_name="first-index",
     )
     # TODO assert we're getting the correct value
     results = json.loads(run_bulk_read_index["results"])
@@ -156,7 +158,7 @@ async def test_version(ops_test: OpsTest):
         method="GET",
         endpoint="/",
         relation_id=client_relation.id,
-        relation_name=client_relation.name,
+        relation_name="first-index",
     )
     version = await get_application_relation_data(
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "version"
@@ -177,7 +179,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 
     # Relate the new application and wait for them to exchange connection data.
     second_client_relation = await ops_test.model.add_relation(
-        f"{SECONDARY_CLIENT_APP_NAME}:{FIRST_RELATION_NAME}", OPENSEARCH_APP_NAME
+        f"{SECONDARY_CLIENT_APP_NAME}:{SECOND_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, SECONDARY_CLIENT_APP_NAME)
 
@@ -191,28 +193,143 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_read_index = await run_request(
         ops_test,
-        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        unit_name=ops_test.model.applications[SECONDARY_CLIENT_APP_NAME].units[0].name,
         endpoint=read_index_endpoint,
         method="GET",
         relation_id=second_client_relation.id,
-        relation_name=second_client_relation.name,
+        relation_name="second-index",
     )
     results = json.loads(run_read_index["results"])
     logging.info(results)
     assert "403 Client Error: Forbidden for url:" in results.get("results", [""])
 
 
-async def test_admin_permissions(ops_test: OpsTest):
+async def test_admin_relation(ops_test: OpsTest):
     """TODO test admin permissions behave the way we want.
 
     admin-only actions include:
-    - creating new users
     - creating multiple indices
     - removing indices they've created
     - set cluster roles.
 
+    verify that:
+    - we can't remove .opensearch_distro index
+      - otherwise create client-admin-role
+    - verify neither admin nor default users can access user api
+      - otherwise create client-default-role
     TODO check that basic users can't do these things.
     """
+    # Add an admin relation and wait for them to exchange data
+    global admin_relation
+    admin_relation = await ops_test.model.add_relation(
+        f"{CLIENT_APP_NAME}:{ADMIN_RELATION_NAME}", OPENSEARCH_APP_NAME
+    )
+    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(60 * 20)
+        )
+
+    # Verify we can access whatever data we like as admin
+    read_index_endpoint = "/albums/_search?q=Jazz"
+    run_bulk_read_index = await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        endpoint=read_index_endpoint,
+        method="GET",
+        relation_id=admin_relation.id,
+        relation_name="admin",
+    )
+    results = json.loads(run_bulk_read_index["results"])
+    logging.info(results)
+    artists = [
+        hit.get("_source", {}).get("artist") for hit in results.get("hits", {}).get("hits", [{}])
+    ]
+    assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
+
+
+async def test_admin_permissions(ops_test: OpsTest):
+    """TODO test admin permissions behave the way we want.
+
+    admin-only actions include:
+    - creating multiple indices
+    - removing indices they've created
+    - set cluster roles.
+
+    verify that:
+    - we can't remove .opensearch_distro index
+      - otherwise create client-admin-role
+    - verify neither admin nor default users can access user api
+      - otherwise create client-default-role
+    TODO check that basic users can't do these things.
+    """
+    # Verify admin can't access security API
+    security_api_endpoint = "/_plugins/_security/api/internalusers"
+    run_dump_users = await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        endpoint=security_api_endpoint,
+        method="GET",
+        relation_id=admin_relation.id,
+        relation_name="admin",
+    )
+    results = json.loads(run_dump_users["results"])
+    logging.info(results)
+    # TODO assert results are good
+
+    # verify admin can't delete .opensearch_distro
+    opensearch_distro_endpoint = "/.opensearch_distro"
+    run_remove_distro = await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        endpoint=opensearch_distro_endpoint,
+        method="DELETE",
+        relation_id=admin_relation.id,
+        relation_name="admin",
+    )
+    results = json.loads(run_remove_distro["results"])
+    logging.info(results)
+    # TODO assert results are good
+
+    assert 1 == 2  # Fail so we get logs, so I can add assertions
+
+
+async def test_normal_user_permissions(ops_test: OpsTest):
+    """Test normal user permissions behave the way we want.
+
+    verify that:
+    - we can't remove .opensearch_distro index
+    - verify neither admin nor default users can access user api
+    """
+    # Verify normal users can't access security API
+    security_api_endpoint = "/_plugins/_security/api/internalusers"
+    run_dump_users = await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        endpoint=security_api_endpoint,
+        method="GET",
+        relation_id=client_relation.id,
+        relation_name="first-index",
+    )
+    results = json.loads(run_dump_users["results"])
+    logging.info(results)
+    # TODO assert results are good
+
+    # verify normal users can't delete .opensearch_distro
+    opensearch_distro_endpoint = "/.opensearch_distro"
+    run_remove_distro = await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
+        endpoint=opensearch_distro_endpoint,
+        method="DELETE",
+        relation_id=client_relation.id,
+        relation_name="first-index",
+    )
+    results = json.loads(run_remove_distro["results"])
+    logging.info(results)
+    # TODO assert results are good
+
+    assert 1 == 2  # Fail so we get logs, so I can test results
 
 
 async def test_scaling(ops_test: OpsTest):
@@ -332,6 +449,7 @@ async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
         endpoint=read_index_endpoint,
         method="GET",
         relation_id=client_relation.id,
+        relation_name="first-index",
     )
     results = json.loads(run_bulk_read_index["results"])
     logging.info(results)

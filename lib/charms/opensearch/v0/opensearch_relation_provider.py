@@ -62,17 +62,17 @@ class ExtraUserRolePermissions(Enum):
         "cluster_permissions": ["cluster_monitor"],
         "index_permissions": [
             {
-                "index_patterns": [],
+                # TODO exclude user index (.opensearch_distro) (and have a set of protected
+                # indices)
+                "index_patterns": [],  # make sure that this isn't the user index, or we're opening a security hole. There's probably a list of other indices we can't touch,
                 "dls": "",
                 "fls": [],
                 "masked_fields": [],
                 "allowed_actions": [
                     "indices_monitor",
-                    "create_index",
                     "crud",
-                    "data_access",
-                    "indices:data/read/search",
-                    "indices:admin/create",
+                    "data_access",  # How is this different to crud?
+                    "indices:data/read/search",  # How is this different to crud?
                 ],
             }
         ],
@@ -80,14 +80,13 @@ class ExtraUserRolePermissions(Enum):
 
     # Admin user has control over:
     # - creating multiple indices
-    # - creating and deleting users and assigning their access controls
     # - Removing indices they have created
-    # - Node roles
     ADMIN = {
-        "description": "Allow full admin access ",
+        "description": "Allow full admin access",
         "index_permissions": [
             {
-                "index_patterns": ["*"],
+                # TODO exclude user index
+                "index_patterns": ["*"],  # TODO make sure we can't access opensearch user
                 "fls": [],
                 "masked_fields": [],
                 "allowed_actions": [
@@ -95,6 +94,7 @@ class ExtraUserRolePermissions(Enum):
                     "indices_all",
                     "crud",
                 ],
+                # TODO exclude security api
             }
         ],
         "cluster_permissions": [
