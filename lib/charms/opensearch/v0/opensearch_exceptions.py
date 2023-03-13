@@ -70,7 +70,7 @@ class OpenSearchHttpError(OpenSearchError):
         try:
             self.response_body = json.loads(response_body)
         except (json.JSONDecodeError, TypeError):
-            self.response_body = None
+            self.response_body = {}
         self.response_code = response_code
 
 

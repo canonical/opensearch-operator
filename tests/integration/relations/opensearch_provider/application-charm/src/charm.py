@@ -43,7 +43,7 @@ class ApplicationCharm(CharmBase):
         self.framework.observe(
             self.first_opensearch.on.index_created, self._on_authentication_updated
         )
-        self.framework.observe(
+        self.framework.observe(  # TODO check if I can delete this
             self.first_opensearch.on.authentication_updated, self._on_authentication_updated
         )
 
@@ -51,14 +51,20 @@ class ApplicationCharm(CharmBase):
         # (these events are defined in the database requires charm library).
         index_name = f'{self.app.name.replace("-", "_")}_second_opensearch'
         self.second_opensearch = OpenSearchRequires(self, "second-index", index_name, "")
+        self.framework.observe(
+            self.second_opensearch.on.index_created, self._on_authentication_updated
+        )
 
         self.admin_opensearch = OpenSearchRequires(self, "admin", "admin-index", "admin")
+        self.framework.observe(
+            self.admin_opensearch.on.index_created, self._on_authentication_updated
+        )
 
         self.framework.observe(self.on.run_request_action, self._on_run_request_action)
 
         self.relations = {
             "first-index": self.first_opensearch,
-            "second-index": self.first_opensearch,
+            "second-index": self.second_opensearch,
             "admin": self.admin_opensearch,
         }
 
@@ -82,7 +88,7 @@ class ApplicationCharm(CharmBase):
         for relation in relations:
             try:
                 self.relation_request(relation.name, relation.id, "GET", "/")
-            except (OpenSearchHttpError, Exception) as e:
+            except OpenSearchHttpError as e:
                 logger.error(e)
                 logger.error(f"relation {relation} didn't connect")
                 connected = False
