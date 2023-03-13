@@ -69,7 +69,7 @@ class OpenSearchHttpError(OpenSearchError):
     def __init__(self, response_body: Optional[str] = None, response_code: Optional[int] = None):
         try:
             self.response_body = json.loads(response_body)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, TypeError):
             self.response_body = None
         self.response_code = response_code
 
