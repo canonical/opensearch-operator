@@ -110,7 +110,7 @@ class ApplicationCharm(CharmBase):
 
     def _on_run_request_action(self, event: ActionEvent):
         logger.info(event.params)
-        relation = self.relations[event.params["relation_name"]]
+        relation = self.relations[event.params["relation-name"]]
         relation_id = event.params["relation-id"]
         databag = relation.fetch_relation_data()[relation_id]
         method = event.params["method"]
