@@ -86,7 +86,7 @@ class ExtraUserRolePermissions(Enum):
         "index_permissions": [
             {
                 # TODO exclude user index
-                "index_patterns": ["*"],  # TODO make sure we can't access opensearch user
+                "index_patterns": ["*"],
                 "fls": [],
                 "masked_fields": [],
                 "allowed_actions": [

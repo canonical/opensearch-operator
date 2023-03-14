@@ -31,48 +31,32 @@ class ApplicationCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-
         # Default charm events.
         self.framework.observe(self.on.update_status, self._on_update_status)
 
-        # Events related to the first database that is requested (these events are defined in the
-        # database requires charm library).
-        # Albums index is used in integration test
+        # `albums` index is used in integration test
         self.first_opensearch = OpenSearchRequires(self, "first-index", "albums", "")
 
-        self.framework.observe(
-            self.first_opensearch.on.index_created, self._on_authentication_updated
-        )
-        self.framework.observe(  # TODO check if I can delete this
-            self.first_opensearch.on.authentication_updated, self._on_authentication_updated
-        )
-
-        # Events related to the second index that is requested
-        # (these events are defined in the database requires charm library).
         index_name = f'{self.app.name.replace("-", "_")}_second_opensearch'
         self.second_opensearch = OpenSearchRequires(self, "second-index", index_name, "")
-        self.framework.observe(
-            self.second_opensearch.on.index_created, self._on_authentication_updated
-        )
-        self.framework.observe(  # TODO check if I can delete this
-            self.second_opensearch.on.authentication_updated, self._on_authentication_updated
-        )
 
         self.admin_opensearch = OpenSearchRequires(self, "admin", "admin-index", "admin")
-        self.framework.observe(
-            self.admin_opensearch.on.index_created, self._on_authentication_updated
-        )
-        self.framework.observe(  # TODO check if I can delete this
-            self.admin_opensearch.on.authentication_updated, self._on_authentication_updated
-        )
-
-        self.framework.observe(self.on.run_request_action, self._on_run_request_action)
 
         self.relations = {
             "first-index": self.first_opensearch,
             "second-index": self.second_opensearch,
             "admin": self.admin_opensearch,
         }
+
+        for relation_handler in self.relations.values():
+            self.framework.observe(
+                relation_handler.on.index_created, self._on_authentication_updated
+            )
+            self.framework.observe(  # TODO check if I can delete this
+                relation_handler.on.authentication_updated, self._on_authentication_updated
+            )
+
+        self.framework.observe(self.on.run_request_action, self._on_run_request_action)
 
     def _on_update_status(self, _) -> None:
         """Health check for index connection."""
@@ -84,9 +68,9 @@ class ApplicationCharm(CharmBase):
 
     def connection_check(self) -> bool:
         """Simple connection check to see if backend exists and we can connect to it."""
-        relations = self.model.relations.get("first-index", []) + self.model.relations.get(
-            "second-index", []
-        )
+        relations = []
+        for relation in self.relations.keys():
+            relations += self.model.relations.get(relation, [])
         if not relations:
             return False
 
@@ -107,9 +91,8 @@ class ApplicationCharm(CharmBase):
 
         tls_ca = event.tls_ca
         if not tls_ca:
-            tls_ca = self.first_opensearch.fetch_relation_data()[event.relation.id].get(
-                "tls_ca", None
-            )
+            relation = self.relations[event.relation.name]
+            tls_ca = relation.fetch_relation_data()[event.relation.id].get("tls_ca", None)
             if not tls_ca:
                 event.defer()  # We're waiting until we get a CA.
         logger.error(f"writing cert to {CERT_PATH}.")

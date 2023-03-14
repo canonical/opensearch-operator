@@ -120,7 +120,7 @@ async def test_bulk_index_usage(ops_test: OpsTest):
     await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
-        relation_name=FIRST_RELATION_NAME,
+        relation_name=FIRST_RELATION_NAME,root:helpers.py:89
         relation_id=client_relation.id,
         method="POST",
         endpoint="/_bulk",
@@ -189,7 +189,8 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         )
 
     # Test that the permissions are respected between relations by running the same request as
-    # before, but expecting it to fail.
+    # before, but expecting it to fail. SECOND_RELATION_NAME doesn't contain permissions for the
+    # `albums` index, so we are expecting a 403 forbidden error.
     unit = ops_test.model.applications[SECONDARY_CLIENT_APP_NAME].units[0]
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_read_index = await run_request(
@@ -201,13 +202,44 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         relation_name=SECOND_RELATION_NAME,
     )
 
-    status = await ops_test.model.get_status()
-    ip = status["applications"][SECONDARY_CLIENT_APP_NAME].units[unit.name]["address"]
+    ip = ops_test.model.units.get(unit.name).public_address
     results = json.loads(run_read_index["results"])
     logging.info(results)
     assert results == [
-        f"403 Client Error: Forbidden for url: https://{ip}:9200/albums/_search?q=Jazz"
+        f"403 Client Error: Forbidden for url: https://{ip}:9200{read_index_endpoint}"
     ]
+
+
+async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
+    """Test that two different applications can connect to the database."""
+    # Relate the new application and wait for them to exchange connection data.
+    second_app_first_client_relation = await ops_test.model.add_relation(
+        f"{SECONDARY_CLIENT_APP_NAME}:{FIRST_RELATION_NAME}", OPENSEARCH_APP_NAME
+    )
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(60 * 5)
+        )
+
+    # Test that different applications can access the same index if they present it in their
+    # relation databag. FIRST_RELATION_NAME contains `albums` in its databag, so we should be able
+    # to query that index if we want.
+    unit = ops_test.model.applications[SECONDARY_CLIENT_APP_NAME].units[0]
+    read_index_endpoint = "/albums/_search?q=Jazz"
+    run_bulk_read_index = await run_request(
+        ops_test,
+        unit_name=unit.name,
+        endpoint=read_index_endpoint,
+        method="GET",
+        relation_id=second_app_first_client_relation.id,
+        relation_name=FIRST_RELATION_NAME,
+    )
+    results = json.loads(run_bulk_read_index["results"])
+    logging.info(results)
+    artists = [
+        hit.get("_source", {}).get("artist") for hit in results.get("hits", {}).get("hits", [{}])
+    ]
+    assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
 async def test_admin_relation(ops_test: OpsTest):
@@ -267,12 +299,11 @@ async def test_admin_permissions(ops_test: OpsTest):
         relation_name=ADMIN_RELATION_NAME,
     )
 
-    status = await ops_test.model.get_status()
-    ip = status["applications"][SECONDARY_CLIENT_APP_NAME].units[test_unit.name]["address"]
+    ip = ops_test.model.units.get(test_unit.name).public_address
     results = json.loads(run_dump_users["results"])
     logging.info(results)
     assert results == [
-        f"403 Client Error: Forbidden for url: https://{ip}:9200/.opensearch_distro"
+        f"403 Client Error: Forbidden for url: https://{ip}:9200{security_api_endpoint}"
     ]
 
     # verify admin can't delete .opensearch_distro
@@ -289,7 +320,7 @@ async def test_admin_permissions(ops_test: OpsTest):
     logging.info(results)
     # TODO this isn't failing correctly - we're getting 404 instead
     assert results == [
-        f"403 Client Error: Forbidden for url: https://{ip}:9200/.opensearch_distro"
+        f"403 Client Error: Forbidden for url: https://{ip}:9200{opensearch_distro_endpoint}"
     ]
 
 
@@ -315,10 +346,9 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     results = json.loads(run_dump_users["results"])
     logging.info(results)
 
-    status = await ops_test.model.get_status()
-    ip = status["applications"][SECONDARY_CLIENT_APP_NAME].units[test_unit.name]["address"]
+    ip = ops_test.model.units.get(test_unit.name).public_address
     assert results == [
-        f"403 Client Error: Forbidden for url: https://{ip}:9200/.opensearch_distro"
+        f"403 Client Error: Forbidden for url: https://{ip}:9200{security_api_endpoint}"
     ]
 
     # verify normal users can't delete .opensearch_distro
@@ -334,7 +364,7 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     results = json.loads(run_remove_distro["results"])
     logging.info(results)
     assert results == [
-        f"403 Client Error: Forbidden for url: https://{ip}:9200/.opensearch_distro"
+        f"403 Client Error: Forbidden for url: https://{ip}:9200{opensearch_distro_endpoint}"
     ]
 
 
@@ -344,54 +374,57 @@ async def test_scaling(ops_test: OpsTest):
     scale_application also contains a wait_for_idle check, including checking for active status.
     """
 
-    async def rel_endpoints(app_name) -> str:
+    async def rel_endpoints(app_name: str, rel_name: str) -> str:
         return await get_application_relation_data(
-            ops_test, f"{app_name}/0", FIRST_RELATION_NAME, "endpoints"
+            ops_test, f"{app_name}/0", rel_name, "endpoints"
         )
 
-    async def get_num_of_endpoints(app_name: str) -> int:
-        return len((await rel_endpoints(app_name)).split(","))
+    async def get_num_of_endpoints(app_name: str, rel_name: str) -> int:
+        return len((await rel_endpoints(app_name, rel_name)).split(","))
 
-    def get_num_of_units() -> int:
+    def get_num_of_opensearch_units() -> int:
         return len(ops_test.model.applications[OPENSEARCH_APP_NAME].units)
 
     # Test things are already working fine
-    assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units(), await rel_endpoints(
-        CLIENT_APP_NAME
-    )
     assert (
-        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
-    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME)
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME) == get_num_of_opensearch_units()
+    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+    assert (
+        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
+        == get_num_of_opensearch_units()
+    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
             status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
         )
 
     # Test scale down
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() - 1)
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() - 1)
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
             status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
         )
-    assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units(), await rel_endpoints(
-        CLIENT_APP_NAME
-    )
     assert (
-        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
-    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME)
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME) == get_num_of_opensearch_units()
+    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+    assert (
+        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
+        == get_num_of_opensearch_units()
+    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
 
     # test scale back up again
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_units() + 1)
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() + 1)
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
             status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
         )
-    assert await get_num_of_endpoints(CLIENT_APP_NAME) == get_num_of_units(), await rel_endpoints(
-        CLIENT_APP_NAME
-    )
     assert (
-        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME) == get_num_of_units()
-    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME)
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME) == get_num_of_opensearch_units()
+    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+    assert (
+        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
+        == get_num_of_opensearch_units()
+    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
 
 
 async def test_relation_broken(ops_test: OpsTest):
@@ -406,9 +439,15 @@ async def test_relation_broken(ops_test: OpsTest):
         )
 
     # Break the relation.
-    await ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
-        f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
-        f"{CLIENT_APP_NAME}:{FIRST_RELATION_NAME}",
+    await asyncio.gather(
+        ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
+            f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
+            f"{CLIENT_APP_NAME}:{FIRST_RELATION_NAME}",
+        ),
+        ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
+            f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
+            f"{CLIENT_APP_NAME}:{ADMIN_RELATION_NAME}",
+        ),
     )
 
     async with ops_test.fast_forward():
@@ -443,7 +482,6 @@ async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
 
     async with ops_test.fast_forward():
-        # This test shouldn't take so long
         await ops_test.model.wait_for_idle(
             apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=1200, status="active"
         )
