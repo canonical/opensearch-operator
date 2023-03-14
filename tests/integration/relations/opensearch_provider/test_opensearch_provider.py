@@ -282,7 +282,7 @@ async def test_admin_permissions(ops_test: OpsTest):
     - set cluster roles.
 
     verify that:
-    - we can't remove .opensearch_distro index
+    - we can't remove .opendistro_security index
       - otherwise create client-admin-role
     - verify neither admin nor default users can access user api
       - otherwise create client-default-role
@@ -302,8 +302,8 @@ async def test_admin_permissions(ops_test: OpsTest):
     logging.info(results)
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
-    # verify admin can't delete .opensearch_distro
-    opensearch_distro_endpoint = "/.opensearch_distro"
+    # verify admin can't delete .opendistro_security
+    opensearch_distro_endpoint = "/.opendistro_security"
     run_remove_distro = await run_request(
         ops_test,
         unit_name=test_unit.name,
@@ -322,7 +322,7 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     """Test normal user permissions behave the way we want.
 
     verify that:
-    - we can't remove .opensearch_distro index
+    - we can't remove .opendistro_security index
     - verify neither admin nor default users can access user api
     """
     test_unit = ops_test.model.applications[CLIENT_APP_NAME].units[0]
@@ -341,8 +341,8 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     logging.info(results)
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
-    # verify normal users can't delete .opensearch_distro
-    opensearch_distro_endpoint = "/.opensearch_distro"
+    # verify normal users can't delete .opendistro_security
+    opensearch_distro_endpoint = "/.opendistro_security"
     run_remove_distro = await run_request(
         ops_test,
         unit_name=test_unit.name,
