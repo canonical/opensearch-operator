@@ -315,7 +315,7 @@ async def test_admin_permissions(ops_test: OpsTest):
         relation_id=admin_relation.id,
         relation_name=ADMIN_RELATION_NAME,
     )
-    results = json.loads(run_dump_users["results"])
+    results = json.loads(run_delete_users["results"])
     logging.info(results)
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
@@ -371,10 +371,9 @@ async def test_normal_user_permissions(ops_test: OpsTest):
         relation_id=client_relation.id,
         relation_name=FIRST_RELATION_NAME,
     )
-    results = json.loads(run_dump_users["results"])
+    results = json.loads(run_delete_users["results"])
     logging.info(results)
     assert "403 Client Error: Forbidden for url:" in results[0], results
-
 
     # verify normal users can't delete .opendistro_security
     opensearch_distro_endpoint = "/.opendistro_security"
