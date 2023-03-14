@@ -54,10 +54,16 @@ class ApplicationCharm(CharmBase):
         self.framework.observe(
             self.second_opensearch.on.index_created, self._on_authentication_updated
         )
+        self.framework.observe(  # TODO check if I can delete this
+            self.second_opensearch.on.authentication_updated, self._on_authentication_updated
+        )
 
         self.admin_opensearch = OpenSearchRequires(self, "admin", "admin-index", "admin")
         self.framework.observe(
             self.admin_opensearch.on.index_created, self._on_authentication_updated
+        )
+        self.framework.observe(  # TODO check if I can delete this
+            self.admin_opensearch.on.authentication_updated, self._on_authentication_updated
         )
 
         self.framework.observe(self.on.run_request_action, self._on_run_request_action)
