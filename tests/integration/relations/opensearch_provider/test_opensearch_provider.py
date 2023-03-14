@@ -183,10 +183,9 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, SECONDARY_CLIENT_APP_NAME)
 
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(60 * 20)
-        )
+    await ops_test.model.wait_for_idle(
+        status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(60 * 20)
+    )
 
     # Test that the permissions are respected between relations by running the same request as
     # before, but expecting it to fail. SECOND_RELATION_NAME doesn't contain permissions for the
@@ -213,13 +212,12 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     second_app_first_client_relation = await ops_test.model.add_relation(
         f"{SECONDARY_CLIENT_APP_NAME}:{FIRST_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            status="active",
-            apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-            timeout=(60 * 10),
-            idle_period=10,
-        )
+    await ops_test.model.wait_for_idle(
+        status="active",
+        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
+        timeout=(60 * 10),
+        idle_period=10,
+    )
 
     # Test that different applications can access the same index if they present it in their
     # relation databag. FIRST_RELATION_NAME contains `albums` in its databag, so we should be able
@@ -250,13 +248,12 @@ async def test_admin_relation(ops_test: OpsTest):
         f"{CLIENT_APP_NAME}:{ADMIN_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            status="active",
-            apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-            timeout=(60 * 10),
-            idle_period=10,
-        )
+    await ops_test.model.wait_for_idle(
+        status="active",
+        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
+        timeout=(60 * 10),
+        idle_period=10,
+    )
 
     # Verify we can access whatever data we like as admin
     read_index_endpoint = "/albums/_search?q=Jazz"
@@ -427,10 +424,9 @@ async def test_relation_broken(ops_test: OpsTest):
     relation_user = await get_application_relation_data(
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
     )
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
-        )
+    await ops_test.model.wait_for_idle(
+        status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
+    )
 
     # Break the relation.
     await asyncio.gather(
@@ -444,17 +440,16 @@ async def test_relation_broken(ops_test: OpsTest):
         ),
     )
 
-    async with ops_test.fast_forward():
-        await asyncio.gather(
-            ops_test.model.wait_for_idle(
-                apps=[CLIENT_APP_NAME],
-                status="blocked",
-            ),
-            ops_test.model.wait_for_idle(
-                apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
-                status="active",
-            ),
-        )
+    await asyncio.gather(
+        ops_test.model.wait_for_idle(
+            apps=[CLIENT_APP_NAME],
+            status="blocked",
+        ),
+        ops_test.model.wait_for_idle(
+            apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
+            status="active",
+        ),
+    )
 
     leader_ip = await get_leader_unit_ip(ops_test)
     users = await http_request(
@@ -475,10 +470,9 @@ async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
 
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=1200, status="active"
-        )
+    await ops_test.model.wait_for_idle(
+        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=1200, status="active"
+    )
 
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_bulk_read_index = await run_request(
