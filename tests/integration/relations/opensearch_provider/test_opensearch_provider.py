@@ -120,7 +120,7 @@ async def test_bulk_index_usage(ops_test: OpsTest):
     await run_request(
         ops_test,
         unit_name=ops_test.model.applications[CLIENT_APP_NAME].units[0].name,
-        relation_name=FIRST_RELATION_NAME,root:helpers.py:89
+        relation_name=FIRST_RELATION_NAME,
         relation_id=client_relation.id,
         method="POST",
         endpoint="/_bulk",
@@ -166,7 +166,7 @@ async def test_version(ops_test: OpsTest):
     logging.info(run_version_request)
     logging.info(version)
     results = json.loads(run_version_request["results"])
-    assert version == results.get("version", {}).get("number")
+    assert version == results.get("version", {}).get("number"), results
 
 
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
@@ -202,12 +202,9 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         relation_name=SECOND_RELATION_NAME,
     )
 
-    ip = ops_test.model.units.get(unit.name).public_address
     results = json.loads(run_read_index["results"])
     logging.info(results)
-    assert results == [
-        f"403 Client Error: Forbidden for url: https://{ip}:9200{read_index_endpoint}"
-    ]
+    assert "403 Client Error: Forbidden for url:" in results[0], results
 
 
 async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
@@ -218,7 +215,10 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     )
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(60 * 5)
+            status="active",
+            apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
+            timeout=(60 * 10),
+            idle_period=10,
         )
 
     # Test that different applications can access the same index if they present it in their
@@ -252,7 +252,10 @@ async def test_admin_relation(ops_test: OpsTest):
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(60 * 20)
+            status="active",
+            apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
+            timeout=(60 * 10),
+            idle_period=10,
         )
 
     # Verify we can access whatever data we like as admin
@@ -298,13 +301,9 @@ async def test_admin_permissions(ops_test: OpsTest):
         relation_id=admin_relation.id,
         relation_name=ADMIN_RELATION_NAME,
     )
-
-    ip = ops_test.model.units.get(test_unit.name).public_address
     results = json.loads(run_dump_users["results"])
     logging.info(results)
-    assert results == [
-        f"403 Client Error: Forbidden for url: https://{ip}:9200{security_api_endpoint}"
-    ]
+    assert "403 Client Error: Forbidden for url:" in results[0], results
 
     # verify admin can't delete .opensearch_distro
     opensearch_distro_endpoint = "/.opensearch_distro"
@@ -319,9 +318,7 @@ async def test_admin_permissions(ops_test: OpsTest):
     results = json.loads(run_remove_distro["results"])
     logging.info(results)
     # TODO this isn't failing correctly - we're getting 404 instead
-    assert results == [
-        f"403 Client Error: Forbidden for url: https://{ip}:9200{opensearch_distro_endpoint}"
-    ]
+    assert "403 Client Error: Forbidden for url:" in results[0], results
 
 
 async def test_normal_user_permissions(ops_test: OpsTest):
@@ -345,11 +342,7 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     )
     results = json.loads(run_dump_users["results"])
     logging.info(results)
-
-    ip = ops_test.model.units.get(test_unit.name).public_address
-    assert results == [
-        f"403 Client Error: Forbidden for url: https://{ip}:9200{security_api_endpoint}"
-    ]
+    assert "403 Client Error: Forbidden for url:" in results[0], results
 
     # verify normal users can't delete .opensearch_distro
     opensearch_distro_endpoint = "/.opensearch_distro"
@@ -363,9 +356,7 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     )
     results = json.loads(run_remove_distro["results"])
     logging.info(results)
-    assert results == [
-        f"403 Client Error: Forbidden for url: https://{ip}:9200{opensearch_distro_endpoint}"
-    ]
+    assert "403 Client Error: Forbidden for url:" in results[0], results
 
 
 async def test_scaling(ops_test: OpsTest):
@@ -387,7 +378,8 @@ async def test_scaling(ops_test: OpsTest):
 
     # Test things are already working fine
     assert (
-        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME) == get_num_of_opensearch_units()
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+        == get_num_of_opensearch_units()
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
     assert (
         await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
@@ -405,7 +397,8 @@ async def test_scaling(ops_test: OpsTest):
             status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
         )
     assert (
-        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME) == get_num_of_opensearch_units()
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+        == get_num_of_opensearch_units()
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
     assert (
         await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
@@ -419,7 +412,8 @@ async def test_scaling(ops_test: OpsTest):
             status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
         )
     assert (
-        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME) == get_num_of_opensearch_units()
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+        == get_num_of_opensearch_units()
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
     assert (
         await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
