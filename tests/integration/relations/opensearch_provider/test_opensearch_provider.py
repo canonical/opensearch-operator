@@ -302,6 +302,23 @@ async def test_admin_permissions(ops_test: OpsTest):
     logging.info(results)
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
+    # verify admin can't delete users
+    first_relation_user = await get_application_relation_data(
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
+    )
+    first_relation_user_endpoint = f"/_plugins/_security/api/internalusers/{first_relation_user}"
+    run_delete_users = await run_request(
+        ops_test,
+        unit_name=test_unit.name,
+        endpoint=first_relation_user_endpoint,
+        method="DELETE",
+        relation_id=admin_relation.id,
+        relation_name=ADMIN_RELATION_NAME,
+    )
+    results = json.loads(run_dump_users["results"])
+    logging.info(results)
+    assert "403 Client Error: Forbidden for url:" in results[0], results
+
     # verify admin can't delete .opendistro_security
     opensearch_distro_endpoint = "/.opendistro_security"
     run_remove_distro = await run_request(
@@ -340,6 +357,24 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     results = json.loads(run_dump_users["results"])
     logging.info(results)
     assert "403 Client Error: Forbidden for url:" in results[0], results
+
+    # verify normal users can't delete users
+    first_relation_user = await get_application_relation_data(
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
+    )
+    first_relation_user_endpoint = f"/_plugins/_security/api/internalusers/{first_relation_user}"
+    run_delete_users = await run_request(
+        ops_test,
+        unit_name=test_unit.name,
+        endpoint=first_relation_user_endpoint,
+        method="DELETE",
+        relation_id=client_relation.id,
+        relation_name=FIRST_RELATION_NAME,
+    )
+    results = json.loads(run_dump_users["results"])
+    logging.info(results)
+    assert "403 Client Error: Forbidden for url:" in results[0], results
+
 
     # verify normal users can't delete .opendistro_security
     opensearch_distro_endpoint = "/.opendistro_security"
