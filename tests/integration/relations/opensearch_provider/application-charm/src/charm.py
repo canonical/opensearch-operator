@@ -86,9 +86,6 @@ class ApplicationCharm(CharmBase):
         return connected
 
     def _on_authentication_updated(self, event: AuthenticationEvent):
-        if event.tls != "True":
-            return
-
         tls_ca = event.tls_ca
         if not tls_ca:
             relation = self.relations[event.relation.name]
