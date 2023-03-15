@@ -6,9 +6,9 @@ import logging
 
 import pytest
 from charms.opensearch.v0.helper_cluster import ClusterTopology
-from integration.ha.continuous_writes import ContinuousWrites
 from pytest_operator.plugin import OpsTest
 
+from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.ha.helpers import (
     all_nodes,
     cluster_allocation,

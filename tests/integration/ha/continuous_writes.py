@@ -4,7 +4,7 @@
 
 import multiprocessing
 
-from integration.helpers import client
+from tests.integration.helpers import client
 from opensearchpy import OpenSearch, TransportError
 from opensearchpy.helpers import BulkIndexError, streaming_bulk
 from pytest_operator.plugin import OpsTest
