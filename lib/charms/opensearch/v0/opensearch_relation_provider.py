@@ -112,7 +112,7 @@ class OpenSearchProvider(Object):
     """Defines functionality for the 'provides' side of the 'opensearch-client' relation.
 
     Hook events observed:
-        - database-requested
+        - index-requested
         - relation-departed
         - relation-broken
     """
@@ -121,7 +121,7 @@ class OpenSearchProvider(Object):
         """Constructor for OpenSearchProvider object.
 
         Args:
-            charm: the charm for which this relation is provided
+            charm: the charm providing the opensearch relation
         """
         super().__init__(charm, ClientRelationName)
 
@@ -192,10 +192,10 @@ class OpenSearchProvider(Object):
         rel_id = event.relation.id
 
         # Share the credentials and updated connection info with the client application.
-        self.opensearch_provides.set_credentials(rel_id, username, pwd)
-        self.update_endpoints(event.relation)
         self.opensearch_provides.set_version(rel_id, self.opensearch.version)
+        self.opensearch_provides.set_credentials(rel_id, username, pwd)
         self.update_certs(rel_id)
+        self.update_endpoints(event.relation)
 
     def create_opensearch_users(
         self,
@@ -275,7 +275,6 @@ class OpenSearchProvider(Object):
                 # cert doesn't exist - presumably we don't yet have a TLS relation.
                 return
         self.opensearch_provides.set_tls_ca(relation_id, "\n".join(ca_chain[::-1]))
-        self.opensearch_provides.set_tls(relation_id, "True")
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         self.update_endpoints(event.relation)
