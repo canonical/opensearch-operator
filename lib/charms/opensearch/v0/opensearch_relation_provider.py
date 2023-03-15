@@ -62,17 +62,13 @@ class ExtraUserRolePermissions(Enum):
         "cluster_permissions": ["cluster_monitor"],
         "index_permissions": [
             {
-                # TODO exclude user index (.opensearch_distro) (and have a set of protected
-                # indices)
-                "index_patterns": [],  # make sure that this isn't the user index, or we're opening a security hole. There's probably a list of other indices we can't touch,
+                "index_patterns": [],
                 "dls": "",
                 "fls": [],
                 "masked_fields": [],
                 "allowed_actions": [
                     "indices_monitor",
-                    "crud",
-                    "data_access",  # How is this different to crud?
-                    "indices:data/read/search",  # How is this different to crud?
+                    "data_access",
                 ],
             }
         ],
@@ -82,10 +78,8 @@ class ExtraUserRolePermissions(Enum):
     # - creating multiple indices
     # - Removing indices they have created
     ADMIN = {
-        "description": "Allow full admin access",
         "index_permissions": [
             {
-                # TODO exclude user index
                 "index_patterns": ["*"],
                 "fls": [],
                 "masked_fields": [],
@@ -94,16 +88,12 @@ class ExtraUserRolePermissions(Enum):
                     "indices_all",
                     "crud",
                 ],
-                # TODO exclude security api
             }
         ],
         "cluster_permissions": [
             "indices_all",
             "cluster_all",
-            "crud",
             "manage",
-            "indices:admin/*",
-            "cluster:admin/*",
         ],
     }
 
@@ -210,7 +200,8 @@ class OpenSearchProvider(Object):
             username: Username to be created
             hashed_pwd: the hash of the password to be assigned to the user
             index: the index to which the users must be granted access
-            extra_user_roles: the level of permissions that the user should be given.
+            extra_user_roles: the level of permissions that the user should be given. Can be a
+                comma-separated list of permissions, which should be merged.
 
         Raises:
             OpenSearchUserMgmtError if user creation fails
@@ -246,13 +237,20 @@ class OpenSearchProvider(Object):
         Returns:
             A dict containing the required permissions for the requested role.
         """
-        if extra_user_roles.upper() not in ExtraUserRolePermissions._member_names_:
-            extra_user_roles = "default"
+        roles = set(extra_user_roles.split(","))
+        permissions = ExtraUserRolePermissions.DEFAULT.value
 
-        permissions = ExtraUserRolePermissions[extra_user_roles.upper()].value
+        # Merge the permissions for all roles into one permissions dict. Currently no checking if
+        # this would create an invalid role config.
+        for role in roles:
+            if role.upper() in ExtraUserRolePermissions._member_names_:
+                for perm_scope, perms in ExtraUserRolePermissions[role.upper()].value.items():
+                    permissions[perm_scope] += perms
 
-        if extra_user_roles == "default":
-            for perm_set in permissions["index_permissions"]:
+        for perm_set in permissions["index_permissions"]:
+            # If this isn't a set of admin permissions (which applies to all indices) then set it
+            # to index.
+            if perm_set["index_patterns"] == []:
                 perm_set["index_patterns"] = [index]
 
         return permissions
