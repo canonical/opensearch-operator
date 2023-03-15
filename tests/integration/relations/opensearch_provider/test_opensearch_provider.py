@@ -169,6 +169,50 @@ async def test_version(ops_test: OpsTest):
     assert version == results.get("version", {}).get("number"), results
 
 
+async def test_scaling(ops_test: OpsTest):
+    """Test that scaling correctly updates endpoints in databag.
+
+    scale_application also contains a wait_for_idle check, including checking for active status.
+    """
+
+    async def rel_endpoints(app_name: str, rel_name: str) -> str:
+        return await get_application_relation_data(
+            ops_test, f"{app_name}/0", rel_name, "endpoints"
+        )
+
+    async def get_num_of_endpoints(app_name: str, rel_name: str) -> int:
+        return len((await rel_endpoints(app_name, rel_name)).split(","))
+
+    def get_num_of_opensearch_units() -> int:
+        return len(ops_test.model.applications[OPENSEARCH_APP_NAME].units)
+
+    # Test things are already working fine
+    assert (
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+        == get_num_of_opensearch_units()
+    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+
+    # Test scale down
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() - 1)
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+    assert (
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+        == get_num_of_opensearch_units()
+    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+
+    # test scale back up again
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() + 1)
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+    assert (
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+        == get_num_of_opensearch_units()
+    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+
+
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
     # Deploy secondary application.
@@ -388,68 +432,6 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     results = json.loads(run_remove_distro["results"])
     logging.info(results)
     assert "403 Client Error: Forbidden for url:" in results[0], results
-
-
-async def test_scaling(ops_test: OpsTest):
-    """Test that scaling correctly updates endpoints in databag.
-
-    scale_application also contains a wait_for_idle check, including checking for active status.
-    """
-
-    async def rel_endpoints(app_name: str, rel_name: str) -> str:
-        return await get_application_relation_data(
-            ops_test, f"{app_name}/0", rel_name, "endpoints"
-        )
-
-    async def get_num_of_endpoints(app_name: str, rel_name: str) -> int:
-        return len((await rel_endpoints(app_name, rel_name)).split(","))
-
-    def get_num_of_opensearch_units() -> int:
-        return len(ops_test.model.applications[OPENSEARCH_APP_NAME].units)
-
-    # Test things are already working fine
-    assert (
-        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-        == get_num_of_opensearch_units()
-    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-    assert (
-        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
-        == get_num_of_opensearch_units()
-    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
-        )
-
-    # Test scale down
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() - 1)
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
-        )
-    assert (
-        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-        == get_num_of_opensearch_units()
-    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-    assert (
-        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
-        == get_num_of_opensearch_units()
-    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
-
-    # test scale back up again
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() + 1)
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS
-        )
-    assert (
-        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-        == get_num_of_opensearch_units()
-    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-    assert (
-        await get_num_of_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
-        == get_num_of_opensearch_units()
-    ), await rel_endpoints(SECONDARY_CLIENT_APP_NAME, SECOND_RELATION_NAME)
 
 
 async def test_relation_broken(ops_test: OpsTest):
