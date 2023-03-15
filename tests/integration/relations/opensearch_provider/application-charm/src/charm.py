@@ -78,7 +78,7 @@ class ApplicationCharm(CharmBase):
         for relation in relations:
             try:
                 self.relation_request(relation.name, relation.id, "GET", "/")
-            except OpenSearchHttpError as e:
+            except Exception as e:
                 logger.error(e)
                 logger.error(f"relation {relation} didn't connect")
                 connected = False
