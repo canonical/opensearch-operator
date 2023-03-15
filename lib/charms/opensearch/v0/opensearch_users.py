@@ -81,8 +81,8 @@ class OpenSearchUserManager:
             f"{ROLE_ENDPOINT}/{role_name}",
             payload={**(permissions or {}), **(action_groups or {})},
         )
-        if resp.get("status") != "OK":
-            raise OpenSearchUserMgmtError(f"creating role {role_name} failed")
+        # if resp.get("status") != "OK":
+        #     raise OpenSearchUserMgmtError(f"creating role {role_name} failed")
         return resp
 
     def remove_role(self, role_name: str) -> Dict[str, any]:

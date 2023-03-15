@@ -38,9 +38,12 @@ class ApplicationCharm(CharmBase):
         self.first_opensearch = OpenSearchRequires(self, "first-index", "albums", "")
 
         index_name = f'{self.app.name.replace("-", "_")}_second_opensearch'
-        self.second_opensearch = OpenSearchRequires(self, "second-index", index_name, "")
+        # set invalid permissions to guarantee we still get default permissions.
+        self.second_opensearch = OpenSearchRequires(self, "second-index", index_name, "hackerman")
 
-        self.admin_opensearch = OpenSearchRequires(self, "admin", "admin-index", "admin")
+        # Checking comma-separated permissions. These should still basically have admin
+        # permissions.
+        self.admin_opensearch = OpenSearchRequires(self, "admin", "admin-index", "admin,default")
 
         self.relations = {
             "first-index": self.first_opensearch,
