@@ -275,7 +275,6 @@ class OpenSearchProvider(Object):
                 # cert doesn't exist - presumably we don't yet have a TLS relation.
                 return
         self.opensearch_provides.set_tls_ca(relation_id, "\n".join(ca_chain[::-1]))
-        self.opensearch_provides.set_tls(relation_id, "True")
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         self.update_endpoints(event.relation)

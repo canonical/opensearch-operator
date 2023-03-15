@@ -86,15 +86,13 @@ class ApplicationCharm(CharmBase):
         return connected
 
     def _on_authentication_updated(self, event: AuthenticationEvent):
-        if event.tls != "True":
-            return
-
         tls_ca = event.tls_ca
         if not tls_ca:
             relation = self.relations[event.relation.name]
-            tls_ca = relation.fetch_relation_data()[event.relation.id].get("tls_ca", None)
+            tls_ca = relation.fetch_relation_data()[event.relation.id].get("tls-ca", None)
             if not tls_ca:
                 event.defer()  # We're waiting until we get a CA.
+                return
         logger.error(f"writing cert to {CERT_PATH}.")
         with open(CERT_PATH, "w") as f:
             f.write(tls_ca)
