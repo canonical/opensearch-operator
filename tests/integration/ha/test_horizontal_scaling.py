@@ -6,6 +6,7 @@ import logging
 
 import pytest
 from charms.opensearch.v0.helper_cluster import ClusterTopology
+from integration.ha.continuous_writes import ContinuousWrites
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.helpers import (
@@ -31,6 +32,14 @@ from tests.integration.helpers import (
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
+
+
+@pytest.fixture()
+async def continuous_writes(ops_test: OpsTest):
+    """Starts continuous write operations to MongoDB for test and clears writes at end of test."""
+    ContinuousWrites.start(ops_test, 1)
+    yield
+    await ContinuousWrites.clear(ops_test)
 
 
 @pytest.mark.abort_on_fail
@@ -65,7 +74,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_horizontal_scale_up(ops_test: OpsTest) -> None:
+async def test_horizontal_scale_up(ops_test: OpsTest, continuous_writes) -> None:
     """Tests that new added units to the cluster are discoverable."""
     # scale up
     await ops_test.model.applications[APP_NAME].add_unit(count=2)
@@ -91,7 +100,7 @@ async def test_horizontal_scale_up(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_safe_scale_down_shards_realloc(ops_test: OpsTest) -> None:
+async def test_safe_scale_down_shards_realloc(ops_test: OpsTest, continuous_writes) -> None:
     """Tests the shutdown of a node, and re-allocation of shards to a newly joined unit.
 
     The goal of this test is to make sure that shards are automatically relocated after
@@ -178,7 +187,7 @@ async def test_safe_scale_down_shards_realloc(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest) -> None:
+async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest, continuous_writes) -> None:
     """Tests the shutdown of a node with a role requiring the re-balance of the cluster roles.
 
     The goal of this test is to make sure that roles are automatically recalculated after
