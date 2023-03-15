@@ -68,9 +68,7 @@ class ExtraUserRolePermissions(Enum):
                 "masked_fields": [],
                 "allowed_actions": [
                     "indices_monitor",
-                    "crud",
-                    "data_access",  # How is this different to crud?
-                    "indices:data/read/search",  # How is this different to crud?
+                    "data_access",
                 ],
             }
         ],
@@ -95,10 +93,7 @@ class ExtraUserRolePermissions(Enum):
         "cluster_permissions": [
             "indices_all",
             "cluster_all",
-            "crud",
             "manage",
-            "indices:admin/*",
-            "cluster:admin/*",
         ],
     }
 
