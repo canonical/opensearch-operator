@@ -3,7 +3,7 @@ The Charmed OpenSearch Operator delivers automated operations management from da
 
 OpenSearch is a popular NoSQL database application. It stores uses JSON-like documents to store data in searchable indices, which are queried using a REST API. OpenSearch is also a distributed database, so vertical and horizontal scaling come naturally.
 
-This operator charm deploys and operates OpenSearch on physical or virtual machines. It offers features such as replication, TLS, password rotation, and easy to use integration with applications. The Charmed OpenSearch Operator meets the need of deploying OpenSearch in a structured and consistent manner while allowing the user flexibility in configuration. It simplifies deployment, scaling, configuration and management of OpenSearch in production at scale in a reliable way.
+This operator charm deploys and operates OpenSearch on physical or virtual machines. It offers features such as replication, TLS, password rotation, and easy to use integration with other applications. The Charmed OpenSearch Operator meets the need of deploying OpenSearch in a structured and consistent manner while allowing the user flexibility in configuration. It simplifies deployment, scaling, configuration and management of OpenSearch in production at scale in a reliable way.
 
 ## Project and community
 
