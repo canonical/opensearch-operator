@@ -91,11 +91,13 @@ class ApplicationCharm(CharmBase):
     def _on_authentication_updated(self, event: AuthenticationEvent):
         tls_ca = event.tls_ca
         if not tls_ca:
-            relation = self.relations[event.relation.name]
-            tls_ca = relation.fetch_relation_data()[event.relation.id].get("tls-ca", None)
-            if not tls_ca:
-                event.defer()  # We're waiting until we get a CA.
-                return
+            event.defer()  # We're waiting until we get a CA.
+            return
+            # logger.error(event.relation)
+            # logger.error(event.relation.name)
+            # relation = self.relations[event.relation.name]
+            # tls_ca = relation.fetch_relation_data()[event.relation.id].get("tls-ca", None)
+            # if not tls_ca:
         logger.error(f"writing cert to {CERT_PATH}.")
         with open(CERT_PATH, "w") as f:
             f.write(tls_ca)
