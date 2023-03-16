@@ -81,9 +81,7 @@ class OpenSearchUserManager:
             f"{ROLE_ENDPOINT}/{role_name}",
             payload={**(permissions or {}), **(action_groups or {})},
         )
-        logger.error(resp)
         if resp.get("status") not in ["CREATED", "OK"]:
-            logger.error(f"THIS COMMAND DIDN'T WORK AND HERE'S WHY {resp}")
             logger.error(resp)
             raise OpenSearchUserMgmtError(f"creating role {role_name} failed")
         return resp
