@@ -171,7 +171,7 @@ class OpenSearchProvider(Object):
 
         username = self._relation_username(event.relation)
         hashed_pwd, pwd = generate_hashed_password()
-        extra_user_roles = event.extra_user_roles if event.extra_user_roles else "default"
+        extra_user_roles = event.extra_user_roles.lower() if event.extra_user_roles else "default"
         try:
             self.create_opensearch_users(username, hashed_pwd, event.index, extra_user_roles)
         except OpenSearchUserMgmtError as err:
