@@ -1275,8 +1275,8 @@ class OpenSearchRequires(DataRequires):
     on = OpenSearchRequiresEvents()
 
     def __init__(
-            self, charm, relation_name: str, index: str, extra_user_roles: Optional[str] = None
-        ):
+        self, charm, relation_name: str, index: str, extra_user_roles: Optional[str] = None
+    ):
         """Manager of OpenSearch client relations."""
         super().__init__(charm, relation_name, extra_user_roles)
         self.charm = charm
