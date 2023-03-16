@@ -55,7 +55,7 @@ class ApplicationCharm(CharmBase):
             self.framework.observe(
                 relation_handler.on.index_created, self._on_authentication_updated
             )
-            self.framework.observe(  # TODO check if I can delete this
+            self.framework.observe(
                 relation_handler.on.authentication_updated, self._on_authentication_updated
             )
 
@@ -90,14 +90,9 @@ class ApplicationCharm(CharmBase):
 
     def _on_authentication_updated(self, event: AuthenticationEvent):
         tls_ca = event.tls_ca
-        if not tls_ca:
+        if not event.tls_ca:
             event.defer()  # We're waiting until we get a CA.
             return
-            # logger.error(event.relation)
-            # logger.error(event.relation.name)
-            # relation = self.relations[event.relation.name]
-            # tls_ca = relation.fetch_relation_data()[event.relation.id].get("tls-ca", None)
-            # if not tls_ca:
         logger.error(f"writing cert to {CERT_PATH}.")
         with open(CERT_PATH, "w") as f:
             f.write(tls_ca)
