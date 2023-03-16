@@ -25,7 +25,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
-from charms.operator_libs_linux.v1.systemd import SystemdError, _systemctl
+from charms.operator_libs_linux.v1.systemd import _systemctl
 from overrides import override
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -185,10 +185,7 @@ class OpenSearchTarball(OpenSearchDistribution):
     def is_failed(self) -> bool:
         """Check if the opensearch daemon has failed."""
         # TODO: replace with is_failed from lib once PR made to the lib upstream.
-        try:
-            return _systemctl("is-failed", "opensearch.service", quiet=True)
-        except SystemdError:
-            return True
+        return _systemctl("is-failed", "opensearch.service", quiet=True)
 
     @override
     def _build_paths(self) -> Paths:
