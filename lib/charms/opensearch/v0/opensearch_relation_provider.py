@@ -201,7 +201,7 @@ class OpenSearchProvider(Object):
             hashed_pwd: the hash of the password to be assigned to the user
             index: the index to which the users must be granted access
             extra_user_roles: the level of permissions that the user should be given. Can be a
-                comma-separated list of permissions, which should be merged.
+                comma-separated list of roles, which should result in a merged list of permissions.
 
         Raises:
             OpenSearchUserMgmtError if user creation fails
