@@ -109,16 +109,16 @@ def _systemctl(
 
     proc.wait()
 
-    if sub_cmd == "is-active":
-        # If we are just checking whether a service is running, return True/False, rather
-        # than raising an error.
-        if proc.returncode < 1:
-            return True
-        if proc.returncode == 3:  # Code returned when service is not active.
-            return False
-
     if proc.returncode < 1:
         return True
+
+    # If we are just checking whether a service is running, return True/False, rather
+    # than raising an error.
+    if sub_cmd == "is-active" and proc.returncode == 3:  # Code returned when service is not active.
+        return False
+
+    if sub_cmd == "is-failed":
+        return False
 
     raise SystemdError(
         "Could not {}{}: systemd output: {}".format(
@@ -134,6 +134,15 @@ def service_running(service_name: str) -> bool:
         service_name: the name of the service to check
     """
     return _systemctl("is-active", service_name, quiet=True)
+
+
+def service_failed(service_name: str) -> bool:
+    """Determine whether a system service has failed.
+
+    Args:
+        service_name: the name of the service to check
+    """
+    return _systemctl("is-failed", service_name, quiet=True)
 
 
 def service_start(service_name: str) -> bool:

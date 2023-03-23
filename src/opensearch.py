@@ -25,7 +25,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
-from charms.operator_libs_linux.v1.systemd import _systemctl
+from charms.operator_libs_linux.v1.systemd import _systemctl, service_failed
 from overrides import override
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -98,8 +98,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         if not self._opensearch.present:
             raise OpenSearchMissingError()
 
-        # TODO: replace with is_failed from lib once PR made to the lib upstream.
-        return _systemctl("is-failed", "snap.opensearch.daemon.service", quiet=True)
+        return service_failed("snap.opensearch.daemon.service")
 
     @override
     def _build_paths(self) -> Paths:

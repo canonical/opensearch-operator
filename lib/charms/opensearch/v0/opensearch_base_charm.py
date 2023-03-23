@@ -239,7 +239,11 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        self._compute_and_broadcast_updated_topology(nodes)
+        # we want to re-calculate the topology only once when latest unit joins
+        if len(nodes) == self.app.planned_units():
+            self._compute_and_broadcast_updated_topology(nodes)
+        else:
+            event.defer()
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
@@ -545,6 +549,9 @@ class OpenSearchBaseCharm(CharmBase):
         # Remove the 'starting' flag on the unit
         self.peers_data.delete(Scope.UNIT, "starting")
 
+        # Apply cluster health status
+        self._apply_cluster_health(wait_for_green_first=True, use_localhost=True)
+
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
         if not self.opensearch.is_node_up():
@@ -687,14 +694,13 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _get_nodes(self, use_localhost: bool) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
-        try:
-            return ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
-        except OpenSearchHttpError:
-            if self.unit.is_leader() and not self.peers_data.get(
-                Scope.APP, "security_index_initialised", False
-            ):
-                return []
-            raise
+        # This means it's the first unit on the cluster.
+        if self.unit.is_leader() and not self.peers_data.get(
+            Scope.APP, "security_index_initialised", False
+        ):
+            return []
+
+        return ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
 
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
@@ -771,7 +777,7 @@ class OpenSearchBaseCharm(CharmBase):
             callback_override="_restart_opensearch"
         )
 
-    def _compute_and_broadcast_updated_topology(self, current_nodes: Optional[List[Node]]):
+    def _compute_and_broadcast_updated_topology(self, current_nodes: List[Node]):
         """Compute cluster topology and broadcast node configs (roles for now) to change if any."""
         if not current_nodes:
             return

@@ -35,11 +35,17 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-async def continuous_writes(ops_test: OpsTest):
-    """Starts continuous write operations to MongoDB for test and clears writes at end of test."""
-    ContinuousWrites.start(ops_test, 1)
+def c_writes(ops_test: OpsTest):
+    """Creates instance of the ContinuousWrites."""
+    return ContinuousWrites(ops_test)
+
+
+@pytest.fixture()
+async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
+    """Starts continuous write operations and clears writes at the end of the test."""
+    await c_writes.start()
     yield
-    await ContinuousWrites.clear(ops_test)
+    await c_writes.clear()
 
 
 @pytest.mark.abort_on_fail
@@ -54,10 +60,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         num_units=1,
         series=SERIES,
     )
-    await ops_test.model.wait_for_idle()
-
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="blocked", timeout=1000)
-    assert len(ops_test.model.applications[APP_NAME].units) == 1
 
     # Deploy TLS Certificates operator.
     config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
@@ -71,10 +73,13 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=1
     )
+    assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
 @pytest.mark.abort_on_fail
-async def test_horizontal_scale_up(ops_test: OpsTest, continuous_writes) -> None:
+async def test_horizontal_scale_up(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Tests that new added units to the cluster are discoverable."""
     # scale up
     await ops_test.model.applications[APP_NAME].add_unit(count=2)
@@ -84,10 +89,16 @@ async def test_horizontal_scale_up(ops_test: OpsTest, continuous_writes) -> None
     num_units = len(ops_test.model.applications[APP_NAME].units)
     assert num_units == 3
 
+    # update hosts used in continuous writes
+    await c_writes.update()
+
     unit_names = get_application_unit_names(ops_test)
     leader_unit_ip = await get_leader_unit_ip(ops_test)
 
     assert await check_cluster_formation_successful(ops_test, leader_unit_ip, unit_names)
+
+    cluster_health_resp = await cluster_health(ops_test, leader_unit_ip)
+    assert cluster_health_resp["status"] == "green"
 
     shards_by_status = await get_shards_by_state(ops_test, leader_unit_ip)
     assert not shards_by_status.get("INITIALIZING")
@@ -100,7 +111,9 @@ async def test_horizontal_scale_up(ops_test: OpsTest, continuous_writes) -> None
 
 
 @pytest.mark.abort_on_fail
-async def test_safe_scale_down_shards_realloc(ops_test: OpsTest, continuous_writes) -> None:
+async def test_safe_scale_down_shards_realloc(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Tests the shutdown of a node, and re-allocation of shards to a newly joined unit.
 
     The goal of this test is to make sure that shards are automatically relocated after
@@ -111,6 +124,9 @@ async def test_safe_scale_down_shards_realloc(ops_test: OpsTest, continuous_writ
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=4
     )
+
+    # update hosts used in continuous writes
+    await c_writes.update()
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
     leader_unit_id = await get_leader_unit_id(ops_test)
@@ -140,6 +156,9 @@ async def test_safe_scale_down_shards_realloc(ops_test: OpsTest, continuous_writ
         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
     )
 
+    # update hosts used in continuous writes
+    await c_writes.update()
+
     # check if at least partial shard re-allocation happened
     new_shards_per_node = await get_number_of_shards_by_node(ops_test, leader_unit_ip)
 
@@ -164,6 +183,9 @@ async def test_safe_scale_down_shards_realloc(ops_test: OpsTest, continuous_writ
     await ops_test.model.applications[APP_NAME].add_unit(count=1)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], timeout=1000, wait_for_exact_units=4)
 
+    # update hosts used in continuous writes
+    await c_writes.update()
+
     new_unit_id = [
         int(unit.name.split("/")[1])
         for unit in ops_test.model.applications[APP_NAME].units
@@ -187,7 +209,9 @@ async def test_safe_scale_down_shards_realloc(ops_test: OpsTest, continuous_writ
 
 
 @pytest.mark.abort_on_fail
-async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest, continuous_writes) -> None:
+async def test_safe_scale_down_roles_reassigning(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Tests the shutdown of a node with a role requiring the re-balance of the cluster roles.
 
     The goal of this test is to make sure that roles are automatically recalculated after
@@ -198,6 +222,9 @@ async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest, continuous_w
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=5
     )
+
+    # update hosts used in continuous writes
+    await c_writes.update()
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
 
@@ -216,6 +243,9 @@ async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest, continuous_w
     await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(apps=[APP_NAME], timeout=1000, wait_for_exact_units=4)
 
+    # update hosts used in continuous writes
+    await c_writes.update()
+
     # fetch nodes, we expect to have a "cm" node, reconfigured to be "data only" to keep the quorum
     new_nodes = await all_nodes(ops_test, leader_unit_ip)
     assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == 3
@@ -230,6 +260,9 @@ async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest, continuous_w
     await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
     # status="blocked"
     await ops_test.model.wait_for_idle(apps=[APP_NAME], timeout=1000, wait_for_exact_units=3)
+
+    # update hosts used in continuous writes
+    await c_writes.update()
 
     # fetch nodes, we expect to have all nodes "cluster_manager" to keep the quorum
     new_nodes = await all_nodes(ops_test, leader_unit_ip)

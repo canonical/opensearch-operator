@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Union
 
 import requests
 import yaml
-from charms.opensearch.v0.helper_networking import reachable_hosts
+from charms.opensearch.v0.helper_networking import is_reachable, reachable_hosts
 from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
@@ -165,6 +165,9 @@ def get_reachable_units(ops_test: OpsTest) -> Dict[int, str]:
     """Helper function to retrieve a dict of id/IP addresses of all online units."""
     result = {}
     for unit in ops_test.model.applications[APP_NAME].units:
+        if not is_reachable(unit.public_address, 9200):
+            continue
+
         u_id = int(unit.name.split("/")[1])
         result[u_id] = unit.public_address
 
@@ -222,19 +225,13 @@ async def http_request(
         return resp.json()
 
 
-async def client(ops_test: OpsTest) -> OpenSearch:
+def opensearch_client(
+    hosts: List[str], user_name: str, password: str, cert_path: str
+) -> OpenSearch:
     """Build an opensearch client."""
-    reachable_units = get_reachable_units(ops_test)
-
-    secrets = await get_admin_secrets(ops_test, list(reachable_units.keys())[0])
-    admin_ca = secrets["ca-chain"]
-    with open("ca_chain.cert", "w") as chain:
-        chain.write(admin_ca)
-
-    http_auth = ("admin", secrets["password"])
     return OpenSearch(
-        hosts=[{"host": {ip}, "port": 9200} for ip in get_application_unit_ips(ops_test)],
-        http_auth=http_auth,
+        hosts=[{"host": ip, "port": 9200} for ip in hosts],
+        http_auth=(user_name, password),
         http_compress=True,
         sniff_on_start=True,  # sniff before doing anything
         sniff_on_connection_fail=True,  # refresh nodes after a node fails to respond
@@ -243,7 +240,7 @@ async def client(ops_test: OpsTest) -> OpenSearch:
         verify_certs=True,  # make sure we verify SSL certificates
         ssl_assert_hostname=False,
         ssl_show_warn=False,
-        ca_certs="ca_chain.cert",  # CA certs on disk
+        ca_certs=cert_path,  # cert path on disk
     )
 
 
