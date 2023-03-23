@@ -43,7 +43,7 @@ class TestOpenSearchUserManager(unittest.TestCase):
         self.opensearch.request.assert_called_with(*request_args, payload=payload)
 
         self.opensearch.request.reset_mock()
-        self.opensearch.request.return_value = {"status": "OK"}
+        self.opensearch.request.return_value = {"status": "CREATED"}
         self.mgr.create_role(**role_kwargs)
         self.opensearch.request.assert_called_with(*request_args, payload=payload)
 
