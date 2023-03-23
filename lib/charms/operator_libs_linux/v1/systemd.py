@@ -60,21 +60,23 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 3
 
 
 class SystemdError(Exception):
+    """Custom exception for SystemD related errors."""
+
     pass
 
 
 def _popen_kwargs():
-    return dict(
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        bufsize=1,
-        universal_newlines=True,
-        encoding="utf-8",
-    )
+    return {
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.STDOUT,
+        "bufsize": 1,
+        "universal_newlines": True,
+        "encoding": "utf-8",
+    }
 
 
 def _systemctl(
@@ -114,7 +116,7 @@ def _systemctl(
 
     # If we are just checking whether a service is running, return True/False, rather
     # than raising an error.
-    if sub_cmd == "is-active" and proc.returncode == 3:  # Code returned when service is not active.
+    if sub_cmd == "is-active" and proc.returncode == 3:  # Code returned when service not active.
         return False
 
     if sub_cmd == "is-failed":
