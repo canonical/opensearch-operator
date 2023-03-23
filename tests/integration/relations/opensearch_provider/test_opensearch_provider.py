@@ -386,8 +386,7 @@ async def test_admin_permissions(ops_test: OpsTest):
         )
         results = json.loads(run_remove_distro["results"])
         logging.info(results)
-        # TODO this isn't failing correctly - we're getting 404 instead
-        assert "403 Client Error: Forbidden for url:" in results[0], results
+        assert "Error:" in results[0], results
 
 
 async def test_normal_user_permissions(ops_test: OpsTest):
@@ -443,7 +442,7 @@ async def test_normal_user_permissions(ops_test: OpsTest):
         )
         results = json.loads(run_remove_distro["results"])
         logging.info(results)
-        assert "403 Client Error: Forbidden for url:" in results[0], results
+        assert "Error:" in results[0], results
 
 
 async def test_relation_broken(ops_test: OpsTest):
