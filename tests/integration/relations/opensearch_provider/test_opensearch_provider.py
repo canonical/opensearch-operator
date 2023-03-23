@@ -40,9 +40,9 @@ ADMIN_RELATION_NAME = "admin"
 PROTECTED_INDICES = [
     ".opendistro_security",
     ".opendistro-alerting-config",
-    ".opendistro-alerting-alert*",
-    ".opendistro-anomaly-results*",
-    ".opendistro-anomaly-detector*",
+    ".opendistro-alerting-alert",
+    ".opendistro-anomaly-results",
+    ".opendistro-anomaly-detector",
     ".opendistro-anomaly-checkpoints",
     ".opendistro-anomaly-detection-state",
 ]
@@ -432,7 +432,7 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     # verify user can't modify protected indices
     for protected_index in PROTECTED_INDICES:
         protected_index_endpoint = f"/{protected_index}"
-        run_remove_distro = await run_request(
+        run_remove_index = await run_request(
             ops_test,
             unit_name=test_unit.name,
             endpoint=protected_index_endpoint,
@@ -440,7 +440,7 @@ async def test_normal_user_permissions(ops_test: OpsTest):
             relation_id=client_relation.id,
             relation_name=FIRST_RELATION_NAME,
         )
-        results = json.loads(run_remove_distro["results"])
+        results = json.loads(run_remove_index["results"])
         logging.info(results)
         assert "Error:" in results[0], results
 
