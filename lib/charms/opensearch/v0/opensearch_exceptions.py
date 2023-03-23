@@ -80,3 +80,7 @@ class OpenSearchHAError(OpenSearchError):
 
 class OpenSearchScaleDownError(OpenSearchError):
     """Exception thrown when a scale-down event is not safe."""
+
+
+class OpenSearchIndexError(OpenSearchError):
+    """Exception thrown when an opensearch index is invalid."""

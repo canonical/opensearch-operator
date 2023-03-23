@@ -81,7 +81,7 @@ class OpenSearchUserManager:
             f"{ROLE_ENDPOINT}/{role_name}",
             payload={**(permissions or {}), **(action_groups or {})},
         )
-        if resp.get("status") not in ["CREATED", "OK"]:
+        if resp.get("status") != "CREATED":
             raise OpenSearchUserMgmtError(f"creating role {role_name} failed")
         return resp
 

@@ -29,7 +29,10 @@ from charms.opensearch.v0.constants_charm import ClientRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_security import generate_hashed_password
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchHttpError,
+    OpenSearchIndexError,
+)
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import (
     CharmBase,
@@ -51,6 +54,17 @@ LIBAPI = 0
 LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
+
+
+INVALID_INDEX_NAMES = [
+    ".opendistro_security",
+    ".opendistro-alerting-config",
+    ".opendistro-alerting-alert*",
+    ".opendistro-anomaly-results*",
+    ".opendistro-anomaly-detector*",
+    ".opendistro-anomaly-checkpoints",
+    ".opendistro-anomaly-detection-state",
+]
 
 
 class ExtraUserRolePermissions(Enum):
@@ -151,12 +165,19 @@ class OpenSearchProvider(Object):
         concept is irrelevant to OpenSearch. In this relation, the application charm should have
         control over node & index security policies, and therefore differentiating between types of
         network endpoints is unnecessary.
+
+        Raises:
+            OpenSearchIndexError if the index name is invalid
+            OpenSearchHttpError if we can't create the required index
         """
         if not self.unit.is_leader():
             return
         if not self.opensearch.is_node_up() or not event.index:
             event.defer()
             return
+
+        if not self.validate_index_name(event.index):
+            raise OpenSearchIndexError(f"invalid index name: {event.index}")
 
         try:
             self.opensearch.request("PUT", event.index)
@@ -183,8 +204,30 @@ class OpenSearchProvider(Object):
         # Share the credentials and updated connection info with the client application.
         self.opensearch_provides.set_version(rel_id, self.opensearch.version)
         self.opensearch_provides.set_credentials(rel_id, username, pwd)
+        self.opensearch_provides.set_index(rel_id, event.index)
         self.update_certs(rel_id)
         self.update_endpoints(event.relation)
+
+    def validate_index_name(self, index_name: str) -> bool:
+        """Validates that the index name provided in the relation is acceptable."""
+        if index_name in INVALID_INDEX_NAMES:
+            logger.error(
+                f"invalid index name {index_name} - tried to access a protected index in {INVALID_INDEX_NAMES}"
+            )
+            return False
+
+        if not index_name.islower():
+            logger.error(f"invalid index name {index_name} - index names must be lowercase")
+            return False
+
+        invalid_chars = [" ", ",", ":", '"', "*", "+", "\\", "/", "|", "?", "#", ">", "<"]
+        if any([char in index_name for char in invalid_chars]):
+            logger.error(
+                f"invalid index name {index_name} - index name includes one or more of the following invalid characters: {invalid_chars}"
+            )
+            return False
+
+        return True
 
     def create_opensearch_users(
         self,

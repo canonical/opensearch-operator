@@ -31,11 +31,21 @@ CLIENT_APP_NAME = "application"
 SECONDARY_CLIENT_APP_NAME = "secondary-application"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
+
+NUM_UNITS = 3
+
 FIRST_RELATION_NAME = "first-index"
 SECOND_RELATION_NAME = "second-index"
 ADMIN_RELATION_NAME = "admin"
-
-NUM_UNITS = 3
+PROTECTED_INDICES = [
+    ".opendistro_security",
+    ".opendistro-alerting-config",
+    ".opendistro-alerting-alert*",
+    ".opendistro-anomaly-results*",
+    ".opendistro-anomaly-detector*",
+    ".opendistro-anomaly-checkpoints",
+    ".opendistro-anomaly-detection-state",
+]
 
 
 @pytest.mark.abort_on_fail
@@ -363,20 +373,21 @@ async def test_admin_permissions(ops_test: OpsTest):
     logging.info(results)
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
-    # verify admin can't delete .opendistro_security
-    opensearch_distro_endpoint = "/.opendistro_security"
-    run_remove_distro = await run_request(
-        ops_test,
-        unit_name=test_unit.name,
-        endpoint=opensearch_distro_endpoint,
-        method="DELETE",
-        relation_id=admin_relation.id,
-        relation_name=ADMIN_RELATION_NAME,
-    )
-    results = json.loads(run_remove_distro["results"])
-    logging.info(results)
-    # TODO this isn't failing correctly - we're getting 404 instead
-    assert "403 Client Error: Forbidden for url:" in results[0], results
+    # verify admin can't modify protected indices
+    for protected_index in PROTECTED_INDICES:
+        protected_index_endpoint = f"/{protected_index}"
+        run_remove_distro = await run_request(
+            ops_test,
+            unit_name=test_unit.name,
+            endpoint=protected_index_endpoint,
+            method="DELETE",
+            relation_id=admin_relation.id,
+            relation_name=ADMIN_RELATION_NAME,
+        )
+        results = json.loads(run_remove_distro["results"])
+        logging.info(results)
+        # TODO this isn't failing correctly - we're getting 404 instead
+        assert "403 Client Error: Forbidden for url:" in results[0], results
 
 
 async def test_normal_user_permissions(ops_test: OpsTest):
@@ -419,19 +430,20 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     logging.info(results)
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
-    # verify normal users can't delete .opendistro_security
-    opensearch_distro_endpoint = "/.opendistro_security"
-    run_remove_distro = await run_request(
-        ops_test,
-        unit_name=test_unit.name,
-        endpoint=opensearch_distro_endpoint,
-        method="DELETE",
-        relation_id=client_relation.id,
-        relation_name=FIRST_RELATION_NAME,
-    )
-    results = json.loads(run_remove_distro["results"])
-    logging.info(results)
-    assert "403 Client Error: Forbidden for url:" in results[0], results
+    # verify user can't modify protected indices
+    for protected_index in PROTECTED_INDICES:
+        protected_index_endpoint = f"/{protected_index}"
+        run_remove_distro = await run_request(
+            ops_test,
+            unit_name=test_unit.name,
+            endpoint=protected_index_endpoint,
+            method="DELETE",
+            relation_id=client_relation.id,
+            relation_name=FIRST_RELATION_NAME,
+        )
+        results = json.loads(run_remove_distro["results"])
+        logging.info(results)
+        assert "403 Client Error: Forbidden for url:" in results[0], results
 
 
 async def test_relation_broken(ops_test: OpsTest):
