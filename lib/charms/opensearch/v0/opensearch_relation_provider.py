@@ -187,8 +187,7 @@ class OpenSearchProvider(Object):
                 and e.response_body.get("error", {}).get("type")
                 == "resource_already_exists_exception"
             ):
-                event.defer()
-                return
+                raise
 
         username = self._relation_username(event.relation)
         hashed_pwd, pwd = generate_hashed_password()
@@ -198,7 +197,6 @@ class OpenSearchProvider(Object):
         except OpenSearchUserMgmtError as err:
             logger.error(err)
             self.unit.status = BlockedStatus(str(err))
-            event.defer()
             return
 
         rel_id = event.relation.id
