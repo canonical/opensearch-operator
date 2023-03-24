@@ -456,7 +456,7 @@ class DataProvides(Object, ABC):
             relation_id: the identifier for a particular relation.
             tls_ca: TLS certification authority.
         """
-        self._update_relation_data(relation_id, {"tls_ca": tls_ca})
+        self._update_relation_data(relation_id, {"tls-ca": tls_ca})
 
 
 class DataRequires(Object, ABC):
@@ -1019,7 +1019,7 @@ class KafkaRequiresEvent(RelationEvent):
 
     @property
     def bootstrap_server(self) -> Optional[str]:
-        """Returns a comma-seperated list of broker uris."""
+        """Returns a comma-separated list of broker uris."""
         return self.relation.data[self.relation.app].get("endpoints")
 
     @property
@@ -1156,7 +1156,7 @@ class KafkaRequires(DataRequires):
             self.on.topic_created.emit(event.relation, app=event.app, unit=event.unit)
 
             # To avoid unnecessary application restarts do not trigger
-            # "endpoints_changed" event if "topic_created" is triggered.
+            # “endpoints_changed“ event if “topic_created“ is triggered.
             return
 
         # Emit an endpoints (bootstrap-server) changed event if the Kafka endpoints
@@ -1300,6 +1300,12 @@ class OpenSearchRequires(DataRequires):
         # Check which data has changed to emit customs events.
         diff = self._diff(event)
 
+        # Check if authentication has updated, emit event if so
+        updates = {"password", "tls", "tls-ca"}
+        if len(set(diff._asdict().keys()) - updates) < len(diff):
+            logger.info("authentication updated at: %s", datetime.now())
+            self.on.authentication_updated.emit(event.relation, app=event.app, unit=event.unit)
+
         # Check if the index is created
         # (the OpenSearch charm shares the credentials).
         if "username" in diff.added and "password" in diff.added:
@@ -1308,16 +1314,7 @@ class OpenSearchRequires(DataRequires):
             self.on.index_created.emit(event.relation, app=event.app, unit=event.unit)
 
             # To avoid unnecessary application restarts do not trigger
-            # "endpoints_changed" or "authentication_updated" event if "index_created" is
-            # triggered.
-            return
-
-        # Check if authentication has updated, emit event if so
-        updates = {"password", "tls", "tls-ca"}
-        if len(set(diff._asdict().keys()) - updates) < len(diff):
-            logger.info("authentication updated at: %s", datetime.now())
-            self.on.authentication_updated.emit(event.relation, app=event.app, unit=event.unit)
-
+            # “endpoints_changed“ event if “index_created“ is triggered.
             return
 
         # Emit a endpoints changed event if the OpenSearch application added or changed this info
