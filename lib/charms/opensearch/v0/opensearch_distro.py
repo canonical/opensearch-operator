@@ -225,7 +225,9 @@ class OpenSearchDistribution(ABC):
             """
             if remaining_retries < 0:
                 if not error_response:
-                    raise OpenSearchHttpError(response_body="Call retry loop failed.", response_code=408)
+                    raise OpenSearchHttpError(
+                        response_body="Call retry loop failed.", response_code=408
+                    )
                 if return_failed_resp:
                     return error_response
                 else:
