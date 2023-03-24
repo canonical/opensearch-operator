@@ -88,8 +88,12 @@ class OpenSearchDistribution(ABC):
         """Install the package."""
         pass
 
-    def start(self):
+    def start(self, ok_when_service_active: bool = False):
         """Start the opensearch service."""
+
+        def _is_connected():
+            return self.is_started() if ok_when_service_active else self.is_node_up()
+
         if self.is_started():
             return
 
@@ -97,7 +101,7 @@ class OpenSearchDistribution(ABC):
         self._start_service()
 
         start = datetime.now()
-        while not self.is_node_up() and (datetime.now() - start).seconds < 75:
+        while not _is_connected() and (datetime.now() - start).seconds < 75:
             time.sleep(3)
         else:
             raise OpenSearchStartTimeoutError()

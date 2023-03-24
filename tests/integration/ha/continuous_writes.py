@@ -25,6 +25,7 @@ class ContinuousWrites:
     """Utility class for managing continuous writes."""
 
     INDEX_NAME = "series_index"
+    LAST_WRITTEN_VAL_PATH = "last_written_value"
     CERT_PATH = "/tmp/ca_chain.cert"
 
     def __init__(self, ops_test: OpsTest):
@@ -133,34 +134,50 @@ class ContinuousWrites:
 
     @staticmethod
     async def _run(data_queue: Queue, starting_number: int, is_bulk: bool) -> None:
+        """Continuous writing."""
+
+        def _client(_data) -> OpenSearch:
+            return opensearch_client(
+                _data.hosts, "admin", _data.password, ContinuousWrites.CERT_PATH
+            )
+
         write_value = starting_number
 
         data = data_queue.get(True)
-        while True:
-            if not data_queue.empty():
-                data = data_queue.get(False)
+        client = _client(data)
 
-            client = opensearch_client(
-                data.hosts, "admin", data.password, ContinuousWrites.CERT_PATH
-            )
+        while True:
+            if not data_queue.empty():  # currently evaluates to false as we don't make updates
+                data = data_queue.get(False)
+                client.close()
+                client = _client(data)
+
             try:
                 if is_bulk:
                     ContinuousWrites._bulk(client, write_value)
                 else:
                     ContinuousWrites._index(client, write_value)
-            except (BulkIndexError, TransportError):
-                continue
-            finally:
+            except BulkIndexError:
+                pass
+            except TransportError:
                 client.close()
+                client = _client(data)
+                continue
 
             write_value += 1
+
+        # write last expected written value on disk
+        with open(ContinuousWrites.LAST_WRITTEN_VAL_PATH, "w") as f:
+            f.write(str(write_value - 1))
+
+        client.close()
 
     @staticmethod
     def _bulk(client: OpenSearch, write_value: int) -> None:
         """Bulk Index group of docs."""
         data = []
         for i in range(100):
-            val = write_value + i
+            val = (100 * write_value) + i
             data.append(
                 {
                     "_index": ContinuousWrites.INDEX_NAME,

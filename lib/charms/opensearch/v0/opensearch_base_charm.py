@@ -518,7 +518,12 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         try:
-            self.opensearch.start()
+            self.opensearch.start(
+                ok_when_service_active=(
+                    self.unit.is_leader()
+                    and self.peers_data.get(Scope.APP, "admin_user_initialized")
+                )
+            )
             self._post_start_init()
             self.status.clear(WaitingToStart)
         except OpenSearchStartTimeoutError:
