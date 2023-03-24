@@ -180,13 +180,19 @@ class OpenSearchProvider(Object):
             raise OpenSearchIndexError(f"invalid index name: {event.index}")
 
         try:
-            self.opensearch.request("PUT", event.index)
+            # Check if index exists before trying to create it. Returns 200 if exists, 404 if not.
+            index_exists = self.opensearch.request(
+                "HEAD", f"/{event.index}", resp_status_code=True
+            )
+            if index_exists != 200:
+                self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
             if not (
                 e.response_code == 400
                 and e.response_body.get("error", {}).get("type")
                 == "resource_already_exists_exception"
             ):
+                logger.error(e)
                 raise
 
         username = self._relation_username(event.relation)
