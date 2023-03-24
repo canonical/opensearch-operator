@@ -628,7 +628,15 @@ class OpenSearchBaseCharm(CharmBase):
 
         This is to be used when starting up the charm, to remove unnecessary default users.
         """
-        for user in self.opensearch.config.load("opensearch-security/internal_users.yml").keys():
+        try:
+            internal_users = self.opensearch.config.load(
+                "opensearch-security/internal_users.yml"
+            ).keys()
+        except FileNotFoundError:
+            # internal_users.yml hasn't been initialised yet, so skip purging for now.
+            return
+
+        for user in internal_users:
             if user != "_meta":
                 self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
 

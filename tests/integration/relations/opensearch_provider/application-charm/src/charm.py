@@ -31,46 +31,38 @@ class ApplicationCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-
         # Default charm events.
         self.framework.observe(self.on.update_status, self._on_update_status)
 
-        # Events related to the first database that is requested
-        # (these events are defined in the database requires charm library).
-        index_name = f'{self.app.name.replace("-", "_")}_first_opensearch'
+        # `albums` index is used in integration test
+        self.first_opensearch = OpenSearchRequires(self, "first-index", "albums", "")
 
-        # TODO change this to "admin"
-        permissive_roles = json.dumps({"roles": ["all_access"]})
-        self.first_opensearch = OpenSearchRequires(
-            self, "first-index", index_name, permissive_roles
-        )
-
-        self.framework.observe(
-            self.first_opensearch.on.index_created, self._on_authentication_updated
-        )
-        self.framework.observe(
-            self.first_opensearch.on.authentication_updated, self._on_authentication_updated
-        )
-
-        # Events related to the second database that is requested
-        # (these events are defined in the database requires charm library).
         index_name = f'{self.app.name.replace("-", "_")}_second_opensearch'
-        # TODO change this to be "default"
-        complex_roles = json.dumps(
-            {
-                "roles": ["readall"],
-                "permissions": ["TODO find some permissions", ""],
-                "action_groups": ["TODO find some action groups", ""],
-            }
-        )
-        self.second_opensearch = OpenSearchRequires(
-            self, "second-index", index_name, complex_roles
-        )
+        # set invalid permissions to guarantee we still get default permissions.
+        self.second_opensearch = OpenSearchRequires(self, "second-index", index_name, "hackerman")
+
+        # Checking comma-separated permissions. These should still basically have admin
+        # permissions.
+        self.admin_opensearch = OpenSearchRequires(self, "admin", "admin-index", "admin,default")
+
+        self.relations = {
+            "first-index": self.first_opensearch,
+            "second-index": self.second_opensearch,
+            "admin": self.admin_opensearch,
+        }
+
+        for relation_handler in self.relations.values():
+            self.framework.observe(
+                relation_handler.on.index_created, self._on_authentication_updated
+            )
+            self.framework.observe(
+                relation_handler.on.authentication_updated, self._on_authentication_updated
+            )
 
         self.framework.observe(self.on.run_request_action, self._on_run_request_action)
 
     def _on_update_status(self, _) -> None:
-        """Health check for database connection."""
+        """Health check for index connection."""
         if self.connection_check():
             self.unit.status = ActiveStatus()
         else:
@@ -79,38 +71,28 @@ class ApplicationCharm(CharmBase):
 
     def connection_check(self) -> bool:
         """Simple connection check to see if backend exists and we can connect to it."""
-        relations = self.model.relations.get("first-index", []) + self.model.relations.get(
-            "second-index", []
-        )
+        relations = []
+        for relation in self.relations.keys():
+            relations += self.model.relations.get(relation, [])
         if not relations:
             return False
+
         connected = True
         for relation in relations:
-            if not self.smoke_check(relation.id):
-                connected = False
+            try:
+                self.relation_request(relation.name, relation.id, "GET", "/")
+            except Exception as e:
+                logger.error(e)
                 logger.error(f"relation {relation} didn't connect")
+                connected = False
+
         return connected
 
-    def smoke_check(self, relation_id) -> bool:
-        try:
-            self.relation_request(relation_id, "GET", "/")
-            return True
-        except (OpenSearchHttpError, Exception) as e:
-            logger.error(e)
-            return False
-
     def _on_authentication_updated(self, event: AuthenticationEvent):
-        logger.error(event)
-        if event.tls != "True":
-            return
-
         tls_ca = event.tls_ca
-        if not tls_ca:
-            tls_ca = self.first_opensearch.fetch_relation_data()[event.relation.id].get(
-                "tls_ca", None
-            )
-            if not tls_ca:
-                event.defer()  # We're waiting until we get a CA.
+        if not event.tls_ca:
+            event.defer()  # We're waiting until we get a CA.
+            return
         logger.error(f"writing cert to {CERT_PATH}.")
         with open(CERT_PATH, "w") as f:
             f.write(tls_ca)
@@ -121,7 +103,7 @@ class ApplicationCharm(CharmBase):
 
     def _on_run_request_action(self, event: ActionEvent):
         logger.info(event.params)
-        relation = self.first_opensearch
+        relation = self.relations[event.params["relation-name"]]
         relation_id = event.params["relation-id"]
         databag = relation.fetch_relation_data()[relation_id]
         method = event.params["method"]
@@ -152,13 +134,15 @@ class ApplicationCharm(CharmBase):
 
     def relation_request(
         self,
+        relation_name: str,
         relation_id: int,
         method: str,
         endpoint: str,
         payload: Optional[Dict[str, any]] = None,
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request to a specific relation."""
-        databag = self.first_opensearch.fetch_relation_data()[relation_id]
+        relation = self.relations[relation_name]
+        databag = relation.fetch_relation_data()[relation_id]
         username = databag.get("username")
         password = databag.get("password")
         hosts = databag.get("endpoints", "").split(",")

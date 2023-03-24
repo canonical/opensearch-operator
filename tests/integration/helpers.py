@@ -308,5 +308,9 @@ async def scale_application(
         return
 
     await ops_test.model.wait_for_idle(
-        apps=[application_name], status="active", timeout=timeout, wait_for_exact_units=count
+        apps=[application_name],
+        status="active",
+        timeout=timeout,
+        wait_for_exact_units=count,
+        idle_period=10,
     )

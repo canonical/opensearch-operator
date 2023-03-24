@@ -48,6 +48,15 @@ juju deploy opensearch --channel edge
 
 Supported [relations](https://juju.is/docs/olm/relations):
 
+#### `opensearch-client` interface:
+
+To connect to the Charmed OpenSearch Operator and exchange data, relate to the `opensearch-client` endpoint:
+
+```shell
+juju deploy data-integrator --channel=edge # TODO this has not yet been released
+juju relate opensearch data-integrator
+```
+
 #### `tls-certificates` interface:
 
 The Charmed OpenSearch Operator also supports TLS encryption on the HTTP and Transport layers. TLS is enabled by default:
