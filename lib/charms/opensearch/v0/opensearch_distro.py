@@ -217,14 +217,21 @@ class OpenSearchDistribution(ABC):
             return_failed_resp: bool,
             error_response: Optional[requests.Response] = None,
         ) -> requests.Response:
-            """Performs an HTTP request."""
-            if remaining_retries < 0:
-                if return_failed_resp and error_response:
-                    return error_response
+            """Performs an HTTP request.
 
-                raise OpenSearchHttpError(
-                    response_body=error_response.text, response_code=error_response.status_code
-                )
+            Raises:
+                OpenSearchHttpError when the call fails, or we retry too many times, or the
+                    expected hosts are unreachable.
+            """
+            if remaining_retries < 0:
+                if not error_response:
+                    raise OpenSearchHttpError(response_body="Call retry loop failed.", response_code=408)
+                if return_failed_resp:
+                    return error_response
+                else:
+                    raise OpenSearchHttpError(
+                        response_body=error_response.text, response_code=error_response.status_code
+                    )
 
             urls = full_urls()
             if not urls:
