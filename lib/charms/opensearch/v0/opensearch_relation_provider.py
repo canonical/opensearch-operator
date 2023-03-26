@@ -158,7 +158,7 @@ class OpenSearchProvider(Object):
     def _unit_departing(self, relation):
         return self.charm.peers_data.get(Scope.UNIT, self._depart_flag(relation))
 
-    def _on_index_requested(self, event: IndexRequestedEvent) -> None:
+    def _on_index_requested(self, event: IndexRequestedEvent) -> None:  # noqa
         """Handle client index-requested event.
 
         The read-only-endpoints field of DatabaseProvides is unused in this relation because this
