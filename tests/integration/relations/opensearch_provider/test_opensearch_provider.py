@@ -79,7 +79,12 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
 
     async with ops_test.fast_forward():
         # This test shouldn't take so long
-        await ops_test.model.wait_for_idle(apps=ALL_APPS, timeout=1400, status="active")
+        await ops_test.model.wait_for_idle(
+            apps=ALL_APPS,
+            timeout=1400,
+            status="active",
+            idle_period=10,
+        )
 
 
 async def test_index_usage(ops_test: OpsTest):

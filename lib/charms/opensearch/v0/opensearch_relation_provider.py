@@ -184,7 +184,11 @@ class OpenSearchProvider(Object):
             index_exists = self.opensearch.request(
                 "HEAD", f"/{event.index}", resp_status_code=True
             )
-            if index_exists != 200:
+        except OpenSearchHttpError as e:
+            index_exists = e.response_code
+
+        try:
+            if index_exists != 404:
                 self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
             if not (
