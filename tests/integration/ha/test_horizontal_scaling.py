@@ -245,7 +245,7 @@ async def test_safe_scale_down_roles_reassigning(
     # scale-down: remove a cm unit
     await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], timeout=1000, wait_for_exact_units=4, idle_period=60
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
     )
 
     # update hosts used in continuous writes
@@ -264,7 +264,7 @@ async def test_safe_scale_down_roles_reassigning(
     ][0]
     await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], timeout=1000, wait_for_exact_units=3, idle_period=60
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
     )
 
     # update hosts used in continuous writes
