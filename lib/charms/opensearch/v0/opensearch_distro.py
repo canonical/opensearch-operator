@@ -223,6 +223,7 @@ class OpenSearchDistribution(ABC):
                     raise OpenSearchHttpError()
                 if return_failed_resp:
                     return error_response
+
                 raise OpenSearchHttpError(
                     response_body=error_response.text, response_code=error_response.status_code
                 )
