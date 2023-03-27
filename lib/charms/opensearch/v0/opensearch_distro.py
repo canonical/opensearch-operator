@@ -16,6 +16,7 @@ from os.path import exists
 from typing import Dict, List, Optional, Set, Union
 
 import requests
+import urllib3.exceptions
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_databag import Scope
@@ -30,7 +31,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchStartTimeoutError,
 )
-from requests import HTTPError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -88,11 +88,11 @@ class OpenSearchDistribution(ABC):
         """Install the package."""
         pass
 
-    def start(self, ok_when_service_active: bool = False):
+    def start(self, wait_until_http_200: bool = True):
         """Start the opensearch service."""
 
         def _is_connected():
-            return self.is_started() if ok_when_service_active else self.is_node_up()
+            return self.is_node_up() if wait_until_http_200 else self.is_started()
 
         if self.is_started():
             return
@@ -260,7 +260,7 @@ class OpenSearchDistribution(ABC):
                     response.raise_for_status()
 
                     return response
-            except requests.exceptions.RequestException as e:
+            except (requests.exceptions.RequestException, urllib3.exceptions.HTTPError) as e:
                 logger.error(
                     f"Request {method} to {urls[0]} with payload: {payload} failed. "
                     f"(Attempts left: {remaining_retries})\n{e}"
@@ -269,7 +269,7 @@ class OpenSearchDistribution(ABC):
                 return call(
                     remaining_retries - 1,
                     return_failed_resp,
-                    e.response if isinstance(e, HTTPError) else None,
+                    e.response if isinstance(e, requests.HTTPError) else None,
                 )
 
         if None in [endpoint, method]:

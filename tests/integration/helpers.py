@@ -248,8 +248,21 @@ def opensearch_client(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def cluster_health(ops_test: OpsTest, unit_ip: str) -> Dict[str, any]:
+async def cluster_health(
+    ops_test: OpsTest, unit_ip: str, wait_for_green_first: bool = False
+) -> Dict[str, any]:
     """Fetch the cluster health."""
+    if wait_for_green_first:
+        try:
+            return await http_request(
+                ops_test,
+                "GET",
+                f"https://{unit_ip}:9200/_cluster/health?wait_for_status=green&timeout=1m",
+            )
+        except requests.HTTPError:
+            # it timed out, settle with current status, fetched next without the 1min wait
+            pass
+
     return await http_request(
         ops_test,
         "GET",

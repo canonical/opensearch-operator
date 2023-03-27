@@ -183,15 +183,21 @@ class ClusterState:
         reraise=True,
     )
     def shards(
-        opensearch: OpenSearchDistribution, host: Optional[str] = None
+        opensearch: OpenSearchDistribution,
+        host: Optional[str] = None,
+        alt_hosts: Optional[List[str]] = None,
     ) -> List[Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
-        return opensearch.request("GET", "/_cat/shards", host=host)
+        return opensearch.request("GET", "/_cat/shards", host=host, alt_hosts=alt_hosts)
 
     @staticmethod
-    def shards_by_state(opensearch: OpenSearchDistribution) -> Dict[str, List[str]]:
+    def shards_by_state(
+        opensearch: OpenSearchDistribution,
+        host: Optional[str] = None,
+        alt_hosts: Optional[List[str]] = None,
+    ) -> Dict[str, List[str]]:
         """Get the shards count by state."""
-        shards = ClusterState.shards(opensearch)
+        shards = ClusterState.shards(opensearch, host=host, alt_hosts=alt_hosts)
 
         shards_state_map = {}
         for shard in shards:
@@ -203,10 +209,12 @@ class ClusterState:
 
     @staticmethod
     def busy_shards_by_unit(
-        opensearch: OpenSearchDistribution, host: Optional[str] = None
+        opensearch: OpenSearchDistribution,
+        host: Optional[str] = None,
+        alt_hosts: Optional[List[str]] = None,
     ) -> Dict[str, List[str]]:
         """Get the busy shards of each index in the cluster."""
-        shards = ClusterState.shards(opensearch, host)
+        shards = ClusterState.shards(opensearch, host=host, alt_hosts=alt_hosts)
 
         busy_shards = {}
         for shard in shards:

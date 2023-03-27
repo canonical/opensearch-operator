@@ -84,13 +84,14 @@ async def test_horizontal_scale_up(
     # scale up
     await ops_test.model.applications[APP_NAME].add_unit(count=2)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
     )
     num_units = len(ops_test.model.applications[APP_NAME].units)
     assert num_units == 3
 
-    # update hosts used in continuous writes
-    await c_writes.update()
+    # update hosts used in continuous writes, so that if we remove a node
+    # we still have working HTTP endpoints
+    # await c_writes.update()
 
     unit_names = get_application_unit_names(ops_test)
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -122,11 +123,11 @@ async def test_safe_scale_down_shards_realloc(
     # scale up
     await ops_test.model.applications[APP_NAME].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=4
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
     )
 
     # update hosts used in continuous writes
-    await c_writes.update()
+    # await c_writes.update()
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
     leader_unit_id = await get_leader_unit_id(ops_test)
@@ -141,7 +142,7 @@ async def test_safe_scale_down_shards_realloc(
     await create_dummy_docs(ops_test, leader_unit_ip)
 
     # get initial cluster health - expected to be all good: green
-    cluster_health_resp = await cluster_health(ops_test, leader_unit_ip)
+    cluster_health_resp = await cluster_health(ops_test, leader_unit_ip, wait_for_green_first=True)
     assert cluster_health_resp["status"] == "green"
     assert cluster_health_resp["unassigned_shards"] == 0
 
@@ -153,11 +154,11 @@ async def test_safe_scale_down_shards_realloc(
     # remove the service in the chosen unit
     await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
     )
 
     # update hosts used in continuous writes
-    await c_writes.update()
+    # await c_writes.update()
 
     # check if at least partial shard re-allocation happened
     new_shards_per_node = await get_number_of_shards_by_node(ops_test, leader_unit_ip)
@@ -181,10 +182,12 @@ async def test_safe_scale_down_shards_realloc(
 
     # scale up by 1 unit
     await ops_test.model.applications[APP_NAME].add_unit(count=1)
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], timeout=1000, wait_for_exact_units=4)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], timeout=1000, wait_for_exact_units=4, idle_period=60
+    ),
 
     # update hosts used in continuous writes
-    await c_writes.update()
+    # await c_writes.update()
 
     new_unit_id = [
         int(unit.name.split("/")[1])
@@ -220,11 +223,11 @@ async def test_safe_scale_down_roles_reassigning(
     # scale up by 1 unit
     await ops_test.model.applications[APP_NAME].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=5
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=5, idle_period=60
     )
 
     # update hosts used in continuous writes
-    await c_writes.update()
+    # await c_writes.update()
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
 
@@ -241,10 +244,12 @@ async def test_safe_scale_down_roles_reassigning(
 
     # scale-down: remove a cm unit
     await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], timeout=1000, wait_for_exact_units=4)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], timeout=1000, wait_for_exact_units=4, idle_period=60
+    )
 
     # update hosts used in continuous writes
-    await c_writes.update()
+    # await c_writes.update()
 
     # fetch nodes, we expect to have a "cm" node, reconfigured to be "data only" to keep the quorum
     new_nodes = await all_nodes(ops_test, leader_unit_ip)
@@ -258,11 +263,12 @@ async def test_safe_scale_down_roles_reassigning(
         if node.ip != leader_unit_ip and node.is_cm_eligible()
     ][0]
     await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
-    # status="blocked"
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], timeout=1000, wait_for_exact_units=3)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], timeout=1000, wait_for_exact_units=3, idle_period=60
+    )
 
     # update hosts used in continuous writes
-    await c_writes.update()
+    # await c_writes.update()
 
     # fetch nodes, we expect to have all nodes "cluster_manager" to keep the quorum
     new_nodes = await all_nodes(ops_test, leader_unit_ip)
