@@ -158,7 +158,7 @@ class OpenSearchProvider(Object):
     def _unit_departing(self, relation):
         return self.charm.peers_data.get(Scope.UNIT, self._depart_flag(relation))
 
-    def _on_index_requested(self, event: IndexRequestedEvent) -> None:  # noqa
+    def _on_index_requested(self, event: IndexRequestedEvent) -> None:
         """Handle client index-requested event.
 
         The read-only-endpoints field of DatabaseProvides is unused in this relation because this
@@ -180,16 +180,7 @@ class OpenSearchProvider(Object):
             raise OpenSearchIndexError(f"invalid index name: {event.index}")
 
         try:
-            # Check if index exists before trying to create it. Returns 200 if exists, 404 if not.
-            index_exists = self.opensearch.request(
-                "HEAD", f"/{event.index}", resp_status_code=True
-            )
-        except OpenSearchHttpError as e:
-            index_exists = e.response_code
-
-        try:
-            if index_exists != 200:
-                self.opensearch.request("PUT", f"/{event.index}")
+            self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
             if not (
                 e.response_code == 400

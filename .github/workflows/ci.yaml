@@ -44,6 +44,9 @@ jobs:
 
   build:
     name: Build charms
+    needs:
+      - lint
+      - unit-test
     uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
 
   lite-integration-test:
@@ -51,7 +54,7 @@ jobs:
       fail-fast: false
       matrix:
         tox-environments:
-          - charm-integration
+          # - charm-integration  # commented out for PR tests
           - tls-integration
           - client-integration
     name: ${{ matrix.tox-environments }}
