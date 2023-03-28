@@ -41,7 +41,7 @@ from ops.charm import (
     RelationDepartedEvent,
 )
 from ops.framework import Object
-from ops.model import BlockedStatus, Relation
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation
 
 # The unique Charmhub library identifier, never change it
 LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
@@ -179,6 +179,8 @@ class OpenSearchProvider(Object):
         if not self.validate_index_name(event.index):
             raise OpenSearchIndexError(f"invalid index name: {event.index}")
 
+        self.unit.status = MaintenanceStatus(f"new index {event.index} requested")
+
         # Check if index exists before trying to create it. Returns 200 if exists, 404 if not.
         try:
             index_exists = self.opensearch.request(
@@ -217,6 +219,7 @@ class OpenSearchProvider(Object):
         self.opensearch_provides.set_index(rel_id, event.index)
         self.update_certs(rel_id)
         self.update_endpoints(event.relation)
+        self.unit.status = ActiveStatus(f"new index {event.index} requested")
 
     def validate_index_name(self, index_name: str) -> bool:
         """Validates that the index name provided in the relation is acceptable."""
