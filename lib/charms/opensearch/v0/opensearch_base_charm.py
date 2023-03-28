@@ -530,9 +530,9 @@ class OpenSearchBaseCharm(CharmBase):
 
         try:
             self.opensearch.start(
-                wait_until_http_200=not (
-                    self.unit.is_leader()
-                    and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
+                wait_until_http_200=(
+                    not self.unit.is_leader()
+                    or self.peers_data.get(Scope.APP, "security_index_initialised", False)
                 )
             )
             self._post_start_init()
