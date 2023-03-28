@@ -8,6 +8,7 @@ from charms.opensearch.v0.models import Node
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
+from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.helpers import http_request
 
 
@@ -123,3 +124,11 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
         f"https://{unit_ip}:9200/_cat/nodes?format=json",
     )
     return [Node(node["name"], node["node.roles"].split(","), node["ip"]) for node in nodes]
+
+
+async def assert_continuous_writes_consistency(c_writes: ContinuousWrites) -> None:
+    """Continuous writes checks."""
+    result = await c_writes.stop()
+
+    assert result.max_stored_id == result.count - 1
+    assert result.max_stored_id == result.last_expected_id
