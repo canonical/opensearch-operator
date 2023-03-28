@@ -189,7 +189,7 @@ class OpenSearchProvider(Object):
 
         try:
             if index_exists != 200:
-                self.opensearch.request("POST", f"/{event.index}")
+                self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
             if not (
                 e.response_code == 400
