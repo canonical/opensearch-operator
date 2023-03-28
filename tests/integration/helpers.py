@@ -272,5 +272,5 @@ async def scale_application(
         status="active",
         timeout=timeout,
         wait_for_exact_units=count,
-        idle_period=10,
+        idle_period=20,
     )

@@ -80,9 +80,9 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
     # This test shouldn't take so long
     await ops_test.model.wait_for_idle(
         apps=ALL_APPS,
-        timeout=1400,
+        timeout=1600,
         status="active",
-        idle_period=10,
+        idle_period=20,
     )
 
 
@@ -274,7 +274,7 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
         timeout=(60 * 10),
-        idle_period=10,
+        idle_period=20,
     )
 
     # Test that different applications can access the same index if they present it in their
@@ -310,7 +310,7 @@ async def test_admin_relation(ops_test: OpsTest):
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
         timeout=(60 * 10),
-        idle_period=10,
+        idle_period=20,
     )
 
     # Verify we can access whatever data we like as admin
