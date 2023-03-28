@@ -269,7 +269,6 @@ class OpenSearchProvider(Object):
                 username,
                 [
                     {"op": "replace", "path": "/.opendistro_security_roles", "value": roles},
-                    {"op": "replace", "path": "/backend_roles", "value": roles},
                 ],
             )
         except OpenSearchUserMgmtError as err:

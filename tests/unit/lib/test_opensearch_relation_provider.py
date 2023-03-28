@@ -110,7 +110,6 @@ class TestOpenSearchProvider(unittest.TestCase):
         roles = [username]
         patches = [
             {"op": "replace", "path": "/.opendistro_security_roles", "value": roles},
-            {"op": "replace", "path": "/backend_roles", "value": roles},
         ]
 
         self.opensearch_provider.create_opensearch_users(
