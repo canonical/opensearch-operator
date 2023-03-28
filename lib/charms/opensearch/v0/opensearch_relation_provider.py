@@ -270,7 +270,10 @@ class OpenSearchProvider(Object):
             self.user_manager.create_user(username, roles, hashed_pwd)
             self.user_manager.patch_user(
                 username,
-                [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
+                [
+                    {"op": "replace", "path": "/.opendistro_security_roles", "value": roles},
+                    {"op": "replace", "path": "/backend_roles", "value": roles},
+                ],
             )
         except OpenSearchUserMgmtError as err:
             logger.error(err)
