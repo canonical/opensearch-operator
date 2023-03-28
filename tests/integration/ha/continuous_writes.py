@@ -3,12 +3,22 @@
 # See LICENSE file for licensing details.
 import asyncio
 import logging
-from multiprocessing import Process, Queue
+import os
+from multiprocessing import Event, Process, Queue
 from types import SimpleNamespace
 
 from opensearchpy import OpenSearch, TransportError
 from opensearchpy.helpers import BulkIndexError, bulk
 from pytest_operator.plugin import OpsTest
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_fixed,
+    wait_random,
+)
 
 from tests.integration.helpers import (
     get_admin_secrets,
@@ -31,6 +41,7 @@ class ContinuousWrites:
     def __init__(self, ops_test: OpsTest):
         self._ops_test = ops_test
         self._is_stopped = True
+        self._event = None
         self._queue = None
         self._process = None
 
@@ -78,10 +89,12 @@ class ContinuousWrites:
         finally:
             client.close()
 
-    async def stop(self) -> int:
+    async def stop(self) -> SimpleNamespace:
         """Stop the continuous writes process and return max inserted ID."""
         if not self._is_stopped:
             self._stop_process()
+
+        result = SimpleNamespace()
 
         client = await self._client()
         try:
@@ -95,21 +108,39 @@ class ContinuousWrites:
                     "aggs": {"max_id": {"max": {"field": "id"}}},
                 },
             )
-            return int(resp["aggregations"]["max_id"]["value"])
+
+            # max stored document id
+            result.max_stored_id = int(resp["aggregations"]["max_id"]["value"])
         finally:
             client.close()
 
+        # documents count
+        result.count = await self.count()
+
+        # last expected document id stored on disk
+        try:
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
+                with attempt:
+                    with open(ContinuousWrites.LAST_WRITTEN_VAL_PATH, "r") as f:
+                        result.last_expected_id = int(f.read().rstrip())
+        except RetryError:
+            result.last_expected_id = -1
+
+        return result
+
     def _create_process(self):
         self._is_stopped = False
+        self._event = Event()
         self._queue = Queue()
         self._process = Process(
             target=ContinuousWrites._run_async,
             name="continuous_writes",
-            args=(self._queue, 1, True),
+            args=(self._event, self._queue, 0, True),
         )
 
     def _stop_process(self):
-        self._process.terminate()
+        self._event.set()
+        self._process.join()
         self._queue.close()
         self._is_stopped = True
 
@@ -133,7 +164,7 @@ class ContinuousWrites:
         )
 
     @staticmethod
-    async def _run(data_queue: Queue, starting_number: int, is_bulk: bool) -> None:
+    async def _run(event: Event, data_queue: Queue, starting_number: int, is_bulk: bool) -> None:
         """Continuous writing."""
 
         def _client(_data) -> OpenSearch:
@@ -158,21 +189,30 @@ class ContinuousWrites:
                 else:
                     ContinuousWrites._index(client, write_value)
             except BulkIndexError:
-                pass
+                continue
             except TransportError:
                 client.close()
                 client = _client(data)
                 continue
+            finally:
+                # process termination requested
+                if event.is_set():
+                    break
 
             write_value += 1
 
         # write last expected written value on disk
         with open(ContinuousWrites.LAST_WRITTEN_VAL_PATH, "w") as f:
-            f.write(str(write_value - 1))
+            if is_bulk:
+                write_value = (100 * write_value) + 99
+
+            f.write(str(write_value))
+            os.fsync(f)
 
         client.close()
 
     @staticmethod
+    @retry(reraise=True, stop=stop_after_attempt(3), wait=wait_random(min=1, max=2))
     def _bulk(client: OpenSearch, write_value: int) -> None:
         """Bulk Index group of docs."""
         data = []
@@ -189,9 +229,12 @@ class ContinuousWrites:
                 }
             )
 
-        bulk(client, actions=data)
+        success, errors = bulk(client, actions=data)
+        if errors:
+            raise BulkIndexError()
 
     @staticmethod
+    @retry(reraise=True, stop=stop_after_attempt(3), wait=wait_random(min=1, max=2))
     def _index(client: OpenSearch, write_value: int) -> None:
         """Index single document."""
         client.index(
@@ -201,6 +244,6 @@ class ContinuousWrites:
         )
 
     @staticmethod
-    def _run_async(data_queue: Queue, starting_number: int, is_bulk: bool):
+    def _run_async(event: Event, data_queue: Queue, starting_number: int, is_bulk: bool):
         """Run async code."""
-        asyncio.run(ContinuousWrites._run(data_queue, starting_number, is_bulk))
+        asyncio.run(ContinuousWrites._run(event, data_queue, starting_number, is_bulk))

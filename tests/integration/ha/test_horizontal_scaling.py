@@ -11,6 +11,7 @@ from pytest_operator.plugin import OpsTest
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.ha.helpers import (
     all_nodes,
+    assert_continuous_writes_consistency,
     cluster_allocation,
     create_dummy_docs,
     create_dummy_indexes,
@@ -110,6 +111,9 @@ async def test_horizontal_scale_up(
     nodes = await all_nodes(ops_test, leader_unit_ip)
     assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == 3
 
+    # continuous writes checks
+    await assert_continuous_writes_consistency(c_writes)
+
 
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_shards_realloc(
@@ -183,7 +187,7 @@ async def test_safe_scale_down_shards_realloc(
     # scale up by 1 unit
     await ops_test.model.applications[APP_NAME].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], timeout=1000, wait_for_exact_units=4, idle_period=60
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
     ),
 
     # update hosts used in continuous writes
@@ -210,6 +214,9 @@ async def test_safe_scale_down_shards_realloc(
     assert cluster_health_resp["unassigned_shards"] == 0
     assert new_shards_per_node.get(-1, 0) == 0
 
+    # continuous writes checks
+    await assert_continuous_writes_consistency(c_writes)
+
 
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_roles_reassigning(
@@ -225,9 +232,6 @@ async def test_safe_scale_down_roles_reassigning(
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=5, idle_period=60
     )
-
-    # update hosts used in continuous writes
-    # await c_writes.update()
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
 
@@ -248,9 +252,6 @@ async def test_safe_scale_down_roles_reassigning(
         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
     )
 
-    # update hosts used in continuous writes
-    # await c_writes.update()
-
     # fetch nodes, we expect to have a "cm" node, reconfigured to be "data only" to keep the quorum
     new_nodes = await all_nodes(ops_test, leader_unit_ip)
     assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == 3
@@ -267,10 +268,10 @@ async def test_safe_scale_down_roles_reassigning(
         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
     )
 
-    # update hosts used in continuous writes
-    # await c_writes.update()
-
     # fetch nodes, we expect to have all nodes "cluster_manager" to keep the quorum
     new_nodes = await all_nodes(ops_test, leader_unit_ip)
     assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == 3
     assert ClusterTopology.nodes_count_by_role(new_nodes)["data"] == 3
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(c_writes)
