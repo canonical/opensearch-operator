@@ -90,10 +90,6 @@ async def test_horizontal_scale_up(
     num_units = len(ops_test.model.applications[APP_NAME].units)
     assert num_units == 3
 
-    # update hosts used in continuous writes, so that if we remove a node
-    # we still have working HTTP endpoints
-    # await c_writes.update()
-
     unit_names = get_application_unit_names(ops_test)
     leader_unit_ip = await get_leader_unit_ip(ops_test)
 
