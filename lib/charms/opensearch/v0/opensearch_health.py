@@ -64,34 +64,28 @@ class OpenSearchHealth:
 
         return status
 
-    def apply_for_app(self, status: str):
+    def apply_for_app(self, status: str) -> None:
         """Cluster wide / app status."""
         if not self._charm.unit.is_leader():
             # this is needed in case the leader is in an error state and doesn't
             # report the status itself
             self._charm.peers_data.put(Scope.UNIT, "health", status)
-            return status
+            return
 
         if status == HealthColors.GREEN:
-            # green: cluster healthy
+            # health green: cluster healthy
             self._charm.status.clear(ClusterHealthRed, app=True)
             self._charm.status.clear(ClusterHealthYellow, app=True)
             self._charm.status.clear(WaitingForBusyShards, app=True)
         elif status == HealthColors.RED:
-            # health RED, some primary shards are unassigned
+            # health RED: some primary shards are unassigned
             self._charm.app.status = BlockedStatus(ClusterHealthRed)
-            return
+        elif status == HealthColors.YELLOW_TEMP:
+            # health is yellow but temporarily (shards are relocating or initializing)
+            self._charm.app.status = WaitingStatus(WaitingForBusyShards)
         else:
-            # cluster health is yellow, either a temporary state where shards are moving
-            # around (relocating / initializing) - or a permanent state where some replica
-            # shards are unassigned.
-            self._charm.app.status = (
-                BlockedStatus(ClusterHealthYellow)
-                if status == HealthColors.YELLOW
-                else WaitingStatus(WaitingForBusyShards)
-            )
-
-        return status
+            # health is yellow permanently (some replica shards are unassigned)
+            self._charm.app.status = BlockedStatus(ClusterHealthYellow)
 
     def apply_for_unit(self, status: str, host: Optional[str] = None):
         """Apply the health status on the current unit."""
@@ -103,16 +97,17 @@ class OpenSearchHealth:
 
         busy_shards = ClusterState.busy_shards_by_unit(
             self._opensearch, host=host, alt_hosts=self._charm.alt_hosts
-        ).get(self._charm.unit_name)
-
-        if busy_shards:
-            self._charm.unit.status = WaitingStatus(
-                WaitingForSpecificBusyShards.format(", ".join(busy_shards))
-            )
-        else:
+        )
+        if not busy_shards:
             self._charm.status.clear(
                 WaitingForSpecificBusyShards, pattern=Status.CheckPattern.Interpolated
             )
+            return
+
+        message = WaitingForSpecificBusyShards.format(
+            " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
+        )
+        self._charm.unit.status = WaitingStatus(message)
 
     def _fetch_status(self, host: Optional[str] = None, wait_for_green_first: bool = False):
         """Fetch the current cluster status."""

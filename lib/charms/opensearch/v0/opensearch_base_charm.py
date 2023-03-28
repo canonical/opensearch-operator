@@ -24,12 +24,11 @@ from charms.opensearch.v0.constants_charm import (
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
     TooManyNodesRemoved,
-    WaitingForSpecificBusyShards,
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import Status
-from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology, Node
+from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_databag import (
     RelationDataStore,
     Scope,
@@ -324,7 +323,7 @@ class OpenSearchBaseCharm(CharmBase):
             if not self.alt_hosts:
                 raise OpenSearchHAError(NoNodeUpInCluster)
 
-            health_color = self.health.apply(use_localhost=False)
+            health_color = self.health.apply(wait_for_green_first=True, use_localhost=False)
             if health_color == HealthColors.RED:
                 raise OpenSearchHAError(ClusterHealthRed)
         finally:
@@ -553,8 +552,6 @@ class OpenSearchBaseCharm(CharmBase):
                 self._initialize_security_index(admin_secrets)
                 self.peers_data.put(Scope.APP, "security_index_initialised", True)
 
-            self.peers_data.put(Scope.APP, "leader_ip", self.unit_ip)
-
         # cleanup bootstrap conf in the node
         if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
             self._cleanup_bootstrap_conf_if_applies()
@@ -612,26 +609,15 @@ class OpenSearchBaseCharm(CharmBase):
         if not self.peers_data.get(Scope.APP, "security_index_initialised", False):
             return False
 
-        if not self.peers_data.get(Scope.APP, "leader_ip"):
+        if not self.alt_hosts:
             return False
 
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
         # overloading the cluster, units must be started one at a time. So we defer starting
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
         try:
-            busy_shards = ClusterState.busy_shards_by_unit(
-                self.opensearch, self.peers_data.get(Scope.APP, "leader_ip")
-            )
-            if busy_shards:
-                message = WaitingForSpecificBusyShards.format(
-                    " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
-                )
-                self.unit.status = WaitingStatus(message)
+            if self.health.apply(use_localhost=False, app=False) == HealthColors.YELLOW_TEMP:
                 return False
-
-            self.status.clear(
-                WaitingForSpecificBusyShards, pattern=Status.CheckPattern.Interpolated
-            )
         except OpenSearchHttpError:
             # this means that the leader unit is not reachable (not started yet),
             # meaning it's a new cluster, so we can safely start the OpenSearch service
