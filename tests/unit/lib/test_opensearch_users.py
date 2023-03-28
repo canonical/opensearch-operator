@@ -78,7 +78,7 @@ class TestOpenSearchUserManager(unittest.TestCase):
             "PUT",
             "/_plugins/_security/api/internalusers/username",
         )
-        payload = {"hash": hash_pw, ".opendistro_security_roles": roles}
+        payload = {"hash": hash_pw, "opendistro_security_roles": roles}
         self.opensearch.request.assert_called_with(*request_args, payload=payload)
 
         self.opensearch.request.reset_mock()

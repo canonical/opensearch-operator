@@ -147,7 +147,7 @@ class OpenSearchUserManager:
         """
         payload = {"hash": hashed_pwd}
         if roles:
-            payload[".opendistro_security_roles"] = roles
+            payload["opendistro_security_roles"] = roles
 
         resp = self.opensearch.request(
             "PUT",
