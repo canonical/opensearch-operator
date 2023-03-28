@@ -219,9 +219,7 @@ class OpenSearchDistribution(ABC):
         ) -> requests.Response:
             """Performs an HTTP request."""
             if remaining_retries < 0:
-                if not error_response:
-                    raise OpenSearchHttpError()
-                if return_failed_resp:
+                if return_failed_resp and error_response:
                     return error_response
 
                 raise OpenSearchHttpError(
