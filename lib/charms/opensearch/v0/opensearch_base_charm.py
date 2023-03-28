@@ -14,7 +14,6 @@ from charms.opensearch.v0.constants_charm import (
     CertsExpirationError,
     ClientRelationName,
     ClusterHealthRed,
-    ClusterHealthYellow,
     NoNodeUpInCluster,
     PeerRelationName,
     RequestUnitServiceOps,
@@ -25,7 +24,6 @@ from charms.opensearch.v0.constants_charm import (
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
     TooManyNodesRemoved,
-    WaitingForBusyShards,
     WaitingForSpecificBusyShards,
     WaitingToStart,
 )
@@ -60,6 +58,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
     OpenSearchStopError,
 )
+from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
     VOTING_TO_DELETE,
@@ -122,6 +121,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.secrets = SecretsDataStore(self, PeerRelationName)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
         self.status = Status(self)
+        self.health = OpenSearchHealth(self)
 
         self.service_manager = RollingOpsManager(
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
@@ -158,9 +158,12 @@ class OpenSearchBaseCharm(CharmBase):
             # Leader election event happening after a previous leader got killed
             if not self.opensearch.is_node_up():
                 event.defer()
-            else:
-                self._apply_cluster_health()
-                self._compute_and_broadcast_updated_topology(self._get_nodes(True))
+                return
+
+            if self.health.apply() == HealthColors.YELLOW_TEMP:
+                event.defer()
+
+            self._compute_and_broadcast_updated_topology(self._get_nodes(True))
             return
 
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
@@ -239,21 +242,27 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        self._compute_and_broadcast_updated_topology(nodes)
+        # we want to re-calculate the topology only once when latest unit joins
+        if len(nodes) == self.app.planned_units():
+            self._compute_and_broadcast_updated_topology(nodes)
+        else:
+            event.defer()
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
+        if (
+            self.unit.is_leader()
+            and self.opensearch.is_node_up()
+            and self.health.apply() == HealthColors.YELLOW_TEMP
+        ):
+            # we defer because we want the temporary status to be updated
+            event.defer()
+
         data = event.relation.data.get(event.unit if self.unit.is_leader() else event.app)
         if not data:
             return
 
         if self.unit.is_leader():
-            cluster_health_color = data.get("health", "green")
-            if cluster_health_color != "green":
-                self.app.status = BlockedStatus(
-                    ClusterHealthRed if cluster_health_color == "red" else ClusterHealthYellow
-                )
-
             if data.get("bootstrap_contributor"):
                 contributor_count = self.peers_data.get(
                     Scope.APP, "bootstrap_contributors_count", 0
@@ -281,7 +290,11 @@ class OpenSearchBaseCharm(CharmBase):
             for node in self._get_nodes(True)
             if node.name != event.departing_unit.name.replace("/", "-")
         ]
-        self._compute_and_broadcast_updated_topology(remaining_nodes)
+
+        if len(remaining_nodes) == self.app.planned_units():
+            self._compute_and_broadcast_updated_topology(remaining_nodes)
+        else:
+            event.defer()
 
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):
         """Triggered when removing unit, Prior to the storage being detached."""
@@ -294,7 +307,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         # attempt lock acquisition through index creation, should crash if index already created
         # meaning another unit is holding the lock
-        if self.opensearch.is_started() and self.alt_hosts:
+        if self.opensearch.is_node_up() and self.alt_hosts:
             self.opensearch.request("PUT", "/.ops_stop", retries=3)
 
             # TODO query if current is CM + is_leader
@@ -311,8 +324,8 @@ class OpenSearchBaseCharm(CharmBase):
             if not self.alt_hosts:
                 raise OpenSearchHAError(NoNodeUpInCluster)
 
-            health = self._apply_cluster_health(wait_for_green_first=True, use_localhost=False)
-            if health == "red":
+            health_color = self.health.apply(use_localhost=False)
+            if health_color == HealthColors.RED:
                 raise OpenSearchHAError(ClusterHealthRed)
         finally:
             # release lock
@@ -353,7 +366,9 @@ class OpenSearchBaseCharm(CharmBase):
         # if there are exclusions to be removed
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
-            self._apply_cluster_health()
+            if self.health.apply() == HealthColors.YELLOW_TEMP:
+                event.defer()
+                return
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -514,7 +529,12 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         try:
-            self.opensearch.start()
+            self.opensearch.start(
+                wait_until_http_200=(
+                    not self.unit.is_leader()
+                    or self.peers_data.get(Scope.APP, "security_index_initialised", False)
+                )
+            )
             self._post_start_init()
             self.status.clear(WaitingToStart)
         except OpenSearchStartTimeoutError:
@@ -544,6 +564,9 @@ class OpenSearchBaseCharm(CharmBase):
 
         # Remove the 'starting' flag on the unit
         self.peers_data.delete(Scope.UNIT, "starting")
+
+        # apply cluster health
+        self.health.apply()
 
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
@@ -695,14 +718,13 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _get_nodes(self, use_localhost: bool) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
-        try:
-            return ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
-        except OpenSearchHttpError:
-            if self.unit.is_leader() and not self.peers_data.get(
-                Scope.APP, "security_index_initialised", False
-            ):
-                return []
-            raise
+        # This means it's the first unit on the cluster.
+        if self.unit.is_leader() and not self.peers_data.get(
+            Scope.APP, "security_index_initialised", False
+        ):
+            return []
+
+        return ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
 
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
@@ -779,7 +801,7 @@ class OpenSearchBaseCharm(CharmBase):
             callback_override="_restart_opensearch"
         )
 
-    def _compute_and_broadcast_updated_topology(self, current_nodes: Optional[List[Node]]):
+    def _compute_and_broadcast_updated_topology(self, current_nodes: List[Node]):
         """Compute cluster topology and broadcast node configs (roles for now) to change if any."""
         if not current_nodes:
             return
@@ -787,59 +809,8 @@ class OpenSearchBaseCharm(CharmBase):
         updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
         self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
 
-    def _apply_cluster_health(
-        self, wait_for_green_first: bool = False, use_localhost: bool = True
-    ) -> str:
-        """Fetch cluster health and set it on the app status."""
-        response: Optional[Dict[str, any]] = None
-        if wait_for_green_first:
-            try:
-                response = ClusterState.health(
-                    self.opensearch,
-                    True,
-                    host=self.unit_ip if use_localhost else None,
-                    alt_hosts=self.alt_hosts,
-                )
-            except OpenSearchHttpError:
-                # it timed out, settle with current status, fetched next without the 1min wait
-                pass
-
-        if not response:
-            response = ClusterState.health(
-                self.opensearch,
-                False,
-                host=self.unit_ip if use_localhost else None,
-                alt_hosts=self.alt_hosts,
-            )
-
-        status = response["status"].lower()
-        if not self.unit.is_leader():
-            # this is needed in case the leader is in an error state and doesn't
-            # report the status itself
-            self.peers_data.put(Scope.UNIT, "health", status)
-            return status
-
-        # cluster health is green
-        if status == "green":
-            self.status.clear(ClusterHealthRed, app=True)
-            self.status.clear(ClusterHealthYellow, app=True)
-            self.status.clear(WaitingForBusyShards, app=True)
-            return "green"
-
-        # some primary shards are unassigned
-        if status == "red":
-            self.app.status = BlockedStatus(ClusterHealthRed)
-            return "red"
-
-        # some replica shards are unassigned
-        shards_by_state = ClusterState.shards_by_state(self.opensearch)
-        busy_shards = shards_by_state.get("INITIALIZING", 0) + shards_by_state.get("RELOCATING", 0)
-        self.app.status = (
-            BlockedStatus(ClusterHealthYellow)
-            if busy_shards == 0
-            else WaitingStatus(WaitingForBusyShards)
-        )
-        return "yellow"
+        # since the above won't trigger a peer rel changed on leader, we'll trigger it manually
+        self.on[PeerRelationName].relation_changed.emit(self.model.get_relation(PeerRelationName))
 
     def _check_certs_expiration(self, event: UpdateStatusEvent) -> None:
         """Checks the certificates' expiration."""

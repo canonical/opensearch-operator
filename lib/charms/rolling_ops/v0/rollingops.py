@@ -380,7 +380,8 @@ class RollingOpsManager(Object):
                 self.charm.on[self.name].run_with_lock.emit()
             return
 
-        self.model.app.status = ActiveStatus()
+        if self.model.app.status.message == f"Beginning rolling {self.name}":
+            self.model.app.status = ActiveStatus()
 
     def _on_acquire_lock(self: CharmBase, event: ActionEvent):
         """Request a lock."""
@@ -414,4 +415,5 @@ class RollingOpsManager(Object):
 
         # cleanup old callback overrides
         relation.data[self.charm.unit].update({"callback_override": ""})
-        self.model.unit.status = ActiveStatus()
+        if self.model.unit.status.message == f"Executing {self.name} operation":
+            self.model.unit.status = ActiveStatus()
