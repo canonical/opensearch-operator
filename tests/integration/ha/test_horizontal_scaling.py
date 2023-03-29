@@ -12,10 +12,13 @@ from pytest_operator.plugin import OpsTest
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.ha.helpers import (
     all_nodes,
+    app_name,
     assert_continuous_writes_consistency,
     cluster_allocation,
     create_dummy_docs,
     create_dummy_indexes,
+    delete_dummy_indexes,
+    get_elected_cm_unit_id,
     get_number_of_shards_by_node,
     get_shards_by_state,
 )
@@ -54,6 +57,11 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
+    # it is possible for users to provide their own cluster for HA testing.
+    # Hence, check if there is a pre-existing cluster.
+    if await app_name(ops_test):
+        return
+
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
@@ -77,12 +85,14 @@ async def test_horizontal_scale_up(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Tests that new added units to the cluster are discoverable."""
+    app = await app_name(ops_test)
+
     # scale up
-    await ops_test.model.applications[APP_NAME].add_unit(count=2)
+    await ops_test.model.applications[app].add_unit(count=2)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
     )
-    num_units = len(ops_test.model.applications[APP_NAME].units)
+    num_units = len(ops_test.model.applications[app].units)
     assert num_units == 3
 
     unit_names = get_application_unit_names(ops_test)
@@ -115,10 +125,12 @@ async def test_safe_scale_down_shards_realloc(
     The goal of this test is to make sure that shards are automatically relocated after
     a Yellow status on the cluster caused by a scale-down event.
     """
+    app = await app_name(ops_test)
+
     # scale up
-    await ops_test.model.applications[APP_NAME].add_unit(count=1)
+    await ops_test.model.applications[app].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
     )
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -144,9 +156,9 @@ async def test_safe_scale_down_shards_realloc(
     print(await cluster_allocation(ops_test, leader_unit_ip))
 
     # remove the service in the chosen unit
-    await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
     )
 
     # check if at least partial shard re-allocation happened
@@ -170,14 +182,14 @@ async def test_safe_scale_down_shards_realloc(
     assert cluster_health_resp["status"] == "yellow"
 
     # scale up by 1 unit
-    await ops_test.model.applications[APP_NAME].add_unit(count=1)
+    await ops_test.model.applications[app].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
     )
 
     new_unit_id = [
         int(unit.name.split("/")[1])
-        for unit in ops_test.model.applications[APP_NAME].units
+        for unit in ops_test.model.applications[app].units
         if int(unit.name.split("/")[1]) not in unit_ids
     ][0]
 
@@ -196,6 +208,9 @@ async def test_safe_scale_down_shards_realloc(
     assert cluster_health_resp["unassigned_shards"] == 0
     assert new_shards_per_node.get(-1, 0) == 0
 
+    # delete the dummy indexes
+    await delete_dummy_indexes(ops_test, leader_unit_ip)
+
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
 
@@ -207,12 +222,14 @@ async def test_safe_scale_down_roles_reassigning(
     """Tests the shutdown of a node with a role requiring the re-balance of the cluster roles.
 
     The goal of this test is to make sure that roles are automatically recalculated after
-    a scale-down event.
+    a scale-up/down event.
     """
+    app = await app_name(ops_test)
+
     # scale up by 1 unit
-    await ops_test.model.applications[APP_NAME].add_unit(count=1)
+    await ops_test.model.applications[app].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=5, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=5, idle_period=60
     )
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -229,9 +246,9 @@ async def test_safe_scale_down_roles_reassigning(
     ][0]
 
     # scale-down: remove a cm unit
-    await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
     )
 
     # fetch nodes, we expect to have a "cm" node, reconfigured to be "data only" to keep the quorum
@@ -245,15 +262,72 @@ async def test_safe_scale_down_roles_reassigning(
         for node in new_nodes
         if node.ip != leader_unit_ip and node.is_cm_eligible()
     ][0]
-    await ops_test.model.applications[APP_NAME].destroy_unit(f"{APP_NAME}/{unit_id_to_stop}")
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=90
     )
 
     # fetch nodes, we expect to have all nodes "cluster_manager" to keep the quorum
     new_nodes = await all_nodes(ops_test, leader_unit_ip)
     assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == 3
     assert ClusterTopology.nodes_count_by_role(new_nodes)["data"] == 3
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(c_writes)
+
+
+async def test_safe_scale_down_remove_leaders(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
+    """Tests the removal of specific units (elected cluster_manager, juju leader).
+
+    The goal of this test is to make sure that:
+     - the CM reelection happens successfully.
+     - the leader-elected event gets triggered successfully and
+        leadership related events on the charm work correctly, i.e: roles reassigning
+    """
+    app = await app_name(ops_test)
+
+    # scale up by 1 unit
+    await ops_test.model.applications[app].add_unit(count=1)
+    await ops_test.model.wait_for_idle(
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=5, idle_period=60
+    )
+
+    # scale down: remove the juju leader
+    leader_unit_id = await get_leader_unit_id(ops_test)
+
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{leader_unit_id}")
+    await ops_test.model.wait_for_idle(
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=90
+    )
+
+    # make sure the duties supposed to be done by the departing leader are done
+    # we expect to have 3 cm-eligible and 1 data-only nodes
+    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    nodes = await all_nodes(ops_test, leader_unit_ip)
+    assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == 3
+    assert ClusterTopology.nodes_count_by_role(nodes)["data"] == 4
+
+    # scale-down: remove the current elected CM
+    first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+    assert first_elected_cm_unit_id != -1
+
+    # scale-down: remove the elected cm
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{first_elected_cm_unit_id}")
+    await ops_test.model.wait_for_idle(
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=90
+    )
+
+    # check if CM re-election happened
+    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    second_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+    assert second_elected_cm_unit_id != -1
+    assert second_elected_cm_unit_id != first_elected_cm_unit_id
+
+    # check health of cluster
+    cluster_health_resp = await cluster_health(ops_test, leader_unit_ip, wait_for_green_first=True)
+    assert cluster_health_resp["status"] == "green"
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
