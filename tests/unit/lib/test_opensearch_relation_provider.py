@@ -108,7 +108,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         extra_user_roles = "admin"
         index = "test_index"
         roles = [username]
-        patches = [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}]
+        patches = [
+            {"op": "replace", "path": "/opendistro_security_roles", "value": roles},
+        ]
 
         self.opensearch_provider.create_opensearch_users(
             username, hashed_pw, index, extra_user_roles

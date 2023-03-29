@@ -44,6 +44,9 @@ jobs:
 
   build:
     name: Build charms
+    needs:
+      - lint
+      - unit-test
     uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
 
   lite-integration-test:

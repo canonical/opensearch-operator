@@ -41,7 +41,7 @@ from ops.charm import (
     RelationDepartedEvent,
 )
 from ops.framework import Object
-from ops.model import BlockedStatus, Relation
+from ops.model import BlockedStatus, MaintenanceStatus, Relation
 
 # The unique Charmhub library identifier, never change it
 LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
@@ -158,7 +158,7 @@ class OpenSearchProvider(Object):
     def _unit_departing(self, relation):
         return self.charm.peers_data.get(Scope.UNIT, self._depart_flag(relation))
 
-    def _on_index_requested(self, event: IndexRequestedEvent) -> None:
+    def _on_index_requested(self, event: IndexRequestedEvent) -> None:  # noqa
         """Handle client index-requested event.
 
         The read-only-endpoints field of DatabaseProvides is unused in this relation because this
@@ -179,14 +179,18 @@ class OpenSearchProvider(Object):
         if not self.validate_index_name(event.index):
             raise OpenSearchIndexError(f"invalid index name: {event.index}")
 
+        prev_status = self.unit.status
+        self.unit.status = MaintenanceStatus(f"new index {event.index} requested")
+
         try:
-            self.opensearch.request("PUT", event.index)
+            self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
             if not (
                 e.response_code == 400
                 and e.response_body.get("error", {}).get("type")
                 == "resource_already_exists_exception"
             ):
+                logger.error(e)
                 raise
 
         username = self._relation_username(event.relation)
@@ -207,6 +211,9 @@ class OpenSearchProvider(Object):
         self.opensearch_provides.set_index(rel_id, event.index)
         self.update_certs(rel_id)
         self.update_endpoints(event.relation)
+
+        logger.info(f"new index {event.index} available")
+        self.unit.status = prev_status
 
     def validate_index_name(self, index_name: str) -> bool:
         """Validates that the index name provided in the relation is acceptable."""
