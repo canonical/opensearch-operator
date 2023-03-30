@@ -101,7 +101,7 @@ async def create_dummy_indexes(ops_test: OpsTest, unit_ip: str, count: int = 5) 
     stop=stop_after_attempt(15),
 )
 async def delete_dummy_indexes(ops_test: OpsTest, unit_ip: str, count: int = 5) -> None:
-    """Create indexes."""
+    """Delete dummy indexes."""
     for index_id in range(count):
         await http_request(
             ops_test,

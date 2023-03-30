@@ -303,7 +303,8 @@ async def test_safe_scale_down_remove_leaders(
     )
 
     # make sure the duties supposed to be done by the departing leader are done
-    # we expect to have 3 cm-eligible and 1 data-only nodes
+    # we expect to have 3 cm-eligible+data (one of which will be elected) and
+    # 1 data-only nodes as per the roles-reassigning logic
     leader_unit_ip = await get_leader_unit_ip(ops_test)
     nodes = await all_nodes(ops_test, leader_unit_ip)
     assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == 3
@@ -312,8 +313,6 @@ async def test_safe_scale_down_remove_leaders(
     # scale-down: remove the current elected CM
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
     assert first_elected_cm_unit_id != -1
-
-    # scale-down: remove the elected cm
     await ops_test.model.applications[app].destroy_unit(f"{app}/{first_elected_cm_unit_id}")
     await ops_test.model.wait_for_idle(
         apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=90
