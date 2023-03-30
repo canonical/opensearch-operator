@@ -38,6 +38,8 @@ from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
 
+IDLE_PERIOD = 120
+
 
 @pytest.fixture()
 def c_writes(ops_test: OpsTest):
@@ -90,7 +92,7 @@ async def test_horizontal_scale_up(
     # scale up
     await ops_test.model.applications[app].add_unit(count=2)
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=IDLE_PERIOD
     )
     num_units = len(ops_test.model.applications[app].units)
     assert num_units == 3
@@ -130,7 +132,7 @@ async def test_safe_scale_down_shards_realloc(
     # scale up
     await ops_test.model.applications[app].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=IDLE_PERIOD
     )
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -158,7 +160,7 @@ async def test_safe_scale_down_shards_realloc(
     # remove the service in the chosen unit
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=IDLE_PERIOD
     )
 
     # check if at least partial shard re-allocation happened
@@ -184,7 +186,7 @@ async def test_safe_scale_down_shards_realloc(
     # scale up by 1 unit
     await ops_test.model.applications[app].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=IDLE_PERIOD
     )
 
     new_unit_id = [
@@ -229,7 +231,7 @@ async def test_safe_scale_down_roles_reassigning(
     # scale up by 1 unit
     await ops_test.model.applications[app].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=5, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=5, idle_period=IDLE_PERIOD
     )
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -248,7 +250,7 @@ async def test_safe_scale_down_roles_reassigning(
     # scale-down: remove a cm unit
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=IDLE_PERIOD
     )
 
     # fetch nodes, we expect to have a "cm" node, reconfigured to be "data only" to keep the quorum
@@ -264,7 +266,7 @@ async def test_safe_scale_down_roles_reassigning(
     ][0]
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=90
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=IDLE_PERIOD
     )
 
     # fetch nodes, we expect to have all nodes "cluster_manager" to keep the quorum
@@ -291,7 +293,7 @@ async def test_safe_scale_down_remove_leaders(
     # scale up by 2 units
     await ops_test.model.applications[app].add_unit(count=2)
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=5, idle_period=60
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=5, idle_period=IDLE_PERIOD
     )
 
     # scale down: remove the juju leader
@@ -299,7 +301,7 @@ async def test_safe_scale_down_remove_leaders(
 
     await ops_test.model.applications[app].destroy_unit(f"{app}/{leader_unit_id}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=120
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=IDLE_PERIOD
     )
 
     # make sure the duties supposed to be done by the departing leader are done
@@ -315,7 +317,7 @@ async def test_safe_scale_down_remove_leaders(
     assert first_elected_cm_unit_id != -1
     await ops_test.model.applications[app].destroy_unit(f"{app}/{first_elected_cm_unit_id}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=90
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=IDLE_PERIOD
     )
 
     # check if CM re-election happened
