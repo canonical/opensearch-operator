@@ -288,8 +288,8 @@ async def test_safe_scale_down_remove_leaders(
     """
     app = await app_name(ops_test)
 
-    # scale up by 1 unit
-    await ops_test.model.applications[app].add_unit(count=1)
+    # scale up by 2 units
+    await ops_test.model.applications[app].add_unit(count=2)
     await ops_test.model.wait_for_idle(
         apps=[app], status="active", timeout=1000, wait_for_exact_units=5, idle_period=60
     )
@@ -299,7 +299,7 @@ async def test_safe_scale_down_remove_leaders(
 
     await ops_test.model.applications[app].destroy_unit(f"{app}/{leader_unit_id}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=90
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=120
     )
 
     # make sure the duties supposed to be done by the departing leader are done
