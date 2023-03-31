@@ -102,7 +102,7 @@ async def test_replication_across_members(
         doc = await get_doc(ops_test, u_ip, index_name, doc_id)
         assert doc["_source"] == default_doc(index_name, doc_id)
 
-    await delete_index(ops_test, leader_unit_ip, index_name, doc_id)
+    await delete_index(ops_test, leader_unit_ip, index_name)
 
     # 2. index data and exclusively query node hosting the replica shard
     doc_id = 13
@@ -127,7 +127,7 @@ async def test_replication_across_members(
     assert len(docs) == 1
     assert docs[0]["_source"] == default_doc(index_name, doc_id)
 
-    await delete_index(ops_test, leader_unit_ip, index_name, doc_id)
+    await delete_index(ops_test, leader_unit_ip, index_name)
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
