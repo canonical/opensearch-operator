@@ -304,17 +304,17 @@ class OpenSearchBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(TooManyNodesRemoved)
             raise OpenSearchScaleDownError(TooManyNodesRemoved)
 
-        # attempt lock acquisition through index creation, should crash if index already created
-        # meaning another unit is holding the lock
         if self.opensearch.is_node_up() and self.alt_hosts:
-            self.opensearch.request("PUT", "/.ops_stop", retries=3)
-
             # TODO query if current is CM + is_leader
             if self.unit.is_leader():
                 remaining_nodes = [
                     node for node in self._get_nodes(True) if node.name != self.unit_name
                 ]
                 self._compute_and_broadcast_updated_topology(remaining_nodes)
+
+            # attempt lock acquisition through index creation, should crash if index
+            # already created, meaning another unit is holding the lock
+            self.opensearch.request("PUT", "/.ops_stop", retries=3)
 
         try:
             self._stop_opensearch()

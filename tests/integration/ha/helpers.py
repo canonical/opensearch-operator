@@ -2,7 +2,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 from random import randint
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
 from pytest_operator.plugin import OpsTest
@@ -10,6 +10,38 @@ from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.helpers import http_request
+
+
+async def app_name(ops_test: OpsTest) -> Optional[str]:
+    """Returns the name of the cluster running OpenSearch.
+
+    This is important since not all deployments of the OpenSearch charm have the
+    application name "opensearch".
+    Note: if multiple clusters are running OpenSearch this will return the one first found.
+    """
+    status = await ops_test.model.get_status()
+    for app in ops_test.model.applications:
+        if "opensearch" in status["applications"][app]["charm"]:
+            return app
+
+    return None
+
+
+async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
+    """Returns the unit id of the current elected cm node."""
+    # get current elected cm node
+    resp = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_cluster/state/cluster_manager_node",
+    )
+    cm_node_id = resp.get("cluster_manager_node")
+    if not cm_node_id:
+        return -1
+
+    # get all nodes
+    resp = await http_request(ops_test, "GET", f"https://{unit_ip}:9200/_nodes")
+    return int(resp["nodes"][cm_node_id]["name"].split("-")[1])
 
 
 @retry(
@@ -61,6 +93,20 @@ async def create_dummy_indexes(ops_test: OpsTest, unit_ip: str, count: int = 5) 
                     "index": {"number_of_shards": p_shards, "number_of_replicas": r_shards}
                 }
             },
+        )
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
+async def delete_dummy_indexes(ops_test: OpsTest, unit_ip: str, count: int = 5) -> None:
+    """Delete dummy indexes."""
+    for index_id in range(count):
+        await http_request(
+            ops_test,
+            "DELETE",
+            f"https://{unit_ip}:9200/index_{index_id}",
         )
 
 
