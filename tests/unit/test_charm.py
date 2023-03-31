@@ -1,7 +1,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-#
-# Learn more about testing at: https://juju.is/docs/sdk/testing
+
 import tempfile
 from os import listdir
 from os.path import isfile, join
@@ -13,11 +12,13 @@ from unit.lib.test_opensearch_base_charm import TestOpenSearchBaseCharm
 
 
 class TestCharm(TestOpenSearchBaseCharm):
-    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
-    def setUp(self, _create_directories):
+    def setUp(self):
         super().setUp()
 
-    def test_store_tls_resources(self):
+    @patch("os.chown")
+    @patch("pwd.getpwnam")
+    @patch("grp.getgrnam")
+    def test_store_tls_resources(self, grp_getgrnam, pwd_getpwnam, os_chown):
         """Test the storing of TLS resources."""
         self.opensearch.paths = MagicMock()
 
@@ -61,7 +62,10 @@ class TestCharm(TestOpenSearchBaseCharm):
                 ],
             )
 
-    def test_are_all_tls_resources_stored(self):
+    @patch("os.chown")
+    @patch("pwd.getpwnam")
+    @patch("grp.getgrnam")
+    def test_are_all_tls_resources_stored(self, grp_getgrnam, pwd_getpwnam, os_chown):
         """Test if all TLS resources are successfully stored."""
         self.opensearch.paths = MagicMock()
 

@@ -10,6 +10,8 @@ from typing import Dict, List, Optional, Union
 
 import requests
 import yaml
+from charms.opensearch.v0.helper_networking import is_reachable, reachable_hosts
+from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
@@ -154,6 +156,24 @@ async def get_leader_unit_id(ops_test: OpsTest) -> int:
     return int(leader_unit.name.split("/")[1])
 
 
+def get_reachable_unit_ips(ops_test: OpsTest) -> List[str]:
+    """Helper function to retrieve the IP addresses of all online units."""
+    return reachable_hosts(get_application_unit_ips(ops_test))
+
+
+def get_reachable_units(ops_test: OpsTest) -> Dict[int, str]:
+    """Helper function to retrieve a dict of id/IP addresses of all online units."""
+    result = {}
+    for unit in ops_test.model.applications[APP_NAME].units:
+        if not is_reachable(unit.public_address, 9200):
+            continue
+
+        u_id = int(unit.name.split("/")[1])
+        result[u_id] = unit.public_address
+
+    return result
+
+
 async def http_request(
     ops_test: OpsTest,
     method: str,
@@ -171,6 +191,7 @@ async def http_request(
         endpoint: the url to be called.
         payload: the body of the request if any.
         resp_status_code: whether to only return the http response code.
+        verify: whether verify certificate chain or not
         user_password: use alternative password than the admin one in the secrets.
 
     Returns:
@@ -183,8 +204,6 @@ async def http_request(
         chain.write(admin_secrets["ca-chain"])
         chain.seek(0)
 
-        session.auth = ("admin", user_password or admin_secrets["password"])
-
         request_kwargs = {
             "method": method,
             "url": endpoint,
@@ -195,6 +214,8 @@ async def http_request(
         elif isinstance(payload, dict):
             request_kwargs["data"] = json.dumps(payload)
 
+        session.auth = ("admin", user_password or admin_secrets["password"])
+
         request_kwargs["verify"] = chain.name if verify else False
         resp = session.request(**request_kwargs)
 
@@ -204,12 +225,44 @@ async def http_request(
         return resp.json()
 
 
+def opensearch_client(
+    hosts: List[str], user_name: str, password: str, cert_path: str
+) -> OpenSearch:
+    """Build an opensearch client."""
+    return OpenSearch(
+        hosts=[{"host": ip, "port": 9200} for ip in hosts],
+        http_auth=(user_name, password),
+        http_compress=True,
+        sniff_on_start=True,  # sniff before doing anything
+        sniff_on_connection_fail=True,  # refresh nodes after a node fails to respond
+        sniffer_timeout=60,  # and also every 60 seconds
+        use_ssl=True,  # turn on ssl
+        verify_certs=True,  # make sure we verify SSL certificates
+        ssl_assert_hostname=False,
+        ssl_show_warn=False,
+        ca_certs=cert_path,  # cert path on disk
+    )
+
+
 @retry(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def cluster_health(ops_test: OpsTest, unit_ip: str) -> Dict[str, any]:
+async def cluster_health(
+    ops_test: OpsTest, unit_ip: str, wait_for_green_first: bool = False
+) -> Dict[str, any]:
     """Fetch the cluster health."""
+    if wait_for_green_first:
+        try:
+            return await http_request(
+                ops_test,
+                "GET",
+                f"https://{unit_ip}:9200/_cluster/health?wait_for_status=green&timeout=1m",
+            )
+        except requests.HTTPError:
+            # it timed out, settle with current status, fetched next without the 1min wait
+            pass
+
     return await http_request(
         ops_test,
         "GET",
@@ -244,3 +297,33 @@ async def check_cluster_formation_successful(
 
     registered_nodes = [node_desc["name"] for node_desc in response["nodes"].values()]
     return set(unit_names) == set(registered_nodes)
+
+
+async def scale_application(
+    ops_test: OpsTest, application_name: str, count: int, timeout=1000
+) -> None:
+    """Scale a given application to a specific unit count.
+
+    Args:
+        ops_test: The ops test framework instance
+        application_name: The name of the application
+        count: The desired number of units to scale to
+        timeout: Time to wait for application to become stable
+    """
+    application = ops_test.model.applications[application_name]
+    change = count - len(application.units)
+    if change > 0:
+        await application.add_units(change)
+    elif change < 0:
+        units = [unit.name for unit in application.units[0:-change]]
+        await application.destroy_units(*units)
+    else:
+        return
+
+    await ops_test.model.wait_for_idle(
+        apps=[application_name],
+        status="active",
+        timeout=timeout,
+        wait_for_exact_units=count,
+        idle_period=20,
+    )

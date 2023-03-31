@@ -63,11 +63,11 @@ cloudinit-userdata: |
     - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
 EOF
 ```
+
 or in a single machine:
-```
+```bash
 sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
 ```
-
 
 Then create a new model and set the previously generated file in it.
 ```bash

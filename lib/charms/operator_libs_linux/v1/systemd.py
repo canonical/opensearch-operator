@@ -60,21 +60,23 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 0
+LIBPATCH = 3
 
 
 class SystemdError(Exception):
+    """Custom exception for SystemD related errors."""
+
     pass
 
 
 def _popen_kwargs():
-    return dict(
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        bufsize=1,
-        universal_newlines=True,
-        encoding="utf-8",
-    )
+    return {
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.STDOUT,
+        "bufsize": 1,
+        "universal_newlines": True,
+        "encoding": "utf-8",
+    }
 
 
 def _systemctl(
@@ -109,16 +111,16 @@ def _systemctl(
 
     proc.wait()
 
-    if sub_cmd == "is-active":
-        # If we are just checking whether a service is running, return True/False, rather
-        # than raising an error.
-        if proc.returncode < 1:
-            return True
-        if proc.returncode == 3:  # Code returned when service is not active.
-            return False
-
     if proc.returncode < 1:
         return True
+
+    # If we are just checking whether a service is running, return True/False, rather
+    # than raising an error.
+    if sub_cmd == "is-active" and proc.returncode == 3:  # Code returned when service not active.
+        return False
+
+    if sub_cmd == "is-failed":
+        return False
 
     raise SystemdError(
         "Could not {}{}: systemd output: {}".format(
@@ -131,16 +133,25 @@ def service_running(service_name: str) -> bool:
     """Determine whether a system service is running.
 
     Args:
-        service_name: the name of the service
+        service_name: the name of the service to check
     """
     return _systemctl("is-active", service_name, quiet=True)
+
+
+def service_failed(service_name: str) -> bool:
+    """Determine whether a system service has failed.
+
+    Args:
+        service_name: the name of the service to check
+    """
+    return _systemctl("is-failed", service_name, quiet=True)
 
 
 def service_start(service_name: str) -> bool:
     """Start a system service.
 
     Args:
-        service_name: the name of the service to stop
+        service_name: the name of the service to start
     """
     return _systemctl("start", service_name)
 

@@ -23,7 +23,7 @@ class TestOpenSearchUserManager(unittest.TestCase):
         self.mgr = OpenSearchUserManager(self.charm)
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
-    def test_create_role(self, _request):
+    def test_create_role(self, _):
         self.opensearch.request.return_value = {"status": "not ok"}
         permissions = {"perm1": "gimme_perms"}
         action_groups = {"ag1": "gimme_more_perms"}
@@ -32,23 +32,23 @@ class TestOpenSearchUserManager(unittest.TestCase):
             "permissions": permissions,
             "action_groups": action_groups,
         }
-
-        with pytest.raises(OpenSearchUserMgmtError):
-            self.mgr.create_role(**role_kwargs)
         request_args = (
             "PUT",
             "/_plugins/_security/api/roles/role_name",
         )
         payload = {**permissions, **action_groups}
+
+        with pytest.raises(OpenSearchUserMgmtError):
+            self.mgr.create_role(**role_kwargs)
         self.opensearch.request.assert_called_with(*request_args, payload=payload)
 
         self.opensearch.request.reset_mock()
-        self.opensearch.request.return_value = {"status": "OK"}
+        self.opensearch.request.return_value = {"status": "CREATED"}
         self.mgr.create_role(**role_kwargs)
         self.opensearch.request.assert_called_with(*request_args, payload=payload)
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
-    def test_remove_role(self, _request):
+    def test_remove_role(self, _):
         self.opensearch.request.return_value = {"status": "not ok"}
         role = "role_name"
         with pytest.raises(OpenSearchUserMgmtError):
@@ -62,7 +62,7 @@ class TestOpenSearchUserManager(unittest.TestCase):
         self.opensearch.request.assert_called_with(*request_args)
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
-    def test_create_user(self, _request):
+    def test_create_user(self, _):
         self.opensearch.request.return_value = {"status": "not ok"}
         roles = ["my_cool_role", "my_terrible_role"]
         hash_pw = "pw"
@@ -87,12 +87,12 @@ class TestOpenSearchUserManager(unittest.TestCase):
         self.opensearch.request.assert_called_with(*request_args, payload=payload)
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
-    def test_remove_user(self, _request):
+    def test_remove_user(self, _):
         self.opensearch.request.return_value = {"status": "not ok"}
         user_name = "username"
         with pytest.raises(OpenSearchUserMgmtError):
             self.mgr.remove_user(user_name)
-        request_args = ("DELETE", "/_plugins/_security/api/internalusers/username/")
+        request_args = ("DELETE", "/_plugins/_security/api/internalusers/username")
         self.opensearch.request.assert_called_with(*request_args)
 
         self.opensearch.request.reset_mock()
@@ -101,7 +101,7 @@ class TestOpenSearchUserManager(unittest.TestCase):
         self.opensearch.request.assert_called_with(*request_args)
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
-    def test_patch_user(self, _request):
+    def test_patch_user(self, _):
         self.opensearch.request.return_value = {"status": "not ok"}
         patches = [{"test patch": "yep, looks like a test."}]
         patch_args = ("username", patches)

@@ -10,15 +10,17 @@ from typing import Dict, List, Optional, Union
 
 import requests
 from charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseCreatedEvent,
-    DatabaseEndpointsChangedEvent,
-    DatabaseRequires,
+    AuthenticationEvent,
+    OpenSearchRequires,
 )
 from ops.charm import ActionEvent, CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
 
 logger = logging.getLogger(__name__)
+
+
+CERT_PATH = "/tmp/test_cert.ca"
 
 
 class ApplicationCharm(CharmBase):
@@ -29,49 +31,38 @@ class ApplicationCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-
         # Default charm events.
         self.framework.observe(self.on.update_status, self._on_update_status)
 
-        # Events related to the first database that is requested
-        # (these events are defined in the database requires charm library).
-        database_name = f'{self.app.name.replace("-", "_")}_first_database'
+        # `albums` index is used in integration test
+        self.first_opensearch = OpenSearchRequires(self, "first-index", "albums", "")
 
-        permissive_roles = json.dumps({"roles": ["all_access"]})
-        self.first_database = DatabaseRequires(
-            self, "first-database", database_name, permissive_roles
-        )
-        self.framework.observe(
-            self.first_database.on.database_created, self._on_first_database_created
-        )
-        self.framework.observe(
-            self.first_database.on.endpoints_changed, self._on_first_database_endpoints_changed
-        )
+        index_name = f'{self.app.name.replace("-", "_")}_second_opensearch'
+        # set invalid permissions to guarantee we still get default permissions.
+        self.second_opensearch = OpenSearchRequires(self, "second-index", index_name, "hackerman")
 
-        # Events related to the second database that is requested
-        # (these events are defined in the database requires charm library).
-        database_name = f'{self.app.name.replace("-", "_")}_second_database'
-        # TODO change this to use new permissions
-        roles = {
-            "roles": ["readall"],
-            "permissions": ["TODO find some permissions", ""],
-            "action_groups": ["TODO find some action groups", ""],
+        # Checking comma-separated permissions. These should still basically have admin
+        # permissions.
+        self.admin_opensearch = OpenSearchRequires(self, "admin", "admin-index", "admin,default")
+
+        self.relations = {
+            "first-index": self.first_opensearch,
+            "second-index": self.second_opensearch,
+            "admin": self.admin_opensearch,
         }
-        complex_roles = json.dumps(roles)
-        self.second_database = DatabaseRequires(
-            self, "second-database", database_name, complex_roles
-        )
-        self.framework.observe(
-            self.second_database.on.database_created, self._on_second_database_created
-        )
-        self.framework.observe(
-            self.second_database.on.endpoints_changed, self._on_second_database_endpoints_changed
-        )
+
+        for relation_handler in self.relations.values():
+            self.framework.observe(
+                relation_handler.on.index_created, self._on_authentication_updated
+            )
+            self.framework.observe(
+                relation_handler.on.authentication_updated, self._on_authentication_updated
+            )
 
         self.framework.observe(self.on.run_request_action, self._on_run_request_action)
 
     def _on_update_status(self, _) -> None:
-        """Health check for database connection."""
+        """Health check for index connection."""
         if self.connection_check():
             self.unit.status = ActiveStatus()
         else:
@@ -80,48 +71,39 @@ class ApplicationCharm(CharmBase):
 
     def connection_check(self) -> bool:
         """Simple connection check to see if backend exists and we can connect to it."""
-        relations = self.model.relations.get("first-database", []) + self.model.relations.get(
-            "second-database", []
-        )
+        relations = []
+        for relation in self.relations.keys():
+            relations += self.model.relations.get(relation, [])
         if not relations:
             return False
+
+        connected = True
         for relation in relations:
-            if not self.smoke_check(relation.id):
-                return False
-        return True
+            try:
+                self.relation_request(relation.name, relation.id, "GET", "/")
+            except Exception as e:
+                logger.error(e)
+                logger.error(f"relation {relation} didn't connect")
+                connected = False
 
-    def smoke_check(self, relation_id) -> bool:
-        try:
-            self.relation_request(relation_id, "GET", "/")
-            return True
-        except (OpenSearchHttpError, Exception) as e:
-            logger.error(e)
-            return False
+        return connected
 
-    # First database events observers.
-    def _on_first_database_created(self, event: DatabaseCreatedEvent) -> None:
-        """Event triggered when a database was created for this application."""
-        logging.info(f"first database credentials: {event.username} {event.password}")
-
-    def _on_first_database_endpoints_changed(self, event: DatabaseEndpointsChangedEvent) -> None:
-        """Event triggered when the opensearch endpoints change."""
-        logger.info(f"first database endpoints have been changed to: {event.endpoints}")
-
-    # Second database events observers.
-    def _on_second_database_created(self, event: DatabaseCreatedEvent) -> None:
-        """Event triggered when a database was created for this application."""
-        logger.info(f"second database credentials: {event.username} {event.password}")
-
-    def _on_second_database_endpoints_changed(self, event: DatabaseEndpointsChangedEvent) -> None:
-        """Event triggered when the opensearch endpoints change."""
-        logger.info(f"second database endpoints have been changed to: {event.endpoints}")
+    def _on_authentication_updated(self, event: AuthenticationEvent):
+        tls_ca = event.tls_ca
+        if not event.tls_ca:
+            event.defer()  # We're waiting until we get a CA.
+            return
+        logger.error(f"writing cert to {CERT_PATH}.")
+        with open(CERT_PATH, "w") as f:
+            f.write(tls_ca)
 
     # ==============
     #  Action hooks
     # ==============
+
     def _on_run_request_action(self, event: ActionEvent):
         logger.info(event.params)
-        relation = self.first_database
+        relation = self.relations[event.params["relation-name"]]
         relation_id = event.params["relation-id"]
         databag = relation.fetch_relation_data()[relation_id]
         method = event.params["method"]
@@ -152,22 +134,23 @@ class ApplicationCharm(CharmBase):
 
     def relation_request(
         self,
+        relation_name: str,
         relation_id: int,
         method: str,
         endpoint: str,
         payload: Optional[Dict[str, any]] = None,
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request to a specific relation."""
-        databag = self.first_database.fetch_relation_data()[relation_id]
-        logging.error(databag)
+        relation = self.relations[relation_name]
+        databag = relation.fetch_relation_data()[relation_id]
         username = databag.get("username")
         password = databag.get("password")
-        endpoints = databag.get("endpoints", "").split(",")
+        hosts = databag.get("endpoints", "").split(",")
 
-        if None in [username, password] or len(endpoints) == 0:
+        if None in [username, password] or not hosts:
             raise OpenSearchHttpError
 
-        host, port = endpoints[0].split(":")
+        host, port = hosts[0].split(":")
 
         return self.request(
             method,
@@ -192,7 +175,6 @@ class ApplicationCharm(CharmBase):
         """Make an HTTP request.
 
         TODO swap this over to a more normal opensearch client
-
         Args:
             method: matching the known http methods.
             endpoint: relative to the base uri.
@@ -211,7 +193,7 @@ class ApplicationCharm(CharmBase):
         full_url = f"https://{host}:{port}/{endpoint}"
 
         request_kwargs = {
-            "verify": False,  # TODO this should be a path to a cert once this relation has TLS.
+            "verify": CERT_PATH,
             "method": method.upper(),
             "url": full_url,
             "headers": {"Content-Type": "application/json", "Accept": "application/json"},

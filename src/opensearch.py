@@ -6,10 +6,13 @@
 This class handles install / start / stop of opensearch services.
 It also exposes some properties and methods for interacting with an OpenSearch Installation
 """
+import grp
 import logging
 import os
+import pwd
 import time
 from datetime import datetime
+from pathlib import Path
 
 import requests
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution, Paths
@@ -18,12 +21,11 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchInstallError,
     OpenSearchMissingError,
     OpenSearchStartError,
-    OpenSearchStartTimeoutError,
     OpenSearchStopError,
 )
 from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
-from charms.operator_libs_linux.v1.systemd import _systemctl
+from charms.operator_libs_linux.v1.systemd import service_failed
 from overrides import override
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -35,12 +37,21 @@ logger = logging.getLogger(__name__)
 class OpenSearchSnap(OpenSearchDistribution):
     """Snap distribution of opensearch, only overrides properties and logic proper to the snap."""
 
+    _BASE_SNAP_DIR = "/var/snap/opensearch"
+    _SNAP_DATA = f"{_BASE_SNAP_DIR}/current"
+    _SNAP_COMMON = f"{_BASE_SNAP_DIR}/common"
+
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
 
         cache = snap.SnapCache()
         self._opensearch = cache["opensearch"]
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        reraise=True,
+    )
     @override
     def install(self):
         """Install opensearch from the snapcraft store."""
@@ -49,22 +60,19 @@ class OpenSearchSnap(OpenSearchDistribution):
 
         try:
             self._opensearch.ensure(snap.SnapState.Latest, channel="edge")
+            self._opensearch.connect("process-control")
         except SnapError as e:
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()
 
-        self._run_cmd("snap connect opensearch:process-control")
-
     @override
-    def start(self):
+    def _start_service(self):
         """Start the snap exposed "daemon" service."""
         if not self._opensearch.present:
             raise OpenSearchMissingError()
 
         if self._opensearch.services[self.SERVICE_NAME]["active"]:
-            logger.info(
-                f"Not doing anything, the opensearch.{self.SERVICE_NAME} service is already started."
-            )
+            logger.info(f"The opensearch.{self.SERVICE_NAME} service is already started.")
             return
 
         try:
@@ -85,6 +93,13 @@ class OpenSearchSnap(OpenSearchDistribution):
             logger.error(f"Failed to stop the opensearch.{self.SERVICE_NAME} service. \n{e}")
             raise OpenSearchStopError()
 
+    def is_failed(self) -> bool:
+        """Check if snap service failed."""
+        if not self._opensearch.present:
+            raise OpenSearchMissingError()
+
+        return service_failed("snap.opensearch.daemon.service")
+
     @override
     def _build_paths(self) -> Paths:
         """Builds a Path object.
@@ -94,13 +109,21 @@ class OpenSearchSnap(OpenSearchDistribution):
           - OPENSEARCH_CONF: writeable by root or snap_daemon ($SNAP_COMMON) where config files are
         """
         return Paths(
-            home="/var/snap/opensearch/current",
-            conf="/var/snap/opensearch/common/config",
-            data="/var/snap/opensearch/common/data",
-            logs="/var/snap/opensearch/common/logs",
-            jdk="/var/snap/opensearch/current/jdk",
-            tmp="/var/snap/opensearch/common/tmp",
+            home=f"{self._SNAP_DATA}",
+            conf=f"{self._SNAP_DATA}/config",
+            data=f"{self._SNAP_COMMON}/data",
+            logs=f"{self._SNAP_COMMON}/logs",
+            jdk=f"{self._SNAP_DATA}/jdk",
+            tmp=f"{self._SNAP_COMMON}/tmp",
         )
+
+    def write_file(self, path: str, data: str, override: bool = True):
+        """Snap implementation of the write_file."""
+        super().write_file(path, data, override=override)
+
+        uid = pwd.getpwnam("snap_daemon").pw_uid
+        gid = grp.getgrnam("root").gr_gid
+        os.chown(path, uid, gid)
 
 
 class OpenSearchTarball(OpenSearchDistribution):
@@ -108,6 +131,7 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
+        self._create_directories()
 
     @retry(
         stop=stop_after_attempt(3),
@@ -117,10 +141,9 @@ class OpenSearchTarball(OpenSearchDistribution):
     @override
     def install(self):
         """Temporary (will be deleted later) - Download and Un-tar the opensearch distro."""
+        url = "https://artifacts.opensearch.org/releases/bundle/opensearch/2.6.0/opensearch-2.6.0-linux-x64.tar.gz"
         try:
-            response = requests.get(
-                "https://artifacts.opensearch.org/releases/bundle/opensearch/2.4.1/opensearch-2.4.1-linux-x64.tar.gz"
-            )
+            response = requests.get(url)
 
             tarball_path = "opensearch.tar.gz"
             with open(tarball_path, "wb") as f:
@@ -133,12 +156,8 @@ class OpenSearchTarball(OpenSearchDistribution):
         self._create_systemd_unit()
 
     @override
-    def start(self):
-        """Start opensearch as a Daemon."""
-        logger.debug("Starting opensearch.")
-        if self.is_started():
-            return
-
+    def _start_service(self):
+        """Start opensearch."""
         try:
             self._setup_linux_perms()
             self._run_cmd(
@@ -146,19 +165,7 @@ class OpenSearchTarball(OpenSearchDistribution):
                 "--clear-groups --reuid ubuntu --regid ubuntu -- sudo systemctl start opensearch.service",
             )
         except OpenSearchCmdError:
-            raise OpenSearchStartError()
-
-        start = datetime.now()
-        while not self.is_node_up() and (datetime.now() - start).seconds < 75:
-            time.sleep(3)
-        else:
-            raise OpenSearchStartTimeoutError()
-
-    @override
-    def is_failed(self) -> bool:
-        """Check if the opensearch daemon has failed."""
-        # TODO: replace with is_failed from lib once PR made to the lib.
-        return _systemctl("is-failed", "opensearch.service", quiet=True)
+            raise OpenSearchStartError
 
     @override
     def _stop_service(self):
@@ -174,6 +181,11 @@ class OpenSearchTarball(OpenSearchDistribution):
             time.sleep(3)
 
     @override
+    def is_failed(self) -> bool:
+        """Check if the opensearch daemon has failed."""
+        return service_failed("opensearch.service")
+
+    @override
     def _build_paths(self) -> Paths:
         return Paths(
             home="/etc/opensearch",
@@ -183,6 +195,11 @@ class OpenSearchTarball(OpenSearchDistribution):
             jdk="/etc/opensearch/jdk",
             tmp="/mnt/opensearch/tmp",
         )
+
+    def _create_directories(self) -> None:
+        """Create the directories defined in self.paths."""
+        for dir_path in self.paths.__dict__.values():
+            Path(dir_path).mkdir(parents=True, exist_ok=True)
 
     def _setup_linux_perms(self):
         """Create ubuntu:ubuntu user:group."""

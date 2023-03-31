@@ -38,7 +38,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         num_units=DEFAULT_NUM_UNITS,
         series=SERIES,
     )
-    await ops_test.model.wait_for_idle(wait_for_exact_units=DEFAULT_NUM_UNITS)
+    await ops_test.model.wait_for_idle(wait_for_exact_units=DEFAULT_NUM_UNITS, timeout=1400)
 
 
 @pytest.mark.abort_on_fail

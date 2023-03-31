@@ -22,7 +22,7 @@ async def get_application_relation_data(
 
     Args:
         ops_test: The ops test framework instance
-        application_name: The name of the application
+        unit_name: The name of the unit
         relation_name: name of the relation to get connection data from
         key: key of data to be retrieved
         relation_id: id of the relation to get connection data from
@@ -91,11 +91,17 @@ async def run_action(
 
 
 async def run_request(
-    ops_test, unit_name: str, relation_id: int, method: str, endpoint: str, payload: str = None
+    ops_test,
+    unit_name: str,
+    relation_name: str,
+    relation_id: int,
+    method: str,
+    endpoint: str,
+    payload: str = None,
 ):
     # python can't have variable names with a hyphen, and Juju can't have action variables with an
     # underscore, so this is a compromise.
-    kwargs = {"relation-id": relation_id}
+    kwargs = {"relation-id": relation_id, "relation-name": relation_name}
     if payload:
         kwargs["payload"] = payload
     return await run_action(

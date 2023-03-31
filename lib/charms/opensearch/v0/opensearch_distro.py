@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 """Base class for Opensearch distributions."""
-
 import json
 import logging
 import os
@@ -11,12 +10,13 @@ import socket
 import subprocess
 import time
 from abc import ABC, abstractmethod
+from datetime import datetime
 from functools import cached_property
 from os.path import exists
-from pathlib import Path
 from typing import Dict, List, Optional, Set, Union
 
 import requests
+import urllib3.exceptions
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_databag import Scope
@@ -29,8 +29,8 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHttpError,
+    OpenSearchStartTimeoutError,
 )
-from requests import HTTPError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -78,22 +78,33 @@ class OpenSearchDistribution(ABC):
 
     def __init__(self, charm, peer_relation_name: str):
         self.paths = self._build_paths()
-        self._create_directories()
         self._set_env_variables()
 
         self.config = YamlConfigSetter(base_path=self.paths.conf)
         self._charm = charm
         self._peer_relation_name = peer_relation_name
 
-    @abstractmethod
     def install(self):
         """Install the package."""
         pass
 
-    @abstractmethod
-    def start(self):
+    def start(self, wait_until_http_200: bool = True):
         """Start the opensearch service."""
-        pass
+
+        def _is_connected():
+            return self.is_node_up() if wait_until_http_200 else self.is_started()
+
+        if self.is_started():
+            return
+
+        # start the opensearch service
+        self._start_service()
+
+        start = datetime.now()
+        while not _is_connected() and (datetime.now() - start).seconds < 75:
+            time.sleep(3)
+        else:
+            raise OpenSearchStartTimeoutError()
 
     def restart(self):
         """Restart the opensearch service."""
@@ -103,9 +114,18 @@ class OpenSearchDistribution(ABC):
         self.start()
 
     def stop(self):
-        """Stop OpenSearch.."""
+        """Stop OpenSearch."""
         # stop the opensearch service
         self._stop_service()
+
+        start = datetime.now()
+        while self.is_started() and (datetime.now() - start).seconds < 60:
+            time.sleep(3)
+
+    @abstractmethod
+    def _start_service(self):
+        """Start the opensearch service."""
+        pass
 
     @abstractmethod
     def _stop_service(self):
@@ -131,10 +151,9 @@ class OpenSearchDistribution(ABC):
             return False
 
         try:
-            self.request("GET", "/_nodes")
-            return True
-        except (OpenSearchHttpError, Exception) as e:
-            logger.exception(e)
+            resp_code = self.request("GET", "/_nodes", resp_status_code=True)
+            return resp_code < 400
+        except (OpenSearchHttpError, Exception):
             return False
 
     def run_bin(self, bin_script_name: str, args: str = None):
@@ -207,7 +226,9 @@ class OpenSearchDistribution(ABC):
                 if return_failed_resp and error_response:
                     return error_response
 
-                raise OpenSearchHttpError()
+                raise OpenSearchHttpError(
+                    response_body=error_response.text, response_code=error_response.status_code
+                )
 
             urls = full_urls()
             if not urls:
@@ -239,7 +260,7 @@ class OpenSearchDistribution(ABC):
                     response.raise_for_status()
 
                     return response
-            except requests.exceptions.RequestException as e:
+            except (requests.exceptions.RequestException, urllib3.exceptions.HTTPError) as e:
                 logger.error(
                     f"Request {method} to {urls[0]} with payload: {payload} failed. "
                     f"(Attempts left: {remaining_retries})\n{e}"
@@ -248,7 +269,7 @@ class OpenSearchDistribution(ABC):
                 return call(
                     remaining_retries - 1,
                     return_failed_resp,
-                    e.response if isinstance(e, HTTPError) else None,
+                    e.response if isinstance(e, requests.HTTPError) else None,
                 )
 
         if None in [endpoint, method]:
@@ -264,8 +285,7 @@ class OpenSearchDistribution(ABC):
 
         return resp.json()
 
-    @staticmethod
-    def write_file(path: str, data: str, override: bool = True):
+    def write_file(self, path: str, data: str, override: bool = True):
         """Persists data into file. Useful for files generated on the fly, such as certs etc."""
         if not override and exists(path):
             return
@@ -298,7 +318,7 @@ class OpenSearchDistribution(ABC):
                 shell=True,
                 text=True,
                 encoding="utf-8",
-                timeout=15,
+                timeout=25,
                 env=os.environ,
             )
 
@@ -314,11 +334,6 @@ class OpenSearchDistribution(ABC):
     def _build_paths(self) -> Paths:
         """Build the Paths object."""
         pass
-
-    def _create_directories(self) -> None:
-        """Create the directories defined in self.paths."""
-        for dir_path in self.paths.__dict__.values():
-            Path(dir_path).mkdir(parents=True, exist_ok=True)
 
     def _set_env_variables(self):
         """Set the necessary environment variables."""

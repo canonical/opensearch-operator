@@ -5,7 +5,6 @@
 
 import unittest
 import uuid
-from unittest.mock import patch
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_networking import (
@@ -23,8 +22,7 @@ from tests.helpers import patch_network_get
 
 @patch_network_get("1.1.1.1")
 class TestHelperNetworking(unittest.TestCase):
-    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._create_directories")
-    def setUp(self, _create_directories) -> None:
+    def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
