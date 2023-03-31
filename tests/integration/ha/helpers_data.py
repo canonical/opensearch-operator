@@ -101,7 +101,7 @@ async def index_doc(
         doc = default_doc(index_name, doc_id)
 
     await http_request(
-        ops_test, "PUT", f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}", payload=data
+        ops_test, "PUT", f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}", payload=doc
     )
 
     # a refresh makes the indexed data available for search, runs by default every 30 sec,
