@@ -100,7 +100,7 @@ async def test_replication_across_members(
     # check that the doc can be retrieved from any node
     for u_id, u_ip in units.items():
         doc = await get_doc(ops_test, u_ip, index_name, doc_id)
-        assert doc["source"] == default_doc(index_name, doc_id)
+        assert doc["_source"] == default_doc(index_name, doc_id)
 
     await delete_index(ops_test, leader_unit_ip, index_name, doc_id)
 
