@@ -9,8 +9,26 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import app_name
-from tests.integration.helpers import APP_NAME, MODEL_CONFIG, SERIES
+from tests.integration.ha.helpers import (
+    app_name,
+    assert_continuous_writes_consistency,
+    get_elected_cm_unit_id,
+    get_shards_by_index,
+)
+from tests.integration.ha.helpers_data import (
+    default_doc,
+    delete_index,
+    get_doc,
+    index_doc,
+)
+from tests.integration.helpers import (
+    APP_NAME,
+    MODEL_CONFIG,
+    SERIES,
+    get_application_unit_ids_ips,
+    get_leader_unit_ip,
+    http_request,
+)
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
@@ -57,3 +75,59 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME], status="active", timeout=1000
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
+
+
+@pytest.mark.abort_on_fail
+async def test_replication_across_members(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
+    """Check consistency, ie write to node, read data from remaining nodes.
+
+    1. check data can be indexed from a node and be searched from any other node.
+    2. index data and only query the node where the replica shard resides.
+    """
+    units = get_application_unit_ids_ips(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test)
+
+    # 1. index document using the elected cm ip
+    cm_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+    cm_ip = units[cm_id]
+
+    index_name = "test_index"
+    doc_id = 12
+    await index_doc(ops_test, cm_ip, index_name, doc_id)
+
+    # check that the doc can be retrieved from any node
+    for u_id, u_ip in units.items():
+        doc = await get_doc(ops_test, u_ip, index_name, doc_id)
+        assert doc["_source"] == default_doc(index_name, doc_id)
+
+    await delete_index(ops_test, leader_unit_ip, index_name, doc_id)
+
+    # 2. index data and exclusively query node hosting the replica shard
+    doc_id = 13
+    await index_doc(ops_test, cm_ip, index_name, doc_id)
+    shards = await get_shards_by_index(ops_test, leader_unit_ip, index_name)
+    replica_shard = [shard for shard in shards if not shard.is_prim][0]
+
+    unit_with_replica_shard_ip = units[replica_shard.unit_id]
+
+    # query exclusively the node with the replica shard
+    docs = (
+        await http_request(
+            ops_test,
+            "GET",
+            (
+                f"https://{unit_with_replica_shard_ip}:9200/{index_name}/_search"
+                f"?preference=_only_nodes:{replica_shard.node_id}"
+            ),
+        )
+    )["hits"]["hits"]
+
+    assert len(docs) == 1
+    assert docs[0]["_source"] == default_doc(index_name, doc_id)
+
+    await delete_index(ops_test, leader_unit_ip, index_name, doc_id)
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(c_writes)
