@@ -134,6 +134,22 @@ def get_application_unit_ips_names(ops_test: OpsTest) -> Dict[str, str]:
     return result
 
 
+def get_application_unit_ids_ips(ops_test: OpsTest) -> Dict[int, str]:
+    """List the units of an application by id and corresponding IP.
+
+    Args:
+        ops_test: The ops test framework instance
+
+    Returns:
+        Dictionary unit_id / unit_ip, of the application
+    """
+    result = {}
+    for unit in ops_test.model.applications[APP_NAME].units:
+        result[int(unit.name.split("/")[1])] = unit.public_address
+
+    return result
+
+
 async def get_leader_unit_ip(ops_test: OpsTest) -> str:
     """Helper function that retrieves the leader unit."""
     leader_unit = None
