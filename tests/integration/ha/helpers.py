@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-from random import randint
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
 from pytest_operator.plugin import OpsTest
@@ -10,6 +9,32 @@ from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.helpers import http_request
+
+
+class Shard:
+    """Class for holding a shard."""
+
+    def __init__(self, index: str, num: int, is_prim: bool, node_id: str, unit_id: int):
+        self.index = index
+        self.num = num
+        self.is_prim = is_prim
+        self.node_id = node_id
+        self.unit_id = unit_id
+
+
+async def app_name(ops_test: OpsTest) -> Optional[str]:
+    """Returns the name of the cluster running OpenSearch.
+
+    This is important since not all deployments of the OpenSearch charm have the
+    application name "opensearch".
+    Note: if multiple clusters are running OpenSearch this will return the one first found.
+    """
+    status = await ops_test.model.get_status()
+    for app in ops_test.model.applications:
+        if "opensearch" in status["applications"][app]["charm"]:
+            return app
+
+    return None
 
 
 async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
@@ -64,56 +89,40 @@ async def get_shards_by_state(ops_test: OpsTest, unit_ip: str) -> Dict[str, List
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def create_dummy_indexes(ops_test: OpsTest, unit_ip: str, max_r_shards: int, count: int = 5) -> None:
-    """Create indexes."""
-    for index_id in range(count):
-        p_shards = index_id % 2 + 2
-        r_shards = max_r_shards if p_shards == 2 else max_r_shards - 1
-        await http_request(
-            ops_test,
-            "PUT",
-            f"https://{unit_ip}:9200/index_{index_id}",
-            {
-                "settings": {
-                    "index": {"number_of_shards": p_shards, "number_of_replicas": r_shards}
-                }
-            },
-        )
+async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) -> List[Shard]:
+    """Returns the list of shards and their location in cluster for an index.
 
+    Args:
+        ops_test: The ops test framework instance.
+        unit_ip: The ip of the OpenSearch unit.
+        index_name: the name of the index.
 
-@retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
-)
-async def delete_dummy_indexes(ops_test: OpsTest, unit_ip: str, count: int = 5) -> None:
-    """Delete dummy indexes."""
-    for index_id in range(count):
-        await http_request(
-            ops_test,
-            "DELETE",
-            f"https://{unit_ip}:9200/index_{index_id}",
-        )
+    Returns:
+        List of shards.
+    """
+    response = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/{index_name}/_search_shards",
+    )
 
+    nodes = response["nodes"]
 
-@retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
-)
-async def create_dummy_docs(ops_test: OpsTest, unit_ip: str, count: int = 5) -> None:
-    """Store documents in the dummy indexes."""
-    all_docs = ""
-    for index_id in range(count):
-        for doc_id in range(count * 1000):
-            all_docs = (
-                f"{all_docs}"
-                f'{{"create":{{"_index":"index_{index_id}", "_id":"{doc_id}"}}}}\n'
-                f'{{"ProductId": "{1000 + doc_id}", '
-                f'"Amount": "{randint(10, 1000)}", '
-                f'"Quantity": "{randint(0, 50)}", '
-                f'Store_Id": "{randint(1, 250)}"}}\n'
+    result = []
+    for shards_collection in response["shards"]:
+        for shard in shards_collection:
+            unit_id = int(nodes[shard["node"]]["name"].split("-")[1])
+            result.append(
+                Shard(
+                    index=index_name,
+                    num=shard["shard"],
+                    is_prim=shard["primary"],
+                    node_id=shard["node"],
+                    unit_id=unit_id,
+                )
             )
 
-    await http_request(ops_test, "PUT", f"https://{unit_ip}:9200/_bulk", payload=all_docs)
+    return result
 
 
 @retry(
