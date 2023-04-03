@@ -15,12 +15,14 @@ from tests.integration.ha.helpers import (
     app_name,
     assert_continuous_writes_consistency,
     cluster_allocation,
-    create_dummy_docs,
-    create_dummy_indexes,
-    delete_dummy_indexes,
     get_elected_cm_unit_id,
     get_number_of_shards_by_node,
     get_shards_by_state,
+)
+from tests.integration.ha.helpers_data import (
+    create_dummy_docs,
+    create_dummy_indexes,
+    delete_dummy_indexes,
 )
 from tests.integration.helpers import (
     APP_NAME,
