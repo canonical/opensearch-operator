@@ -103,8 +103,8 @@ async def test_horizontal_scale_up(
     num_units = len(ops_test.model.applications[app].units)
     assert num_units == init_units_count + 2
 
-    unit_names = get_application_unit_names(ops_test)
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    unit_names = get_application_unit_names(ops_test, app=app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     assert await check_cluster_formation_successful(ops_test, leader_unit_ip, unit_names)
 
@@ -151,11 +151,11 @@ async def test_safe_scale_down_shards_realloc(
         idle_period=IDLE_PERIOD,
     )
 
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
-    leader_unit_id = await get_leader_unit_id(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    leader_unit_id = await get_leader_unit_id(ops_test, app=app)
 
     # fetch all nodes
-    unit_ids = get_application_unit_ids(ops_test)
+    unit_ids = get_application_unit_ids(ops_test, app=app)
     unit_id_to_stop = [unit_id for unit_id in unit_ids if unit_id != leader_unit_id][0]
     unit_ids_to_keep = [unit_id for unit_id in unit_ids if unit_id != unit_id_to_stop]
 
@@ -220,7 +220,7 @@ async def test_safe_scale_down_shards_realloc(
 
     # wait for the new unit to be active
     await ops_test.model.block_until(
-        lambda: get_application_unit_status(ops_test)[new_unit_id] == "active"
+        lambda: get_application_unit_status(ops_test, app=app)[new_unit_id] == "active"
     )
 
     # check if the previously unallocated shards have successfully moved to the newest unit
@@ -275,7 +275,7 @@ async def test_safe_scale_down_roles_reassigning(
         idle_period=IDLE_PERIOD,
     )
 
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     # fetch all nodes
     nodes = await all_nodes(ops_test, leader_unit_ip)
@@ -355,7 +355,7 @@ async def test_safe_scale_down_remove_leaders(
     )
 
     # scale down: remove the juju leader
-    leader_unit_id = await get_leader_unit_id(ops_test)
+    leader_unit_id = await get_leader_unit_id(ops_test, app=app)
 
     await ops_test.model.applications[app].destroy_unit(f"{app}/{leader_unit_id}")
     await ops_test.model.wait_for_idle(
@@ -369,7 +369,7 @@ async def test_safe_scale_down_remove_leaders(
     # make sure the duties supposed to be done by the departing leader are done
     # we expect to have 3 cm-eligible+data (one of which will be elected) and
     # 1 data-only nodes as per the roles-reassigning logic
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     nodes = await all_nodes(ops_test, leader_unit_ip)
     assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == init_units_count
     assert ClusterTopology.nodes_count_by_role(nodes)["data"] == init_units_count + 1
@@ -387,7 +387,7 @@ async def test_safe_scale_down_remove_leaders(
     )
 
     # check if CM re-election happened
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     second_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
     assert second_elected_cm_unit_id != -1
     assert second_elected_cm_unit_id != first_elected_cm_unit_id

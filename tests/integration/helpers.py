@@ -58,14 +58,13 @@ async def run_action(
     unit_id: int,
     action_name: str,
     params: Optional[Dict[str, any]] = None,
+    app: str = APP_NAME,
 ) -> SimpleNamespace:
     """Run a charm action.
 
     Returns:
         A SimpleNamespace with "status, response (results)"
     """
-    app = (await app_name(ops_test)) or APP_NAME
-
     unit_name = ops_test.model.applications[app].units[unit_id].name
 
     action = await ops_test.model.units.get(unit_name).run_action(action_name, **(params or {}))
@@ -74,52 +73,52 @@ async def run_action(
     return SimpleNamespace(status=action.status or "completed", response=action.results)
 
 
-async def get_admin_secrets(ops_test: OpsTest, unit_id: int = 0) -> Dict[str, str]:
+async def get_admin_secrets(ops_test: OpsTest, unit_id: int = 0, app: str = APP_NAME) -> Dict[str, str]:
     """Use the charm action to retrieve the admin password and chain.
 
     Returns:
         Dict with the admin and cert chain stored on the peer relation databag.
     """
     # can retrieve from any unit running unit, so we pick the first
-    return (await run_action(ops_test, unit_id, "get-password")).response
+    return (await run_action(ops_test, unit_id, "get-password", app=app)).response
 
 
-def get_application_unit_names(ops_test: OpsTest) -> List[str]:
+def get_application_unit_names(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
     """List the unit names of an application.
 
     Args:
         ops_test: The ops test framework instance
+        app: the name of the app
 
     Returns:
         list of current unit names of the application
     """
-    app = (await app_name(ops_test)) or APP_NAME
     return [unit.name.replace("/", "-") for unit in ops_test.model.applications[app].units]
 
 
-def get_application_unit_ids(ops_test: OpsTest) -> List[int]:
+def get_application_unit_ids(ops_test: OpsTest, app: str = APP_NAME) -> List[int]:
     """List the unit IDs of an application.
 
     Args:
         ops_test: The ops test framework instance
+        app: the name of the app
 
     Returns:
         list of current unit ids of the application
     """
-    app = (await app_name(ops_test)) or APP_NAME
     return [int(unit.name.split("/")[1]) for unit in ops_test.model.applications[app].units]
 
 
-def get_application_unit_status(ops_test: OpsTest) -> Dict[int, str]:
+def get_application_unit_status(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
     """List the unit statuses of an application.
 
     Args:
         ops_test: The ops test framework instance
+        app: the name of the app
 
     Returns:
         list of current unit statuses of the application
     """
-    app = (await app_name(ops_test)) or APP_NAME
     units = ops_test.model.applications[app].units
 
     result = {}
@@ -129,30 +128,29 @@ def get_application_unit_status(ops_test: OpsTest) -> Dict[int, str]:
     return result
 
 
-def get_application_unit_ips(ops_test: OpsTest) -> List[str]:
+def get_application_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
     """List the unit IPs of an application.
 
     Args:
         ops_test: The ops test framework instance
+        app: the name of the app
 
     Returns:
         list of current unit IPs of the application
     """
-    app = (await app_name(ops_test)) or APP_NAME
     return [unit.public_address for unit in ops_test.model.applications[app].units]
 
 
-def get_application_unit_ips_names(ops_test: OpsTest) -> Dict[str, str]:
+def get_application_unit_ips_names(ops_test: OpsTest, app: str = APP_NAME) -> Dict[str, str]:
     """List the units of an application by name and corresponding IPs.
 
     Args:
         ops_test: The ops test framework instance
+        app: the name of the app
 
     Returns:
         Dictionary unit_name / unit_ip, of the application
     """
-    app = (await app_name(ops_test)) or APP_NAME
-
     result = {}
     for unit in ops_test.model.applications[app].units:
         result[unit.name.replace("/", "-")] = unit.public_address
@@ -160,17 +158,16 @@ def get_application_unit_ips_names(ops_test: OpsTest) -> Dict[str, str]:
     return result
 
 
-def get_application_unit_ids_ips(ops_test: OpsTest) -> Dict[int, str]:
+def get_application_unit_ids_ips(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
     """List the units of an application by id and corresponding IP.
 
     Args:
         ops_test: The ops test framework instance
+        app: the name of the app
 
     Returns:
         Dictionary unit_id / unit_ip, of the application
     """
-    app = (await app_name(ops_test)) or APP_NAME
-
     result = {}
     for unit in ops_test.model.applications[app].units:
         result[int(unit.name.split("/")[1])] = unit.public_address
@@ -178,10 +175,8 @@ def get_application_unit_ids_ips(ops_test: OpsTest) -> Dict[int, str]:
     return result
 
 
-async def get_leader_unit_ip(ops_test: OpsTest) -> str:
+async def get_leader_unit_ip(ops_test: OpsTest, app: str = APP_NAME) -> str:
     """Helper function that retrieves the leader unit."""
-    app = (await app_name(ops_test)) or APP_NAME
-
     leader_unit = None
     for unit in ops_test.model.applications[app].units:
         if await unit.is_leader_from_status():
@@ -191,10 +186,8 @@ async def get_leader_unit_ip(ops_test: OpsTest) -> str:
     return leader_unit.public_address
 
 
-async def get_leader_unit_id(ops_test: OpsTest) -> int:
+async def get_leader_unit_id(ops_test: OpsTest, app: str = APP_NAME) -> int:
     """Helper function that retrieves the leader unit ID."""
-    app = (await app_name(ops_test)) or APP_NAME
-
     leader_unit = None
     for unit in ops_test.model.applications[app].units:
         if await unit.is_leader_from_status():
@@ -209,10 +202,8 @@ def get_reachable_unit_ips(ops_test: OpsTest) -> List[str]:
     return reachable_hosts(get_application_unit_ips(ops_test))
 
 
-def get_reachable_units(ops_test: OpsTest) -> Dict[int, str]:
+def get_reachable_units(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
     """Helper function to retrieve a dict of id/IP addresses of all online units."""
-    app = (await app_name(ops_test)) or APP_NAME
-
     result = {}
     for unit in ops_test.model.applications[app].units:
         if not is_reachable(unit.public_address, 9200):
