@@ -86,8 +86,10 @@ async def test_replication_across_members(
     1. check data can be indexed from a node and be searched from any other node.
     2. index data and only query the node where the replica shard resides.
     """
-    units = get_application_unit_ids_ips(ops_test)
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    app = (await app_name(ops_test)) or APP_NAME
+
+    units = get_application_unit_ids_ips(ops_test, app=app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     # 1. index document using the elected cm ip
     cm_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
