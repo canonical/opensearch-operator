@@ -115,7 +115,7 @@ async def index_doc(
     stop=stop_after_attempt(15),
 )
 async def get_doc(ops_test: OpsTest, unit_ip: str, index_name: str, doc_id: int) -> Dict[str, Any]:
-    """Index a simple document."""
+    """Fetch a document by id."""
     return await http_request(
         ops_test, "GET", f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}"
     )
@@ -126,7 +126,7 @@ async def get_doc(ops_test: OpsTest, unit_ip: str, index_name: str, doc_id: int)
     stop=stop_after_attempt(15),
 )
 async def delete_doc(ops_test: OpsTest, unit_ip: str, index_name: str, doc_id: int) -> None:
-    """Index a simple document."""
+    """Delete a document by id."""
     await http_request(
         ops_test,
         "DELETE",
@@ -139,7 +139,7 @@ async def delete_doc(ops_test: OpsTest, unit_ip: str, index_name: str, doc_id: i
     stop=stop_after_attempt(15),
 )
 async def delete_index(ops_test: OpsTest, unit_ip: str, index_name: str) -> None:
-    """Index a simple document."""
+    """Delete an index."""
     await http_request(
         ops_test,
         "DELETE",
