@@ -38,8 +38,26 @@ MODEL_CONFIG = {
 logger = logging.getLogger(__name__)
 
 
+async def app_name(ops_test: OpsTest) -> Optional[str]:
+    """Returns the name of the cluster running OpenSearch.
+
+    This is important since not all deployments of the OpenSearch charm have the
+    application name "opensearch".
+    Note: if multiple clusters are running OpenSearch this will return the one first found.
+    """
+    status = await ops_test.model.get_status()
+    for app in ops_test.model.applications:
+        if "opensearch" in status["applications"][app]["charm"]:
+            return app
+
+    return None
+
+
 async def run_action(
-    ops_test: OpsTest, unit_id: int, action_name: str, params: Optional[Dict[str, any]] = None
+    ops_test: OpsTest,
+    unit_id: int,
+    action_name: str,
+    params: Optional[Dict[str, any]] = None,
 ) -> SimpleNamespace:
     """Run a charm action.
 

@@ -2,7 +2,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 from random import randint
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from charms.opensearch.v0.models import Node
 from pytest_operator.plugin import OpsTest
@@ -10,21 +10,6 @@ from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.helpers import http_request
-
-
-async def app_name(ops_test: OpsTest) -> Optional[str]:
-    """Returns the name of the cluster running OpenSearch.
-
-    This is important since not all deployments of the OpenSearch charm have the
-    application name "opensearch".
-    Note: if multiple clusters are running OpenSearch this will return the one first found.
-    """
-    status = await ops_test.model.get_status()
-    for app in ops_test.model.applications:
-        if "opensearch" in status["applications"][app]["charm"]:
-            return app
-
-    return None
 
 
 async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
