@@ -33,8 +33,6 @@ from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
 
-IDLE_PERIOD = 120
-
 
 @pytest.fixture()
 def c_writes(ops_test: OpsTest):
@@ -102,6 +100,7 @@ async def test_replication_across_members(
     # check that the doc can be retrieved from any node
     for u_id, u_ip in units.items():
         doc = await get_doc(ops_test, u_ip, index_name, doc_id)
+        logger.debug(doc)
         assert doc["_source"] == default_doc(index_name, doc_id)
 
     await delete_index(ops_test, leader_unit_ip, index_name)
