@@ -73,7 +73,9 @@ async def run_action(
     return SimpleNamespace(status=action.status or "completed", response=action.results)
 
 
-async def get_admin_secrets(ops_test: OpsTest, unit_id: int = 0, app: str = APP_NAME) -> Dict[str, str]:
+async def get_admin_secrets(
+    ops_test: OpsTest, unit_id: int = 0, app: str = APP_NAME
+) -> Dict[str, str]:
     """Use the charm action to retrieve the admin password and chain.
 
     Returns:
