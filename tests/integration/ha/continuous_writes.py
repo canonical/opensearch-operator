@@ -22,7 +22,6 @@ from tenacity import (
 
 from tests.integration.helpers import (
     get_admin_secrets,
-    get_application_unit_ids,
     get_application_unit_ips,
     opensearch_client,
 )
