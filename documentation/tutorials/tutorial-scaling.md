@@ -65,3 +65,9 @@ Machine  State    Address       Inst id        Series  AZ  Message
 3        started  10.23.62.55   juju-d35d30-3  jammy       Running
 5        started  10.23.62.216  juju-d35d30-5  jammy       Running
 ```
+
+---
+
+## Next Steps
+
+The next stage in this tutorial is about removing the OpenSearch charm and tearing down your Juju deployment, and can be found [here](./tutorial-deploy-opensearch.md).

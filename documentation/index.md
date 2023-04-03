@@ -17,7 +17,7 @@ Charmed OpenSearch is an official distribution of OpenSearch. It’s an open-sou
 
 | Level | Path     | Navlink                         |
 | ----- | -------- | ------------------------------- |
-| 1     | Tutorials | [Tutorial](./tutorial.md) |
+| 1     | Tutorials | [Tutorial](./tutorials/tutorial-overview.md) |
 | 1     | how-tos-coming-soon | [How To -- Coming Soon]() |
 | 1     | explanation-coming-soon | [Explanation -- Coming Soon]() |
 | 1     | reference-coming-soon | [Reference -- Coming Soon]() |

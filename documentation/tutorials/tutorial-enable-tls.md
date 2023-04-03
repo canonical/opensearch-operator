@@ -65,3 +65,9 @@ Machine  State    Address       Inst id        Series  AZ  Message
 0        started  10.137.5.232  juju-2f4c88-0  jammy       Running
 1        started  10.137.5.33   juju-2f4c88-1  jammy       Running
 ```
+
+---
+
+## Next Steps
+
+The next stage in this tutorial is about connecting to and using the OpenSearch charm, and can be found [here](./tutorial-connecting-to-opensearch.md).

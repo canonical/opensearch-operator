@@ -119,3 +119,7 @@ cloudinit-userdata: |
 EOF
 juju model-config ./cloudinit-userdata.yaml
 ```
+
+## Next Steps
+
+The next stage in this tutorial is about deploying the OpenSearch charm, and can be found [here](./tutorial-deploy-opensearch.md).
