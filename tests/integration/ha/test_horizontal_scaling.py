@@ -12,9 +12,7 @@ from pytest_operator.plugin import OpsTest
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.ha.helpers import (
     all_nodes,
-    app_name,
     assert_continuous_writes_consistency,
-    cluster_allocation,
     get_elected_cm_unit_id,
     get_number_of_shards_by_node,
     get_shards_by_state,
@@ -28,6 +26,7 @@ from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    app_name,
     check_cluster_formation_successful,
     cluster_health,
     get_application_unit_ids,
@@ -89,18 +88,23 @@ async def test_horizontal_scale_up(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Tests that new added units to the cluster are discoverable."""
-    app = await app_name(ops_test)
+    app = (await app_name(ops_test)) or APP_NAME
+    init_units_count = len(ops_test.model.applications[app].units)
 
     # scale up
     await ops_test.model.applications[app].add_unit(count=2)
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=IDLE_PERIOD
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=init_units_count + 2,
+        idle_period=IDLE_PERIOD,
     )
     num_units = len(ops_test.model.applications[app].units)
-    assert num_units == 3
+    assert num_units == init_units_count + 2
 
-    unit_names = get_application_unit_names(ops_test)
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    unit_names = get_application_unit_names(ops_test, app=app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     assert await check_cluster_formation_successful(ops_test, leader_unit_ip, unit_names)
 
@@ -114,7 +118,12 @@ async def test_horizontal_scale_up(
 
     # check roles, expecting all nodes to be cm_eligible
     nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == 3
+    num_units = len(ops_test.model.applications[app].units)
+    assert (
+        ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == num_units
+        if num_units % 2 != 0
+        else num_units - 1
+    )
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
@@ -129,24 +138,29 @@ async def test_safe_scale_down_shards_realloc(
     The goal of this test is to make sure that shards are automatically relocated after
     a Yellow status on the cluster caused by a scale-down event.
     """
-    app = await app_name(ops_test)
+    app = (await app_name(ops_test)) or APP_NAME
+    init_units_count = len(ops_test.model.applications[app].units)
 
     # scale up
     await ops_test.model.applications[app].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=IDLE_PERIOD
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=init_units_count + 1,
+        idle_period=IDLE_PERIOD,
     )
 
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
-    leader_unit_id = await get_leader_unit_id(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    leader_unit_id = await get_leader_unit_id(ops_test, app=app)
 
     # fetch all nodes
-    unit_ids = get_application_unit_ids(ops_test)
+    unit_ids = get_application_unit_ids(ops_test, app=app)
     unit_id_to_stop = [unit_id for unit_id in unit_ids if unit_id != leader_unit_id][0]
     unit_ids_to_keep = [unit_id for unit_id in unit_ids if unit_id != unit_id_to_stop]
 
     # create indices with right num of primary and replica shards, and populate with data
-    await create_dummy_indexes(ops_test, leader_unit_ip)
+    await create_dummy_indexes(ops_test, leader_unit_ip, max_r_shards=init_units_count)
     await create_dummy_docs(ops_test, leader_unit_ip)
 
     # get initial cluster health - expected to be all good: green
@@ -157,12 +171,15 @@ async def test_safe_scale_down_shards_realloc(
     # get initial cluster allocation (nodes and their corresponding shards)
     init_shards_per_node = await get_number_of_shards_by_node(ops_test, leader_unit_ip)
     assert init_shards_per_node.get(-1, 0) == 0  # unallocated shards
-    print(await cluster_allocation(ops_test, leader_unit_ip))
 
     # remove the service in the chosen unit
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=IDLE_PERIOD
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=init_units_count,
+        idle_period=IDLE_PERIOD,
     )
 
     # check if at least partial shard re-allocation happened
@@ -188,7 +205,11 @@ async def test_safe_scale_down_shards_realloc(
     # scale up by 1 unit
     await ops_test.model.applications[app].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=IDLE_PERIOD
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=init_units_count + 1,
+        idle_period=IDLE_PERIOD,
     )
 
     new_unit_id = [
@@ -199,7 +220,7 @@ async def test_safe_scale_down_shards_realloc(
 
     # wait for the new unit to be active
     await ops_test.model.block_until(
-        lambda: get_application_unit_status(ops_test)[new_unit_id] == "active"
+        lambda: get_application_unit_status(ops_test, app=app)[new_unit_id] == "active"
     )
 
     # check if the previously unallocated shards have successfully moved to the newest unit
@@ -226,21 +247,40 @@ async def test_safe_scale_down_roles_reassigning(
     """Tests the shutdown of a node with a role requiring the re-balance of the cluster roles.
 
     The goal of this test is to make sure that roles are automatically recalculated after
-    a scale-up/down event.
+    a scale-up/down event. For this end, we want to start testing with an even number of units.
     """
-    app = await app_name(ops_test)
+    app = (await app_name(ops_test)) or APP_NAME
+    init_units_count = len(ops_test.model.applications[app].units)
 
-    # scale up by 1 unit
+    # scale up by 1/2 units depending on the parity of current units: to trigger roles reassignment
+    if init_units_count % 2 == 1:
+        # this will NOT trigger any role reassignment, but will ensure the next call will
+        await ops_test.model.applications[app].add_unit(count=1)
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            wait_for_exact_units=init_units_count + 1,
+            idle_period=IDLE_PERIOD,
+        )
+        init_units_count += 1
+
+    # going from an even to odd number of units, this should trigger a role reassignment
     await ops_test.model.applications[app].add_unit(count=1)
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=5, idle_period=IDLE_PERIOD
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=init_units_count + 1,
+        idle_period=IDLE_PERIOD,
     )
 
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     # fetch all nodes
     nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == 5
+    num_units = len(ops_test.model.applications[app].units)
+    assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == num_units
 
     # pick a cluster manager node to remove
     unit_id_to_stop = [
@@ -252,13 +292,18 @@ async def test_safe_scale_down_roles_reassigning(
     # scale-down: remove a cm unit
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=IDLE_PERIOD
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=init_units_count,
+        idle_period=IDLE_PERIOD,
     )
 
-    # fetch nodes, we expect to have a "cm" node, reconfigured to be "data only" to keep the quorum
+    # we expect to have a "cm" node, reconfigured to be "data only" to keep the quorum
     new_nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == 3
-    assert ClusterTopology.nodes_count_by_role(new_nodes)["data"] == 4
+    num_units = len(ops_test.model.applications[app].units)
+    assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == num_units - 1
+    assert ClusterTopology.nodes_count_by_role(new_nodes)["data"] == num_units
 
     # scale-down: remove another cm unit
     unit_id_to_stop = [
@@ -268,13 +313,18 @@ async def test_safe_scale_down_roles_reassigning(
     ][0]
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=IDLE_PERIOD
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=num_units - 1,
+        idle_period=IDLE_PERIOD,
     )
 
     # fetch nodes, we expect to have all nodes "cluster_manager" to keep the quorum
     new_nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == 3
-    assert ClusterTopology.nodes_count_by_role(new_nodes)["data"] == 3
+    num_units = len(ops_test.model.applications[app].units)
+    assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == num_units
+    assert ClusterTopology.nodes_count_by_role(new_nodes)["data"] == num_units
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
@@ -289,41 +339,55 @@ async def test_safe_scale_down_remove_leaders(
      - the CM reelection happens successfully.
      - the leader-elected event gets triggered successfully and
         leadership related events on the charm work correctly, i.e: roles reassigning
+    It is worth noting that we're going into this test with an odd number of units.
     """
-    app = await app_name(ops_test)
+    app = (await app_name(ops_test)) or APP_NAME
+    init_units_count = len(ops_test.model.applications[app].units)
 
     # scale up by 2 units
     await ops_test.model.applications[app].add_unit(count=2)
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=5, idle_period=IDLE_PERIOD
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=init_units_count + 2,
+        idle_period=IDLE_PERIOD,
     )
 
     # scale down: remove the juju leader
-    leader_unit_id = await get_leader_unit_id(ops_test)
+    leader_unit_id = await get_leader_unit_id(ops_test, app=app)
 
     await ops_test.model.applications[app].destroy_unit(f"{app}/{leader_unit_id}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=4, idle_period=IDLE_PERIOD
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=init_units_count + 1,
+        idle_period=IDLE_PERIOD,
     )
 
     # make sure the duties supposed to be done by the departing leader are done
     # we expect to have 3 cm-eligible+data (one of which will be elected) and
     # 1 data-only nodes as per the roles-reassigning logic
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == 3
-    assert ClusterTopology.nodes_count_by_role(nodes)["data"] == 4
+    assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == init_units_count
+    assert ClusterTopology.nodes_count_by_role(nodes)["data"] == init_units_count + 1
 
     # scale-down: remove the current elected CM
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
     assert first_elected_cm_unit_id != -1
     await ops_test.model.applications[app].destroy_unit(f"{app}/{first_elected_cm_unit_id}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=IDLE_PERIOD
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=init_units_count,
+        idle_period=IDLE_PERIOD,
     )
 
     # check if CM re-election happened
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     second_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
     assert second_elected_cm_unit_id != -1
     assert second_elected_cm_unit_id != first_elected_cm_unit_id
