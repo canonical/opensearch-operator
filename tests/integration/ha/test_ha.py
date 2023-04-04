@@ -161,9 +161,7 @@ async def test_multi_clusters_db_isolation(
 
     # cleanup
     await delete_index(ops_test, app, main_app_leader_unit_ip, index_name)
-    await ops_test.model.remove_application(
-        SECOND_APP_NAME, block_until_done=True, force=True, destroy_storage=True
-    )
+    await ops_test.model.remove_application(SECOND_APP_NAME, block_until_done=True)
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
