@@ -33,6 +33,9 @@ from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 logger = logging.getLogger(__name__)
 
 
+SECOND_APP_NAME = "second-opensearch"
+
+
 @pytest.fixture()
 def c_writes(ops_test: OpsTest):
     """Creates instance of the ContinuousWrites."""
@@ -112,6 +115,47 @@ async def test_replication_across_members(
         assert docs[0]["_source"] == default_doc(index_name, doc_id)
 
     await delete_index(ops_test, leader_unit_ip, index_name)
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(c_writes)
+
+
+async def test_multi_clusters_db_isolation(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
+    """Check that writes in cluster not replicated to another cluster."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    index_name = "test_index_unique_cluster_dbs"
+
+    # index document in the current cluster
+    main_app_leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    await index_doc(ops_test, main_app_leader_unit_ip, index_name, doc_id=1)
+
+    # deploy new cluster
+    my_charm = await ops_test.build_charm(".")
+    await ops_test.model.deploy(my_charm, num_units=1, application_name=SECOND_APP_NAME)
+    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.wait_for_idle(apps=[SECOND_APP_NAME], status="active")
+
+    # index document in second cluster
+    second_app_leader_ip = await get_leader_unit_ip(ops_test, app=SECOND_APP_NAME)
+    await index_doc(ops_test, main_app_leader_unit_ip, index_name, doc_id=2, app=SECOND_APP_NAME)
+
+    # fetch all documents in each cluster
+    current_app_docs = await search(ops_test, main_app_leader_unit_ip, index_name)
+    second_app_docs = await search(ops_test, second_app_leader_ip, index_name, app=SECOND_APP_NAME)
+
+    # check that the only doc indexed in each cluster is different
+    assert len(current_app_docs) == 1
+    assert len(second_app_docs) == 1
+    assert current_app_docs[0] != second_app_docs[0]
+
+    # cleanup
+    await delete_index(ops_test, main_app_leader_unit_ip, index_name)
+    await ops_test.model.remove_application(
+        SECOND_APP_NAME, block_until_done=True, force=True, destroy_storage=True
+    )
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
