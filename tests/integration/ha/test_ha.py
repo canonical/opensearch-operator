@@ -17,10 +17,12 @@ from tests.integration.ha.helpers_data import (
     index_doc,
     search,
 )
+from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    get_application_unit_ids,
     get_application_unit_ids_ips,
     get_leader_unit_ip,
 )
@@ -120,6 +122,17 @@ async def test_multi_clusters_db_isolation(
 ) -> None:
     """Check that writes in cluster not replicated to another cluster."""
     app = (await app_name(ops_test)) or APP_NAME
+
+    # remove 1 unit (for CI)
+    unit_ids = get_application_unit_ids(ops_test, app=app)
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{max(unit_ids)}")
+    await ops_test.model.wait_for_idle(
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=len(unit_ids) - 1,
+        idle_period=IDLE_PERIOD,
+    )
 
     index_name = "test_index_unique_cluster_dbs"
 
