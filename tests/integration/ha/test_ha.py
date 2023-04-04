@@ -130,7 +130,7 @@ async def test_multi_clusters_db_isolation(
     # deploy new cluster
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.deploy(my_charm, num_units=1, application_name=SECOND_APP_NAME)
-    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.relate(SECOND_APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(apps=[SECOND_APP_NAME], status="active")
 
     # index document in second cluster
