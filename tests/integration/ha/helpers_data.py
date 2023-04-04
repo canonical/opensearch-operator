@@ -4,7 +4,7 @@
 
 """Helper functions for data related tests, such as indexing, searching etc.."""
 from random import randint
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
@@ -121,6 +121,26 @@ async def get_doc(ops_test: OpsTest, unit_ip: str, index_name: str, doc_id: int)
     return await http_request(
         ops_test, "GET", f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}"
     )
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
+async def search(
+    ops_test: OpsTest,
+    unit_ip: str,
+    index_name: str,
+    query: Optional[Dict[str, Any]],
+    preference: Optional[str],
+) -> Optional[List[Dict[str, Any]]]:
+    """Search documents."""
+    endpoint = f"https://{unit_ip}:9200/{index_name}/_search"
+    if preference:
+        endpoint = f"{endpoint}?preference={preference}"
+
+    resp = await http_request(ops_test, "GET", endpoint, payload=query)
+    return resp["hits"]["hits"]
 
 
 @retry(
