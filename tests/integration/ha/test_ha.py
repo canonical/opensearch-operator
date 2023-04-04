@@ -4,13 +4,30 @@
 
 import asyncio
 import logging
+import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import app_name
-from tests.integration.helpers import APP_NAME, MODEL_CONFIG, SERIES
+from tests.integration.ha.helpers import (
+    app_name,
+    cut_network_from_unit,
+    get_controller_machine,
+    get_elected_cm_unit,
+    instance_ip,
+    is_machine_reachable_from,
+    restore_network_for_unit,
+    wait_network_restore,
+)
+from tests.integration.helpers import (
+    APP_NAME,
+    MODEL_CONFIG,
+    SERIES,
+    get_application_unit_ips,
+    ping_cluster,
+    unit_hostname,
+)
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
@@ -57,3 +74,87 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME], status="active", timeout=1000
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
+
+
+async def test_network_cut(ops_test, c_writes, c_writes_runner):
+    """Test that we can cut the network and the cluster stays online as expected.
+
+    TODO this may require scaling the cluster up to 5 nodes, so we can guarantee 3 functional nodes
+    on update.
+    """
+    # locate primary unit
+    app = await app_name(ops_test)
+    ip_addresses = get_application_unit_ips(ops_test, app)
+    primary = await get_elected_cm_unit(ops_test, ip_addresses[0])
+    all_units = ops_test.model.applications[app].units
+    model_name = ops_test.model.info.name
+
+    primary_hostname = await unit_hostname(ops_test, primary.name)
+
+    # verify the cluster works fine before we can test
+    assert (
+        await ping_cluster(
+            ops_test,
+            primary.public_address,
+        )
+    ).get("results"), f"Connection to host {primary.public_address} is not possible"
+
+    cut_network_from_unit(primary_hostname)
+
+    # verify machine is not reachable from peer units
+    for unit in set(all_units) - {primary}:
+        hostname = await unit_hostname(ops_test, unit.name)
+        assert not is_machine_reachable_from(
+            hostname, primary_hostname
+        ), "unit is reachable from peer"
+
+    # verify machine is not reachable from controller
+    controller = await get_controller_machine(ops_test)
+    assert not is_machine_reachable_from(
+        controller, primary_hostname
+    ), "unit is reachable from controller"
+
+    # Wait for another unit to be elected cluster manager
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+
+    # verify new writes are continuing by counting the number of writes before and after a 5 second
+    # wait
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "writes not continuing to DB"
+
+    # verify that a new cluster manager got elected
+    new_primary = await get_elected_cm_unit(ops_test, get_application_unit_ips(ops_test, app)[0])
+    assert new_primary.name != primary.name
+
+    # verify that no writes to the db were missed
+    total_expected_writes = await c_writes.stop()
+    actual_writes = await c_writes.count()
+    assert total_expected_writes["number"] == actual_writes, "writes to the db were missed."
+
+    # restore network connectivity to old primary
+    restore_network_for_unit(primary_hostname)
+
+    # wait until network is reestablished for the unit
+    wait_network_restore(model_name, primary_hostname, primary.public_address)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+
+    # self healing is performed with update status hook
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
+
+    # verify we have connection to the old primary
+    new_ip = instance_ip(model_name, primary_hostname)
+    assert await ping_cluster(
+        ops_test,
+        new_ip,
+    ), f"Connection to host {new_ip} is not possible"
+
+    # verify presence of primary, replica set member configuration, and number of primaries
+    await helpers.verify_replica_set_configuration(ops_test)
+
+    # verify that old primary is up to date.
+    assert await helpers.secondary_up_to_date(
+        ops_test, new_ip, total_expected_writes["number"]
+    ), "secondary not up to date with the cluster after restarting."

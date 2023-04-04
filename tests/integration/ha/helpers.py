@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import subprocess
 from typing import Dict, List, Optional
 
+import yaml
 from charms.opensearch.v0.models import Node
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
@@ -40,18 +42,25 @@ async def app_name(ops_test: OpsTest) -> Optional[str]:
 async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
     """Returns the unit id of the current elected cm node."""
     # get current elected cm node
-    resp = await http_request(
+    cm_node = await http_request(
         ops_test,
         "GET",
         f"https://{unit_ip}:9200/_cluster/state/cluster_manager_node",
     )
-    cm_node_id = resp.get("cluster_manager_node")
+    cm_node_id = cm_node.get("cluster_manager_node")
     if not cm_node_id:
         return -1
 
     # get all nodes
-    resp = await http_request(ops_test, "GET", f"https://{unit_ip}:9200/_nodes")
-    return int(resp["nodes"][cm_node_id]["name"].split("-")[1])
+    all_nodes = await http_request(ops_test, "GET", f"https://{unit_ip}:9200/_nodes")
+    return int(all_nodes["nodes"][cm_node_id]["name"].split("-")[1])
+
+
+async def get_elected_cm_unit(ops_test: OpsTest, unit_ip: str):
+    """Returns the current elected cm node unit."""
+    cm_id = await get_elected_cm_unit_id(ops_test, unit_ip)
+    opensearch_app_name = await app_name(ops_test)
+    return ops_test.model.applications[opensearch_app_name].units[cm_id]
 
 
 @retry(
@@ -172,3 +181,84 @@ async def assert_continuous_writes_consistency(c_writes: ContinuousWrites) -> No
 
     assert result.max_stored_id == result.count - 1
     assert result.max_stored_id == result.last_expected_id
+
+
+def cut_network_from_unit(machine_name: str) -> None:
+    """Cut network from a lxc container.
+
+    Args:
+        machine_name: lxc container hostname
+    """
+    # apply a mask (device type `none`)
+    cut_network_command = f"lxc config device add {machine_name} eth0 none"
+    subprocess.check_call(cut_network_command.split())
+
+
+def restore_network_for_unit(machine_name: str) -> None:
+    """Restore network from a lxc container.
+
+    Args:
+        machine_name: lxc container hostname
+    """
+    # remove mask from eth0
+    restore_network_command = f"lxc config device remove {machine_name} eth0"
+    subprocess.check_call(restore_network_command.split())
+
+
+@retry(stop=stop_after_attempt(15), wait=wait_fixed(15))
+def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
+    """Wait until network is restored.
+
+    Args:
+        model_name: The name of the model
+        hostname: The name of the instance
+        old_ip: old registered IP address
+    """
+    if instance_ip(model_name, hostname) == old_ip:
+        raise Exception("Network not restored, IP address has not changed yet.")
+
+
+def instance_ip(model: str, instance: str) -> str:
+    """Translate juju instance name to IP.
+    Args:
+        model: The name of the model
+        instance: The name of the instance
+    Returns:
+        The (str) IP address of the instance
+    """
+    output = subprocess.check_output(f"juju machines --model {model}".split())
+
+    for line in output.decode("utf8").splitlines():
+        if instance in line:
+            return line.split()[2]
+
+
+async def get_controller_machine(ops_test: OpsTest) -> str:
+    """Return controller machine hostname.
+
+    Args:
+        ops_test: The ops test framework instance
+
+    Returns:
+        Controller hostname (str)
+    """
+    _, raw_controller, _ = await ops_test.juju("show-controller")
+    controller = yaml.safe_load(raw_controller.strip())
+    return [
+        machine.get("instance-id")
+        for machine in controller[ops_test.controller_name]["controller-machines"].values()
+    ][0]
+
+
+def is_machine_reachable_from(origin_machine: str, target_machine: str) -> bool:
+    """Test network reachability between hosts.
+
+    Args:
+        origin_machine: hostname of the machine to test connection from
+        target_machine: hostname of the machine to test connection to
+    """
+    try:
+        subprocess.check_call(f"lxc exec {origin_machine} -- ping -c 3 {target_machine}".split())
+        return True
+    except subprocess.CalledProcessError:
+        return False

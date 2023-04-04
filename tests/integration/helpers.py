@@ -224,6 +224,18 @@ def get_reachable_units(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str
     return result
 
 
+async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
+    """Get hostname for a unit.
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+    Returns:
+        The machine/container hostname
+    """
+    _, raw_hostname, _ = await ops_test.juju("ssh", unit_name, "hostname")
+    return raw_hostname.strip()
+
+
 async def http_request(
     ops_test: OpsTest,
     method: str,
@@ -318,6 +330,11 @@ async def cluster_health(
         "GET",
         f"https://{unit_ip}:9200/_cluster/health",
     )
+
+
+async def ping_cluster(ops_test: OpsTest, unit_ip: str) -> Dict[str, any]:
+    """Check that we can connect to the root opensearch endpoint on a given unit."""
+    await http_request(ops_test, "GET", f"https://{unit_ip}:9200/")
 
 
 @retry(

@@ -177,8 +177,8 @@ async def test_version(ops_test: OpsTest):
     version = await get_application_relation_data(
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "version"
     )
-    logging.info(run_version_request)
-    logging.info(version)
+    logger.info(run_version_request)
+    logger.info(version)
     results = json.loads(run_version_request["results"])
     assert version == results.get("version", {}).get("number"), results
 
@@ -209,18 +209,28 @@ async def test_scaling(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
 
     # Test scale down
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() - 1)
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+    num_units = get_num_of_opensearch_units() - 1
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, num_units)
+    await asyncio.join(
+        ops_test.model.wait_for_idle(
+            status="active", apps=[OPENSEARCH_APP_NAME], timeout=1400, num_units=num_units
+        ),
+        ops_test.model.wait_for_idle(status="active", apps=ALL_APPS),
+    )
     assert (
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
 
     # test scale back up again
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() + 1)
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+    num_units += 1
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, num_units)
+    await asyncio.join(
+        ops_test.model.wait_for_idle(
+            status="active", apps=[OPENSEARCH_APP_NAME], timeout=1400, num_units=num_units
+        ),
+        ops_test.model.wait_for_idle(status="active", apps=ALL_APPS),
+    )
     assert (
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
