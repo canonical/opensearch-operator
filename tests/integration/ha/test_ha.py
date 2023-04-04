@@ -125,7 +125,7 @@ async def test_multi_clusters_db_isolation(
 
     # index document in the current cluster
     main_app_leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    await index_doc(ops_test, main_app_leader_unit_ip, index_name, doc_id=1)
+    await index_doc(ops_test, app, main_app_leader_unit_ip, index_name, doc_id=1)
 
     # deploy new cluster
     my_charm = await ops_test.build_charm(".")
@@ -135,7 +135,7 @@ async def test_multi_clusters_db_isolation(
 
     # index document in second cluster
     second_app_leader_ip = await get_leader_unit_ip(ops_test, app=SECOND_APP_NAME)
-    await index_doc(ops_test, second_app_leader_ip, index_name, doc_id=2, app=SECOND_APP_NAME)
+    await index_doc(ops_test, SECOND_APP_NAME, second_app_leader_ip, index_name, doc_id=2)
 
     # fetch all documents in each cluster
     current_app_docs = await search(ops_test, app, main_app_leader_unit_ip, index_name)
