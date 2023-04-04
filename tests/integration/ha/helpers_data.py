@@ -16,11 +16,13 @@ from tests.integration.helpers import http_request
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def create_dummy_indexes(ops_test: OpsTest, unit_ip: str, count: int = 5) -> None:
+async def create_dummy_indexes(
+    ops_test: OpsTest, unit_ip: str, max_r_shards: int, count: int = 5
+) -> None:
     """Create indexes."""
     for index_id in range(count):
         p_shards = index_id % 2 + 2
-        r_shards = 3 if p_shards == 2 else 2
+        r_shards = max_r_shards if p_shards == 2 else max_r_shards - 1
         await http_request(
             ops_test,
             "PUT",
