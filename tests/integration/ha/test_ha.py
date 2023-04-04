@@ -9,11 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (
-    app_name,
-    assert_continuous_writes_consistency,
-    get_elected_cm_unit_id,
-)
+from tests.integration.ha.helpers import app_name, assert_continuous_writes_consistency
 from tests.integration.ha.helpers_data import (
     create_index,
     default_doc,
@@ -92,15 +88,13 @@ async def test_replication_across_members(
     units = get_application_unit_ids_ips(ops_test, app=app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
-    # 1. index document using the elected cm ip
-    cm_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
-    cm_ip = units[cm_id]
-
+    # create index with r_shards = nodes - 1
     index_name = "test_index"
     await create_index(ops_test, leader_unit_ip, index_name, r_shards=len(units) - 1)
 
+    # index document
     doc_id = 12
-    await index_doc(ops_test, cm_ip, index_name, doc_id)
+    await index_doc(ops_test, leader_unit_ip, index_name, doc_id)
 
     # check that the doc can be retrieved from any node
     for u_id, u_ip in units.items():
