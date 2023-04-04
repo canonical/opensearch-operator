@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
-from tests.integration.helpers import APP_NAME, http_request
+from tests.integration.helpers import http_request
 
 
 @retry(
@@ -17,7 +17,7 @@ from tests.integration.helpers import APP_NAME, http_request
     stop=stop_after_attempt(15),
 )
 async def create_dummy_indexes(
-    ops_test: OpsTest, unit_ip: str, max_r_shards: int, count: int = 5, app: str = APP_NAME
+    ops_test: OpsTest, app: str, unit_ip: str, max_r_shards: int, count: int = 5
 ) -> None:
     """Create indexes."""
     for index_id in range(count):

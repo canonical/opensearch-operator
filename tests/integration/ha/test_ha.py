@@ -90,16 +90,17 @@ async def test_replication_across_members(
 
     # create index with r_shards = nodes - 1
     index_name = "test_index"
-    await create_index(ops_test, leader_unit_ip, index_name, r_shards=len(units) - 1)
+    await create_index(ops_test, app, leader_unit_ip, index_name, r_shards=len(units) - 1)
 
     # index document
     doc_id = 12
-    await index_doc(ops_test, leader_unit_ip, index_name, doc_id)
+    await index_doc(ops_test, app, leader_unit_ip, index_name, doc_id)
 
     # check that the doc can be retrieved from any node
     for u_id, u_ip in units.items():
         docs = await search(
             ops_test,
+            app,
             u_ip,
             index_name,
             query={"query": {"term": {"_id": doc_id}}},
@@ -108,7 +109,7 @@ async def test_replication_across_members(
         assert len(docs) == 1
         assert docs[0]["_source"] == default_doc(index_name, doc_id)
 
-    await delete_index(ops_test, leader_unit_ip, index_name)
+    await delete_index(ops_test, app, leader_unit_ip, index_name)
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
@@ -134,11 +135,11 @@ async def test_multi_clusters_db_isolation(
 
     # index document in second cluster
     second_app_leader_ip = await get_leader_unit_ip(ops_test, app=SECOND_APP_NAME)
-    await index_doc(ops_test, main_app_leader_unit_ip, index_name, doc_id=2, app=SECOND_APP_NAME)
+    await index_doc(ops_test, second_app_leader_ip, index_name, doc_id=2, app=SECOND_APP_NAME)
 
     # fetch all documents in each cluster
-    current_app_docs = await search(ops_test, main_app_leader_unit_ip, index_name)
-    second_app_docs = await search(ops_test, second_app_leader_ip, index_name, app=SECOND_APP_NAME)
+    current_app_docs = await search(ops_test, app, main_app_leader_unit_ip, index_name)
+    second_app_docs = await search(ops_test, SECOND_APP_NAME, second_app_leader_ip, index_name)
 
     # check that the only doc indexed in each cluster is different
     assert len(current_app_docs) == 1
@@ -146,7 +147,7 @@ async def test_multi_clusters_db_isolation(
     assert current_app_docs[0] != second_app_docs[0]
 
     # cleanup
-    await delete_index(ops_test, main_app_leader_unit_ip, index_name)
+    await delete_index(ops_test, app, main_app_leader_unit_ip, index_name)
     await ops_test.model.remove_application(
         SECOND_APP_NAME, block_until_done=True, force=True, destroy_storage=True
     )
