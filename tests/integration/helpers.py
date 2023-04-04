@@ -65,7 +65,7 @@ async def run_action(
     Returns:
         A SimpleNamespace with "status, response (results)"
     """
-    if not unit_id:
+    if unit_id is None:
         unit_id = list(get_reachable_units(ops_test, app=app).keys())[0]
 
     unit_name = [
