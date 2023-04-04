@@ -22,7 +22,6 @@ from tenacity import (
 
 from tests.integration.helpers import (
     get_admin_secrets,
-    get_application_unit_ids,
     get_application_unit_ips,
     opensearch_client,
 )
@@ -146,9 +145,7 @@ class ContinuousWrites:
 
     async def _secrets(self) -> str:
         """Fetch secrets and return the password."""
-        secrets = await get_admin_secrets(
-            self._ops_test, get_application_unit_ids(self._ops_test)[0]
-        )
+        secrets = await get_admin_secrets(self._ops_test)
         with open(ContinuousWrites.CERT_PATH, "w") as chain:
             chain.write(secrets["ca-chain"])
 

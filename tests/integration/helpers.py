@@ -55,7 +55,7 @@ async def app_name(ops_test: OpsTest) -> Optional[str]:
 
 async def run_action(
     ops_test: OpsTest,
-    unit_id: int,
+    unit_id: Optional[int],
     action_name: str,
     params: Optional[Dict[str, any]] = None,
     app: str = APP_NAME,
@@ -65,7 +65,14 @@ async def run_action(
     Returns:
         A SimpleNamespace with "status, response (results)"
     """
-    unit_name = ops_test.model.applications[app].units[unit_id].name
+    if not unit_id:
+        unit_id = list(get_reachable_units(ops_test, app=app).keys())[0]
+
+    unit_name = [
+        unit.name
+        for unit in ops_test.model.applications[app].units
+        if unit.name.endswith(f"/{unit_id}")
+    ][0]
 
     action = await ops_test.model.units.get(unit_name).run_action(action_name, **(params or {}))
     action = await action.wait()
@@ -74,7 +81,7 @@ async def run_action(
 
 
 async def get_admin_secrets(
-    ops_test: OpsTest, unit_id: int = 0, app: str = APP_NAME
+    ops_test: OpsTest, unit_id: Optional[int] = None, app: str = APP_NAME
 ) -> Dict[str, str]:
     """Use the charm action to retrieve the admin password and chain.
 
