@@ -145,8 +145,8 @@ async def search(
     app: str,
     unit_ip: str,
     index_name: str,
-    query: Optional[Dict[str, Any]],
-    preference: Optional[str],
+    query: Optional[Dict[str, Any]] = None,
+    preference: Optional[str] = None,
 ) -> Optional[List[Dict[str, Any]]]:
     """Search documents."""
     endpoint = f"https://{unit_ip}:9200/{index_name}/_search"
