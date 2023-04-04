@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import logging
 import subprocess
 from typing import Dict, List, Optional
 
@@ -11,6 +12,8 @@ from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.helpers import http_request
+
+logger = logging.getLogger(__name__)
 
 
 class Shard:
@@ -183,6 +186,20 @@ async def assert_continuous_writes_consistency(c_writes: ContinuousWrites) -> No
     assert result.max_stored_id == result.last_expected_id
 
 
+async def secondary_up_to_date(ops_test: OpsTest, unit_ip, expected_writes) -> bool:
+    """Checks if secondary is up to date with the cluster.
+
+    Retries over the period of one minute to give secondary adequate time to copy over data.
+    """
+    get_secondary_writes = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/series_index",
+    )
+    logger.error(get_secondary_writes)
+    assert get_secondary_writes == expected_writes
+
+
 def cut_network_from_unit(machine_name: str) -> None:
     """Cut network from a lxc container.
 
@@ -220,9 +237,11 @@ def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
 
 def instance_ip(model: str, instance: str) -> str:
     """Translate juju instance name to IP.
+
     Args:
         model: The name of the model
         instance: The name of the instance
+
     Returns:
         The (str) IP address of the instance
     """

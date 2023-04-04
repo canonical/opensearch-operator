@@ -18,6 +18,7 @@ from tests.integration.ha.helpers import (
     instance_ip,
     is_machine_reachable_from,
     restore_network_for_unit,
+    secondary_up_to_date,
     wait_network_restore,
 )
 from tests.integration.helpers import (
@@ -140,21 +141,19 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     wait_network_restore(model_name, primary_hostname, primary.public_address)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
-    # self healing is performed with update status hook
+    # self healing is performed with update status hook. Status also checks our node roles are
+    # correctly configured.
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
 
-    # verify we have connection to the old primary
+    # verify we still have connection to the old primary
     new_ip = instance_ip(model_name, primary_hostname)
     assert await ping_cluster(
         ops_test,
         new_ip,
     ), f"Connection to host {new_ip} is not possible"
 
-    # verify presence of primary, replica set member configuration, and number of primaries
-    await helpers.verify_replica_set_configuration(ops_test)
-
     # verify that old primary is up to date.
-    assert await helpers.secondary_up_to_date(
+    assert await secondary_up_to_date(
         ops_test, new_ip, total_expected_writes["number"]
     ), "secondary not up to date with the cluster after restarting."

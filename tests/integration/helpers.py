@@ -226,9 +226,11 @@ def get_reachable_units(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str
 
 async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
     """Get hostname for a unit.
+
     Args:
         ops_test: The ops test object passed into every test case
         unit_name: The name of the unit to be tested
+
     Returns:
         The machine/container hostname
     """
