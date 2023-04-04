@@ -213,9 +213,9 @@ async def test_scaling(ops_test: OpsTest):
     await scale_application(ops_test, OPENSEARCH_APP_NAME, num_units)
     await asyncio.gather(
         ops_test.model.wait_for_idle(
-            status="active", 
-            apps=[OPENSEARCH_APP_NAME], 
-            timeout=1400, 
+            status="active",
+            apps=[OPENSEARCH_APP_NAME],
+            timeout=1400,
             wait_for_exact_units=num_units,
         ),
         ops_test.model.wait_for_idle(status="active", apps=ALL_APPS),
@@ -230,9 +230,9 @@ async def test_scaling(ops_test: OpsTest):
     await scale_application(ops_test, OPENSEARCH_APP_NAME, num_units)
     await asyncio.gather(
         ops_test.model.wait_for_idle(
-            status="active", 
-            apps=[OPENSEARCH_APP_NAME], 
-            timeout=1400, 
+            status="active",
+            apps=[OPENSEARCH_APP_NAME],
+            timeout=1400,
             wait_for_exact_units=num_units,
         ),
         ops_test.model.wait_for_idle(status="active", apps=ALL_APPS),
