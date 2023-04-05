@@ -15,6 +15,7 @@ from tests.integration.ha.helpers import (
     assert_continuous_writes_consistency,
     get_elected_cm_unit_id,
     get_number_of_shards_by_node,
+    get_shards_by_index,
     get_shards_by_state,
 )
 from tests.integration.ha.helpers_data import (
@@ -333,12 +334,13 @@ async def test_safe_scale_down_roles_reassigning(
 async def test_safe_scale_down_remove_leaders(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
-    """Tests the removal of specific units (elected cluster_manager, juju leader).
+    """Tests the removal of specific units (elected cm, juju leader, node with prim shard).
 
     The goal of this test is to make sure that:
      - the CM reelection happens successfully.
      - the leader-elected event gets triggered successfully and
-        leadership related events on the charm work correctly, i.e: roles reassigning
+        leadership related events on the charm work correctly, i.e: roles reassigning.
+     - the primary shards reelection happens successfully.
     It is worth noting that we're going into this test with an odd number of units.
     """
     app = (await app_name(ops_test)) or APP_NAME
@@ -395,6 +397,17 @@ async def test_safe_scale_down_remove_leaders(
     # check health of cluster
     cluster_health_resp = await cluster_health(ops_test, leader_unit_ip, wait_for_green_first=True)
     assert cluster_health_resp["status"] == "green"
+
+    # remove node containing primary shard of index "series_index"
+    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_with_primary_shard}")
+
+    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    p_shards = [shard.unit_id for shard in shards if shard.is_prim]
+    assert len(p_shards) > 0
+    new_unit_with_primary_shard = p_shards[0]
+    assert new_unit_with_primary_shard != unit_with_primary_shard
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
