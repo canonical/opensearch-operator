@@ -9,10 +9,10 @@ juju deploy opensearch --channel=edge
 Juju will now fetch Charmed OpenSearch and begin deploying it to the LXD cloud. This process can take several minutes depending on your machine. You can track the progress by running:
 
 ```bash
-juju status --watch=1s
+watch -c juju status --color
 ```
 
-This command is useful for checking the status of your Juju Model, including the applications and machines that it hosts. Some of the helpful information it displays include IP addresses, ports, state, etc. The output of this command updates once per second. When the application is ready, `juju status` will show:
+This command is useful for checking the status of your Juju Model, including the applications and machines that it hosts. Some of the helpful information it displays include IP addresses, ports, state, etc. The output of this command updates once every other second. When the application is ready, `juju status` will show:
 
 ```bash
 Model     Controller         Cloud/Region         Version  SLA          Timestamp
@@ -28,9 +28,9 @@ Machine  State    Address       Inst id        Series  AZ  Message
 0        started  10.23.62.156  juju-d35d30-0  focal       Running
 ```
 
-To exit the screen with `juju status --watch 1s`, enter `Ctrl+c`.
+To exit the screen with `watch -c juju status --color`, enter `Ctrl+c`.
 
-The status message `Waiting for TLS to be fully configured...` exists because Charmed OpenSearch requires TLS to be configured before use, to ensure data is transmitted securely. If you're seeing a status message like the following, [you need to set the correct kernel parameters to continue](./tutorial-setup-environment.md).
+The status message `Waiting for TLS to be fully configured...` exists because Charmed OpenSearch requires TLS to be configured before use, to ensure data is encrypted in transit for the HTTP and Transport layers. If you're seeing a status message like the following, [you need to set the correct kernel parameters to continue](./tutorial-setup-environment.md).
 
 ```bash
 vm.swappiness should be 0 - net.ipv4.tcp_retries2 should be 5
