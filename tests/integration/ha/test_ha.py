@@ -93,12 +93,11 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     primary_hostname = await unit_hostname(ops_test, primary.name)
 
     # verify the cluster works fine before we can test
-    assert (
-        await ping_cluster(
-            ops_test,
-            primary.public_address,
-        )
-    ).get("results"), f"Connection to host {primary.public_address} is not possible"
+    # TODO update assertion to check the cluster returns what we expect
+    assert await ping_cluster(
+        ops_test,
+        primary.public_address,
+    ), f"Connection to host {primary.public_address} is not possible"
 
     cut_network_from_unit(primary_hostname)
 
@@ -132,6 +131,8 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     # verify that no writes to the db were missed
     total_expected_writes = await c_writes.stop()
     actual_writes = await c_writes.count()
+    logger.error(total_expected_writes)
+
     assert total_expected_writes["number"] == actual_writes, "writes to the db were missed."
 
     # restore network connectivity to old primary
