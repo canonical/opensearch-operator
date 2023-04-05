@@ -115,7 +115,6 @@ Save the CA certificate (value of `tls-ca` in the previous response), username, 
 You can access the opensearch REST API any way you prefer, but in this tutorial we're going to use `curl`. Get the IP of an opensearch node from the output of `juju status` (any of the nodes should work fine), and store the CA certificate in a local file. Run the following command, swapping the values where necessary:
 
 ```bash
-# TODO test this with data-integrator output
 curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/
 ```
 
