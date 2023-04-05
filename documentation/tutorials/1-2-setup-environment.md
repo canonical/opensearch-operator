@@ -4,7 +4,7 @@
 
 Before we start, make sure your machine meets the following requirements:
 
-- Ubuntu 20.04 (Focal) or later.
+- Ubuntu 22.04 (Jammy) or later.
 - 16GB of RAM.
 - 4 CPU cores.
 - At least 20GB of available storage.
@@ -86,8 +86,8 @@ juju add-model tutorial
 You can now view the model you created above by entering the command `juju status` into the command line. You should see the following:
 
 ```bash
-Model    Controller         Cloud/Region         Version  SLA          Timestamp
-tutorial opensearch-demo    localhost/localhost  2.9.37   unsupported  23:20:53Z
+Model     Controller       Cloud/Region         Version  SLA          Timestamp
+tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  14:57:14Z
 
 Model "admin/tutorial" is empty.
 ```
@@ -110,9 +110,9 @@ vm.max_map_count = 262144
 vm.swappiness = 60
 ```
 
-Note these variables so we can reset them later. Not doing so may have impacts on the machine's performances.
+Note these variables so we can reset them later. Not doing so may have impacts on the host machine's performance.
 
-Set the kernel parameters to the new recommended values like so:
+Set the kernel parameters to the recommended values like so:
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
@@ -138,4 +138,4 @@ juju model-config ./cloudinit-userdata.yaml
 
 ## Next Steps
 
-The next stage in this tutorial is about deploying the OpenSearch charm, and can be found [here](./tutorial-deploy-opensearch.md).
+The next stage in this tutorial is about deploying the OpenSearch charm, and can be found [here](./1-3-deploy-opensearch.md).

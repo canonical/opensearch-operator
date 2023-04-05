@@ -5,7 +5,6 @@ import asyncio
 import json
 import logging
 import re
-import time
 
 import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
@@ -17,6 +16,7 @@ from tests.integration.helpers import (
     SERIES,
     get_leader_unit_ip,
     http_request,
+    refresh_index,
     scale_application,
 )
 from tests.integration.relations.opensearch_provider.helpers import (
@@ -104,6 +104,9 @@ async def test_index_usage(ops_test: OpsTest):
         ),
     )
 
+    leader_ip = await get_leader_unit_ip(ops_test)
+    await refresh_index(ops_test, leader_ip, "albums")
+
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_read_index = await run_request(
         ops_test,
@@ -141,8 +144,8 @@ async def test_bulk_index_usage(ops_test: OpsTest):
         payload=re.escape(bulk_payload),
     )
 
-    # Wait so we aren't writing data and requesting it straight away
-    time.sleep(1)
+    leader_ip = await get_leader_unit_ip(ops_test)
+    await refresh_index(ops_test, leader_ip, "albums")
 
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_bulk_read_index = await run_request(

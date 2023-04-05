@@ -1,12 +1,12 @@
 # Charmed OpenSearch tutorial
 The Charmed OpenSearch Operator delivers automated operations management from [day 0 to day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/) on the [OpenSearch](https://github.com/opensearch-project/OpenSearch/) document database. It is an open source, end-to-end, production-ready data platform product running on [Juju](https://juju.is/). This tutorial will cover the following:
 
-1. [Setting up your environment](./tutorial-setup-environment.md)
-2. [Deploying OpenSearch](./tutorial-deploy-opensearch.md)
-3. [Enable TLS](./tutorial-enable-tls.md)
-4. [Connecting to OpenSearch](./tutorial-connecting-to-opensearch.md)
-5. [Scaling](./tutorial-scaling.md)
-6. [Teardown](./tutorial-teardown.md)
+1. [Setting up your environment](./1-2-setup-environment.md)
+2. [Deploying OpenSearch](./1-3-deploy-opensearch.md)
+3. [Enable TLS](./1-4-enable-tls.md)
+4. [Connecting to OpenSearch](./1-5-connecting-to-opensearch.md)
+5. [Scaling](./1-6-scaling.md)
+6. [Teardown](./1-7-teardown.md)
 
 This tutorial assumes a basic understanding of the following:
 

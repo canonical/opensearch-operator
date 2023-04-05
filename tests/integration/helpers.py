@@ -275,6 +275,10 @@ async def http_request(
         return resp.json()
 
 
+async def refresh_index(ops_test: OpsTest, unit_ip: str, index_name: str):
+    await http_request(ops_test, "POST", f"https://{unit_ip}:9200/{index_name}/_refresh")
+
+
 def opensearch_client(
     hosts: List[str], user_name: str, password: str, cert_path: str
 ) -> OpenSearch:

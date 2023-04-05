@@ -12,12 +12,13 @@ Charmed OpenSearch is an open-source project that welcomes community contributio
 - [Join the Discourse forum](https://discourse.charmhub.io/tag/opensearch)
 - [Contribute and report bugs](https://github.com/canonical/opensearch-operator)
 
-
 ## Navigation
+
+This documentation follows the [Diataxis Framework](https://canonical.com/blog/diataxis-a-new-foundation-for-canonical-documentation)
 
 | Level | Path     | Navlink                         |
 | ----- | -------- | ------------------------------- |
-| 1     | Tutorials | [Tutorial](./tutorials/tutorial-overview.md) |
+| 1     | Tutorials | [Tutorial](./tutorials/1-1-overview.md) |
 | 1     | how-tos-coming-soon | [How To -- Coming Soon]() |
 | 1     | explanation-coming-soon | [Explanation -- Coming Soon]() |
 | 1     | reference-coming-soon | [Reference -- Coming Soon]() |
