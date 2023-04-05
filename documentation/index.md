@@ -1,4 +1,4 @@
-## Charmed OpenSearch Documentation
+# Charmed OpenSearch Documentation
 The Charmed OpenSearch Operator delivers automated operations management from day 0 to day 2 on the [OpenSearch Community Edition](https://github.com/opensearch-project/OpenSearch/) document database. It is an open source, end-to-end, production-ready data platform product on top of juju.
 
 OpenSearch is a popular NoSQL database. It stores data as JSON documents in searchable indices, which are queried using a REST API. OpenSearch is also a distributed database, so vertical and horizontal scaling come naturally.
@@ -7,13 +7,13 @@ This charmed operator deploys and operates OpenSearch on physical or virtual mac
 
 ## Project and community
 
-Charmed OpenSearch is an official distribution of OpenSearch. It’s an open-source project that welcomes community contributions, suggestions, fixes and constructive feedback.
+Charmed OpenSearch is an open-source project that welcomes community contributions, suggestions, fixes and constructive feedback.
 - [Read our Code of Conduct](https://ubuntu.com/community/code-of-conduct)
 - [Join the Discourse forum](https://discourse.charmhub.io/tag/opensearch)
 - [Contribute and report bugs](https://github.com/canonical/opensearch-operator)
 
 
-# Navigation
+## Navigation
 
 | Level | Path     | Navlink                         |
 | ----- | -------- | ------------------------------- |
