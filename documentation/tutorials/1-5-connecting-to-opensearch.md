@@ -16,7 +16,28 @@ Located charm "data-integrator" in charm-hub...
 Deploying "data-integrator" from charm-hub charm "data-integrator"...
 ```
 
-Wait for the data-integrator charm to reach an active idle state, which shouldn't take too long.
+Wait for `watch -c juju status --color` to show:
+
+```bash
+Model     Controller       Cloud/Region         Version  SLA          Timestamp
+tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:38:21Z
+
+App                        Version  Status   Scale  Charm                      Channel  Rev  Exposed  Message
+data-integrator                     blocked      1  data-integrator            edge      11  no       Please relate the data-integrator with the desired product
+opensearch                          active       1  opensearch                 edge      22  no
+tls-certificates-operator           active       1  tls-certificates-operator  stable    22  no
+
+Unit                          Workload  Agent  Machine  Public address  Ports  Message
+data-integrator/0*            blocked   idle   2        10.180.162.96          Please relate the data-integrator with the desired product
+opensearch/0*                 active    idle   0        10.180.162.97
+tls-certificates-operator/0*  active    idle   1        10.180.162.44
+
+Machine  State    Address        Inst id        Series  AZ  Message
+0        started  10.180.162.97  juju-3305a8-0  jammy       Running
+1        started  10.180.162.44  juju-3305a8-1  jammy       Running
+2        started  10.180.162.96  juju-3305a8-2  jammy       Running
+
+```
 
 ### Relate to OpenSearch
 
@@ -29,24 +50,31 @@ juju relate data-integrator opensearch
 Wait for `watch -c juju status --color` to show:
 
 ```bash
-ubuntu@ip-172-31-11-104:~/data-integrator$ juju status
-Model     Controller         Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo    localhost/localhost  2.9.37   unsupported  10:32:09Z
+Model     Controller       Cloud/Region         Version  SLA          Timestamp
+tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:40:22Z
 
-App                        Version  Status  Scale  Charm                Channel   Rev  Exposed  Message
-data-integrator                     active      1  data-integrator      edge       3   no
-opensearch                          active      2  opensearch           dpe/edge   96  no
-tls-certificates-operator           active      1  tls-certificates-operator  stable      22  no
+App                        Version  Status  Scale  Charm                      Channel  Rev  Exposed  Message
+data-integrator                     active      1  data-integrator            edge      11  no
+opensearch                          active      1  opensearch                 edge      22  no
+tls-certificates-operator           active      1  tls-certificates-operator  stable    22  no
 
-Unit                          Workload  Agent  Machine  Public address  Ports      Message
-data-integrator/0*            active    idle   5        10.23.62.216               received opensearch credentials
-opensearch/0*                 active    idle   0        10.23.62.156
-tls-certificates-operator/0*  active    idle   1        10.137.5.33
+Unit                          Workload  Agent  Machine  Public address  Ports  Message
+data-integrator/0*            active    idle   2        10.180.162.96
+opensearch/0*                 active    idle   0        10.180.162.97
+tls-certificates-operator/0*  active    idle   1        10.180.162.44
 
-Machine  State    Address       Inst id        Series  AZ  Message
-0        started  10.23.62.156  juju-d35d30-0  focal       Running
-1        started  10.137.5.33   juju-2f4c88-1  jammy       Running
-5        started  10.23.62.216  juju-d35d30-5  jammy       Running
+Machine  State    Address        Inst id        Series  AZ  Message
+0        started  10.180.162.97  juju-3305a8-0  jammy       Running
+1        started  10.180.162.44  juju-3305a8-1  jammy       Running
+2        started  10.180.162.96  juju-3305a8-2  jammy       Running
+
+Relation provider                       Requirer                               Interface                 Type     Message
+data-integrator:data-integrator-peers   data-integrator:data-integrator-peers  data-integrator-peers     peer
+opensearch:opensearch-client            data-integrator:opensearch             opensearch_client         regular
+opensearch:opensearch-peers             opensearch:opensearch-peers            opensearch_peers          peer
+opensearch:service                      opensearch:service                     rolling_op                peer
+tls-certificates-operator:certificates  opensearch:certificates                tls-certificates          regular
+tls-certificates-operator:replicas      tls-certificates-operator:replicas     tls-certificates-replica  peer
 ```
 
 To retrieve information such as the username, password, and database. Enter:
@@ -55,31 +83,32 @@ To retrieve information such as the username, password, and database. Enter:
 juju run-action data-integrator/leader get-credentials --wait
 ```
 
-This should output something like: TODO VERIFY
+This should output something like:
 
 ```yaml
-​​unit-data-integrator-0:
+unit-data-integrator-0:
   UnitId: data-integrator/0
-  id: "24"
+  id: "2"
   results:
+    ok: "True"
     opensearch:
+      endpoints: 10.180.162.97:9200
       index: test-index
-      endpoints: 10.23.62.156
-      password: VMnRws6BlojzDi5e1m2GVWOgJaoSs44d
+      password: wPe02Gl7OiJPBTKh21DKvC0X9bzb9ZjQ
       tls-ca: |-
         -----BEGIN CERTIFICATE-----
-        MIIC6jCCAdKgAwIBAgIU...............
+        MIIC6jCCAdKgAwIBAgIULtS8XNzJj5N8...
         -----END CERTIFICATE-----
-      username: opensearch-client_4
-    ok: "True"
+      username: opensearch-client_5
+      version: 2.6.0
   status: completed
   timing:
-    completed: 2022-12-06 10:33:24 +0000 UTC
-    enqueued: 2022-12-06 10:33:20 +0000 UTC
-    started: 2022-12-06 10:33:24 +0000 UTC
+    completed: 2023-04-05 15:41:11 +0000 UTC
+    enqueued: 2023-04-05 15:41:09 +0000 UTC
+    started: 2023-04-05 15:41:10 +0000 UTC
 ```
 
-Save the ca-cert (value of `tls-ca` in the previous response), username, and password, because you'll need them in the next section.
+Save the CA certificate (value of `tls-ca` in the previous response), username, and password, because you'll need them in the next section.
 
 ### Create and Access OpenSearch Indices
 
@@ -96,7 +125,7 @@ Sending a `GET` request to this `/` endpoint should return some basic informatio
 {
   "name" : "opensearch-0",
   "cluster_name" : "opensearch-tutorial",
-  "cluster_uuid" : "9UQCiZmLRhWn1H-XDZ4lFQ",
+  "cluster_uuid" : "4Oe44nUzQOavu71_ifHn0w",
   "version" : {
     "distribution" : "opensearch",
     "number" : "2.6.0",
@@ -114,7 +143,7 @@ Sending a `GET` request to this `/` endpoint should return some basic informatio
 
 If this command fails, ensure the opensearch units are all in an active-idle state.
 
-The command we just ran used the `--cacert` flag to pass in the ca chain generated by the TLS operator, ensuring secure and encrypted HTTP communications between our local host and the opensearch node. 
+The command we just ran used the `--cacert` flag to pass in the ca chain generated by the TLS operator, ensuring secure and encrypted HTTP communications between our local host and the opensearch node.
 To recap, the CA chain is generated by the TLS operator, and is passed over to the opensearch charm, which provides this cert in its databag to any application that relates to it using the `opensearch-client` relation interface. When developing charms that relate to the opensearch operator, ensure you use this cert along the user credentials (username/password pair) to authenticate communications.
 
 To index some data, run the following command:

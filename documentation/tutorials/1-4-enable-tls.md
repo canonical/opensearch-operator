@@ -6,7 +6,7 @@ TLS is enabled via relations, by relating Charmed OpenSearch to the [TLS Certifi
 
 ### Configure TLS
 
-Before enabling TLS on Charmed OpenSearch we must first deploy the `TLS-certificates-operator` charm:
+Before enabling TLS on Charmed OpenSearch we must first deploy the `tls-certificates-operator` charm:
 
 ```bash
 juju deploy tls-certificates-operator
@@ -15,20 +15,20 @@ juju deploy tls-certificates-operator
 Wait until the `tls-certificates-operator` is ready to be configured. When it is ready to be configured `watch -c juju status --color` will show:
 
 ```bash
-Model     Controller         Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo    localhost/localhost  2.9.37   unsupported  09:24:12Z
+Model     Controller       Cloud/Region         Version  SLA          Timestamp
+tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:16:43Z
 
 App                        Version  Status   Scale  Charm                      Channel  Rev  Exposed  Message
-opensearch                          blocked      1  opensearch                 edge      11  no       Waiting for TLS to be fully configured...
-tls-certificates-operator           blocked      1  tls-certificates-operator  beta      22  no       Configuration options missing: ['certificate', 'ca-certificate']
+opensearch                          blocked      1  opensearch                 edge      22  no       Waiting for TLS to be fully configured...
+tls-certificates-operator           blocked      1  tls-certificates-operator  stable    22  no       Configuration options missing: ['certificate', 'ca-certificate']
 
 Unit                          Workload  Agent  Machine  Public address  Ports  Message
-opensearch/0*                 blocked   idle   0        10.137.5.232           Waiting for TLS to be fully configured...
-tls-certificates-operator/0*  blocked   idle   1        10.137.5.33            Configuration options missing: ['certificate', 'ca-certificate']
+opensearch/0*                 blocked   idle   0        10.180.162.97          Waiting for TLS to be fully configured...
+tls-certificates-operator/0*  blocked   idle   1        10.180.162.44          Configuration options missing: ['certificate', 'ca-certificate']
 
-Machine  State    Address       Inst id        Series  AZ  Message
-0        started  10.137.5.232  juju-2f4c88-0  jammy       Running
-1        started  10.137.5.33   juju-2f4c88-1  jammy       Running
+Machine  State    Address        Inst id        Series  AZ  Message
+0        started  10.180.162.97  juju-3305a8-0  jammy       Running
+1        started  10.180.162.44  juju-3305a8-1  jammy       Running
 ```
 
 Now we can configure the TLS certificates. Configure the  `tls-certificates-operator` to use self signed certificates:
@@ -47,27 +47,33 @@ After configuring the certificates `juju status` will show the status of `tls-ce
 juju relate tls-certificates-operator opensearch
 ```
 
-The OpenSearch service will start and the output of `juju status` should now resemble the following:
+The OpenSearch service will start, and the output of `juju status --relations` should now resemble the following:
 
 ```bash
-Model     Controller         Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo    localhost/localhost  2.9.37   unsupported  09:24:12Z
+Model     Controller       Cloud/Region         Version  SLA          Timestamp
+tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:24:18Z
 
 App                        Version  Status  Scale  Charm                      Channel  Rev  Exposed  Message
-opensearch                          active      1  opensearch                 edge      11  no
-tls-certificates-operator           active      1  tls-certificates-operator  stable      22  no
+opensearch                          active      1  opensearch                 edge      22  no
+tls-certificates-operator           active      1  tls-certificates-operator  stable    22  no
 
 Unit                          Workload  Agent  Machine  Public address  Ports  Message
-opensearch/0*                 active    idle   0        10.137.5.232
-tls-certificates-operator/0*  active    idle   1        10.137.5.33
+opensearch/0*                 active    idle   0        10.180.162.97
+tls-certificates-operator/0*  active    idle   1        10.180.162.44
 
-Machine  State    Address       Inst id        Series  AZ  Message
-0        started  10.137.5.232  juju-2f4c88-0  jammy       Running
-1        started  10.137.5.33   juju-2f4c88-1  jammy       Running
+Machine  State    Address        Inst id        Series  AZ  Message
+0        started  10.180.162.97  juju-3305a8-0  jammy       Running
+1        started  10.180.162.44  juju-3305a8-1  jammy       Running
+
+Relation provider                       Requirer                            Interface                 Type     Message
+opensearch:opensearch-peers             opensearch:opensearch-peers         opensearch_peers          peer
+opensearch:service                      opensearch:service                  rolling_op                peer
+tls-certificates-operator:certificates  opensearch:certificates             tls-certificates          regular
+tls-certificates-operator:replicas      tls-certificates-operator:replicas  tls-certificates-replica  peer
 ```
 
 ---
 
 ## Next Steps
 
-The next stage in this tutorial is about connecting to and using the OpenSearch charm, and can be found [here](./tutorial-connecting-to-opensearch.md).
+The next stage in this tutorial is about connecting to and using the OpenSearch charm, and can be found [here](./1-5-connecting-to-opensearch.md).

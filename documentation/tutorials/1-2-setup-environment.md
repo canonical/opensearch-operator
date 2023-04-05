@@ -16,7 +16,7 @@ For a complete list of OpenSearch system requirements, please read the [Opensear
 
 The simplest way to get started with Charmed OpenSearch is to set up a local LXD cloud. LXD is a system container and virtual machine manager that comes pre-installed on Ubuntu. Juju interfaces with LXD to control the containers on which Charmed OpenSearch runs. While this tutorial covers some of the basics of using LXD, you can [learn more about LXD here](https://linuxcontainers.org/lxd/getting-started-cli/).
 
-Verify that LXD is installed by entering `which lxd` into the command line. This will output:
+Verify that LXD is installed by executing the command `which lxd`. This will output:
 
 ```bash
 /snap/bin/lxd
@@ -59,7 +59,7 @@ Cloud      Regions  Default    Type  Credentials  Source    Description
 localhost  1        localhost  lxd   1            built-in  LXD Container Hypervisor
 ```
 
-Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup or configuration needed. A controller will be used to deploy and control Charmed OpenSearch. Run the following command to bootstrap a Juju controller named ‘opensearch-demo’ on LXD. This bootstrapping processes can take several minutes depending on your system resources:
+Notice that juju already has a built-in knowledge of LXD and how it works, so there is no additional setup or configuration needed. A controller will be used to deploy and control Charmed OpenSearch. Run the following command to bootstrap a Juju controller named `opensearch-demo` on LXD. This bootstrapping processes can take several minutes depending on your system resources:
 
 ```bash
 juju bootstrap localhost opensearch-demo
@@ -77,7 +77,7 @@ The Juju controller should exist within an LXD container. You can verify this by
 
 where `<id>` is a unique combination of numbers and letters such as `9d7e4e-0`
 
-The controller can hold multiple models. In each model, we deploy charmed applications. Set up a specific model for this tutorial, named ‘tutorial’:
+The controller can hold multiple models. In each model, we deploy charmed applications. Set up a specific model for this tutorial, named `tutorial`:
 
 ```bash
 juju add-model tutorial
