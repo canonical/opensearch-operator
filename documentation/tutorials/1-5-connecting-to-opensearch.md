@@ -66,8 +66,11 @@ This should output something like: TODO VERIFY
       index: test-index
       endpoints: 10.23.62.156
       password: VMnRws6BlojzDi5e1m2GVWOgJaoSs44d
-      ca-cert: TODO ADD A CERT IN HERE
-      username: relation-4
+      tls-ca: |-
+        -----BEGIN CERTIFICATE-----
+        MIIC6jCCAdKgAwIBAgIU...............
+        -----END CERTIFICATE-----
+      username: opensearch-client_4
     ok: "True"
   status: completed
   timing:
@@ -76,7 +79,7 @@ This should output something like: TODO VERIFY
     started: 2022-12-06 10:33:24 +0000 UTC
 ```
 
-Save the ca-cert, username, and password, because you'll need them in the next section.
+Save the ca-cert (value of `tls-ca` in the previous response), username, and password, because you'll need them in the next section.
 
 ### Create and Access OpenSearch Indices
 
