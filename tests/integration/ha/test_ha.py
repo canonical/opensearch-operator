@@ -117,6 +117,9 @@ async def test_replication_across_members(
     await assert_continuous_writes_consistency(c_writes)
 
 
+# put this test at the end of the list of tests, as we delete an app during cleanup
+# and the safeguards we have on the charm prevent us from doing so, so we'll keep
+# using a unit without need - when other tests may need the unit on the CI
 async def test_multi_clusters_db_isolation(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
@@ -161,7 +164,7 @@ async def test_multi_clusters_db_isolation(
 
     # cleanup
     await delete_index(ops_test, app, main_app_leader_unit_ip, index_name)
-    await ops_test.model.remove_application(SECOND_APP_NAME, block_until_done=True)
+    await ops_test.model.remove_application(SECOND_APP_NAME)
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
