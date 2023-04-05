@@ -16,7 +16,6 @@ from tests.integration.helpers import (
     SERIES,
     get_leader_unit_ip,
     http_request,
-    refresh_index,
     scale_application,
 )
 from tests.integration.relations.opensearch_provider.helpers import (
