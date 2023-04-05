@@ -1,12 +1,12 @@
-## Scale Charmed OpenSearch
+## Horizontally Scale Charmed OpenSearch
 
-You can add two replicas to your deployed OpenSearch application with:
+You can add two additional nodes to your deployed OpenSearch application with:
 
 ```bash
 juju add-unit opensearch -n 2
 ```
 
-You can now watch the replica set add these replicas with: `juju status --watch 1s`. It usually takes several minutes for the replicas to be added to the replica set. You’ll know that all three replicas are ready when `juju status --watch 1s` reports:
+You can now watch the new units join the cluster with: `watch -c juju status --color`. It usually takes a few minutes for the new nodes to be added to the cluster formation. You’ll know that all three nodes are ready when `watch -c juju status --color` reports:
 
 ```bash
 Model     Controller         Cloud/Region         Version  SLA          Timestamp
@@ -34,15 +34,15 @@ Machine  State    Address       Inst id        Series  AZ  Message
 
 You can trust that Charmed OpenSearch added these replicas correctly, but if you want to verify that your data is correctly replicated, feel free to run the above commands on all the replicas. To view the cluster settings yourself, send a `GET` request (in the same way as before) to the endpoint `_cluster/settings`.
 
-### Remove replicas
+### Remove nodes
 
-Removing a unit from the Juju application scales down your OpenSearch cluster by one node. Before we scale down the nodes we no longer need, list all the units with `juju status`. Here you will see three units: `opensearch/0`, `opensearch/1`, and `opensearch/2`. Each of these units hosts an OpenSearch node. To remove the node hosted on the unit `opensearch/2` enter:
+Removing a unit from the Juju application scales down your OpenSearch cluster by one node. Before we scale down the nodes we no longer need, list all the units with `juju status`. Here you will see three units / nodes: `opensearch/0`, `opensearch/1`, and `opensearch/2`. To remove the unit `opensearch/2` run:
 
 ```bash
 juju remove-unit opensearch/2
 ```
 
-You’ll know that the replica was successfully removed when `juju status --watch 1s` reports:
+You’ll know that the node was successfully removed when `watch -c juju status --color` reports:
 
 ```bash
 Model     Controller         Cloud/Region         Version  SLA          Timestamp
@@ -50,8 +50,8 @@ tutorial  opensearch-demo    localhost/localhost  2.9.37   unsupported  14:42:04
 
 App                        Version  Status  Scale  Charm                      Channel   Rev  Exposed  Message
 data-integrator                     active      1  data-integrator            edge      3    no
-opensearch                          active      3  opensearch                 dpe/edge  96   no
-tls-certificates-operator           active      1  tls-certificates-operator  beta      22   no
+opensearch                          active      2  opensearch                 dpe/edge  21   no
+tls-certificates-operator           active      1  tls-certificates-operator  stable      22   no
 
 Unit                          Workload  Agent  Machine  Public address  Ports      Message
 data-integrator/0*            active    idle   5        10.23.62.216               received opensearch credentials
@@ -70,4 +70,4 @@ Machine  State    Address       Inst id        Series  AZ  Message
 
 ## Next Steps
 
-The next stage in this tutorial is about removing the OpenSearch charm and tearing down your Juju deployment, and can be found [here](./tutorial-deploy-opensearch.md).
+The next stage in this tutorial is about removing the OpenSearch charm and tearing down your Juju deployment, and can be found [here](./tutorial-teardown.md).

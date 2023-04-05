@@ -10,7 +10,7 @@ Before we start, make sure your machine meets the following requirements:
 - At least 20GB of available storage.
 - Access to the internet for downloading the required snaps and charms.
 
-For a complete list of OpenSearch system requirements, please read the [Opensearch Documentation](https://opensearch.org/docs/2.4/install-and-configure/install-opensearch/index/).
+For a complete list of OpenSearch system requirements, please read the [Opensearch Documentation](https://opensearch.org/docs/2.6/install-and-configure/install-opensearch/index/).
 
 ### Prepare LXD
 
@@ -29,7 +29,7 @@ lxd init --auto
 lxc network set lxdbr0 ipv6.address none
 ```
 
-You can list all LXD containers by entering the command `lxc list` in to the command line. Although at this point in the tutorial none should exist and you'll only see this as output:
+You can list all LXD containers by executing the command `lxc list`. Although at this point in the tutorial none should exist and you'll only see this as output:
 
 ```bash
 +------+-------+------+------+------+-----------+
@@ -39,7 +39,7 @@ You can list all LXD containers by entering the command `lxc list` in to the com
 
 ### Install and prepare Juju
 
-Juju is an Operator Lifecycle Manager (OLM) for clouds, bare metal, LXD or Kubernetes. We will be using it to deploy and manage Charmed OpenSearch. As with LXD, Juju is installed using a snap package:
+[Juju](https://juju.is/docs/olm) is an Operator Lifecycle Manager (OLM) for clouds, bare metal, LXD or Kubernetes. We will be using it to deploy and manage Charmed OpenSearch. As with LXD, Juju is installed using a snap package:
 
 ```bash
 sudo snap install juju --classic
@@ -110,7 +110,9 @@ vm.max_map_count = 262144
 vm.swappiness = 60
 ```
 
-Note these variables so we can reset them later. Not doing so may cause some system instability. Set the kernel parameters to the new recommended values like so:
+Note these variables so we can reset them later. Not doing so may have impacts on the machine's performances.
+
+Set the kernel parameters to the new recommended values like so:
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5

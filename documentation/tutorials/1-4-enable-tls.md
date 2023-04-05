@@ -9,10 +9,10 @@ TLS is enabled via relations, by relating Charmed OpenSearch to the [TLS Certifi
 Before enabling TLS on Charmed OpenSearch we must first deploy the `TLS-certificates-operator` charm:
 
 ```bash
-juju deploy tls-certificates-operator --channel=beta
+juju deploy tls-certificates-operator
 ```
 
-Wait until the `tls-certificates-operator` is ready to be configured. When it is ready to be configured `juju status --watch 1s`. Will show:
+Wait until the `tls-certificates-operator` is ready to be configured. When it is ready to be configured `watch -c juju status --color` will show:
 
 ```bash
 Model     Controller         Cloud/Region         Version  SLA          Timestamp
@@ -47,7 +47,7 @@ After configuring the certificates `juju status` will show the status of `tls-ce
 juju relate tls-certificates-operator opensearch
 ```
 
-The output of `juju status` should now resemble the following:
+The OpenSearch service will start and the output of `juju status` should now resemble the following:
 
 ```bash
 Model     Controller         Cloud/Region         Version  SLA          Timestamp
@@ -55,7 +55,7 @@ tutorial  opensearch-demo    localhost/localhost  2.9.37   unsupported  09:24:12
 
 App                        Version  Status  Scale  Charm                      Channel  Rev  Exposed  Message
 opensearch                          active      1  opensearch                 edge      11  no
-tls-certificates-operator           active      1  tls-certificates-operator  beta      22  no
+tls-certificates-operator           active      1  tls-certificates-operator  stable      22  no
 
 Unit                          Workload  Agent  Machine  Public address  Ports  Message
 opensearch/0*                 active    idle   0        10.137.5.232
