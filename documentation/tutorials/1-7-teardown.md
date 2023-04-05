@@ -4,10 +4,10 @@
 
 ***Warning:** when you remove Charmed OpenSearch as shown below you will lose all the data in your cluster. Furthermore, when you remove Juju as shown below you will lose access to any other applications you have hosted on Juju.*
 
-To remove Charmed OpenSearch and the model it is hosted on, run the command:
+To remove Charmed OpenSearch and the model it is hosted on, run this command:
 
 ```bash
-juju destroy-model tutorial --destroy-storage --force --no-wait 
+juju destroy-model tutorial --destroy-storage --force --no-wait
 ```
 
 Next step is to remove the Juju controller. You can see all of the available controllers by entering `juju controllers`. To remove the controller enter:

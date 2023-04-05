@@ -98,14 +98,11 @@ async def test_index_usage(ops_test: OpsTest):
         relation_name=FIRST_RELATION_NAME,
         relation_id=client_relation.id,
         method="PUT",
-        endpoint="/albums/_doc/1",
+        endpoint="/albums/_doc/1?refresh=true",
         payload=re.escape(
             '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
         ),
     )
-
-    leader_ip = await get_leader_unit_ip(ops_test)
-    await refresh_index(ops_test, leader_ip, "albums")
 
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_read_index = await run_request(
@@ -140,12 +137,9 @@ async def test_bulk_index_usage(ops_test: OpsTest):
         relation_name=FIRST_RELATION_NAME,
         relation_id=client_relation.id,
         method="POST",
-        endpoint="/_bulk",
+        endpoint="/_bulk?refresh=true",
         payload=re.escape(bulk_payload),
     )
-
-    leader_ip = await get_leader_unit_ip(ops_test)
-    await refresh_index(ops_test, leader_ip, "albums")
 
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_bulk_read_index = await run_request(
