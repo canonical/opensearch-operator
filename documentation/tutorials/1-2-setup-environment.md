@@ -45,6 +45,20 @@ Juju is an Operator Lifecycle Manager (OLM) for clouds, bare metal, LXD or Kuber
 sudo snap install juju --classic
 ```
 
+To list the clouds available to juju run the following command:
+
+```bash
+juju clouds
+```
+
+The output will most likely look as follows:
+
+```bash
+Clouds available on the client:
+Cloud      Regions  Default    Type  Credentials  Source    Description
+localhost  1        localhost  lxd   1            built-in  LXD Container Hypervisor
+```
+
 Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup or configuration needed. A controller will be used to deploy and control Charmed OpenSearch. Run the following command to bootstrap a Juju controller named ‘opensearch-demo’ on LXD. This bootstrapping processes can take several minutes depending on your system resources:
 
 ```bash
