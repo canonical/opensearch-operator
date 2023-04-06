@@ -86,10 +86,10 @@ The admin password under the result: `admin-password` should match whatever you 
 
 TLS private keys are used for certificate signing requests, and should be recycled in the same way as passwords. There are three types of private keys available to be updated on this charm, and they are as follows:
 
-- `app-admin`
-  - Must only be set on the leader unit
-- `unit-transport`
-- `unit-http`
+- `"app-admin"` is the key used for requesting a certificate with a CSR for the admin user and cluster administration related operations.
+  - Must only be set on the leader unit.
+- `"unit-transport"` is the key used for requesting a certificate with a CSR for the transport layer (node to node communication).
+- `"unit-http"` is the key used for requesting a certificate with a CSR for the admin user and cluster administration related operations.
 
 To change a private key to a random value, run the following command:
 
@@ -113,10 +113,10 @@ unit-opensearch-0:
 
 No certificate data is presented in the results of this action.
 
-To set the key to a specific value, and to set a password, run the following command:
+To set the key to a specific value run the following command:
 
 ```shell
-juju run-action opensearch/leader set-tls-private-key type=<type> password=<password> key=<key> --wait
+juju run-action opensearch/leader set-tls-private-key type=<type> key=<key> --wait
 ```
 
 Running the command should output:
@@ -131,4 +131,24 @@ unit-opensearch-0:
     completed: 2023-04-06 12:07:02 +0000 UTC
     enqueued: 2023-04-06 12:07:01 +0000 UTC
     started: 2023-04-06 12:07:01 +0000 UTC
+```
+
+If the key you intend to set has a passphrase, set it like so
+
+```shell
+juju run-action opensearch/leader set-tls-private-key type=<type> password=<password> key=<key> --wait
+```
+
+Running the command should output:
+
+```yaml
+unit-opensearch-0:
+  UnitId: opensearch/0
+  id: "16"
+  results: {}
+  status: completed
+  timing:
+    completed: 2023-04-06 12:37:55 +0000 UTC
+    enqueued: 2023-04-06 12:37:52 +0000 UTC
+    started: 2023-04-06 12:37:54 +0000 UTC
 ```
