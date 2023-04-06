@@ -5,7 +5,7 @@
 When we accessed OpenSearch earlier in this tutorial, we needed to include a password in the HTTP request. Over time it is a good practice to change the password frequently. Here we will go through setting and changing the password for the admin user.
 
 ### Retrieve the admin password
-As previously mentioned, the admin password can be retrieved by running the `get-password` action on the Charmed OpenSearch application:
+As previously mentioned, the admin credentials (password + the ca chain used to generate the admin client certificate) can be retrieved by running the `get-password` action on the Charmed OpenSearch application:
 
 ```bash
 juju run-action opensearch/leader get-password --wait
@@ -32,12 +32,12 @@ The admin password is under the result: `admin-password`.
 
 ### Rotate the admin password
 
-You can change the admin password to a new random password by entering:
+You can change the admin password to a new random and generated password by running:
 
 ```shell
 juju run-action opensearch/leader set-password --wait
 ```
-
+**Note:** this action can only be run from the leader unit.  
 Running the command should output:
 
 ```yaml
@@ -88,8 +88,8 @@ TLS private keys are used for certificate signing requests, and should be recycl
 
 - `"app-admin"` is the key used for requesting a certificate with a CSR for the admin user and cluster administration related operations.
   - Must only be set on the leader unit.
-- `"unit-transport"` is the key used for requesting a certificate with a CSR for the transport layer (node to node communication).
-- `"unit-http"` is the key used for requesting a certificate with a CSR for the admin user and cluster administration related operations.
+- `"unit-transport"` is the key used for requesting, for the target unit, a certificate with a CSR for the transport layer (node to node communication).
+- `"unit-http"` is the key used for requesting, for the target unit, a certificate with a CSR for the admin user and cluster administration related operations.
 
 To change a private key to a random value, run the following command, setting `category` equal to your preferred type of private key:
 
