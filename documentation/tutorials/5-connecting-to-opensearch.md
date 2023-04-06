@@ -326,4 +326,4 @@ Also, note that the certificate does not change across relations. To create a ne
 
 ## Next Steps
 
-The next stage in this tutorial is about horizontally scaling the OpenSearch cluster, and can be found [here](./6-scaling.md).
+The next stage in this tutorial is about horizontally scaling the OpenSearch cluster, and can be found [here](./6-horizontal-scaling.md).

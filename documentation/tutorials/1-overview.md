@@ -5,7 +5,7 @@ The Charmed OpenSearch Operator delivers automated operations management from [d
 2. [Deploying OpenSearch](./3-deploy-opensearch.md)
 3. [Enable TLS](./4-enable-tls.md)
 4. [Connecting to OpenSearch](./5-connecting-to-opensearch.md)
-5. [Scaling](./6-scaling.md)
+5. [Horizontal Scaling](./6-horizontal-scaling.md)
 6. [Teardown](./7-teardown.md)
 
 This tutorial assumes a basic understanding of the following:
