@@ -160,4 +160,4 @@ Machine  State    Address         Inst id        Series  AZ  Message
 
 ## Next Steps
 
-The next stage in this tutorial is about removing the OpenSearch charm and tearing down your Juju deployment, and can be found [here](./7-teardown.md).
+The next stage in this tutorial is about removing the OpenSearch charm and tearing down your Juju deployment, and can be found [here](./8-teardown.md).
