@@ -322,7 +322,6 @@ Note that the data in our index has not changed.
 
 Also, note that the certificate does not change across relations. To create a new certificate, remove the relation between opensearch and the tls-certificates operator, wait for opensearch to enter a blocked status, then recreate the relation. Run the `get-credentials` action on the data-integrator charm again to get the new credentials, and test them again with the above search request.
 
-
 ---
 
 ## Next Steps
