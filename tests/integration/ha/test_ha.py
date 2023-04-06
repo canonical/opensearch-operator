@@ -133,7 +133,7 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     actual_writes = await c_writes.count()
     logger.error(total_expected_writes)
 
-    assert total_expected_writes["number"] == actual_writes, "writes to the db were missed."
+    assert total_expected_writes.count == actual_writes, "writes to the db were missed."
 
     # restore network connectivity to old primary
     restore_network_for_unit(primary_hostname)
@@ -156,5 +156,5 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
 
     # verify that old primary is up to date.
     assert await secondary_up_to_date(
-        ops_test, new_ip, total_expected_writes["number"]
+        ops_test, new_ip, total_expected_writes.count
     ), "secondary not up to date with the cluster after restarting."
