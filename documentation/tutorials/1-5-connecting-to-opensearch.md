@@ -112,6 +112,8 @@ Save the CA certificate (value of `tls-ca` in the previous response), username, 
 
 ### Create and Access OpenSearch Indices
 
+Before connecting to OpenSearch, it is mandatory that you [enable TLS on this cluster](./1-4-enable-tls.md), following the previous step in the tutorial.
+
 You can access the opensearch REST API any way you prefer, but in this tutorial we're going to use `curl`. Get the IP of an opensearch node from the output of `juju status` (any of the nodes should work fine), and store the CA certificate in a local file. Run the following command, swapping the values where necessary:
 
 ```bash
@@ -303,7 +305,7 @@ This should output something like the following error:
 Unauthorized
 ```
 
-If you wanted to recreate this user all you would need to do is relate the two applications and run the same action on data-integrator to get the same credentials:
+If you wanted to recreate this user all you would need to do is relate the two applications and run the same action on data-integrator to get the new credentials:
 
 ```bash
 juju relate data-integrator opensearch
@@ -318,8 +320,7 @@ curl --cacert demo-ca.pem -XGET https://new_username:new_password@opensearch_nod
 
 Note that the data in our index has not changed.
 
-<!-- FIXME this currently fails due to a bug. -->
-Also, note that the certificate does not change across relations. To create a new CA cert, remove the relation between opensearch and the tls-certificates operator, wait for opensearch to enter a blocked status, then recreate the relation. Run the get-credentials action on the data-integrator charm again to get the new credentials, and test them again with the above search request.
+Also, note that the certificate does not change across relations. To create a new certificate, remove the relation between opensearch and the tls-certificates operator, wait for opensearch to enter a blocked status, then recreate the relation. Run the `get-credentials` action on the data-integrator charm again to get the new credentials, and test them again with the above search request.
 
 ---
 

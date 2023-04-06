@@ -2,6 +2,8 @@
 
 [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) is used to encrypt data exchanged between two applications; it secures data transmitted over the network. Typically, enabling TLS within a highly available database, and between a highly available database and client/server applications, requires domain-specific knowledge and a high level of expertise. Fortunately, the domain-specific knowledge has been encoded into Charmed OpenSearch. This means enabling TLS on Charmed Opensearch is easily available and requires minimal effort on your end.
 
+TLS is mandatory for OpenSearch deployments because nodes in an OpenSearch cluster require TLS to communicate with each other securely. Therefore, the OpenSearch charm will be in a blocked state until TLS is configured. Since TLS certificates are already being prepared for internal communication between OpenSearch nodes, we make use of the same certificate for external communications with the REST API. Therefore, TLS must be configured before connecting to the charm.
+
 TLS is enabled via relations, by relating Charmed OpenSearch to the [TLS Certificates Charm](https://charmhub.io/tls-certificates-operator). The TLS Certificates Charm centralises TLS certificate management in a consistent manner and handles providing, requesting, and renewing TLS certificates.
 
 ### Configure TLS
