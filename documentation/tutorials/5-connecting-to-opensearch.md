@@ -322,8 +322,9 @@ Note that the data in our index has not changed.
 
 Also, note that the certificate does not change across relations. To create a new certificate, remove the relation between opensearch and the tls-certificates operator, wait for opensearch to enter a blocked status, then recreate the relation. Run the `get-credentials` action on the data-integrator charm again to get the new credentials, and test them again with the above search request.
 
+
 ---
 
 ## Next Steps
 
-The next stage in this tutorial is about horizontally scaling the OpenSearch cluster, and can be found [here](./7-horizontal-scaling.md).
+The next stage in this tutorial is about managing user credentials through Juju Actions, and can be found [here](6-user-management.md).

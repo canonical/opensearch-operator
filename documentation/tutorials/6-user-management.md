@@ -152,3 +152,9 @@ unit-opensearch-0:
     enqueued: 2023-04-06 12:37:52 +0000 UTC
     started: 2023-04-06 12:37:54 +0000 UTC
 ```
+
+---
+
+## Next Steps
+
+The next stage in this tutorial is about horizontally scaling the OpenSearch cluster, and can be found [here](./7-horizontal-scaling.md).
