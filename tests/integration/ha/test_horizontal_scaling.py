@@ -403,11 +403,13 @@ async def test_safe_scale_down_remove_leaders(
     unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_with_primary_shard}")
 
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
-    p_shards = [shard.unit_id for shard in shards if shard.is_prim]
-    assert len(p_shards) > 0
-    new_unit_with_primary_shard = p_shards[0]
-    assert new_unit_with_primary_shard != unit_with_primary_shard
+    units_with_p_shards = [shard.unit_id for shard in shards if shard.is_prim]
+    assert len(units_with_p_shards) == 1
+
+    for unit_id in units_with_p_shards:
+        assert unit_id != unit_with_primary_shard
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
