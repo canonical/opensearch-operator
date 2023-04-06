@@ -3,12 +3,13 @@
 # See LICENSE file for licensing details.
 from typing import Dict, List, Optional
 
+import psutil
 from charms.opensearch.v0.models import Node
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.helpers import http_request
+from tests.integration.helpers import IDLE_PERIOD, http_request
 
 
 class Shard:
@@ -172,3 +173,37 @@ async def assert_continuous_writes_consistency(c_writes: ContinuousWrites) -> No
 
     assert result.max_stored_id == result.count - 1
     assert result.max_stored_id == result.last_expected_id
+
+
+def find_process_by_port(port: int = 9200) -> Optional[int]:
+    """Find pid of process listening on port."""
+    for proc in psutil.process_iter():
+        for conn in proc.connections():
+            if conn.status == "LISTEN" and conn.laddr.port == port:
+                return proc.pid
+
+    return None
+
+
+async def send_kill_signal_to_process(
+    ops_test: OpsTest, app: str, unit_id: int, signal: str
+) -> None:
+    """Run kill with signal in specific unit."""
+    # Killing the only instance can be disastrous.
+    if len(ops_test.model.applications[app].units) < 2:
+        await ops_test.model.applications[app].add_unit(count=1)
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            idle_period=IDLE_PERIOD,
+        )
+
+    unit_name = f"{app}/{unit_id}"
+
+    opensearch_pid = find_process_by_port(9200)
+    if not opensearch_pid:
+        return
+
+    kill_cmd = f"run --unit {unit_name} -- kill -{signal.upper()} {opensearch_pid}"
+    await ops_test.juju(*kill_cmd.split(), check=True)

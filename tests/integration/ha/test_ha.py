@@ -4,12 +4,18 @@
 
 import asyncio
 import logging
+import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import app_name, assert_continuous_writes_consistency
+from tests.integration.ha.helpers import (
+    app_name,
+    assert_continuous_writes_consistency,
+    get_shards_by_index,
+    send_kill_signal_to_process,
+)
 from tests.integration.ha.helpers_data import (
     create_index,
     default_doc,
@@ -22,9 +28,12 @@ from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    check_cluster_formation_successful,
     get_application_unit_ids,
     get_application_unit_ids_ips,
+    get_application_unit_names,
     get_leader_unit_ip,
+    is_up,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
@@ -112,6 +121,50 @@ async def test_replication_across_members(
         assert docs[0]["_source"] == default_doc(index_name, doc_id)
 
     await delete_index(ops_test, app, leader_unit_ip, index_name)
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(c_writes)
+
+
+@pytest.mark.abort_on_fail
+async def test_kill_db_process_node_with_primary_shard(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
+    """Check cluster can self-heal and data can be indexed/read when primary shard dies."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    units_ips = get_application_unit_ids_ips(ops_test, app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    # find unit hosting the primary shard of the index "series-index"
+    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    first_unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
+
+    # Kill the opensearch process
+    await send_kill_signal_to_process(
+        ops_test, app, first_unit_with_primary_shard, signal="SIGKILL"
+    )
+
+    # verify new writes are continuing by counting the number of writes before and after 5 seconds
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "writes not continuing to DB"
+
+    # verify that the opensearch service is back running on the old primary unit
+    assert await is_up(
+        ops_test, units_ips[first_unit_with_primary_shard]
+    ), "OpenSearch service hasn't restarted."
+
+    # fetch unit hosting the new primary shard of the previous index
+    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    new_unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
+    assert new_unit_with_primary_shard != first_unit_with_primary_shard
+
+    # verify the node with the old primary successfully joined the rest of the fleet
+    assert await check_cluster_formation_successful(
+        ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
+    )
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)

@@ -13,13 +13,21 @@ import yaml
 from charms.opensearch.v0.helper_networking import is_reachable, reachable_hosts
 from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    stop_after_attempt,
+    wait_fixed,
+    wait_random,
+)
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 
 SERIES = "jammy"
 UNIT_IDS = [0, 1, 2]
+IDLE_PERIOD = 120
 
 TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
 
@@ -349,6 +357,21 @@ async def check_cluster_formation_successful(
 
     registered_nodes = [node_desc["name"] for node_desc in response["nodes"].values()]
     return set(unit_names) == set(registered_nodes)
+
+
+async def is_up(ops_test: OpsTest, unit_ip: str) -> bool:
+    """Return if node up."""
+    try:
+        for attempt in Retrying(
+            stop=stop_after_attempt(15), wait=wait_fixed(wait=5) + wait_random(0, 5)
+        ):
+            with attempt:
+                http_resp_code = await http_request(
+                    ops_test, "GET", f"https://{unit_ip}:9200/", resp_status_code=True
+                )
+                return http_resp_code == 200
+    except RetryError:
+        return False
 
 
 async def scale_application(

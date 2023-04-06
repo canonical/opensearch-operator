@@ -24,6 +24,7 @@ from tests.integration.ha.helpers_data import (
 )
 from tests.integration.helpers import (
     APP_NAME,
+    IDLE_PERIOD,
     MODEL_CONFIG,
     SERIES,
     app_name,
@@ -38,8 +39,6 @@ from tests.integration.helpers import (
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
-
-IDLE_PERIOD = 120
 
 
 @pytest.fixture()
