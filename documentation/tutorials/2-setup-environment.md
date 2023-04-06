@@ -138,4 +138,4 @@ juju model-config ./cloudinit-userdata.yaml
 
 ## Next Steps
 
-The next stage in this tutorial is about deploying the OpenSearch charm, and can be found [here](./1-3-deploy-opensearch.md).
+The next stage in this tutorial is about deploying the OpenSearch charm, and can be found [here](./3-deploy-opensearch.md).

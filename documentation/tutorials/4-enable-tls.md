@@ -78,4 +78,4 @@ tls-certificates-operator:replicas      tls-certificates-operator:replicas  tls-
 
 ## Next Steps
 
-The next stage in this tutorial is about connecting to and using the OpenSearch charm, and can be found [here](./1-5-connecting-to-opensearch.md).
+The next stage in this tutorial is about connecting to and using the OpenSearch charm, and can be found [here](./5-connecting-to-opensearch.md).

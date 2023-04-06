@@ -112,7 +112,7 @@ Save the CA certificate (value of `tls-ca` in the previous response), username, 
 
 ### Create and Access OpenSearch Indices
 
-Before connecting to OpenSearch, it is mandatory that you [enable TLS on this cluster](./1-4-enable-tls.md), following the previous step in the tutorial.
+Before connecting to OpenSearch, it is mandatory that you [enable TLS on this cluster](./4-enable-tls.md), following the previous step in the tutorial.
 
 You can access the opensearch REST API any way you prefer, but in this tutorial we're going to use `curl`. Get the IP of an opensearch node from the output of `juju status` (any of the nodes should work fine), and store the CA certificate in a local file. Run the following command, swapping the values where necessary:
 
@@ -326,4 +326,4 @@ Also, note that the certificate does not change across relations. To create a ne
 
 ## Next Steps
 
-The next stage in this tutorial is about horizontally scaling the OpenSearch cluster, and can be found [here](./1-6-scaling.md).
+The next stage in this tutorial is about horizontally scaling the OpenSearch cluster, and can be found [here](./6-scaling.md).

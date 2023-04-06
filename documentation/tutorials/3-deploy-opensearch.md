@@ -32,7 +32,7 @@ Machine  State    Address        Inst id        Series  AZ  Message
 
 To exit the screen with `watch -c juju status --color`, enter `Ctrl+c`.
 
-The status message `Waiting for TLS to be fully configured...` exists because Charmed OpenSearch requires TLS to be configured before use, to ensure data is encrypted in transit for the HTTP and Transport layers. If you're seeing a status message like the following, [you need to set the correct kernel parameters to continue](./1-2-setup-environment.md).
+The status message `Waiting for TLS to be fully configured...` exists because Charmed OpenSearch requires TLS to be configured before use, to ensure data is encrypted in transit for the HTTP and Transport layers. If you're seeing a status message like the following, [you need to set the correct kernel parameters to continue](./2-setup-environment.md).
 
 ```bash
 vm.swappiness should be 0 - net.ipv4.tcp_retries2 should be 5
@@ -42,4 +42,4 @@ vm.swappiness should be 0 - net.ipv4.tcp_retries2 should be 5
 
 ## Next Steps
 
-The next stage in this tutorial is about enabling TLS on the OpenSearch charm. This step is essential for the charm's function, and the tutorial can be found [here](./1-4-enable-tls.md).
+The next stage in this tutorial is about enabling TLS on the OpenSearch charm. This step is essential for the charm's function, and the tutorial can be found [here](./4-enable-tls.md).
