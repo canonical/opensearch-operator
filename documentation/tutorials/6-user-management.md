@@ -91,10 +91,10 @@ TLS private keys are used for certificate signing requests, and should be recycl
 - `"unit-transport"` is the key used for requesting a certificate with a CSR for the transport layer (node to node communication).
 - `"unit-http"` is the key used for requesting a certificate with a CSR for the admin user and cluster administration related operations.
 
-To change a private key to a random value, run the following command:
+To change a private key to a random value, run the following command, setting `category` equal to your preferred type of private key:
 
 ```shell
-juju run-action opensearch/leader set-tls-private-key type=<type> --wait
+juju run-action opensearch/leader set-tls-private-key category=<category> --wait
 ```
 
 Running the command should output:
@@ -116,7 +116,7 @@ No certificate data is presented in the results of this action.
 To set the key to a specific value run the following command:
 
 ```shell
-juju run-action opensearch/leader set-tls-private-key type=<type> key=<key> --wait
+juju run-action opensearch/leader set-tls-private-key category=<category> key=<key> --wait
 ```
 
 Running the command should output:
@@ -136,7 +136,7 @@ unit-opensearch-0:
 If the key you intend to set has a passphrase, set it like so
 
 ```shell
-juju run-action opensearch/leader set-tls-private-key type=<type> password=<password> key=<key> --wait
+juju run-action opensearch/leader set-tls-private-key category=<category> password=<password> key=<key> --wait
 ```
 
 Running the command should output:

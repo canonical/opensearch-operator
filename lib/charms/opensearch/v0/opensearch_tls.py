@@ -71,7 +71,7 @@ class OpenSearchTLS(Object):
 
     def _on_set_tls_private_key(self, event: ActionEvent) -> None:
         """Set the TLS private key, which will be used for requesting the certificate."""
-        cert_type = CertType(event.params["type"])  # type
+        cert_type = CertType(event.params["category"])  # type
         scope = Scope.APP if cert_type == CertType.APP_ADMIN else Scope.UNIT
 
         if scope == Scope.APP and not self.charm.unit.is_leader():

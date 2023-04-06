@@ -113,7 +113,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charm.OpenSearchOperatorCharm._purge_users")
     def test_on_set_tls_private_key(self, _, __, _put_admin_user, _request_certificate):
         """Test _on_set_tls private key event."""
-        event_mock = MagicMock(params={"type": "app-admin"})
+        event_mock = MagicMock(params={"category": "app-admin"})
 
         self.harness.set_leader(is_leader=False)
         self.charm.tls._on_set_tls_private_key(event_mock)
@@ -123,7 +123,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.charm.tls._on_set_tls_private_key(event_mock)
         _request_certificate.assert_called_once()
 
-        event_mock = MagicMock(params={"type": "unit-transport"})
+        event_mock = MagicMock(params={"category": "unit-transport"})
         self.harness.set_leader(is_leader=False)
         self.charm.tls._on_set_tls_private_key(event_mock)
         _request_certificate.assert_called()
