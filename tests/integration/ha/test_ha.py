@@ -125,7 +125,9 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     assert more_writes > writes, "writes not continuing to DB"
 
     # verify that a new cluster manager got elected
-    new_primary = await get_elected_cm_unit(ops_test, get_application_unit_ips(ops_test, app)[0])
+    ips = get_application_unit_ips(ops_test, app)
+    ips.remove(primary.public_address)
+    new_primary = await get_elected_cm_unit(ops_test, ips[0])
     assert new_primary.name != primary.name
 
     # verify that no writes to the db were missed
@@ -140,7 +142,7 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
 
     # wait until network is reestablished for the unit
     wait_network_restore(model_name, primary_hostname, primary.public_address)
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000, wait_for_exact_units=3)
 
     # self healing is performed with update status hook. Status also checks our node roles are
     # correctly configured.
