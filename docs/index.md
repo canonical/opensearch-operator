@@ -17,19 +17,19 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 ## Navigation
 
 
-| Level | Path                       | Navlink                                                       |
-|-------|----------------------------|---------------------------------------------------------------|
-| 1     | tutorial                   | [Tutorial]()                                                  |
-| 2     | t-overview                 | [1. Introduction](TODO)                                       |
-| 2     | t-setup-environment        | [2. Set up the environment](TODO)                             |
-| 2     | t-deploy-opensearch        | [3. Deploy OpenSearch](TODO)                                  |
-| 2     | t-enable-tls               | [4. Enable security](TODO)                                    |
-| 2     | t-connecting-to-opensearch | [5. Connect to OpenSearch](TODO)                              |
-| 2     | t-user-management          | [6. Manage user](TODO)                                        |
-| 2     | t-horizontal-scaling       | [7. Scale deployment horizontally](TODO)                      |
-| 2     | t-teardown                 | [8. Cleanup your environment](TODO)                           |
-| 1     | reference                  | [Reference]()                                                 |
-| 2     | r-actions                  | [Actions](https://charmhub.io/opensearch/actions)             |
-| 2     | r-configurations           | [Configurations](https://charmhub.io/opensearch/configure)    |
-| 2     | r-libraries                | [Libraries](https://charmhub.io/opensearch/libraries/helpers) |
+| Level | Path                       | Navlink                                                                                    |
+|-------|----------------------------|--------------------------------------------------------------------------------------------|
+| 1     | tutorial                   | [Tutorial]()                                                                               |
+| 2     | t-overview                 | [1. Introduction](/t/charmed-opensearch-tutorial-overview/9722)                            |
+| 2     | t-setup-environment        | [2. Set up the environment](/t/charmed-opensearch-tutorial-setup-environment/9724)         |
+| 2     | t-deploy-opensearch        | [3. Deploy OpenSearch](/t/charmed-opensearch-tutorial-deploy-opensearch/9716)              |
+| 2     | t-enable-tls               | [4. Enable encryption](/t/charmed-opensearch-tutorial-enable-tls/9718)                     |
+| 2     | t-connecting-to-opensearch | [5. Connect to OpenSearch](/t/charmed-opensearch-tutorial-connecting-to-opensearch/9714)   |
+| 2     | t-user-management          | [6. Manage user](/t/charmed-opensearch-tutorial-user-management/9728)                      |
+| 2     | t-horizontal-scaling       | [7. Scale deployment horizontally](/t/charmed-opensearch-tutorial-horizontal-scaling/9720) |
+| 2     | t-teardown                 | [8. Cleanup your environment](/t/charmed-opensearch-tutorial-teardown/9726)                |
+| 1     | reference                  | [Reference]()                                                                              |
+| 2     | r-actions                  | [Actions](https://charmhub.io/opensearch/actions)                                          |
+| 2     | r-configurations           | [Configurations](https://charmhub.io/opensearch/configure)                                 |
+| 2     | r-libraries                | [Libraries](https://charmhub.io/opensearch/libraries/helpers)                              |
 
