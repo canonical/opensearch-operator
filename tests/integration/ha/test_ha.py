@@ -140,6 +140,16 @@ async def test_kill_db_process_node_with_primary_shard(
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     first_unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
 
+    # Killing the only instance can be disastrous.
+    if len(ops_test.model.applications[app].units) < 2:
+        await ops_test.model.applications[app].add_unit(count=1)
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            idle_period=IDLE_PERIOD,
+        )
+
     # Kill the opensearch process
     await send_kill_signal_to_process(
         ops_test, app, first_unit_with_primary_shard, signal="SIGKILL"
@@ -147,7 +157,7 @@ async def test_kill_db_process_node_with_primary_shard(
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
     writes = await c_writes.count()
-    time.sleep(5)
+    time.sleep(30)  # the opensearch service is scheduled to restart after 20 sec
     more_writes = await c_writes.count()
     assert more_writes > writes, "writes not continuing to DB"
 
