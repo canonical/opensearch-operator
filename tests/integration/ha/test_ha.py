@@ -9,13 +9,24 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import app_name
-from tests.integration.helpers import APP_NAME, MODEL_CONFIG, SERIES
+from tests.integration.ha.helpers import app_name, assert_continuous_writes_consistency
+from tests.integration.ha.helpers_data import (
+    create_index,
+    default_doc,
+    delete_index,
+    index_doc,
+    search,
+)
+from tests.integration.helpers import (
+    APP_NAME,
+    MODEL_CONFIG,
+    SERIES,
+    get_application_unit_ids_ips,
+    get_leader_unit_ip,
+)
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
-
-IDLE_PERIOD = 120
 
 
 @pytest.fixture()
@@ -57,3 +68,44 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME], status="active", timeout=1000
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
+
+
+@pytest.mark.abort_on_fail
+async def test_replication_across_members(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
+    """Check consistency, ie write to node, read data from remaining nodes.
+
+    1. Create index with replica shards equal to number of nodes - 1.
+    2. Index data.
+    3. Query data from all the nodes (all the nodes should contain a copy of the data).
+    """
+    app = (await app_name(ops_test)) or APP_NAME
+
+    units = get_application_unit_ids_ips(ops_test, app=app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    # create index with r_shards = nodes - 1
+    index_name = "test_index"
+    await create_index(ops_test, leader_unit_ip, index_name, r_shards=len(units) - 1)
+
+    # index document
+    doc_id = 12
+    await index_doc(ops_test, leader_unit_ip, index_name, doc_id)
+
+    # check that the doc can be retrieved from any node
+    for u_id, u_ip in units.items():
+        docs = await search(
+            ops_test,
+            u_ip,
+            index_name,
+            query={"query": {"term": {"_id": doc_id}}},
+            preference="_only_local",
+        )
+        assert len(docs) == 1
+        assert docs[0]["_source"] == default_doc(index_name, doc_id)
+
+    await delete_index(ops_test, leader_unit_ip, index_name)
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(c_writes)
