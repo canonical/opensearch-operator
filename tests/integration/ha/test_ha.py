@@ -17,16 +17,21 @@ from tests.integration.ha.helpers_data import (
     index_doc,
     search,
 )
+from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    get_application_unit_ids,
     get_application_unit_ids_ips,
     get_leader_unit_ip,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
+
+
+SECOND_APP_NAME = "second-opensearch"
 
 
 @pytest.fixture()
@@ -87,16 +92,17 @@ async def test_replication_across_members(
 
     # create index with r_shards = nodes - 1
     index_name = "test_index"
-    await create_index(ops_test, leader_unit_ip, index_name, r_shards=len(units) - 1)
+    await create_index(ops_test, app, leader_unit_ip, index_name, r_shards=len(units) - 1)
 
     # index document
     doc_id = 12
-    await index_doc(ops_test, leader_unit_ip, index_name, doc_id)
+    await index_doc(ops_test, app, leader_unit_ip, index_name, doc_id)
 
     # check that the doc can be retrieved from any node
     for u_id, u_ip in units.items():
         docs = await search(
             ops_test,
+            app,
             u_ip,
             index_name,
             query={"query": {"term": {"_id": doc_id}}},
@@ -105,7 +111,60 @@ async def test_replication_across_members(
         assert len(docs) == 1
         assert docs[0]["_source"] == default_doc(index_name, doc_id)
 
-    await delete_index(ops_test, leader_unit_ip, index_name)
+    await delete_index(ops_test, app, leader_unit_ip, index_name)
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(c_writes)
+
+
+# put this test at the end of the list of tests, as we delete an app during cleanup
+# and the safeguards we have on the charm prevent us from doing so, so we'll keep
+# using a unit without need - when other tests may need the unit on the CI
+async def test_multi_clusters_db_isolation(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
+    """Check that writes in cluster not replicated to another cluster."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    # remove 1 unit (for CI)
+    unit_ids = get_application_unit_ids(ops_test, app=app)
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{max(unit_ids)}")
+    await ops_test.model.wait_for_idle(
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=len(unit_ids) - 1,
+        idle_period=IDLE_PERIOD,
+    )
+
+    index_name = "test_index_unique_cluster_dbs"
+
+    # index document in the current cluster
+    main_app_leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    await index_doc(ops_test, app, main_app_leader_unit_ip, index_name, doc_id=1)
+
+    # deploy new cluster
+    my_charm = await ops_test.build_charm(".")
+    await ops_test.model.deploy(my_charm, num_units=1, application_name=SECOND_APP_NAME)
+    await ops_test.model.relate(SECOND_APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.wait_for_idle(apps=[SECOND_APP_NAME], status="active")
+
+    # index document in second cluster
+    second_app_leader_ip = await get_leader_unit_ip(ops_test, app=SECOND_APP_NAME)
+    await index_doc(ops_test, SECOND_APP_NAME, second_app_leader_ip, index_name, doc_id=2)
+
+    # fetch all documents in each cluster
+    current_app_docs = await search(ops_test, app, main_app_leader_unit_ip, index_name)
+    second_app_docs = await search(ops_test, SECOND_APP_NAME, second_app_leader_ip, index_name)
+
+    # check that the only doc indexed in each cluster is different
+    assert len(current_app_docs) == 1
+    assert len(second_app_docs) == 1
+    assert current_app_docs[0] != second_app_docs[0]
+
+    # cleanup
+    await delete_index(ops_test, app, main_app_leader_unit_ip, index_name)
+    await ops_test.model.remove_application(SECOND_APP_NAME)
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)

@@ -17,7 +17,7 @@ from tests.integration.helpers import http_request
     stop=stop_after_attempt(15),
 )
 async def create_dummy_indexes(
-    ops_test: OpsTest, unit_ip: str, max_r_shards: int, count: int = 5
+    ops_test: OpsTest, app: str, unit_ip: str, max_r_shards: int, count: int = 5
 ) -> None:
     """Create indexes."""
     for index_id in range(count):
@@ -32,6 +32,7 @@ async def create_dummy_indexes(
                     "index": {"number_of_shards": p_shards, "number_of_replicas": r_shards}
                 }
             },
+            app=app,
         )
 
 
@@ -39,13 +40,14 @@ async def create_dummy_indexes(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def delete_dummy_indexes(ops_test: OpsTest, unit_ip: str, count: int = 5) -> None:
+async def delete_dummy_indexes(ops_test: OpsTest, app: str, unit_ip: str, count: int = 5) -> None:
     """Delete dummy indexes."""
     for index_id in range(count):
         await http_request(
             ops_test,
             "DELETE",
             f"https://{unit_ip}:9200/index_{index_id}",
+            app=app,
         )
 
 
@@ -53,7 +55,7 @@ async def delete_dummy_indexes(ops_test: OpsTest, unit_ip: str, count: int = 5) 
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def create_dummy_docs(ops_test: OpsTest, unit_ip: str, count: int = 5) -> None:
+async def create_dummy_docs(ops_test: OpsTest, app: str, unit_ip: str, count: int = 5) -> None:
     """Store documents in the dummy indexes."""
     all_docs = ""
     for index_id in range(count):
@@ -67,7 +69,7 @@ async def create_dummy_docs(ops_test: OpsTest, unit_ip: str, count: int = 5) -> 
                 f'Store_Id": "{randint(1, 250)}"}}\n'
             )
 
-    await http_request(ops_test, "PUT", f"https://{unit_ip}:9200/_bulk", payload=all_docs)
+    await http_request(ops_test, "PUT", f"https://{unit_ip}:9200/_bulk", payload=all_docs, app=app)
 
 
 @retry(
@@ -75,7 +77,12 @@ async def create_dummy_docs(ops_test: OpsTest, unit_ip: str, count: int = 5) -> 
     stop=stop_after_attempt(15),
 )
 async def create_index(
-    ops_test: OpsTest, unit_ip: str, index_name: str, p_shards: int = 1, r_shards: int = 1
+    ops_test: OpsTest,
+    app: str,
+    unit_ip: str,
+    index_name: str,
+    p_shards: int = 1,
+    r_shards: int = 1,
 ) -> None:
     """Create an index with a set number of primary and replica shards."""
     await http_request(
@@ -83,6 +90,7 @@ async def create_index(
         "PUT",
         f"https://{unit_ip}:9200/{index_name}",
         {"settings": {"index": {"number_of_shards": p_shards, "number_of_replicas": r_shards}}},
+        app=app,
     )
 
 
@@ -92,6 +100,7 @@ async def create_index(
 )
 async def index_doc(
     ops_test: OpsTest,
+    app: str,
     unit_ip: str,
     index_name: str,
     doc_id: int,
@@ -103,23 +112,27 @@ async def index_doc(
         doc = default_doc(index_name, doc_id)
 
     await http_request(
-        ops_test, "PUT", f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}", payload=doc
+        ops_test, "PUT", f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}", payload=doc, app=app
     )
 
     # a refresh makes the indexed data available for search, runs by default every 30 sec,
     # but we can manually trigger it like below
     if refresh:
-        await http_request(ops_test, "POST", f"https://{unit_ip}:9200/{index_name}/_refresh")
+        await http_request(
+            ops_test, "POST", f"https://{unit_ip}:9200/{index_name}/_refresh", app=app
+        )
 
 
 @retry(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def get_doc(ops_test: OpsTest, unit_ip: str, index_name: str, doc_id: int) -> Dict[str, Any]:
+async def get_doc(
+    ops_test: OpsTest, app: str, unit_ip: str, index_name: str, doc_id: int
+) -> Dict[str, Any]:
     """Fetch a document by id."""
     return await http_request(
-        ops_test, "GET", f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}"
+        ops_test, "GET", f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}", app=app
     )
 
 
@@ -129,17 +142,18 @@ async def get_doc(ops_test: OpsTest, unit_ip: str, index_name: str, doc_id: int)
 )
 async def search(
     ops_test: OpsTest,
+    app: str,
     unit_ip: str,
     index_name: str,
-    query: Optional[Dict[str, Any]],
-    preference: Optional[str],
+    query: Optional[Dict[str, Any]] = None,
+    preference: Optional[str] = None,
 ) -> Optional[List[Dict[str, Any]]]:
     """Search documents."""
     endpoint = f"https://{unit_ip}:9200/{index_name}/_search"
     if preference:
         endpoint = f"{endpoint}?preference={preference}"
 
-    resp = await http_request(ops_test, "GET", endpoint, payload=query)
+    resp = await http_request(ops_test, "GET", endpoint, payload=query, app=app)
     return resp["hits"]["hits"]
 
 
@@ -147,12 +161,15 @@ async def search(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def delete_doc(ops_test: OpsTest, unit_ip: str, index_name: str, doc_id: int) -> None:
+async def delete_doc(
+    ops_test: OpsTest, app: str, unit_ip: str, index_name: str, doc_id: int
+) -> None:
     """Delete a document by id."""
     await http_request(
         ops_test,
         "DELETE",
         f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}",
+        app=app,
     )
 
 
@@ -160,12 +177,13 @@ async def delete_doc(ops_test: OpsTest, unit_ip: str, index_name: str, doc_id: i
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def delete_index(ops_test: OpsTest, unit_ip: str, index_name: str) -> None:
+async def delete_index(ops_test: OpsTest, app: str, unit_ip: str, index_name: str) -> None:
     """Delete an index."""
     await http_request(
         ops_test,
         "DELETE",
         f"https://{unit_ip}:9200/{index_name}/",
+        app=app,
     )
 
 
