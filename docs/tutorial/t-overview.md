@@ -13,5 +13,5 @@ This tutorial assumes a basic understanding of the following:
 
 - Basic linux commands.
 - OpenSearch concepts such as indices and users.
-  - To learn more about these concepts, visit the [OpenSearch Documentation](https://opensearch.org/docs/latest/)
 
+To learn more about these concepts, visit the [OpenSearch Documentation](https://opensearch.org/docs/latest/)

@@ -32,4 +32,3 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 | 2     | r-actions                  | [Actions](https://charmhub.io/opensearch/actions)                                          |
 | 2     | r-configurations           | [Configurations](https://charmhub.io/opensearch/configure)                                 |
 | 2     | r-libraries                | [Libraries](https://charmhub.io/opensearch/libraries/helpers)                              |
-
