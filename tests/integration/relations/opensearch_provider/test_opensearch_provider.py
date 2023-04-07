@@ -5,7 +5,6 @@ import asyncio
 import json
 import logging
 import re
-import time
 
 import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
@@ -98,7 +97,7 @@ async def test_index_usage(ops_test: OpsTest):
         relation_name=FIRST_RELATION_NAME,
         relation_id=client_relation.id,
         method="PUT",
-        endpoint="/albums/_doc/1",
+        endpoint="/albums/_doc/1?refresh=true",
         payload=re.escape(
             '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
         ),
@@ -137,12 +136,9 @@ async def test_bulk_index_usage(ops_test: OpsTest):
         relation_name=FIRST_RELATION_NAME,
         relation_id=client_relation.id,
         method="POST",
-        endpoint="/_bulk",
+        endpoint="/_bulk?refresh=true",
         payload=re.escape(bulk_payload),
     )
-
-    # Wait so we aren't writing data and requesting it straight away
-    time.sleep(1)
 
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_bulk_read_index = await run_request(
