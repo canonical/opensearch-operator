@@ -5,9 +5,9 @@ The Charmed OpenSearch Operator delivers automated operations management from [d
 2. [Deploying OpenSearch](./3-deploy-opensearch.md)
 3. [Enable TLS](./4-enable-tls.md)
 4. [Connecting to OpenSearch](./5-connecting-to-opensearch.md)
-5. [Managing User Credentials](./6-user-management.md)
-6. [Horizontal Scaling](./7-horizontal-scaling.md)
-7. [Teardown](./8-teardown.md)
+5. [Managing User Credentials](./t-user-management.md)
+6. [Horizontal Scaling](./t-horizontal-scaling.md)
+7. [Teardown](./t-teardown.md)
 
 This tutorial assumes a basic understanding of the following:
 
@@ -15,10 +15,3 @@ This tutorial assumes a basic understanding of the following:
 - OpenSearch concepts such as indices and users.
   - To learn more about these concepts, visit the [OpenSearch Documentation](https://opensearch.org/docs/latest/)
 
-### License
-
-The Charmed OpenSearch Operator is distributed under the Apache Software License, version 2.0. It [installs/operates/depends on] [OpenSearch Community Edition](https://github.com/opensearch-project/OpenSearch/), which is licensed under the Apache Software License, version 2.0.
-
-### Trademark Notice
-
-OpenSearch is a registered trademark of Amazon Web Services. Other trademarks are property of their respective owners.

@@ -326,4 +326,4 @@ Also, note that the certificate does not change across relations. To create a ne
 
 ## Next Steps
 
-The next stage in this tutorial is about managing user credentials through Juju Actions, and can be found [here](6-user-management.md).
+The next stage in this tutorial is about managing user credentials through Juju Actions, and can be found [here](t-user-management.md).

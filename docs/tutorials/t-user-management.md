@@ -157,4 +157,4 @@ unit-opensearch-0:
 
 ## Next Steps
 
-The next stage in this tutorial is about horizontally scaling the OpenSearch cluster, and can be found [here](./7-horizontal-scaling.md).
+The next stage in this tutorial is about horizontally scaling the OpenSearch cluster, and can be found [here](./t-horizontal-scaling.md).
