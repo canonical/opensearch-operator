@@ -178,6 +178,7 @@ async def test_kill_db_process_node_with_primary_shard(
     # fetch unit hosting the new primary shard of the previous index
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     units_with_p_shards = [shard.unit_id for shard in shards if shard.is_prim]
+    assert len(units_with_p_shards) == 1
     for unit_id in units_with_p_shards:
         assert (
             unit_id != first_unit_with_primary_shard
