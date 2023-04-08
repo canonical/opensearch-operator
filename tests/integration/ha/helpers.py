@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-import subprocess
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
@@ -181,7 +180,9 @@ async def send_kill_signal_to_process(
     """Run kill with signal in specific unit."""
     unit_name = f"{app}/{unit_id}"
 
-    opensearch_pid = subprocess.getoutput("sudo lsof -ti:9200")
+    get_pid_cmd = f"run --unit {unit_name} -- sudo lsof -ti:9200"
+    _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=True)
+
     if not opensearch_pid:
         return
 
