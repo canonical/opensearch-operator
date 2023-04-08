@@ -162,8 +162,8 @@ async def test_safe_scale_down_shards_realloc(
     unit_ids_to_keep = [unit_id for unit_id in unit_ids if unit_id != unit_id_to_stop]
 
     # create indices with right num of primary and replica shards, and populate with data
-    await create_dummy_indexes(ops_test, leader_unit_ip, max_r_shards=init_units_count)
-    await create_dummy_docs(ops_test, leader_unit_ip)
+    await create_dummy_indexes(ops_test, app, leader_unit_ip, max_r_shards=init_units_count)
+    await create_dummy_docs(ops_test, app, leader_unit_ip)
 
     # get initial cluster health - expected to be all good: green
     cluster_health_resp = await cluster_health(ops_test, leader_unit_ip, wait_for_green_first=True)
@@ -236,7 +236,7 @@ async def test_safe_scale_down_shards_realloc(
     assert new_shards_per_node.get(-1, 0) == 0
 
     # delete the dummy indexes
-    await delete_dummy_indexes(ops_test, leader_unit_ip)
+    await delete_dummy_indexes(ops_test, app, leader_unit_ip)
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
