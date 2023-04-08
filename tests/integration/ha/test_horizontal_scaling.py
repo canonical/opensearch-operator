@@ -42,9 +42,10 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def c_writes(ops_test: OpsTest):
+async def c_writes(ops_test: OpsTest):
     """Creates instance of the ContinuousWrites."""
-    return ContinuousWrites(ops_test)
+    app = (await app_name(ops_test)) or APP_NAME
+    return ContinuousWrites(ops_test, app)
 
 
 @pytest.fixture()
