@@ -178,9 +178,12 @@ async def test_kill_db_process_node_with_primary_shard(
     # fetch unit hosting the new primary shard of the previous index
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     units_with_p_shards = [shard.unit_id for shard in shards if shard.is_prim]
-    for unit in units_with_p_shards:
-        assert unit != first_unit_with_primary_shard
+    for unit_id in units_with_p_shards:
+        assert (
+            unit_id != first_unit_with_primary_shard
+        ), "Primary shard still assigned to the unit where the service was killed."
 
+    # check that the unit previously hosting the primary shard now hosts a replica
     units_with_r_shards = [shard.unit_id for shard in shards if not shard.is_prim]
     assert first_unit_with_primary_shard in units_with_r_shards
 
