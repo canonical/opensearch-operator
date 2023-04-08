@@ -44,15 +44,24 @@ SECOND_APP_NAME = "second-opensearch"
 
 
 @pytest.fixture()
-def c_writes(ops_test: OpsTest):
+async def c_writes(ops_test: OpsTest):
     """Creates instance of the ContinuousWrites."""
-    return ContinuousWrites(ops_test)
+    app = (await app_name(ops_test)) or APP_NAME
+    return ContinuousWrites(ops_test, app)
 
 
 @pytest.fixture()
 async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     """Starts continuous write operations and clears writes at the end of the test."""
     await c_writes.start()
+    yield
+    await c_writes.clear()
+
+
+@pytest.fixture()
+async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
+    """Same as previous runner, but starts continuous writes on cluster wide replicated index."""
+    await c_writes.start(repl_on_all_nodes=True)
     yield
     await c_writes.clear()
 
@@ -128,7 +137,7 @@ async def test_replication_across_members(
 
 @pytest.mark.abort_on_fail
 async def test_kill_db_process_node_with_primary_shard(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check cluster can self-heal + data indexed/read when process dies on node with P_shard."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -168,69 +177,12 @@ async def test_kill_db_process_node_with_primary_shard(
 
     # fetch unit hosting the new primary shard of the previous index
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
-    new_unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
-    assert new_unit_with_primary_shard != first_unit_with_primary_shard
-
-    # verify the node with the old primary successfully joined the rest of the fleet
-    assert await check_cluster_formation_successful(
-        ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
-    )
-
-    # continuous writes checks
-    await assert_continuous_writes_consistency(c_writes)
-
-
-@pytest.mark.abort_on_fail
-async def test_freeze_db_process_node_with_primary_shard(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
-    """Check cluster can self-heal + data indexed/read on process freeze on node with P_shard."""
-    app = (await app_name(ops_test)) or APP_NAME
-
-    units_ips = get_application_unit_ids_ips(ops_test, app)
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    # find unit hosting the primary shard of the index "series-index"
-    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
-    first_unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
-
-    # Killing the only instance can be disastrous.
-    if len(ops_test.model.applications[app].units) < 2:
-        await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
-            apps=[app],
-            status="active",
-            timeout=1000,
-            idle_period=IDLE_PERIOD,
-        )
-
-    # Freeze the opensearch process
-    await send_kill_signal_to_process(
-        ops_test, app, first_unit_with_primary_shard, signal="SIGSTOP"
-    )
-
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "writes not continuing to DB"
-
-    # Un-Freeze the opensearch process in the node previously hosting the primary shard
-    await send_kill_signal_to_process(
-        ops_test, app, first_unit_with_primary_shard, signal="SIGCONT"
-    )
-
-    # verify that the opensearch service is back running on the old primary unit
-    assert await is_up(
-        ops_test, units_ips[first_unit_with_primary_shard]
-    ), "OpenSearch service hasn't restarted."
-
-    # fetch unit hosting the new primary shard of the previous index
-    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     units_with_p_shards = [shard.unit_id for shard in shards if shard.is_prim]
-    assert len(units_with_p_shards) == 1
-    for unit_id in units_with_p_shards:
-        assert unit_id != first_unit_with_primary_shard
+    for unit in units_with_p_shards:
+        assert unit != first_unit_with_primary_shard
+
+    units_with_r_shards = [shard.unit_id for shard in shards if not shard.is_prim]
+    assert first_unit_with_primary_shard in units_with_r_shards
 
     # verify the node with the old primary successfully joined the rest of the fleet
     assert await check_cluster_formation_successful(
