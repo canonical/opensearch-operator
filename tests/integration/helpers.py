@@ -246,6 +246,7 @@ async def http_request(
     resp_status_code: bool = False,
     verify=True,
     user_password: Optional[str] = None,
+    app: str = APP_NAME,
 ):
     """Makes an HTTP request.
 
@@ -257,11 +258,12 @@ async def http_request(
         resp_status_code: whether to only return the http response code.
         verify: whether verify certificate chain or not
         user_password: use alternative password than the admin one in the secrets.
+        app: the name of the current application.
 
     Returns:
         A json object.
     """
-    admin_secrets = await get_admin_secrets(ops_test)
+    admin_secrets = await get_admin_secrets(ops_test, app=app)
 
     # fetch the cluster info from the endpoint of this unit
     with requests.Session() as session, tempfile.NamedTemporaryFile(mode="w+") as chain:
