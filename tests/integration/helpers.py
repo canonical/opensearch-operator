@@ -336,7 +336,9 @@ async def cluster_health(
 
 async def ping_cluster(ops_test: OpsTest, unit_ip: str) -> Dict[str, any]:
     """Check that we can connect to the root opensearch endpoint on a given unit."""
-    return await http_request(ops_test, "GET", f"https://{unit_ip}:9200/")
+    result = await http_request(ops_test, "GET", f"https://{unit_ip}:9200/")
+    logger.error(result)
+    return result
 
 
 @retry(
