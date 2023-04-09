@@ -222,7 +222,7 @@ async def test_freeze_db_process_node_with_primary_shard(
         )
 
     # Freeze the opensearch process
-    await send_kill_signal_to_process(
+    opensearch_pid = await send_kill_signal_to_process(
         ops_test, app, first_unit_with_primary_shard, signal="SIGSTOP"
     )
 
@@ -234,7 +234,11 @@ async def test_freeze_db_process_node_with_primary_shard(
 
     # Un-Freeze the opensearch process in the node previously hosting the primary shard
     await send_kill_signal_to_process(
-        ops_test, app, first_unit_with_primary_shard, signal="SIGCONT"
+        ops_test,
+        app,
+        first_unit_with_primary_shard,
+        signal="SIGCONT",
+        opensearch_pid=opensearch_pid,
     )
 
     # verify that the opensearch service is back running on the unit previously hosting the p_shard
