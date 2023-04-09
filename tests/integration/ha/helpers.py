@@ -187,7 +187,7 @@ async def send_kill_signal_to_process(
     if not opensearch_pid:
         return None
 
-    kill_cmd = f"run --unit {unit_name} -- sudo kill -{signal.upper()} {opensearch_pid}"
+    kill_cmd = f"run --unit {unit_name} -- kill -{signal.upper()} {opensearch_pid}"
     await ops_test.juju(*kill_cmd.split(), check=True)
 
     return opensearch_pid
