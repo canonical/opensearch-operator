@@ -795,7 +795,14 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
-        if set(updated_nodes.values()) == set(current_nodes):
+        updated_nodes.sort(key=lambda node: node.name)
+        current_nodes.sort(key=lambda node: node.name)
+        update = False
+        for updated_node, current_node in zip(updated_nodes, current_nodes):
+            if updated_node != current_node:
+                update = True
+                break
+        if not update:
             # Nodes haven't changed, so do nothing
             return
 
