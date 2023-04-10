@@ -795,15 +795,17 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
-        updated_nodes.sort(key=lambda node: node.name)
+        updated_nodes_list = list(updated_nodes.values())
+
+        updated_nodes_list.sort(key=lambda node: node.name)
         current_nodes.sort(key=lambda node: node.name)
-        update = False
-        for updated_node, current_node in zip(updated_nodes, current_nodes):
+        nodes_identical = True
+        for updated_node, current_node in zip(updated_nodes_list, current_nodes):
             if updated_node != current_node:
-                update = True
+                nodes_identical = False
                 break
-        if not update:
-            # Nodes haven't changed, so do nothing
+        if nodes_identical:
+            # Nodes haven't changed, don't update
             return
 
         self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
