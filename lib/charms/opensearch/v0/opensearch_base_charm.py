@@ -795,7 +795,8 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
-        if updated_nodes.values() == current_nodes:
+        if set(updated_nodes.values()) == set(current_nodes):
+            # Nodes haven't changed, so do nothing
             return
 
         self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
