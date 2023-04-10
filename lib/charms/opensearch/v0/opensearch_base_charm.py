@@ -795,6 +795,9 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
+        if updated_nodes.values() == current_nodes:
+            return
+
         self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
 
         # since the above won't trigger a peer rel changed on leader, we'll trigger it manually
