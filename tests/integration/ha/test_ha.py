@@ -137,10 +137,13 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
 
     # verify that a new cluster manager got elected
     ips = get_application_unit_ips(ops_test, app)
-    ips.remove(cm_public_address)
-    ips.remove(cm.public_address)
+    logger.error(ips)
     logger.error(cm_public_address)
     logger.error(cm.public_address)
+    if cm_public_address in ips:
+        ips.remove(cm_public_address)
+    if cm.public_address in ips:
+        ips.remove(cm.public_address)
     new_cm = await get_elected_cm_unit(ops_test, ips[0])
     assert new_cm.name != cm.name
 
