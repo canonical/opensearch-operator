@@ -138,6 +138,9 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     # verify that a new cluster manager got elected
     ips = get_application_unit_ips(ops_test, app)
     ips.remove(cm_public_address)
+    ips.remove(cm.public_address)
+    logger.error(cm_public_address)
+    logger.error(cm.public_address)
     new_cm = await get_elected_cm_unit(ops_test, ips[0])
     assert new_cm.name != cm.name
 
@@ -152,9 +155,6 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
 
     # wait until network is reestablished for the unit
     wait_network_restore(model_name, cm_hostname, cm_public_address)
-    await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=3
-    )
 
     # self healing is performed with update status hook. Status also checks our node roles are
     # correctly configured.
@@ -167,15 +167,10 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     # fails - can't access opensearch from this node anymore.
     # we can still access networking, but opensearch is failing to reconnect for one reason or
     # another. TODO next week figure out opensearch node reconnect policy/stratz
-    # TODO assertion commented out
-    # assert await ping_cluster(
-    logger.error(
-        await ping_cluster(
-            ops_test,
-            cm.public_address,
-        )
-    )
-    # , f"Connection to host {cm.public_address} is not possible"
+    assert await ping_cluster(
+        ops_test,
+        cm.public_address,
+    ), f"Connection to host {cm.public_address} is not possible"
 
     # verify that old cluster manager is up to date.
     assert await secondary_up_to_date(
@@ -207,7 +202,7 @@ async def test_replication_across_members(
     await index_doc(ops_test, app, leader_unit_ip, index_name, doc_id)
 
     # check that the doc can be retrieved from any node
-    for u_id, u_ip in units.items():
+    for _, u_ip in units.items():
         docs = await search(
             ops_test,
             app,

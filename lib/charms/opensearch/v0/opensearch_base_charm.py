@@ -362,6 +362,13 @@ class OpenSearchBaseCharm(CharmBase):
         if not self.opensearch.is_node_up():
             return
 
+        for relation in self.model.relations.get(ClientRelationName, []):
+            self.opensearch_provider.update_endpoints(relation)
+
+        self.user_manager.remove_users_and_roles()
+
+        self._compute_and_broadcast_updated_topology(self._get_nodes(True))
+
         # if there are exclusions to be removed
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
@@ -369,12 +376,7 @@ class OpenSearchBaseCharm(CharmBase):
                 event.defer()
                 return
 
-        for relation in self.model.relations.get(ClientRelationName, []):
-            self.opensearch_provider.update_endpoints(relation)
-
-        self.user_manager.remove_users_and_roles()
-
-        # If relation broken - leave
+        # If cert relation broken - leave
         if self.model.get_relation("certificates") is not None:
             return
 
