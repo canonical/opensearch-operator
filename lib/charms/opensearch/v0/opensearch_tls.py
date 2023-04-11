@@ -29,6 +29,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     generate_csr,
     generate_private_key,
 )
+
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
@@ -112,6 +113,10 @@ class OpenSearchTLS(Object):
 
         old_cert = secrets.get("cert", None)
         renewal = old_cert is not None and old_cert != event.certificate
+
+        if scope == Scope.APP and not self.charm.unit.is_leader():
+            logger.error("nonleader units cannot modify app-level certs")
+            return
 
         self.charm.secrets.put_object(
             scope,

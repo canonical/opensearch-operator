@@ -367,8 +367,16 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.user_manager.remove_users_and_roles()
 
+        # try:
+        #     # Retrieve the nodes of the cluster, needed to configure this node
+        #     nodes = self._get_nodes(False)
+        #     # Set the configuration of the node
+        #     self._set_node_conf(nodes)
+        # except OpenSearchHttpError:
+        #     pass
+
         if self.unit.is_leader():
-            self._compute_and_broadcast_updated_topology(self._get_nodes(True))
+            # self._compute_and_broadcast_updated_topology(self._get_nodes(True))
 
             # if there are exclusions to be removed
             self.opensearch_exclusions.cleanup()

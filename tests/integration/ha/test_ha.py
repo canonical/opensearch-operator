@@ -20,6 +20,7 @@ from tests.integration.ha.helpers import (
     restore_network_for_unit,
     secondary_up_to_date,
     wait_network_restore,
+    instance_ip
 )
 from tests.integration.ha.helpers_data import (
     create_index,
@@ -101,6 +102,7 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     app = await app_name(ops_test)
     ip_addresses = get_application_unit_ips(ops_test, app)
     cm = await get_elected_cm_unit(ops_test, ip_addresses[0])
+    logger.error(dir(cm))
     all_units = ops_test.model.applications[app].units
     model_name = ops_test.model.info.name
 
@@ -135,17 +137,14 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     writes = await c_writes.count()
     time.sleep(5)
     more_writes = await c_writes.count()
-    assert more_writes > writes, "writes not continuing to DB"
+    assert more_writes > writes, "writes not continuing to OpenSearch"
 
     # verify that a new cluster manager got elected
     ips = get_application_unit_ips(ops_test, app)
     logger.error(ips)
     logger.error(cm_public_address)
-    logger.error(cm.public_address)
     if cm_public_address in ips:
         ips.remove(cm_public_address)
-    if cm.public_address in ips:
-        ips.remove(cm.public_address)
     new_cm = await get_elected_cm_unit(ops_test, ips[0])
     assert new_cm.name != cm.name
 
@@ -168,18 +167,19 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     )
 
     # verify we still have connection to the old cluster manager
-    # new_ip = instance_ip(model_name, cm_hostname)
     # fails - can't access opensearch from this node anymore.
     # we can still access networking, but opensearch is failing to reconnect for one reason or
     # another. TODO next week figure out opensearch node reconnect policy/stratz
+    new_ip = instance_ip(model_name, cm_hostname)
+    logger.error(f"attempting connection to {new_ip}")
     assert await ping_cluster(
         ops_test,
-        cm.public_address,
-    ), f"Connection to host {cm.public_address} is not possible"
+        new_ip,
+    ), f"Connection to host {new_ip} is not possible"
 
     # verify that old cluster manager is up to date.
     assert await secondary_up_to_date(
-        ops_test, cm.public_address, total_expected_writes.count
+        ops_test, new_ip, total_expected_writes.count
     ), "secondary not up to date with the cluster after restarting."
 
 
