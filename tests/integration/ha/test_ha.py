@@ -211,36 +211,40 @@ async def test_primary_shard_network_cut(ops_test, c_writes, c_writes_runner):
     # locate cluster manager unit
     app = await app_name(ops_test)
     ip_addresses = get_application_unit_ips(ops_test, app)
-    cm = await get_elected_cm_unit(ops_test, ip_addresses[0])
-    logger.error(dir(cm))
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    # find unit hosting the primary shard of the index "series-index"
+    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    primary_shard_unit = [shard.unit_id for shard in shards if shard.is_prim][0]
+
+    logger.error(dir(primary_shard_unit))
     all_units = ops_test.model.applications[app].units
     model_name = ops_test.model.info.name
 
-    cm_hostname = await unit_hostname(ops_test, cm.name)
-    cm_public_address = cm.public_address
+    primary_hostname = await unit_hostname(ops_test, primary_shard_unit.name)
+    primary_public_address = primary_shard_unit.public_address
 
     # verify the cluster works fine before we can test
-    # TODO update assertion to check the cluster returns what we expect
     assert await ping_cluster(
         ops_test,
-        cm_public_address,
-    ), f"Connection to host {cm_public_address} is not possible"
+        primary_public_address,
+    ), f"Connection to host {primary_public_address} is not possible"
 
-    logger.error(f"cutting network for unit {cm.name} with address {cm.public_address}")
+    logger.error(f"cutting network for unit {primary_shard_unit.name} with address {primary_shard_unit.public_address}")
 
-    cut_network_from_unit(cm_hostname)
+    cut_network_from_unit(primary_hostname)
 
     time.sleep(30)
 
     # verify machine is not reachable from peer units
-    for unit in set(all_units) - {cm}:
+    for unit in set(all_units) - {primary_shard_unit}:
         hostname = await unit_hostname(ops_test, unit.name)
-        assert not is_machine_reachable_from(hostname, cm_hostname), "unit is reachable from peer"
+        assert not is_machine_reachable_from(hostname, primary_hostname), "unit is reachable from peer"
 
     # verify machine is not reachable from controller
     controller = await get_controller_machine(ops_test)
     assert not is_machine_reachable_from(
-        controller, cm_hostname
+        controller, primary_hostname
     ), "unit is reachable from controller"
 
     # Wait for another unit to be elected cluster manager TODO this may be part of the problem
@@ -256,11 +260,12 @@ async def test_primary_shard_network_cut(ops_test, c_writes, c_writes_runner):
     # verify that a new cluster manager got elected
     ips = get_application_unit_ips(ops_test, app)
     logger.error(ips)
-    logger.error(cm_public_address)
-    if cm_public_address in ips:
-        ips.remove(cm_public_address)
-    new_cm = await get_elected_cm_unit(ops_test, ips[0])
-    assert new_cm.name != cm.name
+    logger.error(primary_public_address)
+    if primary_public_address in ips:
+        ips.remove(primary_public_address)
+    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    new_primary_shard_unit = [shard.unit_id for shard in shards if shard.is_prim][0]
+    assert new_primary_shard_unit.name != primary_shard_unit.name
 
     # verify that no writes to the db were missed
     total_expected_writes = await c_writes.stop()
@@ -269,10 +274,10 @@ async def test_primary_shard_network_cut(ops_test, c_writes, c_writes_runner):
     assert total_expected_writes.count == actual_writes, "writes to the db were missed."
 
     # restore network connectivity to old cluster manager
-    restore_network_for_unit(cm_hostname)
+    restore_network_for_unit(primary_hostname)
 
     # wait until network is reestablished for the unit
-    wait_network_restore(model_name, cm_hostname, cm_public_address)
+    wait_network_restore(model_name, primary_hostname, primary_public_address)
 
     time.sleep(30)
 
@@ -285,7 +290,7 @@ async def test_primary_shard_network_cut(ops_test, c_writes, c_writes_runner):
     # verify we still have connection to the old cluster manager
     # fails - can't access opensearch from this node anymore. We can still access networking, but
     # opensearch is failing to reconnect for one reason or another.
-    new_ip = instance_ip(model_name, cm_hostname)
+    new_ip = instance_ip(model_name, primary_hostname)
     logger.error(f"attempting connection to {new_ip}")
     assert await ping_cluster(
         ops_test,
