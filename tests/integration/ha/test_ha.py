@@ -16,11 +16,11 @@ from tests.integration.ha.helpers import (
     cut_network_from_unit,
     get_controller_machine,
     get_elected_cm_unit,
+    instance_ip,
     is_machine_reachable_from,
     restore_network_for_unit,
     secondary_up_to_date,
     wait_network_restore,
-    instance_ip
 )
 from tests.integration.ha.helpers_data import (
     create_index,
