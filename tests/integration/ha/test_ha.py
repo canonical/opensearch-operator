@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-
 import asyncio
 import logging
 import time
@@ -10,39 +9,31 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (
+from tests.integration.ha.helpers import (  # assert_continuous_writes_consistency,; get_shards_by_index,; send_kill_signal_to_process,
     app_name,
-    assert_continuous_writes_consistency,
     cut_network_from_unit,
     get_controller_machine,
     get_elected_cm_unit,
-    get_shards_by_index,
     instance_ip,
     is_machine_reachable_from,
     restore_network_for_unit,
     secondary_up_to_date,
-    send_kill_signal_to_process,
     wait_network_restore,
 )
-from tests.integration.ha.helpers_data import (
-    create_index,
-    default_doc,
-    delete_index,
-    index_doc,
-    search,
-)
-from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (
+
+# from tests.integration.ha.helpers_data import (
+#     create_index,
+#     default_doc,
+#     delete_index,
+#     index_doc,
+#     search,
+# )
+# from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
+from tests.integration.helpers import (  # check_cluster_formation_successful,; get_application_unit_ids,; get_application_unit_ids_ips,; get_application_unit_names,; get_leader_unit_ip,; is_up,
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
-    check_cluster_formation_successful,
-    get_application_unit_ids,
-    get_application_unit_ids_ips,
     get_application_unit_ips,
-    get_application_unit_names,
-    get_leader_unit_ip,
-    is_up,
     ping_cluster,
     unit_hostname,
 )
@@ -201,7 +192,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 # async def test_primary_shard_network_cut(ops_test, c_writes, c_writes_runner):
 #     """Test that we can cut the network to the primary shard and the cluster stays online.
 
-#     TODO this may require scaling the cluster up to 5 nodes, so we can guarantee 3 functional nodes
+#     TODO this may require scaling the cluster up to 5 nodes, so we can guarantee 3 working nodes
 #     on update.
 #     """
 #     # locate cluster manager unit
@@ -226,7 +217,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 #     ), f"Connection to host {primary_public_address} is not possible"
 
 #     logger.error(
-#         f"cutting network for unit {primary_shard_unit.name} with address {primary_shard_unit.public_address}"
+#         f"cutting network for unit {primary_shard_unit.name} with address {primary_shard_unit.public_address}" # noqa
 #     )
 
 #     cut_network_from_unit(primary_hostname)
@@ -249,7 +240,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 #     # Wait for another unit to be elected cluster manager TODO this may be part of the problem
 #     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
-#     # verify new writes are continuing by counting the number of writes before and after a 5 second
+#     # verify new writes are continuing by counting the number of writes before and after a 5 second # noqa
 #     # wait
 #     writes = await c_writes.count()
 #     time.sleep(5)
@@ -373,7 +364,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 #         ops_test, app, first_unit_with_primary_shard, signal="SIGKILL"
 #     )
 
-#     # verify new writes are continuing by counting the number of writes before and after 5 seconds
+#     # verify new writes are continuing by counting the number of writes before and after 5 seconds # noqa
 #     writes = await c_writes.count()
 #     time.sleep(5)
 #     more_writes = await c_writes.count()
