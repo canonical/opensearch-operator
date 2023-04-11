@@ -132,6 +132,8 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 
     logger.error(f"cutting network for unit {cm.name} with address {cm.public_address}")
 
+    time.sleep(30)
+
     cut_network_from_unit(cm_hostname)
 
     time.sleep(30)
@@ -210,7 +212,6 @@ async def test_primary_shard_network_cut(ops_test, c_writes, c_writes_runner):
     """
     # locate cluster manager unit
     app = await app_name(ops_test)
-    ip_addresses = get_application_unit_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     # find unit hosting the primary shard of the index "series-index"
@@ -230,7 +231,9 @@ async def test_primary_shard_network_cut(ops_test, c_writes, c_writes_runner):
         primary_public_address,
     ), f"Connection to host {primary_public_address} is not possible"
 
-    logger.error(f"cutting network for unit {primary_shard_unit.name} with address {primary_shard_unit.public_address}")
+    logger.error(
+        f"cutting network for unit {primary_shard_unit.name} with address {primary_shard_unit.public_address}"
+    )
 
     cut_network_from_unit(primary_hostname)
 
@@ -239,7 +242,9 @@ async def test_primary_shard_network_cut(ops_test, c_writes, c_writes_runner):
     # verify machine is not reachable from peer units
     for unit in set(all_units) - {primary_shard_unit}:
         hostname = await unit_hostname(ops_test, unit.name)
-        assert not is_machine_reachable_from(hostname, primary_hostname), "unit is reachable from peer"
+        assert not is_machine_reachable_from(
+            hostname, primary_hostname
+        ), "unit is reachable from peer"
 
     # verify machine is not reachable from controller
     controller = await get_controller_machine(ops_test)
