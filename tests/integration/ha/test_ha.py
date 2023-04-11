@@ -166,9 +166,9 @@ async def test_kill_db_process_node_with_primary_shard(
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
     writes = await c_writes.count()
-    time.sleep(30)  # the opensearch service is scheduled to restart after 20 sec
+    time.sleep(5)
     more_writes = await c_writes.count()
-    assert more_writes > writes, "writes not continuing to DB"
+    assert more_writes > writes, "Writes not continuing to DB"
 
     # verify that the opensearch service is back running on the old primary unit
     assert await is_up(
