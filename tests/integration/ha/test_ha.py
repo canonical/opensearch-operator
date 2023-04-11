@@ -198,10 +198,10 @@ async def test_kill_db_process_node_with_primary_shard(
 
 
 @pytest.mark.abort_on_fail
-async def test_kill_db_process_node_with_primary_shard(
-        ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+async def test_freeze_db_process_node_with_primary_shard(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
-    """Check cluster can self-heal + data indexed/read when process dies on node with P_shard."""
+    """Check cluster can self-heal + data indexed/read on process freeze on node with P_shard."""
     app = (await app_name(ops_test)) or APP_NAME
 
     units_ips = get_application_unit_ids_ips(ops_test, app)
@@ -221,18 +221,27 @@ async def test_kill_db_process_node_with_primary_shard(
             idle_period=IDLE_PERIOD,
         )
 
-    # Kill the opensearch process
-    await send_kill_signal_to_process(
-        ops_test, app, first_unit_with_primary_shard, signal="SIGKILL"
+    # Freeze the opensearch process
+    opensearch_pid = await send_kill_signal_to_process(
+        ops_test, app, first_unit_with_primary_shard, signal="SIGSTOP"
     )
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
     writes = await c_writes.count()
-    time.sleep(30)  # the opensearch service is scheduled to restart after 20 sec
+    time.sleep(5)
     more_writes = await c_writes.count()
     assert more_writes > writes, "writes not continuing to DB"
 
-    # verify that the opensearch service is back running on the old primary unit
+    # Un-Freeze the opensearch process in the node previously hosting the primary shard
+    await send_kill_signal_to_process(
+        ops_test,
+        app,
+        first_unit_with_primary_shard,
+        signal="SIGCONT",
+        opensearch_pid=opensearch_pid,
+    )
+
+    # verify that the opensearch service is back running on the unit previously hosting the p_shard
     assert await is_up(
         ops_test, units_ips[first_unit_with_primary_shard]
     ), "OpenSearch service hasn't restarted."
@@ -243,14 +252,14 @@ async def test_kill_db_process_node_with_primary_shard(
     assert len(units_with_p_shards) == 1
     for unit_id in units_with_p_shards:
         assert (
-                unit_id != first_unit_with_primary_shard
-        ), "Primary shard still assigned to the unit where the service was killed."
+            unit_id != first_unit_with_primary_shard
+        ), "Primary shard still assigned to the unit where the service was stopped."
 
     # check that the unit previously hosting the primary shard now hosts a replica
     units_with_r_shards = [shard.unit_id for shard in shards if not shard.is_prim]
     assert first_unit_with_primary_shard in units_with_r_shards
 
-    # verify the node with the old primary successfully joined the rest of the fleet
+    # verify the node with the old primary successfully joined back the rest of the fleet
     assert await check_cluster_formation_successful(
         ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
     )
