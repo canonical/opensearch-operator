@@ -4,12 +4,20 @@
 
 import asyncio
 import logging
+import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import app_name, assert_continuous_writes_consistency
+from tests.integration.ha.helpers import (
+    app_name,
+    assert_continuous_writes_consistency,
+    get_elected_cm_unit,
+    secondary_up_to_date,
+    send_kill_signal_to_process,
+)
 from tests.integration.ha.helpers_data import (
     create_index,
     default_doc,
@@ -168,3 +176,55 @@ async def test_multi_clusters_db_isolation(
 
     # continuous writes checks
     await assert_continuous_writes_consistency(c_writes)
+
+
+async def test_restart_db_process(ops_test, c_writes: ContinuousWrites, c_writes_runner):
+    # locate primary unit
+    app = await app_name(ops_test)
+    ip_addresses = [unit.public_address for unit in ops_test.model.applications[app].units]
+    old_cm = await get_elected_cm_unit(ops_test, ip_addresses[0])
+
+    # send SIGTERM, we expect `systemd` to restart the process
+    sig_term_time = time.time()
+    await send_kill_signal_to_process(ops_test, old_cm.name, kill_code="SIGTERM")
+
+    # verify new writes are continuing by counting the number of writes before and after a 5 second
+    # wait
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "writes not continuing to OpenSearch"
+
+    # verify that db service got restarted and is ready
+    await ops_test.model.wait_for_idle(
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=3
+    )
+
+    # verify that a new cluster manager gets elected
+    new_cm = await get_elected_cm_unit(ops_test, ip_addresses[0])
+    assert new_cm.name != old_cm.name
+
+    # verify that a stepdown was performed on restart. SIGTERM should send a graceful restart and
+    # send a replica step down signal. Performed with a retry to give time for the logs to update.
+    # ---
+    # IN OPENSEARCH-LAND: the cluster manager should tell the other nodes that it's leaving, rather
+    # than leaving them to figure it out themselves.
+    try:
+        for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
+            with attempt:
+                assert await helpers.db_step_down(
+                    ops_test, old_cm.name, sig_term_time
+                ), "old cluster manager departed without stepping down."
+    except RetryError:
+        False, "old cluster manager departed without stepping down."
+
+    # verify that no writes to the db were missed
+    total_expected_writes = await c_writes.stop()
+    actual_writes = await c_writes.count()
+    logger.error(total_expected_writes)
+    assert total_expected_writes.count == actual_writes, "writes to the db were missed."
+
+    # verify that old primary is up to date.
+    assert await secondary_up_to_date(
+        ops_test, old_cm.public_address, total_expected_writes["number"]
+    ), "secondary not up to date with the cluster after restarting."

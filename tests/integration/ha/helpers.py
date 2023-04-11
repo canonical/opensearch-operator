@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import logging
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
@@ -9,6 +10,12 @@ from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.helpers import http_request
+
+logger = logging.getLogger(__name__)
+
+
+class ProcessError(Exception):
+    """Raised when a process fails."""
 
 
 class Shard:
@@ -52,6 +59,13 @@ async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
     # get all nodes
     resp = await http_request(ops_test, "GET", f"https://{unit_ip}:9200/_nodes")
     return int(resp["nodes"][cm_node_id]["name"].split("-")[1])
+
+
+async def get_elected_cm_unit(ops_test: OpsTest, unit_ip: str):
+    """Returns the current elected cm node unit."""
+    cm_id = await get_elected_cm_unit_id(ops_test, unit_ip)
+    opensearch_app_name = await app_name(ops_test)
+    return ops_test.model.applications[opensearch_app_name].units[cm_id]
 
 
 @retry(
@@ -172,3 +186,36 @@ async def assert_continuous_writes_consistency(c_writes: ContinuousWrites) -> No
 
     assert result.max_stored_id == result.count - 1
     assert result.max_stored_id == result.last_expected_id
+
+
+async def secondary_up_to_date(ops_test: OpsTest, unit_ip, expected_writes) -> bool:
+    """Checks if secondary is up to date with the cluster.
+
+    Retries over the period of one minute to give secondary adequate time to copy over data.
+    """
+    get_secondary_writes = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/series_index",
+    )
+    logger.error(get_secondary_writes)
+    assert get_secondary_writes == expected_writes
+
+
+async def send_kill_signal_to_process(
+    ops_test: OpsTest, app: str, unit_id: int, signal: str, opensearch_pid: Optional[int] = None
+) -> Optional[int]:
+    """Run kill with signal in specific unit."""
+    unit_name = f"{app}/{unit_id}"
+
+    if opensearch_pid is None:
+        get_pid_cmd = f"run --unit {unit_name} -- sudo lsof -ti:9200"
+        _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=True)
+
+    if not opensearch_pid:
+        return None
+
+    kill_cmd = f"run --unit {unit_name} -- kill -{signal.upper()} {opensearch_pid}"
+    await ops_test.juju(*kill_cmd.split(), check=True)
+
+    return opensearch_pid
