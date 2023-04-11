@@ -230,6 +230,11 @@ class OpenSearchBaseCharm(CharmBase):
         ):
             return
 
+        if not self.model.get_relation(PeerRelationName).data.get(event.unit, None):
+            # unit no longer exists. This may occur if this hook is deferred and fails to fire
+            # before the unit is removed.
+            return
+
         new_unit_host = unit_ip(self, event.unit, PeerRelationName)
         if not is_reachable(new_unit_host, self.opensearch.port):
             event.defer()
@@ -367,13 +372,13 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.user_manager.remove_users_and_roles()
 
-        # try:
-        #     # Retrieve the nodes of the cluster, needed to configure this node
-        #     nodes = self._get_nodes(False)
-        #     # Set the configuration of the node
-        #     self._set_node_conf(nodes)
-        # except OpenSearchHttpError:
-        #     pass
+        try:
+            # Retrieve the nodes of the cluster, needed to configure this node
+            nodes = self._get_nodes(False)
+            # Set the configuration of the node
+            self._set_node_conf(nodes)
+        except OpenSearchHttpError:
+            pass
 
         if self.unit.is_leader():
             # self._compute_and_broadcast_updated_topology(self._get_nodes(True))
@@ -758,15 +763,24 @@ class OpenSearchBaseCharm(CharmBase):
                 # indicates that this unit is part of the "initial cm nodes"
                 self.peers_data.put(Scope.UNIT, "bootstrap_contributor", True)
 
-        self.opensearch_config.set_node(
-            self.app.name,
-            self.model.name,
-            self.unit_name,
-            computed_roles,
-            cm_names,
-            cm_ips,
-            contribute_to_bootstrap,
-        )
+        # Update config only when we have meaningful changes.
+        current_config = self.opensearch_config.load_node()
+        if not (
+            current_config.get("cluster.name") == f"{self.app.name}-{self.model.name}"
+            and current_config.get("node.name") == self.unit_name
+            and current_config.get("node.roles") == computed_roles
+            and current_config.get("discovery.seed_hosts") == cm_ips
+            and (current_config.get("cluster.initial_cluster_manager_nodes") == cm_names)
+        ):
+            self.opensearch_config.set_node(
+                self.app.name,
+                self.model.name,
+                self.unit_name,
+                computed_roles,
+                cm_names,
+                cm_ips,
+                contribute_to_bootstrap,
+            )
 
     def _cleanup_bootstrap_conf_if_applies(self) -> None:
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""

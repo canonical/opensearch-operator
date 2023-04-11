@@ -283,6 +283,9 @@ async def http_request(
         session.auth = ("admin", user_password or admin_secrets["password"])
 
         request_kwargs["verify"] = chain.name if verify else False
+        logger.error(
+            f"curl -k -X{method} https://admin:{admin_secrets['password']}@{endpoint[8:]}"
+        )
         resp = session.request(**request_kwargs)
 
         if resp_status_code:

@@ -87,13 +87,13 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
-        timeout=1200,
+        timeout=1400,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
-async def test_network_cut(ops_test, c_writes, c_writes_runner):
-    """Test that we can cut the network and the cluster stays online as expected.
+async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
+    """Test that we can cut the network to the cluster manager and the cluster stays online.
 
     TODO this may require scaling the cluster up to 5 nodes, so we can guarantee 3 functional nodes
     on update.
@@ -116,7 +116,11 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
         cm_public_address,
     ), f"Connection to host {cm_public_address} is not possible"
 
+    logger.error(f"cutting network for unit {cm.name} with address {cm.public_address}")
+
     cut_network_from_unit(cm_hostname)
+
+    time.sleep(30)
 
     # verify machine is not reachable from peer units
     for unit in set(all_units) - {cm}:
@@ -129,7 +133,7 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
         controller, cm_hostname
     ), "unit is reachable from controller"
 
-    # Wait for another unit to be elected cluster manager
+    # Wait for another unit to be elected cluster manager TODO this may be part of the problem
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     # verify new writes are continuing by counting the number of writes before and after a 5 second
@@ -160,6 +164,8 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     # wait until network is reestablished for the unit
     wait_network_restore(model_name, cm_hostname, cm_public_address)
 
+    time.sleep(30)
+
     # self healing is performed with update status hook. Status also checks our node roles are
     # correctly configured.
     await ops_test.model.wait_for_idle(
@@ -167,9 +173,104 @@ async def test_network_cut(ops_test, c_writes, c_writes_runner):
     )
 
     # verify we still have connection to the old cluster manager
-    # fails - can't access opensearch from this node anymore.
-    # we can still access networking, but opensearch is failing to reconnect for one reason or
-    # another. TODO next week figure out opensearch node reconnect policy/stratz
+    # fails - can't access opensearch from this node anymore. We can still access networking, but
+    # opensearch is failing to reconnect for one reason or another.
+    new_ip = instance_ip(model_name, cm_hostname)
+    logger.error(f"attempting connection to {new_ip}")
+    assert await ping_cluster(
+        ops_test,
+        new_ip,
+    ), f"Connection to host {new_ip} is not possible"
+
+    # verify that old cluster manager is up to date.
+    assert await secondary_up_to_date(
+        ops_test, new_ip, total_expected_writes.count
+    ), "secondary not up to date with the cluster after restarting."
+
+
+async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
+    """Test that we can cut the network to the primary shard and the cluster stays online.
+
+    TODO this may require scaling the cluster up to 5 nodes, so we can guarantee 3 functional nodes
+    on update.
+    """
+    # locate cluster manager unit
+    app = await app_name(ops_test)
+    ip_addresses = get_application_unit_ips(ops_test, app)
+    cm = await get_elected_cm_unit(ops_test, ip_addresses[0])
+    logger.error(dir(cm))
+    all_units = ops_test.model.applications[app].units
+    model_name = ops_test.model.info.name
+
+    cm_hostname = await unit_hostname(ops_test, cm.name)
+    cm_public_address = cm.public_address
+
+    # verify the cluster works fine before we can test
+    # TODO update assertion to check the cluster returns what we expect
+    assert await ping_cluster(
+        ops_test,
+        cm_public_address,
+    ), f"Connection to host {cm_public_address} is not possible"
+
+    logger.error(f"cutting network for unit {cm.name} with address {cm.public_address}")
+
+    cut_network_from_unit(cm_hostname)
+
+    time.sleep(30)
+
+    # verify machine is not reachable from peer units
+    for unit in set(all_units) - {cm}:
+        hostname = await unit_hostname(ops_test, unit.name)
+        assert not is_machine_reachable_from(hostname, cm_hostname), "unit is reachable from peer"
+
+    # verify machine is not reachable from controller
+    controller = await get_controller_machine(ops_test)
+    assert not is_machine_reachable_from(
+        controller, cm_hostname
+    ), "unit is reachable from controller"
+
+    # Wait for another unit to be elected cluster manager TODO this may be part of the problem
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+
+    # verify new writes are continuing by counting the number of writes before and after a 5 second
+    # wait
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "writes not continuing to OpenSearch"
+
+    # verify that a new cluster manager got elected
+    ips = get_application_unit_ips(ops_test, app)
+    logger.error(ips)
+    logger.error(cm_public_address)
+    if cm_public_address in ips:
+        ips.remove(cm_public_address)
+    new_cm = await get_elected_cm_unit(ops_test, ips[0])
+    assert new_cm.name != cm.name
+
+    # verify that no writes to the db were missed
+    total_expected_writes = await c_writes.stop()
+    actual_writes = await c_writes.count()
+    logger.error(total_expected_writes)
+    assert total_expected_writes.count == actual_writes, "writes to the db were missed."
+
+    # restore network connectivity to old cluster manager
+    restore_network_for_unit(cm_hostname)
+
+    # wait until network is reestablished for the unit
+    wait_network_restore(model_name, cm_hostname, cm_public_address)
+
+    time.sleep(30)
+
+    # self healing is performed with update status hook. Status also checks our node roles are
+    # correctly configured.
+    await ops_test.model.wait_for_idle(
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=3
+    )
+
+    # verify we still have connection to the old cluster manager
+    # fails - can't access opensearch from this node anymore. We can still access networking, but
+    # opensearch is failing to reconnect for one reason or another.
     new_ip = instance_ip(model_name, cm_hostname)
     logger.error(f"attempting connection to {new_ip}")
     assert await ping_cluster(
