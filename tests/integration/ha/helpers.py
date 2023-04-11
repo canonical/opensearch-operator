@@ -172,3 +172,22 @@ async def assert_continuous_writes_consistency(c_writes: ContinuousWrites) -> No
 
     assert result.max_stored_id == result.count - 1
     assert result.max_stored_id == result.last_expected_id
+
+
+async def send_kill_signal_to_process(
+    ops_test: OpsTest, app: str, unit_id: int, signal: str, opensearch_pid: Optional[int] = None
+) -> Optional[int]:
+    """Run kill with signal in specific unit."""
+    unit_name = f"{app}/{unit_id}"
+
+    if opensearch_pid is None:
+        get_pid_cmd = f"run --unit {unit_name} -- sudo lsof -ti:9200"
+        _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=True)
+
+    if not opensearch_pid:
+        return None
+
+    kill_cmd = f"run --unit {unit_name} -- kill -{signal.upper()} {opensearch_pid}"
+    await ops_test.juju(*kill_cmd.split(), check=True)
+
+    return opensearch_pid
