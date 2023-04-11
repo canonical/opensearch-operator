@@ -37,17 +37,22 @@ class ContinuousWrites:
     LAST_WRITTEN_VAL_PATH = "last_written_value"
     CERT_PATH = "/tmp/ca_chain.cert"
 
-    def __init__(self, ops_test: OpsTest):
+    def __init__(self, ops_test: OpsTest, app: str):
         self._ops_test = ops_test
+        self._app = app
         self._is_stopped = True
         self._event = None
         self._queue = None
         self._process = None
 
-    async def start(self) -> None:
+    async def start(self, repl_on_all_nodes: bool = False) -> None:
         """Run continuous writes in the background."""
         if not self._is_stopped:
             await self.clear()
+
+        # create index if custom conf needed
+        if repl_on_all_nodes:
+            await self._create_fully_replicated_index()
 
         # create process
         self._create_process()
@@ -62,7 +67,9 @@ class ContinuousWrites:
         """Update cluster related conf. Useful in cases such as scaling, pwd change etc."""
         password = await self._secrets()
         self._queue.put(
-            SimpleNamespace(hosts=get_application_unit_ips(self._ops_test), password=password)
+            SimpleNamespace(
+                hosts=get_application_unit_ips(self._ops_test, app=self._app), password=password
+            )
         )
 
     async def clear(self) -> None:
@@ -85,6 +92,18 @@ class ContinuousWrites:
 
             resp = client.count(index=ContinuousWrites.INDEX_NAME)
             return int(resp["count"])
+        finally:
+            client.close()
+
+    async def _create_fully_replicated_index(self):
+        """Create index with 1 p_shard and an r_shard on each node."""
+        client = await self._client()
+        try:
+            # create index with a replica shard on every node
+            client.indices.create(
+                index=ContinuousWrites.INDEX_NAME,
+                body={"settings": {"index": {"auto_expand_replicas": "1-all"}}},
+            )
         finally:
             client.close()
 
@@ -154,7 +173,7 @@ class ContinuousWrites:
     async def _client(self):
         """Build an opensearch client."""
         return opensearch_client(
-            get_application_unit_ips(self._ops_test),
+            get_application_unit_ips(self._ops_test, app=self._app),
             "admin",
             await self._secrets(),
             ContinuousWrites.CERT_PATH,
