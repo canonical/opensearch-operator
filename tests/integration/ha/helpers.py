@@ -227,8 +227,8 @@ def wait_network_restore(ops_test, unit_id, old_ip: str) -> None:
     """Wait until network is restored.
 
     Args:
-        model_name: The name of the model
-        hostname: The name of the instance
+        ops_test: The ops test framework instance
+        unit_id: The id of the unit whose network was cut
         old_ip: old registered IP address
     """
     if get_application_unit_ids_ips(ops_test)[unit_id] == old_ip:
