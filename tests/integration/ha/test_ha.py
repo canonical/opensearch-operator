@@ -255,7 +255,7 @@ async def test_restart_db_process(ops_test, c_writes: ContinuousWrites, c_writes
     old_cm_id = await get_elected_cm_unit_id(ops_test, ip_addresses[0])
 
     # send SIGTERM, we expect `systemd` to restart the process
-    await send_kill_signal_to_process(ops_test, old_cm.name, kill_code="SIGTERM")
+    await send_kill_signal_to_process(ops_test, app, unit_id=old_cm_id, signal="SIGTERM")
 
     # verify new writes are continuing by counting the number of writes before and after a 5 second
     # wait
