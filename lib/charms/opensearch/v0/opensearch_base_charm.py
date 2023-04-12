@@ -373,6 +373,9 @@ class OpenSearchBaseCharm(CharmBase):
 
         self._reconfigure_and_restart_unit_if_needed()
 
+        if self.unit.is_leader():
+            self._compute_and_broadcast_updated_topology(self._get_nodes(True))
+
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
             return
