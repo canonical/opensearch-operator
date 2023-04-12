@@ -176,4 +176,6 @@ class OpenSearchConfig:
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
 
     def update_host(self):
-        self._opensearch.config.put(self.CONFIG_YML, "network.host", ["_site_"] + self._opensearch.network_hosts)
+        self._opensearch.config.put(
+            self.CONFIG_YML, "network.host", ["_site_"] + self._opensearch.network_hosts
+        )

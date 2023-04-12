@@ -793,9 +793,10 @@ class OpenSearchBaseCharm(CharmBase):
         if new_node_conf:
             new_node_conf = Node.from_dict(new_node_conf)
             current_conf = self.opensearch_config.load_node()
-            if sorted(current_conf["node.roles"]) == sorted(
-                new_node_conf.roles
-            ) and current_conf.get("network.host") == self.unit_ip:
+            if (
+                sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles)
+                and current_conf.get("network.host") == self.unit_ip
+            ):
                 # no conf change
                 return
 
