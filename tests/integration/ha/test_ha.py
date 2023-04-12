@@ -177,7 +177,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     # verify we still have connection to the old cluster manager
     # fails - can't access opensearch from this node anymore. We can still access networking, but
     # opensearch is failing to reconnect for one reason or another.
-    new_ip = get_application_unit_ids_ips(ops_test)[cm.name.split("/")[1]]
+    new_ip = get_application_unit_ids_ips(ops_test)[int(cm.name.split("/")[1])]
     logger.error(f"attempting connection to {new_ip}")
     assert await ping_cluster(
         ops_test,

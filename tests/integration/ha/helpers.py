@@ -223,7 +223,7 @@ def restore_network_for_unit(machine_name: str) -> None:
 
 
 @retry(stop=stop_after_attempt(15), wait=wait_fixed(15))
-def wait_network_restore(ops_test, unit_id, old_ip: str) -> None:
+def wait_network_restore(ops_test, unit_id: int, old_ip: str) -> None:
     """Wait until network is restored.
 
     Args:
