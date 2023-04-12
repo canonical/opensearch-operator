@@ -121,14 +121,18 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
         cm_address,
     ), f"Connection to host {cm_address} is not possible"
 
-    logger.error(f"cutting network for unit {cm.name} with address {cm_address} and hostname {cm_hostname}")
+    logger.error(
+        f"cutting network for unit {cm.name} with address {cm_address} and hostname {cm_hostname}"
+    )
 
     cut_network_from_unit(cm_hostname)
 
     # verify machine is not reachable from peer units
     for unit in set(all_units) - {cm}:
         hostname = await unit_hostname(ops_test, unit.name)
-        assert not is_machine_reachable_from(hostname, cm_hostname), f"unit is reachable from peer {unit.name}"
+        assert not is_machine_reachable_from(
+            hostname, cm_hostname
+        ), f"unit is reachable from peer {unit.name}"
 
     # verify machine is not reachable from controller
     controller = await get_controller_machine(ops_test)
