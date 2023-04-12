@@ -3,6 +3,7 @@
 
 """Class for Setting configuration in opensearch config files."""
 import logging
+import socket
 from typing import Dict, List
 
 from charms.opensearch.v0.constants_tls import CertType
@@ -137,8 +138,9 @@ class OpenSearchConfig:
 
         self._opensearch.config.put(self.CONFIG_YML, "node.roles", roles)
 
-        if len(cm_ips) > 0:
-            self._opensearch.config.put(self.CONFIG_YML, "discovery.seed_hosts", cm_ips)
+        # This allows the new CMs to be discovered automatically (hot reload of unicast_hosts.txt)
+        self._opensearch.config.put(self.CONFIG_YML, "discovery.seed_providers", "file")
+        self.append_seed_hosts(cm_ips)
 
         if "cluster_manager" in roles and contribute_to_bootstrap:  # cluster NOT bootstrapped yet
             self._opensearch.config.put(
@@ -170,6 +172,18 @@ class OpenSearchConfig:
             "plugins.security.unsupported.restapi.allow_securityconfig_modification",
             True,
         )
+
+    def append_seed_hosts(self, cm_ips: List[str]):
+        """Add CM nodes ips / host names to the seed host list of this unit."""
+        cm_ips_hostnames = cm_ips.copy()
+        for ip in cm_ips:
+            cm_ips_hostnames.append(socket.getfqdn(ip))
+
+        with open(self._opensearch.paths.seed_hosts, "w+") as f:
+            existing = [line.strip() for line in f.readlines()]
+            full_list = set(existing + cm_ips_hostnames)
+            lines = "\n".join(full_list)
+            f.write(f"{lines}\n")
 
     def cleanup_bootstrap_conf(self):
         """Remove some conf entries when the cluster is bootstrapped."""
