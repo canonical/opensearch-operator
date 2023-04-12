@@ -363,6 +363,16 @@ class OpenSearchBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
             return
 
+        try:
+            # Retrieve the nodes of the cluster, needed to configure this node
+            nodes = self._get_nodes(False)
+            # Set the configuration of the node
+            self._set_node_conf(nodes)
+        except OpenSearchHttpError:
+            pass
+
+        self._reconfigure_and_restart_unit_if_needed()
+
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
             return
@@ -371,15 +381,6 @@ class OpenSearchBaseCharm(CharmBase):
             self.opensearch_provider.update_endpoints(relation)
 
         self.user_manager.remove_users_and_roles()
-
-        try:
-            # Retrieve the nodes of the cluster, needed to configure this node
-            nodes = self._get_nodes(False)
-            # Set the configuration of the node
-            self._set_node_conf(nodes)
-        except OpenSearchHttpError:
-            pass
-        self._reconfigure_and_restart_unit_if_needed()
 
         if self.unit.is_leader():
             self._compute_and_broadcast_updated_topology(self._get_nodes(False))
