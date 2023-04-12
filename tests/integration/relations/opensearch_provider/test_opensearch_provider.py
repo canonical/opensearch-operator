@@ -201,38 +201,19 @@ async def test_scaling(ops_test: OpsTest):
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
 
     # Test scale down
-    num_units = get_num_of_opensearch_units() - 1
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, num_units)
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(
-            status="active",
-            apps=[OPENSEARCH_APP_NAME],
-            timeout=1400,
-            wait_for_exact_units=num_units,
-        ),
-        ops_test.model.wait_for_idle(status="active", apps=ALL_APPS),
-    )
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() - 1)
+    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
     assert (
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
 
     # test scale back up again
-    num_units += 1
-    await scale_application(ops_test, OPENSEARCH_APP_NAME, num_units)
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(
-            status="active",
-            apps=[OPENSEARCH_APP_NAME],
-            timeout=1400,
-            wait_for_exact_units=num_units,
-        ),
-        ops_test.model.wait_for_idle(status="active", apps=ALL_APPS),
-    )
+    await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() + 1)
+    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
     assert (
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
