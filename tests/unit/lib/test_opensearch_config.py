@@ -5,7 +5,7 @@
 import shutil
 import unittest
 from typing import Dict
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
@@ -27,6 +27,7 @@ class TestOpenSearchConfig(unittest.TestCase):
 
         self.config_path = "tests/unit/resources/config"
         self.opensearch_yml = copy_file_content_to_tmp(self.config_path, "opensearch.yml")
+        self.seed_unicast_hosts = copy_file_content_to_tmp(self.config_path, "unicast_hosts.txt")
         self.jvm_options = copy_file_content_to_tmp(self.config_path, "jvm.options")
         self.sec_conf_yml = copy_file_content_to_tmp(
             self.config_path, "opensearch-security/config.yml"
@@ -34,16 +35,17 @@ class TestOpenSearchConfig(unittest.TestCase):
 
         self.charm.opensearch = Mock()
         self.charm.opensearch.network_hosts = ["10.10.10.10"]
+
+        self.charm.opensearch.paths = Mock()
         self.charm.opensearch.paths.conf = None
+        self.charm.opensearch.paths.seed_hosts = self.seed_unicast_hosts
+        self.charm.opensearch.paths.certs_relative = "certificates"
+        self.charm.opensearch.paths.data = "data"
+        self.charm.opensearch.paths.logs = "logs"
         self.charm.opensearch.config = YamlConfigSetter(f"{self.config_path}/tmp")
 
         self.opensearch_config = self.charm.opensearch_config
         self.opensearch_config._opensearch = self.charm.opensearch
-        self.opensearch_config._opensearch.paths = Mock()
-
-        self.opensearch_config._opensearch.paths.certs_relative = "certificates"
-        self.opensearch_config._opensearch.paths.data = "data"
-        self.opensearch_config._opensearch.paths.logs = "logs"
 
         self.yaml_conf_setter = YamlConfigSetter()
 
@@ -135,8 +137,11 @@ class TestOpenSearchConfig(unittest.TestCase):
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
         self.assertCountEqual(opensearch_conf["plugins.security.nodes_dn"], ["10.10.10.10"])
 
-    def test_set_node_and_cleanup_if_bootstrapped(self):
+    @patch("socket.gethostbyaddr")
+    def test_set_node_and_cleanup_if_bootstrapped(self, gethostbyaddr):
         """Test setting the core config of a node."""
+        gethostbyaddr.return_value = "hostname.com", ["alias1", "alias2"], ["10.10.10.10"]
+
         self.opensearch_config.set_node(
             self.charm.app.name,
             self.charm.model.name,
@@ -153,7 +158,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         self.assertEqual(opensearch_conf["node.name"], self.charm.unit_name)
         self.assertEqual(opensearch_conf["network.host"], ["_site_", "10.10.10.10"])
         self.assertEqual(opensearch_conf["node.roles"], ["cluster_manager", "data"])
-        self.assertEqual(opensearch_conf["discovery.seed_hosts"], ["10.10.10.10"])
+        self.assertEqual(opensearch_conf["discovery.seed_providers"], "file")
         self.assertEqual(opensearch_conf["cluster.initial_cluster_manager_nodes"], ["cm1"])
         self.assertEqual(opensearch_conf["path.data"], "data")
         self.assertEqual(opensearch_conf["path.logs"], "logs")
@@ -167,6 +172,12 @@ class TestOpenSearchConfig(unittest.TestCase):
         self.opensearch_config.cleanup_bootstrap_conf()
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
         self.assertNotIn("cluster.initial_cluster_manager_nodes", opensearch_conf)
+
+        # test unicast_hosts content
+        with open(self.seed_unicast_hosts, "r") as f:
+            stored = set([line.strip() for line in f.readlines()])
+            expected = {"hostname.com", "alias1", "alias2", "10.10.10.10"}
+            self.assertEqual(stored, expected)
 
     def tearDown(self) -> None:
         shutil.rmtree(f"{self.config_path}/tmp")
