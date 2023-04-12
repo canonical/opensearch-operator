@@ -383,7 +383,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.user_manager.remove_users_and_roles()
 
         if self.unit.is_leader():
-            self._compute_and_broadcast_updated_topology(self._get_nodes(True))
+            # self._compute_and_broadcast_updated_topology(self._get_nodes(True))
             # if there are exclusions to be removed
             self.opensearch_exclusions.cleanup()
             if self.health.apply() == HealthColors.YELLOW_TEMP:
