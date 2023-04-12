@@ -786,6 +786,13 @@ class OpenSearchBaseCharm(CharmBase):
         if not nodes_config:
             return
 
+        nodes_config = {name: Node.from_dict(node) for name, node in nodes_config.items()}
+
+        # update (append) CM IPs
+        self.opensearch_config.add_seed_hosts(
+            [node.ip for node in list(nodes_config.values()) if node.is_cm_eligible()]
+        )
+
         new_node_conf = nodes_config.get(self.unit_name)
         if not new_node_conf and not self.opensearch.is_node_up():
             # the conf could not be computed / broadcasted, because this node is
@@ -794,7 +801,6 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         if new_node_conf:
-            new_node_conf = Node.from_dict(new_node_conf)
             current_conf = self.opensearch_config.load_node()
             if (
                 sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles)
