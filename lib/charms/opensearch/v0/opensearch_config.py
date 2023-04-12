@@ -140,7 +140,7 @@ class OpenSearchConfig:
 
         # This allows the new CMs to be discovered automatically (hot reload of unicast_hosts.txt)
         self._opensearch.config.put(self.CONFIG_YML, "discovery.seed_providers", "file")
-        self.append_seed_hosts(cm_ips)
+        self.add_seed_hosts(cm_ips)
 
         if "cluster_manager" in roles and contribute_to_bootstrap:  # cluster NOT bootstrapped yet
             self._opensearch.config.put(
@@ -173,7 +173,7 @@ class OpenSearchConfig:
             True,
         )
 
-    def append_seed_hosts(self, cm_ips: List[str]):
+    def add_seed_hosts(self, cm_ips: List[str]):
         """Add CM nodes ips / host names to the seed host list of this unit."""
         cm_ips_hostnames = cm_ips.copy()
         for ip in cm_ips:

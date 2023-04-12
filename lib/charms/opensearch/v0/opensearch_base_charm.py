@@ -770,8 +770,8 @@ class OpenSearchBaseCharm(CharmBase):
 
         nodes_config = {name: Node.from_dict(node) for name, node in nodes_config.items()}
 
-        # update CM IPs
-        self.opensearch_config.append_seed_hosts(
+        # update (append) CM IPs
+        self.opensearch_config.add_seed_hosts(
             [node.ip for node in list(nodes_config.values()) if node.is_cm_eligible()]
         )
 
