@@ -69,6 +69,7 @@ class Paths:
         self.tmp = tmp
         self.certs = f"{conf}/certificates"  # must be under config
         self.certs_relative = "certificates"
+        self.seed_hosts = f"{conf}/unicast_hosts.txt"
 
 
 class OpenSearchDistribution(ABC):
