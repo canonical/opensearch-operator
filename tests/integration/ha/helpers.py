@@ -11,7 +11,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.helpers import http_request
+from tests.integration.helpers import http_request, get_application_unit_ids_ips
 
 logger = logging.getLogger(__name__)
 
@@ -223,7 +223,7 @@ def restore_network_for_unit(machine_name: str) -> None:
 
 
 @retry(stop=stop_after_attempt(15), wait=wait_fixed(15))
-def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
+def wait_network_restore(ops_test, unit_id, old_ip: str) -> None:
     """Wait until network is restored.
 
     Args:
@@ -231,25 +231,8 @@ def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
         hostname: The name of the instance
         old_ip: old registered IP address
     """
-    if instance_ip(model_name, hostname) == old_ip:
+    if get_application_unit_ids_ips(ops_test)[unit_id] == old_ip:
         raise Exception("Network not restored, IP address has not changed yet.")
-
-
-def instance_ip(model: str, instance: str) -> str:
-    """Translate juju instance name to IP.
-
-    Args:
-        model: The name of the model
-        instance: The name of the instance
-
-    Returns:
-        The (str) IP address of the instance
-    """
-    output = subprocess.check_output(f"juju machines --model {model}".split())
-
-    for line in output.decode("utf8").splitlines():
-        if instance in line:
-            return line.split()[2]
 
 
 async def get_controller_machine(ops_test: OpsTest) -> str:

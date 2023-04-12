@@ -14,7 +14,6 @@ from tests.integration.ha.helpers import (  # assert_continuous_writes_consisten
     cut_network_from_unit,
     get_controller_machine,
     get_elected_cm_unit,
-    instance_ip,
     is_machine_reachable_from,
     restore_network_for_unit,
     secondary_up_to_date,
@@ -29,7 +28,9 @@ from tests.integration.ha.helpers import (  # assert_continuous_writes_consisten
 #     search,
 # )
 # from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (  # check_cluster_formation_successful,; get_application_unit_ids,; get_application_unit_ids_ips,; get_application_unit_names,; get_leader_unit_ip,; is_up,
+from tests.integration.helpers import (  # check_cluster_formation_successful,;
+    # get_application_unit_ids,# ;
+    get_application_unit_ids_ips,# ; get_application_unit_names,; get_leader_unit_ip,; is_up,
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
@@ -109,7 +110,6 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     cm = await get_elected_cm_unit(ops_test, ip_addresses[0])
     logger.error(dir(cm))
     all_units = ops_test.model.applications[app].units
-    model_name = ops_test.model.info.name
 
     cm_hostname = await unit_hostname(ops_test, cm.name)
     cm_public_address = cm.public_address
@@ -165,7 +165,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     restore_network_for_unit(cm_hostname)
 
     # wait until network is reestablished for the unit
-    wait_network_restore(model_name, cm_hostname, cm_public_address)
+    wait_network_restore(ops_test, cm.name.split("/")[1], cm_public_address)
 
     # self healing is performed with update status hook. Status also checks our node roles are
     # correctly configured.
@@ -176,7 +176,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     # verify we still have connection to the old cluster manager
     # fails - can't access opensearch from this node anymore. We can still access networking, but
     # opensearch is failing to reconnect for one reason or another.
-    new_ip = instance_ip(model_name, cm_hostname)
+    new_ip = get_application_unit_ids_ips(ops_test)[cm.name.split("/")[1]]
     logger.error(f"attempting connection to {new_ip}")
     assert await ping_cluster(
         ops_test,
