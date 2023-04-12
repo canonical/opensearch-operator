@@ -358,6 +358,11 @@ class OpenSearchBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
             return
 
+        try:
+            self.health.apply(app=False)
+        except OpenSearchHttpError:
+            self.unit.status = BlockedStatus("Health check failed")
+
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
             return

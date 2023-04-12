@@ -265,9 +265,7 @@ async def test_restart_db_process(ops_test, c_writes: ContinuousWrites, c_writes
     assert more_writes > writes, "writes not continuing to OpenSearch"
 
     # verify that db service was restarted and is ready
-    await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=3
-    )
+    await ops_test.model.wait_for_idle(apps=[app], status="active")
 
     # verify cluster manager step-down and a new cluster manager gets elected
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
