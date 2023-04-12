@@ -181,9 +181,7 @@ class OpenSearchConfig:
             cm_ips_hostnames.extend([name] + aliases + addresses)
 
         with open(self._opensearch.paths.seed_hosts, "w+") as f:
-            existing = [line.strip() for line in f.readlines()]
-            full_list = set(existing + cm_ips_hostnames)
-            lines = "\n".join(full_list)
+            lines = "\n".join(cm_ips_hostnames)
             f.write(f"{lines}\n")
 
     def cleanup_bootstrap_conf(self):
