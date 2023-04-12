@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 import yaml
 from charms.opensearch.v0.models import Node
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
+from tenacity import retry, stop_after_attempt, wait_exponential, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.helpers import get_application_unit_ids_ips, http_request
@@ -222,7 +222,7 @@ def restore_network_for_unit(machine_name: str) -> None:
     subprocess.check_call(restore_network_command.split())
 
 
-@retry(stop=stop_after_attempt(15), wait=wait_fixed(15))
+@retry(stop=stop_after_attempt(15), wait=wait_exponential(multiplier=1, min=2, max=30),)
 def wait_network_restore(ops_test, unit_id: int, old_ip: str) -> None:
     """Wait until network is restored.
 
@@ -232,6 +232,9 @@ def wait_network_restore(ops_test, unit_id: int, old_ip: str) -> None:
         old_ip: old registered IP address
     """
     logger.error(get_application_unit_ids_ips(ops_test))
+    logger.error(unit_id)
+    logger.error(get_application_unit_ids_ips(ops_test).get(unit_id))
+    logger.error(old_ip)
     if get_application_unit_ids_ips(ops_test).get(unit_id) == old_ip:
         raise Exception("Network not restored, IP address has not changed yet.")
 
