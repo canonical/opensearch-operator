@@ -177,7 +177,8 @@ class OpenSearchConfig:
         """Add CM nodes ips / host names to the seed host list of this unit."""
         cm_ips_hostnames = cm_ips.copy()
         for ip in cm_ips:
-            cm_ips_hostnames.append(socket.getfqdn(ip))
+            name, aliases, addresses = socket.gethostbyaddr(ip)
+            cm_ips_hostnames.extend([name] + aliases + addresses)
 
         with open(self._opensearch.paths.seed_hosts, "w+") as f:
             existing = [line.strip() for line in f.readlines()]
