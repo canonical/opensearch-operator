@@ -174,3 +174,6 @@ class OpenSearchConfig:
     def cleanup_bootstrap_conf(self):
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
+
+    def update_host(self):
+        self._opensearch.config.put(self.CONFIG_YML, "network.host", ["_site_"] + self._opensearch.network_hosts)

@@ -28,9 +28,10 @@ from tests.integration.ha.helpers import (  # assert_continuous_writes_consisten
 #     search,
 # )
 # from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (  # check_cluster_formation_successful,;
-    # get_application_unit_ids,# ;
-    get_application_unit_ids_ips,# ; get_application_unit_names,; get_leader_unit_ip,; is_up,
+from tests.integration.helpers import (
+    get_application_unit_ids_ips,  # ; get_application_unit_names,; get_leader_unit_ip,; is_up,
+)
+from tests.integration.helpers import (  # check_cluster_formation_successful,;; get_application_unit_ids,# ;
     APP_NAME,
     MODEL_CONFIG,
     SERIES,

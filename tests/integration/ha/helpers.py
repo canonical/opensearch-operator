@@ -11,7 +11,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.helpers import http_request, get_application_unit_ids_ips
+from tests.integration.helpers import get_application_unit_ids_ips, http_request
 
 logger = logging.getLogger(__name__)
 

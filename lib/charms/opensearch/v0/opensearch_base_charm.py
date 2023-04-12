@@ -383,8 +383,6 @@ class OpenSearchBaseCharm(CharmBase):
         self.user_manager.remove_users_and_roles()
 
         if self.unit.is_leader():
-            self._compute_and_broadcast_updated_topology(self._get_nodes(False))
-
             # if there are exclusions to be removed
             self.opensearch_exclusions.cleanup()
             if self.health.apply() == HealthColors.YELLOW_TEMP:
@@ -765,24 +763,15 @@ class OpenSearchBaseCharm(CharmBase):
                 # indicates that this unit is part of the "initial cm nodes"
                 self.peers_data.put(Scope.UNIT, "bootstrap_contributor", True)
 
-        # Update config only when we have meaningful changes.
-        current_config = self.opensearch_config.load_node()
-        if not (
-            current_config.get("cluster.name") == f"{self.app.name}-{self.model.name}"
-            and current_config.get("node.name") == self.unit_name
-            and current_config.get("node.roles") == computed_roles
-            and current_config.get("discovery.seed_hosts") == cm_ips
-            and (current_config.get("cluster.initial_cluster_manager_nodes") == cm_names)
-        ):
-            self.opensearch_config.set_node(
-                self.app.name,
-                self.model.name,
-                self.unit_name,
-                computed_roles,
-                cm_names,
-                cm_ips,
-                contribute_to_bootstrap,
-            )
+        self.opensearch_config.set_node(
+            self.app.name,
+            self.model.name,
+            self.unit_name,
+            computed_roles,
+            cm_names,
+            cm_ips,
+            contribute_to_bootstrap,
+        )
 
     def _cleanup_bootstrap_conf_if_applies(self) -> None:
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
@@ -804,9 +793,13 @@ class OpenSearchBaseCharm(CharmBase):
         if new_node_conf:
             new_node_conf = Node.from_dict(new_node_conf)
             current_conf = self.opensearch_config.load_node()
-            if sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles):
-                # no conf change (roles for now)
+            if sorted(current_conf["node.roles"]) == sorted(
+                new_node_conf.roles
+            ) and current_conf.get("network.host") == self.unit_ip:
+                # no conf change
                 return
+
+        self.opensearch_config.update_host()
 
         self.unit.status = WaitingStatus(WaitingToStart)
         self.on[self.service_manager.name].acquire_lock.emit(
