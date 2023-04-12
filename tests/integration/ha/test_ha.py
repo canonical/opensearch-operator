@@ -113,16 +113,16 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     all_units = ops_test.model.applications[app].units
 
     cm_hostname = await unit_hostname(ops_test, cm.name)
-    cm_public_address = cm.public_address
+    cm_address = cm.public_address
 
     # verify the cluster works fine before we can test
     # TODO update assertion to check the cluster returns what we expect
     assert await ping_cluster(
         ops_test,
-        cm_public_address,
-    ), f"Connection to host {cm_public_address} is not possible"
+        cm_address,
+    ), f"Connection to host {cm_address} is not possible"
 
-    logger.error(f"cutting network for unit {cm.name} with address {cm.public_address}")
+    logger.error(f"cutting network for unit {cm.name} with address {cm_address}")
 
     cut_network_from_unit(cm_hostname)
 
@@ -150,9 +150,9 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     # verify that a new cluster manager got elected
     ips = get_application_unit_ips(ops_test, app)
     logger.error(ips)
-    logger.error(cm_public_address)
-    if cm_public_address in ips:
-        ips.remove(cm_public_address)
+    logger.error(cm_address)
+    if cm_address in ips:
+        ips.remove(cm_address)
     new_cm = await get_elected_cm_unit(ops_test, ips[0])
     assert new_cm.name != cm.name
 
@@ -166,7 +166,8 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     restore_network_for_unit(cm_hostname)
 
     # wait until network is reestablished for the unit
-    wait_network_restore(ops_test, cm.name.split("/")[1], cm_public_address)
+    cm_unit_id = int(cm.name.split("/")[1])
+    wait_network_restore(ops_test, unit_id = cm_unit_id, old_ip = cm_address)
 
     # self healing is performed with update status hook. Status also checks our node roles are
     # correctly configured.
@@ -175,9 +176,8 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     )
 
     # verify we still have connection to the old cluster manager
-    # fails - can't access opensearch from this node anymore. We can still access networking, but
-    # opensearch is failing to reconnect for one reason or another.
-    new_ip = get_application_unit_ids_ips(ops_test)[int(cm.name.split("/")[1])]
+    logger.error(get_application_unit_ids_ips(ops_test))
+    new_ip = get_application_unit_ids_ips(ops_test)[cm_unit_id]
     logger.error(f"attempting connection to {new_ip}")
     assert await ping_cluster(
         ops_test,

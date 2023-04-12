@@ -231,7 +231,8 @@ def wait_network_restore(ops_test, unit_id: int, old_ip: str) -> None:
         unit_id: The id of the unit whose network was cut
         old_ip: old registered IP address
     """
-    if get_application_unit_ids_ips(ops_test)[unit_id] == old_ip:
+    logger.error(get_application_unit_ids_ips(ops_test))
+    if get_application_unit_ids_ips(ops_test).get(unit_id) == old_ip:
         raise Exception("Network not restored, IP address has not changed yet.")
 
 
