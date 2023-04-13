@@ -187,8 +187,8 @@ async def assert_continuous_writes_consistency(
         shards_by_id.setdefault(shard.num, []).append(shard)
 
     # count data on each shard. For the continuous writes index, we have 2 primary shards
-    # and replica shards of each on all the nodes.
-    # in other words: prim1 and its replicas will have a different "num" than prim2 and its replicas.
+    # and replica shards of each on all the nodes. In other words: prim1 and its replicas
+    # will have a different "num" than prim2 and its replicas.
     count_from_shards = 0
     for shard_num, shards_list in shards_by_id.items():
         count_by_shard = [
