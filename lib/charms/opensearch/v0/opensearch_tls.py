@@ -113,6 +113,10 @@ class OpenSearchTLS(Object):
         old_cert = secrets.get("cert", None)
         renewal = old_cert is not None and old_cert != event.certificate
 
+        if scope == Scope.APP and not self.charm.unit.is_leader():
+            logger.error("nonleader units cannot modify app-level certs")
+            return
+
         self.charm.secrets.put_object(
             scope,
             cert_type.val,

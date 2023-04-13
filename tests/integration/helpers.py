@@ -13,19 +13,27 @@ import yaml
 from charms.opensearch.v0.helper_networking import is_reachable, reachable_hosts
 from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    stop_after_attempt,
+    wait_fixed,
+    wait_random,
+)
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 
 SERIES = "jammy"
 UNIT_IDS = [0, 1, 2]
+IDLE_PERIOD = 120
 
 TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
 
 MODEL_CONFIG = {
     "logging-config": "<root>=INFO;unit=DEBUG",
-    "update-status-hook-interval": "30s",
+    "update-status-hook-interval": "29s",
     "cloudinit-userdata": """postruncmd:
         - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
         - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
@@ -283,6 +291,9 @@ async def http_request(
         session.auth = ("admin", user_password or admin_secrets["password"])
 
         request_kwargs["verify"] = chain.name if verify else False
+        logger.error(
+            f"curl -k -X{method} https://admin:{admin_secrets['password']}@{endpoint[8:]}"
+        )
         resp = session.request(**request_kwargs)
 
         if resp_status_code:
@@ -370,6 +381,21 @@ async def check_cluster_formation_successful(
 
     registered_nodes = [node_desc["name"] for node_desc in response["nodes"].values()]
     return set(unit_names) == set(registered_nodes)
+
+
+async def is_up(ops_test: OpsTest, unit_ip: str) -> bool:
+    """Return if node up."""
+    try:
+        for attempt in Retrying(
+            stop=stop_after_attempt(15), wait=wait_fixed(wait=5) + wait_random(0, 5)
+        ):
+            with attempt:
+                http_resp_code = await http_request(
+                    ops_test, "GET", f"https://{unit_ip}:9200/", resp_status_code=True
+                )
+                return http_resp_code == 200
+    except RetryError:
+        return False
 
 
 async def scale_application(

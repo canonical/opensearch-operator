@@ -230,6 +230,11 @@ class OpenSearchBaseCharm(CharmBase):
         ):
             return
 
+        if not self.model.get_relation(PeerRelationName).data.get(event.unit, None):
+            # unit no longer exists. This may occur if this hook is deferred and fails to fire
+            # before the unit is removed.
+            return
+
         new_unit_host = unit_ip(self, event.unit, PeerRelationName)
         if not is_reachable(new_unit_host, self.opensearch.port):
             event.defer()
@@ -358,6 +363,16 @@ class OpenSearchBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
             return
 
+        try:
+            # Retrieve the nodes of the cluster, needed to configure this node
+            nodes = self._get_nodes(False)
+            # Set the configuration of the node
+            self._set_node_conf(nodes)
+        except OpenSearchHttpError:
+            pass
+
+        self._reconfigure_and_restart_unit_if_needed()
+
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
             return
@@ -368,8 +383,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.user_manager.remove_users_and_roles()
 
         if self.unit.is_leader():
-            self._compute_and_broadcast_updated_topology(self._get_nodes(True))
-
+            # self._compute_and_broadcast_updated_topology(self._get_nodes(True))
             # if there are exclusions to be removed
             self.opensearch_exclusions.cleanup()
             if self.health.apply() == HealthColors.YELLOW_TEMP:
@@ -770,6 +784,13 @@ class OpenSearchBaseCharm(CharmBase):
         if not nodes_config:
             return
 
+        nodes_config = {name: Node.from_dict(node) for name, node in nodes_config.items()}
+
+        # update (append) CM IPs
+        self.opensearch_config.add_seed_hosts(
+            [node.ip for node in list(nodes_config.values()) if node.is_cm_eligible()]
+        )
+
         new_node_conf = nodes_config.get(self.unit_name)
         if not new_node_conf and not self.opensearch.is_node_up():
             # the conf could not be computed / broadcasted, because this node is
@@ -778,11 +799,15 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         if new_node_conf:
-            new_node_conf = Node.from_dict(new_node_conf)
             current_conf = self.opensearch_config.load_node()
-            if sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles):
-                # no conf change (roles for now)
+            if (
+                sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles)
+                and current_conf.get("network.host") == self.unit_ip
+            ):
+                # no conf change
                 return
+
+        self.opensearch_config.update_host()
 
         self.unit.status = WaitingStatus(WaitingToStart)
         self.on[self.service_manager.name].acquire_lock.emit(

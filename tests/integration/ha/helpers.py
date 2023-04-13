@@ -11,7 +11,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.helpers import http_request
+from tests.integration.helpers import http_request  # get_application_unit_ids_ips,
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +137,54 @@ async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) 
     return result
 
 
+async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
+    """Get hostname for a unit.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+
+    Returns:
+        The machine/container hostname
+    """
+    _, raw_hostname, _ = await ops_test.juju("ssh", unit_name, "hostname")
+    return raw_hostname.strip()
+
+
+def instance_ip(model: str, instance: str) -> str:
+    """Translate juju instance name to IP.
+
+    Args:
+        model: The name of the model
+        instance: The name of the instance
+
+    Returns:
+        The (str) IP address of the instance
+    """
+    output = subprocess.check_output(f"juju machines --model {model}".split())
+
+    for line in output.decode("utf8").splitlines():
+        if instance in line:
+            return line.split()[2]
+
+
+async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
+    """Wrapper for getting unit ip.
+
+    Juju incorrectly reports the IP addresses after the network is restored this is reported as a
+    bug here: https://github.com/juju/python-libjuju/issues/738 . Once this bug is resolved use of
+    `get_unit_ip` should be replaced with `.public_address`
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+
+    Returns:
+        The (str) ip of the unit
+    """
+    return instance_ip(ops_test.model.info.name, await unit_hostname(ops_test, unit_name))
+
+
 @retry(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
@@ -222,7 +270,7 @@ def restore_network_for_unit(machine_name: str) -> None:
     subprocess.check_call(restore_network_command.split())
 
 
-@retry(stop=stop_after_attempt(15), wait=wait_fixed(15))
+@retry(stop=stop_after_attempt(60), wait=wait_fixed(15))
 def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
     """Wait until network is restored.
 
@@ -233,23 +281,6 @@ def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
     """
     if instance_ip(model_name, hostname) == old_ip:
         raise Exception("Network not restored, IP address has not changed yet.")
-
-
-def instance_ip(model: str, instance: str) -> str:
-    """Translate juju instance name to IP.
-
-    Args:
-        model: The name of the model
-        instance: The name of the instance
-
-    Returns:
-        The (str) IP address of the instance
-    """
-    output = subprocess.check_output(f"juju machines --model {model}".split())
-
-    for line in output.decode("utf8").splitlines():
-        if instance in line:
-            return line.split()[2]
 
 
 async def get_controller_machine(ops_test: OpsTest) -> str:
@@ -281,3 +312,22 @@ def is_machine_reachable_from(origin_machine: str, target_machine: str) -> bool:
         return True
     except subprocess.CalledProcessError:
         return False
+
+
+async def send_kill_signal_to_process(
+    ops_test: OpsTest, app: str, unit_id: int, signal: str, opensearch_pid: Optional[int] = None
+) -> Optional[int]:
+    """Run kill with signal in specific unit."""
+    unit_name = f"{app}/{unit_id}"
+
+    if opensearch_pid is None:
+        get_pid_cmd = f"run --unit {unit_name} -- sudo lsof -ti:9200"
+        _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=True)
+
+    if not opensearch_pid:
+        return None
+
+    kill_cmd = f"run --unit {unit_name} -- kill -{signal.upper()} {opensearch_pid}"
+    await ops_test.juju(*kill_cmd.split(), check=True)
+
+    return opensearch_pid
