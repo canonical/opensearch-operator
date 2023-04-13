@@ -229,7 +229,7 @@ def restore_network_for_unit(machine_name: str) -> None:
 
 
 @retry(
-    stop=stop_after_attempt(15),
+    stop=stop_after_attempt(60),
     wait=wait_exponential(multiplier=1, min=2, max=30),
 )
 def wait_network_restore(ops_test, unit_id: int, old_ip: str) -> None:

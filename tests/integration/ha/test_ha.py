@@ -173,7 +173,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     wait_network_restore(ops_test, unit_id=cm_unit_id, old_ip=cm_address)
 
     # self healing is performed with update status hook. Status also checks our node roles are
-    # correctly configured. 65s wait means we want to guarantee a status hook fires in that time.
+    # correctly configured.
     await ops_test.model.wait_for_idle(
         apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=35
     )
