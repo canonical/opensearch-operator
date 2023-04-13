@@ -86,7 +86,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=config),
-        ops_test.model.deploy(my_charm, num_units=4, series=SERIES),
+        ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -96,7 +96,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         status="active",
         timeout=1400,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 4
+    assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
 async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
@@ -175,7 +175,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     # self healing is performed with update status hook. Status also checks our node roles are
     # correctly configured.
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=4
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=3
     )
 
     # verify we still have connection to the old cluster manager
