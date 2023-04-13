@@ -370,6 +370,7 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         if self.unit.is_leader():
+            self._compute_and_broadcast_updated_topology(self._get_nodes(True))
             # if there are exclusions to be removed
             self.opensearch_exclusions.cleanup()
             if self.health.apply() == HealthColors.YELLOW_TEMP:
@@ -772,16 +773,12 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _reconfigure_and_restart_unit_if_needed(self, recompute_conf: bool = False):
         """Reconfigure the current unit if a new config was computed for it, then restart."""
-        host_update = self.opensearch_config.update_host_if_needed()
-        if recompute_conf and host_update:
+        if recompute_conf:
             # TODO This should recompute whole conf, for now we only need network host to update.
-            # if self.opensearch_config.update_host_if_needed():
-            # self.on[self.service_manager.name].acquire_lock.emit(
-            # callback_override="_restart_opensearch"
-            # )
-            self.on[self.service_manager.name].acquire_lock.emit(
-                callback_override="_restart_opensearch"
-            )
+            if self.opensearch_config.update_host_if_needed():
+                self.on[self.service_manager.name].acquire_lock.emit(
+                    callback_override="_restart_opensearch"
+                )
             return
 
         nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
