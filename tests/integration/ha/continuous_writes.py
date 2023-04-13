@@ -6,6 +6,7 @@ import logging
 import os
 from multiprocessing import Event, Process, Queue
 from types import SimpleNamespace
+from typing import Optional
 
 from opensearchpy import OpenSearch, TransportError
 from opensearchpy.helpers import BulkIndexError, bulk
@@ -83,14 +84,14 @@ class ContinuousWrites:
         finally:
             client.close()
 
-    async def count(self) -> int:
+    async def count(self, unit_ip: Optional[str] = None, preference: Optional[str] = None) -> int:
         """Count the number of documents in the index."""
-        client = await self._client()
+        client = await self._client(unit_ip)
         try:
             # refresh the index so that all writes are visible on search
             client.indices.refresh(index=ContinuousWrites.INDEX_NAME)
 
-            resp = client.count(index=ContinuousWrites.INDEX_NAME)
+            resp = client.count(index=ContinuousWrites.INDEX_NAME, preference=preference)
             return int(resp["count"])
         finally:
             client.close()
@@ -170,10 +171,14 @@ class ContinuousWrites:
 
         return secrets["password"]
 
-    async def _client(self):
+    async def _client(self, unit_ip: Optional[str] = None):
         """Build an opensearch client."""
+        hosts = get_application_unit_ips(self._ops_test, app=self._app)
+        if unit_ip:
+            hosts = [unit_ip]
+
         return opensearch_client(
-            get_application_unit_ips(self._ops_test, app=self._app),
+            hosts,
             "admin",
             await self._secrets(),
             ContinuousWrites.CERT_PATH,

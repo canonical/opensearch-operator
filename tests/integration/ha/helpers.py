@@ -8,7 +8,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.helpers import http_request
+from tests.integration.helpers import get_application_unit_ids_ips, http_request
 
 
 class Shard:
@@ -166,12 +166,38 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
     return [Node(node["name"], node["node.roles"].split(","), node["ip"]) for node in nodes]
 
 
-async def assert_continuous_writes_consistency(c_writes: ContinuousWrites) -> None:
+async def assert_continuous_writes_consistency(
+    ops_test: OpsTest, c_writes: ContinuousWrites, app: str
+) -> None:
     """Continuous writes checks."""
     result = await c_writes.stop()
-
     assert result.max_stored_id == result.count - 1
     assert result.max_stored_id == result.last_expected_id
+
+    # investigate the data in each shard, primaries and their respective replicas
+    units_ips = get_application_unit_ids_ips(ops_test, app)
+    shards = await get_shards_by_index(
+        ops_test, list(units_ips.values())[0], ContinuousWrites.INDEX_NAME
+    )
+
+    shards_by_id = {}
+    for shard in shards:
+        shards_by_id.setdefault(shard.num, []).append(shard)
+
+    # count data on each shard. For the continuous writes index, we have 2 primary shards
+    # and replica shards of each on all the nodes.
+    # in other words: prim1 and its replicas will have a different ID than prim2 and its replicas.
+    count_from_shards = 0
+    for shard_id, shards_list in shards_by_id.items():
+        count_by_shard = [
+            c_writes.count(units_ips[shard.unit_id], preference="_only_local")
+            for shard in shards_list
+        ]
+        # all shards with the same id must have the same count
+        assert len(set(count_by_shard)) == 1
+        count_from_shards += count_by_shard[0]
+
+    assert result.count == count_from_shards
 
 
 async def send_kill_signal_to_process(
