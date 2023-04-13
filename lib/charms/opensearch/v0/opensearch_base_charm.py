@@ -363,22 +363,13 @@ class OpenSearchBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
             return
 
-        # try:
-        #     # Retrieve the nodes of the cluster, needed to configure this node
-        #     nodes = self._get_nodes(False)
-        #     # Set the configuration of the node
-        #     self._set_node_conf(nodes)
-        # except OpenSearchHttpError:
-        #     pass
-
-        self._reconfigure_and_restart_unit_if_needed()
+        self._reconfigure_and_restart_unit_if_needed(recompute_conf=True)
 
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
             return
 
         if self.unit.is_leader():
-            # self._compute_and_broadcast_updated_topology(self._get_nodes(True))
             # if there are exclusions to be removed
             self.opensearch_exclusions.cleanup()
             if self.health.apply() == HealthColors.YELLOW_TEMP:
@@ -600,6 +591,7 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _restart_opensearch(self, event: EventBase) -> None:
         """Restart OpenSearch if possible."""
+        self.unit.status = WaitingStatus(WaitingToStart)
         if not self.peers_data.get(Scope.UNIT, "starting", False):
             try:
                 self._stop_opensearch()
@@ -778,8 +770,16 @@ class OpenSearchBaseCharm(CharmBase):
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
         self.opensearch_config.cleanup_bootstrap_conf()
 
-    def _reconfigure_and_restart_unit_if_needed(self):
+    def _reconfigure_and_restart_unit_if_needed(self, recompute_conf: bool = False):
         """Reconfigure the current unit if a new config was computed for it, then restart."""
+        if recompute_conf:
+            # TODO This should recompute whole conf, for now we only need network host to update.
+            if self.opensearch_config.update_host_if_needed():
+                self.on[self.service_manager.name].acquire_lock.emit(
+                    callback_override="_restart_opensearch"
+                )
+            return
+
         nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
         if not nodes_config:
             return
@@ -807,9 +807,6 @@ class OpenSearchBaseCharm(CharmBase):
                 # no conf change
                 return
 
-        self.opensearch_config.update_host()
-
-        self.unit.status = WaitingStatus(WaitingToStart)
         self.on[self.service_manager.name].acquire_lock.emit(
             callback_override="_restart_opensearch"
         )
