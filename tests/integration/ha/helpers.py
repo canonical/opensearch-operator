@@ -11,7 +11,6 @@ from pytest_operator.plugin import OpsTest
 from tenacity import (
     retry,
     stop_after_attempt,
-    wait_exponential,
     wait_fixed,
     wait_random,
 )
@@ -228,23 +227,15 @@ def restore_network_for_unit(machine_name: str) -> None:
     subprocess.check_call(restore_network_command.split())
 
 
-@retry(
-    stop=stop_after_attempt(60),
-    wait=wait_exponential(multiplier=1, min=2, max=30),
-)
-def wait_network_restore(ops_test, unit_id: int, old_ip: str) -> None:
+@retry(stop=stop_after_attempt(60), wait=wait_fixed(15))
+def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
     """Wait until network is restored.
-
     Args:
-        ops_test: The ops test framework instance
-        unit_id: The id of the unit whose network was cut
+        model_name: The name of the model
+        hostname: The name of the instance
         old_ip: old registered IP address
     """
-    logger.error(get_application_unit_ids_ips(ops_test))
-    logger.error(unit_id)
-    logger.error(get_application_unit_ids_ips(ops_test).get(unit_id))
-    logger.error(old_ip)
-    if get_application_unit_ids_ips(ops_test).get(unit_id) == old_ip:
+    if instance_ip(model_name, hostname) == old_ip:
         raise Exception("Network not restored, IP address has not changed yet.")
 
 
