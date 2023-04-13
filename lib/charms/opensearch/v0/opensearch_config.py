@@ -190,7 +190,7 @@ class OpenSearchConfig:
 
     def update_host_if_needed(self) -> bool:
         """Update the opensearch config with the current network hosts."""
-        old_hosts = set(self._opensearch.config.load().get("network.host"))
+        old_hosts = set(self._opensearch.config.load(self.CONFIG_YML).get("network.host", []))
         hosts = set(["_site_"] + self._opensearch.network_hosts)
         if old_hosts != hosts:
             self._opensearch.config.put(self.CONFIG_YML, "network.host", hosts)
