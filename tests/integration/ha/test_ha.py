@@ -14,6 +14,7 @@ from tests.integration.ha.helpers import (  # assert_continuous_writes_consisten
     cut_network_from_unit,
     get_controller_machine,
     get_elected_cm_unit,
+    get_unit_ip,
     is_machine_reachable_from,
     restore_network_for_unit,
     secondary_up_to_date,
@@ -112,8 +113,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     all_units = ops_test.model.applications[app].units
 
     cm_hostname = await unit_hostname(ops_test, cm.name)
-    cm_address = cm.public_address
-
+    cm_address = await get_unit_ip(ops_test, cm.name)
     # verify the cluster works fine before we can test
     # TODO update assertion to check the cluster returns what we expect
     assert await ping_cluster(

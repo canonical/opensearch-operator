@@ -8,15 +8,10 @@ from typing import Dict, List, Optional
 import yaml
 from charms.opensearch.v0.models import Node
 from pytest_operator.plugin import OpsTest
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_fixed,
-    wait_random,
-)
+from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.helpers import get_application_unit_ids_ips, http_request
+from tests.integration.helpers import http_request  # get_application_unit_ids_ips,
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +137,54 @@ async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) 
     return result
 
 
+async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
+    """Get hostname for a unit.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+
+    Returns:
+        The machine/container hostname
+    """
+    _, raw_hostname, _ = await ops_test.juju("ssh", unit_name, "hostname")
+    return raw_hostname.strip()
+
+
+def instance_ip(model: str, instance: str) -> str:
+    """Translate juju instance name to IP.
+
+    Args:
+        model: The name of the model
+        instance: The name of the instance
+
+    Returns:
+        The (str) IP address of the instance
+    """
+    output = subprocess.check_output(f"juju machines --model {model}".split())
+
+    for line in output.decode("utf8").splitlines():
+        if instance in line:
+            return line.split()[2]
+
+
+async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
+    """Wrapper for getting unit ip.
+
+    Juju incorrectly reports the IP addresses after the network is restored this is reported as a
+    bug here: https://github.com/juju/python-libjuju/issues/738 . Once this bug is resolved use of
+    `get_unit_ip` should be replaced with `.public_address`
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+
+    Returns:
+        The (str) ip of the unit
+    """
+    return instance_ip(ops_test.model.info.name, await unit_hostname(ops_test, unit_name))
+
+
 @retry(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
@@ -230,6 +273,7 @@ def restore_network_for_unit(machine_name: str) -> None:
 @retry(stop=stop_after_attempt(60), wait=wait_fixed(15))
 def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
     """Wait until network is restored.
+
     Args:
         model_name: The name of the model
         hostname: The name of the instance
