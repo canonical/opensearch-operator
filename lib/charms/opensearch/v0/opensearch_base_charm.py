@@ -776,9 +776,9 @@ class OpenSearchBaseCharm(CharmBase):
         if recompute_conf and host_update:
             # TODO This should recompute whole conf, for now we only need network host to update.
             # if self.opensearch_config.update_host_if_needed():
-                # self.on[self.service_manager.name].acquire_lock.emit(
-                    # callback_override="_restart_opensearch"
-                # )
+            # self.on[self.service_manager.name].acquire_lock.emit(
+            # callback_override="_restart_opensearch"
+            # )
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
