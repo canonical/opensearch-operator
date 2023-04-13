@@ -189,7 +189,10 @@ class OpenSearchConfig:
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
 
     def update_host_if_needed(self) -> bool:
-        """Update the opensearch config with the current network hosts."""
+        """Update the opensearch config with the current network hosts.
+
+        Returns: True if host updated, False otherwise.
+        """
         old_hosts = set(self._opensearch.config.load(self.CONFIG_YML).get("network.host", []))
         hosts = set(["_site_"] + self._opensearch.network_hosts)
         if old_hosts != hosts:
