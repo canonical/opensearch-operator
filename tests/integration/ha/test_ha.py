@@ -170,7 +170,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 
     # wait until network is reestablished for the unit
     cm_unit_id = int(cm.name.split("/")[1])
-    wait_network_restore(ops_test.model.name, hostname=cm_hostname, old_ip=cm_address)
+    wait_network_restore(ops_test.model.info.name, hostname=cm_hostname, old_ip=cm_address)
 
     # self healing is performed with update status hook. Status also checks our node roles are
     # correctly configured.
