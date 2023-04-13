@@ -14,7 +14,8 @@ from tests.integration.helpers import get_application_unit_ids_ips, http_request
 class Shard:
     """Class for holding a shard."""
 
-    def __init__(self, index: str, num: int, is_prim: bool, node_id: str, unit_id: int):
+    def __init__(self, id: str, index: str, num: int, is_prim: bool, node_id: str, unit_id: int):
+        self.id = id
         self.index = index
         self.num = num
         self.is_prim = is_prim
@@ -114,6 +115,7 @@ async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) 
             unit_id = int(nodes[shard["node"]]["name"].split("-")[1])
             result.append(
                 Shard(
+                    id=shard["allocation_id"]["id"],
                     index=index_name,
                     num=shard["shard"],
                     is_prim=shard["primary"],
@@ -186,11 +188,11 @@ async def assert_continuous_writes_consistency(
 
     # count data on each shard. For the continuous writes index, we have 2 primary shards
     # and replica shards of each on all the nodes.
-    # in other words: prim1 and its replicas will have a different ID than prim2 and its replicas.
+    # in other words: prim1 and its replicas will have a different "num" than prim2 and its replicas.
     count_from_shards = 0
-    for shard_id, shards_list in shards_by_id.items():
+    for shard_num, shards_list in shards_by_id.items():
         count_by_shard = [
-            c_writes.count(units_ips[shard.unit_id], preference="_only_local")
+            await c_writes.count(units_ips[shard.unit_id], preference=f"shard={shard.id}")
             for shard in shards_list
         ]
         # all shards with the same id must have the same count
