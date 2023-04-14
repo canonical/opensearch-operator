@@ -227,6 +227,10 @@ async def test_freeze_db_process_node_with_primary_shard(
         ops_test, app, first_unit_with_primary_shard, signal="SIGSTOP"
     )
 
+    # verify the unit is not reachable
+    is_node_up = await is_up(ops_test, units_ips[first_unit_with_primary_shard], retries=3)
+    assert not is_node_up
+
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
     # should also be plenty for the shard primary reelection to happen
     writes = await c_writes.count()

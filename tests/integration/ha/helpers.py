@@ -213,9 +213,11 @@ async def send_kill_signal_to_process(
         _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=True)
 
     if not opensearch_pid:
-        return None
+        raise Exception("Could not fetch PID for process listening on port 9200.")
 
     kill_cmd = f"ssh {unit_name} -- sudo kill -{signal.upper()} {opensearch_pid}"
-    await ops_test.juju(*kill_cmd.split(), check=True)
+    return_code, stdout, stderr = await ops_test.juju(*kill_cmd.split(), check=False)
+    if return_code != 0:
+        raise Exception(f"{kill_cmd} failed -- rc: {return_code} - out: {stdout} - err: {stderr}")
 
     return opensearch_pid

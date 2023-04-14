@@ -359,11 +359,11 @@ async def check_cluster_formation_successful(
     return set(unit_names) == set(registered_nodes)
 
 
-async def is_up(ops_test: OpsTest, unit_ip: str) -> bool:
+async def is_up(ops_test: OpsTest, unit_ip: str, retries: int = 15) -> bool:
     """Return if node up."""
     try:
         for attempt in Retrying(
-            stop=stop_after_attempt(15), wait=wait_fixed(wait=5) + wait_random(0, 5)
+            stop=stop_after_attempt(retries), wait=wait_fixed(wait=5) + wait_random(0, 5)
         ):
             with attempt:
                 http_resp_code = await http_request(
