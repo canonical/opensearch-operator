@@ -33,6 +33,7 @@ from tests.integration.helpers import (
     get_application_unit_ids_ips,
     get_application_unit_names,
     get_leader_unit_ip,
+    get_reachable_unit_ips,
     is_up,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -238,8 +239,12 @@ async def test_freeze_db_process_node_with_primary_shard(
     more_writes = await c_writes.count()
     assert more_writes > writes, "writes not continuing to DB"
 
+    # get reachable unit to perform requests against, in case the previously stopped unit
+    # is leader unit, so its address is not reachable
+    reachable_ip = get_reachable_unit_ips(ops_test)[0]
+
     # fetch unit hosting the new primary shard of the previous index
-    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    shards = await get_shards_by_index(ops_test, reachable_ip, ContinuousWrites.INDEX_NAME)
     units_with_p_shards = [shard.unit_id for shard in shards if shard.is_prim]
     assert len(units_with_p_shards) == 2
     for unit_id in units_with_p_shards:
