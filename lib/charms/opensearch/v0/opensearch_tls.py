@@ -95,6 +95,7 @@ class OpenSearchTLS(Object):
         self._request_certificate(Scope.UNIT, CertType.UNIT_HTTP)
 
     def refresh_certificate(self, scope: Scope, cert_type: CertType) -> None:
+        """Requests a new certificate with the given scope and type from the tls operator."""
         secrets = self.charm.secrets.get_object(scope, cert_type.val)
         key = secrets.get("key").encode("utf-8")
         key_password = secrets.get("key-password")
