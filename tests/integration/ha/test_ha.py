@@ -165,6 +165,10 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     logger.error(total_expected_writes)
     assert total_expected_writes.count == actual_writes, "writes to the db were missed."
 
+    # TODO showw status here (check if update-status breaks everything before we restore network)
+    time.sleep(70)
+    # TODO showw status here
+
     # restore network connectivity to old cluster manager
     restore_network_for_unit(cm_hostname)
 

@@ -363,13 +363,8 @@ class OpenSearchBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
             return
 
-        self._reconfigure_and_restart_unit_if_needed(recompute_conf=True)
-
-        if self.unit.is_leader():
-            try:
-                self._compute_and_broadcast_updated_topology(self._get_nodes(True))
-            except OpenSearchHttpError:
-                pass
+        if self._reconfigure_and_restart_unit_if_needed(recompute_conf=True):
+            return
 
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
@@ -598,6 +593,7 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _restart_opensearch(self, event: EventBase) -> None:
         """Restart OpenSearch if possible."""
+        logger.error("restarting opensearch daemon")
         self.unit.status = WaitingStatus(WaitingToStart)
         if not self.peers_data.get(Scope.UNIT, "starting", False):
             try:
@@ -777,19 +773,21 @@ class OpenSearchBaseCharm(CharmBase):
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
         self.opensearch_config.cleanup_bootstrap_conf()
 
-    def _reconfigure_and_restart_unit_if_needed(self, recompute_conf: bool = False):
-        """Reconfigure the current unit if a new config was computed for it, then restart."""
-        if recompute_conf:
+    def _reconfigure_and_restart_unit_if_needed(self, recompute_conf: bool = False) -> bool:
+        """Reconfigure the current unit if a new config was computed for it, then restart.
+
+        Return: True if we restart the unit, false otherwise.
+        """
+        if recompute_conf and self.opensearch_config.update_host_if_needed():
             # TODO This should recompute whole conf, for now we only need network host to update.
-            if self.opensearch_config.update_host_if_needed():
-                self.on[self.service_manager.name].acquire_lock.emit(
-                    callback_override="_restart_opensearch"
-                )
-            return
+            self.on[self.service_manager.name].acquire_lock.emit(
+                callback_override="_restart_opensearch"
+            )
+            return True
 
         nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
         if not nodes_config:
-            return
+            return False
 
         nodes_config = {name: Node.from_dict(node) for name, node in nodes_config.items()}
 
@@ -803,20 +801,18 @@ class OpenSearchBaseCharm(CharmBase):
             # the conf could not be computed / broadcasted, because this node is
             # "starting" and is not online "yet" - either barely being configured (i.e. TLS)
             # or waiting to start.
-            return
+            return False
 
         if new_node_conf:
             current_conf = self.opensearch_config.load_node()
-            if (
-                sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles)
-                and current_conf.get("network.host") == self.unit_ip
-            ):
+            if sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles):
                 # no conf change
-                return
+                return False
 
         self.on[self.service_manager.name].acquire_lock.emit(
             callback_override="_restart_opensearch"
         )
+        return True
 
     def _compute_and_broadcast_updated_topology(self, current_nodes: List[Node]):
         """Compute cluster topology and broadcast node configs (roles for now) to change if any."""
@@ -824,18 +820,18 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
-        updated_nodes_list = list(updated_nodes.values())
+        # updated_nodes_list = list(updated_nodes.values())
 
-        updated_nodes_list.sort(key=lambda node: node.name)
-        current_nodes.sort(key=lambda node: node.name)
-        nodes_identical = True
-        for updated_node, current_node in zip(updated_nodes_list, current_nodes):
-            if updated_node != current_node:
-                nodes_identical = False
-                break
-        if nodes_identical:
-            # Nodes haven't changed, don't update
-            return
+        # updated_nodes_list.sort(key=lambda node: node.name)
+        # current_nodes.sort(key=lambda node: node.name)
+        # nodes_identical = True
+        # for updated_node, current_node in zip(updated_nodes_list, current_nodes):
+        #     if updated_node != current_node:
+        #         nodes_identical = False
+        #         break
+        # if nodes_identical:
+        #     # Nodes haven't changed, don't update
+        #     return
 
         self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
 
