@@ -779,10 +779,11 @@ class OpenSearchBaseCharm(CharmBase):
         Return: True if we restart the unit, false otherwise.
         """
         if recompute_conf and self.opensearch_config.update_host_if_needed():
+            # _on_tls_conf_set (occurs after certificate is received) should handle restarting
+            # opensearch.
+            self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_HTTP)
+            self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
             # TODO This should recompute whole conf, for now we only need network host to update.
-            self.on[self.service_manager.name].acquire_lock.emit(
-                callback_override="_restart_opensearch"
-            )
             return True
 
         nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")

@@ -194,6 +194,10 @@ class OpenSearchConfig:
         Returns: True if host updated, False otherwise.
         """
         old_hosts = set(self._opensearch.config.load(self.CONFIG_YML).get("network.host", []))
+        if not old_hosts:
+            # Unit not configured yet
+            return False
+
         hosts = set(["_site_"] + self._opensearch.network_hosts)
         if old_hosts != hosts:
             self._opensearch.config.put(self.CONFIG_YML, "network.host", hosts)

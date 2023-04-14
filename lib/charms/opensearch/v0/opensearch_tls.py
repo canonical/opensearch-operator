@@ -94,6 +94,12 @@ class OpenSearchTLS(Object):
         self._request_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
         self._request_certificate(Scope.UNIT, CertType.UNIT_HTTP)
 
+    def refresh_certificate(self, scope: Scope, cert_type: CertType) -> None:
+        secrets = self.charm.secrets.get_object(scope, cert_type.val)
+        key = secrets.get("key").encode("utf-8")
+        key_password = secrets.get("key-password")
+        self._request_certificate(scope, cert_type, key, key_password)
+
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Notify the charm that the relation is broken."""
         self.charm.on_tls_relation_broken(event)
@@ -172,14 +178,14 @@ class OpenSearchTLS(Object):
         self,
         scope: Scope,
         cert_type: CertType,
-        param: Optional[str] = None,
+        key: Optional[str] = None,
         password: Optional[str] = None,
     ):
         """Request certificate and store the key/key-password/csr in the scope's data bag."""
-        if param is None:
+        if key is None:
             key = generate_private_key()
         else:
-            key = self._parse_tls_file(param)
+            key = self._parse_tls_file(key)
 
         if password is not None:
             password = password.encode("utf-8")
