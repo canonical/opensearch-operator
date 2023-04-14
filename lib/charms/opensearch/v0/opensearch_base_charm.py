@@ -365,12 +365,18 @@ class OpenSearchBaseCharm(CharmBase):
 
         self._reconfigure_and_restart_unit_if_needed(recompute_conf=True)
 
+        if self.unit.is_leader():
+            try:
+                self._compute_and_broadcast_updated_topology(self._get_nodes(True))
+            except:
+                pass
+
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
             return
 
         if self.unit.is_leader():
-            self._compute_and_broadcast_updated_topology(self._get_nodes(True))
+            # self._compute_and_broadcast_updated_topology(self._get_nodes(True))
             # if there are exclusions to be removed
             self.opensearch_exclusions.cleanup()
             if self.health.apply() == HealthColors.YELLOW_TEMP:
