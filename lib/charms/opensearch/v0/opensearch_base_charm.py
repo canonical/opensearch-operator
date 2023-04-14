@@ -368,7 +368,7 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader():
             try:
                 self._compute_and_broadcast_updated_topology(self._get_nodes(True))
-            except:
+            except OpenSearchHttpError:
                 pass
 
         # if node already shutdown - leave
