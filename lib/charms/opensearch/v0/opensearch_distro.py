@@ -181,6 +181,7 @@ class OpenSearchDistribution(ABC):
         check_hosts_reach: bool = True,
         resp_status_code: bool = False,
         retries: int = 0,
+        timeout: int = 5,
     ) -> Union[Dict[str, any], List[any], int]:
         """Make an HTTP request.
 
@@ -193,6 +194,7 @@ class OpenSearchDistribution(ABC):
             check_hosts_reach: if true, performs a ping for each host
             resp_status_code: whether to only return the HTTP code from the response.
             retries: number of retries
+            timeout: number of seconds before a timeout happens
 
         Raises:
             ValueError if method or endpoint are missing
@@ -250,7 +252,7 @@ class OpenSearchDistribution(ABC):
                             "Accept": "application/json",
                             "Content-Type": "application/json",
                         },
-                        "timeout": 5,
+                        "timeout": timeout,
                     }
                     if payload:
                         request_kwargs["data"] = (
