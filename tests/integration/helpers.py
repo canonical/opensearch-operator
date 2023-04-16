@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 import json
 import logging
-import subprocess
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -283,7 +282,7 @@ async def http_request(
 
         if resp.status_code == 503:
             logger.debug("\n\n\n\n -- Error 503 -- \n")
-            debug_failed_unit(ops_test, app, endpoint)
+            await debug_failed_unit(ops_test, app, endpoint)
 
         if resp_status_code:
             return resp.status_code
@@ -291,7 +290,7 @@ async def http_request(
         return resp.json()
 
 
-def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
+async def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
     """Print the logs of a unit failing with a certain set of statuses."""
     unit_ip = endpoint[8:].split(":")[0]
 
