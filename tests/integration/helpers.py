@@ -307,7 +307,7 @@ async def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
         logger.debug(f"{f}:\n")
 
         get_logs_cmd = f"run --unit {app}/{unit_id} -- sudo cat {f}"
-        _, out, err = await ops_test.juju(*get_logs_cmd.split(), check=True)
+        _, out, err = await ops_test.juju(*get_logs_cmd.split())
         logger.debug(f"out:\n{out}\n---\nerr:\n{err}")
 
         logger.debug("\n\n------------------\n\n")
@@ -391,7 +391,7 @@ async def is_up(ops_test: OpsTest, unit_ip: str, retries: int = 15) -> bool:
     """Return if node up."""
     try:
         for attempt in Retrying(
-            stop=stop_after_attempt(retries), wait=wait_fixed(wait=5) + wait_random(0, 5)
+            stop=stop_after_attempt(retries), wait=wait_fixed(wait=10) + wait_random(0, 5)
         ):
             with attempt:
                 http_resp_code = await http_request(
