@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import json
 import logging
+import subprocess
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -280,10 +281,37 @@ async def http_request(
         request_kwargs["verify"] = chain.name if verify else False
         resp = session.request(**request_kwargs)
 
+        if resp.status_code == 503:
+            logger.debug("\n\n\n\n -- Error 503 -- \n")
+            debug_failed_unit(ops_test, app, endpoint)
+
         if resp_status_code:
             return resp.status_code
 
         return resp.json()
+
+
+def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
+    """Print the logs of a unit failing with a certain set of statuses."""
+    unit_ip = endpoint[8:].split(":")[0]
+
+    ids_ips = get_application_unit_ids_ips(ops_test, app=app)
+    unit_id = [u_id for u_id, u_ip in ids_ips.items() if u_ip == unit_ip][0]
+
+    root = "/var/snap/opensearch"
+    files_to_debug = [
+        f"{root}/common/logs/{app}-{ops_test.model_name}.log",
+        f"{root}/current/config/opensearch.yml",
+        f"{root}/current/config/unicast_hosts.txt",
+    ]
+    for f in files_to_debug:
+        logger.debug(f"{f}:\n")
+
+        get_logs_cmd = f"run --unit {app}/{unit_id} -- sudo cat {f}"
+        _, out, err = await ops_test.juju(*get_logs_cmd.split(), check=True)
+        logger.debug(f"out:\n{out}\n---\nerr:\n{err}")
+
+        logger.debug("\n\n------------------\n\n")
 
 
 def opensearch_client(
