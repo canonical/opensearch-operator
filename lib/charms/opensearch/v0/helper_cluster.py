@@ -239,12 +239,16 @@ class ClusterState:
     ) -> Dict[str, any]:
         """Fetch the cluster health."""
         endpoint = "/_cluster/health"
+
+        timeout = 5
         if wait_for_green:
             endpoint = f"{endpoint}?wait_for_status=green&timeout=1m"
+            timeout = 75
 
         return opensearch.request(
             "GET",
             endpoint,
             host=host,
             alt_hosts=alt_hosts,
+            timeout=timeout,
         )
