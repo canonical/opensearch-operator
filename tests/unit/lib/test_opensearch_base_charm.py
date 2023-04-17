@@ -154,7 +154,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_LIB_PATH}.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
     @patch(f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm._get_nodes")
     @patch(f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm._set_node_conf")
-    def test_on_update_status(self, _, __, ___, get_relation, cert_expiration_remaining_hours):
+    @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.update_host_if_needed")
+    def test_on_update_status(self, _, __, ___, ____, get_relation, cert_expiration_remaining_hours):
         """Test on update status."""
         with patch(
             f"{self.OPENSEARCH_DISTRO}.missing_sys_requirements"
