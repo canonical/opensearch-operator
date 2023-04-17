@@ -268,7 +268,7 @@ async def test_restart_db_process(ops_test, c_writes: ContinuousWrites, c_writes
     await ops_test.model.wait_for_idle(apps=[app], status="active")
 
     # verify cluster manager step-down and a new cluster manager gets elected
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test)
     new_cm_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
     assert new_cm_id != -1
     assert new_cm_id != old_cm_id
