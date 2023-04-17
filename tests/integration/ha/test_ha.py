@@ -9,21 +9,18 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (
+from tests.integration.ha.helpers import (  # assert_continuous_writes_consistency,; get_shards_by_index,; instance_ip,; send_kill_signal_to_process,
     app_name,
-    # assert_continuous_writes_consistency,
     cut_network_from_unit,
     get_controller_machine,
     get_elected_cm_unit,
-    # get_shards_by_index,
     get_unit_ip,
-    # instance_ip,
     is_machine_reachable_from,
     restore_network_for_unit,
     secondary_up_to_date,
-    # send_kill_signal_to_process,
     wait_network_restore,
 )
+
 # from tests.integration.ha.helpers_data import (
 #     create_index,
 #     default_doc,
@@ -35,17 +32,11 @@ from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
     get_application_unit_ids_ips,  # ; get_application_unit_names,; get_leader_unit_ip,; is_up,
 )
-from tests.integration.helpers import (  # check_cluster_formation_successful,;; get_application_unit_ids,# ;
+from tests.integration.helpers import (  # check_cluster_formation_successful,;; get_application_unit_ids,# ;; check_cluster_formation_successful,; get_application_unit_ids,; get_application_unit_names,; get_leader_unit_ip,; get_reachable_unit_ips,; is_up,
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
-    # check_cluster_formation_successful,
-    # get_application_unit_ids,
     get_application_unit_ips,
-    # get_application_unit_names,
-    # get_leader_unit_ip,
-    # get_reachable_unit_ips,
-    # is_up,
     ping_cluster,
     unit_hostname,
 )
@@ -388,7 +379,8 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 #         ops_test, app, first_unit_with_primary_shard, signal="SIGKILL"
 #     )
 
-#     # verify new writes are continuing by counting the number of writes before and after 5 seconds
+#     # verify new writes are continuing by counting the number of writes before and after 5
+#     # seconds
 #     # should also be plenty for the shard primary reelection to happen
 #     writes = await c_writes.count()
 #     time.sleep(5)
@@ -455,7 +447,8 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 #     is_node_up = await is_up(ops_test, units_ips[first_unit_with_primary_shard], retries=3)
 #     assert not is_node_up
 
-#     # verify new writes are continuing by counting the number of writes before and after 5 seconds
+#     # verify new writes are continuing by counting the number of writes before and after 5
+#     # seconds
 #     # should also be plenty for the shard primary reelection to happen
 #     writes = await c_writes.count()
 #     time.sleep(5)
@@ -484,7 +477,8 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 #         opensearch_pid=opensearch_pid,
 #     )
 
-#     # verify that the opensearch service is back running on the unit previously hosting the p_shard
+#     # verify that the opensearch service is back running on the unit previously hosting the
+#     # p_shard
 #     assert await is_up(
 #         ops_test, units_ips[first_unit_with_primary_shard]
 #     ), "OpenSearch service hasn't restarted."
