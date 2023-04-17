@@ -137,7 +137,7 @@ class OpenSearchDistribution(ABC):
         """Check if OpenSearch is started."""
         reachable = is_reachable(self.host, self.port)
         if not reachable:
-            logger.error("Cannot connect to the OpenSearch server...")
+            logger.error("Cannot connect to the OpenSearch server on this node...")
 
         return reachable
 

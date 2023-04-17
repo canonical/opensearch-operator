@@ -150,6 +150,8 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
         controller, cm_hostname
     ), "unit is reachable from controller"
 
+    # wait for the MODEL to become idle first
+    await ops_test.model.wait_for_idle()
     # Wait for another unit to be elected cluster manager TODO this may be part of the problem
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
@@ -189,6 +191,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 
     # self healing is performed with update status hook. Status also checks our node roles are
     # correctly configured.
+    await ops_test.model.wait_for_idle()
     await ops_test.model.wait_for_idle(
         apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=35
     )
