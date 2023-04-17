@@ -207,7 +207,7 @@ async def test_kill_db_process_node_with_primary_shard(
 async def test_kill_db_process_node_with_elected_cm(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
-    """Check cluster can self-heal + data indexed/read when process dies on node with P_shard."""
+    """Check cluster can self-heal, data indexed/read when process dies on node with elected CM."""
     app = (await app_name(ops_test)) or APP_NAME
 
     units_ips = get_application_unit_ids_ips(ops_test, app)
@@ -230,7 +230,7 @@ async def test_kill_db_process_node_with_elected_cm(
     await send_kill_signal_to_process(ops_test, app, first_elected_cm_unit_id, signal="SIGKILL")
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    # should also be plenty for the shard primary reelection to happen
+    # should also be plenty for the cluster manager reelection to happen
     writes = await c_writes.count()
     time.sleep(5)
     more_writes = await c_writes.count()
