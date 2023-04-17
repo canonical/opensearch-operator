@@ -13,6 +13,7 @@ from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.ha.helpers import (
     app_name,
     assert_continuous_writes_consistency,
+    get_elected_cm_unit_id,
     get_shards_by_index,
     send_kill_signal_to_process,
 )
@@ -194,6 +195,59 @@ async def test_kill_db_process_node_with_primary_shard(
     assert first_unit_with_primary_shard in units_with_r_shards
 
     # verify the node with the old primary successfully joined the rest of the fleet
+    assert await check_cluster_formation_successful(
+        ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
+    )
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
+
+@pytest.mark.abort_on_fail
+async def test_kill_db_process_node_with_elected_cm(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+) -> None:
+    """Check cluster can self-heal + data indexed/read when process dies on node with P_shard."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    units_ips = get_application_unit_ids_ips(ops_test, app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    # find unit currently elected cluster_manager
+    first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+
+    # Killing the only instance can be disastrous.
+    if len(ops_test.model.applications[app].units) < 2:
+        await ops_test.model.applications[app].add_unit(count=1)
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            idle_period=IDLE_PERIOD,
+        )
+
+    # Kill the opensearch process
+    await send_kill_signal_to_process(ops_test, app, first_elected_cm_unit_id, signal="SIGKILL")
+
+    # verify new writes are continuing by counting the number of writes before and after 5 seconds
+    # should also be plenty for the shard primary reelection to happen
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "Writes not continuing to DB"
+
+    # verify that the opensearch service is back running on the old elected cm unit
+    assert await is_up(
+        ops_test, units_ips[first_elected_cm_unit_id]
+    ), "OpenSearch service hasn't restarted."
+
+    # fetch the current elected cluster manager
+    current_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+    assert (
+        current_elected_cm_unit_id != first_elected_cm_unit_id
+    ), "Cluster manager election did not happen."
+
+    # verify the node with the old elected cm successfully joined back the rest of the fleet
     assert await check_cluster_formation_successful(
         ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
     )
