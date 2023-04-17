@@ -13,18 +13,18 @@ from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.ha.helpers import (
     app_name,
     assert_continuous_writes_consistency,
+    get_elected_cm_unit,
+    get_elected_cm_unit_id,
     get_shards_by_index,
+    secondary_up_to_date,
     send_kill_signal_to_process,
 )
 from tests.integration.ha.helpers_data import (
     create_index,
     default_doc,
     delete_index,
-    get_elected_cm_unit,
-    get_elected_cm_unit_id,
     index_doc,
     search,
-    secondary_up_to_date,
 )
 from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
