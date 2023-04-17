@@ -171,9 +171,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
     # TODO show status here (check if update-status breaks everything before we restore network)
-    await ops_test.model.wait_for_idle()
     time.sleep(70)
-    await ops_test.model.wait_for_idle()
 
     # restore network connectivity to old cluster manager
     restore_network_for_unit(cm_hostname)
