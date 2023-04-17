@@ -9,7 +9,9 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (  # assert_continuous_writes_consistency,; get_shards_by_index,; instance_ip,; send_kill_signal_to_process,
+from tests.integration.ha.helpers import (
+    assert_continuous_writes_consistency,
+    # get_shards_by_index,; instance_ip,; send_kill_signal_to_process,
     app_name,
     cut_network_from_unit,
     get_controller_machine,
@@ -142,9 +144,9 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     ), "unit is reachable from controller"
 
     # wait for the MODEL to become idle first
-    await ops_test.model.wait_for_idle()
+    await ops_test.model.wait_for_idle(status="active")
     # Wait for another unit to be elected cluster manager TODO this may be part of the problem
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active")
 
     # verify new writes are continuing by counting the number of writes before and after a 5 second
     # wait
@@ -163,15 +165,16 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     assert new_cm.name != cm.name
 
     # verify that no writes to the db were missed
-    total_expected_writes = await c_writes.stop()
-    actual_writes = await c_writes.count()
-    logger.error(total_expected_writes)
-    assert total_expected_writes.count == actual_writes, "writes to the db were missed."
+    # total_expected_writes = await c_writes.stop()
+    # actual_writes = await c_writes.count()
+    # logger.error(total_expected_writes)
+    # assert total_expected_writes.count == actual_writes, "writes to the db were missed."
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
     # TODO show status here (check if update-status breaks everything before we restore network)
-    # logger.error(ops_test.model.get_status())
+    await ops_test.model.wait_for_idle()
     time.sleep(70)
-    # logger.error(await ops_test.model.get_status())
+    await ops_test.model.wait_for_idle()
 
     # restore network connectivity to old cluster manager
     restore_network_for_unit(cm_hostname)
@@ -197,6 +200,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     ), f"Connection to host {new_ip} is not possible"
 
     # verify that old cluster manager is up to date.
+    total_expected_writes = await c_writes.stop()
     assert await secondary_up_to_date(
         ops_test, new_ip, total_expected_writes.count
     ), "secondary not up to date with the cluster after restarting."
