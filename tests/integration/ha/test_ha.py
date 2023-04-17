@@ -9,26 +9,29 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (  # assert_continuous_writes_consistency,; get_shards_by_index,; send_kill_signal_to_process,
+from tests.integration.ha.helpers import (
     app_name,
+    assert_continuous_writes_consistency,
     cut_network_from_unit,
     get_controller_machine,
     get_elected_cm_unit,
+    get_shards_by_index,
     get_unit_ip,
+    instance_ip,
     is_machine_reachable_from,
     restore_network_for_unit,
     secondary_up_to_date,
+    send_kill_signal_to_process,
     wait_network_restore,
 )
-
-# from tests.integration.ha.helpers_data import (
-#     create_index,
-#     default_doc,
-#     delete_index,
-#     index_doc,
-#     search,
-# )
-# from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
+from tests.integration.ha.helpers_data import (
+    create_index,
+    default_doc,
+    delete_index,
+    index_doc,
+    search,
+)
+from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
     get_application_unit_ids_ips,  # ; get_application_unit_names,; get_leader_unit_ip,; is_up,
 )
@@ -36,7 +39,13 @@ from tests.integration.helpers import (  # check_cluster_formation_successful,;;
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    check_cluster_formation_successful,
+    get_application_unit_ids,
     get_application_unit_ips,
+    get_application_unit_names,
+    get_leader_unit_ip,
+    get_reachable_unit_ips,
+    is_up,
     ping_cluster,
     unit_hostname,
 )
@@ -95,7 +104,8 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
-        timeout=1400,
+        timeout=1000,
+        idle_period=IDLE_PERIOD,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
@@ -228,7 +238,7 @@ async def test_primary_shard_network_cut(ops_test, c_writes, c_writes_runner):
     ), f"Connection to host {primary_public_address} is not possible"
 
     logger.error(
-        f"cutting network for unit {primary_shard_unit.name} with address {primary_shard_unit.public_address}" # noqa
+        f"cutting network for unit {primary_shard_unit.name} with address {primary_shard_unit.public_address}"  # noqa
     )
 
     cut_network_from_unit(primary_hostname)
@@ -343,7 +353,7 @@ async def test_replication_across_members(
     await delete_index(ops_test, app, leader_unit_ip, index_name)
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
 @pytest.mark.abort_on_fail
@@ -375,7 +385,8 @@ async def test_kill_db_process_node_with_primary_shard(
         ops_test, app, first_unit_with_primary_shard, signal="SIGKILL"
     )
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds # noqa
+    # verify new writes are continuing by counting the number of writes before and after 5 seconds
+    # should also be plenty for the shard primary reelection to happen
     writes = await c_writes.count()
     time.sleep(5)
     more_writes = await c_writes.count()
@@ -389,7 +400,7 @@ async def test_kill_db_process_node_with_primary_shard(
     # fetch unit hosting the new primary shard of the previous index
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     units_with_p_shards = [shard.unit_id for shard in shards if shard.is_prim]
-    assert len(units_with_p_shards) == 1
+    assert len(units_with_p_shards) == 2
     for unit_id in units_with_p_shards:
         assert (
             unit_id != first_unit_with_primary_shard
@@ -405,7 +416,90 @@ async def test_kill_db_process_node_with_primary_shard(
     )
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
+
+@pytest.mark.abort_on_fail
+async def test_freeze_db_process_node_with_primary_shard(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+) -> None:
+    """Check cluster can self-heal + data indexed/read on process freeze on node with P_shard."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    units_ips = get_application_unit_ids_ips(ops_test, app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    # find unit hosting the primary shard of the index "series-index"
+    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    first_unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
+
+    # Killing the only instance can be disastrous.
+    if len(ops_test.model.applications[app].units) < 2:
+        await ops_test.model.applications[app].add_unit(count=1)
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            idle_period=IDLE_PERIOD,
+        )
+
+    # Freeze the opensearch process
+    opensearch_pid = await send_kill_signal_to_process(
+        ops_test, app, first_unit_with_primary_shard, signal="SIGSTOP"
+    )
+
+    # verify the unit is not reachable
+    is_node_up = await is_up(ops_test, units_ips[first_unit_with_primary_shard], retries=3)
+    assert not is_node_up
+
+    # verify new writes are continuing by counting the number of writes before and after 5 seconds
+    # should also be plenty for the shard primary reelection to happen
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "writes not continuing to DB"
+
+    # get reachable unit to perform requests against, in case the previously stopped unit
+    # is leader unit, so its address is not reachable
+    reachable_ip = get_reachable_unit_ips(ops_test)[0]
+
+    # fetch unit hosting the new primary shard of the previous index
+    shards = await get_shards_by_index(ops_test, reachable_ip, ContinuousWrites.INDEX_NAME)
+    units_with_p_shards = [shard.unit_id for shard in shards if shard.is_prim]
+    assert len(units_with_p_shards) == 2
+    for unit_id in units_with_p_shards:
+        assert (
+            unit_id != first_unit_with_primary_shard
+        ), "Primary shard still assigned to the unit where the service was stopped."
+
+    # Un-Freeze the opensearch process in the node previously hosting the primary shard
+    await send_kill_signal_to_process(
+        ops_test,
+        app,
+        first_unit_with_primary_shard,
+        signal="SIGCONT",
+        opensearch_pid=opensearch_pid,
+    )
+
+    # verify that the opensearch service is back running on the unit previously hosting the p_shard
+    assert await is_up(
+        ops_test, units_ips[first_unit_with_primary_shard]
+    ), "OpenSearch service hasn't restarted."
+
+    # fetch unit hosting the new primary shard of the previous index
+    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+
+    # check that the unit previously hosting the primary shard now hosts a replica
+    units_with_r_shards = [shard.unit_id for shard in shards if not shard.is_prim]
+    assert first_unit_with_primary_shard in units_with_r_shards
+
+    # verify the node with the old primary successfully joined back the rest of the fleet
+    assert await check_cluster_formation_successful(
+        ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
+    )
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
 # put this test at the end of the list of tests, as we delete an app during cleanup
@@ -458,4 +552,4 @@ async def test_multi_clusters_db_isolation(
     await ops_test.model.remove_application(SECOND_APP_NAME)
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)

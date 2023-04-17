@@ -128,7 +128,7 @@ async def test_horizontal_scale_up(
     )
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
 @pytest.mark.abort_on_fail
@@ -239,7 +239,7 @@ async def test_safe_scale_down_shards_realloc(
     await delete_dummy_indexes(ops_test, app, leader_unit_ip)
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
 @pytest.mark.abort_on_fail
@@ -329,7 +329,7 @@ async def test_safe_scale_down_roles_reassigning(
     assert ClusterTopology.nodes_count_by_role(new_nodes)["data"] == num_units
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
 async def test_safe_scale_down_remove_leaders(
@@ -423,4 +423,4 @@ async def test_safe_scale_down_remove_leaders(
     assert new_writes > writes
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)

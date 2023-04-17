@@ -282,6 +282,7 @@ async def http_request(
             "method": method,
             "url": endpoint,
             "headers": {"Accept": "application/json", "Content-Type": "application/json"},
+            "timeout": 5,
         }
         if isinstance(payload, str):
             request_kwargs["data"] = payload
@@ -296,10 +297,37 @@ async def http_request(
         )
         resp = session.request(**request_kwargs)
 
+        if resp.status_code == 503:
+            logger.debug("\n\n\n\n -- Error 503 -- \n")
+            await debug_failed_unit(ops_test, app, endpoint)
+
         if resp_status_code:
             return resp.status_code
 
         return resp.json()
+
+
+async def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
+    """Print the logs of a unit failing with a certain set of statuses."""
+    unit_ip = endpoint[8:].split(":")[0]
+
+    ids_ips = get_application_unit_ids_ips(ops_test, app=app)
+    unit_id = [u_id for u_id, u_ip in ids_ips.items() if u_ip == unit_ip][0]
+
+    root = "/var/snap/opensearch"
+    files_to_debug = [
+        f"{root}/common/logs/{app}-{ops_test.model_name}.log",
+        f"{root}/current/config/opensearch.yml",
+        f"{root}/current/config/unicast_hosts.txt",
+    ]
+    for f in files_to_debug:
+        logger.debug(f"{f}:\n")
+
+        get_logs_cmd = f"run --unit {app}/{unit_id} -- sudo cat {f}"
+        _, out, err = await ops_test.juju(*get_logs_cmd.split())
+        logger.debug(f"out:\n{out}\n---\nerr:\n{err}")
+
+        logger.debug("\n\n------------------\n\n")
 
 
 def opensearch_client(
@@ -383,11 +411,11 @@ async def check_cluster_formation_successful(
     return set(unit_names) == set(registered_nodes)
 
 
-async def is_up(ops_test: OpsTest, unit_ip: str) -> bool:
+async def is_up(ops_test: OpsTest, unit_ip: str, retries: int = 15) -> bool:
     """Return if node up."""
     try:
         for attempt in Retrying(
-            stop=stop_after_attempt(15), wait=wait_fixed(wait=5) + wait_random(0, 5)
+            stop=stop_after_attempt(retries), wait=wait_fixed(wait=10) + wait_random(0, 5)
         ):
             with attempt:
                 http_resp_code = await http_request(
