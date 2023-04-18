@@ -4,9 +4,11 @@
 """Base class for the OpenSearch Operators."""
 import logging
 import math
-import os
+
+# import os
 import random
-import subprocess
+
+# import subprocess
 from abc import abstractmethod
 from datetime import datetime
 from typing import Dict, List, Optional, Type
@@ -270,8 +272,6 @@ class OpenSearchBaseCharm(CharmBase):
         if not data:
             return
 
-        logger.error(f"databag = {data}")
-
         if self.unit.is_leader():
             if data.get("bootstrap_contributor"):
                 contributor_count = self.peers_data.get(
@@ -374,9 +374,9 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         logger.info("recomputing config...")
-        if self._reconfigure_and_restart_unit_if_needed(recompute_conf=True):
-            logger.info("reconfigured and restarted unit")
-            return
+        self._reconfigure_and_restart_unit_if_needed(recompute_conf=True)
+        # logger.info("reconfigured and restarted unit")
+        # return
 
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
@@ -447,7 +447,7 @@ class OpenSearchBaseCharm(CharmBase):
         )
 
     def on_tls_conf_set(
-        self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
+        self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
     ):
         """Called after certificate ready and stored on the corresponding scope databag.
 
@@ -456,9 +456,14 @@ class OpenSearchBaseCharm(CharmBase):
         - Run the security admin script
         """
         logger.info("TLS cert available")
-        logger.info(_)
+        logger.info(event)
         # Get the list of stored secrets for this cert
         current_secrets = self.secrets.get_object(scope, cert_type.val)
+
+        if cert_type == CertType.UNIT_TRANSPORT and self.opensearch.is_started():
+            self._stop_opensearch()
+            event.defer()
+            return
 
         # Store cert/key on disk - must happen after opensearch stop for transport certs renewal
         self._store_tls_resources(cert_type, current_secrets)
@@ -550,26 +555,26 @@ class OpenSearchBaseCharm(CharmBase):
             # it for one reason or another. We've tried updating the cert keys
             if rel.data[unit].get("starting") == "True":
                 logger.error(f"deferring event {event}, unit {unit.name} is already restarting")
-                if unit.name == self.unit.name:
-                    root = "/var/snap/opensearch"
-                    files_to_debug = [
-                        f"{root}/current/config/opensearch.yml",
-                        f"{root}/current/config/unicast_hosts.txt",
-                    ]
-                    for f in files_to_debug:
-                        command = f"sudo cat {f}"
-                        output = subprocess.run(
-                            command,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            shell=True,
-                            text=True,
-                            encoding="utf-8",
-                            timeout=25,
-                            env=os.environ,
-                        )
+                # if unit.name == self.unit.name:
+                #     root = "/var/snap/opensearch"
+                #     files_to_debug = [
+                #         f"{root}/current/config/opensearch.yml",
+                #         f"{root}/current/config/unicast_hosts.txt",
+                #     ]
+                #     for f in files_to_debug:
+                #         command = f"sudo cat {f}"
+                #         output = subprocess.run(
+                #             command,
+                #             stdout=subprocess.PIPE,
+                #             stderr=subprocess.PIPE,
+                #             shell=True,
+                #             text=True,
+                #             encoding="utf-8",
+                #             timeout=25,
+                #             env=os.environ,
+                #         )
 
-                        logger.debug(f"\n\n{command}:\n{output.stdout}\n\n")
+                #         logger.debug(f"\n\n{command}:\n{output.stdout}\n\n")
 
                 event.defer()
                 return
@@ -834,22 +839,21 @@ class OpenSearchBaseCharm(CharmBase):
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
         self.opensearch_config.cleanup_bootstrap_conf()
 
-    def _reconfigure_and_restart_unit_if_needed(self, recompute_conf: bool = False) -> bool:
+    def _reconfigure_and_restart_unit_if_needed(self) -> bool:
         """Reconfigure the current unit if a new config was computed for it, then restart.
 
         Return: True if we restart the unit, false otherwise.
         """
         logger.error("reconfiguring nodes")
-        if recompute_conf:
-            # _on_tls_conf_set (occurs after certificate is received) should handle restarting
-            # opensearch.
-            if self.opensearch_config.update_host_if_needed():
-                logger.info("refreshing certificates")
-                self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_HTTP)
-                self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
-                # TODO This should recompute whole conf, for now we only need network host to
-                # update.
-                return True  # todo should this be in this if scope or the above?
+        # _on_tls_conf_set (occurs after certificate is received) should handle restarting
+        # opensearch.
+        if self.opensearch_config.update_host_if_needed():
+            logger.info("refreshing certificates")
+            self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_HTTP)
+            self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
+            # TODO This should recompute whole conf, for now we only need network host to
+            # update.
+            # return True  # todo should this be in this if scope or the above?
 
         logger.error("sorting nodes config")
         nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")

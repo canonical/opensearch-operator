@@ -72,9 +72,9 @@ omit the successful units from a subsequent run-action call.)
 """
 import logging
 from enum import Enum
-from typing import AnyStr, Callable, Optional, Union
+from typing import AnyStr, Callable, Optional
 
-from ops.charm import ActionEvent, CharmBase, LeaderElectedEvent, RelationChangedEvent
+from ops.charm import ActionEvent, CharmBase
 from ops.framework import EventBase, Object
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 

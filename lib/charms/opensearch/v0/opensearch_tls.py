@@ -135,14 +135,15 @@ class OpenSearchTLS(Object):
             merge=True,
         )
 
-        for relation in self.charm.opensearch_provider.relations:
-            self.charm.opensearch_provider.update_certs(relation.id, event.chain)
-
         try:
             self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
         except OpenSearchError as e:
             logger.error(e)
             event.defer()
+            return
+
+        for relation in self.charm.opensearch_provider.relations:
+            self.charm.opensearch_provider.update_certs(relation.id, event.chain)
 
     def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
         """Request the new certificate when old certificate is expiring."""
