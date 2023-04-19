@@ -164,11 +164,10 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     assert new_cm.name != cm.name
 
     # verify that no writes to the db were missed
-    # total_expected_writes = await c_writes.stop()
-    # actual_writes = await c_writes.count()
-    # logger.error(total_expected_writes)
-    # assert total_expected_writes.count == actual_writes, "writes to the db were missed."
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    total_expected_writes = await c_writes.stop()
+    actual_writes = await c_writes.count()
+    logger.error(total_expected_writes)
+    assert total_expected_writes.count == actual_writes, "writes to the db were missed."
 
     # TODO show status here (check if update-status breaks everything before we restore network)
     time.sleep(70)

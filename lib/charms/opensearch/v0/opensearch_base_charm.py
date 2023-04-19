@@ -88,7 +88,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import EventBase
-from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus, ActiveStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -374,12 +374,14 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         logger.info("recomputing config...")
-        self._reconfigure_and_restart_unit_if_needed(recompute_conf=True)
-        # logger.info("reconfigured and restarted unit")
+        self._reconfigure_and_restart_unit_if_needed()
+        logger.info("reconfigured and restarted unit")
         # return
 
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
+            self.unit.status = WaitingStatus("opensearch not available on this node")
+            self._restart_opensearch(event)
             return
 
         if self.unit.is_leader():
@@ -460,10 +462,11 @@ class OpenSearchBaseCharm(CharmBase):
         # Get the list of stored secrets for this cert
         current_secrets = self.secrets.get_object(scope, cert_type.val)
 
-        if cert_type == CertType.UNIT_TRANSPORT and self.opensearch.is_started():
-            self._stop_opensearch()
-            event.defer()
-            return
+        # if cert_type == CertType.UNIT_TRANSPORT and self.opensearch.is_started():
+        #     self._stop_opensearch()
+        #     event.defer()
+
+            # return
 
         # Store cert/key on disk - must happen after opensearch stop for transport certs renewal
         self._store_tls_resources(cert_type, current_secrets)
@@ -678,15 +681,18 @@ class OpenSearchBaseCharm(CharmBase):
         missing_sys_reqs = self.opensearch.missing_sys_requirements()
         if len(missing_sys_reqs) > 0:
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
+            logger.error("opensearch cannot start: bad sys reqs")
             return False
 
         if self.unit.is_leader():
             return True
 
         if not self.peers_data.get(Scope.APP, "security_index_initialised", False):
+            logger.error("opensearch cannot start: security index not initialised")
             return False
 
         if not self.alt_hosts:
+            logger.error("opensearch cannot start: no alt hosts")
             return False
 
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
@@ -694,6 +700,7 @@ class OpenSearchBaseCharm(CharmBase):
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
         try:
             if self.health.apply(use_localhost=False, app=False) == HealthColors.YELLOW_TEMP:
+                logger.error("opensearch cannot start: yellow shards")
                 return False
         except OpenSearchHttpError:
             # this means that the leader unit is not reachable (not started yet),
@@ -853,6 +860,9 @@ class OpenSearchBaseCharm(CharmBase):
             self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
             # TODO This should recompute whole conf, for now we only need network host to
             # update.
+            self.on[self.service_manager.name].acquire_lock.emit(
+                callback_override="_restart_opensearch"
+            )
             # return True  # todo should this be in this if scope or the above?
 
         logger.error("sorting nodes config")
@@ -965,7 +975,7 @@ class OpenSearchBaseCharm(CharmBase):
     @property
     def unit_ip(self) -> str:
         """IP address of the current unit."""
-        return get_host_ip(self, PeerRelationName)
+        return get_host_ip()
 
     @property
     def unit_name(self) -> str:

@@ -25,8 +25,7 @@ logger = logging.getLogger(__name__)
 
 def get_host_ip(charm: CharmBase, peer_relation_name: str) -> str:
     """Fetches the IP address of the current unit."""
-    address = charm.model.get_binding(peer_relation_name).network.bind_address
-    return str(address)
+    return socket.gethostbyname(socket.getfqdn())
 
 
 def get_hostname_by_unit(charm: CharmBase, unit_name: str) -> str:
@@ -39,7 +38,7 @@ def unit_ip(charm: CharmBase, unit: Unit, peer_relation_name: str) -> str:
     """Returns the ip address of a given unit."""
     # check if host is current host
     if unit == charm.unit:
-        return get_host_ip(charm, peer_relation_name)
+        return get_host_ip()
 
     private_address = (
         charm.model.get_relation(peer_relation_name).data[unit].get("private-address")
@@ -56,7 +55,7 @@ def units_ips(charm: CharmBase, peer_relation_name: str) -> Dict[str, str]:
         unit_ip_map[unit_id] = unit_ip(charm, unit, peer_relation_name)
 
     # Sometimes the above command doesn't get the current node, so ensure we get this unit's ip.
-    unit_ip_map[charm.unit.name.split("/")[1]] = get_host_ip(charm, peer_relation_name)
+    unit_ip_map[charm.unit.name.split("/")[1]] = get_host_ip()
 
     return unit_ip_map
 

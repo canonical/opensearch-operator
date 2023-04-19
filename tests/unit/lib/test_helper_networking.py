@@ -32,7 +32,7 @@ class TestHelperNetworking(unittest.TestCase):
 
     def test_get_host_ip(self):
         """Test host IP value."""
-        self.assertEqual(get_host_ip(self.charm, PeerRelationName), "1.1.1.1")
+        self.assertEqual(get_host_ip(), "1.1.1.1")
 
     def test_get_hostname_by_unit(self):
         """Test the dns name returned."""

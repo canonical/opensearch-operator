@@ -368,7 +368,7 @@ class OpenSearchDistribution(ABC):
     @property
     def host(self) -> str:
         """Host IP address of the current node."""
-        return get_host_ip(self._charm, self._peer_relation_name)
+        return get_host_ip()
 
     @property
     def network_hosts(self) -> List[str]:
