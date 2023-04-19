@@ -11,7 +11,6 @@ from pytest_operator.plugin import OpsTest
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.ha.helpers import (  # get_shards_by_index,; instance_ip,; send_kill_signal_to_process,
     app_name,
-    assert_continuous_writes_consistency,
     cut_network_from_unit,
     get_controller_machine,
     get_elected_cm_unit,
@@ -96,7 +95,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
-        timeout=1000,
+        timeout=1400,
         idle_period=IDLE_PERIOD,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3

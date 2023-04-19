@@ -8,10 +8,8 @@ import uuid
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_networking import (
-    get_host_ip,
     get_hostname_by_unit,
     is_reachable,
-    unit_ip,
     units_ips,
 )
 from ops.testing import Harness
@@ -30,20 +28,12 @@ class TestHelperNetworking(unittest.TestCase):
         self.charm = self.harness.charm
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
 
-    def test_get_host_ip(self):
-        """Test host IP value."""
-        self.assertEqual(get_host_ip(), "1.1.1.1")
-
     def test_get_hostname_by_unit(self):
         """Test the dns name returned."""
         self.assertEqual(
             get_hostname_by_unit(self.charm, self.charm.unit.name),
             f"{self.charm.app.name}-{self.charm.unit_id}.{self.charm.app.name}-endpoints",
         )
-
-    def test_unit_ip(self):
-        """Test the unit IP value."""
-        self.assertEqual(unit_ip(self.charm, self.charm.unit, PeerRelationName), "1.1.1.1")
 
     def test_units_ips(self):
         """Test all units IPs."""

@@ -68,14 +68,17 @@ class OpenSearchSnap(OpenSearchDistribution):
     @override
     def _start_service(self):
         """Start the snap exposed "daemon" service."""
+        logger.error("checking if opensearch present")
         if not self._opensearch.present:
             raise OpenSearchMissingError()
 
+        logger.error("active service check")
         if self._opensearch.services[self.SERVICE_NAME]["active"]:
             logger.info(f"The opensearch.{self.SERVICE_NAME} service is already started.")
             return
 
         try:
+            logger.error("snap start")
             self._opensearch.start([self.SERVICE_NAME])
         except SnapError as e:
             logger.error(f"Failed to start the opensearch.{self.SERVICE_NAME} service. \n{e}")

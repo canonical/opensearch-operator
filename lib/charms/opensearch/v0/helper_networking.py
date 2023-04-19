@@ -23,7 +23,7 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-def get_host_ip(charm: CharmBase, peer_relation_name: str) -> str:
+def get_host_ip() -> str:
     """Fetches the IP address of the current unit."""
     return socket.gethostbyname(socket.getfqdn())
 

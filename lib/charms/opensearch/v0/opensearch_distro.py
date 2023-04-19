@@ -95,10 +95,13 @@ class OpenSearchDistribution(ABC):
         def _is_connected():
             return self.is_node_up() if wait_until_http_200 else self.is_started()
 
+        logger.error("check if opns is already started")
         if self.is_started():
+            logger.error("already started")
             return
 
         # start the opensearch service
+        logger.error("starting service")
         self._start_service()
 
         start = datetime.now()

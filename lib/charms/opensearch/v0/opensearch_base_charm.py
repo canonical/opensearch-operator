@@ -88,7 +88,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import EventBase
-from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus, ActiveStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -374,31 +374,37 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         logger.info("recomputing config...")
-        self._reconfigure_and_restart_unit_if_needed()
-        logger.info("reconfigured and restarted unit")
-        # return
-
-        # if node already shutdown - leave
-        if not self.opensearch.is_node_up():
-            self.unit.status = WaitingStatus("opensearch not available on this node")
-            self._restart_opensearch(event)
+        if self._reconfigure_and_restart_unit_if_needed(recompute_conf=True):
+            logger.info("reconfigured and restarted unit")
             return
 
+        # if node already shutdown - leave
+        # if not self.opensearch.is_node_up():
+        #     self.unit.status = WaitingStatus("opensearch not available on this node")
+        #     self._restart_opensearch(event)
+        #     return
+
+        logger.error("leader check")
         if self.unit.is_leader():
             # self._compute_and_broadcast_updated_topology(self._get_nodes(True))
             # if there are exclusions to be removed
             self.opensearch_exclusions.cleanup()
             if self.health.apply() == HealthColors.YELLOW_TEMP:
+                logger.error("leaving update-status because bad health")
                 event.defer()
                 return
 
+        logger.error("leader check")
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
+        logger.error("rem user")
         self.user_manager.remove_users_and_roles()
 
         # If cert relation broken - leave
+        # TODO doesn't this return if the cert relation exists?
         if self.model.get_relation("certificates") is not None:
+            logger.error("no certs")
             return
 
         # handle when/if certificates are expired
@@ -466,7 +472,7 @@ class OpenSearchBaseCharm(CharmBase):
         #     self._stop_opensearch()
         #     event.defer()
 
-            # return
+        # return
 
         # Store cert/key on disk - must happen after opensearch stop for transport certs renewal
         self._store_tls_resources(cert_type, current_secrets)
@@ -549,8 +555,6 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        self.unit.status = WaitingStatus(WaitingToStart)
-
         rel = self.model.get_relation(PeerRelationName)
         for unit in rel.units.union({self.unit}):
             # This is where the infinite deferral loop happens, because we're stuck in a "starting"
@@ -601,6 +605,7 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         try:
+            self.unit.status = WaitingStatus(WaitingToStart)
             logger.error("starting opensearch daemon")
             self.opensearch.start(
                 wait_until_http_200=(
@@ -613,9 +618,11 @@ class OpenSearchBaseCharm(CharmBase):
             logger.error("init complete")
             self.status.clear(WaitingToStart)
         except OpenSearchStartTimeoutError as e:
+            logger.error("OpenSearchStartTimeoutError")
             logger.error(e)
             event.defer()
         except OpenSearchStartError as e:
+            logger.error("OpenSearchStartError")
             logger.error(e)
             self.peers_data.delete(Scope.UNIT, "starting")
             self.unit.status = BlockedStatus(ServiceStartError)
@@ -663,7 +670,6 @@ class OpenSearchBaseCharm(CharmBase):
     def _restart_opensearch(self, event: EventBase) -> None:
         """Restart OpenSearch if possible."""
         logger.error(f"restarting opensearch daemon due to event {event}")
-        self.unit.status = WaitingStatus(WaitingToStart)
         if not self.peers_data.get(Scope.UNIT, "starting", False):
             try:
                 self._stop_opensearch()
@@ -707,6 +713,7 @@ class OpenSearchBaseCharm(CharmBase):
             # meaning it's a new cluster, so we can safely start the OpenSearch service
             pass
 
+        logger.error("opensearch can start")
         return True
 
     def _purge_users(self):
@@ -846,7 +853,7 @@ class OpenSearchBaseCharm(CharmBase):
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
         self.opensearch_config.cleanup_bootstrap_conf()
 
-    def _reconfigure_and_restart_unit_if_needed(self) -> bool:
+    def _reconfigure_and_restart_unit_if_needed(self, recompute_conf: bool = False) -> bool:
         """Reconfigure the current unit if a new config was computed for it, then restart.
 
         Return: True if we restart the unit, false otherwise.
@@ -854,16 +861,18 @@ class OpenSearchBaseCharm(CharmBase):
         logger.error("reconfiguring nodes")
         # _on_tls_conf_set (occurs after certificate is received) should handle restarting
         # opensearch.
-        if self.opensearch_config.update_host_if_needed():
-            logger.info("refreshing certificates")
-            self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_HTTP)
-            self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
-            # TODO This should recompute whole conf, for now we only need network host to
-            # update.
-            self.on[self.service_manager.name].acquire_lock.emit(
-                callback_override="_restart_opensearch"
-            )
-            # return True  # todo should this be in this if scope or the above?
+        if recompute_conf:
+            if self.opensearch_config.update_host_if_needed():
+                logger.info("refreshing certificates")
+                self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_HTTP)
+                self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
+                # TODO This should recompute whole conf, for now we only need network host to
+                # update.
+                self.on[self.service_manager.name].acquire_lock.emit(
+                    callback_override="_restart_opensearch"
+                )
+                return True  # todo should this be in this if scope or the above?
+            return False
 
         logger.error("sorting nodes config")
         nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
@@ -881,6 +890,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         logger.error("getting new node conf")
         new_node_conf = nodes_config.get(self.unit_name)
+        logger.error(f"new node conf = {new_node_conf}")
         if not new_node_conf and not self.opensearch.is_node_up():
             # the conf could not be computed / broadcasted, because this node is
             # "starting" and is not online "yet" - either barely being configured (i.e. TLS)
