@@ -106,6 +106,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 
     TODO this may require scaling the cluster up to 5 nodes, so we can guarantee 3 functional nodes
     on update.
+    TODO try with just one node and see what happens
     """
     # locate cluster manager unit
     app = await app_name(ops_test)

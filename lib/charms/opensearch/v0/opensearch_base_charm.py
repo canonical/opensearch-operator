@@ -557,32 +557,8 @@ class OpenSearchBaseCharm(CharmBase):
 
         rel = self.model.get_relation(PeerRelationName)
         for unit in rel.units.union({self.unit}):
-            # This is where the infinite deferral loop happens, because we're stuck in a "starting"
-            # state that never gets removed. The systemd service can start, but we can't connect to
-            # it for one reason or another. We've tried updating the cert keys
             if rel.data[unit].get("starting") == "True":
                 logger.error(f"deferring event {event}, unit {unit.name} is already restarting")
-                # if unit.name == self.unit.name:
-                #     root = "/var/snap/opensearch"
-                #     files_to_debug = [
-                #         f"{root}/current/config/opensearch.yml",
-                #         f"{root}/current/config/unicast_hosts.txt",
-                #     ]
-                #     for f in files_to_debug:
-                #         command = f"sudo cat {f}"
-                #         output = subprocess.run(
-                #             command,
-                #             stdout=subprocess.PIPE,
-                #             stderr=subprocess.PIPE,
-                #             shell=True,
-                #             text=True,
-                #             encoding="utf-8",
-                #             timeout=25,
-                #             env=os.environ,
-                #         )
-
-                #         logger.debug(f"\n\n{command}:\n{output.stdout}\n\n")
-
                 event.defer()
                 return
 
