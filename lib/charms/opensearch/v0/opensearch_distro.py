@@ -102,6 +102,9 @@ class OpenSearchDistribution(ABC):
 
         # start the opensearch service
         logger.error("starting service")
+        for key in os.environ.keys():
+            if key.startswith("OPENSEARCH_CLASSPATH"):
+                del os.environ[key]
         self._start_service()
 
         start = datetime.now()

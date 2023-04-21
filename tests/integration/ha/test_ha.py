@@ -129,6 +129,8 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
 
     cut_network_from_unit(cm_hostname)
 
+    c_writes.update()
+
     # verify machine is not reachable from peer units
     for unit in set(all_units) - {cm}:
         hostname = await unit_hostname(ops_test, unit.name)
@@ -142,8 +144,6 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
         controller, cm_hostname
     ), "unit is reachable from controller"
 
-    # wait for the MODEL to become idle first
-    await ops_test.model.wait_for_idle(status="active")
     # Wait for another unit to be elected cluster manager TODO this may be part of the problem
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active")
 
@@ -178,6 +178,7 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     # wait until network is reestablished for the unit
     cm_unit_id = int(cm.name.split("/")[1])
     wait_network_restore(ops_test.model.info.name, hostname=cm_hostname, old_ip=cm_address)
+    c_writes.update()
 
     # self healing is performed with update status hook. Status also checks our node roles are
     # correctly configured.
@@ -185,6 +186,8 @@ async def test_cluster_manager_network_cut(ops_test, c_writes, c_writes_runner):
     await ops_test.model.wait_for_idle(
         apps=[app], status="active", timeout=1000, wait_for_exact_units=3, idle_period=35
     )
+    # Sometimes juju can take a long time to update network addresses
+    c_writes.update()
 
     # verify we still have connection to the old cluster manager
     logger.error(get_application_unit_ids_ips(ops_test))

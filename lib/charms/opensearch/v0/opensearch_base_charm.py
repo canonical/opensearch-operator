@@ -5,10 +5,8 @@
 import logging
 import math
 
-# import os
 import random
 
-# import subprocess
 from abc import abstractmethod
 from datetime import datetime
 from typing import Dict, List, Optional, Type
@@ -258,13 +256,11 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
-        logger.error(f"peer relation changed due to {event}")
         if (
             self.unit.is_leader()
             and self.opensearch.is_node_up()
             and self.health.apply() == HealthColors.YELLOW_TEMP
         ):
-            logger.error("deferring because this status is temp, and we want it to update")
             # we defer because we want the temporary status to be updated
             event.defer()
 
@@ -280,18 +276,15 @@ class OpenSearchBaseCharm(CharmBase):
                 self.peers_data.put(
                     Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                 )
-                logger.error("boy howdy we're a bootstrap contributor")
 
             for relation in self.model.relations.get(ClientRelationName, []):
                 logger.error(f"updating relation endpoints for {relation}")
                 self.opensearch_provider.update_endpoints(relation)
 
             if data.get(VOTING_TO_DELETE) or data.get(ALLOCS_TO_DELETE):
-                logger.error("cleaning up opensearch exclusions")
                 self.opensearch_exclusions.cleanup()
 
         # Run restart node on the concerned unit
-        logger.error("restarting on the specific unit")
         self._reconfigure_and_restart_unit_if_needed()
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
@@ -373,38 +366,30 @@ class OpenSearchBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
             return
 
-        logger.info("recomputing config...")
         if self._reconfigure_and_restart_unit_if_needed(recompute_conf=True):
-            logger.info("reconfigured and restarted unit")
             return
 
         # if node already shutdown - leave
-        # if not self.opensearch.is_node_up():
-        #     self.unit.status = WaitingStatus("opensearch not available on this node")
-        #     self._restart_opensearch(event)
-        #     return
+        if not self.opensearch.is_node_up():
+            self.unit.status = WaitingStatus("opensearch not available on this node")
+            self._restart_opensearch(event)
+            return
 
-        logger.error("leader check")
         if self.unit.is_leader():
-            # self._compute_and_broadcast_updated_topology(self._get_nodes(True))
             # if there are exclusions to be removed
             self.opensearch_exclusions.cleanup()
             if self.health.apply() == HealthColors.YELLOW_TEMP:
-                logger.error("leaving update-status because bad health")
                 event.defer()
                 return
 
-        logger.error("leader check")
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
-        logger.error("rem user")
         self.user_manager.remove_users_and_roles()
 
         # If cert relation broken - leave
         # TODO doesn't this return if the cert relation exists?
         if self.model.get_relation("certificates") is not None:
-            logger.error("no certs")
             return
 
         # handle when/if certificates are expired
@@ -463,16 +448,8 @@ class OpenSearchBaseCharm(CharmBase):
         - Update the corresponding yaml conf files
         - Run the security admin script
         """
-        logger.info("TLS cert available")
-        logger.info(event)
         # Get the list of stored secrets for this cert
         current_secrets = self.secrets.get_object(scope, cert_type.val)
-
-        # if cert_type == CertType.UNIT_TRANSPORT and self.opensearch.is_started():
-        #     self._stop_opensearch()
-        #     event.defer()
-
-        # return
 
         # Store cert/key on disk - must happen after opensearch stop for transport certs renewal
         self._store_tls_resources(cert_type, current_secrets)
@@ -485,9 +462,6 @@ class OpenSearchBaseCharm(CharmBase):
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-        logger.info(
-            f"TLS config reset - restarting opensearch with renewal {renewal} and cert_type {cert_type}"
-        )
         if renewal and cert_type == CertType.UNIT_TRANSPORT:
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
@@ -528,29 +502,22 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
-        logger.info(WaitingToStart)
         logger.info(f"starting opensearch from event {event}")
         if self.opensearch.is_started():
-            logger.error("opensearch daemon started")
             try:
                 self._post_start_init()
-                logger.error("post start init complete")
                 self.status.clear(WaitingToStart)
             except OpenSearchHttpError as e:
                 logger.error(f"starting opensearch failed due to {e}")
                 event.defer()
             return
 
-        logger.error("checking if opensearch service can start")
         if not self._can_service_start():
-            logger.error("opensearch cannot start, deleting 'starting' flag")
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
             return
 
-        logger.error("checking opensearch has not failed")
         if self.peers_data.get(Scope.UNIT, "starting", False) and self.opensearch.is_failed():
-            logger.error(f"opensearch failed. Deferring event {event} and deleting starting flag")
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
             return
@@ -558,48 +525,35 @@ class OpenSearchBaseCharm(CharmBase):
         rel = self.model.get_relation(PeerRelationName)
         for unit in rel.units.union({self.unit}):
             if rel.data[unit].get("starting") == "True":
-                logger.error(f"deferring event {event}, unit {unit.name} is already restarting")
                 event.defer()
                 return
 
-        logger.error("adding starting flag for restart")
         self.peers_data.put(Scope.UNIT, "starting", True)
 
         try:
             # Retrieve the nodes of the cluster, needed to configure this node
-            logger.error("getting nodes")
             nodes = self._get_nodes(False)
-            logger.error(f"nodes: {nodes}. setting node conf..")
 
             # Set the configuration of the node
             self._set_node_conf(nodes)
-            logger.error("node conf set")
         except OpenSearchHttpError:
-            logger.error("node setting failed. deferring, deleting starting flag")
             event.defer()
             self.peers_data.delete(Scope.UNIT, "starting")
             return
 
         try:
             self.unit.status = WaitingStatus(WaitingToStart)
-            logger.error("starting opensearch daemon")
             self.opensearch.start(
                 wait_until_http_200=(
                     not self.unit.is_leader()
                     or self.peers_data.get(Scope.APP, "security_index_initialised", False)
                 )
             )
-            logger.error("running post_start_init")
             self._post_start_init()
-            logger.error("init complete")
             self.status.clear(WaitingToStart)
         except OpenSearchStartTimeoutError as e:
-            logger.error("OpenSearchStartTimeoutError")
-            logger.error(e)
             event.defer()
         except OpenSearchStartError as e:
-            logger.error("OpenSearchStartError")
-            logger.error(e)
             self.peers_data.delete(Scope.UNIT, "starting")
             self.unit.status = BlockedStatus(ServiceStartError)
             event.defer()
@@ -630,7 +584,6 @@ class OpenSearchBaseCharm(CharmBase):
         """Stop OpenSearch if possible."""
         if not self.opensearch.is_node_up():
             return
-        logger.info(ServiceIsStopping)
         self.unit.status = WaitingStatus(ServiceIsStopping)
 
         # 1. Add current node to the voting + alloc exclusions
@@ -663,18 +616,15 @@ class OpenSearchBaseCharm(CharmBase):
         missing_sys_reqs = self.opensearch.missing_sys_requirements()
         if len(missing_sys_reqs) > 0:
             self.unit.status = BlockedStatus(" - ".join(missing_sys_reqs))
-            logger.error("opensearch cannot start: bad sys reqs")
             return False
 
         if self.unit.is_leader():
             return True
 
         if not self.peers_data.get(Scope.APP, "security_index_initialised", False):
-            logger.error("opensearch cannot start: security index not initialised")
             return False
 
         if not self.alt_hosts:
-            logger.error("opensearch cannot start: no alt hosts")
             return False
 
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
@@ -682,14 +632,12 @@ class OpenSearchBaseCharm(CharmBase):
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
         try:
             if self.health.apply(use_localhost=False, app=False) == HealthColors.YELLOW_TEMP:
-                logger.error("opensearch cannot start: yellow shards")
                 return False
         except OpenSearchHttpError:
             # this means that the leader unit is not reachable (not started yet),
             # meaning it's a new cluster, so we can safely start the OpenSearch service
             pass
 
-        logger.error("opensearch can start")
         return True
 
     def _purge_users(self):
@@ -834,12 +782,10 @@ class OpenSearchBaseCharm(CharmBase):
 
         Return: True if we restart the unit, false otherwise.
         """
-        logger.error("reconfiguring nodes")
         # _on_tls_conf_set (occurs after certificate is received) should handle restarting
         # opensearch.
         if recompute_conf:
             if self.opensearch_config.update_host_if_needed():
-                logger.info("refreshing certificates")
                 self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_HTTP)
                 self.tls.refresh_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
                 # TODO This should recompute whole conf, for now we only need network host to
@@ -847,40 +793,33 @@ class OpenSearchBaseCharm(CharmBase):
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
-                return True  # todo should this be in this if scope or the above?
+                return True
             return False
 
-        logger.error("sorting nodes config")
         nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
         if not nodes_config:
             return False
 
         nodes_config = {name: Node.from_dict(node) for name, node in nodes_config.items()}
-        logger.error(nodes_config)
 
-        logger.error("adding seed hosts")
         # update (append) CM IPs
         self.opensearch_config.add_seed_hosts(
             [node.ip for node in list(nodes_config.values()) if node.is_cm_eligible()]
         )
 
-        logger.error("getting new node conf")
         new_node_conf = nodes_config.get(self.unit_name)
-        logger.error(f"new node conf = {new_node_conf}")
         if not new_node_conf and not self.opensearch.is_node_up():
-            # the conf could not be computed / broadcasted, because this node is
-            # "starting" and is not online "yet" - either barely being configured (i.e. TLS)
-            # or waiting to start.
+            # the conf could not be computed / broadcasted, because this node is "starting" and is
+            # not online "yet" - either barely being configured (i.e. TLS) or waiting to start.
             return False
 
         if new_node_conf:
-            logger.error(f"new node conf: {new_node_conf}")
             current_conf = self.opensearch_config.load_node()
             if sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles):
                 # no conf change
                 return False
 
-        logger.error("restarting opensearch because we've changed configs. ")
+        self.unit.status = WaitingStatus(WaitingToStart)
         self.on[self.service_manager.name].acquire_lock.emit(
             callback_override="_restart_opensearch"
         )
@@ -890,21 +829,7 @@ class OpenSearchBaseCharm(CharmBase):
         """Compute cluster topology and broadcast node configs (roles for now) to change if any."""
         if not current_nodes:
             return
-
         updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
-        # updated_nodes_list = list(updated_nodes.values())
-
-        # updated_nodes_list.sort(key=lambda node: node.name)
-        # current_nodes.sort(key=lambda node: node.name)
-        # nodes_identical = True
-        # for updated_node, current_node in zip(updated_nodes_list, current_nodes):
-        #     if updated_node != current_node:
-        #         nodes_identical = False
-        #         break
-        # if nodes_identical:
-        #     # Nodes haven't changed, don't update
-        #     return
-
         self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
 
         # since the above won't trigger a peer rel changed on leader, we'll trigger it manually
