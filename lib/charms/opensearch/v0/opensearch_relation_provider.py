@@ -41,7 +41,7 @@ from ops.charm import (
     RelationDepartedEvent,
 )
 from ops.framework import Object
-from ops.model import BlockedStatus, MaintenanceStatus, Relation, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, Relation
 
 # The unique Charmhub library identifier, never change it
 LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
@@ -191,10 +191,6 @@ class OpenSearchProvider(Object):
                 == "resource_already_exists_exception"
             ):
                 logger.error(e)
-                self.charm.unit.status = WaitingStatus(
-                    "waiting for opensearch application to stabilise before creating relation index"
-                )
-                event.defer()
                 return
 
         username = self._relation_username(event.relation)
