@@ -61,13 +61,6 @@ async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
     return int(resp["nodes"][cm_node_id]["name"].split("-")[1])
 
 
-async def get_elected_cm_unit(ops_test: OpsTest, unit_ip: str):
-    """Returns the current elected cm node unit."""
-    cm_id = await get_elected_cm_unit_id(ops_test, unit_ip)
-    opensearch_app_name = await app_name(ops_test)
-    return ops_test.model.applications[opensearch_app_name].units[cm_id]
-
-
 @retry(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
@@ -214,20 +207,6 @@ async def assert_continuous_writes_consistency(
         count_from_shards += count_by_shard[0]
 
     assert result.count == count_from_shards
-
-
-async def secondary_up_to_date(ops_test: OpsTest, unit_ip, expected_writes) -> bool:
-    """Checks if secondary is up to date with the cluster.
-
-    Retries over the period of one minute to give secondary adequate time to copy over data.
-    """
-    get_secondary_writes = await http_request(
-        ops_test,
-        "GET",
-        f"https://{unit_ip}:9200/series_index",
-    )
-    logger.error(get_secondary_writes)
-    assert get_secondary_writes == expected_writes
 
 
 async def send_kill_signal_to_process(
