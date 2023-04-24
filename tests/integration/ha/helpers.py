@@ -8,7 +8,13 @@ from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.helpers import get_application_unit_ids_ips, http_request
+from tests.integration.helpers import (
+    get_application_unit_ids,
+    get_application_unit_ids_ips,
+    http_request,
+)
+
+OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
 
 
 class Shard:
@@ -221,3 +227,32 @@ async def send_kill_signal_to_process(
         raise Exception(f"{kill_cmd} failed -- rc: {return_code} - out: {stdout} - err: {stderr}")
 
     return opensearch_pid
+
+
+async def update_restart_delay(ops_test: OpsTest, app: str, unit_id: int, delay: int):
+    """Updates the restart delay in the DB service file."""
+    unit_name = f"{app}/{unit_id}"
+
+    # load the service file from the unit and update it with the new delay
+    replace_delay_cmd = (
+        f"run --unit {unit_name} -- "
+        f"sudo sed -i -e  's/^RestartSec=[0-9]\\+/RestartSec={delay}/g' "
+        f"{OPENSEARCH_SERVICE_PATH}"
+    )
+    await ops_test.juju(*replace_delay_cmd.split(), check=True)
+
+    # reload the daemon for systemd to reflect changes
+    reload_cmd = f"run --unit {unit_name} -- sudo systemctl daemon-reload"
+    await ops_test.juju(*reload_cmd.split(), check=True)
+
+
+async def all_processes_down(ops_test: OpsTest, app: str) -> bool:
+    """Check if all processes are down."""
+    for unit_id in get_application_unit_ids(ops_test, app):
+        unit_name = f"{app}/{unit_id}"
+        get_pid_cmd = f"run --unit {unit_name} -- sudo lsof -ti:9200"
+        _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=True)
+        if opensearch_pid:
+            return False
+
+    return True
