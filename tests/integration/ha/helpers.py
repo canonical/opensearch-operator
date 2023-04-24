@@ -268,6 +268,7 @@ async def all_db_processes_down(ops_test: OpsTest) -> bool:
 
 async def update_restart_delay(ops_test: OpsTest, unit, delay: int):
     """Updates the restart delay in the DB service file.
+
     When the DB service fails it will now wait for `delay` number of seconds.
     """
     # load the service file from the unit and update it with the new delay

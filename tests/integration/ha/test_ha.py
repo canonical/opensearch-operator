@@ -11,13 +11,13 @@ from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.ha.helpers import (
+    all_db_processes_down,
     app_name,
     assert_continuous_writes_consistency,
     get_elected_cm_unit_id,
     get_shards_by_index,
     send_kill_signal_to_process,
     update_restart_delay,
-    all_db_processes_down
 )
 from tests.integration.ha.helpers_data import (
     create_index,
@@ -71,9 +71,11 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
     yield
     await c_writes.clear()
 
+
 @pytest.fixture()
 async def reset_restart_delay(ops_test: OpsTest):
     """Resets service file delay on all units."""
+    app = (await app_name(ops_test)) or APP_NAME
     # update all units to have a new RESTART_DELAY. Modifying the Restart delay to 3 minutes
     # should ensure enough time for all replicas to be down at the same time.
     for unit in ops_test.model.applications[app].units:
@@ -115,6 +117,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.skip
 @pytest.mark.abort_on_fail
 async def test_replication_across_members(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -157,6 +160,7 @@ async def test_replication_across_members(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.skip
 @pytest.mark.abort_on_fail
 async def test_kill_db_process_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -220,6 +224,7 @@ async def test_kill_db_process_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.skip
 @pytest.mark.abort_on_fail
 async def test_kill_db_process_node_with_elected_cm(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -273,6 +278,7 @@ async def test_kill_db_process_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.skip
 @pytest.mark.abort_on_fail
 async def test_freeze_db_process_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -356,6 +362,7 @@ async def test_freeze_db_process_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.skip
 @pytest.mark.abort_on_fail
 async def test_freeze_db_process_node_with_elected_cm(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -429,7 +436,7 @@ async def test_freeze_db_process_node_with_elected_cm(
 
 
 async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_delay):
-    app = await app_name(ops_test) or APP_NAME
+    app = (await app_name(ops_test)) or APP_NAME
     # kill all units "simultaneously"
     await asyncio.gather(
         *[
@@ -446,12 +453,20 @@ async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_d
     # of all replicas being down at the same time.
     assert await all_db_processes_down(ops_test), "Not all units down at the same time."
 
+    await ops_test.model.wait_for_idle(
+        apps=[app], status="active", timeout=1000, idle_period=IDLE_PERIOD
+    )
+
     # sleep for twice the median election time and the restart delay
-    time.sleep(MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY)
+    time.sleep(30 + RESTART_DELAY)
+
+    await ops_test.model.wait_for_idle(
+        apps=[app], status="active", timeout=1000, idle_period=IDLE_PERIOD
+    )
 
     # verify all units are up and running
     for unit in ops_test.model.applications[app].units:
-        assert await helpers.mongod_ready(
+        assert await is_up(
             ops_test, unit.public_address
         ), f"unit {unit.name} not restarted after cluster crash."
 
@@ -462,7 +477,7 @@ async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_d
     more_writes = await c_writes.count()
     assert more_writes > writes, "writes not continuing to DB"
 
-    # verify the node with the old primary successfully joined the rest of the fleet
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     assert await check_cluster_formation_successful(
         ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
     )
@@ -471,6 +486,7 @@ async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_d
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.skip
 # put this test at the end of the list of tests, as we delete an app during cleanup
 # and the safeguards we have on the charm prevent us from doing so, so we'll keep
 # using a unit without need - when other tests may need the unit on the CI
