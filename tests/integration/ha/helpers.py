@@ -227,9 +227,9 @@ async def send_kill_signal_to_process(
     unit_id: int,
     signal: str,
     opensearch_pid: Optional[int] = None,
-    unit_name: str = None,
 ) -> Optional[int]:
     """Run kill with signal in specific unit."""
+    unit_name = f"{app}/{unit_id}"
     if opensearch_pid is None:
         get_pid_cmd = f"run --unit {unit_name} -- sudo lsof -ti:9200"
         _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=True)

@@ -440,7 +440,9 @@ async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_d
     await asyncio.gather(
         *[
             # TODO is there a smarter way to get every unit id?
-            send_kill_signal_to_process(ops_test, int(unit.name.split("/")[-1]), signal="SIGTERM")
+            send_kill_signal_to_process(
+                ops_test, app, int(unit.name.split("/")[-1]), signal="SIGTERM"
+            )
             for unit in ops_test.model.applications[app].units
         ]
     )
