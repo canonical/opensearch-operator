@@ -417,16 +417,16 @@ async def test_freeze_db_process_node_with_elected_cm(
 
 
 @pytest.mark.abort_on_fail
-async def test_restart_db_process_with_elected_cm(
+async def test_restart_db_process_with_elected_cluster_manager(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
-    """Check cluster can self-heal, data indexed/read on process freeze on node with elected CM."""
+    """Check cluster self-healing & data indexed/read on process restart on CM node."""
     app = (await app_name(ops_test)) or APP_NAME
 
     units_ips = get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
-    # find unit currently elected cluster_manager
+    # find unit currently elected cluster manager
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
 
     # Killing the only instance can be disastrous.
@@ -452,6 +452,56 @@ async def test_restart_db_process_with_elected_cm(
     # verify that the opensearch service is back running on the unit previously elected CM unit
     assert await is_up(
         ops_test, units_ips[first_elected_cm_unit_id]
+    ), "OpenSearch service hasn't restarted."
+
+    # verify the previously elected CM node successfully joined back the rest of the fleet
+    assert await check_cluster_formation_successful(
+        ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
+    )
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
+
+@pytest.mark.abort_on_fail
+async def test_restart_db_process_with_primary_shard(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+) -> None:
+    """Check cluster can self-heal, data indexed/read on process restart on primary shard node."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    units_ips = get_application_unit_ids_ips(ops_test, app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    # find unit hosting the primary shard of the index "series-index"
+    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    first_unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
+
+    # Killing the only instance can be disastrous.
+    if len(ops_test.model.applications[app].units) < 2:
+        await ops_test.model.applications[app].add_unit(count=1)
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            idle_period=IDLE_PERIOD,
+        )
+
+    # restart the opensearch process
+    await send_kill_signal_to_process(
+        ops_test, app, first_unit_with_primary_shard, signal="SIGTERM"
+    )
+
+    # verify new writes are continuing by counting the number of writes before and after 5 seconds
+    # should also be plenty for the cluster manager reelection to happen
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "writes not continuing to DB"
+
+    # verify that the opensearch service is back running on the unit previously elected CM unit
+    assert await is_up(
+        ops_test, units_ips[first_unit_with_primary_shard]
     ), "OpenSearch service hasn't restarted."
 
     # verify the previously elected CM node successfully joined back the rest of the fleet
