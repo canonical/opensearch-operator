@@ -206,6 +206,59 @@ async def test_kill_db_process_node_with_primary_shard(
 
 
 @pytest.mark.abort_on_fail
+async def test_kill_db_process_node_with_elected_cm(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+) -> None:
+    """Check cluster can self-heal, data indexed/read when process dies on node with elected CM."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    units_ips = get_application_unit_ids_ips(ops_test, app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    # find unit currently elected cluster_manager
+    first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+
+    # Killing the only instance can be disastrous.
+    if len(ops_test.model.applications[app].units) < 2:
+        await ops_test.model.applications[app].add_unit(count=1)
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            idle_period=IDLE_PERIOD,
+        )
+
+    # Kill the opensearch process
+    await send_kill_signal_to_process(ops_test, app, first_elected_cm_unit_id, signal="SIGKILL")
+
+    # verify new writes are continuing by counting the number of writes before and after 5 seconds
+    # should also be plenty for the cluster manager reelection to happen
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "Writes not continuing to DB"
+
+    # verify that the opensearch service is back running on the old elected cm unit
+    assert await is_up(
+        ops_test, units_ips[first_elected_cm_unit_id]
+    ), "OpenSearch service hasn't restarted."
+
+    # fetch the current elected cluster manager
+    current_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+    assert (
+        current_elected_cm_unit_id != first_elected_cm_unit_id
+    ), "Cluster manager election did not happen."
+
+    # verify the node with the old elected cm successfully joined back the rest of the fleet
+    assert await check_cluster_formation_successful(
+        ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
+    )
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
+
+@pytest.mark.abort_on_fail
 async def test_freeze_db_process_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
@@ -280,6 +333,78 @@ async def test_freeze_db_process_node_with_primary_shard(
     assert first_unit_with_primary_shard in units_with_r_shards
 
     # verify the node with the old primary successfully joined back the rest of the fleet
+    assert await check_cluster_formation_successful(
+        ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
+    )
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
+
+@pytest.mark.abort_on_fail
+async def test_freeze_db_process_node_with_elected_cm(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+) -> None:
+    """Check cluster can self-heal, data indexed/read on process freeze on node with elected CM."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    units_ips = get_application_unit_ids_ips(ops_test, app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    # find unit currently elected cluster_manager
+    first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+
+    # Killing the only instance can be disastrous.
+    if len(ops_test.model.applications[app].units) < 2:
+        await ops_test.model.applications[app].add_unit(count=1)
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            idle_period=IDLE_PERIOD,
+        )
+
+    # Freeze the opensearch process
+    opensearch_pid = await send_kill_signal_to_process(
+        ops_test, app, first_elected_cm_unit_id, signal="SIGSTOP"
+    )
+
+    # verify the unit is not reachable
+    is_node_up = await is_up(ops_test, units_ips[first_elected_cm_unit_id], retries=3)
+    assert not is_node_up
+
+    # verify new writes are continuing by counting the number of writes before and after 5 seconds
+    # should also be plenty for the cluster manager reelection to happen
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "writes not continuing to DB"
+
+    # get reachable unit to perform requests against, in case the previously stopped unit
+    # is leader unit, so its address is not reachable
+    reachable_ip = get_reachable_unit_ips(ops_test)[0]
+
+    # fetch the current elected cluster_manager
+    current_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, reachable_ip)
+    assert (
+        current_elected_cm_unit_id != first_elected_cm_unit_id
+    ), "Cluster manager still assigned to the unit where the service was stopped."
+
+    # Un-Freeze the opensearch process in the node previously elected CM
+    await send_kill_signal_to_process(
+        ops_test,
+        app,
+        first_elected_cm_unit_id,
+        signal="SIGCONT",
+        opensearch_pid=opensearch_pid,
+    )
+
+    # verify that the opensearch service is back running on the unit previously elected CM unit
+    assert await is_up(
+        ops_test, units_ips[first_elected_cm_unit_id]
+    ), "OpenSearch service hasn't restarted."
+
+    # verify the previously elected CM node successfully joined back the rest of the fleet
     assert await check_cluster_formation_successful(
         ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
     )
