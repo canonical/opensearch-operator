@@ -441,7 +441,7 @@ async def test_full_cluster_crash(
 
     # Reset restart delay
     for unit_id in get_application_unit_ids(ops_test, app):
-        await update_restart_delay(ops_test,app,  unit_id, ORIGINAL_RESTART_DELAY)
+        await update_restart_delay(ops_test, app, unit_id, ORIGINAL_RESTART_DELAY)
 
     # sleep for restart delay + 10 secs max for the election time + node start
     time.sleep(ORIGINAL_RESTART_DELAY + 10)
