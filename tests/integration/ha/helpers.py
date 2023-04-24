@@ -236,7 +236,7 @@ async def update_restart_delay(ops_test: OpsTest, app: str, unit_id: int, delay:
     # load the service file from the unit and update it with the new delay
     replace_delay_cmd = (
         f"run --unit {unit_name} -- "
-        f"sudo sed -i -e  's/^RestartSec=[0-9]\\+/RestartSec={delay}/g' "
+        f"sudo sed -i -e s/^RestartSec=[0-9]\\+/RestartSec={delay}/g "
         f"{OPENSEARCH_SERVICE_PATH}"
     )
     await ops_test.juju(*replace_delay_cmd.split(), check=True)
