@@ -1,14 +1,33 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import subprocess
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    stop_after_attempt,
+    wait_fixed,
+    wait_random,
+)
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.helpers import get_application_unit_ids_ips, http_request
+
+OPENSEARCH_SERVICE_DEFAULT_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
+TMP_SERVICE_PATH = "tests/integration/ha_tests/tmp.service"
+
+
+class ProcessError(Exception):
+    """Raised when a process fails."""
+
+
+class ProcessRunningError(Exception):
+    """Raised when a process is running when it is not expected to be."""
 
 
 class Shard:
@@ -226,27 +245,48 @@ async def send_kill_signal_to_process(
     return opensearch_pid
 
 
+async def all_db_processes_down(ops_test: OpsTest) -> bool:
+    """Verifies that all units of the charm do not have the DB process running."""
+    app = await app_name(ops_test)
+
+    try:
+        for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(3)):
+            with attempt:
+                for unit in ops_test.model.applications[app].units:
+                    search_db_process = f"run --unit {unit.name} pgrep -x mongod"
+                    _, processes, _ = await ops_test.juju(*search_db_process.split())
+                    # splitting processes by "\n" results in one or more empty lines, hence we
+                    # need to process these lines accordingly.
+                    processes = [proc for proc in processes.split("\n") if len(proc) > 0]
+                    if len(processes) > 0:
+                        raise ProcessRunningError
+    except RetryError:
+        return False
+
+    return True
+
+
 async def update_restart_delay(ops_test: OpsTest, unit, delay: int):
     """Updates the restart delay in the DB service file.
     When the DB service fails it will now wait for `delay` number of seconds.
     """
     # load the service file from the unit and update it with the new delay
-    await unit.scp_from(source=MONGOD_SERVICE_DEFAULT_PATH, destination=TMP_SERVICE_PATH)
-    with open(TMP_SERVICE_PATH, "r") as mongodb_service_file:
-        mongodb_service = mongodb_service_file.readlines()
+    await unit.scp_from(source=OPENSEARCH_SERVICE_DEFAULT_PATH, destination=TMP_SERVICE_PATH)
+    with open(TMP_SERVICE_PATH, "r") as opensearch_service_file:
+        opensearch_service = opensearch_service_file.readlines()
 
-    for index, line in enumerate(mongodb_service):
+    for index, line in enumerate(opensearch_service):
         if "RestartSec" in line:
-            mongodb_service[index] = f"RestartSec={delay}s\n"
+            opensearch_service[index] = f"RestartSec={delay}s\n"
 
     with open(TMP_SERVICE_PATH, "w") as service_file:
-        service_file.writelines(mongodb_service)
+        service_file.writelines(opensearch_service)
 
-    # upload the changed file back to the unit, we cannot scp this file directly to
-    # MONGOD_SERVICE_DEFAULT_PATH since this directory has strict permissions, instead we scp it
-    # elsewhere and then move it to MONGOD_SERVICE_DEFAULT_PATH.
-    await unit.scp_to(source=TMP_SERVICE_PATH, destination="mongod.service")
-    mv_cmd = f"run --unit {unit.name} mv /home/ubuntu/mongod.service {MONGOD_SERVICE_DEFAULT_PATH}"
+    # Upload the changed file back to the unit. We cannot scp this file directly to
+    # OPENSEARCH_SERVICE_DEFAULT_PATH since this directory has strict permissions, so we scp it
+    # elsewhere and then move it to OPENSEARCH_SERVICE_DEFAULT_PATH.
+    await unit.scp_to(source=TMP_SERVICE_PATH, destination="opensearch.service")
+    mv_cmd = f"run --unit {unit.name} mv /home/ubuntu/opensearch.service {OPENSEARCH_SERVICE_DEFAULT_PATH}"
     return_code, _, _ = await ops_test.juju(*mv_cmd.split())
     if return_code != 0:
         raise ProcessError(f"Command: {mv_cmd} failed on unit: {unit.name}.")

@@ -16,6 +16,8 @@ from tests.integration.ha.helpers import (
     get_elected_cm_unit_id,
     get_shards_by_index,
     send_kill_signal_to_process,
+    update_restart_delay,
+    all_db_processes_down
 )
 from tests.integration.ha.helpers_data import (
     create_index,
@@ -68,6 +70,19 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
     await c_writes.start(repl_on_all_nodes=True)
     yield
     await c_writes.clear()
+
+@pytest.fixture()
+async def reset_restart_delay(ops_test: OpsTest):
+    """Resets service file delay on all units."""
+    # update all units to have a new RESTART_DELAY. Modifying the Restart delay to 3 minutes
+    # should ensure enough time for all replicas to be down at the same time.
+    for unit in ops_test.model.applications[app].units:
+        await update_restart_delay(ops_test, unit, RESTART_DELAY)
+
+    yield
+    app = await app_name(ops_test)
+    for unit in ops_test.model.applications[app].units:
+        await update_restart_delay(ops_test, unit, ORIGINAL_RESTART_DELAY)
 
 
 @pytest.mark.abort_on_fail
@@ -415,12 +430,6 @@ async def test_freeze_db_process_node_with_elected_cm(
 
 async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_delay):
     app = await app_name(ops_test) or APP_NAME
-
-    # update all units to have a new RESTART_DELAY,  Modifying the Restart delay to 3 minutes
-    # should ensure enough time for all replicas to be down at the same time.
-    for unit in ops_test.model.applications[app].units:
-        await helpers.update_restart_delay(ops_test, unit, RESTART_DELAY)
-
     # kill all units "simultaneously"
     await asyncio.gather(
         *[
@@ -435,7 +444,7 @@ async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_d
     # This test serves to verify behavior when all replicas are down at the same time that when
     # they come back online they operate as expected. This check verifies that we meet the criterea
     # of all replicas being down at the same time.
-    assert await helpers.all_db_processes_down(ops_test), "Not all units down at the same time."
+    assert await all_db_processes_down(ops_test), "Not all units down at the same time."
 
     # sleep for twice the median election time and the restart delay
     time.sleep(MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY)
@@ -446,15 +455,17 @@ async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_d
             ops_test, unit.public_address
         ), f"unit {unit.name} not restarted after cluster crash."
 
-    # verify new writes are continuing by counting the number of writes before and after a 5 second
-    # wait
-    writes = await helpers.count_writes(ops_test)
+    # verify new writes are continuing by counting the number of writes before and after 5 seconds
+    # should also be plenty for the shard primary reelection to happen
+    writes = await c_writes.count()
     time.sleep(5)
-    more_writes = await helpers.count_writes(ops_test)
+    more_writes = await c_writes.count()
     assert more_writes > writes, "writes not continuing to DB"
 
-    # verify presence of primary, replica set member configuration, and number of primaries
-    await helpers.verify_replica_set_configuration(ops_test)
+    # verify the node with the old primary successfully joined the rest of the fleet
+    assert await check_cluster_formation_successful(
+        ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
+    )
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
