@@ -41,7 +41,7 @@ from ops.charm import (
     RelationDepartedEvent,
 )
 from ops.framework import Object
-from ops.model import BlockedStatus, MaintenanceStatus, Relation
+from ops.model import BlockedStatus, MaintenanceStatus, Relation, WaitingStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
@@ -56,7 +56,7 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-INVALID_INDEX_NAMES = [
+PROTECTED_INDEX_NAMES = [
     ".opendistro_security",
     ".opendistro-alerting-config",
     ".opendistro-alerting-alert*",
@@ -191,7 +191,11 @@ class OpenSearchProvider(Object):
                 == "resource_already_exists_exception"
             ):
                 logger.error(e)
-                raise
+                self.charm.unit.status = WaitingStatus(
+                    "waiting for opensearch application to stabilise before creating relation index"
+                )
+                event.defer()
+                return
 
         username = self._relation_username(event.relation)
         hashed_pwd, pwd = generate_hashed_password()
@@ -201,6 +205,7 @@ class OpenSearchProvider(Object):
         except OpenSearchUserMgmtError as err:
             logger.error(err)
             self.unit.status = BlockedStatus(str(err))
+            event.defer()
             return
 
         rel_id = event.relation.id
@@ -217,9 +222,9 @@ class OpenSearchProvider(Object):
 
     def validate_index_name(self, index_name: str) -> bool:
         """Validates that the index name provided in the relation is acceptable."""
-        if index_name in INVALID_INDEX_NAMES:
+        if index_name in PROTECTED_INDEX_NAMES:
             logger.error(
-                f"invalid index name {index_name} - tried to access a protected index in {INVALID_INDEX_NAMES}"
+                f"invalid index name {index_name} - tried to access a protected index in {PROTECTED_INDEX_NAMES}"
             )
             return False
 
@@ -227,10 +232,10 @@ class OpenSearchProvider(Object):
             logger.error(f"invalid index name {index_name} - index names must be lowercase")
             return False
 
-        invalid_chars = [" ", ",", ":", '"', "*", "+", "\\", "/", "|", "?", "#", ">", "<"]
-        if any([char in index_name for char in invalid_chars]):
+        forbidden_chars = [" ", ",", ":", '"', "*", "+", "\\", "/", "|", "?", "#", ">", "<"]
+        if any([char in index_name for char in forbidden_chars]):
             logger.error(
-                f"invalid index name {index_name} - index name includes one or more of the following invalid characters: {invalid_chars}"
+                f"invalid index name {index_name} - index name includes one or more of the following forbidden characters: {forbidden_chars}"
             )
             return False
 
