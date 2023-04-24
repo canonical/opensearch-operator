@@ -43,7 +43,8 @@ logger = logging.getLogger(__name__)
 
 
 SECOND_APP_NAME = "second-opensearch"
-
+RESTART_DELAY = 60 * 3
+ORIGINAL_RESTART_DELAY = 5
 
 @pytest.fixture()
 async def c_writes(ops_test: OpsTest):
@@ -422,7 +423,8 @@ async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_d
     # kill all units "simultaneously"
     await asyncio.gather(
         *[
-            helpers.kill_unit_process(ops_test, unit.name, kill_code="SIGTERM")
+            # TODO is there a smarter way to get every unit id?
+            send_kill_signal_to_process(ops_test, int(unit.name.split("/")[-1]), kill_code="SIGTERM")
             for unit in ops_test.model.applications[app].units
         ]
     )
@@ -441,20 +443,11 @@ async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_d
             ops_test, unit.public_address
         ), f"unit {unit.name} not restarted after cluster crash."
 
-    # verify new writes are continuing by counting the number of writes before and after a 5 second
-    # wait
-    writes = await helpers.count_writes(ops_test)
-    time.sleep(5)
-    more_writes = await helpers.count_writes(ops_test)
-    assert more_writes > writes, "writes not continuing to DB"
-
     # verify presence of primary, replica set member configuration, and number of primaries
     await helpers.verify_replica_set_configuration(ops_test)
 
-    # verify that no writes to the db were missed
-    total_expected_writes = await helpers.stop_continous_writes(ops_test)
-    actual_writes = await helpers.count_writes(ops_test)
-    assert total_expected_writes["number"] == actual_writes, "writes to the db were missed."
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
 # put this test at the end of the list of tests, as we delete an app during cleanup
