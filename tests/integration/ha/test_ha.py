@@ -75,12 +75,6 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
 @pytest.fixture()
 async def reset_restart_delay(ops_test: OpsTest):
     """Resets service file delay on all units."""
-    app = (await app_name(ops_test)) or APP_NAME
-    # update all units to have a new RESTART_DELAY. Modifying the Restart delay to 3 minutes
-    # should ensure enough time for all replicas to be down at the same time.
-    for unit in ops_test.model.applications[app].units:
-        await update_restart_delay(ops_test, unit, RESTART_DELAY)
-
     yield
     app = await app_name(ops_test)
     for unit in ops_test.model.applications[app].units:
@@ -437,6 +431,11 @@ async def test_freeze_db_process_node_with_elected_cm(
 
 async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_delay):
     app = (await app_name(ops_test)) or APP_NAME
+    # update all units to have a new RESTART_DELAY. Modifying the Restart delay to 3 minutes
+    # should ensure enough time for all replicas to be down at the same time.
+    for unit in ops_test.model.applications[app].units:
+        await update_restart_delay(ops_test, unit, RESTART_DELAY)
+
     # kill all units "simultaneously"
     await asyncio.gather(
         *[

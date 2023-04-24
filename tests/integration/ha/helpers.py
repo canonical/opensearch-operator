@@ -19,7 +19,7 @@ from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.helpers import get_application_unit_ids_ips, http_request
 
 OPENSEARCH_SERVICE_DEFAULT_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
-TMP_SERVICE_PATH = "tests/integration/ha_tests/tmp.service"
+TMP_SERVICE_PATH = "tests/integration/ha/tmp.service"
 
 
 class ProcessError(Exception):
