@@ -411,6 +411,52 @@ async def test_freeze_db_process_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_delay):
+    app = await app_name(ops_test) or APP_NAME
+
+    # update all units to have a new RESTART_DELAY,  Modifying the Restart delay to 3 minutes
+    # should ensure enough time for all replicas to be down at the same time.
+    for unit in ops_test.model.applications[app].units:
+        await helpers.update_restart_delay(ops_test, unit, RESTART_DELAY)
+
+    # kill all units "simultaneously"
+    await asyncio.gather(
+        *[
+            helpers.kill_unit_process(ops_test, unit.name, kill_code="SIGTERM")
+            for unit in ops_test.model.applications[app].units
+        ]
+    )
+
+    # This test serves to verify behavior when all replicas are down at the same time that when
+    # they come back online they operate as expected. This check verifies that we meet the criterea
+    # of all replicas being down at the same time.
+    assert await helpers.all_db_processes_down(ops_test), "Not all units down at the same time."
+
+    # sleep for twice the median election time and the restart delay
+    time.sleep(MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY)
+
+    # verify all units are up and running
+    for unit in ops_test.model.applications[app].units:
+        assert await helpers.mongod_ready(
+            ops_test, unit.public_address
+        ), f"unit {unit.name} not restarted after cluster crash."
+
+    # verify new writes are continuing by counting the number of writes before and after a 5 second
+    # wait
+    writes = await helpers.count_writes(ops_test)
+    time.sleep(5)
+    more_writes = await helpers.count_writes(ops_test)
+    assert more_writes > writes, "writes not continuing to DB"
+
+    # verify presence of primary, replica set member configuration, and number of primaries
+    await helpers.verify_replica_set_configuration(ops_test)
+
+    # verify that no writes to the db were missed
+    total_expected_writes = await helpers.stop_continous_writes(ops_test)
+    actual_writes = await helpers.count_writes(ops_test)
+    assert total_expected_writes["number"] == actual_writes, "writes to the db were missed."
+
+
 # put this test at the end of the list of tests, as we delete an app during cleanup
 # and the safeguards we have on the charm prevent us from doing so, so we'll keep
 # using a unit without need - when other tests may need the unit on the CI
