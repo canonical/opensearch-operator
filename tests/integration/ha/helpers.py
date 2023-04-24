@@ -203,7 +203,12 @@ async def assert_continuous_writes_consistency(
 
 
 async def send_kill_signal_to_process(
-    ops_test: OpsTest, app: str, unit_id: int, signal: str, opensearch_pid: Optional[int] = None, unit_name:str = None
+    ops_test: OpsTest,
+    app: str,
+    unit_id: int,
+    signal: str,
+    opensearch_pid: Optional[int] = None,
+    unit_name: str = None,
 ) -> Optional[int]:
     """Run kill with signal in specific unit."""
     if opensearch_pid is None:
@@ -219,6 +224,7 @@ async def send_kill_signal_to_process(
         raise Exception(f"{kill_cmd} failed -- rc: {return_code} - out: {stdout} - err: {stderr}")
 
     return opensearch_pid
+
 
 async def update_restart_delay(ops_test: OpsTest, unit, delay: int):
     """Updates the restart delay in the DB service file.

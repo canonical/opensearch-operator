@@ -46,6 +46,7 @@ SECOND_APP_NAME = "second-opensearch"
 RESTART_DELAY = 60 * 3
 ORIGINAL_RESTART_DELAY = 5
 
+
 @pytest.fixture()
 async def c_writes(ops_test: OpsTest):
     """Creates instance of the ContinuousWrites."""
@@ -424,7 +425,9 @@ async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_d
     await asyncio.gather(
         *[
             # TODO is there a smarter way to get every unit id?
-            send_kill_signal_to_process(ops_test, int(unit.name.split("/")[-1]), kill_code="SIGTERM")
+            send_kill_signal_to_process(
+                ops_test, int(unit.name.split("/")[-1]), kill_code="SIGTERM"
+            )
             for unit in ops_test.model.applications[app].units
         ]
     )
@@ -442,6 +445,13 @@ async def test_full_cluster_restart(ops_test: OpsTest, c_writes, reset_restart_d
         assert await helpers.mongod_ready(
             ops_test, unit.public_address
         ), f"unit {unit.name} not restarted after cluster crash."
+
+    # verify new writes are continuing by counting the number of writes before and after a 5 second
+    # wait
+    writes = await helpers.count_writes(ops_test)
+    time.sleep(5)
+    more_writes = await helpers.count_writes(ops_test)
+    assert more_writes > writes, "writes not continuing to DB"
 
     # verify presence of primary, replica set member configuration, and number of primaries
     await helpers.verify_replica_set_configuration(ops_test)
