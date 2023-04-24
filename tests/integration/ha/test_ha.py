@@ -46,7 +46,6 @@ logger = logging.getLogger(__name__)
 
 
 SECOND_APP_NAME = "second-opensearch"
-
 ORIGINAL_RESTART_DELAY = 20
 RESTART_DELAY = 360
 
@@ -72,15 +71,6 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
     await c_writes.start(repl_on_all_nodes=True)
     yield
     await c_writes.clear()
-
-
-@pytest.fixture()
-async def reset_service_restart_delay(ops_test: OpsTest):
-    """Resets service file restart delay on all units."""
-    yield
-    app = (await app_name(ops_test)) or APP_NAME
-    for unit_id in get_application_unit_ids(ops_test, app=app):
-        await update_restart_delay(ops_test, app, unit_id, ORIGINAL_RESTART_DELAY)
 
 
 @pytest.mark.abort_on_fail
@@ -428,10 +418,7 @@ async def test_freeze_db_process_node_with_elected_cm(
 
 @pytest.mark.abort_on_fail
 async def test_full_cluster_crash(
-    ops_test: OpsTest,
-    c_writes: ContinuousWrites,
-    c_balanced_writes_runner,
-    reset_service_restart_delay,
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check cluster can operate normally after all nodes down at same time and come back up."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -439,7 +426,7 @@ async def test_full_cluster_crash(
     # update all units to have a new RESTART_DELAY. Modifying the Restart delay to 3 minutes
     # should ensure enough time for all replicas to be down at the same time.
     for unit_id in get_application_unit_ids(ops_test, app):
-        await update_restart_delay(ops_test, unit_id, RESTART_DELAY)
+        await update_restart_delay(ops_test, app, unit_id, RESTART_DELAY)
 
     # kill all units simultaneously
     await asyncio.gather(
@@ -452,8 +439,12 @@ async def test_full_cluster_crash(
     # check that all units being down at the same time.
     assert await all_processes_down(ops_test, app), "Not all units down at the same time."
 
+    # Reset restart delay
+    for unit_id in get_application_unit_ids(ops_test, app):
+        await update_restart_delay(ops_test,app,  unit_id, ORIGINAL_RESTART_DELAY)
+
     # sleep for restart delay + 10 secs max for the election time + node start
-    time.sleep(RESTART_DELAY + 10)
+    time.sleep(ORIGINAL_RESTART_DELAY + 10)
 
     # verify all units are up and running
     for unit_id, unit_ip in get_application_unit_ids_ips(ops_test, app):
@@ -468,7 +459,7 @@ async def test_full_cluster_crash(
     # check that cluster health is green (all primary and replica shards allocated)
     leader_ip = await get_leader_unit_ip(ops_test, app)
     health_resp = await cluster_health(ops_test, leader_ip)
-    assert health_resp["status"] == "green"
+    assert health_resp["status"] == "green", f"Cluster {health_resp['status']} - expected green."
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
