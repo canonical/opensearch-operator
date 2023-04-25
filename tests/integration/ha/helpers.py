@@ -43,6 +43,10 @@ async def app_name(ops_test: OpsTest) -> Optional[str]:
     return None
 
 
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
 async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
     """Returns the unit id of the current elected cm node."""
     # get current elected cm node
