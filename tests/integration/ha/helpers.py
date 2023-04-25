@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-import subprocess
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
 from pytest_operator.plugin import OpsTest
-from tenacity import (
-    RetryError,
-    Retrying,
-    retry,
-    stop_after_attempt,
-    wait_fixed,
-    wait_random,
-)
+from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.helpers import get_application_unit_ids_ips, http_request
+from tests.integration.helpers import (
+    get_application_unit_ids,
+    get_application_unit_ids_ips,
+    http_request,
+)
+
+OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
 
 OPENSEARCH_SERVICE_DEFAULT_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
 TMP_SERVICE_PATH = "tests/integration/ha/tmp.service"
@@ -56,6 +54,10 @@ async def app_name(ops_test: OpsTest) -> Optional[str]:
     return None
 
 
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
 async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
     """Returns the unit id of the current elected cm node."""
     # get current elected cm node
@@ -232,9 +234,9 @@ async def send_kill_signal_to_process(
     unit_name = f"{app}/{unit_id}"
     if opensearch_pid is None:
         get_pid_cmd = f"run --unit {unit_name} -- sudo lsof -ti:9200"
-        _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=True)
+        _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=False)
 
-    if not opensearch_pid:
+    if not opensearch_pid.strip():
         raise Exception("Could not fetch PID for process listening on port 9200.")
 
     kill_cmd = f"ssh {unit_name} -- sudo kill -{signal.upper()} {opensearch_pid}"
@@ -245,58 +247,30 @@ async def send_kill_signal_to_process(
     return opensearch_pid
 
 
-async def all_db_processes_down(ops_test: OpsTest) -> bool:
-    """Verifies that all units of the charm do not have the DB process running."""
-    app = await app_name(ops_test)
+async def update_restart_delay(ops_test: OpsTest, app: str, unit_id: int, delay: int):
+    """Updates the restart delay in the DB service file."""
+    unit_name = f"{app}/{unit_id}"
 
-    try:
-        for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(3)):
-            with attempt:
-                for unit in ops_test.model.applications[app].units:
-                    search_db_process = f"run --unit {unit.name} pgrep -x mongod"
-                    _, processes, _ = await ops_test.juju(*search_db_process.split())
-                    # splitting processes by "\n" results in one or more empty lines, hence we
-                    # need to process these lines accordingly.
-                    processes = [proc for proc in processes.split("\n") if len(proc) > 0]
-                    if len(processes) > 0:
-                        raise ProcessRunningError
-    except RetryError:
-        return False
+    # load the service file from the unit and update it with the new delay
+    replace_delay_cmd = (
+        f"run --unit {unit_name} -- "
+        f"sudo sed -i -e s/^RestartSec=[0-9]\\+/RestartSec={delay}/g "
+        f"{OPENSEARCH_SERVICE_PATH}"
+    )
+    await ops_test.juju(*replace_delay_cmd.split(), check=True)
+
+    # reload the daemon for systemd to reflect changes
+    reload_cmd = f"run --unit {unit_name} -- sudo systemctl daemon-reload"
+    await ops_test.juju(*reload_cmd.split(), check=True)
+
+
+async def all_processes_down(ops_test: OpsTest, app: str) -> bool:
+    """Check if all processes are down."""
+    for unit_id in get_application_unit_ids(ops_test, app):
+        unit_name = f"{app}/{unit_id}"
+        get_pid_cmd = f"run --unit {unit_name} -- sudo lsof -ti:9200"
+        _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=False)
+        if opensearch_pid.strip():
+            return False
 
     return True
-
-
-async def update_restart_delay(ops_test: OpsTest, unit, delay: int):
-    """Updates the restart delay in the DB service file.
-
-    When the DB service fails it will now wait for `delay` number of seconds.
-    """
-    # load the service file from the unit and update it with the new delay
-    await unit.scp_from(source=OPENSEARCH_SERVICE_DEFAULT_PATH, destination=TMP_SERVICE_PATH)
-    with open(TMP_SERVICE_PATH, "r") as opensearch_service_file:
-        opensearch_service = opensearch_service_file.readlines()
-
-    for index, line in enumerate(opensearch_service):
-        if "RestartSec" in line:
-            opensearch_service[index] = f"RestartSec={delay}s\n"
-
-    with open(TMP_SERVICE_PATH, "w") as service_file:
-        service_file.writelines(opensearch_service)
-
-    # Upload the changed file back to the unit. We cannot scp this file directly to
-    # OPENSEARCH_SERVICE_DEFAULT_PATH since this directory has strict permissions, so we scp it
-    # elsewhere and then move it to OPENSEARCH_SERVICE_DEFAULT_PATH.
-    await unit.scp_to(source=TMP_SERVICE_PATH, destination="opensearch.service")
-    mv_cmd = f"run --unit {unit.name} mv /home/ubuntu/opensearch.service {OPENSEARCH_SERVICE_DEFAULT_PATH}"
-    return_code, _, _ = await ops_test.juju(*mv_cmd.split())
-    if return_code != 0:
-        raise ProcessError(f"Command: {mv_cmd} failed on unit: {unit.name}.")
-
-    # remove tmp file from machine
-    subprocess.call(["rm", TMP_SERVICE_PATH])
-
-    # reload the daemon for systemd otherwise changes are not saved
-    reload_cmd = f"run --unit {unit.name} systemctl daemon-reload"
-    return_code, _, _ = await ops_test.juju(*reload_cmd.split())
-    if return_code != 0:
-        raise ProcessError(f"Command: {reload_cmd} failed on unit: {unit.name}.")

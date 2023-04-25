@@ -390,14 +390,10 @@ async def check_cluster_formation_successful(
 async def is_up(ops_test: OpsTest, unit_ip: str, retries: int = 15) -> bool:
     """Return if node up."""
     try:
-        for attempt in Retrying(
-            stop=stop_after_attempt(retries), wait=wait_fixed(wait=10) + wait_random(0, 5)
-        ):
+        for attempt in Retrying(stop=stop_after_attempt(retries), wait=wait_fixed(wait=15)):
             with attempt:
-                http_resp_code = await http_request(
-                    ops_test, "GET", f"https://{unit_ip}:9200/", resp_status_code=True
-                )
-                return http_resp_code == 200
+                await http_request(ops_test, "GET", f"https://{unit_ip}:9200/")
+                return True
     except RetryError:
         return False
 
