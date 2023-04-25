@@ -73,15 +73,6 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
     await c_writes.clear()
 
 
-@pytest.fixture()
-async def reset_restart_delay(ops_test: OpsTest):
-    """Resets service file delay on all units."""
-    yield
-    app = await app_name(ops_test)
-    for unit in ops_test.model.applications[app].units:
-        await update_restart_delay(ops_test, unit, ORIGINAL_RESTART_DELAY)
-
-
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
