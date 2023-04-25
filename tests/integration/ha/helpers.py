@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-import logging
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
@@ -16,12 +15,6 @@ from tests.integration.helpers import (
 )
 
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
-
-logger = logging.getLogger(__name__)
-
-
-class ProcessError(Exception):
-    """Raised when a process fails."""
 
 
 class Shard:

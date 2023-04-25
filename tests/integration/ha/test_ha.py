@@ -459,6 +459,8 @@ async def test_restart_db_process_with_elected_cluster_manager(
         ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
     )
 
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
 
 @pytest.mark.abort_on_fail
 async def test_restart_db_process_with_primary_shard(
