@@ -16,17 +16,6 @@ from tests.integration.helpers import (
 
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
 
-OPENSEARCH_SERVICE_DEFAULT_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
-TMP_SERVICE_PATH = "tests/integration/ha/tmp.service"
-
-
-class ProcessError(Exception):
-    """Raised when a process fails."""
-
-
-class ProcessRunningError(Exception):
-    """Raised when a process is running when it is not expected to be."""
-
 
 class Shard:
     """Class for holding a shard."""
