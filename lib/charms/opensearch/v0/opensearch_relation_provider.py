@@ -41,7 +41,7 @@ from ops.charm import (
     RelationDepartedEvent,
 )
 from ops.framework import Object
-from ops.model import BlockedStatus, MaintenanceStatus, Relation
+from ops.model import MaintenanceStatus, Relation
 
 # The unique Charmhub library identifier, never change it
 LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
@@ -200,7 +200,6 @@ class OpenSearchProvider(Object):
             self.create_opensearch_users(username, hashed_pwd, event.index, extra_user_roles)
         except OpenSearchUserMgmtError as err:
             logger.error(err)
-            self.unit.status = BlockedStatus(str(err))
             return
 
         rel_id = event.relation.id
