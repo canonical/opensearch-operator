@@ -187,7 +187,9 @@ class ContinuousWrites:
         )
 
     @staticmethod
-    async def _run(event: Event, data_queue: Queue, starting_number: int, is_bulk: bool) -> None:
+    async def _run(  # noqa: C901
+        event: Event, data_queue: Queue, starting_number: int, is_bulk: bool
+    ) -> None:
         """Continuous writing."""
 
         def _client(_data) -> OpenSearch:
@@ -213,9 +215,13 @@ class ContinuousWrites:
                     ContinuousWrites._index(client, write_value)
             except BulkIndexError:
                 continue
-            except TransportError:
+            except (TransportError, ConnectionRefusedError):
                 client.close()
-                client = _client(data)
+                try:
+                    client = _client(data)
+                except (TransportError, ConnectionRefusedError):
+                    pass
+
                 continue
             finally:
                 # process termination requested
