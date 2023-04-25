@@ -477,6 +477,13 @@ async def test_multi_clusters_db_isolation(
     # remove 1 unit (for CI)
     unit_ids = get_application_unit_ids(ops_test, app=app)
     await ops_test.model.applications[app].destroy_unit(f"{app}/{max(unit_ids)}")
+
+    # deploy new cluster
+    my_charm = await ops_test.build_charm(".")
+    await ops_test.model.deploy(my_charm, num_units=1, application_name=SECOND_APP_NAME)
+    await ops_test.model.relate(SECOND_APP_NAME, TLS_CERTIFICATES_APP_NAME)
+
+    # wait
     await ops_test.model.wait_for_idle(
         apps=[app],
         status="active",
@@ -484,18 +491,13 @@ async def test_multi_clusters_db_isolation(
         wait_for_exact_units=len(unit_ids) - 1,
         idle_period=IDLE_PERIOD,
     )
+    await ops_test.model.wait_for_idle(apps=[SECOND_APP_NAME], status="active")
 
     index_name = "test_index_unique_cluster_dbs"
 
     # index document in the current cluster
     main_app_leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     await index_doc(ops_test, app, main_app_leader_unit_ip, index_name, doc_id=1)
-
-    # deploy new cluster
-    my_charm = await ops_test.build_charm(".")
-    await ops_test.model.deploy(my_charm, num_units=1, application_name=SECOND_APP_NAME)
-    await ops_test.model.relate(SECOND_APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.wait_for_idle(apps=[SECOND_APP_NAME], status="active")
 
     # index document in second cluster
     second_app_leader_ip = await get_leader_unit_ip(ops_test, app=SECOND_APP_NAME)
