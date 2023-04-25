@@ -443,11 +443,11 @@ async def test_full_cluster_crash(
     for unit_id in get_application_unit_ids(ops_test, app):
         await update_restart_delay(ops_test, app, unit_id, ORIGINAL_RESTART_DELAY)
 
-    # sleep for restart delay + 10 secs max for the election time + node start
-    time.sleep(ORIGINAL_RESTART_DELAY + 10)
+    # sleep for restart delay + 30 secs max for the election time + node start + cluster formation
+    time.sleep(ORIGINAL_RESTART_DELAY + 30)
 
     # verify all units are up and running
-    for unit_id, unit_ip in get_application_unit_ids_ips(ops_test, app):
+    for unit_id, unit_ip in get_application_unit_ids_ips(ops_test, app).items():
         assert await is_up(ops_test, unit_ip), f"Unit {unit_id} not restarted after cluster crash."
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds

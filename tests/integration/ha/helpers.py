@@ -216,9 +216,9 @@ async def send_kill_signal_to_process(
 
     if opensearch_pid is None:
         get_pid_cmd = f"run --unit {unit_name} -- sudo lsof -ti:9200"
-        _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=True)
+        _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=False)
 
-    if not opensearch_pid:
+    if not opensearch_pid.strip():
         raise Exception("Could not fetch PID for process listening on port 9200.")
 
     kill_cmd = f"ssh {unit_name} -- sudo kill -{signal.upper()} {opensearch_pid}"
@@ -251,8 +251,8 @@ async def all_processes_down(ops_test: OpsTest, app: str) -> bool:
     for unit_id in get_application_unit_ids(ops_test, app):
         unit_name = f"{app}/{unit_id}"
         get_pid_cmd = f"run --unit {unit_name} -- sudo lsof -ti:9200"
-        _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=True)
-        if opensearch_pid:
+        _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=False)
+        if opensearch_pid.strip():
             return False
 
     return True
