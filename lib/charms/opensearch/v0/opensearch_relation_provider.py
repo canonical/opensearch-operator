@@ -191,7 +191,8 @@ class OpenSearchProvider(Object):
                 == "resource_already_exists_exception"
             ):
                 logger.error(e)
-                raise
+                event.defer()
+                return
 
         username = self._relation_username(event.relation)
         hashed_pwd, pwd = generate_hashed_password()
