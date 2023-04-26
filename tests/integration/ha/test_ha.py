@@ -420,8 +420,10 @@ async def test_freeze_db_process_node_with_elected_cm(
 async def test_full_cluster_crash(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
-    """Check cluster can operate normally after all nodes down at same time and come back up."""
+    """Check cluster can operate normally after all nodes SIGKILL at same time and come back up."""
     app = (await app_name(ops_test)) or APP_NAME
+
+    leader_ip = await get_leader_unit_ip(ops_test, app)
 
     # update all units to have a new RESTART_DELAY. Modifying the Restart delay to 3 minutes
     # should ensure enough time for all replicas to be down at the same time.
@@ -443,12 +445,18 @@ async def test_full_cluster_crash(
     for unit_id in get_application_unit_ids(ops_test, app):
         await update_restart_delay(ops_test, app, unit_id, ORIGINAL_RESTART_DELAY)
 
-    # sleep for restart delay + 30 secs max for the election time + node start + cluster formation
-    time.sleep(ORIGINAL_RESTART_DELAY + 30)
+    # sleep for restart delay + 45 secs max for the election time + node start + cluster formation
+    # around 10 sec enough in a good machine - 45 secs for CI
+    time.sleep(ORIGINAL_RESTART_DELAY + 45)
 
     # verify all units are up and running
     for unit_id, unit_ip in get_application_unit_ids_ips(ops_test, app).items():
         assert await is_up(ops_test, unit_ip), f"Unit {unit_id} not restarted after cluster crash."
+
+    # check all nodes successfully joined the same cluster
+    assert await check_cluster_formation_successful(
+        ops_test, leader_ip, get_application_unit_names(ops_test, app=app)
+    )
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
     writes = await c_writes.count()
@@ -457,7 +465,62 @@ async def test_full_cluster_crash(
     assert more_writes > writes, "Writes not continuing to DB"
 
     # check that cluster health is green (all primary and replica shards allocated)
+    health_resp = await cluster_health(ops_test, leader_ip)
+    assert health_resp["status"] == "green", f"Cluster {health_resp['status']} - expected green."
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
+
+@pytest.mark.abort_on_fail
+async def test_full_cluster_restart(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+) -> None:
+    """Check cluster can operate normally after all nodes SIGTERM at same time and come back up."""
+    app = (await app_name(ops_test)) or APP_NAME
+
     leader_ip = await get_leader_unit_ip(ops_test, app)
+
+    # update all units to have a new RESTART_DELAY. Modifying the Restart delay to 3 minutes
+    # should ensure enough time for all replicas to be down at the same time.
+    for unit_id in get_application_unit_ids(ops_test, app):
+        await update_restart_delay(ops_test, app, unit_id, RESTART_DELAY)
+
+    # kill all units simultaneously
+    await asyncio.gather(
+        *[
+            send_kill_signal_to_process(ops_test, app, unit_id, signal="SIGTERM")
+            for unit_id in get_application_unit_ids(ops_test, app)
+        ]
+    )
+
+    # check that all units being down at the same time.
+    assert await all_processes_down(ops_test, app), "Not all units down at the same time."
+
+    # Reset restart delay
+    for unit_id in get_application_unit_ids(ops_test, app):
+        await update_restart_delay(ops_test, app, unit_id, ORIGINAL_RESTART_DELAY)
+
+    # sleep for restart delay + 45 secs max for the election time + node start + cluster formation
+    # around 10 sec enough in a good machine - 45 secs for CI
+    time.sleep(ORIGINAL_RESTART_DELAY + 45)
+
+    # verify all units are up and running
+    for unit_id, unit_ip in get_application_unit_ids_ips(ops_test, app).items():
+        assert await is_up(ops_test, unit_ip), f"Unit {unit_id} not restarted after cluster crash."
+
+    # check all nodes successfully joined the same cluster
+    assert await check_cluster_formation_successful(
+        ops_test, leader_ip, get_application_unit_names(ops_test, app=app)
+    )
+
+    # verify new writes are continuing by counting the number of writes before and after 5 seconds
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "Writes not continuing to DB"
+
+    # check that cluster health is green (all primary and replica shards allocated)
     health_resp = await cluster_health(ops_test, leader_ip)
     assert health_resp["status"] == "green", f"Cluster {health_resp['status']} - expected green."
 
