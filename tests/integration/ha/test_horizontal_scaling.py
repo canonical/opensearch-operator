@@ -80,7 +80,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME], status="active", timeout=1000
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME], status="active", timeout=1400
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 

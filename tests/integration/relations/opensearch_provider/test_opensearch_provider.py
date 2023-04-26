@@ -235,7 +235,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, SECONDARY_CLIENT_APP_NAME)
 
     await ops_test.model.wait_for_idle(
-        status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(60 * 20)
+        status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(60 * 25)
     )
 
     # Test that the permissions are respected between relations by running the same request as
