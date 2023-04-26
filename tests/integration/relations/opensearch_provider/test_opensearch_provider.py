@@ -85,6 +85,7 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
     )
 
 
+@pytest.mark.abort_on_fail
 async def test_index_usage(ops_test: OpsTest):
     """Check we can update and delete things.
 
@@ -121,6 +122,7 @@ async def test_index_usage(ops_test: OpsTest):
     )
 
 
+@pytest.mark.abort_on_fail
 async def test_bulk_index_usage(ops_test: OpsTest):
     """Check we can update and delete things using bulk api."""
     bulk_payload = """{ "index" : { "_index": "albums", "_id" : "2" } }
@@ -160,6 +162,7 @@ async def test_bulk_index_usage(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
+@pytest.mark.abort_on_fail
 async def test_version(ops_test: OpsTest):
     """Check version reported in the databag is consistent with the version on the charm."""
     run_version_request = await run_request(
@@ -179,6 +182,7 @@ async def test_version(ops_test: OpsTest):
     assert version == results.get("version", {}).get("number"), results
 
 
+@pytest.mark.abort_on_fail
 async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag.
 
@@ -220,6 +224,7 @@ async def test_scaling(ops_test: OpsTest):
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
 
 
+@pytest.mark.abort_on_fail
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
     # Deploy secondary application.
@@ -257,6 +262,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
 
+@pytest.mark.abort_on_fail
 async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     """Test that two different applications can connect to the database."""
     # Relate the new application and wait for them to exchange connection data.
@@ -291,6 +297,7 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
+@pytest.mark.abort_on_fail
 async def test_admin_relation(ops_test: OpsTest):
     """Test we can create relations with admin permissions."""
     # Add an admin relation and wait for them to exchange data
@@ -324,6 +331,7 @@ async def test_admin_relation(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
+@pytest.mark.abort_on_fail
 async def test_admin_permissions(ops_test: OpsTest):
     """Test admin permissions behave the way we want.
 
@@ -386,6 +394,7 @@ async def test_admin_permissions(ops_test: OpsTest):
         assert "Error:" in results[0], results
 
 
+@pytest.mark.abort_on_fail
 async def test_normal_user_permissions(ops_test: OpsTest):
     """Test normal user permissions behave the way we want.
 
@@ -442,6 +451,7 @@ async def test_normal_user_permissions(ops_test: OpsTest):
         assert "Error:" in results[0], results
 
 
+@pytest.mark.abort_on_fail
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
@@ -487,6 +497,7 @@ async def test_relation_broken(ops_test: OpsTest):
     assert relation_user not in users.keys()
 
 
+@pytest.mark.abort_on_fail
 async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     """Verify that if we recreate a relation, we can access the same index."""
     client_relation = await ops_test.model.add_relation(
