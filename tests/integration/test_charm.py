@@ -59,7 +59,7 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
 
     # Deploy TLS Certificates operator.
     config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=config)
+    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, config=config)
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=1000
     )
