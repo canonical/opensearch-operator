@@ -51,6 +51,15 @@ RESTART_DELAY = 360
 
 
 @pytest.fixture()
+async def reset_restart_delay(ops_test: OpsTest):
+    """Resets service file delay on all units."""
+    yield
+    app = (await app_name(ops_test)) or APP_NAME
+    for unit_id in get_application_unit_ids(ops_test, app):
+        await update_restart_delay(ops_test, app, unit_id, ORIGINAL_RESTART_DELAY)
+
+
+@pytest.fixture()
 async def c_writes(ops_test: OpsTest):
     """Creates instance of the ContinuousWrites."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -418,7 +427,7 @@ async def test_freeze_db_process_node_with_elected_cm(
 
 @pytest.mark.abort_on_fail
 async def test_full_cluster_crash(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, reset_restart_delay
 ) -> None:
     """Check cluster can operate normally after all nodes SIGKILL at same time and come back up."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -474,7 +483,7 @@ async def test_full_cluster_crash(
 
 @pytest.mark.abort_on_fail
 async def test_full_cluster_restart(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, reset_restart_delay
 ) -> None:
     """Check cluster can operate normally after all nodes SIGTERM at same time and come back up."""
     app = (await app_name(ops_test)) or APP_NAME
