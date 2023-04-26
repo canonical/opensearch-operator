@@ -39,7 +39,6 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
         num_units=len(UNIT_IDS),
         series=SERIES,
     )
-    await ops_test.model.wait_for_idle()
     assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
 
     # Deploy TLS Certificates operator.

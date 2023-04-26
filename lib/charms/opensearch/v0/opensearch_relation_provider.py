@@ -183,7 +183,19 @@ class OpenSearchProvider(Object):
         self.unit.status = MaintenanceStatus(f"new index {event.index} requested")
 
         try:
-            self.opensearch.request("PUT", f"/{event.index}")
+            check_index_exists = self.opensearch.request(
+                "HEAD", f"/{event.index}", resp_status_code=True
+            )
+        except OpenSearchHttpError as e:
+            # for some reason we still can't connect to opensearch
+            logger.error(e)
+            event.defer()
+            return
+
+        try:
+            if check_index_exists != 200:
+                # index does not exist, so create it
+                self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
             if not (
                 e.response_code == 400
