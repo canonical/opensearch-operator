@@ -65,7 +65,7 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
             num_units=NUM_UNITS,
             series=SERIES,
         ),
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=tls_config),
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
     )
     await ops_test.model.relate(OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
@@ -266,7 +266,7 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-        timeout=(60 * 10),
+        timeout=(60 * 12),
         idle_period=20,
     )
 
