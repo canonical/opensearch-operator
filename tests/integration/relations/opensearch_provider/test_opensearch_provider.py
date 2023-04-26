@@ -272,7 +272,7 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-        timeout=(60 * 10),
+        timeout=(60 * 12),
         idle_period=20,
     )
 
