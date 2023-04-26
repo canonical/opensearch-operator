@@ -44,8 +44,8 @@ async def app_name(ops_test: OpsTest) -> Optional[str]:
 
 
 @retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
+    wait=wait_fixed(wait=15) + wait_random(0, 5),
+    stop=stop_after_attempt(25),
 )
 async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
     """Returns the unit id of the current elected cm node."""
@@ -65,8 +65,8 @@ async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
 
 
 @retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
+    wait=wait_fixed(wait=15) + wait_random(0, 5),
+    stop=stop_after_attempt(25),
 )
 async def get_shards_by_state(ops_test: OpsTest, unit_ip: str) -> Dict[str, List[str]]:
     """Returns all shard statuses for all indexes in the cluster.
@@ -96,8 +96,8 @@ async def get_shards_by_state(ops_test: OpsTest, unit_ip: str) -> Dict[str, List
 
 
 @retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
+    wait=wait_fixed(wait=15) + wait_random(0, 5),
+    stop=stop_after_attempt(25),
 )
 async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) -> List[Shard]:
     """Returns the list of shards and their location in cluster for an index.
@@ -136,8 +136,8 @@ async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) 
 
 
 @retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
+    wait=wait_fixed(wait=15) + wait_random(0, 5),
+    stop=stop_after_attempt(25),
 )
 async def cluster_allocation(ops_test: OpsTest, unit_ip: str) -> List[Dict[str, str]]:
     """Fetch the cluster allocation of shards."""
@@ -163,8 +163,8 @@ async def get_number_of_shards_by_node(ops_test: OpsTest, unit_ip: str) -> Dict[
 
 
 @retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
+    wait=wait_fixed(wait=15) + wait_random(0, 5),
+    stop=stop_after_attempt(25),
 )
 async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
     """Fetch the cluster allocation of shards."""
