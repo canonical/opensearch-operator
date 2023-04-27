@@ -176,35 +176,11 @@ class OpenSearchProvider(Object):
             event.defer()
             return
 
-        if not self.validate_index_name(event.index):
-            raise OpenSearchIndexError(f"invalid index name: {event.index}")
-
         prev_status = self.unit.status
-        self.unit.status = MaintenanceStatus(f"new index {event.index} requested")
 
-        try:
-            check_index_exists = self.opensearch.request(
-                "HEAD", f"/{event.index}", resp_status_code=True
-            )
-        except OpenSearchHttpError as e:
-            # for some reason we still can't connect to opensearch
-            logger.error(e)
+        if not self.create_index(event.index):
             event.defer()
             return
-
-        try:
-            if check_index_exists != 200:
-                # index does not exist, so create it
-                self.opensearch.request("PUT", f"/{event.index}")
-        except OpenSearchHttpError as e:
-            if not (
-                e.response_code == 400
-                and e.response_body.get("error", {}).get("type")
-                == "resource_already_exists_exception"
-            ):
-                logger.error(e)
-                event.defer()
-                return
 
         username = self._relation_username(event.relation)
         hashed_pwd, pwd = generate_hashed_password()
@@ -227,6 +203,51 @@ class OpenSearchProvider(Object):
 
         logger.info(f"new index {event.index} available")
         self.unit.status = prev_status
+
+    def create_index(self, index_name: str) -> bool:
+        """Creates index if index_name is valid.
+
+        Returns: True if index is created successfully, false otherwise.
+        """
+        if not self.validate_index_name(index_name):
+            raise OpenSearchIndexError(f"invalid index name: {index_name}")
+
+        self.unit.status = MaintenanceStatus(f"new index {index_name} requested")
+
+        try:
+            check_index_exists = self.opensearch.request(
+                "HEAD", f"/{index_name}", resp_status_code=True
+            )
+        except OpenSearchHttpError as e:
+            if e.response_code:
+                # HEAD /index requests can return 404 if the index doesn't exist, raising an error
+                # in self.opensearch.request. However, we can still get the response code for this
+                # error to use for the check.
+                check_index_exists = e.response_code
+            else:
+                # for some reason we still can't connect to opensearch
+                logger.error(e)
+                return False
+
+        logger.error(check_index_exists)
+
+        try:
+            if check_index_exists != 200:
+                # index does not exist, so create it
+                self.opensearch.request("PUT", f"/{index_name}")
+        except OpenSearchHttpError as e:
+            if not (
+                e.response_code == 400
+                and e.response_body.get("error", {}).get("type")
+                == "resource_already_exists_exception"
+            ):
+                # We can connect to opensearch, but we can't create indices. This implies
+                # something has gone wrong. For now, defer.
+                logger.error(e)
+                return False
+
+        # Index created successfully
+        return True
 
     def validate_index_name(self, index_name: str) -> bool:
         """Validates that the index name provided in the relation is acceptable."""
