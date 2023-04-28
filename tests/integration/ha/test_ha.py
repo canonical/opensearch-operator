@@ -14,8 +14,12 @@ from tests.integration.ha.helpers import (
     all_processes_down,
     app_name,
     assert_continuous_writes_consistency,
+    cut_network_from_unit_with_ip_change,
     get_elected_cm_unit_id,
     get_shards_by_index,
+    is_network_restored,
+    is_unit_reachable,
+    restore_network_for_unit,
     send_kill_signal_to_process,
     update_restart_delay,
 )
@@ -34,8 +38,10 @@ from tests.integration.helpers import (
     check_cluster_formation_successful,
     cluster_health,
     get_application_unit_ids,
+    get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
     get_application_unit_names,
+    get_controller_hostname,
     get_leader_unit_ip,
     get_reachable_unit_ips,
     is_up,
@@ -645,6 +651,98 @@ async def test_full_cluster_restart(
     # check that cluster health is green (all primary and replica shards allocated)
     health_resp = await cluster_health(ops_test, leader_ip)
     assert health_resp["status"] == "green", f"Cluster {health_resp['status']} - expected green."
+
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
+
+async def test_full_network_cut_elected_cm_with_ip_change(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
+    """Check that cluster can self-heal and unit reconfigures itself with new IP."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    unit_ids_ips = get_application_unit_ids_ips(ops_test, app)
+    unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
+
+    # Killing the only instance can be disastrous.
+    if len(ops_test.model.applications[app].units) < 2:
+        await ops_test.model.applications[app].add_unit(count=1)
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            idle_period=IDLE_PERIOD,
+        )
+
+    # find unit currently elected cluster_manager
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+    first_elected_cm_unit_ip = unit_ids_ips[first_elected_cm_unit_id]
+    first_elected_cm_unit_hostname = unit_ids_hostnames[first_elected_cm_unit_id]
+
+    # verify the node is well reachable
+    assert await is_up(
+        ops_test, unit_ids_ips[first_elected_cm_unit_id]
+    ), "Initial elected cluster manager node not ."
+
+    # cut network from current elected cm unit
+    await cut_network_from_unit_with_ip_change(ops_test, app, first_elected_cm_unit_id)
+
+    # verify machine not reachable from / to peer units
+    for unit_id, unit_hostname in unit_ids_hostnames.items():
+        if unit_id != first_elected_cm_unit_id:
+            assert not await is_unit_reachable(
+                from_host=unit_hostname, to_host=first_elected_cm_unit_hostname
+            )
+            assert not await is_unit_reachable(
+                from_host=first_elected_cm_unit_hostname, to_host=unit_hostname
+            )
+
+    # check reach from controller
+    assert not is_unit_reachable(
+        from_host=await get_controller_hostname(ops_test), to_host=first_elected_cm_unit_hostname
+    ), "Unit is still reachable from controller"
+
+    # verify node not up anymore
+    assert not await is_up(
+        ops_test, unit_ids_ips[first_elected_cm_unit_id]
+    ), "Connection still possible to the first CM node where the network was cut."
+
+    # verify new writes are continuing by counting the number of writes before and after 5 seconds
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "Writes not continuing to DB"
+
+    # check new CM got elected
+    current_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+    assert current_elected_cm_unit_id != first_elected_cm_unit_id, "No CM election happened."
+
+    # restore the network on the unit
+    await restore_network_for_unit(ops_test, app, first_elected_cm_unit_id)
+
+    # Wait until the cluster becomes idle (node restart).
+    await ops_test.model.wait_for_idle(
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=len(unit_ids_ips),
+        idle_period=IDLE_PERIOD,
+    )
+
+    # check unit network restored
+    assert is_network_restored(
+        ops_test, app, first_elected_cm_unit_id, first_elected_cm_unit_ip
+    ), "Network could not be restored."
+
+    # check if node up and is included in the cluster formation
+    unit_ids_ips = get_application_unit_ids_ips(ops_test, app)
+    first_cm_unit_new_ip = unit_ids_ips[first_elected_cm_unit_id]
+    assert is_up(ops_test, first_cm_unit_new_ip), "Node still not up."
+    assert check_cluster_formation_successful(
+        ops_test, first_cm_unit_new_ip, get_application_unit_names(ops_test, app)
+    )
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)

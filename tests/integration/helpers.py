@@ -192,6 +192,19 @@ def get_application_unit_ids_ips(ops_test: OpsTest, app: str = APP_NAME) -> Dict
     return result
 
 
+async def get_application_unit_ids_hostnames(
+    ops_test: OpsTest, app: str = APP_NAME
+) -> Dict[int, str]:
+    """List the units of an application by id and corresponding host name."""
+    result = {}
+    for unit in ops_test.model.applications[app].units:
+        unit_id = int(unit.name.split("/")[1])
+        _, raw_hostname, _ = await ops_test.juju("ssh", f"{app}/{unit_id}", "hostname")
+        result[unit_id] = raw_hostname.strip()
+
+    return result
+
+
 async def get_leader_unit_ip(ops_test: OpsTest, app: str = APP_NAME) -> str:
     """Helper function that retrieves the leader unit."""
     leader_unit = None
@@ -212,6 +225,18 @@ async def get_leader_unit_id(ops_test: OpsTest, app: str = APP_NAME) -> int:
             break
 
     return int(leader_unit.name.split("/")[1])
+
+
+async def get_controller_hostname(ops_test: OpsTest) -> str:
+    """Return controller machine hostname."""
+    _, raw_controller, _ = await ops_test.juju("show-controller")
+
+    controller = yaml.safe_load(raw_controller.strip())
+
+    return [
+        machine.get("instance-id")
+        for machine in controller[ops_test.controller_name]["controller-machines"].values()
+    ][0]
 
 
 def get_reachable_unit_ips(ops_test: OpsTest) -> List[str]:
