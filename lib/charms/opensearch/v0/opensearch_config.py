@@ -187,3 +187,22 @@ class OpenSearchConfig:
     def cleanup_bootstrap_conf(self):
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
+
+    def update_host_if_needed(self) -> bool:
+        """Update the opensearch config with the current network hosts, after having started.
+
+        Returns: True if host updated, False otherwise.
+        """
+        logger.info("checking if old hosts are to be updated")
+        old_hosts = set(self.load_node().get("network.host", []))
+        if not old_hosts:
+            # Unit not configured yet
+            return False
+
+        hosts = set(["_site_"] + self._opensearch.network_hosts)
+        if old_hosts != hosts:
+            logger.info(f"updating hosts from {old_hosts} to {hosts}")
+            self._opensearch.config.put(self.CONFIG_YML, "network.host", hosts)
+            return True
+
+        return False

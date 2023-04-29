@@ -5,6 +5,7 @@
 
 """Charmed Machine Operator for OpenSearch."""
 import logging
+from os import remove
 from os.path import exists
 from typing import Dict
 
@@ -71,6 +72,17 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                     return False
 
         return exists(f"{certs_dir}/chain.pem") and exists(f"{certs_dir}/root-ca.cert")
+
+    @override
+    def _delete_stored_tls_resources(self):
+        """Delete the TLS resources of the unit that are stored on disk."""
+        certs_dir = self.opensearch.paths.certs
+        for cert_type in [CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]:
+            for extension in ["key", "cert"]:
+                try:
+                    remove(f"{certs_dir}/{cert_type}.{extension}")
+                except OSError:
+                    pass
 
 
 if __name__ == "__main__":

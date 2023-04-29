@@ -85,6 +85,14 @@ class OpenSearchTLS(Object):
         except ValueError as e:
             event.fail(str(e))
 
+    def request_new_unit_certificates(self) -> None:
+        """Requests a new certificate with the given scope and type from the tls operator."""
+        for cert_type in [CertType.UNIT_HTTP, CertType.UNIT_TRANSPORT]:
+            secrets = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)
+            self._request_certificate(
+                Scope.UNIT, cert_type, secrets.get("key", None), secrets.get("key-password", None)
+            )
+
     def _on_tls_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Request certificate when TLS relation joined."""
         admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN)
@@ -168,14 +176,14 @@ class OpenSearchTLS(Object):
         self,
         scope: Scope,
         cert_type: CertType,
-        param: Optional[str] = None,
+        key: Optional[str] = None,
         password: Optional[str] = None,
     ):
         """Request certificate and store the key/key-password/csr in the scope's data bag."""
-        if param is None:
+        if key is None:
             key = generate_private_key()
         else:
-            key = self._parse_tls_file(param)
+            key = self._parse_tls_file(key)
 
         if password is not None:
             password = password.encode("utf-8")
@@ -236,7 +244,7 @@ class OpenSearchTLS(Object):
         if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", raw_content):
             return re.sub(
                 r"(-+(BEGIN|END) [A-Z ]+-+)",
-                "\n\\1\n",
+                "\\1",
                 raw_content,
             ).encode("utf-8")
         return base64.b64decode(raw_content)

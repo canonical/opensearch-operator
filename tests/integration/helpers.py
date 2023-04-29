@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import json
 import logging
+import subprocess
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -46,6 +47,17 @@ MODEL_CONFIG = {
 logger = logging.getLogger(__name__)
 
 
+class Unit:
+    """Model class for a Unit, with properties widely used."""
+
+    def __init__(self, id: int, name: str, ip: str, hostname: str, is_leader: bool):
+        self.id = id
+        self.name = name
+        self.ip = ip
+        self.hostname = hostname
+        self.is_leader = is_leader
+
+
 async def app_name(ops_test: OpsTest) -> Optional[str]:
     """Returns the name of the cluster running OpenSearch.
 
@@ -74,7 +86,7 @@ async def run_action(
         A SimpleNamespace with "status, response (results)"
     """
     if unit_id is None:
-        unit_id = list(get_reachable_units(ops_test, app=app).keys())[0]
+        unit_id = list(await get_reachable_units(ops_test, app=app).keys())[0]
 
     unit_name = [
         unit.name
@@ -98,6 +110,39 @@ async def get_admin_secrets(
     """
     # can retrieve from any unit running unit, so we pick the first
     return (await run_action(ops_test, unit_id, "get-password", app=app)).response
+
+
+async def get_application_units(ops_test: OpsTest, app: str = APP_NAME) -> List[Unit]:
+    """Get fully detailed units of an application."""
+    # Juju incorrectly reports the IP addresses after the network is restored this is reported as a
+    # bug here: https://github.com/juju/python-libjuju/issues/738. Once this bug is resolved use of
+    # `get_unit_ip` should be replaced with `.public_address`
+
+    app_units = [unit.name.split("/")[1] for unit in ops_test.model.applications[app].units]
+    leader_unit_id = await get_leader_unit_id(ops_test, app)
+
+    machines = json.loads(
+        subprocess.check_output(
+            f"juju machines --model {ops_test.model_name} --format=json".split()
+        )
+    ).get("machines")
+
+    units = []
+    for u_id, unit in machines.items():
+        if u_id not in app_units:
+            # skip non-application units
+            continue
+
+        unit = Unit(
+            id=int(u_id),
+            name=f"{app}/{u_id}",
+            ip=unit["dns-name"],
+            hostname=unit["hostname"],
+            is_leader=u_id == leader_unit_id,
+        )
+        units.append(unit)
+
+    return units
 
 
 def get_application_unit_names(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
@@ -145,7 +190,7 @@ def get_application_unit_status(ops_test: OpsTest, app: str = APP_NAME) -> Dict[
     return result
 
 
-def get_application_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
+async def get_application_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
     """List the unit IPs of an application.
 
     Args:
@@ -155,10 +200,10 @@ def get_application_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List[str
     Returns:
         list of current unit IPs of the application
     """
-    return [unit.public_address for unit in ops_test.model.applications[app].units]
+    return [unit.ip for unit in await get_application_units(ops_test, app)]
 
 
-def get_application_unit_ips_names(ops_test: OpsTest, app: str = APP_NAME) -> Dict[str, str]:
+async def get_application_unit_ips_names(ops_test: OpsTest, app: str = APP_NAME) -> Dict[str, str]:
     """List the units of an application by name and corresponding IPs.
 
     Args:
@@ -169,13 +214,13 @@ def get_application_unit_ips_names(ops_test: OpsTest, app: str = APP_NAME) -> Di
         Dictionary unit_name / unit_ip, of the application
     """
     result = {}
-    for unit in ops_test.model.applications[app].units:
-        result[unit.name.replace("/", "-")] = unit.public_address
+    for unit in await get_application_units(ops_test, app):
+        result[unit.name] = unit.ip
 
     return result
 
 
-def get_application_unit_ids_ips(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
+async def get_application_unit_ids_ips(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
     """List the units of an application by id and corresponding IP.
 
     Args:
@@ -186,8 +231,8 @@ def get_application_unit_ids_ips(ops_test: OpsTest, app: str = APP_NAME) -> Dict
         Dictionary unit_id / unit_ip, of the application
     """
     result = {}
-    for unit in ops_test.model.applications[app].units:
-        result[int(unit.name.split("/")[1])] = unit.public_address
+    for unit in await get_application_units(ops_test, app):
+        result[unit.id] = unit.ip
 
     return result
 
@@ -197,23 +242,17 @@ async def get_application_unit_ids_hostnames(
 ) -> Dict[int, str]:
     """List the units of an application by id and corresponding host name."""
     result = {}
-    for unit in ops_test.model.applications[app].units:
-        unit_id = int(unit.name.split("/")[1])
-        _, raw_hostname, _ = await ops_test.juju("ssh", f"{app}/{unit_id}", "hostname")
-        result[unit_id] = raw_hostname.strip()
+    for unit in await get_application_units(ops_test, app):
+        result[unit.id] = unit.hostname
 
     return result
 
 
 async def get_leader_unit_ip(ops_test: OpsTest, app: str = APP_NAME) -> str:
     """Helper function that retrieves the leader unit."""
-    leader_unit = None
-    for unit in ops_test.model.applications[app].units:
-        if await unit.is_leader_from_status():
-            leader_unit = unit
-            break
-
-    return leader_unit.public_address
+    for unit in await get_application_units(ops_test, app):
+        if unit.is_leader:
+            return unit.ip
 
 
 async def get_leader_unit_id(ops_test: OpsTest, app: str = APP_NAME) -> int:
@@ -239,20 +278,19 @@ async def get_controller_hostname(ops_test: OpsTest) -> str:
     ][0]
 
 
-def get_reachable_unit_ips(ops_test: OpsTest) -> List[str]:
+async def get_reachable_unit_ips(ops_test: OpsTest) -> List[str]:
     """Helper function to retrieve the IP addresses of all online units."""
-    return reachable_hosts(get_application_unit_ips(ops_test))
+    return reachable_hosts(await get_application_unit_ips(ops_test))
 
 
-def get_reachable_units(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
+async def get_reachable_units(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
     """Helper function to retrieve a dict of id/IP addresses of all online units."""
     result = {}
-    for unit in ops_test.model.applications[app].units:
-        if not is_reachable(unit.public_address, 9200):
+    for unit in await get_application_units(ops_test, app):
+        if not is_reachable(unit.ip, 9200):
             continue
 
-        u_id = int(unit.name.split("/")[1])
-        result[u_id] = unit.public_address
+        result[unit.id] = unit.ip
 
     return result
 
@@ -319,7 +357,7 @@ async def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
     """Print the logs of a unit failing with a certain set of statuses."""
     unit_ip = endpoint[8:].split(":")[0]
 
-    ids_ips = get_application_unit_ids_ips(ops_test, app=app)
+    ids_ips = await get_application_unit_ids_ips(ops_test, app=app)
     unit_id = [u_id for u_id, u_ip in ids_ips.items() if u_ip == unit_ip][0]
 
     root = "/var/snap/opensearch"

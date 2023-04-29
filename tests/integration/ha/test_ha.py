@@ -130,7 +130,7 @@ async def test_replication_across_members(
     """
     app = (await app_name(ops_test)) or APP_NAME
 
-    units = get_application_unit_ids_ips(ops_test, app=app)
+    units = await get_application_unit_ids_ips(ops_test, app=app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     # create index with r_shards = nodes - 1
@@ -167,7 +167,7 @@ async def test_kill_db_process_node_with_primary_shard(
     """Check cluster can self-heal + data indexed/read when process dies on node with P_shard."""
     app = (await app_name(ops_test)) or APP_NAME
 
-    units_ips = get_application_unit_ids_ips(ops_test, app)
+    units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     # find unit hosting the primary shard of the index "series-index"
@@ -230,7 +230,7 @@ async def test_kill_db_process_node_with_elected_cm(
     """Check cluster can self-heal, data indexed/read when process dies on node with elected CM."""
     app = (await app_name(ops_test)) or APP_NAME
 
-    units_ips = get_application_unit_ids_ips(ops_test, app)
+    units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     # find unit currently elected cluster_manager
@@ -283,7 +283,7 @@ async def test_freeze_db_process_node_with_primary_shard(
     """Check cluster can self-heal + data indexed/read on process freeze on node with P_shard."""
     app = (await app_name(ops_test)) or APP_NAME
 
-    units_ips = get_application_unit_ids_ips(ops_test, app)
+    units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     # find unit hosting the primary shard of the index "series-index"
@@ -318,7 +318,7 @@ async def test_freeze_db_process_node_with_primary_shard(
 
     # get reachable unit to perform requests against, in case the previously stopped unit
     # is leader unit, so its address is not reachable
-    reachable_ip = get_reachable_unit_ips(ops_test)[0]
+    reachable_ip = await get_reachable_unit_ips(ops_test)[0]
 
     # fetch unit hosting the new primary shard of the previous index
     shards = await get_shards_by_index(ops_test, reachable_ip, ContinuousWrites.INDEX_NAME)
@@ -366,7 +366,7 @@ async def test_freeze_db_process_node_with_elected_cm(
     """Check cluster can self-heal, data indexed/read on process freeze on node with elected CM."""
     app = (await app_name(ops_test)) or APP_NAME
 
-    units_ips = get_application_unit_ids_ips(ops_test, app)
+    units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     # find unit currently elected cluster_manager
@@ -400,7 +400,7 @@ async def test_freeze_db_process_node_with_elected_cm(
 
     # get reachable unit to perform requests against, in case the previously stopped unit
     # is leader unit, so its address is not reachable
-    reachable_ip = get_reachable_unit_ips(ops_test)[0]
+    reachable_ip = await get_reachable_unit_ips(ops_test)[0]
 
     # fetch the current elected cluster_manager
     current_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, reachable_ip)
@@ -438,7 +438,7 @@ async def test_restart_db_process_with_elected_cluster_manager(
     """Check cluster self-healing & data indexed/read on process restart on CM node."""
     app = (await app_name(ops_test)) or APP_NAME
 
-    units_ips = get_application_unit_ids_ips(ops_test, app)
+    units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     # find unit currently elected cluster manager
@@ -490,7 +490,7 @@ async def test_restart_db_process_with_primary_shard(
     """Check cluster can self-heal, data indexed/read on process restart on primary shard node."""
     app = (await app_name(ops_test)) or APP_NAME
 
-    units_ips = get_application_unit_ids_ips(ops_test, app)
+    units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     # find unit hosting the primary shard of the index "series-index"
@@ -578,7 +578,7 @@ async def test_full_cluster_crash(
     time.sleep(ORIGINAL_RESTART_DELAY + 45)
 
     # verify all units are up and running
-    for unit_id, unit_ip in get_application_unit_ids_ips(ops_test, app).items():
+    for unit_id, unit_ip in await get_application_unit_ids_ips(ops_test, app).items():
         assert await is_up(ops_test, unit_ip), f"Unit {unit_id} not restarted after cluster crash."
 
     # check all nodes successfully joined the same cluster
@@ -634,7 +634,7 @@ async def test_full_cluster_restart(
     time.sleep(ORIGINAL_RESTART_DELAY + 45)
 
     # verify all units are up and running
-    for unit_id, unit_ip in get_application_unit_ids_ips(ops_test, app).items():
+    for unit_id, unit_ip in await get_application_unit_ids_ips(ops_test, app).items():
         assert await is_up(ops_test, unit_ip), f"Unit {unit_id} not restarted after cluster crash."
 
     # check all nodes successfully joined the same cluster
@@ -662,7 +662,7 @@ async def test_full_network_cut_elected_cm_with_ip_change(
     """Check that cluster can self-heal and unit reconfigures itself with new IP."""
     app = (await app_name(ops_test)) or APP_NAME
 
-    unit_ids_ips = get_application_unit_ids_ips(ops_test, app)
+    unit_ids_ips = await get_application_unit_ids_ips(ops_test, app)
     unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
 
     # Killing the only instance can be disastrous.
@@ -732,12 +732,12 @@ async def test_full_network_cut_elected_cm_with_ip_change(
     )
 
     # check unit network restored
-    assert is_network_restored(
+    assert await is_network_restored(
         ops_test, app, first_elected_cm_unit_id, first_elected_cm_unit_ip
     ), "Network could not be restored."
 
     # check if node up and is included in the cluster formation
-    unit_ids_ips = get_application_unit_ids_ips(ops_test, app)
+    unit_ids_ips = await get_application_unit_ids_ips(ops_test, app)
     first_cm_unit_new_ip = unit_ids_ips[first_elected_cm_unit_id]
     assert is_up(ops_test, first_cm_unit_new_ip), "Node still not up."
     assert check_cluster_formation_successful(

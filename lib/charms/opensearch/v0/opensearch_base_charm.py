@@ -73,6 +73,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
 from ops.charm import (
     ActionEvent,
     CharmBase,
+    ConfigChangedEvent,
     LeaderElectedEvent,
     RelationBrokenEvent,
     RelationChangedEvent,
@@ -131,6 +132,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
 
         self.framework.observe(
             self.on[PeerRelationName].relation_created, self._on_peer_relation_created
@@ -381,6 +383,12 @@ class OpenSearchBaseCharm(CharmBase):
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
 
+    def _on_config_changed(self, _: ConfigChangedEvent):
+        """On update status event. Useful for IP changes or for user provided config changes."""
+        if self.opensearch_config.update_host_if_needed():
+            self._delete_stored_tls_resources()
+            self.tls.request_new_unit_certificates()
+
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
         if not self.unit.is_leader():
@@ -448,7 +456,7 @@ class OpenSearchBaseCharm(CharmBase):
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-        if renewal and cert_type == CertType.UNIT_TRANSPORT:
+        if renewal and self._is_tls_fully_configured():
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
@@ -850,6 +858,11 @@ class OpenSearchBaseCharm(CharmBase):
     @abstractmethod
     def _are_all_tls_resources_stored(self):
         """Check if all TLS resources are stored on disk."""
+        pass
+
+    @abstractmethod
+    def _delete_stored_tls_resources(self):
+        """Delete the TLS resources of the unit that are stored on disk."""
         pass
 
     @property

@@ -69,7 +69,8 @@ class ContinuousWrites:
         password = await self._secrets()
         self._queue.put(
             SimpleNamespace(
-                hosts=get_application_unit_ips(self._ops_test, app=self._app), password=password
+                hosts=await get_application_unit_ips(self._ops_test, app=self._app),
+                password=password,
             )
         )
 
@@ -175,7 +176,7 @@ class ContinuousWrites:
 
     async def _client(self, unit_ip: Optional[str] = None):
         """Build an opensearch client."""
-        hosts = get_application_unit_ips(self._ops_test, app=self._app)
+        hosts = await get_application_unit_ips(self._ops_test, app=self._app)
         if unit_ip:
             hosts = [unit_ip]
 

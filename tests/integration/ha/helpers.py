@@ -194,7 +194,7 @@ async def assert_continuous_writes_consistency(
     assert result.max_stored_id == result.last_expected_id
 
     # investigate the data in each shard, primaries and their respective replicas
-    units_ips = get_application_unit_ids_ips(ops_test, app)
+    units_ips = await get_application_unit_ids_ips(ops_test, app)
     shards = await get_shards_by_index(
         ops_test, list(units_ips.values())[0], ContinuousWrites.INDEX_NAME
     )
@@ -300,13 +300,13 @@ async def is_unit_reachable(from_host: str, to_host: str) -> bool:
         return False
 
 
-def is_network_restored(
+async def is_network_restored(
     ops_test: OpsTest, app: str, unit_id: int, unit_ip: str, retries: int = 20
 ) -> bool:
     try:
         for attempt in Retrying(stop=stop_after_attempt(retries), wait=wait_fixed(wait=30)):
             with attempt:
-                units_ips = get_application_unit_ids_ips(ops_test, app)
+                units_ips = await get_application_unit_ids_ips(ops_test, app)
                 if units_ips[unit_id] == unit_ip:
                     raise Exception
 
