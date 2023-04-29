@@ -86,7 +86,8 @@ async def run_action(
         A SimpleNamespace with "status, response (results)"
     """
     if unit_id is None:
-        unit_id = list(await get_reachable_units(ops_test, app=app).keys())[0]
+        reachable_units = await get_reachable_units(ops_test, app=app)
+        unit_id = list(reachable_units.keys())[0]
 
     unit_name = [
         unit.name
