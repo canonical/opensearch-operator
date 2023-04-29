@@ -21,6 +21,7 @@ from charms.opensearch.v0.constants_charm import (
     ServiceIsStopping,
     ServiceStartError,
     ServiceStopped,
+    TLSNewCertsRequested,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
     TooManyNodesRemoved,
@@ -386,6 +387,7 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_config_changed(self, _: ConfigChangedEvent):
         """On update status event. Useful for IP changes or for user provided config changes."""
         if self.opensearch_config.update_host_if_needed():
+            self.unit.status = MaintenanceStatus(TLSNewCertsRequested)
             self._delete_stored_tls_resources()
             self.tls.request_new_unit_certificates()
 
