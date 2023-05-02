@@ -224,12 +224,14 @@ class OpenSearchDistribution(ABC):
             return_failed_resp: bool,
             error_response: Optional[requests.Response] = None,
             err_text: Optional[str] = None,
-            err_response_code: Optional[int] = None
+            err_response_code: Optional[int] = None,
         ) -> requests.Response:
             """Performs an HTTP request."""
             if remaining_retries < 0:
                 if not error_response:
-                    raise OpenSearchHttpError(response_body=err_text, response_code=err_response_code)
+                    raise OpenSearchHttpError(
+                        response_body=err_text, response_code=err_response_code
+                    )
 
                 if return_failed_resp:
                     return error_response
@@ -268,7 +270,7 @@ class OpenSearchDistribution(ABC):
                     logger.error(response.status_code)
                     logger.error(response.text)
 
-                    # TODO this is making it really hard to figure out what our responses are. 
+                    # TODO this is making it really hard to figure out what our responses are.
                     response.raise_for_status()
 
                     return response
@@ -287,11 +289,11 @@ class OpenSearchDistribution(ABC):
                 return call(
                     remaining_retries - 1,
                     return_failed_resp,
-                    # TODO we're getting RequestException instead of HTTPError when we create a new index for the client relation. 
+                    # TODO we're getting RequestException instead of HTTPError when we create a new index for the client relation.
                     # TODO pass response codes into OpenSearchHttpError
-                    error_response = e.response if isinstance(e, requests.HTTPError) else None,
-                    err_text = err_text,
-                    err_response_code =err_response_code,
+                    error_response=e.response if isinstance(e, requests.HTTPError) else None,
+                    err_text=err_text,
+                    err_response_code=err_response_code,
                 )
 
         if None in [endpoint, method]:
