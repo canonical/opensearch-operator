@@ -289,7 +289,8 @@ class OpenSearchDistribution(ABC):
                 return call(
                     remaining_retries - 1,
                     return_failed_resp,
-                    # TODO we're getting RequestException instead of HTTPError when we create a new index for the client relation.
+                    # TODO we're getting RequestException instead of HTTPError when we create a new
+                    # index for the client relation.
                     # TODO pass response codes into OpenSearchHttpError
                     error_response=e.response if isinstance(e, requests.HTTPError) else None,
                     err_text=err_text,
