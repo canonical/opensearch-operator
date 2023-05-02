@@ -192,6 +192,9 @@ class OpenSearchProvider(Object):
                 logger.error(e)
                 logger.error(e.response_code)
                 logger.error(f"failed to check if {event.index} index exists")
+                self.unit.status = BlockedStatus(
+                    f"failed to check if {event.index} index exists - deferring index-requested event..."
+                )
                 event.defer()
                 return
 
@@ -207,7 +210,12 @@ class OpenSearchProvider(Object):
             ):
                 logger.error(e)
                 logger.error(e.response_code)
-                logger.error(f"failed to create {event.index} index")
+                logger.error(
+                    f"failed to create {event.index} index - deferring index-requested event..."
+                )
+                self.unit.status = BlockedStatus(
+                    f"failed to create {event.index} index - deferring index-requested event..."
+                )
                 event.defer()
                 return
 
