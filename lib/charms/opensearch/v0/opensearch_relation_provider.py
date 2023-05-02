@@ -182,10 +182,23 @@ class OpenSearchProvider(Object):
         prev_status = self.unit.status
         self.unit.status = MaintenanceStatus(f"new index {event.index} requested")
 
+        # TODO this could be MUCH cleaner
         try:
-            self.opensearch.request("PUT", f"/{event.index}")
+            index_exists = self.opensearch.request("HEAD", f"/{event.index}") == 200
+        except OpenSearchHttpError as e:
+            if e.response_code == 404:
+                index_exists = False
+            else:
+                logger.error(e)
+                event.defer()
+                return
+
+        try:
+            if not index_exists:
+                self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
             if not (
+                # TODO is this still relevant?
                 e.response_code == 400
                 and e.response_body.get("error", {}).get("type")
                 == "resource_already_exists_exception"
