@@ -190,6 +190,8 @@ class OpenSearchProvider(Object):
                 index_exists = False
             else:
                 logger.error(e)
+                logger.error(e.response_code)
+                logger.error(f"failed to check if {event.index} index exists")
                 event.defer()
                 return
 
@@ -204,6 +206,8 @@ class OpenSearchProvider(Object):
                 == "resource_already_exists_exception"
             ):
                 logger.error(e)
+                logger.error(e.response_code)
+                logger.error(f"failed to create {event.index} index")
                 event.defer()
                 return
 
