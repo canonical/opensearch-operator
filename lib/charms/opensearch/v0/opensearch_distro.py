@@ -223,11 +223,13 @@ class OpenSearchDistribution(ABC):
             remaining_retries: int,
             return_failed_resp: bool,
             error_response: Optional[requests.Response] = None,
+            err_text: Optional[str] = None,
+            err_response_code: Optional[int] = None
         ) -> requests.Response:
             """Performs an HTTP request."""
             if remaining_retries < 0:
                 if not error_response:
-                    raise OpenSearchHttpError()
+                    raise OpenSearchHttpError(response_body=err_text, response_code=err_response_code)
 
                 if return_failed_resp:
                     return error_response
@@ -242,7 +244,7 @@ class OpenSearchDistribution(ABC):
                     f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
                 )
                 raise OpenSearchHttpError()
-
+            response = None
             try:
                 with requests.Session() as s:
                     s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
@@ -263,7 +265,10 @@ class OpenSearchDistribution(ABC):
                         )
 
                     response = s.request(**request_kwargs)
+                    logger.error(response.status_code)
+                    logger.error(response.text)
 
+                    # TODO this is making it really hard to figure out what our responses are. 
                     response.raise_for_status()
 
                     return response
@@ -273,10 +278,20 @@ class OpenSearchDistribution(ABC):
                     f"(Attempts left: {remaining_retries})\n{e}"
                 )
                 time.sleep(1)
+                if response:
+                    err_text = response.text
+                    err_response_code = response.status_code
+                else:
+                    err_text = None
+                    err_response_code = None
                 return call(
                     remaining_retries - 1,
                     return_failed_resp,
-                    e.response if isinstance(e, requests.HTTPError) else None,
+                    # TODO we're getting RequestException instead of HTTPError when we create a new index for the client relation. 
+                    # TODO pass response codes into OpenSearchHttpError
+                    error_response = e.response if isinstance(e, requests.HTTPError) else None,
+                    err_text = err_text,
+                    err_response_code =err_response_code,
                 )
 
         if None in [endpoint, method]:

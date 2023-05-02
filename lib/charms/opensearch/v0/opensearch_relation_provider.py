@@ -182,25 +182,8 @@ class OpenSearchProvider(Object):
         prev_status = self.unit.status
         self.unit.status = MaintenanceStatus(f"new index {event.index} requested")
 
-        # TODO this could be MUCH cleaner
         try:
-            index_exists = self.opensearch.request("HEAD", f"/{event.index}") == 200
-        except OpenSearchHttpError as e:
-            if e.response_code == 404:
-                index_exists = False
-            else:
-                logger.error(e)
-                logger.error(e.response_code)
-                logger.error(f"failed to check if {event.index} index exists")
-                self.unit.status = BlockedStatus(
-                    f"failed to check if {event.index} index exists - deferring index-requested event..."
-                )
-                event.defer()
-                return
-
-        try:
-            if not index_exists:
-                self.opensearch.request("PUT", f"/{event.index}")
+            self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
             if not (
                 # TODO is this still relevant?
