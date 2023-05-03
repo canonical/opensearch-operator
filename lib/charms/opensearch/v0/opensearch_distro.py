@@ -223,19 +223,17 @@ class OpenSearchDistribution(ABC):
             remaining_retries: int,
             return_failed_resp: bool,
             error_response: Optional[requests.Response] = None,
-            err_text: Optional[str] = None,
-            err_response_code: Optional[int] = None,
         ) -> requests.Response:
             """Performs an HTTP request."""
             if remaining_retries < 0:
+                logger.error(error_response)
                 if not error_response:
-                    raise OpenSearchHttpError(
-                        response_body=err_text, response_code=err_response_code
-                    )
+                    raise OpenSearchHttpError()
 
                 if return_failed_resp:
                     return error_response
 
+                # For some reason this isn't being fired. why?
                 raise OpenSearchHttpError(
                     response_body=error_response.text, response_code=error_response.status_code
                 )
@@ -270,7 +268,7 @@ class OpenSearchDistribution(ABC):
                     logger.error(response.status_code)
                     logger.error(response.text)
 
-                    # TODO this is making it really hard to figure out what our responses are.
+                    # TODO this is making it really hard to figure out what our responses are. re implement
                     response.raise_for_status()
 
                     return response
@@ -280,21 +278,14 @@ class OpenSearchDistribution(ABC):
                     f"(Attempts left: {remaining_retries})\n{e}"
                 )
                 time.sleep(1)
-                if response:
-                    err_text = response.text
-                    err_response_code = response.status_code
-                else:
-                    err_text = None
-                    err_response_code = None
+                logger.error(e)
+                if isinstance(e, requests.HTTPError):
+                    logger.error(e.response)
+                    logger.error(e.request)
                 return call(
                     remaining_retries - 1,
                     return_failed_resp,
-                    # TODO we're getting RequestException instead of HTTPError when we create a new
-                    # index for the client relation.
-                    # TODO pass response codes into OpenSearchHttpError
                     error_response=e.response if isinstance(e, requests.HTTPError) else None,
-                    err_text=err_text,
-                    err_response_code=err_response_code,
                 )
 
         if None in [endpoint, method]:
