@@ -227,13 +227,18 @@ class OpenSearchDistribution(ABC):
             """Performs an HTTP request."""
             if remaining_retries < 0:
                 logger.error(error_response)
+                logger.error(return_failed_resp)
                 if not error_response:
+                    logger.error("not error response")
                     raise OpenSearchHttpError()
 
                 if return_failed_resp:
+                    logger.error("error resp and return failed resp")
                     return error_response
 
                 # For some reason this isn't being fired. why?
+                logger.error(error_response.text)
+                logger.error(error_response.status_code)
                 raise OpenSearchHttpError(
                     response_body=error_response.text, response_code=error_response.status_code
                 )
@@ -266,15 +271,14 @@ class OpenSearchDistribution(ABC):
 
                     response = s.request(**request_kwargs)
                     logger.error(response.status_code)
-                    logger.error(response.text)
 
-                    # TODO this is making it really hard to figure out what our responses are. re implement
+                    # TODO this is making it really hard to figure out what our responses are.
                     response.raise_for_status()
 
                     return response
             except (requests.exceptions.RequestException, urllib3.exceptions.HTTPError) as e:
                 logger.error(
-                    f"Request {method} to {urls[0]} with payload: {payload} failed. "
+                    f"Request {method} to {urls[0]} with payload: {payload} failed."
                     f"(Attempts left: {remaining_retries})\n{e}"
                 )
                 time.sleep(1)
