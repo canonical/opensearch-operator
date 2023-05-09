@@ -41,7 +41,7 @@ from ops.charm import (
     RelationDepartedEvent,
 )
 from ops.framework import Object
-from ops.model import BlockedStatus, MaintenanceStatus, Relation
+from ops.model import BlockedStatus, MaintenanceStatus, Relation, ActiveStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
@@ -179,22 +179,22 @@ class OpenSearchProvider(Object):
         if not self.validate_index_name(event.index):
             raise OpenSearchIndexError(f"invalid index name: {event.index}")
 
-        prev_status = self.unit.status
         self.unit.status = MaintenanceStatus(f"new index {event.index} requested")
 
         try:
             create_index_request = self.opensearch.request("PUT", f"/{event.index}")
             logger.error(create_index_request)
         except OpenSearchHttpError as e:
+            logger.error(e)
             logger.error(f"logger e.response_code {e.response_code}")
             logger.error(f"logger e.response_body {e.response_body}")
+            logger.error(f"error response = {e.response_body.get('error')}")
+            logger.error(f"error response = {e.response_body.get('error', {}).get('type')}")
             if not (
                 e.response_code == 400
                 and e.response_body.get("error", {}).get("type")
                 == "resource_already_exists_exception"
             ):
-                logger.error(e)
-                logger.error(e.response_code)
                 logger.error(
                     f"failed to create {event.index} index - deferring index-requested event..."
                 )
@@ -224,7 +224,7 @@ class OpenSearchProvider(Object):
         self.update_endpoints(event.relation)
 
         logger.info(f"new index {event.index} available")
-        self.unit.status = prev_status
+        self.unit.status = ActiveStatus()
 
     def validate_index_name(self, index_name: str) -> bool:
         """Validates that the index name provided in the relation is acceptable."""

@@ -227,8 +227,9 @@ class OpenSearchDistribution(ABC):
             """Performs an HTTP request."""
             if remaining_retries < 0:
                 logger.error(error_response)
+                logger.error(error_response.text)
                 logger.error(return_failed_resp)
-                if not error_response:
+                if error_response is None:
                     logger.error("not error response")
                     raise OpenSearchHttpError()
 
