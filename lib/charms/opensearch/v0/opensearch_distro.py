@@ -226,20 +226,12 @@ class OpenSearchDistribution(ABC):
         ) -> requests.Response:
             """Performs an HTTP request."""
             if remaining_retries < 0:
-                logger.error(error_response)
-                logger.error(error_response.text)
-                logger.error(return_failed_resp)
                 if error_response is None:
-                    logger.error("not error response")
                     raise OpenSearchHttpError()
 
                 if return_failed_resp:
-                    logger.error("error resp and return failed resp")
                     return error_response
 
-                # For some reason this isn't being fired. why?
-                logger.error(error_response.text)
-                logger.error(error_response.status_code)
                 raise OpenSearchHttpError(
                     response_body=error_response.text, response_code=error_response.status_code
                 )
@@ -250,7 +242,7 @@ class OpenSearchDistribution(ABC):
                     f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
                 )
                 raise OpenSearchHttpError()
-            response = None
+
             try:
                 with requests.Session() as s:
                     s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
@@ -271,22 +263,15 @@ class OpenSearchDistribution(ABC):
                         )
 
                     response = s.request(**request_kwargs)
-                    logger.error(response.status_code)
-
-                    # TODO this is making it really hard to figure out what our responses are.
                     response.raise_for_status()
-
                     return response
+
             except (requests.exceptions.RequestException, urllib3.exceptions.HTTPError) as e:
                 logger.error(
                     f"Request {method} to {urls[0]} with payload: {payload} failed."
                     f"(Attempts left: {remaining_retries})\n{e}"
                 )
                 time.sleep(1)
-                logger.error(e)
-                if isinstance(e, requests.HTTPError):
-                    logger.error(e.response)
-                    logger.error(e.request)
                 return call(
                     remaining_retries - 1,
                     return_failed_resp,

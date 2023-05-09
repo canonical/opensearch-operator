@@ -182,25 +182,16 @@ class OpenSearchProvider(Object):
         self.unit.status = MaintenanceStatus(f"new index {event.index} requested")
 
         try:
-            create_index_request = self.opensearch.request("PUT", f"/{event.index}")
-            logger.error(create_index_request)
+            self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
-            logger.error(e)
-            logger.error(f"logger e.response_code {e.response_code}")
-            logger.error(f"logger e.response_body {e.response_body}")
-            logger.error(f"error response = {e.response_body.get('error')}")
-            logger.error(f"error response = {e.response_body.get('error', {}).get('type')}")
             if not (
                 e.response_code == 400
                 and e.response_body.get("error", {}).get("type")
                 == "resource_already_exists_exception"
             ):
-                logger.error(
-                    f"failed to create {event.index} index - deferring index-requested event..."
-                )
-                self.unit.status = BlockedStatus(
-                    f"failed to create {event.index} index - deferring index-requested event..."
-                )
+                failed_to_create = f"failed to create {event.index} index - deferring index-requested event..."
+                logger.error(failed_to_create)
+                self.unit.status = BlockedStatus(failed_to_create)
                 event.defer()
                 return
 

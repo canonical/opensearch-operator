@@ -182,7 +182,6 @@ async def test_version(ops_test: OpsTest):
     assert version == results.get("version", {}).get("number"), results
 
 
-@pytest.mark.skip
 @pytest.mark.abort_on_fail
 async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag.
