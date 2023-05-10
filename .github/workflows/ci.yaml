@@ -12,6 +12,11 @@ on:
     - cron: '53 0 * * *' # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
+    inputs:
+      juju-version:
+        required: false
+        type: string
+        default: 3.1/stable
 
 jobs:
   lint:
@@ -49,7 +54,13 @@ jobs:
       - unit-test
     uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2.3.9
 
-  lite-integration-test:
+# Integration test runner:
+# - parameterise provider, juju-channel, and tox-environments
+# - if tox-environment == h-scaling-integration, use heavy-runner
+#   - how does this handle when we're running tests on both juju 2 and 3? every release takes 2
+#     hours?
+
+  integration-test:
     strategy:
       fail-fast: false
       matrix:
@@ -58,6 +69,10 @@ jobs:
           - tls-integration
           - client-integration
           - ha-integration
+        runner: ["ubuntu-22.04"]
+        include:
+          - tox-environments: h-scaling-integration
+            runner: "Ubuntu_4C_16G"
     name: ${{ matrix.tox-environments }}
     needs:
       - lint
@@ -73,7 +88,7 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-          juju-channel: 3.1/stable
+          juju-channel: ${{ inputs.juju-version }}
       - name: Download packed charm(s)
         uses: actions/download-artifact@v3
         with:
@@ -91,58 +106,8 @@ jobs:
           fi
       - name: Run integration tests
         run: |
-          # set sysctl values in case the cloudinit-userdata not applied
-          sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
-
-          tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
-        env:
-          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
-
-  # These tests currently compete for access to the 4-core runner amongst individual test runs in
-  # this repo, and with other charms. Therefore, this runner should be used sparingly until we can
-  # access more runners.
-  heavy-integration-test:
-    strategy:
-      fail-fast: false
-      matrix:
-        tox-environments:
-          - h-scaling-integration
-    name: ${{ matrix.tox-environments }}
-    needs:
-      - lint
-      - unit-test
-      - build
-    runs-on: Ubuntu_4C_16G
-    timeout-minutes: 120
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup operator environment
-        # TODO: Replace with custom image on self-hosted runner
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: lxd
-          juju-channel: 3.1/stable
-      - name: Download packed charm(s)
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ needs.build.outputs.artifact-name }}
-      - name: Select tests
-        id: select-tests
-        run: |
-          if [ "${{ github.event_name }}" == "schedule" ]
-          then
-            echo Running unstable and stable tests
-            echo "mark_expression=" >> $GITHUB_OUTPUT
-          else
-            echo Skipping unstable tests
-            echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
-          fi
-      - name: Run integration tests
-        run: |
-          # set sysctl values in case the cloudinit-userdata not applied
-          sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
-
+          # set up environment - get juju version and set kernel params
+          source ./setup.sh
           tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}

@@ -21,14 +21,22 @@ jobs:
           credentials: "${{ secrets.CHARMHUB_TOKEN }}" # FIXME: current token will expire in 2023-07-04
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-  ci-tests:
+  ci-tests-juju-2:
     uses: ./.github/workflows/ci.yaml
+    with:
+      juju-version: 2.9/stable
+
+  ci-tests-juju-3:
+    uses: ./.github/workflows/ci.yaml
+    with:
+      juju-version: 3.1/stable
 
   release-to-charmhub:
     name: Release to CharmHub
     needs:
       - lib-check
-      - ci-tests
+      - ci-tests-juju-2
+      - ci-tests-juju-3
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
