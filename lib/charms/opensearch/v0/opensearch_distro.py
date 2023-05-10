@@ -268,7 +268,7 @@ class OpenSearchDistribution(ABC):
 
             except (requests.exceptions.RequestException, urllib3.exceptions.HTTPError) as e:
                 logger.error(
-                    f"Request {method} to {urls[0]} with payload: {payload} failed."
+                    f"Request {method} to {urls[0]} with payload: {payload} failed. "
                     f"(Attempts left: {remaining_retries})\n{e}"
                 )
                 time.sleep(1)

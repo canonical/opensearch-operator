@@ -189,6 +189,7 @@ class OpenSearchProvider(Object):
                 and e.response_body.get("error", {}).get("type")
                 == "resource_already_exists_exception"
             ):
+                logger.error(e)
                 failed_to_create = (
                     f"failed to create {event.index} index - deferring index-requested event..."
                 )
