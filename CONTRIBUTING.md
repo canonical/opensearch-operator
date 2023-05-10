@@ -32,12 +32,30 @@ source venv/bin/activate
 
 ### Testing
 
+Test environments rely on the `JUJU_VERSION` environment variable to be set to your major juju version before running. To do this, run the following command:
+
 ```shell
-tox run -e format        # update your code according to linting rules
-tox run -e lint          # code style
-tox run -e unit          # unit tests
-tox run -e integration   # integration tests
-tox                      # runs 'format', 'lint', and 'unit' environments
+source ./setup.sh
+```
+
+To run tests, run the following
+
+```shell
+tox -e format   # update your code according to linting rules
+tox -e lint     # code style
+tox -e unit     # unit tests
+tox -m integration  # integration tests
+tox                 # runs 'format', 'lint', and 'unit' environments
+```
+
+Integration tests can be run for separate areas of functionality:
+
+```shell
+tox -e charm-integration      # basic charm integration tests
+tox -e tls-integration        # TLS-specific integration tests
+tox -e client-integration     # Validates the `opensearch-client` integration
+tox -e ha-integration         # HA tests
+tox -e h-scaling-integration  # HA tests specific to horizontal scaling
 ```
 
 ## Build charm
