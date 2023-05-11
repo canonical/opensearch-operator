@@ -83,7 +83,7 @@ jobs:
       - name: Setup operator environment (passing in juju version)
         # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
-        if: ${{ inputs.juju-version != ""}}
+        if: ${{ inputs.juju-version != 0}}
         with:
           provider: lxd
           juju-channel: ${{ inputs.juju-version }}
@@ -91,7 +91,7 @@ jobs:
       - name: Setup operator environment (using default juju version 3.1/stable)
         # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
-        if: ${{ inputs.juju-version == ""}}
+        if: ${{ inputs.juju-version == 0}}
         with:
           provider: lxd
           # Replace juju version manually if it's not been passed in. This can occur whenever this
