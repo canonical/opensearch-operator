@@ -41,7 +41,7 @@ from ops.charm import (
     RelationDepartedEvent,
 )
 from ops.framework import Object
-from ops.model import BlockedStatus, MaintenanceStatus, Relation
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation
 
 # The unique Charmhub library identifier, never change it
 LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
@@ -51,7 +51,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +179,6 @@ class OpenSearchProvider(Object):
         if not self.validate_index_name(event.index):
             raise OpenSearchIndexError(f"invalid index name: {event.index}")
 
-        prev_status = self.unit.status
         self.unit.status = MaintenanceStatus(f"new index {event.index} requested")
 
         try:
@@ -190,7 +189,9 @@ class OpenSearchProvider(Object):
                 and e.response_body.get("error", {}).get("type")
                 == "resource_already_exists_exception"
             ):
-                logger.error(e)
+                failed_to_create = f"failed to create {event.index} index due to {e} - deferring index-requested event..."
+                logger.error(failed_to_create)
+                self.unit.status = BlockedStatus(failed_to_create)
                 event.defer()
                 return
 
@@ -214,7 +215,7 @@ class OpenSearchProvider(Object):
         self.update_endpoints(event.relation)
 
         logger.info(f"new index {event.index} available")
-        self.unit.status = prev_status
+        self.unit.status = ActiveStatus()
 
     def validate_index_name(self, index_name: str) -> bool:
         """Validates that the index name provided in the relation is acceptable."""
