@@ -8,6 +8,7 @@ concurrency:
 
 on:
   pull_request:
+    # TODO Set juju version here
   schedule:
     - cron: '53 0 * * *' # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
@@ -19,8 +20,22 @@ on:
         default: 3.1/stable
 
 jobs:
+  test-env:
+    name: Test environment variables for workflow calls
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: test
+        run: |
+          echo ${{ inputs.juju-version }}
+          source ./setup.sh
+          echo ${{ on.workflow_call.inputs.juju-version}}
+
   lint:
     name: Lint
+    needs:
+      - test-env
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
