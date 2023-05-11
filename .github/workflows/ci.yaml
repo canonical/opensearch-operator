@@ -31,6 +31,7 @@ jobs:
         run: |
           echo "3.1/stable"
           echo "juju version didn't exist,set default"
+      - name: test2
         if: ${{ inputs.juju-version != ""}}
         run: |
           echo ${{ inputs.juju-version }}
@@ -99,11 +100,17 @@ jobs:
       - name: Setup operator environment
         # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
+        if: ${{ inputs.juju-version != ""}}
         with:
           provider: lxd
-          if: ${{ inputs.juju-version != ""}}
           juju-channel: ${{ inputs.juju-version }}
-          if: ${{ inputs.juju-version == ""}}
+
+      - name: Setup operator environment
+        # TODO: Replace with custom image on self-hosted runner
+        uses: charmed-kubernetes/actions-operator@main
+        if: ${{ inputs.juju-version == ""}}
+        with:
+          provider: lxd
           juju-channel: 3.1/stable
 
       - name: Download packed charm(s)
