@@ -8,11 +8,9 @@ concurrency:
 
 on:
   pull_request:
-    # TODO Set juju version here
+    # TODO how do I set juju version here
   schedule:
     - cron: '53 0 * * *' # Daily at 00:53 UTC
-  # Added to check if we can access the default value of `inputs` from another PL trigger. Although, this should occur on pull_request. 
-  workflow_dispatch:
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
     inputs:
@@ -32,7 +30,7 @@ jobs:
         run: |
           echo ${{ inputs.juju-version }}
           source ./setup.sh
-          echo ${{ on.workflow_call.inputs.juju-version}}
+          echo ${{ workflow_call.inputs.juju-version}}
 
   lint:
     name: Lint
@@ -99,7 +97,11 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-          juju-channel: ${{ inputs.juju-version }}
+          if: ${{ inputs.juju-version == ""}}
+            juju-channel: ${{ inputs.juju-version }}
+          if: ${{ inputs.juju-version != ""}}
+            juju-channel: 3.1/stable
+
       - name: Download packed charm(s)
         uses: actions/download-artifact@v3
         with:
