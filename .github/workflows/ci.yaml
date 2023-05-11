@@ -103,7 +103,6 @@ jobs:
       - name: Select tests
         id: select-tests
         run: |
-          echo ${{ matrix.runner }}
           if [ "${{ github.event_name }}" == "schedule" ]
           then
             echo Running unstable and stable tests
@@ -116,6 +115,7 @@ jobs:
       - name: Run integration tests
         run: |
           # set up environment - get juju version and set kernel params
+          echo ${{matrix.runner}}
           source ./setup.sh
           tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
