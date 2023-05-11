@@ -27,10 +27,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: test
+        if: ${{ inputs.juju-version == ""}}
+        run: |
+          echo "3.1/stable"
+          echo "juju version didn't exist,set default"
+        if: ${{ inputs.juju-version != ""}}
         run: |
           echo ${{ inputs.juju-version }}
-          source ./setup.sh
-          echo ${{ workflow_call.inputs.juju-version}}
+          echo "juju version does exist!"
 
   lint:
     name: Lint
@@ -97,10 +101,10 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-          if: ${{ inputs.juju-version == ""}}
-            juju-channel: ${{ inputs.juju-version }}
           if: ${{ inputs.juju-version != ""}}
-            juju-channel: 3.1/stable
+          juju-channel: ${{ inputs.juju-version }}
+          if: ${{ inputs.juju-version == ""}}
+          juju-channel: 3.1/stable
 
       - name: Download packed charm(s)
         uses: actions/download-artifact@v3
@@ -121,6 +125,7 @@ jobs:
         run: |
           # set up environment - get juju version and set kernel params
           source ./setup.sh
+          echo $JUJU_VERSION
           tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
