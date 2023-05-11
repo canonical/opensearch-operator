@@ -79,6 +79,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Setup operator environment (passing in juju version)
         # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
@@ -93,6 +94,8 @@ jobs:
         if: ${{ inputs.juju-version == ""}}
         with:
           provider: lxd
+          # Replace juju version manually if it's not been passed in. This can occur whenever this
+          # workflow runs on PR or on schedule.
           juju-channel: 3.1/stable
 
       - name: Download packed charm(s)
@@ -102,6 +105,7 @@ jobs:
       - name: Select tests
         id: select-tests
         run: |
+          echo ${{ matrix.runner }}
           if [ "${{ github.event_name }}" == "schedule" ]
           then
             echo Running unstable and stable tests
@@ -110,11 +114,11 @@ jobs:
             echo Skipping unstable tests
             echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
           fi
+
       - name: Run integration tests
         run: |
           # set up environment - get juju version and set kernel params
           source ./setup.sh
-          echo $JUJU_VERSION
           tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
