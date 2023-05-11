@@ -8,7 +8,6 @@ concurrency:
 
 on:
   pull_request:
-    # TODO how do I set juju version here
   schedule:
     - cron: '53 0 * * *' # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
@@ -20,23 +19,6 @@ on:
         default: 3.1/stable
 
 jobs:
-  test-env:
-    name: Test environment variables for workflow calls
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: test
-        if: ${{ inputs.juju-version == ""}}
-        run: |
-          echo "3.1/stable"
-          echo "juju version didn't exist,set default"
-      - name: test2
-        if: ${{ inputs.juju-version != ""}}
-        run: |
-          echo ${{ inputs.juju-version }}
-          echo "juju version does exist!"
-
   lint:
     name: Lint
     needs:
@@ -97,7 +79,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup operator environment
+      - name: Setup operator environment (passing in juju version)
         # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
         if: ${{ inputs.juju-version != ""}}
@@ -105,7 +87,7 @@ jobs:
           provider: lxd
           juju-channel: ${{ inputs.juju-version }}
 
-      - name: Setup operator environment
+      - name: Setup operator environment (using default juju version 3.1/stable)
         # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
         if: ${{ inputs.juju-version == ""}}
