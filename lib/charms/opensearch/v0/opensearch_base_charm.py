@@ -260,12 +260,13 @@ class OpenSearchBaseCharm(CharmBase):
             # we defer because we want the temporary status to be updated
             event.defer()
 
-        data = event.relation.data.get(event.unit if self.unit.is_leader() else event.app)
-        if not data:
+        app_data = event.relation.data.get(event.app)
+        unit_data = event.relation.data.get(event.unit)
+        if not unit_data and not app_data:
             return
 
-        if self.unit.is_leader():
-            if data.get("bootstrap_contributor"):
+        if unit_data and self.unit.is_leader():
+            if unit_data.get("bootstrap_contributor"):
                 contributor_count = self.peers_data.get(
                     Scope.APP, "bootstrap_contributors_count", 0
                 )
@@ -276,11 +277,12 @@ class OpenSearchBaseCharm(CharmBase):
             for relation in self.model.relations.get(ClientRelationName, []):
                 self.opensearch_provider.update_endpoints(relation)
 
-            if data.get(VOTING_TO_DELETE) or data.get(ALLOCS_TO_DELETE):
+            if unit_data.get(VOTING_TO_DELETE) or unit_data.get(ALLOCS_TO_DELETE):
                 self.opensearch_exclusions.cleanup()
 
         # Run restart node on the concerned unit
-        self._reconfigure_and_restart_unit_if_needed()
+        if app_data:
+            self._reconfigure_and_restart_unit_if_needed()
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
@@ -548,7 +550,8 @@ class OpenSearchBaseCharm(CharmBase):
             self.status.clear(WaitingToStart)
         except OpenSearchStartTimeoutError:
             event.defer()
-        except OpenSearchStartError:
+        except OpenSearchStartError as e:
+            logger.error(e)
             self.peers_data.delete(Scope.UNIT, "starting")
             self.unit.status = BlockedStatus(ServiceStartError)
             event.defer()
@@ -577,9 +580,6 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
-        if not self.opensearch.is_node_up():
-            return
-
         self.unit.status = WaitingStatus(ServiceIsStopping)
 
         # 1. Add current node to the voting + alloc exclusions
@@ -658,7 +658,6 @@ class OpenSearchBaseCharm(CharmBase):
         hashed_pwd, pwd = generate_hashed_password(pwd)
 
         if is_update:
-            # TODO replace with user_manager.patch_user()
             resp = self.opensearch.request(
                 "PATCH",
                 "/_plugins/_security/api/internalusers/admin",

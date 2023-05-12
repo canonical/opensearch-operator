@@ -73,7 +73,6 @@ class OpenSearchConfig:
 
     def set_node_tls_conf(self, cert_type: CertType, secrets: Dict[str, any]):
         """Configures TLS for nodes."""
-        logger.debug(f"set_node_tls_conf: {cert_type}")
         target_conf_layer = "http" if cert_type == CertType.UNIT_HTTP else "transport"
 
         self._opensearch.config.put(

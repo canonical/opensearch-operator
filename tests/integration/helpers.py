@@ -50,12 +50,15 @@ logger = logging.getLogger(__name__)
 class Unit:
     """Model class for a Unit, with properties widely used."""
 
-    def __init__(self, id: int, name: str, ip: str, hostname: str, is_leader: bool):
+    def __init__(
+        self, id: int, name: str, ip: str, hostname: str, is_leader: bool, machine_id: int
+    ):
         self.id = id
         self.name = name
         self.ip = ip
         self.hostname = hostname
         self.is_leader = is_leader
+        self.machine_id = machine_id
 
 
 async def app_name(ops_test: OpsTest) -> Optional[str]:
@@ -118,28 +121,22 @@ async def get_application_units(ops_test: OpsTest, app: str = APP_NAME) -> List[
     # Juju incorrectly reports the IP addresses after the network is restored this is reported as a
     # bug here: https://github.com/juju/python-libjuju/issues/738. Once this bug is resolved use of
     # `get_unit_ip` should be replaced with `.public_address`
-
-    app_units = [unit.name.split("/")[1] for unit in ops_test.model.applications[app].units]
-    leader_unit_id = await get_leader_unit_id(ops_test, app)
-
-    machines = json.loads(
+    resp_units = json.loads(
         subprocess.check_output(
-            f"juju machines --model {ops_test.model_name} --format=json".split()
+            f"juju status --model {ops_test.model.info.name} {app} --format=json".split()
         )
-    ).get("machines")
+    )["applications"][app]["units"]
 
     units = []
-    for u_id, unit in machines.items():
-        if u_id not in app_units:
-            # skip non-application units
-            continue
-
+    for u_name, unit in resp_units.items():
+        unit_id = int(u_name.split("/")[-1])
         unit = Unit(
-            id=int(u_id),
-            name=f"{app}/{u_id}",
-            ip=unit["dns-name"],
-            hostname=unit["hostname"],
-            is_leader=u_id == leader_unit_id,
+            id=unit_id,
+            name=u_name.replace("/", "-"),
+            ip=unit["public-address"],
+            hostname=await get_unit_hostname(ops_test, unit_id, app),
+            is_leader=unit.get("leader", False),
+            machine_id=int(unit["machine"]),
         )
         units.append(unit)
 
@@ -243,10 +240,18 @@ async def get_application_unit_ids_hostnames(
 ) -> Dict[int, str]:
     """List the units of an application by id and corresponding host name."""
     result = {}
-    for unit in await get_application_units(ops_test, app):
-        result[unit.id] = unit.hostname
+    for unit in ops_test.model.applications[app].units:
+        unit_id = int(unit.name.split("/")[1])
+        _, raw_hostname, _ = await ops_test.juju("ssh", f"{app}/{unit_id}", "hostname")
+        result[unit_id] = await get_unit_hostname(ops_test, unit_id, app)
 
     return result
+
+
+async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str = APP_NAME) -> str:
+    """Get the hostname of a specific unit."""
+    _, hostname, _ = await ops_test.juju("ssh", f"{app}/{unit_id}", "hostname")
+    return hostname.strip()
 
 
 async def get_leader_unit_ip(ops_test: OpsTest, app: str = APP_NAME) -> str:

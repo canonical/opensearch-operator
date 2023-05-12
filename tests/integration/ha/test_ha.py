@@ -694,19 +694,19 @@ async def test_full_network_cut_elected_cm_with_ip_change(
         if unit_id != first_elected_cm_unit_id:
             assert not await is_unit_reachable(
                 from_host=unit_hostname, to_host=first_elected_cm_unit_hostname
-            )
+            ), "Unit is still reachable from other units."
             assert not await is_unit_reachable(
                 from_host=first_elected_cm_unit_hostname, to_host=unit_hostname
-            )
+            ), "Unit can still reach other units."
 
-    # check reach from controller
-    assert not is_unit_reachable(
+    # check reach from controller - noticed that the controller is able to ping the unit for longer
+    assert not await is_unit_reachable(
         from_host=await get_controller_hostname(ops_test), to_host=first_elected_cm_unit_hostname
     ), "Unit is still reachable from controller"
 
     # verify node not up anymore
     assert not await is_up(
-        ops_test, unit_ids_ips[first_elected_cm_unit_id]
+        ops_test, unit_ids_ips[first_elected_cm_unit_id], retries=3
     ), "Connection still possible to the first CM node where the network was cut."
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
@@ -716,11 +716,12 @@ async def test_full_network_cut_elected_cm_with_ip_change(
     assert more_writes > writes, "Writes not continuing to DB"
 
     # check new CM got elected
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     current_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
     assert current_elected_cm_unit_id != first_elected_cm_unit_id, "No CM election happened."
 
     # restore the network on the unit
-    await restore_network_for_unit(ops_test, app, first_elected_cm_unit_id)
+    await restore_network_for_unit(ops_test, app, first_elected_cm_unit_hostname)
 
     # Wait until the cluster becomes idle (node restart).
     await ops_test.model.wait_for_idle(
@@ -739,10 +740,10 @@ async def test_full_network_cut_elected_cm_with_ip_change(
     # check if node up and is included in the cluster formation
     unit_ids_ips = await get_application_unit_ids_ips(ops_test, app)
     first_cm_unit_new_ip = unit_ids_ips[first_elected_cm_unit_id]
-    assert is_up(ops_test, first_cm_unit_new_ip), "Node still not up."
+    assert is_up(ops_test, first_cm_unit_new_ip), "Unit still not up."
     assert check_cluster_formation_successful(
         ops_test, first_cm_unit_new_ip, get_application_unit_names(ops_test, app)
-    )
+    ), "Unit did NOT join the rest of the cluster."
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import logging
 import subprocess
 from typing import Dict, List, Optional
 
@@ -24,6 +25,9 @@ from tests.integration.helpers import (
 )
 
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
+
+
+logger = logging.getLogger(__name__)
 
 
 class Shard:
@@ -281,31 +285,34 @@ async def cut_network_from_unit_with_ip_change(ops_test: OpsTest, app: str, unit
     subprocess.check_call(cut_network_command.split())
 
 
-async def restore_network_for_unit(ops_test: OpsTest, app: str, unit_id: int) -> None:
+async def restore_network_for_unit(ops_test: OpsTest, app: str, unit_hostname: str) -> None:
     """Restore network from a lxc container."""
-    unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
-    unit_hostname = unit_ids_hostnames[unit_id]
-
     # remove mask from eth0
     restore_network_command = f"lxc config device remove {unit_hostname} eth0"
     subprocess.check_call(restore_network_command.split())
 
 
-async def is_unit_reachable(from_host: str, to_host: str) -> bool:
+async def is_unit_reachable(from_host: str, to_host: str, retries: int = 5) -> bool:
     """Test network reachability between hosts."""
     try:
-        subprocess.check_call(f"lxc exec {from_host} -- ping -c 5 {to_host}".split())
+        for attempt in Retrying(stop=stop_after_attempt(retries), wait=wait_fixed(wait=30)):
+            with attempt:
+                try:
+                    subprocess.check_call(f"lxc exec {from_host} -- ping -c 5 {to_host}".split())
+                    raise Exception
+                except subprocess.CalledProcessError:
+                    return False
+    except RetryError:
         return True
-    except subprocess.CalledProcessError:
-        return False
 
 
 async def is_network_restored(
-    ops_test: OpsTest, app: str, unit_id: int, unit_ip: str, retries: int = 20
+    ops_test: OpsTest, app: str, unit_id: int, unit_ip: str, retries: int = 25
 ) -> bool:
     try:
         for attempt in Retrying(stop=stop_after_attempt(retries), wait=wait_fixed(wait=30)):
             with attempt:
+                logger.error("Network not restored yet, attempting again.")
                 units_ips = await get_application_unit_ids_ips(ops_test, app)
                 if units_ips[unit_id] == unit_ip:
                     raise Exception
