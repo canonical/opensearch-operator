@@ -387,7 +387,7 @@ class OpenSearchBaseCharm(CharmBase):
         self._check_certs_expiration(event)
 
     def _on_config_changed(self, _: ConfigChangedEvent):
-        """On update status event. Useful for IP changes or for user provided config changes."""
+        """On config changed event. Useful for IP changes or for user provided config changes."""
         if self.opensearch_config.update_host_if_needed():
             self.unit.status = MaintenanceStatus(TLSNewCertsRequested)
             self._delete_stored_tls_resources()
@@ -535,8 +535,8 @@ class OpenSearchBaseCharm(CharmBase):
             # Set the configuration of the node
             self._set_node_conf(nodes)
         except OpenSearchHttpError:
-            event.defer()
             self.peers_data.delete(Scope.UNIT, "starting")
+            event.defer()
             return
 
         try:
@@ -663,7 +663,6 @@ class OpenSearchBaseCharm(CharmBase):
                 "/_plugins/_security/api/internalusers/admin",
                 [{"op": "replace", "path": "/hash", "value": hashed_pwd}],
             )
-            logger.debug(f"Patch admin user response: {resp}")
             if resp.get("status") != "OK":
                 raise OpenSearchError(f"{resp}")
         else:
@@ -785,17 +784,16 @@ class OpenSearchBaseCharm(CharmBase):
         )
 
         new_node_conf = nodes_config.get(self.unit_name)
-        if not new_node_conf and not self.opensearch.is_node_up():
+        if not new_node_conf:
             # the conf could not be computed / broadcasted, because this node is
             # "starting" and is not online "yet" - either barely being configured (i.e. TLS)
             # or waiting to start.
             return
 
-        if new_node_conf:
-            current_conf = self.opensearch_config.load_node()
-            if sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles):
-                # no conf change (roles for now)
-                return
+        current_conf = self.opensearch_config.load_node()
+        if sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles):
+            # no conf change (roles for now)
+            return
 
         self.unit.status = WaitingStatus(WaitingToStart)
         self.on[self.service_manager.name].acquire_lock.emit(

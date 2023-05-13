@@ -82,6 +82,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 try:
                     remove(f"{certs_dir}/{cert_type}.{extension}")
                 except OSError:
+                    # thrown if file not exists, ignore
                     pass
 
 

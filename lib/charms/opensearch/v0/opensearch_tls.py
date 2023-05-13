@@ -118,7 +118,7 @@ class OpenSearchTLS(Object):
         try:
             scope, cert_type, secrets = self._find_secret(event.certificate_signing_request, "csr")
         except TypeError:
-            logger.debug("Unknown certificate available.")
+            logger.error("Unknown certificate available.")
             return
 
         # seems like the admin certificate is also broadcast to non leader units on refresh request
@@ -152,9 +152,8 @@ class OpenSearchTLS(Object):
         """Request the new certificate when old certificate is expiring."""
         try:
             scope, cert_type, secrets = self._find_secret(event.certificate, "cert")
-            logger.debug(f"{scope.val}.{cert_type.val} TLS certificate expiring.")
         except TypeError:
-            logger.debug("Unknown certificate expiring.")
+            logger.error("Unknown certificate expiring.")
             return
 
         self._request_certificate_renewal(scope, cert_type, secrets)
@@ -200,9 +199,7 @@ class OpenSearchTLS(Object):
         if self.charm.model.get_relation(TLS_RELATION):
             self.certs.request_certificate_creation(certificate_signing_request=csr)
 
-    def _request_certificate_renewal(
-        self, scope: Scope, cert_type: CertType, secrets: Dict[str, str]
-    ):
+    def _request_certificate_renewal(self, scope: Scope, cert_type: CertType, secrets: Dict[str, str]):
         """Request new certificate and store the key/key-password/csr in the scope's data bag."""
         key = secrets["key"].encode("utf-8")
         key_password = secrets.get("key-password", None)
