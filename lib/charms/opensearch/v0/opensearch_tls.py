@@ -117,8 +117,9 @@ class OpenSearchTLS(Object):
         """
         try:
             scope, cert_type, secrets = self._find_secret(event.certificate_signing_request, "csr")
+            logger.debug(f"{scope.val}.{cert_type.val} TLS certificate available.")
         except TypeError:
-            logger.error("Unknown certificate available.")
+            logger.debug("Unknown certificate available.")
             return
 
         # seems like the admin certificate is also broadcast to non leader units on refresh request
@@ -152,8 +153,9 @@ class OpenSearchTLS(Object):
         """Request the new certificate when old certificate is expiring."""
         try:
             scope, cert_type, secrets = self._find_secret(event.certificate, "cert")
+            logger.debug(f"{scope.val}.{cert_type.val} TLS certificate expiring.")
         except TypeError:
-            logger.error("Unknown certificate expiring.")
+            logger.debug("Unknown certificate expiring.")
             return
 
         self._request_certificate_renewal(scope, cert_type, secrets)
