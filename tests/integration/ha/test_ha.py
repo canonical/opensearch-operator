@@ -318,7 +318,7 @@ async def test_freeze_db_process_node_with_primary_shard(
 
     # get reachable unit to perform requests against, in case the previously stopped unit
     # is leader unit, so its address is not reachable
-    reachable_ip = await get_reachable_unit_ips(ops_test)[0]
+    reachable_ip = (await get_reachable_unit_ips(ops_test))[0]
 
     # fetch unit hosting the new primary shard of the previous index
     shards = await get_shards_by_index(ops_test, reachable_ip, ContinuousWrites.INDEX_NAME)
@@ -400,7 +400,7 @@ async def test_freeze_db_process_node_with_elected_cm(
 
     # get reachable unit to perform requests against, in case the previously stopped unit
     # is leader unit, so its address is not reachable
-    reachable_ip = await get_reachable_unit_ips(ops_test)[0]
+    reachable_ip = (await get_reachable_unit_ips(ops_test))[0]
 
     # fetch the current elected cluster_manager
     current_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, reachable_ip)
