@@ -40,7 +40,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 
 logger = logging.getLogger(__name__)
@@ -226,7 +226,7 @@ class OpenSearchDistribution(ABC):
         ) -> requests.Response:
             """Performs an HTTP request."""
             if remaining_retries < 0:
-                if not error_response:
+                if error_response is None:
                     raise OpenSearchHttpError()
 
                 if return_failed_resp:
@@ -274,7 +274,7 @@ class OpenSearchDistribution(ABC):
                 return call(
                     remaining_retries - 1,
                     return_failed_resp,
-                    e.response if isinstance(e, requests.exceptions.HTTPError) else None,
+                    error_response=e.response if isinstance(e, requests.exceptions.HTTPError) else None,
                 )
 
         if None in [endpoint, method]:

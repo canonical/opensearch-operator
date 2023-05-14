@@ -96,7 +96,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 
 SERVICE_MANAGER = "service"
@@ -259,6 +259,9 @@ class OpenSearchBaseCharm(CharmBase):
         ):
             # we defer because we want the temporary status to be updated
             event.defer()
+
+        for relation in self.model.relations.get(ClientRelationName, []):
+            self.opensearch_provider.update_endpoints(relation)
 
         app_data = event.relation.data.get(event.app)
         unit_data = event.relation.data.get(event.unit)
