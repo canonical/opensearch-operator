@@ -201,7 +201,9 @@ class OpenSearchTLS(Object):
         if self.charm.model.get_relation(TLS_RELATION):
             self.certs.request_certificate_creation(certificate_signing_request=csr)
 
-    def _request_certificate_renewal(self, scope: Scope, cert_type: CertType, secrets: Dict[str, str]):
+    def _request_certificate_renewal(
+        self, scope: Scope, cert_type: CertType, secrets: Dict[str, str]
+    ):
         """Request new certificate and store the key/key-password/csr in the scope's data bag."""
         key = secrets["key"].encode("utf-8")
         key_password = secrets.get("key-password", None)

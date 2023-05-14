@@ -274,7 +274,7 @@ class OpenSearchDistribution(ABC):
                 return call(
                     remaining_retries - 1,
                     return_failed_resp,
-                    error_response=e.response if isinstance(e, requests.exceptions.HTTPError) else None,
+                    e.response if isinstance(e, requests.exceptions.HTTPError) else None,
                 )
 
         if None in [endpoint, method]:

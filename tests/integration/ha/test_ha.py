@@ -687,7 +687,8 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
 
     # check reach from controller - noticed that the controller is able to ping the unit for longer
     assert not await is_unit_reachable(
-        from_host=await get_controller_hostname(ops_test), to_host=first_unit_with_primary_shard_hostname
+        from_host=await get_controller_hostname(ops_test),
+        to_host=first_unit_with_primary_shard_hostname,
     ), "Unit is still reachable from controller"
 
     # verify node not up anymore
