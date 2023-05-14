@@ -277,9 +277,6 @@ class OpenSearchBaseCharm(CharmBase):
                     Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                 )
 
-            for relation in self.model.relations.get(ClientRelationName, []):
-                self.opensearch_provider.update_endpoints(relation)
-
             if unit_data.get(VOTING_TO_DELETE) or unit_data.get(ALLOCS_TO_DELETE):
                 self.opensearch_exclusions.cleanup()
 
