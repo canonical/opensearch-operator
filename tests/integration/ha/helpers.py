@@ -276,7 +276,7 @@ async def all_processes_down(ops_test: OpsTest, app: str) -> bool:
 
 
 async def cut_network_from_unit_with_ip_change(ops_test: OpsTest, app: str, unit_id: int) -> None:
-    """Cut network from a lxc container."""
+    """Cut network from a lxc container, triggering an IP change after restoration."""
     unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
     unit_hostname = unit_ids_hostnames[unit_id]
 
@@ -285,7 +285,7 @@ async def cut_network_from_unit_with_ip_change(ops_test: OpsTest, app: str, unit
     subprocess.check_call(cut_network_command.split())
 
 
-async def restore_network_for_unit(ops_test: OpsTest, app: str, unit_hostname: str) -> None:
+async def restore_network_for_unit(unit_hostname: str) -> None:
     """Restore network from a lxc container."""
     # remove mask from eth0
     restore_network_command = f"lxc config device remove {unit_hostname} eth0"
@@ -306,7 +306,7 @@ async def is_unit_reachable(from_host: str, to_host: str, retries: int = 5) -> b
         return True
 
 
-async def is_network_restored(
+async def is_network_restored_after_ip_change(
     ops_test: OpsTest, app: str, unit_id: int, unit_ip: str, retries: int = 25
 ) -> bool:
     try:

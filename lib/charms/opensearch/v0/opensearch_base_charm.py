@@ -370,6 +370,9 @@ class OpenSearchBaseCharm(CharmBase):
         # if there are exclusions to be removed
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
+
+            self._compute_and_broadcast_updated_topology(self._get_nodes(True))
+
             if self.health.apply() == HealthColors.YELLOW_TEMP:
                 event.defer()
                 return
