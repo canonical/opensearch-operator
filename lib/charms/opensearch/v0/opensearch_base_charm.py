@@ -396,8 +396,8 @@ class OpenSearchBaseCharm(CharmBase):
             self.tls.request_new_unit_certificates()
 
             # since when an IP change happens, "_on_peer_relation_joined" won't be called,
-            # we need to alert the leader that it must recompute the node roles for any unit whose roles
-            # were changed while the current unit was cut-off from the rest of the network
+            # we need to alert the leader that it must recompute the node roles for any unit whose
+            # roles were changed while the current unit was cut-off from the rest of the network
             self.on[PeerRelationName].relation_changed.emit(self.model.get_relation(PeerRelationName))
 
     def _on_set_password_action(self, event: ActionEvent):
