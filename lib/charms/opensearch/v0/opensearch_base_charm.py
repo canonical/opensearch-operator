@@ -53,6 +53,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHAError,
     OpenSearchHttpError,
+    OpenSearchNotFullyReadyError,
     OpenSearchScaleDownError,
     OpenSearchStartError,
     OpenSearchStartTimeoutError,
@@ -371,8 +372,6 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
 
-            self._compute_and_broadcast_updated_topology(self._get_nodes(True))
-
             if self.health.apply() == HealthColors.YELLOW_TEMP:
                 event.defer()
                 return
@@ -395,6 +394,11 @@ class OpenSearchBaseCharm(CharmBase):
             self.unit.status = MaintenanceStatus(TLSNewCertsRequested)
             self._delete_stored_tls_resources()
             self.tls.request_new_unit_certificates()
+
+            # since when an IP change happens, "_on_peer_relation_joined" won't be called,
+            # we need to alert the leader that it must recompute the node roles for any unit whose roles
+            # were changed while the current unit was cut-off from the rest of the network
+            self.on[PeerRelationName].relation_changed.emit(self.model.get_relation(PeerRelationName))
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -507,7 +511,7 @@ class OpenSearchBaseCharm(CharmBase):
             try:
                 self._post_start_init()
                 self.status.clear(WaitingToStart)
-            except OpenSearchHttpError:
+            except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
                 event.defer()
             return
 
@@ -551,7 +555,7 @@ class OpenSearchBaseCharm(CharmBase):
             )
             self._post_start_init()
             self.status.clear(WaitingToStart)
-        except OpenSearchStartTimeoutError:
+        except (OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
         except OpenSearchStartError as e:
             logger.error(e)
@@ -561,12 +565,19 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _post_start_init(self):
         """Initialization post OpenSearch start."""
-        if self.unit.is_leader():
-            # initialize the security index if needed and if the admin certs are written on disk
-            if not self.peers_data.get(Scope.APP, "security_index_initialised"):
-                admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-                self._initialize_security_index(admin_secrets)
-                self.peers_data.put(Scope.APP, "security_index_initialised", True)
+        # initialize the security index if needed (and certs written on disk etc.)
+        if self.unit.is_leader() and not self.peers_data.get(
+            Scope.APP, "security_index_initialised"
+        ):
+            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+            self._initialize_security_index(admin_secrets)
+            self.peers_data.put(Scope.APP, "security_index_initialised", True)
+
+        # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
+        # may be thrown when calling a node - we want to unsure this node is perfectly ready
+        # before marking it as ready
+        if not self.opensearch.is_node_up():
+            raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
         # cleanup bootstrap conf in the node
         if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
