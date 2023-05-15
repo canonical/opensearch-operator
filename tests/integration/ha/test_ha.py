@@ -545,6 +545,7 @@ async def test_restart_db_process_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_elected_cluster_manager(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
@@ -622,13 +623,14 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cluster_manager
     )
 
     # check unit network restored
+    unit_ids_ips = await get_application_unit_ids_ips(ops_test, app)
+    first_cm_unit_new_ip = unit_ids_ips[first_elected_cm_unit_id]
+
     assert await is_network_restored_after_ip_change(
         ops_test, app, first_elected_cm_unit_id, first_elected_cm_unit_ip
     ), "Network could not be restored."
 
     # check if node up and is included in the cluster formation
-    unit_ids_ips = await get_application_unit_ids_ips(ops_test, app)
-    first_cm_unit_new_ip = unit_ids_ips[first_elected_cm_unit_id]
     assert is_up(ops_test, first_cm_unit_new_ip), "Unit still not up."
 
     # verify the previously elected CM node successfully joined the rest of the fleet
@@ -640,6 +642,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cluster_manager
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
@@ -727,13 +730,14 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     )
 
     # check unit network restored
+    unit_ids_ips = await get_application_unit_ids_ips(ops_test, app)
+    first_unit_with_primary_shard_new_ip = unit_ids_ips[first_unit_with_primary_shard]
+
     assert await is_network_restored_after_ip_change(
         ops_test, app, first_unit_with_primary_shard, first_unit_with_primary_shard_ip
     ), "Network could not be restored."
 
     # check if node up and is included in the cluster formation
-    unit_ids_ips = await get_application_unit_ids_ips(ops_test, app)
-    first_unit_with_primary_shard_new_ip = unit_ids_ips[first_unit_with_primary_shard]
     assert is_up(ops_test, first_unit_with_primary_shard_new_ip), "Unit still not up."
 
     # check that the unit previously hosting the primary shard now hosts a replica
