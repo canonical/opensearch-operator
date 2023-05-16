@@ -547,7 +547,7 @@ async def test_restart_db_process_node_with_primary_shard(
 
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_elected_cluster_manager(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check that cluster can self-heal and unit reconfigures itself with new IP."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -644,7 +644,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cluster_manager
 
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_primary_shard(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check that cluster can self-heal and unit reconfigures itself with new IP."""
     app = (await app_name(ops_test)) or APP_NAME
