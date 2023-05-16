@@ -558,7 +558,6 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cluster_manager
     # find unit currently elected cluster_manager
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
-    first_elected_cm_unit_ip = unit_ids_ips[first_elected_cm_unit_id]
     first_elected_cm_unit_hostname = unit_ids_hostnames[first_elected_cm_unit_id]
 
     # Killing the only instance can be disastrous.
@@ -657,7 +656,6 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     # find unit hosting the primary shard of the index "series-index"
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     first_unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
-    first_unit_with_primary_shard_ip = unit_ids_ips[first_unit_with_primary_shard]
     first_unit_with_primary_shard_hostname = unit_ids_hostnames[first_unit_with_primary_shard]
 
     # Killing the only instance can be disastrous.
