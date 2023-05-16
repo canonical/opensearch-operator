@@ -627,7 +627,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cluster_manager
     first_cm_unit_new_ip = unit_ids_ips[first_elected_cm_unit_id]
 
     assert await is_network_restored_after_ip_change(
-        ops_test, app, first_elected_cm_unit_id, first_elected_cm_unit_ip
+        ops_test, app, first_elected_cm_unit_id, first_cm_unit_new_ip
     ), "Network could not be restored."
 
     # check if node up and is included in the cluster formation
@@ -734,7 +734,7 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     first_unit_with_primary_shard_new_ip = unit_ids_ips[first_unit_with_primary_shard]
 
     assert await is_network_restored_after_ip_change(
-        ops_test, app, first_unit_with_primary_shard, first_unit_with_primary_shard_ip
+        ops_test, app, first_unit_with_primary_shard, first_unit_with_primary_shard_new_ip
     ), "Network could not be restored."
 
     # check if node up and is included in the cluster formation

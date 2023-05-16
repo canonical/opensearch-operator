@@ -577,7 +577,7 @@ class OpenSearchBaseCharm(CharmBase):
             self.peers_data.put(Scope.APP, "security_index_initialised", True)
 
         # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
-        # may be thrown when calling a node - we want to unsure this node is perfectly ready
+        # may be thrown when calling a node - we want to ensure this node is perfectly ready
         # before marking it as ready
         if not self.opensearch.is_node_up():
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
