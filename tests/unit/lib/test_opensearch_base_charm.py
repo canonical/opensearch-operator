@@ -37,6 +37,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.opensearch = self.charm.opensearch
         self.opensearch.current = MagicMock()
         self.opensearch.current.return_value = Node("cm1", ["cluster_manager", "data"], "1.1.1.1")
+        self.opensearch.is_failed = MagicMock()
+        self.opensearch.is_failed.return_value = False
 
         self.peers_data = self.charm.peers_data
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
@@ -141,7 +143,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             self.peers_data.delete(Scope.APP, "security_index_initialised")
             _can_service_start.return_value = True
             self.harness.set_leader(True)
-            start.reset_mock()
+            # start.reset_mock()
+
             self.charm.on.start.emit()
             _get_nodes.assert_called()
             _set_node_conf.assert_called()

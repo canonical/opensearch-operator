@@ -398,7 +398,7 @@ class OpenSearchBaseCharm(CharmBase):
             # since when an IP change happens, "_on_peer_relation_joined" won't be called,
             # we need to alert the leader that it must recompute the node roles for any unit whose
             # roles were changed while the current unit was cut-off from the rest of the network
-            self.on[PeerRelationName].relation_changed.emit(
+            self.on[PeerRelationName].relation_joined.emit(
                 self.model.get_relation(PeerRelationName)
             )
 
@@ -546,6 +546,7 @@ class OpenSearchBaseCharm(CharmBase):
         except OpenSearchHttpError:
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
+            self._post_start_init()
             return
 
         try:
