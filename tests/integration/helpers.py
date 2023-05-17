@@ -336,7 +336,7 @@ async def http_request(
             "method": method,
             "url": endpoint,
             "headers": {"Accept": "application/json", "Content-Type": "application/json"},
-            "timeout": 5,
+            "timeout": 10,
         }
         if isinstance(payload, str):
             request_kwargs["data"] = payload
