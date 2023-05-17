@@ -66,7 +66,7 @@ async def test_security_index_initialised(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_tls_configured(ops_test: OpsTest) -> None:
     """Test that TLS is enabled when relating to the TLS Certificates Operator."""
-    for unit_name, unit_ip in await get_application_unit_ips_names(ops_test).items():
+    for unit_name, unit_ip in (await get_application_unit_ips_names(ops_test)).items():
         assert await check_unit_tls_configured(ops_test, unit_ip, unit_name)
 
 
