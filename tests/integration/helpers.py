@@ -242,7 +242,6 @@ async def get_application_unit_ids_hostnames(
     result = {}
     for unit in ops_test.model.applications[app].units:
         unit_id = int(unit.name.split("/")[1])
-        _, raw_hostname, _ = await ops_test.juju("ssh", f"{app}/{unit_id}", "hostname")
         result[unit_id] = await get_unit_hostname(ops_test, unit_id, app)
 
     return result
