@@ -33,7 +33,7 @@ TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
 
 MODEL_CONFIG = {
     "logging-config": "<root>=INFO;unit=DEBUG",
-    "update-status-hook-interval": "25s",
+    "update-status-hook-interval": "1m",
     "cloudinit-userdata": """postruncmd:
         - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
         - [ 'sysctl', '-w', 'fs.file-max=1048576' ]

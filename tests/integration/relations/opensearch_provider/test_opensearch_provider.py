@@ -187,6 +187,7 @@ async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag.
 
     scale_application also contains a wait_for_idle check, including checking for active status.
+    Idle_period checks must be greater than 1 minute to guarantee update_status fires correctly.
     """
 
     async def rel_endpoints(app_name: str, rel_name: str) -> str:
@@ -205,11 +206,11 @@ async def test_scaling(ops_test: OpsTest):
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS, idle_period=65)
 
     # Test scale down
     await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() - 1)
-    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS, idle_period=65)
     assert (
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
@@ -217,7 +218,7 @@ async def test_scaling(ops_test: OpsTest):
 
     # test scale back up again
     await scale_application(ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() + 1)
-    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS, idle_period=65)
     assert (
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
