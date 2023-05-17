@@ -226,8 +226,6 @@ class OpenSearchDistribution(ABC):
         ) -> requests.Response:
             """Performs an HTTP request."""
             if remaining_retries < 0:
-                # Can't check `if not error_response`, because Response objects evaluate to False
-                # when the request fails.
                 if error_response is None:
                     raise OpenSearchHttpError()
 
@@ -265,9 +263,8 @@ class OpenSearchDistribution(ABC):
                         )
 
                     response = s.request(**request_kwargs)
-                    response.raise_for_status()
-                    return response
 
+                    return response
             except (requests.exceptions.RequestException, urllib3.exceptions.HTTPError) as e:
                 logger.error(
                     f"Request {method} to {urls[0]} with payload: {payload} failed. "
@@ -277,7 +274,7 @@ class OpenSearchDistribution(ABC):
                 return call(
                     remaining_retries - 1,
                     return_failed_resp,
-                    error_response=e.response if isinstance(e, requests.HTTPError) else None,
+                    e.response if isinstance(e, requests.exceptions.HTTPError) else None,
                 )
 
         if None in [endpoint, method]:
@@ -363,8 +360,11 @@ class OpenSearchDistribution(ABC):
     @property
     def roles(self) -> List[str]:
         """Get the list of the roles assigned to this node."""
-        nodes = self.request("GET", f"/_nodes/{self.node_id}")
-        return nodes["nodes"][self.node_id]["roles"]
+        try:
+            nodes = self.request("GET", f"/_nodes/{self.node_id}", alt_hosts=self._charm.alt_hosts)
+            return nodes["nodes"][self.node_id]["roles"]
+        except OpenSearchHttpError:
+            return self.config.load("opensearch.yml")["node.roles"]
 
     @property
     def host(self) -> str:

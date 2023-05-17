@@ -1,20 +1,33 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import logging
+import subprocess
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    stop_after_attempt,
+    wait_fixed,
+    wait_random,
+)
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.helpers import (
     get_application_unit_ids,
+    get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
     http_request,
 )
 
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
+
+
+logger = logging.getLogger(__name__)
 
 
 class Shard:
@@ -185,7 +198,7 @@ async def assert_continuous_writes_consistency(
     assert result.max_stored_id == result.last_expected_id
 
     # investigate the data in each shard, primaries and their respective replicas
-    units_ips = get_application_unit_ids_ips(ops_test, app)
+    units_ips = await get_application_unit_ids_ips(ops_test, app)
     shards = await get_shards_by_index(
         ops_test, list(units_ips.values())[0], ContinuousWrites.INDEX_NAME
     )
@@ -260,3 +273,50 @@ async def all_processes_down(ops_test: OpsTest, app: str) -> bool:
             return False
 
     return True
+
+
+async def cut_network_from_unit_with_ip_change(ops_test: OpsTest, app: str, unit_id: int) -> None:
+    """Cut network from a lxc container, triggering an IP change after restoration."""
+    unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
+    unit_hostname = unit_ids_hostnames[unit_id]
+
+    # apply a mask (device type `none`)
+    cut_network_command = f"lxc config device add {unit_hostname} eth0 none"
+    subprocess.check_call(cut_network_command.split())
+
+
+async def restore_network_for_unit(unit_hostname: str) -> None:
+    """Restore network from a lxc container."""
+    # remove mask from eth0
+    restore_network_command = f"lxc config device remove {unit_hostname} eth0"
+    subprocess.check_call(restore_network_command.split())
+
+
+async def is_unit_reachable(from_host: str, to_host: str, retries: int = 5) -> bool:
+    """Test network reachability between hosts."""
+    try:
+        for attempt in Retrying(stop=stop_after_attempt(retries), wait=wait_fixed(wait=30)):
+            with attempt:
+                try:
+                    subprocess.check_call(f"lxc exec {from_host} -- ping -c 5 {to_host}".split())
+                    raise Exception
+                except subprocess.CalledProcessError:
+                    return False
+    except RetryError:
+        return True
+
+
+async def is_network_restored_after_ip_change(
+    ops_test: OpsTest, app: str, unit_id: int, unit_ip: str, retries: int = 25
+) -> bool:
+    try:
+        for attempt in Retrying(stop=stop_after_attempt(retries), wait=wait_fixed(wait=30)):
+            with attempt:
+                logger.error("Network not restored yet, attempting again.")
+                units_ips = await get_application_unit_ids_ips(ops_test, app)
+                if units_ips[unit_id] == unit_ip:
+                    raise Exception
+
+                return True
+    except RetryError:
+        return False

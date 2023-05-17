@@ -261,6 +261,7 @@ class YamlConfigSetter(ConfigSetter):
 
             if output_type in [OutputType.file, OutputType.all]:
                 if output_file is None or output_file == config_file:
+                    f.seek(0)
                     f.write(data)
                 else:
                     with open(output_file, "w") as g:

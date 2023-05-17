@@ -85,6 +85,18 @@ class OpenSearchTLS(Object):
         except ValueError as e:
             event.fail(str(e))
 
+    def request_new_unit_certificates(self) -> None:
+        """Requests a new certificate with the given scope and type from the tls operator."""
+        for cert_type in [CertType.UNIT_HTTP, CertType.UNIT_TRANSPORT]:
+            csr = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)["csr"].encode("utf-8")
+            self.certs.request_certificate_revocation(csr)
+
+        # doing this sequentially (revoking -> requesting new ones), to avoid triggering
+        # the "certificate available" callback with old certificates
+        for cert_type in [CertType.UNIT_HTTP, CertType.UNIT_TRANSPORT]:
+            secrets = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)
+            self._request_certificate_renewal(Scope.UNIT, cert_type, secrets)
+
     def _on_tls_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Request certificate when TLS relation joined."""
         admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN)
@@ -108,6 +120,10 @@ class OpenSearchTLS(Object):
             logger.debug(f"{scope.val}.{cert_type.val} TLS certificate available.")
         except TypeError:
             logger.debug("Unknown certificate available.")
+            return
+
+        # seems like the admin certificate is also broadcast to non leader units on refresh request
+        if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
         old_cert = secrets.get("cert", None)
@@ -142,40 +158,20 @@ class OpenSearchTLS(Object):
             logger.debug("Unknown certificate expiring.")
             return
 
-        key = secrets["key"].encode("utf-8")
-        key_password = secrets.get("key-password", None)
-        old_csr = secrets["csr"].encode("utf-8")
-
-        subject = self._get_subject(cert_type)
-        new_csr = generate_csr(
-            private_key=key,
-            private_key_password=(None if key_password is None else key_password.encode("utf-8")),
-            subject=subject,
-            organization=self.charm.app.name,
-            **self._get_sans(cert_type),
-        )
-
-        self.charm.secrets.put_object(
-            scope, cert_type.val, {"csr": new_csr.decode("utf-8"), "subject": subject}, merge=True
-        )
-
-        self.certs.request_certificate_renewal(
-            old_certificate_signing_request=old_csr,
-            new_certificate_signing_request=new_csr,
-        )
+        self._request_certificate_renewal(scope, cert_type, secrets)
 
     def _request_certificate(
         self,
         scope: Scope,
         cert_type: CertType,
-        param: Optional[str] = None,
+        key: Optional[str] = None,
         password: Optional[str] = None,
     ):
         """Request certificate and store the key/key-password/csr in the scope's data bag."""
-        if param is None:
+        if key is None:
             key = generate_private_key()
         else:
-            key = self._parse_tls_file(param)
+            key = self._parse_tls_file(key)
 
         if password is not None:
             password = password.encode("utf-8")
@@ -204,6 +200,32 @@ class OpenSearchTLS(Object):
 
         if self.charm.model.get_relation(TLS_RELATION):
             self.certs.request_certificate_creation(certificate_signing_request=csr)
+
+    def _request_certificate_renewal(
+        self, scope: Scope, cert_type: CertType, secrets: Dict[str, str]
+    ):
+        """Request new certificate and store the key/key-password/csr in the scope's data bag."""
+        key = secrets["key"].encode("utf-8")
+        key_password = secrets.get("key-password", None)
+        old_csr = secrets["csr"].encode("utf-8")
+
+        subject = self._get_subject(cert_type)
+        new_csr = generate_csr(
+            private_key=key,
+            private_key_password=(None if key_password is None else key_password.encode("utf-8")),
+            subject=subject,
+            organization=self.charm.app.name,
+            **self._get_sans(cert_type),
+        )
+
+        self.charm.secrets.put_object(
+            scope, cert_type.val, {"csr": new_csr.decode("utf-8"), "subject": subject}, merge=True
+        )
+
+        self.certs.request_certificate_renewal(
+            old_certificate_signing_request=old_csr,
+            new_certificate_signing_request=new_csr,
+        )
 
     def _get_sans(self, cert_type: CertType) -> Dict[str, List[str]]:
         """Create a list of OID/IP/DNS names for an OpenSearch unit.
@@ -236,7 +258,7 @@ class OpenSearchTLS(Object):
         if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", raw_content):
             return re.sub(
                 r"(-+(BEGIN|END) [A-Z ]+-+)",
-                "\n\\1\n",
+                "\\1",
                 raw_content,
             ).encode("utf-8")
         return base64.b64decode(raw_content)

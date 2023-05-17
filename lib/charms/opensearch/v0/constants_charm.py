@@ -47,6 +47,7 @@ RequestUnitServiceOps = "Requesting lock on operation: {}"
 InstallProgress = "Installing OpenSearch..."
 SecurityIndexInitProgress = "Initializing the security index..."
 AdminUserInitProgress = "Configuring admin user..."
+TLSNewCertsRequested = "Requesting new TLS certificates..."
 HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 
