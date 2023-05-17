@@ -25,7 +25,12 @@ from charms.data_platform_libs.v0.data_interfaces import (
     IndexRequestedEvent,
     OpenSearchProvides,
 )
-from charms.opensearch.v0.constants_charm import ClientRelationName
+from charms.opensearch.v0.constants_charm import (
+    ClientRelationName,
+    IndexCreationFailed,
+    NewIndexRequested,
+    UserCreationFailed,
+)
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_security import generate_hashed_password
@@ -179,13 +184,9 @@ class OpenSearchProvider(Object):
         if not self.validate_index_name(event.index):
             raise OpenSearchIndexError(f"invalid index name: {event.index}")
 
-        maintenance_status = f"new index {event.index} requested"
-        self.unit.status = MaintenanceStatus(maintenance_status)
+        self.unit.status = MaintenanceStatus(NewIndexRequested.format(index=event.index))
 
         try:
-            failed_to_create_idx = (
-                f"failed to create {event.index} index - deferring index-requested event..."
-            )
             self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
             if not (
@@ -193,8 +194,8 @@ class OpenSearchProvider(Object):
                 and e.response_body.get("error", {}).get("type")
                 == "resource_already_exists_exception"
             ):
-                logger.error(failed_to_create_idx)
-                self.unit.status = BlockedStatus(failed_to_create_idx)
+                logger.error(IndexCreationFailed.format(index=event.index))
+                self.unit.status = BlockedStatus(IndexCreationFailed.format(index=event.index))
                 event.defer()
                 return
 
@@ -202,11 +203,12 @@ class OpenSearchProvider(Object):
         hashed_pwd, pwd = generate_hashed_password()
         extra_user_roles = event.extra_user_roles.lower() if event.extra_user_roles else "default"
         try:
-            failed_to_create_users = f"failed to create users for {event.relation}"
             self.create_opensearch_users(username, hashed_pwd, event.index, extra_user_roles)
         except OpenSearchUserMgmtError as err:
             logger.error(err)
-            self.unit.status = BlockedStatus(failed_to_create_users)
+            self.unit.status = BlockedStatus(
+                UserCreationFailed.format(rel_name=ClientRelationName, id=event.relation.id)
+            )
             return
 
         rel_id = event.relation.id
@@ -220,9 +222,11 @@ class OpenSearchProvider(Object):
 
         logger.info(f"new index {event.index} available")
         # Clear old statuses set by this hook
-        self.charm.status.clear(maintenance_status)
-        self.charm.status.clear(failed_to_create_idx)
-        self.charm.status.clear(failed_to_create_users)
+        self.charm.status.clear(NewIndexRequested.format(index=event.index))
+        self.charm.status.clear(IndexCreationFailed.format(index=event.index))
+        self.charm.status.clear(
+            UserCreationFailed.format(rel_name=ClientRelationName, id=event.relation.id)
+        )
 
     def validate_index_name(self, index_name: str) -> bool:
         """Validates that the index name provided in the relation is acceptable."""

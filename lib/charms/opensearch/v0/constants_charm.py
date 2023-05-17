@@ -39,9 +39,13 @@ ClusterHealthRed = "1 or more 'primary' shards are not assigned, please scale yo
 ClusterHealthYellow = (
     "1 or more 'replica' shards are not assigned, please scale your application up."
 )
+IndexCreationFailed = "failed to create {index} index - deferring index-requested event..."
+UserCreationFailed = "failed to create users for {rel_name} relation {id}"
+
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
+
 
 # Maintenance statuses
 InstallProgress = "Installing OpenSearch..."
@@ -49,6 +53,7 @@ SecurityIndexInitProgress = "Initializing the security index..."
 AdminUserInitProgress = "Configuring admin user..."
 HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
+NewIndexRequested = "new index {index} requested"
 
 
 # Relation Interfaces
