@@ -350,8 +350,9 @@ class OpenSearchProvider(Object):
         if not self.unit.is_leader():
             return
         if self._unit_departing(event.relation):
-            # This unit is being removed, so don't update the relation.
+            # This unit is being removed.
             self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
+            self.update_endpoints(event.relation, omit_endpoints={self.charm.unit_ip})
             return
 
         self.user_manager.remove_users_and_roles(event.relation.id)
