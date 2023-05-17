@@ -42,11 +42,11 @@ class Status:
         condition: bool
         if pattern == Status.CheckPattern.Equal:
             condition = context.status.message == status_message
-        elif Status.CheckPattern.Start:
+        elif pattern == Status.CheckPattern.Start:
             condition = context.status.message.startswith(status_message)
-        elif Status.CheckPattern.End:
+        elif pattern == Status.CheckPattern.End:
             condition = context.status.message.endswith(status_message)
-        elif Status.CheckPattern.Interpolated:
+        elif pattern == Status.CheckPattern.Interpolated:
             condition = (
                 re.fullmatch(status_message.replace("{}", "(?s:.*?)"), status_message) is not None
             )
