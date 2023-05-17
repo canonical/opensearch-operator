@@ -48,8 +48,7 @@ class Status:
             condition = context.status.message.endswith(status_message)
         elif Status.CheckPattern.Interpolated:
             condition = (
-                re.fullmatch(status_message.replace("{}", "(?s:.*?)"), status_message)
-                is not None
+                re.fullmatch(status_message.replace("{}", "(?s:.*?)"), status_message) is not None
             )
         else:
             condition = status_message in context.status.message
