@@ -348,6 +348,7 @@ class OpenSearchProvider(Object):
         """Check if this relation is being removed, and update the peer databag accordingly."""
         if event.departing_unit == self.charm.unit:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
+            self.update_endpoints(event.relation, omit_endpoints={self.charm.unit_ip})
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle client relation-broken event."""
@@ -364,7 +365,7 @@ class OpenSearchProvider(Object):
     def update_endpoints(self, relation: Relation, omit_endpoints: Optional[Set[str]] = None):
         """Updates endpoints in the databag for the given relation."""
         # we can only set endpoints if we're the leader
-        if not self.unit.is_leader():
+        if not self.unit.is_leader() or not self.opensearch.is_node_up():
             return
 
         if not omit_endpoints:

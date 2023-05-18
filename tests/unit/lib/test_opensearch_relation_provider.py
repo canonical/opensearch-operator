@@ -172,10 +172,14 @@ class TestOpenSearchProvider(unittest.TestCase):
         _remove_users.assert_called_with(event.relation.id)
 
     @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_endpoints")
+    @patch(
+        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up",
+        return_value=True,
+    )
     @patch("charm.OpenSearchOperatorCharm._get_nodes")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_update_endpoints(self, _, __, _nodes, _set_endpoints):
+    def test_update_endpoints(self, _, __, _nodes, _is_node_up, _set_endpoints):
         self.harness.set_leader(True)
         node = MagicMock()
         node.ip = "4.4.4.4"
