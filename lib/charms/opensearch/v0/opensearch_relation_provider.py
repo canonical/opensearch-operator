@@ -29,10 +29,12 @@ from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
     IndexCreationFailed,
     NewIndexRequested,
+    PeerRelationName,
     UserCreationFailed,
 )
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
+from charms.opensearch.v0.helper_networking import unit_ip
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
@@ -346,9 +348,13 @@ class OpenSearchProvider(Object):
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
+        # remove departing unit from endpoints available to requirer charm.
+        if event.departing_unit.app == self.charm.app:
+            departing_unit_ip = unit_ip(self.charm, event.departing_unit.name, PeerRelationName)
+            self.update_endpoints(event.relation, omit_endpoints={departing_unit_ip})
+
         if event.departing_unit == self.charm.unit:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
-            self.update_endpoints(event.relation, omit_endpoints={self.charm.unit_ip})
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle client relation-broken event."""
@@ -357,22 +363,28 @@ class OpenSearchProvider(Object):
         if self._unit_departing(event.relation):
             # This unit is being removed.
             self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
-            self.update_endpoints(event.relation, omit_endpoints={self.charm.unit_ip})
             return
 
         self.user_manager.remove_users_and_roles(event.relation.id)
 
     def update_endpoints(self, relation: Relation, omit_endpoints: Optional[Set[str]] = None):
         """Updates endpoints in the databag for the given relation."""
-        # we can only set endpoints if we're the leader
+        # we can only set endpoints if we're the leader, and we can only get endpoints if the node
+        # is running.
         if not self.unit.is_leader() or not self.opensearch.is_node_up():
             return
 
         if not omit_endpoints:
             omit_endpoints = set()
 
+        try:
+            ips = set([node.ip for node in self.charm._get_nodes(use_localhost=True)])
+        except OpenSearchHttpError:
+            logger.error("unable to get nodes")
+            # TODO maybe set endpoints to 0?
+            return
+
         port = self.opensearch.port
-        ips = set([node.ip for node in self.charm._get_nodes(use_localhost=True)])
         endpoints = ",".join([f"{ip}:{port}" for ip in ips - omit_endpoints])
         databag_endpoints = relation.data[relation.app].get("endpoints")
 

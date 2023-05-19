@@ -125,10 +125,10 @@ class TestOpenSearchProvider(unittest.TestCase):
         _create_user.assert_called_with(username, roles, hashed_pw)
         _patch_user.assert_called_with(username, patches)
 
-    # @patch("charms.opensearch.v0.opensearch_relation_provider.unit_ip", return_value="1.1.1.2")
-    def test_on_relation_departed(self):
+    @patch("charms.opensearch.v0.opensearch_relation_provider.unit_ip", return_value="1.1.1.2")
+    def test_on_relation_departed(self, _):
         event = MagicMock()
-        event.departing_unit = None
+        event.departing_unit.name = "some other unit"
         self.opensearch_provider._on_relation_departed(event)
         assert not self.charm.peers_data.get(
             Scope.UNIT, self.opensearch_provider._depart_flag(event.relation)
