@@ -46,6 +46,10 @@ class ContinuousWrites:
         self._queue = None
         self._process = None
 
+    @retry(
+        wait=wait_fixed(wait=5) + wait_random(0, 5),
+        stop=stop_after_attempt(5),
+    )
     async def start(self, repl_on_all_nodes: bool = False) -> None:
         """Run continuous writes in the background."""
         if not self._is_stopped:
@@ -74,6 +78,10 @@ class ContinuousWrites:
             )
         )
 
+    @retry(
+        wait=wait_fixed(wait=5) + wait_random(0, 5),
+        stop=stop_after_attempt(5),
+    )
     async def clear(self) -> None:
         """Stop writes and Delete the index."""
         if not self._is_stopped:
@@ -85,6 +93,10 @@ class ContinuousWrites:
         finally:
             client.close()
 
+    @retry(
+        wait=wait_fixed(wait=5) + wait_random(0, 5),
+        stop=stop_after_attempt(5),
+    )
     async def count(self, unit_ip: Optional[str] = None, preference: Optional[str] = None) -> int:
         """Count the number of documents in the index."""
         client = await self._client(unit_ip)
@@ -111,6 +123,10 @@ class ContinuousWrites:
         finally:
             client.close()
 
+    @retry(
+        wait=wait_fixed(wait=5) + wait_random(0, 5),
+        stop=stop_after_attempt(5),
+    )
     async def stop(self) -> SimpleNamespace:
         """Stop the continuous writes process and return max inserted ID."""
         if not self._is_stopped:
