@@ -332,11 +332,13 @@ async def http_request(
         chain.write(admin_secrets["ca-chain"])
         chain.seek(0)
 
+        logger.info(f"Calling: {method} -- {endpoint}")
+
         request_kwargs = {
             "method": method,
             "url": endpoint,
             "headers": {"Accept": "application/json", "Content-Type": "application/json"},
-            "timeout": 10,
+            "timeout": 15,
         }
         if isinstance(payload, str):
             request_kwargs["data"] = payload
