@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import random
 import time
 
 import pytest
@@ -46,6 +47,7 @@ from tests.integration.helpers import (
     get_controller_hostname,
     get_leader_unit_ip,
     get_reachable_unit_ips,
+    http_request,
     is_up,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -79,6 +81,13 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     """Starts continuous write operations and clears writes at the end of the test."""
     await c_writes.start()
     yield
+
+    reachable_ip = random.choice(await get_reachable_unit_ips(ops_test))
+    await http_request(ops_test, "GET", f"https://{reachable_ip}:9200/_cat/nodes", json_resp=False)
+    await http_request(
+        ops_test, "GET", f"https://{reachable_ip}:9200/_cat/shards", json_resp=False
+    )
+
     await c_writes.clear()
 
 
@@ -87,6 +96,13 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
     """Same as previous runner, but starts continuous writes on cluster wide replicated index."""
     await c_writes.start(repl_on_all_nodes=True)
     yield
+
+    reachable_ip = random.choice(await get_reachable_unit_ips(ops_test))
+    await http_request(ops_test, "GET", f"https://{reachable_ip}:9200/_cat/nodes", json_resp=False)
+    await http_request(
+        ops_test, "GET", f"https://{reachable_ip}:9200/_cat/shards", json_resp=False
+    )
+
     await c_writes.clear()
 
 
