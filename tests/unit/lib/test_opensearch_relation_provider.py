@@ -8,11 +8,11 @@ from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelatio
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
-from helpers import patch_network_get
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
+from tests.helpers import patch_network_get
 
 
 @patch_network_get("1.1.1.1")
@@ -125,8 +125,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         _create_user.assert_called_with(username, roles, hashed_pw)
         _patch_user.assert_called_with(username, patches)
 
-    @patch("charms.opensearch.v0.opensearch_relation_provider.unit_ip", return_value="1.1.1.2")
-    def test_on_relation_departed(self, _):
+    def test_on_relation_departed(self):
         event = MagicMock()
         event.departing_unit.name = "some other unit"
         self.opensearch_provider._on_relation_departed(event)

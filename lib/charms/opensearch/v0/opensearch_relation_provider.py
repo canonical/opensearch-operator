@@ -350,7 +350,7 @@ class OpenSearchProvider(Object):
         """Check if this relation is being removed, and update the peer databag accordingly."""
         # remove departing unit from endpoints available to requirer charm.
         if event.departing_unit.app == self.charm.app:
-            departing_unit_ip = unit_ip(self.charm, event.departing_unit.name, PeerRelationName)
+            departing_unit_ip = unit_ip(self.charm, event.departing_unit, PeerRelationName)
             self.update_endpoints(event.relation, omit_endpoints={departing_unit_ip})
 
         if event.departing_unit == self.charm.unit:
