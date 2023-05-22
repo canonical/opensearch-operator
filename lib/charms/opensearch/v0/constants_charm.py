@@ -36,6 +36,7 @@ TooManyNodesRemoved = (
     "Too many nodes being removed at the same time, please scale your application up."
 )
 ClusterHealthRed = "1 or more 'primary' shards are not assigned, please scale your application up."
+ClusterHealthUnknown = "No unit online, cannot determine if it's safe to scale-down."
 ClusterHealthYellow = (
     "1 or more 'replica' shards are not assigned, please scale your application up."
 )

@@ -14,7 +14,7 @@ from charms.opensearch.v0.constants_charm import (
     CertsExpirationError,
     ClientRelationName,
     ClusterHealthRed,
-    NoNodeUpInCluster,
+    ClusterHealthUnknown,
     PeerRelationName,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
@@ -60,6 +60,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStopError,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
+from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
     VOTING_TO_DELETE,
@@ -124,6 +125,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.tls = OpenSearchTLS(self, TLS_RELATION)
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
+        self.ops_lock = OpenSearchOpsLock(self)
 
         self.service_manager = RollingOpsManager(
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
@@ -303,6 +305,9 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):
         """Triggered when removing unit, Prior to the storage being detached."""
+        # acquire lock to ensure only 1 unit removed at a time
+        self.ops_lock.acquire()
+
         # we currently block the scale down if majority removed
         if self.app.planned_units() < math.ceil(
             len(self.model.get_relation(PeerRelationName).units) / 2
@@ -310,42 +315,37 @@ class OpenSearchBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(TooManyNodesRemoved)
             raise OpenSearchScaleDownError(TooManyNodesRemoved)
 
-        if self.opensearch.is_node_up() and self.alt_hosts:
-            # TODO query if current is CM + is_leader
-            if self.unit.is_leader():
-                remaining_nodes = [
-                    node for node in self._get_nodes(True) if node.name != self.unit_name
-                ]
-                self._compute_and_broadcast_updated_topology(remaining_nodes)
-
-            # attempt lock acquisition through index creation, should crash if index
-            # already created, meaning another unit is holding the lock
-            self.opensearch.request("PUT", "/.ops_stop", retries=3)
+        # if the leader is departing, and this hook fails "leader elected" won"t trigger,
+        # so we want to rebalance the node roles from here
+        if (
+            self.unit.is_leader()
+            and self.app.planned_units() > 1
+            and (self.opensearch.is_node_up() or self.alt_hosts)
+        ):
+            remaining_nodes = [
+                node
+                for node in self._get_nodes(self.opensearch.is_node_up())
+                if node.name != self.unit_name
+            ]
+            self._compute_and_broadcast_updated_topology(remaining_nodes)
 
         try:
             self._stop_opensearch()
 
-            # check cluster status
-            if not self.alt_hosts:
-                raise OpenSearchHAError(NoNodeUpInCluster)
-
-            health_color = self.health.apply(wait_for_green_first=True, use_localhost=False)
-            if health_color == HealthColors.RED:
-                raise OpenSearchHAError(ClusterHealthRed)
+            # safeguards in case planned_units > 0
+            if self.app.planned_units() > 0:
+                # check cluster status
+                if self.alt_hosts:
+                    health_color = self.health.apply(
+                        wait_for_green_first=True, use_localhost=False
+                    )
+                    if health_color == HealthColors.RED:
+                        raise OpenSearchHAError(ClusterHealthRed)
+                else:
+                    raise OpenSearchHAError(ClusterHealthUnknown)
         finally:
             # release lock
-            if self.alt_hosts:
-                resp_code = self.opensearch.request(
-                    "DELETE",
-                    "/.ops_stop",
-                    alt_hosts=self.alt_hosts,
-                    resp_status_code=True,
-                    retries=3,
-                )
-                # ignore 404, it means the index is not found and this just means that
-                # the cleanup happened before but event got deferred because of another error
-                if resp_code >= 400 and resp_code != 404:
-                    raise OpenSearchHttpError("Failed to remove 'ops_stop' lock index.")
+            self.ops_lock.release()
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.

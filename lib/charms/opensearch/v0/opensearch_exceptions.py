@@ -63,6 +63,10 @@ class OpenSearchNotFullyReadyError(OpenSearchError):
     """Exception thrown when a node is started but not full ready to take on requests."""
 
 
+class OpenSearchOpsLockAlreadyAcquiredError(OpenSearchError):
+    """Exception thrown when a node is started but not full ready to take on requests."""
+
+
 class OpenSearchCmdError(OpenSearchError):
     """Exception thrown when an OpenSearch bin command fails."""
 
