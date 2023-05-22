@@ -309,6 +309,7 @@ async def http_request(
     verify=True,
     user_password: Optional[str] = None,
     app: str = APP_NAME,
+    json_resp: bool = True,
 ):
     """Makes an HTTP request.
 
@@ -321,6 +322,7 @@ async def http_request(
         verify: whether verify certificate chain or not
         user_password: use alternative password than the admin one in the secrets.
         app: the name of the current application.
+        json_resp: return a json response or simply log
 
     Returns:
         A json object.
@@ -332,12 +334,19 @@ async def http_request(
         chain.write(admin_secrets["ca-chain"])
         chain.seek(0)
 
+        logger.info(f"Calling: {method} -- {endpoint}")
+
         request_kwargs = {
             "method": method,
             "url": endpoint,
-            "headers": {"Accept": "application/json", "Content-Type": "application/json"},
-            "timeout": 5,
+            "timeout": 15,
         }
+        if json_resp:
+            request_kwargs["headers"] = {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            }
+
         if isinstance(payload, str):
             request_kwargs["data"] = payload
         elif isinstance(payload, dict):
@@ -355,7 +364,11 @@ async def http_request(
         if resp_status_code:
             return resp.status_code
 
-        return resp.json()
+        if json_resp:
+            return resp.json()
+
+        logger.info(resp.text)
+        return resp
 
 
 async def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
