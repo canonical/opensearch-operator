@@ -6,14 +6,13 @@ import logging
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_databag import Scope
-from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchOpsLockAlreadyAcquiredError,
 )
 
 # The unique Charmhub library identifier, never change it
-LIBID = "b02ab02d4fd644fdabe02c61e509093f"
+LIBID = "0924c6d81c604a15873ad43498cd6895"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
@@ -31,7 +30,7 @@ class OpenSearchOpsLock:
     LOCK_INDEX = ".ops_lock"
     PEER_DATA_LOCK_FLAG = "ops_removing_unit"
 
-    def __init__(self, charm: OpenSearchBaseCharm):
+    def __init__(self, charm):
         self._charm = charm
         self._opensearch = charm.opensearch
 
