@@ -3,7 +3,6 @@
 
 """Base class for the OpenSearch Operators."""
 import logging
-import math
 import random
 from abc import abstractmethod
 from datetime import datetime
@@ -24,7 +23,6 @@ from charms.opensearch.v0.constants_charm import (
     TLSNewCertsRequested,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
-    TooManyNodesRemoved,
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
@@ -54,7 +52,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHAError,
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
-    OpenSearchScaleDownError,
     OpenSearchStartError,
     OpenSearchStartTimeoutError,
     OpenSearchStopError,
@@ -307,13 +304,6 @@ class OpenSearchBaseCharm(CharmBase):
         """Triggered when removing unit, Prior to the storage being detached."""
         # acquire lock to ensure only 1 unit removed at a time
         self.ops_lock.acquire()
-
-        # we currently block the scale down if majority removed
-        if self.app.planned_units() < math.ceil(
-            len(self.model.get_relation(PeerRelationName).units) / 2
-        ):
-            self.unit.status = BlockedStatus(TooManyNodesRemoved)
-            raise OpenSearchScaleDownError(TooManyNodesRemoved)
 
         # if the leader is departing, and this hook fails "leader elected" won"t trigger,
         # so we want to rebalance the node roles from here
