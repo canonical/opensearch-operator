@@ -40,9 +40,13 @@ class OpenSearchOpsLock:
         if len(self._charm.model.get_relation(PeerRelationName).units) == 1:
             return
 
+        # we check first on the peer data bag if the lock is already acquired
+        if self._is_lock_in_peer_data():
+            raise OpenSearchOpsLockAlreadyAcquiredError("Another unit is being removed.")
+
         host = self._charm.unit_ip if self._opensearch.is_node_up() else None
 
-        # can use opensearch to lock
+        # we can use opensearch to lock
         if host is not None or self._charm.alt_hosts:
             try:
                 # attempt lock acquisition through index creation, should crash if index
@@ -62,9 +66,6 @@ class OpenSearchOpsLock:
                 raise OpenSearchOpsLockAlreadyAcquiredError("Another unit is being removed.")
 
         # we could not use opensearch for locking, we use the peer rel data bag
-        if self._is_lock_in_peer_data():
-            raise OpenSearchOpsLockAlreadyAcquiredError("Another unit is being removed.")
-
         self._charm.peers_data.put(Scope.UNIT, OpenSearchOpsLock.PEER_DATA_LOCK_FLAG, True)
 
     def release(self):
