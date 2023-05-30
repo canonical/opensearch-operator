@@ -14,6 +14,7 @@ It requires a charm that extends OpenSearchBaseCharm as it refers internal objec
 """
 
 import base64
+import json
 import logging
 import re
 import socket
@@ -29,7 +30,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     generate_csr,
     generate_private_key,
 )
-from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
+from ops.charm import ActionEvent, RelationBrokenEvent, RelationChangedEvent, RelationJoinedEvent
 from ops.framework import Object
 
 # The unique Charmhub library identifier, never change it
@@ -62,6 +63,11 @@ class OpenSearchTLS(Object):
         self.framework.observe(
             self.charm.on[TLS_RELATION].relation_joined, self._on_tls_relation_joined
         )
+
+        self.framework.observe(
+            self.charm.on[TLS_RELATION].relation_changed, self._on_tls_relation_changed
+        )
+
         self.framework.observe(
             self.charm.on[TLS_RELATION].relation_broken, self._on_tls_relation_broken
         )
@@ -99,6 +105,8 @@ class OpenSearchTLS(Object):
 
     def _on_tls_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Request certificate when TLS relation joined."""
+        self.charm.on_tls_relation_joined()
+
         admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN)
         if self.charm.unit.is_leader() and admin_cert is None:
             self._request_certificate(Scope.APP, CertType.APP_ADMIN)
@@ -106,9 +114,39 @@ class OpenSearchTLS(Object):
         self._request_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
         self._request_certificate(Scope.UNIT, CertType.UNIT_HTTP)
 
-    def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
+    def _on_tls_relation_changed(self, event: RelationChangedEvent) -> None:
+        self.charm.on_tls_relation_broken()
+
+        # todo: how to only call in subsequent calls -- ONLY ON CONFIG CHANGES ?  Check operator code
+        #  perhaps test on existence of "certificates" in the tls operator peer rel data ?
+
+        tls_rel_data = event.relation.data[event.app]
+        if not tls_rel_data:
+            return
+
+        certs = tls_rel_data.get("certificates")
+        if not certs:
+            return
+
+        certs = json.loads(certs)
+        if not certs:
+            return
+
+        for cert_entry in certs:
+            if not cert_entry.get("revoked", False):
+                return
+
+        self.charm.on_tls_relation_joined()
+
+        if self.charm.unit.is_leader():
+            self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+
+        self._request_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
+        self._request_certificate(Scope.UNIT, CertType.UNIT_HTTP)
+
+    def _on_tls_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Notify the charm that the relation is broken."""
-        self.charm.on_tls_relation_broken(event)
+        self.charm.on_tls_relation_broken()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Enable TLS when TLS certificate available.
@@ -123,8 +161,8 @@ class OpenSearchTLS(Object):
             return
 
         # seems like the admin certificate is also broadcast to non leader units on refresh request
-        if not self.charm.unit.is_leader() and scope == Scope.APP:
-            return
+        # if not self.charm.unit.is_leader() and scope == Scope.APP:
+        #     return
 
         old_cert = secrets.get("cert", None)
         renewal = old_cert is not None and old_cert != event.certificate

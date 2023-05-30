@@ -4,6 +4,7 @@
 # See LICENSE file for licensing details.
 
 """Charmed Machine Operator for OpenSearch."""
+import glob
 import logging
 from os import remove
 from os.path import exists
@@ -53,14 +54,13 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             to_pkcs8(secrets["key"], secrets.get("key-password")),
         )
         self.opensearch.write_file(f"{certs_dir}/{cert_type}.cert", secrets["cert"])
-        self.opensearch.write_file(f"{certs_dir}/root-ca.cert", secrets["ca"], override=False)
+        self.opensearch.write_file(f"{certs_dir}/root-ca.cert", secrets["ca"])
 
-        if cert_type == CertType.APP_ADMIN:
-            self.opensearch.write_file(
-                f"{certs_dir}/chain.pem",
-                "\n".join(secrets["chain"][::-1]),
-                override=override_admin,
-            )
+        self.opensearch.write_file(
+            f"{certs_dir}/chain.pem",
+            "\n".join(secrets["chain"][::-1]),
+            override=True,  # override_admin,
+        )
 
     @override
     def _are_all_tls_resources_stored(self):
@@ -74,9 +74,25 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         return exists(f"{certs_dir}/chain.pem") and exists(f"{certs_dir}/root-ca.cert")
 
     @override
-    def _delete_stored_tls_resources(self):
-        """Delete the TLS resources of the unit that are stored on disk."""
+    def _delete_stored_tls_resources(self, delete_all: bool = False):
+        """Delete the TLS resources of the unit that are stored on disk.
+
+        Args:
+            delete_all: if set to true, any TLS related resource will be deleted.
+                        Otherwise, only cert/key of the HTTP / Transport layer of
+                        the unit are deleted.
+        """
+        # These are the stored resources on disk:
+        #   chain.pem, root-ca.cert, app-admin.[cert, key],
+        #   unit-http.[cert, key], unit-transport.[cert, key]
         certs_dir = self.opensearch.paths.certs
+
+        if delete_all:
+            stored_certs = glob.glob(f"{certs_dir}/*")
+            for cert in stored_certs:
+                remove(cert)
+            return
+
         for cert_type in [CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]:
             for extension in ["key", "cert"]:
                 try:
