@@ -381,12 +381,11 @@ class OpenSearchProvider(Object):
             ips = set([node.ip for node in self.charm._get_nodes(use_localhost=True)])
         except OpenSearchHttpError:
             logger.error("unable to get nodes")
-            # TODO maybe set endpoints to 0?
-            return
+            ips = set()
 
         port = self.opensearch.port
         endpoints = ",".join([f"{ip}:{port}" for ip in ips - omit_endpoints])
         databag_endpoints = relation.data[relation.app].get("endpoints")
 
-        if endpoints and endpoints != databag_endpoints:
+        if endpoints != databag_endpoints:
             self.opensearch_provides.set_endpoints(relation.id, endpoints)
