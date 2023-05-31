@@ -36,6 +36,7 @@ TooManyNodesRemoved = (
     "Too many nodes being removed at the same time, please scale your application up."
 )
 ClusterHealthRed = "1 or more 'primary' shards are not assigned, please scale your application up."
+ClusterHealthUnknown = "No unit online, cannot determine if it's safe to scale-down."
 ClusterHealthYellow = (
     "1 or more 'replica' shards are not assigned, please scale your application up."
 )
@@ -51,6 +52,7 @@ RequestUnitServiceOps = "Requesting lock on operation: {}"
 InstallProgress = "Installing OpenSearch..."
 SecurityIndexInitProgress = "Initializing the security index..."
 AdminUserInitProgress = "Configuring admin user..."
+TLSNewCertsRequested = "Requesting new TLS certificates..."
 HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 NewIndexRequested = "new index {index} requested"

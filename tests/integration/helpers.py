@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import json
 import logging
+import subprocess
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -46,6 +47,20 @@ MODEL_CONFIG = {
 logger = logging.getLogger(__name__)
 
 
+class Unit:
+    """Model class for a Unit, with properties widely used."""
+
+    def __init__(
+        self, id: int, name: str, ip: str, hostname: str, is_leader: bool, machine_id: int
+    ):
+        self.id = id
+        self.name = name
+        self.ip = ip
+        self.hostname = hostname
+        self.is_leader = is_leader
+        self.machine_id = machine_id
+
+
 async def app_name(ops_test: OpsTest) -> Optional[str]:
     """Returns the name of the cluster running OpenSearch.
 
@@ -74,7 +89,8 @@ async def run_action(
         A SimpleNamespace with "status, response (results)"
     """
     if unit_id is None:
-        unit_id = list(get_reachable_units(ops_test, app=app).keys())[0]
+        reachable_units = await get_reachable_units(ops_test, app=app)
+        unit_id = list(reachable_units.keys())[0]
 
     unit_name = [
         unit.name
@@ -98,6 +114,33 @@ async def get_admin_secrets(
     """
     # can retrieve from any unit running unit, so we pick the first
     return (await run_action(ops_test, unit_id, "get-password", app=app)).response
+
+
+async def get_application_units(ops_test: OpsTest, app: str = APP_NAME) -> List[Unit]:
+    """Get fully detailed units of an application."""
+    # Juju incorrectly reports the IP addresses after the network is restored this is reported as a
+    # bug here: https://github.com/juju/python-libjuju/issues/738. Once this bug is resolved use of
+    # `get_unit_ip` should be replaced with `.public_address`
+    resp_units = json.loads(
+        subprocess.check_output(
+            f"juju status --model {ops_test.model.info.name} {app} --format=json".split()
+        )
+    )["applications"][app]["units"]
+
+    units = []
+    for u_name, unit in resp_units.items():
+        unit_id = int(u_name.split("/")[-1])
+        unit = Unit(
+            id=unit_id,
+            name=u_name.replace("/", "-"),
+            ip=unit["public-address"],
+            hostname=await get_unit_hostname(ops_test, unit_id, app),
+            is_leader=unit.get("leader", False),
+            machine_id=int(unit["machine"]),
+        )
+        units.append(unit)
+
+    return units
 
 
 def get_application_unit_names(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
@@ -145,7 +188,7 @@ def get_application_unit_status(ops_test: OpsTest, app: str = APP_NAME) -> Dict[
     return result
 
 
-def get_application_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
+async def get_application_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
     """List the unit IPs of an application.
 
     Args:
@@ -155,10 +198,10 @@ def get_application_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List[str
     Returns:
         list of current unit IPs of the application
     """
-    return [unit.public_address for unit in ops_test.model.applications[app].units]
+    return [unit.ip for unit in await get_application_units(ops_test, app)]
 
 
-def get_application_unit_ips_names(ops_test: OpsTest, app: str = APP_NAME) -> Dict[str, str]:
+async def get_application_unit_ips_names(ops_test: OpsTest, app: str = APP_NAME) -> Dict[str, str]:
     """List the units of an application by name and corresponding IPs.
 
     Args:
@@ -169,13 +212,13 @@ def get_application_unit_ips_names(ops_test: OpsTest, app: str = APP_NAME) -> Di
         Dictionary unit_name / unit_ip, of the application
     """
     result = {}
-    for unit in ops_test.model.applications[app].units:
-        result[unit.name.replace("/", "-")] = unit.public_address
+    for unit in await get_application_units(ops_test, app):
+        result[unit.name] = unit.ip
 
     return result
 
 
-def get_application_unit_ids_ips(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
+async def get_application_unit_ids_ips(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
     """List the units of an application by id and corresponding IP.
 
     Args:
@@ -186,21 +229,35 @@ def get_application_unit_ids_ips(ops_test: OpsTest, app: str = APP_NAME) -> Dict
         Dictionary unit_id / unit_ip, of the application
     """
     result = {}
-    for unit in ops_test.model.applications[app].units:
-        result[int(unit.name.split("/")[1])] = unit.public_address
+    for unit in await get_application_units(ops_test, app):
+        result[unit.id] = unit.ip
 
     return result
 
 
+async def get_application_unit_ids_hostnames(
+    ops_test: OpsTest, app: str = APP_NAME
+) -> Dict[int, str]:
+    """List the units of an application by id and corresponding host name."""
+    result = {}
+    for unit in ops_test.model.applications[app].units:
+        unit_id = int(unit.name.split("/")[1])
+        result[unit_id] = await get_unit_hostname(ops_test, unit_id, app)
+
+    return result
+
+
+async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str = APP_NAME) -> str:
+    """Get the hostname of a specific unit."""
+    _, hostname, _ = await ops_test.juju("ssh", f"{app}/{unit_id}", "hostname")
+    return hostname.strip()
+
+
 async def get_leader_unit_ip(ops_test: OpsTest, app: str = APP_NAME) -> str:
     """Helper function that retrieves the leader unit."""
-    leader_unit = None
-    for unit in ops_test.model.applications[app].units:
-        if await unit.is_leader_from_status():
-            leader_unit = unit
-            break
-
-    return leader_unit.public_address
+    for unit in await get_application_units(ops_test, app):
+        if unit.is_leader:
+            return unit.ip
 
 
 async def get_leader_unit_id(ops_test: OpsTest, app: str = APP_NAME) -> int:
@@ -214,20 +271,31 @@ async def get_leader_unit_id(ops_test: OpsTest, app: str = APP_NAME) -> int:
     return int(leader_unit.name.split("/")[1])
 
 
-def get_reachable_unit_ips(ops_test: OpsTest) -> List[str]:
+async def get_controller_hostname(ops_test: OpsTest) -> str:
+    """Return controller machine hostname."""
+    _, raw_controller, _ = await ops_test.juju("show-controller")
+
+    controller = yaml.safe_load(raw_controller.strip())
+
+    return [
+        machine.get("instance-id")
+        for machine in controller[ops_test.controller_name]["controller-machines"].values()
+    ][0]
+
+
+async def get_reachable_unit_ips(ops_test: OpsTest) -> List[str]:
     """Helper function to retrieve the IP addresses of all online units."""
-    return reachable_hosts(get_application_unit_ips(ops_test))
+    return reachable_hosts(await get_application_unit_ips(ops_test))
 
 
-def get_reachable_units(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
+async def get_reachable_units(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
     """Helper function to retrieve a dict of id/IP addresses of all online units."""
     result = {}
-    for unit in ops_test.model.applications[app].units:
-        if not is_reachable(unit.public_address, 9200):
+    for unit in await get_application_units(ops_test, app):
+        if not is_reachable(unit.ip, 9200):
             continue
 
-        u_id = int(unit.name.split("/")[1])
-        result[u_id] = unit.public_address
+        result[unit.id] = unit.ip
 
     return result
 
@@ -241,6 +309,7 @@ async def http_request(
     verify=True,
     user_password: Optional[str] = None,
     app: str = APP_NAME,
+    json_resp: bool = True,
 ):
     """Makes an HTTP request.
 
@@ -253,6 +322,7 @@ async def http_request(
         verify: whether verify certificate chain or not
         user_password: use alternative password than the admin one in the secrets.
         app: the name of the current application.
+        json_resp: return a json response or simply log
 
     Returns:
         A json object.
@@ -264,12 +334,19 @@ async def http_request(
         chain.write(admin_secrets["ca-chain"])
         chain.seek(0)
 
+        logger.info(f"Calling: {method} -- {endpoint}")
+
         request_kwargs = {
             "method": method,
             "url": endpoint,
-            "headers": {"Accept": "application/json", "Content-Type": "application/json"},
-            "timeout": 5,
+            "timeout": 15,
         }
+        if json_resp:
+            request_kwargs["headers"] = {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            }
+
         if isinstance(payload, str):
             request_kwargs["data"] = payload
         elif isinstance(payload, dict):
@@ -287,14 +364,18 @@ async def http_request(
         if resp_status_code:
             return resp.status_code
 
-        return resp.json()
+        if json_resp:
+            return resp.json()
+
+        logger.info(resp.text)
+        return resp
 
 
 async def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
     """Print the logs of a unit failing with a certain set of statuses."""
     unit_ip = endpoint[8:].split(":")[0]
 
-    ids_ips = get_application_unit_ids_ips(ops_test, app=app)
+    ids_ips = await get_application_unit_ids_ips(ops_test, app=app)
     unit_id = [u_id for u_id, u_ip in ids_ips.items() if u_ip == unit_ip][0]
 
     root = "/var/snap/opensearch"
