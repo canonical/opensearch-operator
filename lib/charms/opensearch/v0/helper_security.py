@@ -79,14 +79,14 @@ def rfc2253_tls_subject(subject: string) -> str:
 
 def to_pkcs8(private_key: str, password: Optional[str] = None) -> str:
     """Convert a PEM key to PKCS8."""
-    command = """openssl pkcs8 \
-        -inform PEM \
-        -outform PEM \
-        -in {tmp_key_filename} \
-        -topk8 \
-        -v1 PBE-SHA1-3DES \
-        -passout pass:"{password}" \
-        -passin pass:"{password}" \
+    command = """openssl pkcs8
+        -inform PEM
+        -outform PEM
+        -in {tmp_key_filename}
+        -topk8
+        -v1 PBE-SHA1-3DES
+        -passout pass:"{password}"
+        -passin pass:"{password}"
         -out {tmp_pkcs8_key_filename}"""
     if password is None:
         password = ""

@@ -29,9 +29,7 @@ ServiceStopFailed = "An error occurred while attempting to stop the OpenSearch s
 ServiceIsStopping = "The OpenSearch service is stopping."
 TLSRelationMissing = "The TLS operator is not related to OpenSearch. Cannot start this unit."
 TLSNotFullyConfigured = "Waiting for TLS to be fully configured..."
-TLSRelationBrokenError = (
-    "Relation broken with the TLS Operator while TLS not fully configured."
-)
+TLSRelationBrokenError = "Relation broken with the TLS Operator while TLS not fully configured."
 NoNodeUpInCluster = "No node is up in this cluster."
 TooManyNodesRemoved = (
     "Too many nodes being removed at the same time, please scale your application up."

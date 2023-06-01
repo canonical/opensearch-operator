@@ -4,9 +4,8 @@
 """Base class for the OpenSearch Operators."""
 import logging
 import random
-from abc import abstractmethod
 from datetime import datetime
-from typing import Dict, List, Optional, Type
+from typing import List, Optional, Type
 
 from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
@@ -119,7 +118,9 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch_exclusions = OpenSearchExclusions(self)
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = SecretsDataStore(self, PeerRelationName)
-        self.tls = OpenSearchTLS(self, TLS_RELATION)
+        self.tls = OpenSearchTLS(
+            self, TLS_RELATION, self.opensearch.paths.jdk, self.opensearch.paths.certs
+        )
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.ops_lock = OpenSearchOpsLock(self)
@@ -131,6 +132,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch_provider = OpenSearchProvider(self)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
+        self.framework.observe(self.framework.on.commit, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -196,7 +198,7 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        if not self._is_tls_fully_configured():
+        if not self._are_security_resources_configured():
             self.unit.status = WaitingStatus(TLSNotFullyConfigured)
             event.defer()
             return
@@ -225,7 +227,7 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         # Store the "Admin" certificate, key and CA on the disk of the new unit
-        self._store_tls_resources(CertType.APP_ADMIN, admin_secrets, override_admin=False)
+        # self._store_tls_resources(CertType.APP_ADMIN, admin_secrets, override_admin=False)
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units when a new node joins the cluster."""
@@ -311,7 +313,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.ops_lock.acquire()
 
         # if the leader is departing, and this hook fails "leader elected" won"t trigger,
-        # so we want to rebalance the node roles from here
+        # so we want to re-balance the node roles from here
         if (
             self.unit.is_leader()
             and self.app.planned_units() > 1
@@ -387,7 +389,6 @@ class OpenSearchBaseCharm(CharmBase):
         """On config changed event. Useful for IP changes or for user provided config changes."""
         if self.opensearch_config.update_host_if_needed():
             self.unit.status = MaintenanceStatus(TLSNewCertsRequested)
-            self._delete_stored_tls_resources()
             self.tls.request_new_unit_certificates()
 
             # since when an IP change happens, "_on_peer_relation_joined" won't be called,
@@ -423,7 +424,7 @@ class OpenSearchBaseCharm(CharmBase):
             event.fail("Only the 'admin' username is allowed for this action.")
             return
 
-        if not self._is_tls_fully_configured():
+        if not self._are_security_resources_configured():
             event.fail("admin user or TLS certificates not configured yet.")
             return
 
@@ -431,7 +432,7 @@ class OpenSearchBaseCharm(CharmBase):
         cert = self.secrets.get_object(
             Scope.APP, CertType.APP_ADMIN.val
         )  # replace later with new user certs
-        ca_chain = "\n".join(cert["chain"][::-1])
+        ca_chain = "\n".join(cert["cert-chain"][::-1])
 
         event.set_results(
             {
@@ -442,7 +443,7 @@ class OpenSearchBaseCharm(CharmBase):
         )
 
     def on_tls_conf_set(
-        self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
+        self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
     ):
         """Called after certificate ready and stored on the corresponding scope databag.
 
@@ -453,19 +454,6 @@ class OpenSearchBaseCharm(CharmBase):
         # Get the list of stored secrets for this cert
         current_secrets = self.secrets.get_object(scope, cert_type.val)
 
-        # Store cert/key on disk - must happen after opensearch stop for transport certs renewal
-        self._store_tls_resources(cert_type, current_secrets)
-
-        if not self.unit.is_leader():
-            if self._all_certificates_available():
-                # store the admin certificates
-                self._store_tls_resources(
-                    CertType.APP_ADMIN, self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-                )
-            else:  # this means the admin certificate is not yet available
-                event.defer()
-                return
-
         if scope == Scope.UNIT:
             # node http or transport cert
             self.opensearch_config.set_node_tls_conf(cert_type, current_secrets)
@@ -473,7 +461,7 @@ class OpenSearchBaseCharm(CharmBase):
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
-        if self._is_tls_fully_configured():
+        if self._are_security_resources_configured():
             self.status.clear(TLSNotFullyConfigured)
 
             # In case of renewal of the unit transport layer cert - restart opensearch
@@ -488,6 +476,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def on_tls_relation_joined(self):
         """We clean up any residue from the previous TLS relation if any."""
+        logger.debug(
+            f"\n\non_tls_relation_joined: \n\t- {self.unit_name} -- leader: {self.unit.is_leader()} "
+            f"-- was rel_broken: {self.peers_data.get(Scope.UNIT, 'tls_rel_broken', False)}"
+        )
         if not self.peers_data.get(Scope.UNIT, "tls_rel_broken", False):
             return
 
@@ -499,15 +491,16 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader():
             self.secrets.delete(Scope.APP, CertType.APP_ADMIN.val)
 
-        # we remove all the TLS resources that are stored on disk
-        self._delete_stored_tls_resources(delete_all=True)
+        # self.peers_data.delete(Scope.UNIT, "tls_rel_broken")
+        # if self.unit.is_leader():
+        #     self.peers_data.delete(Scope.APP, "tls_rel_broken")
 
         # We clear the status
         self.status.clear(TLSRelationBrokenError)
 
     def on_tls_relation_broken(self):
         """As long as all certificates are produced, we don't do anything."""
-        if self._is_tls_fully_configured():
+        if self._are_security_resources_configured():
             # we use the unit's peer rel databag, in case the leader cannot receive hooks,
             # in cases like storage_detaching is crashing due to scale-down safeguards
             # in the leader unit
@@ -519,31 +512,17 @@ class OpenSearchBaseCharm(CharmBase):
         # Otherwise, we block.
         self.unit.status = BlockedStatus(TLSRelationBrokenError)
 
-    def _is_tls_fully_configured(self) -> bool:
+    def _are_security_resources_configured(self) -> bool:
         """Check if TLS fully configured meaning the admin user configured & 3 certs present."""
-        # In case the initialisation of the admin user is not finished yet
-        if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
-            return False
+        # In case the
+        if (
+            self.peers_data.get(Scope.APP, "admin_user_initialized")  # admin user init complete
+            and self.tls.all_certificates_available()  # all certificates well generated
+            and self.tls.all_tls_resources_stored()  # all certificates stored on disk
+        ):
+            return True
 
-        if not self._all_certificates_available():
-            return False
-
-        return self._are_all_tls_resources_stored()
-
-    def _all_certificates_available(self) -> bool:
-        admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if not admin_secrets or not admin_secrets.get("cert") or not admin_secrets.get("chain"):
-            return False
-
-        unit_transport_secrets = self.secrets.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)
-        if not unit_transport_secrets or not unit_transport_secrets.get("cert"):
-            return False
-
-        unit_http_secrets = self.secrets.get_object(Scope.UNIT, CertType.UNIT_HTTP.val)
-        if not unit_http_secrets or not unit_http_secrets.get("cert"):
-            return False
-
-        return True
+        return False
 
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
@@ -610,8 +589,7 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader() and not self.peers_data.get(
             Scope.APP, "security_index_initialised"
         ):
-            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-            self._initialize_security_index(admin_secrets)
+            self._initialize_security_index()
             self.peers_data.put(Scope.APP, "security_index_initialised", True)
 
         # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
@@ -649,7 +627,7 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _restart_opensearch(self, event: EventBase) -> None:
         """Restart OpenSearch if possible."""
-        if not self._is_tls_fully_configured():
+        if not self._are_security_resources_configured():
             event.defer()
             return
 
@@ -745,18 +723,25 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.secrets.put(Scope.APP, "admin_password", pwd)
 
-    def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
+    def _initialize_security_index(self) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.
 
         IMPORTANT: must only run once per cluster, otherwise the index gets overrode
         """
+        admin_secrets = self.secrets.get
+
         args = [
             f"-cd {self.opensearch.paths.conf}/opensearch-security/",
             f"-cn {self.app.name}-{self.model.name}",
             f"-h {self.unit_ip}",
-            f"-cacert {self.opensearch.paths.certs}/root-ca.cert",
-            f"-cert {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.cert",
-            f"-key {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.key",
+            f"-ts {self.opensearch.paths.certs}/ca.p12",
+            f"-tspass {self.secrets.get(Scope.APP, 'keystore-password-ca')}",
+            "-tsalias ca",
+            "-tst PKCS12",
+            f"-ks {self.opensearch.paths.certs}/{CertType.APP_ADMIN.val}.p12",
+            f"-kspass {self.secrets.get(Scope.APP, f'keystore-password-{CertType.APP_ADMIN.val}')}.p12",
+            f"-ksalias {CertType.APP_ADMIN.val}",
+            "-kst PKCS12",
         ]
 
         admin_key_pwd = admin_secrets.get("key-password", None)
@@ -776,6 +761,9 @@ class OpenSearchBaseCharm(CharmBase):
             Scope.APP, "security_index_initialised", False
         ):
             return []
+
+        # todo handle case where get_nodes(False) and no node available??
+        # if self.opensearch.is_node_up()
 
         return ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
 
@@ -906,28 +894,28 @@ class OpenSearchBaseCharm(CharmBase):
             Scope.UNIT, "certs_exp_checked_at", datetime.now().strftime(date_format)
         )
 
-    @abstractmethod
-    def _store_tls_resources(
-        self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
-    ):
-        """Write certificates and keys on disk."""
-        pass
-
-    @abstractmethod
-    def _are_all_tls_resources_stored(self):
-        """Check if all TLS resources are stored on disk."""
-        pass
-
-    @abstractmethod
-    def _delete_stored_tls_resources(self, delete_all: bool = False):
-        """Delete the TLS resources of the unit that are stored on disk.
-
-        Args:
-            delete_all: if set to true, any TLS related resource will be deleted.
-                        Otherwise, only cert/key of the HTTP / Transport layer of
-                        the unit are deleted.
-        """
-        pass
+    # @abstractmethod
+    # def _store_tls_resources(
+    #     self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
+    # ):
+    #     """Write certificates and keys on disk."""
+    #     pass
+    #
+    # @abstractmethod
+    # def _are_all_tls_resources_stored(self):
+    #     """Check if all TLS resources are stored on disk."""
+    #     pass
+    #
+    # @abstractmethod
+    # def _delete_stored_tls_resources(self, delete_all: bool = False):
+    #     """Delete the TLS resources of the unit that are stored on disk.
+    #
+    #     Args:
+    #         delete_all: if set to true, any TLS related resource will be deleted.
+    #                     Otherwise, only cert/key of the HTTP / Transport layer of
+    #                     the unit are deleted.
+    #     """
+    #     pass
 
     @property
     def unit_ip(self) -> str:
