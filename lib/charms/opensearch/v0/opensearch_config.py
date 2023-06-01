@@ -73,7 +73,6 @@ class OpenSearchConfig:
 
     def set_node_tls_conf(self, cert_type: CertType, secrets: Dict[str, any]):
         """Configures TLS for nodes."""
-        logger.debug(f"set_node_tls_conf: {cert_type}")
         target_conf_layer = "http" if cert_type == CertType.UNIT_HTTP else "transport"
 
         self._opensearch.config.put(
@@ -177,13 +176,35 @@ class OpenSearchConfig:
         """Add CM nodes ips / host names to the seed host list of this unit."""
         cm_ips_hostnames = cm_ips.copy()
         for ip in cm_ips:
-            name, aliases, addresses = socket.gethostbyaddr(ip)
-            cm_ips_hostnames.extend([name] + aliases + addresses)
+            try:
+                name, aliases, addresses = socket.gethostbyaddr(ip)
+                cm_ips_hostnames.extend([name] + aliases + addresses)
+            except socket.herror:
+                # no ptr record - the IP is enough and the only thing we have
+                pass
 
         with open(self._opensearch.paths.seed_hosts, "w+") as f:
-            lines = "\n".join(cm_ips_hostnames)
+            lines = "\n".join(set(cm_ips_hostnames))
             f.write(f"{lines}\n")
 
     def cleanup_bootstrap_conf(self):
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
+
+    def update_host_if_needed(self) -> bool:
+        """Update the opensearch config with the current network hosts, after having started.
+
+        Returns: True if host updated, False otherwise.
+        """
+        old_hosts = set(self.load_node().get("network.host", []))
+        if not old_hosts:
+            # Unit not configured yet
+            return False
+
+        hosts = set(["_site_"] + self._opensearch.network_hosts)
+        if old_hosts != hosts:
+            logger.info(f"Updating network.host from: {old_hosts} - to: {hosts}")
+            self._opensearch.config.put(self.CONFIG_YML, "network.host", hosts)
+            return True
+
+        return False

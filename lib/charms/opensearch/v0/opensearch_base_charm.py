@@ -3,7 +3,6 @@
 
 """Base class for the OpenSearch Operators."""
 import logging
-import math
 import random
 from abc import abstractmethod
 from datetime import datetime
@@ -14,16 +13,16 @@ from charms.opensearch.v0.constants_charm import (
     CertsExpirationError,
     ClientRelationName,
     ClusterHealthRed,
-    NoNodeUpInCluster,
+    ClusterHealthUnknown,
     PeerRelationName,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
     ServiceStartError,
     ServiceStopped,
+    TLSNewCertsRequested,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
-    TooManyNodesRemoved,
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
@@ -52,12 +51,13 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHAError,
     OpenSearchHttpError,
-    OpenSearchScaleDownError,
+    OpenSearchNotFullyReadyError,
     OpenSearchStartError,
     OpenSearchStartTimeoutError,
     OpenSearchStopError,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
+from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
     VOTING_TO_DELETE,
@@ -73,6 +73,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
 from ops.charm import (
     ActionEvent,
     CharmBase,
+    ConfigChangedEvent,
     LeaderElectedEvent,
     RelationBrokenEvent,
     RelationChangedEvent,
@@ -121,6 +122,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.tls = OpenSearchTLS(self, TLS_RELATION)
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
+        self.ops_lock = OpenSearchOpsLock(self)
 
         self.service_manager = RollingOpsManager(
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
@@ -131,6 +133,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
 
         self.framework.observe(
             self.on[PeerRelationName].relation_created, self._on_peer_relation_created
@@ -260,12 +263,13 @@ class OpenSearchBaseCharm(CharmBase):
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
-        data = event.relation.data.get(event.unit if self.unit.is_leader() else event.app)
-        if not data:
+        app_data = event.relation.data.get(event.app)
+        unit_data = event.relation.data.get(event.unit)
+        if not unit_data and not app_data:
             return
 
-        if self.unit.is_leader():
-            if data.get("bootstrap_contributor"):
+        if unit_data and self.unit.is_leader():
+            if unit_data.get("bootstrap_contributor"):
                 contributor_count = self.peers_data.get(
                     Scope.APP, "bootstrap_contributors_count", 0
                 )
@@ -273,11 +277,12 @@ class OpenSearchBaseCharm(CharmBase):
                     Scope.APP, "bootstrap_contributors_count", contributor_count + 1
                 )
 
-            if data.get(VOTING_TO_DELETE) or data.get(ALLOCS_TO_DELETE):
+            if unit_data.get(VOTING_TO_DELETE) or unit_data.get(ALLOCS_TO_DELETE):
                 self.opensearch_exclusions.cleanup()
 
         # Run restart node on the concerned unit
-        self._reconfigure_and_restart_unit_if_needed()
+        if app_data:
+            self._reconfigure_and_restart_unit_if_needed()
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
@@ -297,49 +302,40 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):
         """Triggered when removing unit, Prior to the storage being detached."""
-        # we currently block the scale down if majority removed
-        if self.app.planned_units() < math.ceil(
-            len(self.model.get_relation(PeerRelationName).units) / 2
+        # acquire lock to ensure only 1 unit removed at a time
+        self.ops_lock.acquire()
+
+        # if the leader is departing, and this hook fails "leader elected" won"t trigger,
+        # so we want to rebalance the node roles from here
+        if (
+            self.unit.is_leader()
+            and self.app.planned_units() > 1
+            and (self.opensearch.is_node_up() or self.alt_hosts)
         ):
-            self.unit.status = BlockedStatus(TooManyNodesRemoved)
-            raise OpenSearchScaleDownError(TooManyNodesRemoved)
-
-        if self.opensearch.is_node_up() and self.alt_hosts:
-            # TODO query if current is CM + is_leader
-            if self.unit.is_leader():
-                remaining_nodes = [
-                    node for node in self._get_nodes(True) if node.name != self.unit_name
-                ]
-                self._compute_and_broadcast_updated_topology(remaining_nodes)
-
-            # attempt lock acquisition through index creation, should crash if index
-            # already created, meaning another unit is holding the lock
-            self.opensearch.request("PUT", "/.ops_stop", retries=3)
+            remaining_nodes = [
+                node
+                for node in self._get_nodes(self.opensearch.is_node_up())
+                if node.name != self.unit_name
+            ]
+            self._compute_and_broadcast_updated_topology(remaining_nodes)
 
         try:
             self._stop_opensearch()
 
-            # check cluster status
-            if not self.alt_hosts:
-                raise OpenSearchHAError(NoNodeUpInCluster)
-
-            health_color = self.health.apply(wait_for_green_first=True, use_localhost=False)
-            if health_color == HealthColors.RED:
-                raise OpenSearchHAError(ClusterHealthRed)
+            # safeguards in case planned_units > 0
+            if self.app.planned_units() > 0:
+                # check cluster status
+                if self.alt_hosts:
+                    health_color = self.health.apply(
+                        wait_for_green_first=True, use_localhost=False
+                    )
+                    if health_color == HealthColors.RED:
+                        raise OpenSearchHAError(ClusterHealthRed)
+                else:
+                    raise OpenSearchHAError(ClusterHealthUnknown)
         finally:
             # release lock
-            if self.alt_hosts:
-                resp_code = self.opensearch.request(
-                    "DELETE",
-                    "/.ops_stop",
-                    alt_hosts=self.alt_hosts,
-                    resp_status_code=True,
-                    retries=3,
-                )
-                # ignore 404, it means the index is not found and this just means that
-                # the cleanup happened before but event got deferred because of another error
-                if resp_code >= 400 and resp_code != 404:
-                    raise OpenSearchHttpError("Failed to remove 'ops_stop' lock index.")
+            self.ops_lock.release()
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
@@ -365,6 +361,7 @@ class OpenSearchBaseCharm(CharmBase):
         # if there are exclusions to be removed
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
+
             if self.health.apply() == HealthColors.YELLOW_TEMP:
                 event.defer()
                 return
@@ -380,6 +377,20 @@ class OpenSearchBaseCharm(CharmBase):
 
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
+
+    def _on_config_changed(self, _: ConfigChangedEvent):
+        """On config changed event. Useful for IP changes or for user provided config changes."""
+        if self.opensearch_config.update_host_if_needed():
+            self.unit.status = MaintenanceStatus(TLSNewCertsRequested)
+            self._delete_stored_tls_resources()
+            self.tls.request_new_unit_certificates()
+
+            # since when an IP change happens, "_on_peer_relation_joined" won't be called,
+            # we need to alert the leader that it must recompute the node roles for any unit whose
+            # roles were changed while the current unit was cut-off from the rest of the network
+            self.on[PeerRelationName].relation_joined.emit(
+                self.model.get_relation(PeerRelationName)
+            )
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -448,7 +459,7 @@ class OpenSearchBaseCharm(CharmBase):
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-        if renewal and cert_type == CertType.UNIT_TRANSPORT:
+        if renewal and self._is_tls_fully_configured():
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
@@ -492,7 +503,7 @@ class OpenSearchBaseCharm(CharmBase):
             try:
                 self._post_start_init()
                 self.status.clear(WaitingToStart)
-            except OpenSearchHttpError:
+            except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
                 event.defer()
             return
 
@@ -523,8 +534,9 @@ class OpenSearchBaseCharm(CharmBase):
             # Set the configuration of the node
             self._set_node_conf(nodes)
         except OpenSearchHttpError:
-            event.defer()
             self.peers_data.delete(Scope.UNIT, "starting")
+            event.defer()
+            self._post_start_init()
             return
 
         try:
@@ -536,21 +548,29 @@ class OpenSearchBaseCharm(CharmBase):
             )
             self._post_start_init()
             self.status.clear(WaitingToStart)
-        except OpenSearchStartTimeoutError:
+        except (OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
-        except OpenSearchStartError:
+        except OpenSearchStartError as e:
+            logger.error(e)
             self.peers_data.delete(Scope.UNIT, "starting")
             self.unit.status = BlockedStatus(ServiceStartError)
             event.defer()
 
     def _post_start_init(self):
         """Initialization post OpenSearch start."""
-        if self.unit.is_leader():
-            # initialize the security index if needed and if the admin certs are written on disk
-            if not self.peers_data.get(Scope.APP, "security_index_initialised"):
-                admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-                self._initialize_security_index(admin_secrets)
-                self.peers_data.put(Scope.APP, "security_index_initialised", True)
+        # initialize the security index if needed (and certs written on disk etc.)
+        if self.unit.is_leader() and not self.peers_data.get(
+            Scope.APP, "security_index_initialised"
+        ):
+            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+            self._initialize_security_index(admin_secrets)
+            self.peers_data.put(Scope.APP, "security_index_initialised", True)
+
+        # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
+        # may be thrown when calling a node - we want to ensure this node is perfectly ready
+        # before marking it as ready
+        if not self.opensearch.is_node_up():
+            raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
         # cleanup bootstrap conf in the node
         if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
@@ -567,9 +587,6 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
-        if not self.opensearch.is_node_up():
-            return
-
         self.unit.status = WaitingStatus(ServiceIsStopping)
 
         # 1. Add current node to the voting + alloc exclusions
@@ -648,13 +665,11 @@ class OpenSearchBaseCharm(CharmBase):
         hashed_pwd, pwd = generate_hashed_password(pwd)
 
         if is_update:
-            # TODO replace with user_manager.patch_user()
             resp = self.opensearch.request(
                 "PATCH",
                 "/_plugins/_security/api/internalusers/admin",
                 [{"op": "replace", "path": "/hash", "value": hashed_pwd}],
             )
-            logger.debug(f"Patch admin user response: {resp}")
             if resp.get("status") != "OK":
                 raise OpenSearchError(f"{resp}")
         else:
@@ -776,17 +791,16 @@ class OpenSearchBaseCharm(CharmBase):
         )
 
         new_node_conf = nodes_config.get(self.unit_name)
-        if not new_node_conf and not self.opensearch.is_node_up():
+        if not new_node_conf:
             # the conf could not be computed / broadcasted, because this node is
             # "starting" and is not online "yet" - either barely being configured (i.e. TLS)
             # or waiting to start.
             return
 
-        if new_node_conf:
-            current_conf = self.opensearch_config.load_node()
-            if sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles):
-                # no conf change (roles for now)
-                return
+        current_conf = self.opensearch_config.load_node()
+        if sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles):
+            # no conf change (roles for now)
+            return
 
         self.unit.status = WaitingStatus(WaitingToStart)
         self.on[self.service_manager.name].acquire_lock.emit(
@@ -850,6 +864,11 @@ class OpenSearchBaseCharm(CharmBase):
     @abstractmethod
     def _are_all_tls_resources_stored(self):
         """Check if all TLS resources are stored on disk."""
+        pass
+
+    @abstractmethod
+    def _delete_stored_tls_resources(self):
+        """Delete the TLS resources of the unit that are stored on disk."""
         pass
 
     @property
