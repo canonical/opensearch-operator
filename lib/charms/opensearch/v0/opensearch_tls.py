@@ -443,11 +443,11 @@ class OpenSearchTLS(Object):
         store_path = f"{self.certs_path}/{alias}.p12"
         try:
             run_cmd(
-                f"""{keytool} -changealias
-                -alias {alias}
-                -destalias old-{alias}
-                -keystore {store_path}
-                -storepass {store_pwd}
+                f"""{keytool} -changealias \
+                -alias {alias} \
+                -destalias old-{alias} \
+                -keystore {store_path} \
+                -storepass {store_pwd} \
                 -storetype PKCS12
             """
             )
@@ -464,19 +464,19 @@ class OpenSearchTLS(Object):
             ca_tmp_file.flush()
 
             run_cmd(
-                f"""{keytool} -importcert
-                -trustcacerts
-                -noprompt
-                -alias {alias}
-                -keystore {store_path}
-                -file {alias}.cert
-                -storepass {store_pwd}
+                f"""{keytool} -importcert \
+                -trustcacerts \
+                -noprompt \
+                -alias {alias} \
+                -keystore {store_path} \
+                -file {alias}.cert \
+                -storepass {store_pwd} \
                 -storetype PKCS12
             """
             )
 
         # todo chown / chmod
-        run_cmd(f"sudo chown snap_daemon:root {store_path}")
+        run_cmd(f"sudo chown -R snap_daemon:root {self.certs_path}")
 
     def remove_old_ca(self, store_pass: str):
         """Remove old CA cert from trust store."""
@@ -505,14 +505,16 @@ class OpenSearchTLS(Object):
 
         try:
             run_cmd(
-                f"""openssl pkcs12 -export
-                -in {tmp_cert.name}
-                -inkey {tmp_key.name}
-                -out {self.certs_path}/{cert_type.val}.p12
-                -name {cert_type.val}
+                f"""openssl pkcs12 -export \
+                -in {tmp_cert.name} \
+                -inkey {tmp_key.name} \
+                -out {self.certs_path}/{cert_type.val}.p12 \
+                -name {cert_type.val} \
                 -password pass:{store_pwd}
             """
             )
+            run_cmd(f"sudo chown -R snap_daemon:root {self.certs_path}")
+
             # todo chown / chmod
         finally:
             tmp_key.close()
@@ -528,9 +530,9 @@ class OpenSearchTLS(Object):
         keytool = f"sudo {self.jdk_path}/bin/keytool"
         try:
             run_cmd(
-                f"""{keytool} -delete
-                -alias {alias}
-                -storepass {store_pass}
+                f"""{keytool} -delete \
+                -alias {alias} \
+                -storepass {store_pass} \
                 -keystore {self.certs_path}/{key_store_name}.p12
             """
             )
