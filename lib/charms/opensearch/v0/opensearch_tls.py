@@ -129,8 +129,8 @@ class OpenSearchTLS(Object):
         self._delete_tls_resources()
 
         # create passwords for both unit-http/transport key_stores
-        self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.UNIT_TRANSPORT.val)
-        self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.UNIT_HTTP.val)
+        self._create_keystore_pwd_if_not_exists(Scope.UNIT, CertType.UNIT_TRANSPORT.val)
+        self._create_keystore_pwd_if_not_exists(Scope.UNIT, CertType.UNIT_HTTP.val)
 
         if self.charm.unit.is_leader():
             # create passwords for both ca trust_store/admin key_store
@@ -495,16 +495,15 @@ class OpenSearchTLS(Object):
 
         self._remove_key_store_content_by_alias(store_pwd, alias=cert_type.val)
 
-        with (
-            tempfile.NamedTemporaryFile(mode="w+t") as tmp_key,
-            tempfile.NamedTemporaryFile(mode="w+t") as tmp_cert,
-        ):
-            tmp_key.write(private_key)
-            tmp_key.flush()
+        tmp_key = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_key.write(private_key)
+        tmp_key.flush()
 
-            tmp_cert.write("\n".join(cert_chain))
-            tmp_cert.flush()
+        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_cert.write("\n".join(cert_chain))
+        tmp_cert.flush()
 
+        try:
             run_cmd(
                 f"""openssl pkcs12 -export
                 -in {tmp_cert.name}
@@ -515,6 +514,9 @@ class OpenSearchTLS(Object):
             """
             )
             # todo chown / chmod
+        finally:
+            tmp_key.close()
+            tmp_cert.close()
 
     def _remove_key_store_content_by_alias(
         self, store_pass: str, alias: str, key_store_name: Optional[str] = None
@@ -545,4 +547,3 @@ class OpenSearchTLS(Object):
         key_stores = glob.glob(f"{self.certs_path}/*")
         for key_store in key_stores:
             os.remove(key_store)
-            return
