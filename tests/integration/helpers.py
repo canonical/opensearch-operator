@@ -34,7 +34,7 @@ TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
 
 MODEL_CONFIG = {
     "logging-config": "<root>=INFO;unit=DEBUG",
-    "update-status-hook-interval": "29s",
+    "update-status-hook-interval": "1m",
     "cloudinit-userdata": """postruncmd:
         - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
         - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
@@ -480,7 +480,7 @@ async def is_up(ops_test: OpsTest, unit_ip: str, retries: int = 25) -> bool:
 
 
 async def scale_application(
-    ops_test: OpsTest, application_name: str, count: int, timeout=1000
+    ops_test: OpsTest, application_name: str, count: int, timeout=1000, idle_period=20
 ) -> None:
     """Scale a given application to a specific unit count.
 
@@ -489,6 +489,8 @@ async def scale_application(
         application_name: The name of the application
         count: The desired number of units to scale to
         timeout: Time to wait for application to become stable
+        idle_period: The length of time we watch an application to ensure it stays in an idle
+            status.
     """
     application = ops_test.model.applications[application_name]
     change = count - len(application.units)
@@ -505,5 +507,5 @@ async def scale_application(
         status="active",
         timeout=timeout,
         wait_for_exact_units=count,
-        idle_period=20,
+        idle_period=idle_period,
     )

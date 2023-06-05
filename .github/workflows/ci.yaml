@@ -15,8 +15,8 @@ on:
     inputs:
       juju-version:
         required: false
-        type: string
-        default: 3.1/stable
+        type: number
+        default: 3
 
 jobs:
   lint:
@@ -78,23 +78,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Setup operator environment (passing in juju version)
+      - name: Setup Juju 3 operator environment
+        # Runs on juju 3 by default
         # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
-        if: ${{ inputs.juju-version != 0}}
+        if: ${{ inputs.juju-version == 3 || inputs.juju-version == 0}}
         with:
           provider: lxd
-          juju-channel: ${{ inputs.juju-version }}
-
-      - name: Setup operator environment (using default juju version 3.1/stable)
-        # TODO: Replace with custom image on self-hosted runner
-        uses: charmed-kubernetes/actions-operator@main
-        if: ${{ inputs.juju-version == 0}}
-        with:
-          provider: lxd
-          # Replace juju version manually if it's not been passed in. This can occur whenever this
-          # workflow runs on PR or on schedule.
           juju-channel: 3.1/stable
+
+      - name: Setup Juju 2 operator environment
+        # TODO: Replace with custom image on self-hosted runner
+        uses: charmed-kubernetes/actions-operator@main
+        if: ${{ inputs.juju-version == 2}}
+        with:
+          provider: lxd
+          juju-channel: 2.9/stable
 
       - name: Download packed charm(s)
         uses: actions/download-artifact@v3
@@ -117,6 +116,12 @@ jobs:
           # set up environment - get juju version and set kernel params
           echo ${{matrix.runner}}
           source ./setup.sh
-          tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+          if [ "${{inputs.juju-version}}" != "0" ]
+          then
+            tox run -e j${{inputs.juju-version}}-${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+          else
+            # default juju version is 3
+            tox run -e j3-${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+          fi
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
