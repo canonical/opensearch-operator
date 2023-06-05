@@ -116,9 +116,9 @@ jobs:
           # Set kernel params
           sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
           echo "${{inputs.juju-version}}"
-          if [ "${{inputs.juju-version}}" != "" ]
+          if [ "${{inputs.juju-version}}" == "2" ]
           then
-            tox run -e j${{inputs.juju-version}}-${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+            tox run -e j2-${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
           else
             # default juju version is 3
             tox run -e j3-${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
