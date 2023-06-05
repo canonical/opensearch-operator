@@ -113,9 +113,9 @@ jobs:
 
       - name: Run integration tests
         run: |
-          # set up environment - get juju version and set kernel params
-          echo ${{matrix.runner}}
-          source ./setup.sh
+          # Set kernel params
+          sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
+
           if [ "${{inputs.juju-version}}" != "0" ]
           then
             tox run -e j${{inputs.juju-version}}-${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
