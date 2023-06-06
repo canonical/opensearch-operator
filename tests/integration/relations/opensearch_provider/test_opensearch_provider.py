@@ -205,11 +205,17 @@ async def test_scaling(ops_test: OpsTest):
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS, idle_period=70)
+    await ops_test.model.wait_for_idle(
+        status="active", apps=ALL_APPS, timeout=1600, idle_period=70
+    )
 
     # Test scale down
     await scale_application(
-        ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() - 1, idle_period=70
+        ops_test,
+        OPENSEARCH_APP_NAME,
+        get_num_of_opensearch_units() - 1,
+        timeout=1600,
+        idle_period=70,
     )
     await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
     assert (
@@ -219,7 +225,11 @@ async def test_scaling(ops_test: OpsTest):
 
     # test scale back up again
     await scale_application(
-        ops_test, OPENSEARCH_APP_NAME, get_num_of_opensearch_units() + 1, idle_period=70
+        ops_test,
+        OPENSEARCH_APP_NAME,
+        get_num_of_opensearch_units() + 1,
+        timeout=1600,
+        idle_period=70,
     )
     await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
     assert (
@@ -279,7 +289,7 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-        timeout=(60 * 12),
+        timeout=(60 * 20),
         idle_period=70,
     )
 
@@ -316,7 +326,7 @@ async def test_admin_relation(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-        timeout=(60 * 10),
+        timeout=(60 * 20),
         idle_period=70,
     )
 
@@ -466,7 +476,10 @@ async def test_relation_broken(ops_test: OpsTest):
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
     )
     await ops_test.model.wait_for_idle(
-        status="active", apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, idle_period=70
+        status="active",
+        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
+        idle_period=70,
+        timeout=1600,
     )
 
     # Break the relation.
@@ -487,6 +500,7 @@ async def test_relation_broken(ops_test: OpsTest):
             apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
             status="active",
             idle_period=70,
+            timeout=1600,
         ),
     )
 
@@ -511,7 +525,7 @@ async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
 
     await ops_test.model.wait_for_idle(
-        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=1200, status="active", idle_period=70
+        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=1600, status="active", idle_period=70
     )
 
     read_index_endpoint = "/albums/_search?q=Jazz"
