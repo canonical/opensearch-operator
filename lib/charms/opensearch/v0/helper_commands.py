@@ -34,6 +34,8 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
     if args is not None:
         command = f"{command} {args}"
 
+    command = " ".join(command.split())
+
     logger.debug(f"Executing command: {command}")
 
     try:
@@ -48,10 +50,11 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
             env=os.environ,
         )
 
-        logger.debug(f"{command}:\n{output.stdout}")
+        if output.stdout:
+            logger.debug(f"out: {output.stdout}")
 
         if output.returncode != 0:
-            logger.error(f"{command}:\n Stderr: {output.stderr}\n Stdout: {output.stdout}")
+            logger.error(f"err: {output.stderr}")
             raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
 
         return SimpleNamespace(cmd=command, out=output.stdout, err=output.stderr)
