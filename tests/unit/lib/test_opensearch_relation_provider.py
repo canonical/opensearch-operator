@@ -8,11 +8,11 @@ from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelatio
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
-from helpers import patch_network_get
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
+from tests.helpers import patch_network_get
 
 
 @patch_network_get("1.1.1.1")
@@ -125,10 +125,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         _create_user.assert_called_with(username, roles, hashed_pw)
         _patch_user.assert_called_with(username, patches)
 
-    # @patch("charms.opensearch.v0.opensearch_relation_provider.unit_ip", return_value="1.1.1.2")
     def test_on_relation_departed(self):
         event = MagicMock()
-        event.departing_unit = None
+        event.departing_unit.name = "some other unit"
         self.opensearch_provider._on_relation_departed(event)
         assert not self.charm.peers_data.get(
             Scope.UNIT, self.opensearch_provider._depart_flag(event.relation)
@@ -172,10 +171,14 @@ class TestOpenSearchProvider(unittest.TestCase):
         _remove_users.assert_called_with(event.relation.id)
 
     @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_endpoints")
+    @patch(
+        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up",
+        return_value=True,
+    )
     @patch("charm.OpenSearchOperatorCharm._get_nodes")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_update_endpoints(self, _, __, _nodes, _set_endpoints):
+    def test_update_endpoints(self, _, __, _nodes, _is_node_up, _set_endpoints):
         self.harness.set_leader(True)
         node = MagicMock()
         node.ip = "4.4.4.4"

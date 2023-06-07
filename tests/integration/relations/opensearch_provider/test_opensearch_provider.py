@@ -187,6 +187,7 @@ async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag.
 
     scale_application also contains a wait_for_idle check, including checking for active status.
+    Idle_period checks must be greater than 1 minute to guarantee update_status fires correctly.
     """
 
     async def rel_endpoints(app_name: str, rel_name: str) -> str:
@@ -231,7 +232,7 @@ async def test_scaling(ops_test: OpsTest):
         timeout=1600,
         idle_period=70,
     )
-    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS, timeout=1600)
     assert (
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
@@ -257,7 +258,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
         timeout=(60 * 20),
-        idle_period=70,
+        idle_period=65,
     )
 
     # Test that the permissions are respected between relations by running the same request as
@@ -290,7 +291,7 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
         timeout=(60 * 20),
-        idle_period=70,
+        idle_period=65,
     )
 
     # Test that different applications can access the same index if they present it in their
@@ -327,7 +328,7 @@ async def test_admin_relation(ops_test: OpsTest):
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
         timeout=(60 * 20),
-        idle_period=70,
+        idle_period=65,
     )
 
     # Verify we can access whatever data we like as admin
@@ -499,8 +500,8 @@ async def test_relation_broken(ops_test: OpsTest):
         ops_test.model.wait_for_idle(
             apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
             status="active",
-            idle_period=70,
             timeout=1600,
+            idle_period=65,
         ),
     )
 
@@ -525,7 +526,7 @@ async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
 
     await ops_test.model.wait_for_idle(
-        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=1600, status="active", idle_period=70
+        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=2000, status="active", idle_period=65
     )
 
     read_index_endpoint = "/albums/_search?q=Jazz"
