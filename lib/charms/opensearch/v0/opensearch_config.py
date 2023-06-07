@@ -79,7 +79,7 @@ class OpenSearchConfig:
             self._opensearch.config.put(
                 self.CONFIG_YML,
                 f"plugins.security.ssl.{target_conf_layer}.{store_type}_type",
-                "PKCS12"
+                "PKCS12",
             )
 
             self._opensearch.config.put(
@@ -95,7 +95,6 @@ class OpenSearchConfig:
                 certificate_type,
             )
 
-        logger.debug(f"\n\n\nSet node conf: {cert_type} -- {keystore_pwd}")
         for store_type, pwd in [("keystore", keystore_pwd), ("truststore", truststore_pwd)]:
             self._opensearch.config.put(
                 self.CONFIG_YML,
@@ -121,14 +120,14 @@ class OpenSearchConfig:
             )
 
     def set_node(
-            self,
-            app_name: str,
-            model_name: str,
-            unit_name: str,
-            roles: List[str],
-            cm_names: List[str],
-            cm_ips: List[str],
-            contribute_to_bootstrap: bool,
+        self,
+        app_name: str,
+        model_name: str,
+        unit_name: str,
+        roles: List[str],
+        cm_names: List[str],
+        cm_ips: List[str],
+        contribute_to_bootstrap: bool,
     ) -> None:
         """Set base config for each node in the cluster."""
         self._opensearch.config.put(self.CONFIG_YML, "cluster.name", f"{app_name}-{model_name}")
@@ -187,8 +186,6 @@ class OpenSearchConfig:
             except socket.herror:
                 # no ptr record - the IP is enough and the only thing we have
                 pass
-
-        logger.debug(f"\n\nAdding seed hosts {cm_ips_hostnames}")
 
         with open(self._opensearch.paths.seed_hosts, "w+") as f:
             lines = "\n".join(set(cm_ips_hostnames))
