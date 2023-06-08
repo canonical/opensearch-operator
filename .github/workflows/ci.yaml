@@ -110,7 +110,7 @@ jobs:
           # Set kernel params
           sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
           echo ${{ inputs.libjuju-version }}
-          echo ${{matrix.tox-environments}}
+          echo ${{ matrix.tox-environments }}
           tox -e ${{ inputs.libjuju-version }}-${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
