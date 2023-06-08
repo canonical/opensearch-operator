@@ -352,3 +352,46 @@ async def is_network_restored_after_ip_change(
                 return True
     except RetryError:
         return False
+
+
+def storage_app_entries(ops_test: OpsTest, app: str) -> List[str]:
+    """Retrieves entries of storage associated with an application.
+
+    Note: this function exists as a temporary solution until this issue is ported to libjuju 2:
+    https://github.com/juju/python-libjuju/issues/694
+    """
+    model_name = ops_test.model.info.name
+    proc = subprocess.check_output(f"juju storage --model={model_name}".split())
+    proc = proc.decode("utf-8")
+
+    storage_entries = []
+    for line in proc.splitlines():
+        line = line.strip()
+        if not line or "Storage" in line or "detached" in line:
+            continue
+
+        if line.split()[0] == app:
+            storage_entries.append(line)
+
+    return storage_entries
+
+
+def storage_type(ops_test: OpsTest, app: str) -> Optional[str]:
+    """Retrieves type of storage associated with an application"""
+    storage_entries = storage_app_entries(ops_test, app)
+    if not storage_entries:
+        return None
+
+    for entry in storage_entries:
+        return entry.split()[3]
+
+
+def storage_id(ops_test: OpsTest, app: str, unit_id: int):
+    """Retrieves storage id associated with provided unit."""
+    storage_entries = storage_app_entries(ops_test, app)
+    if not storage_entries:
+        return None
+
+    for entry in storage_entries:
+        if entry.split()[0] == f"{app}/{unit_id}":
+            return entry.split()[1]
