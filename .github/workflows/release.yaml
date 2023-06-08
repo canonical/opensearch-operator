@@ -21,15 +21,17 @@ jobs:
           credentials: "${{ secrets.CHARMHUB_TOKEN }}" # FIXME: current token will expire in 2023-07-04
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-  ci-tests-juju-2:
+  ci-tests:
+    strategy:
+      matrix:
+        version:
+          - snap: 3.1/stable
+          - snap: 2.9/stable
+            libjuju: ==2.9.42.1
     uses: ./.github/workflows/ci.yaml
     with:
-      juju-version: 2
-
-  ci-tests-juju-3:
-    uses: ./.github/workflows/ci.yaml
-    with:
-      juju-version: 3
+      juju-snap-channel: ${{ matrix.version.snap }}
+      libjuju-version-specifier: ${{ matrix.version.libjuju }}
 
   release-to-charmhub:
     name: Release to CharmHub
