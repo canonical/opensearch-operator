@@ -35,6 +35,7 @@ from charms.opensearch.v0.helper_databag import (
 )
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
+    get_host_public_ip,
     is_reachable,
     reachable_hosts,
     unit_ip,
@@ -875,6 +876,11 @@ class OpenSearchBaseCharm(CharmBase):
     def unit_ip(self) -> str:
         """IP address of the current unit."""
         return get_host_ip(self, PeerRelationName)
+
+    @property
+    def unit_public_ip(self) -> str:
+        """Public IP address of the current unit."""
+        return get_host_public_ip()
 
     @property
     def unit_name(self) -> str:

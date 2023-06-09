@@ -238,8 +238,13 @@ class OpenSearchTLS(Object):
         if cert_type == CertType.APP_ADMIN:
             return sans
 
-        sans["sans_ip"] = [self.charm.unit_ip]
-        sans["sans_dns"] = [self.charm.unit_name, socket.getfqdn()]
+        sans["sans_ip"] = [self.charm.unit_ip, self.charm.unit_public_ip]
+        sans["sans_dns"] = [socket.gethostname()]
+        for ip in sans["sans_ip"]:
+            name, aliases, addresses = socket.gethostbyaddr(ip)
+            sans["sans_dns"].extend(
+                [entry for entry in ([name] + aliases + addresses) if entry.strip()]
+            )
 
         return sans
 
