@@ -250,7 +250,7 @@ class OpenSearchTLS(Object):
 
                 dns.add(name)
                 dns.update(aliases)
-            except socket.herror:
+            except (socket.herror, socket.gaierror):
                 continue
 
         sans["sans_ip"] = [ip for ip in ips if ip.strip()]
