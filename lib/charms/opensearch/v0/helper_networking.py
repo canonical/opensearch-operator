@@ -6,12 +6,11 @@ import logging
 import os
 import socket
 import subprocess
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from ops.charm import CharmBase
 from ops.model import Unit
 
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "afaa4474be1f4ae09089631dbe729d4c"
@@ -33,7 +32,7 @@ def get_host_ip(charm: CharmBase, peer_relation_name: str) -> str:
     return str(address)
 
 
-def get_host_public_ip() -> str:
+def get_host_public_ip() -> Optional[str]:
     """Fetches the Public IP address of the current unit."""
     cmd = "dig +short myip.opendns.com @resolver1.opendns.com"
     output = subprocess.run(
@@ -47,9 +46,7 @@ def get_host_public_ip() -> str:
         env=os.environ,
     )
     if output.returncode != 0:
-        raise OpenSearchCmdError(
-            f"Could not get the public address of the unit.\n{cmd}:\nerr: {output.stderr}"
-        )
+        return None
 
     return output.stdout
 
