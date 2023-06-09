@@ -48,7 +48,7 @@ def get_host_public_ip() -> Optional[str]:
     if output.returncode != 0:
         return None
 
-    return output.stdout
+    return output.stdout.strip()
 
 
 def get_hostname_by_unit(charm: CharmBase, unit_name: str) -> str:
