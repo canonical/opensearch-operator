@@ -177,10 +177,14 @@ class OpenSearchBaseCharm(CharmBase):
             self._put_admin_user()
             self.peers_data.put(Scope.APP, "admin_user_initialized", True)
             self.status.clear(AdminUserInitProgress)
+        else:
+            # when going from 0 nodes cluster to N, we don't want to change the password
+            # so we just store it in the conf file
+            self._put_admin_user(keep_current_if_exists=True)
 
     def _on_start(self, event: StartEvent):
         """Triggered when on start. Set the right node role."""
-        if self.opensearch.is_started():
+        if self.opensearch.is_node_up():
             if self.peers_data.get(Scope.APP, "security_index_initialised"):
                 # in the case where it was on WaitingToStart status, event got deferred
                 # and the service started in between, put status back to active
@@ -308,17 +312,31 @@ class OpenSearchBaseCharm(CharmBase):
 
         # if the leader is departing, and this hook fails "leader elected" won"t trigger,
         # so we want to rebalance the node roles from here
-        if (
-            self.unit.is_leader()
-            and self.app.planned_units() > 1
-            and (self.opensearch.is_node_up() or self.alt_hosts)
-        ):
-            remaining_nodes = [
-                node
-                for node in self._get_nodes(self.opensearch.is_node_up())
-                if node.name != self.unit_name
-            ]
-            self._compute_and_broadcast_updated_topology(remaining_nodes)
+        if self.unit.is_leader():
+            if (
+                self.app.planned_units() > 1
+                and (self.opensearch.is_node_up() or self.alt_hosts)
+            ):
+                remaining_nodes = [
+                    node
+                    for node in self._get_nodes(self.opensearch.is_node_up())
+                    if node.name != self.unit_name
+                ]
+                self._compute_and_broadcast_updated_topology(remaining_nodes)
+            elif self.app.planned_units() == 0:
+                self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
+                self.peers_data.delete(Scope.APP, "nodes_config")
+
+                # todo: remove this if snap storage reuse is solved.
+                self.peers_data.delete(Scope.APP, "security_index_initialised")
+
+        # we attempt to flush the translog to disk
+        if self.opensearch.is_node_up():
+            try:
+                self.opensearch.request("POST", "/_flush?wait_for_ongoing")
+            except OpenSearchHttpError:
+                # if it's a failed attempt we move on
+                pass
 
         try:
             self._stop_opensearch()
@@ -465,18 +483,13 @@ class OpenSearchBaseCharm(CharmBase):
                 callback_override="_restart_opensearch"
             )
 
-    def on_tls_relation_broken(self, event: RelationBrokenEvent):
+    def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
         if self._is_tls_fully_configured():
             return
 
         # Otherwise, we block.
         self.unit.status = BlockedStatus(TLSRelationBrokenError)
-
-        try:
-            self._stop_opensearch()
-        except OpenSearchStopError:
-            event.defer()
 
     def _is_tls_fully_configured(self) -> bool:
         """Check if TLS fully configured meaning the admin user configured & 3 certs present."""
@@ -660,8 +673,35 @@ class OpenSearchBaseCharm(CharmBase):
             if user != "_meta":
                 self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
 
-    def _put_admin_user(self, pwd: Optional[str] = None):
+    def _put_admin_user(self, pwd: Optional[str] = None, keep_current_if_exists: bool = False):
         """Change password of Admin user."""
+
+        def put_in_local_config(hashed_password: str):
+            """Put admin password in local config file."""
+            # reserved: False, prevents this resource from being update-protected from:
+            # updates made on the dashboard or the rest api.
+            # we grant the admin user all opensearch access + security_rest_api_access
+            self.opensearch.config.put(
+                "opensearch-security/internal_users.yml",
+                "admin",
+                {
+                    "hash": hashed_password,
+                    "reserved": False,
+                    "backend_roles": ["admin"],
+                    "opendistro_security_roles": [
+                        "security_rest_api_access",
+                        "all_access",
+                    ],
+                    "description": "Admin user",
+                },
+            )
+
+        if keep_current_if_exists:
+            current_admin_pwd_hash = self.secrets.get(Scope.APP, "admin_password_hash")
+            if current_admin_pwd_hash:
+                put_in_local_config(current_admin_pwd_hash)
+                return
+
         is_update = pwd is not None
         hashed_pwd, pwd = generate_hashed_password(pwd)
 
@@ -674,25 +714,10 @@ class OpenSearchBaseCharm(CharmBase):
             if resp.get("status") != "OK":
                 raise OpenSearchError(f"{resp}")
         else:
-            # reserved: False, prevents this resource from being update-protected from:
-            # updates made on the dashboard or the rest api.
-            # we grant the admin user all opensearch access + security_rest_api_access
-            self.opensearch.config.put(
-                "opensearch-security/internal_users.yml",
-                "admin",
-                {
-                    "hash": hashed_pwd,
-                    "reserved": False,
-                    "backend_roles": ["admin"],
-                    "opendistro_security_roles": [
-                        "security_rest_api_access",
-                        "all_access",
-                    ],
-                    "description": "Admin user",
-                },
-            )
+            put_in_local_config(hashed_pwd)
 
         self.secrets.put(Scope.APP, "admin_password", pwd)
+        self.secrets.put(Scope.APP, "admin_password_hash", hashed_pwd)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.
@@ -752,7 +777,7 @@ class OpenSearchBaseCharm(CharmBase):
             cm_names.append(self.unit_name)
             cm_ips.append(self.unit_ip)
 
-            cms_in_bootstrap = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
+            cms_in_bootstrap = self.peers_data.get(Scope.APP, "bootstrap_contributors", 0)
             if cms_in_bootstrap < self.app.planned_units():
                 contribute_to_bootstrap = True
 
@@ -776,6 +801,7 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _cleanup_bootstrap_conf_if_applies(self) -> None:
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
+        self.peers_data.delete(Scope.UNIT, "bootstrap_contributor")
         self.opensearch_config.cleanup_bootstrap_conf()
 
     def _reconfigure_and_restart_unit_if_needed(self):

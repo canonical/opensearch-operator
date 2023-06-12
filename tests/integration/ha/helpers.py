@@ -370,7 +370,8 @@ def storage_app_entries(ops_test: OpsTest, app: str) -> List[str]:
         if not line or "Storage" in line or "detached" in line:
             continue
 
-        if line.split()[0] == app:
+        unit_name = line.split()[0]
+        if unit_name.split("/")[0] == app:
             storage_entries.append(line)
 
     return storage_entries
