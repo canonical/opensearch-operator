@@ -240,10 +240,10 @@ class OpenSearchTLS(Object):
 
         dns = {self.charm.unit_name, socket.gethostname(), socket.getfqdn()}
         ips = {self.charm.unit_ip}
-        if cert_type in [CertType.APP_ADMIN, CertType.UNIT_HTTP] and self.charm.unit_public_ip:
+        if cert_type == CertType.UNIT_HTTP and self.charm.unit_public_ip:
             ips.add(self.charm.unit_public_ip)
 
-        for ip in ips:
+        for ip in ips.copy():
             try:
                 name, aliases, addresses = socket.gethostbyaddr(ip)
                 ips.update(addresses)
@@ -279,7 +279,7 @@ class OpenSearchTLS(Object):
         return base64.b64decode(raw_content)
 
     def _find_secret(
-            self, event_data: str, secret_name: str
+        self, event_data: str, secret_name: str
     ) -> Optional[Tuple[Scope, CertType, Dict[str, str]]]:
         """Find secret across all scopes (app, unit) and across all cert types.
 

@@ -171,16 +171,16 @@ class OpenSearchBaseCharm(CharmBase):
 
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             self.unit.status = MaintenanceStatus(AdminUserInitProgress)
-            # User config is currently in a default state, which contains multiple insecure default
-            # users. Purge the user list before initialising the users the charm requires.
-            self._purge_users()
-            self._put_admin_user()
-            self.peers_data.put(Scope.APP, "admin_user_initialized", True)
-            self.status.clear(AdminUserInitProgress)
-        else:
-            # when going from 0 nodes cluster to N, we don't want to change the password
-            # so we just store it in the conf file
-            self._put_admin_user(keep_current_if_exists=True)
+
+        # User config is currently in a default state, which contains multiple insecure default
+        # users. Purge the user list before initialising the users the charm requires.
+        self._purge_users()
+
+        # this is in case we're coming from 0 to N units, we don't want to use the rest api
+        self._put_admin_user(
+            keep_current_if_exists=self.peers_data.get(Scope.APP, "admin_user_initialized", False)
+        )
+        self.status.clear(AdminUserInitProgress)
 
     def _on_start(self, event: StartEvent):
         """Triggered when on start. Set the right node role."""
@@ -305,7 +305,7 @@ class OpenSearchBaseCharm(CharmBase):
         else:
             event.defer()
 
-    def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):
+    def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa
         """Triggered when removing unit, Prior to the storage being detached."""
         # acquire lock to ensure only 1 unit removed at a time
         self.ops_lock.acquire()
@@ -313,10 +313,7 @@ class OpenSearchBaseCharm(CharmBase):
         # if the leader is departing, and this hook fails "leader elected" won"t trigger,
         # so we want to rebalance the node roles from here
         if self.unit.is_leader():
-            if (
-                self.app.planned_units() > 1
-                and (self.opensearch.is_node_up() or self.alt_hosts)
-            ):
+            if self.app.planned_units() > 1 and (self.opensearch.is_node_up() or self.alt_hosts):
                 remaining_nodes = [
                     node
                     for node in self._get_nodes(self.opensearch.is_node_up())
@@ -718,6 +715,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.secrets.put(Scope.APP, "admin_password", pwd)
         self.secrets.put(Scope.APP, "admin_password_hash", hashed_pwd)
+        self.peers_data.put(Scope.APP, "admin_user_initialized", True)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.

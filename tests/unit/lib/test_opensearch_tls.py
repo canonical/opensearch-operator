@@ -5,7 +5,7 @@
 import socket
 import unittest
 from unittest import mock
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
@@ -18,6 +18,9 @@ from tests.helpers import create_utf8_encoded_private_key, patch_network_get
 
 @patch_network_get("1.1.1.1")
 class TestOpenSearchTLS(unittest.TestCase):
+    BASE_LIB_PATH = "charms.opensearch.v0"
+    BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
+
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     def setUp(self, _put_admin_user) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
@@ -33,20 +36,48 @@ class TestOpenSearchTLS(unittest.TestCase):
         socket.getfqdn = Mock()
         socket.getfqdn.return_value = "nebula"
 
-    def test_get_sans(self):
+    @patch("socket.getfqdn")
+    @patch("socket.gethostname")
+    @patch("socket.gethostbyaddr")
+    def test_get_sans(self, gethostbyaddr, gethostname, getfqdn):
         """Test the SANs returned depending on the cert type."""
         self.assertDictEqual(
             self.charm.tls._get_sans(CertType.APP_ADMIN),
             {"sans_oid": ["1.2.3.4.5.5"]},
         )
 
-        for cert_type in [CertType.UNIT_HTTP, CertType.UNIT_TRANSPORT]:
+        gethostbyaddr.return_value = (self.charm.unit_name, ["alias"], ["address1", "address2"])
+        gethostname.return_value = "nebula"
+        getfqdn.return_value = "nebula"
+
+        with mock.patch(
+            f"{TestOpenSearchTLS.BASE_CHARM_CLASS}.unit_public_ip", new_callable=PropertyMock
+        ) as public_ip_mock:
+            public_ip_mock.return_value = "XX.XXX.XX.XXX"
+
+            base_ips = ["1.1.1.1", "address1", "address2"]
+            base_dns_entries = [self.charm.unit_name, "nebula", "alias"]
+
             self.assertDictEqual(
-                self.charm.tls._get_sans(cert_type),
+                dict(
+                    (key, sorted(val))
+                    for key, val in self.charm.tls._get_sans(CertType.UNIT_HTTP).items()
+                ),
                 {
                     "sans_oid": ["1.2.3.4.5.5"],
-                    "sans_ip": ["1.1.1.1"],
-                    "sans_dns": [self.charm.unit_name, "nebula"],
+                    "sans_ip": sorted(base_ips + ["XX.XXX.XX.XXX"]),
+                    "sans_dns": sorted(base_dns_entries),
+                },
+            )
+            self.assertDictEqual(
+                dict(
+                    (key, sorted(val))
+                    for key, val in self.charm.tls._get_sans(CertType.UNIT_TRANSPORT).items()
+                ),
+                {
+                    "sans_oid": ["1.2.3.4.5.5"],
+                    "sans_ip": sorted(base_ips),
+                    "sans_dns": sorted(base_dns_entries),
                 },
             )
 

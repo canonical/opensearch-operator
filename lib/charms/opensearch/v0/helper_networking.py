@@ -11,7 +11,6 @@ from typing import Dict, List, Optional
 from ops.charm import CharmBase
 from ops.model import Unit
 
-
 # The unique Charmhub library identifier, never change it
 LIBID = "afaa4474be1f4ae09089631dbe729d4c"
 

@@ -378,7 +378,7 @@ def storage_app_entries(ops_test: OpsTest, app: str) -> List[str]:
 
 
 def storage_type(ops_test: OpsTest, app: str) -> Optional[str]:
-    """Retrieves type of storage associated with an application"""
+    """Retrieves type of storage associated with an application."""
     storage_entries = storage_app_entries(ops_test, app)
     if not storage_entries:
         return None
