@@ -1,15 +1,12 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-name: Tests
+name: CI
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
-  pull_request:
-  schedule:
-    - cron: '53 0 * * *' # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
     inputs:
@@ -50,9 +47,25 @@ jobs:
       - name: Run tests
         run: tox run -e unit
 
+  lib-check:
+    name: Check libraries
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check libs
+        uses: canonical/charming-actions/check-libraries@2.1.1
+        with:
+          credentials: "${{ secrets.CHARMHUB_TOKEN }}" # FIXME: current token will expire in 2023-07-04
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
   build:
     name: Build charms
     needs:
+      - lib-check
       - lint
       - unit-test
     uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2.3.9
@@ -110,7 +123,8 @@ jobs:
           # Set kernel params
           sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
           echo ${{ inputs.libjuju-version }}
+
           echo ${{ matrix.tox-environments }}
-          tox -e ${{ inputs.libjuju-version }}-${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+          tox -e j${{ inputs.libjuju-version }}-${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}

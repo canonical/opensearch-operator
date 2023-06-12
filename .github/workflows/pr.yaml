@@ -1,0 +1,14 @@
+name: Basic CI workflow caller
+
+on:
+  schedule:
+    - cron: '53 0 * * *' # Daily at 00:53 UTC
+  pull_request:
+
+jobs:
+  ci-tests:
+    uses: ./.github/workflows/ci.yaml
+    with:
+      juju-snap-channel: 3.1/stable
+      libjuju-version-specifier: 3
+
