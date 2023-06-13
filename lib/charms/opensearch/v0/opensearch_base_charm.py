@@ -35,7 +35,6 @@ from charms.opensearch.v0.helper_databag import (
 )
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
-    get_host_public_ip,
     is_reachable,
     reachable_hosts,
     unit_ip,
@@ -177,9 +176,8 @@ class OpenSearchBaseCharm(CharmBase):
         self._purge_users()
 
         # this is in case we're coming from 0 to N units, we don't want to use the rest api
-        self._put_admin_user(
-            keep_current_if_exists=self.peers_data.get(Scope.APP, "admin_user_initialized", False)
-        )
+        self._put_admin_user()
+
         self.status.clear(AdminUserInitProgress)
 
     def _on_start(self, event: StartEvent):
@@ -305,7 +303,7 @@ class OpenSearchBaseCharm(CharmBase):
         else:
             event.defer()
 
-    def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa
+    def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
         # acquire lock to ensure only 1 unit removed at a time
         self.ops_lock.acquire()
@@ -670,11 +668,23 @@ class OpenSearchBaseCharm(CharmBase):
             if user != "_meta":
                 self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
 
-    def _put_admin_user(self, pwd: Optional[str] = None, keep_current_if_exists: bool = False):
+    def _put_admin_user(self, pwd: Optional[str] = None):
         """Change password of Admin user."""
+        # update
+        if pwd is not None:
+            hashed_pwd, pwd = generate_hashed_password(pwd)
+            resp = self.opensearch.request(
+                "PATCH",
+                "/_plugins/_security/api/internalusers/admin",
+                [{"op": "replace", "path": "/hash", "value": hashed_pwd}],
+            )
+            if resp.get("status") != "OK":
+                raise OpenSearchError(f"{resp}")
+        else:
+            hashed_pwd = self.secrets.get(Scope.APP, "admin_password_hash")
+            if not hashed_pwd:
+                hashed_pwd, pwd = generate_hashed_password()
 
-        def put_in_local_config(hashed_password: str):
-            """Put admin password in local config file."""
             # reserved: False, prevents this resource from being update-protected from:
             # updates made on the dashboard or the rest api.
             # we grant the admin user all opensearch access + security_rest_api_access
@@ -682,7 +692,7 @@ class OpenSearchBaseCharm(CharmBase):
                 "opensearch-security/internal_users.yml",
                 "admin",
                 {
-                    "hash": hashed_password,
+                    "hash": hashed_pwd,
                     "reserved": False,
                     "backend_roles": ["admin"],
                     "opendistro_security_roles": [
@@ -692,26 +702,6 @@ class OpenSearchBaseCharm(CharmBase):
                     "description": "Admin user",
                 },
             )
-
-        if keep_current_if_exists:
-            current_admin_pwd_hash = self.secrets.get(Scope.APP, "admin_password_hash")
-            if current_admin_pwd_hash:
-                put_in_local_config(current_admin_pwd_hash)
-                return
-
-        is_update = pwd is not None
-        hashed_pwd, pwd = generate_hashed_password(pwd)
-
-        if is_update:
-            resp = self.opensearch.request(
-                "PATCH",
-                "/_plugins/_security/api/internalusers/admin",
-                [{"op": "replace", "path": "/hash", "value": hashed_pwd}],
-            )
-            if resp.get("status") != "OK":
-                raise OpenSearchError(f"{resp}")
-        else:
-            put_in_local_config(hashed_pwd)
 
         self.secrets.put(Scope.APP, "admin_password", pwd)
         self.secrets.put(Scope.APP, "admin_password_hash", hashed_pwd)
@@ -900,11 +890,6 @@ class OpenSearchBaseCharm(CharmBase):
     def unit_ip(self) -> str:
         """IP address of the current unit."""
         return get_host_ip(self, PeerRelationName)
-
-    @property
-    def unit_public_ip(self) -> str:
-        """Public IP address of the current unit."""
-        return get_host_public_ip()
 
     @property
     def unit_name(self) -> str:

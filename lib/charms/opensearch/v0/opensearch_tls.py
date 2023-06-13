@@ -21,6 +21,7 @@ from typing import Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_databag import Scope
+from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
@@ -240,8 +241,10 @@ class OpenSearchTLS(Object):
 
         dns = {self.charm.unit_name, socket.gethostname(), socket.getfqdn()}
         ips = {self.charm.unit_ip}
-        if cert_type == CertType.UNIT_HTTP and self.charm.unit_public_ip:
-            ips.add(self.charm.unit_public_ip)
+
+        host_public_ip = get_host_public_ip()
+        if cert_type == CertType.UNIT_HTTP and host_public_ip:
+            ips.add(host_public_ip)
 
         for ip in ips.copy():
             try:

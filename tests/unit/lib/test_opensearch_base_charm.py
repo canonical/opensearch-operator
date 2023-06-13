@@ -67,12 +67,16 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         """Test on leader elected event."""
         self.harness.set_leader(True)
         _purge_users.assert_called_once()
-        _put_admin_user.assert_called_with(keep_current_if_exists=False)
+        _put_admin_user.assert_called_once()
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
+
+        _purge_users.reset_mock()
+        _put_admin_user.reset_mock()
 
         self.peers_data.put(Scope.APP, "admin_user_initialized", True)
         self.charm.on.leader_elected.emit()
-        _put_admin_user.assert_called_with(keep_current_if_exists=True)
+        _purge_users.assert_called_once()
+        _put_admin_user.assert_called_once()
 
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
