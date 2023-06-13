@@ -109,7 +109,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         timeout=1000,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 3
+    assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
 @pytest.mark.abort_on_fail
@@ -124,8 +124,23 @@ async def test_storage_reuse_after_scale_down(
             "re-use of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
 
-    # wait for enough data to be written
-    time.sleep(60)
+    # scale-down to 1 if multiple units
+    unit_ids = get_application_unit_ids(ops_test, app)
+    if len(unit_ids) > 1:
+        for unit_id in unit_ids[1:]:
+            await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
+
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            wait_for_exact_units=1,
+            idle_period=IDLE_PERIOD,
+        )
+    else:
+        # wait for enough data to be written
+        time.sleep(60)
+
     writes_result = await c_writes.stop()
 
     # get unit info
