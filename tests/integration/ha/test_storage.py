@@ -112,6 +112,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.abort_on_fail
 async def test_storage_reuse_after_scale_down(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ):
