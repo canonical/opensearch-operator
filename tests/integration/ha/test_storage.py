@@ -186,8 +186,22 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
             "re-use of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
 
-    # wait for enough data to be written
-    time.sleep(60)
+    # scale-down to 1 if multiple units
+    unit_ids = get_application_unit_ids(ops_test, app)
+    if len(unit_ids) < 3:
+        await ops_test.model.applications[app].add_unit(count=3 - len(unit_ids))
+
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            wait_for_exact_units=3,
+            idle_period=IDLE_PERIOD,
+        )
+    else:
+        # wait for enough data to be written
+        time.sleep(60)
+
     writes_result = await c_writes.stop()
 
     # get unit info
@@ -197,6 +211,9 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
 
     # remove application
     await ops_test.model.applications[app].destroy()
+
+    # wait a bit until all app deleted
+    time.sleep(60)
 
     # deploy new cluster
     my_charm = await ops_test.build_charm(".")
@@ -221,7 +238,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
         timeout=1000,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[app].units) == 3
+    assert len(ops_test.model.applications[app].units) == len(storage_ids)
 
     # check if previous volumes are attached to the units of the new cluster
     new_storage_ids = []
