@@ -210,6 +210,20 @@ async def test_scaling(ops_test: OpsTest):
         status="active", apps=ALL_APPS, timeout=1600, idle_period=70
     )
 
+    # test scale up
+    await scale_application(
+        ops_test,
+        OPENSEARCH_APP_NAME,
+        get_num_of_opensearch_units() + 1,
+        timeout=1600,
+        idle_period=70,
+    )
+    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS, timeout=1600)
+    assert (
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+        == get_num_of_opensearch_units()
+    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+
     # Test scale down
     await scale_application(
         ops_test,
@@ -219,20 +233,6 @@ async def test_scaling(ops_test: OpsTest):
         idle_period=70,
     )
     await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
-    assert (
-        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-        == get_num_of_opensearch_units()
-    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-
-    # test scale back up again
-    await scale_application(
-        ops_test,
-        OPENSEARCH_APP_NAME,
-        get_num_of_opensearch_units() + 1,
-        timeout=1600,
-        idle_period=70,
-    )
-    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS, timeout=1600)
     assert (
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
