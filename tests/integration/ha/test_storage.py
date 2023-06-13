@@ -126,7 +126,7 @@ async def test_storage_reuse_after_scale_down(
 
     # wait for enough data to be written
     time.sleep(60)
-    writes_result = c_writes.stop()
+    writes_result = await c_writes.stop()
 
     # get unit info
     unit_id = get_application_unit_ids(ops_test, app)[0]
