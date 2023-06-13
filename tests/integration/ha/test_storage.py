@@ -163,7 +163,7 @@ async def test_storage_reuse_after_scale_down(
 async def test_storage_reuse_in_new_cluster_after_app_removal(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ):
-    """Check storage is reused and data accessible after removing an app and deploying new cluster."""
+    """Check storage is reused and data accessible after removing app and deploying new cluster."""
     app = (await app_name(ops_test)) or APP_NAME
 
     if storage_type(ops_test, app) == "rootfs":
