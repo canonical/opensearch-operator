@@ -21,6 +21,7 @@ from typing import Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_databag import Scope
+from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
@@ -238,8 +239,25 @@ class OpenSearchTLS(Object):
         if cert_type == CertType.APP_ADMIN:
             return sans
 
-        sans["sans_ip"] = [self.charm.unit_ip]
-        sans["sans_dns"] = [self.charm.unit_name, socket.getfqdn()]
+        dns = {self.charm.unit_name, socket.gethostname(), socket.getfqdn()}
+        ips = {self.charm.unit_ip}
+
+        host_public_ip = get_host_public_ip()
+        if cert_type == CertType.UNIT_HTTP and host_public_ip:
+            ips.add(host_public_ip)
+
+        for ip in ips.copy():
+            try:
+                name, aliases, addresses = socket.gethostbyaddr(ip)
+                ips.update(addresses)
+
+                dns.add(name)
+                dns.update(aliases)
+            except (socket.herror, socket.gaierror):
+                continue
+
+        sans["sans_ip"] = [ip for ip in ips if ip.strip()]
+        sans["sans_dns"] = [entry for entry in dns if entry.strip()]
 
         return sans
 

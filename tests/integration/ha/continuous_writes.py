@@ -109,6 +109,26 @@ class ContinuousWrites:
         finally:
             client.close()
 
+    async def max_stored_id(self) -> int:
+        """Query the max stored document id."""
+        client = await self._client()
+        try:
+            # refresh the index so that all writes are visible on search
+            client.indices.refresh(index=ContinuousWrites.INDEX_NAME)
+
+            resp = client.search(
+                index=ContinuousWrites.INDEX_NAME,
+                body={
+                    "size": 0,
+                    "aggs": {"max_id": {"max": {"field": "id"}}},
+                },
+            )
+
+            # max stored document id
+            return int(resp["aggregations"]["max_id"]["value"])
+        finally:
+            client.close()
+
     async def _create_fully_replicated_index(self):
         """Create index with 1 p_shard and an r_shard on each node."""
         client = await self._client()
@@ -134,23 +154,8 @@ class ContinuousWrites:
 
         result = SimpleNamespace()
 
-        client = await self._client()
-        try:
-            # refresh the index so that all writes are visible on search
-            client.indices.refresh(index=ContinuousWrites.INDEX_NAME)
-
-            resp = client.search(
-                index=ContinuousWrites.INDEX_NAME,
-                body={
-                    "size": 0,
-                    "aggs": {"max_id": {"max": {"field": "id"}}},
-                },
-            )
-
-            # max stored document id
-            result.max_stored_id = int(resp["aggregations"]["max_id"]["value"])
-        finally:
-            client.close()
+        # max stored document id
+        result.max_stored_id = await self.max_stored_id()
 
         # documents count
         result.count = await self.count()
