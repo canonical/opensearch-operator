@@ -112,8 +112,8 @@ class OpenSearchSnap(OpenSearchDistribution):
             home=f"{self._SNAP_DATA}/usr/share/opensearch",
             conf=f"{self._SNAP_DATA}/etc/opensearch/config",
             jdk=f"{self._SNAP_DATA}/usr/share/opensearch",
-            data=f"{self._SNAP_COMMON}/data",
-            logs=f"{self._SNAP_COMMON}/logs",
+            data=f"{self._SNAP_COMMON}/var/lib/opensearch/data",
+            logs=f"{self._SNAP_COMMON}/var/log/opensearch/logs",
             tmp=f"{self._SNAP_COMMON}/tmp",
         )
 
