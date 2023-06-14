@@ -40,8 +40,6 @@ class OpenSearchSnap(OpenSearchDistribution):
     _BASE_SNAP_DIR = "/var/snap/opensearch"
     _SNAP_DATA = f"{_BASE_SNAP_DIR}/current"
     _SNAP_COMMON = f"{_BASE_SNAP_DIR}/common"
-    _ETC = f"{_SNAP_DATA}/etc/opensearch"
-    _USR = f"{_SNAP_DATA}/usr/share/opensearch"
 
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
@@ -111,9 +109,9 @@ class OpenSearchSnap(OpenSearchDistribution):
           - OPENSEARCH_CONF: writeable by root or snap_daemon ($SNAP_COMMON) where config files are
         """
         return Paths(
-            home=f"{self._ETC}",
-            conf=f"{self._ETC}/config",
-            jdk=f"{self._USR}/jdk",
+            home=f"{self._SNAP_DATA}/usr/share/opensearch",
+            conf=f"{self._SNAP_DATA}/etc/opensearch/config",
+            jdk=f"{self._SNAP_DATA}/usr/share/opensearch",
             data=f"{self._SNAP_COMMON}/data",
             logs=f"{self._SNAP_COMMON}/logs",
             tmp=f"{self._SNAP_COMMON}/tmp",
