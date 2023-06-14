@@ -6,18 +6,18 @@ on:
       - main
 
 jobs:
-  ci-tests:
-    strategy:
-      matrix:
-        version:
-          - snap: 3.1/stable
-            libjuju: 3
-          - snap: 2.9/stable
-            libjuju: 2
+  ci-tests-juju-2:
     uses: ./.github/workflows/ci.yaml
     with:
-      juju-snap-channel: ${{ matrix.version.snap }}
-      libjuju-version: ${{ matrix.version.libjuju }}
+      juju-snap-channel: 2.9/stable
+      libjuju-version-specifier: 2.9.42.1
+
+  ci-tests-juju-3:
+    uses: ./.github/workflows/ci.yaml
+    with:
+      juju-snap-channel: 3.1/stable
+      libjuju-version-specifier: 3.1.0.1
+
 
   release-to-charmhub:
     name: Release to CharmHub
