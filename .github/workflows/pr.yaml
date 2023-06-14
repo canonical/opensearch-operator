@@ -7,8 +7,14 @@ on:
 
 jobs:
   ci-tests:
+    strategy:
+      matrix:
+        version:
+          - snap: 3.1/stable
+          - snap: 2.9/stable
+            libjuju: 2.9.42.1
     uses: ./.github/workflows/ci.yaml
     with:
-      juju-snap-channel: 3.1/stable
-      libjuju-version: 3
+      juju-snap-channel: ${{ matrix.version.snap }}
+      libjuju-version-specifier: ${{ matrix.version.libjuju }}
 

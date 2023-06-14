@@ -14,7 +14,7 @@ on:
         description: Snap channel for Juju CLI
         default: 3.1/stable
         type: string
-      libjuju-version:
+      libjuju-version-specifier:
         default: "3"
         type: string
 
@@ -125,6 +125,7 @@ jobs:
           echo ${{ inputs.libjuju-version }}
 
           echo ${{ matrix.tox-environments }}
-          tox -e j${{ inputs.libjuju-version }}-${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+          tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+          LIBJUJU_VERSION: ${{ inputs.libjuju-version-specifier }}
