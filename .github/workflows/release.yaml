@@ -6,25 +6,23 @@ on:
       - main
 
 jobs:
-  ci-tests-juju-2:
+  ci:
+    strategy:
+      matrix:
+        version:
+          - snap: 3.1/stable
+          - snap: 2.9/stable
+            libjuju: 2.9.42.1
     uses: ./.github/workflows/ci.yaml
     with:
-      juju-snap-channel: 2.9/stable
-      libjuju-version-specifier: 2.9.42.1
-
-  ci-tests-juju-3:
-    uses: ./.github/workflows/ci.yaml
-    with:
-      juju-snap-channel: 3.1/stable
-      libjuju-version-specifier: 3.1.0.1
+      juju-snap-channel: ${{ matrix.version.snap }}
+      libjuju-version-specifier: ${{ matrix.version.libjuju }}
 
 
   release-to-charmhub:
     name: Release to CharmHub
     needs:
-      - lib-check
-      - ci-tests-juju-2
-      - ci-tests-juju-3
+      - ci
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
