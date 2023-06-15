@@ -1,13 +1,14 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-name: PR CI
+name: Nightly CI
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
-  pull_request:
+  schedule:
+    - cron: '53 0 * * *' # Daily at 00:53 UTC
 
 jobs:
   ci:
