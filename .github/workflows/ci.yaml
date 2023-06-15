@@ -11,7 +11,7 @@ on:
         default: 3.1/stable
         type: string
       libjuju-version-specifier:
-        default: "3"
+        default: "3.1.0.1"
         type: string
 
 jobs:
@@ -121,8 +121,7 @@ jobs:
         run: |
           # Set kernel params
           sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
-          echo ${{ inputs.libjuju-version }}
-
+          echo ${{ inputs.libjuju-version-specifier }}
           echo ${{ matrix.tox-environments }}
           tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
