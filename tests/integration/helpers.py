@@ -287,7 +287,7 @@ async def get_reachable_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List
     """Helper function to retrieve the IP addresses of all online units."""
     result = []
     for ip in await get_application_unit_ips(ops_test, app):
-        if await is_up(ops_test, ip, retries=0):
+        if await is_up(ops_test, ip, retries=1):
             result.append(ip)
 
     return result
@@ -300,7 +300,7 @@ async def get_reachable_units(ops_test: OpsTest, app: str = APP_NAME) -> Dict[in
         if not is_reachable(unit.ip, 9200):
             continue
 
-        if not (await is_up(ops_test, unit.ip, retries=0)):
+        if not (await is_up(ops_test, unit.ip, retries=1)):
             continue
 
         result[unit.id] = unit.ip
