@@ -497,6 +497,7 @@ class OpenSearchBaseCharm(CharmBase):
         """We clean up any residue from the previous TLS relation if any."""
         self.unit.status = WaitingStatus(TLSNotFullyConfigured)
 
+        # todo ??? delete
         if not self.peers_data.get(Scope.UNIT, "tls_rel_broken", False):
             return
 
@@ -603,7 +604,6 @@ class OpenSearchBaseCharm(CharmBase):
             Scope.APP, "security_index_initialised"
         ):
             self._initialize_security_index()
-            self.peers_data.put(Scope.APP, "security_index_initialised", True)
 
         # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
         # may be thrown when calling a node - we want to ensure this node is perfectly ready
@@ -785,9 +785,13 @@ class OpenSearchBaseCharm(CharmBase):
             args.append(f"-keypass {admin_key_pwd}")
 
         self.unit.status = MaintenanceStatus(SecurityIndexInitProgress)
+
         self.opensearch.run_script(
             "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
         )
+
+        self.peers_data.put(Scope.APP, "security_index_initialised", True)
+
         self.status.clear(SecurityIndexInitProgress)
 
     def _get_nodes(self, use_localhost: bool) -> List[Node]:
