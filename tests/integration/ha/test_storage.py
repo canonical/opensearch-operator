@@ -172,3 +172,81 @@ async def test_storage_reuse_after_scale_down(
     # check if data is also imported
     assert writes_result.count == (await c_writes.count())
     assert writes_result.max_stored_id == (await c_writes.max_stored_id())
+
+
+@pytest.mark.abort_on_fail
+async def test_storage_reuse_in_new_cluster_after_app_removal(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+):
+    """Check storage is reused and data accessible after removing app and deploying new cluster."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    if storage_type(ops_test, app) == "rootfs":
+        pytest.skip(
+            "re-use of storage can only be used on deployments with persistent storage not on rootfs deployments"
+        )
+
+    # scale-down to 1 if multiple units
+    unit_ids = get_application_unit_ids(ops_test, app)
+    if len(unit_ids) < 3:
+        await ops_test.model.applications[app].add_unit(count=3 - len(unit_ids))
+
+        await ops_test.model.wait_for_idle(
+            apps=[app],
+            status="active",
+            timeout=1000,
+            wait_for_exact_units=3,
+            idle_period=IDLE_PERIOD,
+        )
+    else:
+        # wait for enough data to be written
+        time.sleep(60)
+
+    writes_result = await c_writes.stop()
+
+    # get unit info
+    storage_ids = []
+    for unit_id in get_application_unit_ids(ops_test, app):
+        storage_ids.append(storage_id(ops_test, app, unit_id))
+
+    # remove application
+    await ops_test.model.applications[app].destroy()
+
+    # wait a bit until all app deleted
+    time.sleep(60)
+
+    # deploy new cluster
+    my_charm = await ops_test.build_charm(".")
+    deploy_cluster_with_storage_cmd = (
+        f"deploy {my_charm} --model={ops_test.model.info.name} --attach-storage={storage_ids[0]}"
+    )
+    return_code, _, _ = await ops_test.juju(*deploy_cluster_with_storage_cmd.split())
+    assert return_code == 0, f"Failed to deploy app with storage {storage_ids[0]}"
+
+    # add unit with storage attached
+    for unit_storage_id in storage_ids[1:]:
+        add_unit_cmd = (
+            f"add-unit {app} --model={ops_test.model.info.name} --attach-storage={unit_storage_id}"
+        )
+        return_code, _, _ = await ops_test.juju(*add_unit_cmd.split())
+        assert return_code == 0, f"Failed to add unit with storage {unit_storage_id}"
+
+    await ops_test.model.relate(app, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
+        status="active",
+        timeout=1000,
+        idle_period=IDLE_PERIOD,
+    )
+    assert len(ops_test.model.applications[app].units) == len(storage_ids)
+
+    # check if previous volumes are attached to the units of the new cluster
+    new_storage_ids = []
+    for unit_id in get_application_unit_ids(ops_test, app):
+        new_storage_ids.append(storage_id(ops_test, app, unit_id))
+
+    assert sorted(storage_ids) == sorted(new_storage_ids), "Storage IDs mismatch."
+
+    # check if data is also imported
+    assert writes_result.count == (await c_writes.count())
+    assert writes_result.max_stored_id == (await c_writes.max_stored_id())
