@@ -283,16 +283,24 @@ async def get_controller_hostname(ops_test: OpsTest) -> str:
     ][0]
 
 
-async def get_reachable_unit_ips(ops_test: OpsTest) -> List[str]:
+async def get_reachable_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
     """Helper function to retrieve the IP addresses of all online units."""
-    return reachable_hosts(await get_application_unit_ips(ops_test))
+    result = []
+    for ip in (await get_application_unit_ips(ops_test, app)):
+        if await is_up(ops_test, ip, retries=0):
+            result.append(ip)
+
+    return result
 
 
 async def get_reachable_units(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
     """Helper function to retrieve a dict of id/IP addresses of all online units."""
     result = {}
-    for unit in await get_application_units(ops_test, app):
+    for unit in (await get_application_units(ops_test, app)):
         if not is_reachable(unit.ip, 9200):
+            continue
+
+        if not (await is_up(ops_test, unit.ip, retries=0)):
             continue
 
         result[unit.id] = unit.ip

@@ -324,7 +324,7 @@ async def test_freeze_db_process_node_with_primary_shard(
     )
 
     # verify the unit is not reachable
-    is_node_up = await is_up(ops_test, units_ips[first_unit_with_primary_shard], retries=5)
+    is_node_up = await is_up(ops_test, units_ips[first_unit_with_primary_shard])
     assert not is_node_up
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
@@ -406,7 +406,7 @@ async def test_freeze_db_process_node_with_elected_cm(
     )
 
     # verify the unit is not reachable
-    is_node_up = await is_up(ops_test, units_ips[first_elected_cm_unit_id], retries=5)
+    is_node_up = await is_up(ops_test, units_ips[first_elected_cm_unit_id])
     assert not is_node_up
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
