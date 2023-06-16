@@ -11,7 +11,7 @@ on:
         default: 3.1/stable
         type: string
       libjuju-version-specifier:
-        default: "3.1.0.1"
+        default: "==3.1.0.1"
         type: string
 
 jobs:
@@ -46,9 +46,6 @@ jobs:
   lib-check:
     name: Check libraries
     runs-on: ubuntu-22.04
-    needs:
-      - lint
-      - unit-test
     timeout-minutes: 5
     steps:
       - name: Checkout
