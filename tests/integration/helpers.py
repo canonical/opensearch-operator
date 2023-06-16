@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Union
 
 import requests
 import yaml
-from charms.opensearch.v0.helper_networking import is_reachable, reachable_hosts
+from charms.opensearch.v0.helper_networking import is_reachable
 from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -286,7 +286,7 @@ async def get_controller_hostname(ops_test: OpsTest) -> str:
 async def get_reachable_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
     """Helper function to retrieve the IP addresses of all online units."""
     result = []
-    for ip in (await get_application_unit_ips(ops_test, app)):
+    for ip in await get_application_unit_ips(ops_test, app):
         if await is_up(ops_test, ip, retries=0):
             result.append(ip)
 
@@ -296,7 +296,7 @@ async def get_reachable_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List
 async def get_reachable_units(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
     """Helper function to retrieve a dict of id/IP addresses of all online units."""
     result = {}
-    for unit in (await get_application_units(ops_test, app)):
+    for unit in await get_application_units(ops_test, app):
         if not is_reachable(unit.ip, 9200):
             continue
 
