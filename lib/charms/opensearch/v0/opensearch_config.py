@@ -188,7 +188,7 @@ class OpenSearchConfig:
                 pass
 
         with open(self._opensearch.paths.seed_hosts, "w+") as f:
-            lines = "\n".join(set(cm_ips_hostnames))
+            lines = "\n".join([entry for entry in cm_ips_hostnames if entry.strip()])
             f.write(f"{lines}\n")
 
     def cleanup_bootstrap_conf(self):

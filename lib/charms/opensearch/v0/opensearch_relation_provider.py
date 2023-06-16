@@ -25,9 +25,16 @@ from charms.data_platform_libs.v0.data_interfaces import (
     IndexRequestedEvent,
     OpenSearchProvides,
 )
-from charms.opensearch.v0.constants_charm import ClientRelationName
+from charms.opensearch.v0.constants_charm import (
+    ClientRelationName,
+    IndexCreationFailed,
+    NewIndexRequested,
+    PeerRelationName,
+    UserCreationFailed,
+)
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_databag import Scope
+from charms.opensearch.v0.helper_networking import unit_ip
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
@@ -41,7 +48,7 @@ from ops.charm import (
     RelationDepartedEvent,
 )
 from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation
+from ops.model import BlockedStatus, MaintenanceStatus, Relation
 
 # The unique Charmhub library identifier, never change it
 LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
@@ -179,7 +186,7 @@ class OpenSearchProvider(Object):
         if not self.validate_index_name(event.index):
             raise OpenSearchIndexError(f"invalid index name: {event.index}")
 
-        self.unit.status = MaintenanceStatus(f"new index {event.index} requested")
+        self.unit.status = MaintenanceStatus(NewIndexRequested.format(index=event.index))
 
         try:
             self.opensearch.request("PUT", f"/{event.index}")
@@ -189,9 +196,8 @@ class OpenSearchProvider(Object):
                 and e.response_body.get("error", {}).get("type")
                 == "resource_already_exists_exception"
             ):
-                failed_to_create = f"failed to create {event.index} index due to {e} - deferring index-requested event..."
-                logger.error(failed_to_create)
-                self.unit.status = BlockedStatus(failed_to_create)
+                logger.error(IndexCreationFailed.format(index=event.index))
+                self.unit.status = BlockedStatus(IndexCreationFailed.format(index=event.index))
                 event.defer()
                 return
 
@@ -202,7 +208,9 @@ class OpenSearchProvider(Object):
             self.create_opensearch_users(username, hashed_pwd, event.index, extra_user_roles)
         except OpenSearchUserMgmtError as err:
             logger.error(err)
-            self.unit.status = BlockedStatus(str(err))
+            self.unit.status = BlockedStatus(
+                UserCreationFailed.format(rel_name=ClientRelationName, id=event.relation.id)
+            )
             return
 
         rel_id = event.relation.id
@@ -215,7 +223,12 @@ class OpenSearchProvider(Object):
         self.update_endpoints(event.relation)
 
         logger.info(f"new index {event.index} available")
-        self.unit.status = ActiveStatus()
+        # Clear old statuses set by this hook
+        self.charm.status.clear(NewIndexRequested.format(index=event.index))
+        self.charm.status.clear(IndexCreationFailed.format(index=event.index))
+        self.charm.status.clear(
+            UserCreationFailed.format(rel_name=ClientRelationName, id=event.relation.id)
+        )
 
     def validate_index_name(self, index_name: str) -> bool:
         """Validates that the index name provided in the relation is acceptable."""
@@ -335,6 +348,11 @@ class OpenSearchProvider(Object):
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
+        # remove departing unit from endpoints available to requirer charm.
+        if event.departing_unit.app == self.charm.app:
+            departing_unit_ip = unit_ip(self.charm, event.departing_unit, PeerRelationName)
+            self.update_endpoints(event.relation, omit_endpoints={departing_unit_ip})
+
         if event.departing_unit == self.charm.unit:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
 
@@ -343,7 +361,7 @@ class OpenSearchProvider(Object):
         if not self.unit.is_leader():
             return
         if self._unit_departing(event.relation):
-            # This unit is being removed, so don't update the relation.
+            # This unit is being removed.
             self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
             return
 
@@ -351,17 +369,23 @@ class OpenSearchProvider(Object):
 
     def update_endpoints(self, relation: Relation, omit_endpoints: Optional[Set[str]] = None):
         """Updates endpoints in the databag for the given relation."""
-        # we can only set endpoints if we're the leader
-        if not self.unit.is_leader():
+        # we can only set endpoints if we're the leader, and we can only get endpoints if the node
+        # is running.
+        if not self.unit.is_leader() or not self.opensearch.is_node_up():
             return
 
         if not omit_endpoints:
             omit_endpoints = set()
 
+        try:
+            ips = set([node.ip for node in self.charm._get_nodes(use_localhost=True)])
+        except OpenSearchHttpError:
+            logger.error("unable to get nodes")
+            ips = set()
+
         port = self.opensearch.port
-        ips = set([node.ip for node in self.charm._get_nodes(use_localhost=True)])
         endpoints = ",".join([f"{ip}:{port}" for ip in ips - omit_endpoints])
         databag_endpoints = relation.data[relation.app].get("endpoints")
 
-        if endpoints and endpoints != databag_endpoints:
+        if endpoints != databag_endpoints:
             self.opensearch_provides.set_endpoints(relation.id, endpoints)
