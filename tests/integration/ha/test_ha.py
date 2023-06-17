@@ -585,6 +585,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
     first_elected_cm_unit_hostname = unit_ids_hostnames[first_elected_cm_unit_id]
+    first_elected_cm_unit_ip = unit_ids_ips[first_elected_cm_unit_id]
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
@@ -598,7 +599,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
 
     # verify the node is well reachable
     assert await is_up(
-        ops_test, unit_ids_ips[first_elected_cm_unit_id]
+        ops_test, first_elected_cm_unit_ip
     ), "Initial elected cluster manager node not online."
 
     # cut network from current elected cm unit
@@ -621,7 +622,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
 
     # verify node not up anymore
     assert not await is_up(
-        ops_test, unit_ids_ips[first_elected_cm_unit_id], retries=3
+        ops_test, first_elected_cm_unit_ip, retries=3
     ), "Connection still possible to the first CM node where the network was cut."
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
@@ -652,7 +653,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
     first_cm_unit_new_ip = unit_ids_ips[first_elected_cm_unit_id]
 
     assert await is_network_restored_after_ip_change(
-        ops_test, app, first_elected_cm_unit_id, first_cm_unit_new_ip
+        ops_test, app, first_elected_cm_unit_id, first_elected_cm_unit_ip
     ), "Network could not be restored."
 
     # check if node up and is included in the cluster formation
@@ -683,6 +684,7 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     first_unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
     first_unit_with_primary_shard_hostname = unit_ids_hostnames[first_unit_with_primary_shard]
+    first_unit_with_primary_shard_ip = unit_ids_ips[first_unit_with_primary_shard]
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
@@ -696,7 +698,7 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
 
     # verify the node is well reachable
     assert await is_up(
-        ops_test, unit_ids_ips[first_unit_with_primary_shard]
+        ops_test, first_unit_with_primary_shard_ip
     ), "Initial node with primary shard of 'series_index' elected cluster manager node not online."
 
     # cut network from current elected cm unit
@@ -720,7 +722,7 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
 
     # verify node not up anymore
     assert not await is_up(
-        ops_test, unit_ids_ips[first_unit_with_primary_shard], retries=3
+        ops_test, first_unit_with_primary_shard_ip, retries=3
     ), "Connection still possible to the first unit with primary shard where the network was cut."
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
@@ -758,7 +760,7 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     first_unit_with_primary_shard_new_ip = unit_ids_ips[first_unit_with_primary_shard]
 
     assert await is_network_restored_after_ip_change(
-        ops_test, app, first_unit_with_primary_shard, first_unit_with_primary_shard_new_ip
+        ops_test, app, first_unit_with_primary_shard, first_unit_with_primary_shard_ip
     ), "Network could not be restored."
 
     # check if node up and is included in the cluster formation
