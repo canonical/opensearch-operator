@@ -140,7 +140,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 @pytest.mark.abort_on_fail
 async def test_replication_across_members(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check consistency, ie write to node, read data from remaining nodes.
 
