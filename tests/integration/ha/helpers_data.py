@@ -121,6 +121,9 @@ async def index_doc(
         await http_request(
             ops_test, "POST", f"https://{unit_ip}:9200/{index_name}/_refresh", app=app
         )
+        await http_request(
+            ops_test, "POST", f"https://{unit_ip}:9200/{index_name}/_flush", app=app
+        )
 
 
 @retry(
