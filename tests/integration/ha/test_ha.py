@@ -89,6 +89,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     )
 
     await c_writes.clear()
+    logger.info("\n\n\n\n--------\n\n\n\n")
 
 
 @pytest.fixture()
@@ -104,6 +105,7 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
     )
 
     await c_writes.clear()
+    logger.info("\n\n\n\n--------\n\n\n\n")
 
 
 @pytest.mark.abort_on_fail
@@ -323,8 +325,11 @@ async def test_freeze_db_process_node_with_primary_shard(
         ops_test, app, first_unit_with_primary_shard, signal="SIGSTOP"
     )
 
+    # wait until the SIGSTOP fully takes effect
+    time.sleep(10)
+
     # verify the unit is not reachable
-    is_node_up = await is_up(ops_test, units_ips[first_unit_with_primary_shard])
+    is_node_up = await is_up(ops_test, units_ips[first_unit_with_primary_shard], retries=3)
     assert not is_node_up
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
@@ -358,7 +363,7 @@ async def test_freeze_db_process_node_with_primary_shard(
 
     # verify that the opensearch service is back running on the unit previously hosting the p_shard
     assert await is_up(
-        ops_test, units_ips[first_unit_with_primary_shard]
+        ops_test, units_ips[first_unit_with_primary_shard], retries=3
     ), "OpenSearch service hasn't restarted."
 
     # fetch unit hosting the new primary shard of the previous index
@@ -405,8 +410,11 @@ async def test_freeze_db_process_node_with_elected_cm(
         ops_test, app, first_elected_cm_unit_id, signal="SIGSTOP"
     )
 
+    # wait until the SIGSTOP fully takes effect
+    time.sleep(10)
+
     # verify the unit is not reachable
-    is_node_up = await is_up(ops_test, units_ips[first_elected_cm_unit_id])
+    is_node_up = await is_up(ops_test, units_ips[first_elected_cm_unit_id], retries=3)
     assert not is_node_up
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
@@ -437,7 +445,7 @@ async def test_freeze_db_process_node_with_elected_cm(
 
     # verify that the opensearch service is back running on the unit previously elected CM unit
     assert await is_up(
-        ops_test, units_ips[first_elected_cm_unit_id]
+        ops_test, units_ips[first_elected_cm_unit_id], retries=3
     ), "OpenSearch service hasn't restarted."
 
     # verify the previously elected CM node successfully joined back the rest of the fleet

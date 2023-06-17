@@ -390,7 +390,7 @@ async def http_request(
         if json_resp:
             return resp.json()
 
-        logger.info(resp.text)
+        logger.info(f"\n{resp.text}")
         return resp
 
 
