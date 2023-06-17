@@ -51,7 +51,14 @@ class Unit:
     """Model class for a Unit, with properties widely used."""
 
     def __init__(
-        self, id: int, name: str, ip: str, hostname: str, is_leader: bool, machine_id: int
+        self,
+        id: int,
+        name: str,
+        ip: str,
+        hostname: str,
+        is_leader: bool,
+        machine_id: int,
+        status: str,
     ):
         self.id = id
         self.name = name
@@ -59,6 +66,7 @@ class Unit:
         self.hostname = hostname
         self.is_leader = is_leader
         self.machine_id = machine_id
+        self.status = status
 
 
 async def app_name(ops_test: OpsTest) -> Optional[str]:
@@ -89,8 +97,11 @@ async def run_action(
         A SimpleNamespace with "status, response (results)"
     """
     if unit_id is None:
-        reachable_units = await get_reachable_units(ops_test, app=app)
-        unit_id = list(reachable_units.keys())[0]
+        unit_id = [
+            unit
+            for unit in (await get_application_units(ops_test, app))
+            if unit.status == "active"
+        ][0].id
 
     unit_name = [
         unit.name
@@ -137,6 +148,7 @@ async def get_application_units(ops_test: OpsTest, app: str = APP_NAME) -> List[
             hostname=await get_unit_hostname(ops_test, unit_id, app),
             is_leader=unit.get("leader", False),
             machine_id=int(unit["machine"]),
+            status=unit["workload-status"]["current"],
         )
         units.append(unit)
 
@@ -287,6 +299,9 @@ async def get_reachable_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List
     """Helper function to retrieve the IP addresses of all online units."""
     result = []
     for ip in await get_application_unit_ips(ops_test, app):
+        if not is_reachable(ip, 9200):
+            continue
+
         if await is_up(ops_test, ip, retries=1):
             result.append(ip)
 
