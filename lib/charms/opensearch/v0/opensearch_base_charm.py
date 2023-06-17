@@ -441,13 +441,18 @@ class OpenSearchBaseCharm(CharmBase):
             }
         )
 
+    def on_tls_ca_renewal(self, event: CertificateAvailableEvent):
+        """Called when adding new CA to the trust store."""
+        self.on[self.service_manager.name].acquire_lock.emit(
+            callback_override="_restart_opensearch"
+        )
+
     def on_tls_conf_set(
         self,
         event: CertificateAvailableEvent,
         scope: Scope,
         cert_type: CertType,
         cert_renewal: bool,
-        ca_renewal: bool,
     ):
         """Called after certificate ready and stored on the corresponding scope databag.
 
@@ -473,16 +478,16 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-        if ca_renewal:
-            self.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
-
-            if not self._is_tls_configured_in_all_units():
-                event.defer()
-                return
-
-            # no rolling restart - full cluster restart
-            self._restart_opensearch(event)
-            return
+        # if ca_renewal:
+        #     self.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
+        #
+        #     if not self._is_tls_configured_in_all_units():
+        #         event.defer()
+        #         return
+        #
+        #     # no rolling restart - full cluster restart
+        #     self._restart_opensearch(event)
+        #     return
 
         if cert_renewal or self.peers_data.get(Scope.UNIT, "tls_rel_broken", False):
             self.peers_data.delete(Scope.UNIT, "tls_rel_broken")
