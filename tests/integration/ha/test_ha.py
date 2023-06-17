@@ -153,6 +153,20 @@ async def test_replication_across_members(
     units = await get_application_unit_ids_ips(ops_test, app=app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
+    logger.info(await http_request(ops_test, "GET", f"https://{leader_unit_ip}:9200/_cluster/settings"))
+    await http_request(
+        ops_test,
+        method="PUT",
+        endpoint=f"https://{leader_unit_ip}:9200/_cluster/settings",
+        payload={
+            "persistent": {
+                "cluster.routing.allocation.enable": True
+            }
+        },
+    )
+    logger.info(await http_request(ops_test, "GET", f"https://{leader_unit_ip}:9200/_cluster/settings"))
+    logger.info("\n\n\n")
+
     # create index with r_shards = nodes - 1
     index_name = "test_index"
     await create_index(ops_test, app, leader_unit_ip, index_name, r_shards=len(units) - 1)
