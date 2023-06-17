@@ -167,6 +167,10 @@ async def test_replication_across_members(
     )
     logger.info(f"{index_name} settings:\n{settings_resp}")
 
+    await http_request(
+        ops_test, "GET", f"https://{leader_unit_ip}:9200/_cat/shards", json_resp=False
+    )
+
     # check that the doc can be retrieved from any node
     for u_id, u_ip in units.items():
         docs = await search(
