@@ -162,7 +162,9 @@ async def test_replication_across_members(
     await index_doc(ops_test, app, leader_unit_ip, index_name, doc_id)
 
     # print index settings
-    settings_resp = await http_request(ops_test, "GET", f"https://{leader_unit_ip}:9200/{index_name}/_settings")
+    settings_resp = await http_request(
+        ops_test, "GET", f"https://{leader_unit_ip}:9200/{index_name}/_settings"
+    )
     logger.info(f"{index_name} settings:\n{settings_resp}")
 
     # check that the doc can be retrieved from any node
