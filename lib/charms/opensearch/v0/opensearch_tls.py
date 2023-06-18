@@ -172,6 +172,7 @@ class OpenSearchTLS(Object):
 
     def _on_tls_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Notify the charm that the relation is broken."""
+        self.charm.peers_data.put(Scope.UNIT, "tls_rel_broken", True)
         self.charm.on_tls_relation_broken()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:  # noqa
@@ -201,7 +202,8 @@ class OpenSearchTLS(Object):
         if current_stored_ca != event.ca:
             self.store_new_ca(event.ca)
 
-            # this means the CA is renewed.
+            # this means the CA is renewed - we need to restart all units with this new CA
+            # prior to updating the certificates with the new CA.
             if current_stored_ca:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
                 self.charm.on_tls_ca_renewal(event)
@@ -216,6 +218,7 @@ class OpenSearchTLS(Object):
         cert_renewal = (
             self._read_stored_ca(alias="old-ca") is not None
             or (old_cert is not None and old_cert != event.certificate)
+            or self.charm.peers_data.get(Scope.UNIT, "tls_rel_broken", False)
         )
 
         self.charm.secrets.put_object(
@@ -239,9 +242,6 @@ class OpenSearchTLS(Object):
             self.charm.peers_data.put(Scope.APP, f"tls_{cert_type}_configured", True)
         else:
             self.charm.peers_data.put(Scope.UNIT, f"tls_{cert_type}_configured", True)
-
-        for relation in self.charm.opensearch_provider.relations:
-            self.charm.opensearch_provider.update_certs(relation.id, event.chain)
 
         # store the admin certificates in non-leader units
         if not self.charm.unit.is_leader():

@@ -489,34 +489,29 @@ class OpenSearchBaseCharm(CharmBase):
         #     self._restart_opensearch(event)
         #     return
 
-        if cert_renewal or self.peers_data.get(Scope.UNIT, "tls_rel_broken", False):
+        # update client relations
+        for relation in self.opensearch_provider.relations:
+            self.opensearch_provider.update_certs(relation.id, event.chain)
+
+        self.status.clear(TLSNotFullyConfigured)
+
+        if cert_renewal:
             self.peers_data.delete(Scope.UNIT, "tls_rel_broken")
 
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
             return
-        self.status.clear(TLSNotFullyConfigured)
 
-    def on_tls_relation_joined(self):
+    def on_tls_relation_joined(self) -> None:
         """We clean up any residue from the previous TLS relation if any."""
         self.unit.status = WaitingStatus(TLSNotFullyConfigured)
 
-        # todo ??? delete
-        if not self.peers_data.get(Scope.UNIT, "tls_rel_broken", False):
-            return
-
-    def on_tls_relation_broken(self):
+    def on_tls_relation_broken(self) -> None:
         """As long as all certificates are produced, we don't do anything."""
-        if self._are_security_resources_configured():
-            # we use the unit's peer rel databag, in case the leader cannot receive hooks,
-            # in cases like storage_detaching is crashing due to scale-down safeguards
-            # in the leader unit
-            self.peers_data.put(Scope.UNIT, "tls_rel_broken", True)
+        if not self._are_security_resources_configured():
+            self.unit.status = BlockedStatus(TLSRelationBrokenError)
             return
-
-        # Otherwise, we block.
-        self.unit.status = BlockedStatus(TLSRelationBrokenError)
 
     def _are_security_resources_configured(self) -> bool:
         """Check if TLS fully configured meaning the admin user configured & 3 certs present."""
@@ -526,7 +521,7 @@ class OpenSearchBaseCharm(CharmBase):
             and self.tls.all_tls_resources_stored()  # all certificates stored on disk
         )
 
-    def _is_tls_configured_in_all_units(self):
+    def _is_tls_configured_in_all_units(self) -> bool:
         """Checks whether TLS is well configured in all units for a rolling restart."""
         if not self.peers_data.get(Scope.APP, f"tls_{CertType.APP_ADMIN}_configured", False):
             return False
@@ -572,18 +567,18 @@ class OpenSearchBaseCharm(CharmBase):
         self.peers_data.put(Scope.UNIT, "starting", True)
 
         # todo this should not be needed once trust store hot reload works
-        if not self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
-            try:
-                # Retrieve the nodes of the cluster, needed to configure this node
-                nodes = self._get_nodes(False)
+        # if not self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
+        try:
+            # Retrieve the nodes of the cluster, needed to configure this node
+            nodes = self._get_nodes(False)
 
-                # Set the configuration of the node
-                self._set_node_conf(nodes)
-            except OpenSearchHttpError:
-                self.peers_data.delete(Scope.UNIT, "starting")
-                event.defer()
-                self._post_start_init()
-                return
+            # Set the configuration of the node
+            self._set_node_conf(nodes)
+        except OpenSearchHttpError:
+            self.peers_data.delete(Scope.UNIT, "starting")
+            event.defer()
+            self._post_start_init()
+            return
 
         try:
             self.opensearch.start(
