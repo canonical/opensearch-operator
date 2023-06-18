@@ -255,13 +255,13 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         # remove old ca if all units have completely finished renewing it
-        rel = self.model.get_relation(PeerRelationName)
-        all_units = rel.units.union({self.unit})
-        units_with_fully_renewed_ca = sum(
-            1 for unit in all_units if rel.data[unit].get("tls_ca_renewing") != "True"
-        )
-        if units_with_fully_renewed_ca == len(all_units):
-            self.tls.remove_old_ca_if_any()
+        # rel = self.model.get_relation(PeerRelationName)
+        # all_units = rel.units.union({self.unit})
+        # units_with_fully_renewed_ca = sum(
+        #     1 for unit in all_units if rel.data[unit].get("tls_ca_renewing") != "True"
+        # )
+        # if units_with_fully_renewed_ca == len(all_units):
+        #     self.tls.remove_old_ca_if_any()
 
         if unit_data and self.unit.is_leader():
             if unit_data.get("bootstrap_contributor"):
@@ -621,11 +621,11 @@ class OpenSearchBaseCharm(CharmBase):
         # Remove the 'starting' flag on the unit
         self.peers_data.delete(Scope.UNIT, "starting")
 
-        # Remove ca removal flag
-        self.peers_data.delete(Scope.UNIT, "tls_ca_renewing")
-
         # apply cluster health
         self.health.apply()
+
+        # reset the TLS related peer rel data flags
+        self.tls.reset_internal_state()
 
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""

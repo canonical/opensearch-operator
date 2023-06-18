@@ -119,9 +119,19 @@ class OpenSearchTLS(Object):
             secrets = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)
             self._request_certificate_renewal(Scope.UNIT, cert_type, secrets)
 
-    def resume_tls_certs_renewal_if_needed(self) -> None:
+    def reset_internal_state(self) -> None:
         """Removes tls_ca_renewing flag so new certificates can be generated."""
-        self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
+        if not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
+            # this means simple certificate creation, with no CA renewal
+            return
+
+        # this means that the unit certificates were generated, after a previous CA renewal.
+        if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+            self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewing")
+            self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewed")
+        else:
+            # this means only the CA renewal completed, still need to create certificates
+            self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewed", True)
 
     def _on_tls_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Request certificate when TLS relation joined."""
@@ -213,6 +223,11 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
+        # check if there was a CA renewal on the cluster, if not complete defer
+        if not self._ca_renewal_complete_in_cluster():
+            event.defer()
+            return
+
         # check if certificate renewal
         old_cert = secrets.get("cert", None)
         cert_renewal = (
@@ -238,10 +253,10 @@ class OpenSearchTLS(Object):
         )
 
         # set flag to indicate cert type well configured
-        if self.charm.unit.is_leader() and cert_type == CertType.APP_ADMIN:
-            self.charm.peers_data.put(Scope.APP, f"tls_{cert_type}_configured", True)
-        else:
-            self.charm.peers_data.put(Scope.UNIT, f"tls_{cert_type}_configured", True)
+        # if self.charm.unit.is_leader() and cert_type == CertType.APP_ADMIN:
+        #     self.charm.peers_data.put(Scope.APP, f"tls_{cert_type}_configured", True)
+        # else:
+        #     self.charm.peers_data.put(Scope.UNIT, f"tls_{cert_type}_configured", True)
 
         # store the admin certificates in non-leader units
         if not self.charm.unit.is_leader():
@@ -639,3 +654,15 @@ class OpenSearchTLS(Object):
         key_stores = glob.glob(f"{self.certs_path}/*")
         for key_store in key_stores:
             os.remove(key_store)
+
+    def _ca_renewal_complete_in_cluster(self) -> bool:
+        """Check whether the CA renewal completed in all units."""
+        rel = self.model.get_relation(self.peer_relation)
+        for unit in rel.units.union({self.charm.unit}):
+            rel_data = rel.data[unit]
+            ca_renewing = rel_data.get("tls_ca_renewing")
+            ca_renewed = rel_data.get("tls_ca_renewed")
+            if ca_renewing == "True" and ca_renewed != "True":
+                return False
+
+        return True
