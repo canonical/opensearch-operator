@@ -45,14 +45,18 @@ tox                 # runs 'format', 'lint', and 'unit' environments
 Integration tests can be run for separate areas of functionality:
 
 ```shell
-tox -e j2-charm-integration      # basic charm integration tests
-tox -e j2-tls-integration        # TLS-specific integration tests
-tox -e j2-client-integration     # Validates the `opensearch-client` integration
-tox -e j2-ha-integration         # HA tests
-tox -e j2-h-scaling-integration  # HA tests specific to horizontal scaling
+tox -e charm-integration      # basic charm integration tests
+tox -e tls-integration        # TLS-specific integration tests
+tox -e client-integration     # Validates the `opensearch-client` integration
+tox -e ha-integration         # HA tests
+tox -e h-scaling-integration  # HA tests specific to horizontal scaling
 ```
 
-If you're running tests on juju 3, replace the `j2` prefix with `j3`
+If you're running tests on juju 3, run the following command to change libjuju to the correct version:
+
+```shell
+export LIBJUJU_VERSION_SPECIFIER=\=\=3.1.0.1
+```
 
 ## Build charm
 
