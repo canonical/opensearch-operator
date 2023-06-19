@@ -381,8 +381,8 @@ async def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
     root = "/var/snap/opensearch"
     files_to_debug = [
         f"{root}/common/logs/{app}-{ops_test.model_name}.log",
-        f"{root}/current/config/opensearch.yml",
-        f"{root}/current/config/unicast_hosts.txt",
+        f"{root}/current/opensearchopensearch.yml",
+        f"{root}/current/unicast_hosts.txt",
     ]
     for f in files_to_debug:
         logger.debug(f"{f}:\n")

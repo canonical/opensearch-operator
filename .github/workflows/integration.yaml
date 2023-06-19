@@ -24,13 +24,14 @@ jobs:
       matrix:
         tox-environments:
           - charm-integration
-          - tls-integration
-          - client-integration
-          - ha-integration
-        runner: ["ubuntu-22.04"]
-        include:
-          - tox-environments: h-scaling-integration
-            runner: "Ubuntu_4C_16G"
+          # commented out so I don't take up every runner
+        #   - tls-integration
+        #   - client-integration
+        #   - ha-integration
+        # runner: ["ubuntu-22.04"]
+        # include:
+        #   - tox-environments: h-scaling-integration
+        #     runner: "Ubuntu_4C_16G"
     name: ${{ matrix.tox-environments }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120

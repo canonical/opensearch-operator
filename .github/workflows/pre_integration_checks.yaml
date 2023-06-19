@@ -1,18 +1,9 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-name: CI
+name: Pre-integration checks
 
 on:
-  # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
-    inputs:
-      juju-snap-channel:
-        description: Snap channel for Juju CLI
-        default: 3.1/stable
-        type: string
-      libjuju-version-specifier:
-        default: "==3.1.0.1"
-        type: string
 
 jobs:
   lint:
@@ -58,29 +49,7 @@ jobs:
           credentials: "${{ secrets.CHARMHUB_TOKEN }}" # FIXME: current token will expire in 2023-07-04
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-  build:
-    name: Build charms
-    needs:
-      - lib-check
-      - lint
-      - unit-test
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2.3.9
 
-  integration:
-    needs:
-      - lint
-      - unit-test
-      - build
-    strategy:
-      matrix:
-        version:
-          - snap: 3.1/stable
-          - snap: 2.9/stable
-            libjuju: "==2.9.42.1"
-    uses: ./.github/workflows/integration.yaml
-    with:
-      juju-snap-channel: ${{ inputs.juju-snap-channel }}
-      libjuju-version-specifier: ${{ inputs.libjuju-version-specifier }}
-      artifact-name: ${{ needs.build.outputs.artifact-name }}
+
 
 

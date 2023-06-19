@@ -10,14 +10,27 @@ on:
   pull_request:
 
 jobs:
-  ci:
+  pre-integration-checks:
+    uses: ./.github/workflows/pre_integration_checks.yaml
+
+  build:
+    name: Build charms
+    needs:
+      - pre-integration-checks
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2.3.9
+
+  integration:
+    needs:
+      - pre-integration-checks
+      - build
     strategy:
       matrix:
         version:
           - snap: 3.1/stable
           - snap: 2.9/stable
-            libjuju: "2.9.42.1"
-    uses: ./.github/workflows/ci.yaml
+            libjuju: "==2.9.42.1"
+    uses: ./.github/workflows/integration.yaml
     with:
       juju-snap-channel: ${{ matrix.version.snap }}
       libjuju-version-specifier: ${{ matrix.version.libjuju }}
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
