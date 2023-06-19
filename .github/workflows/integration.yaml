@@ -37,6 +37,8 @@ jobs:
         #     runner: "Ubuntu_4C_16G"
     name: ${{ matrix.tox-environments }}
     runs-on: ${{ matrix.runner }}
+    needs:
+      - build
     timeout-minutes: 120
     steps:
       - name: Checkout
