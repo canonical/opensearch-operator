@@ -25,14 +25,14 @@ jobs:
     #   - build
     strategy:
       matrix:
-        version:
+        include:
           - snap: 3.1/stable
             libjuju: ==3.1.0.1
           - snap: 2.9/stable
             libjuju: ==2.9.42.1
     uses: ./.github/workflows/integration.yaml
     with:
-      juju-snap-channel: ${{ matrix.version.snap }}
-      libjuju-version-specifier: ${{ matrix.version.libjuju }}
+      juju-snap-channel: ${{ matrix.snap }}
+      libjuju-version-specifier: ${{ matrix.libjuju }}
       artifact-name: "test"
       # ${{ needs.build.outputs.artifact-name }}
