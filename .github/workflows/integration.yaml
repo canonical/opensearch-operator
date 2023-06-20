@@ -12,33 +12,26 @@ on:
       libjuju-version-specifier:
         default: ==3.1.0.1
         type: string
-      # artifact-name:
-      #   description: Location for built charm file.
-      #   type: string
+      charms:
+        description: Built charm file.
+        type: string
 
 jobs:
-  build:
-    name: Build charms
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2.3.9
-
   integration-test:
     strategy:
       fail-fast: false
       matrix:
         tox-environments:
           - charm-integration
-          # commented out so I don't take up every runner
-        #   - tls-integration
-        #   - client-integration
-        #   - ha-integration
+          - tls-integration
+          - client-integration
+          - ha-integration
         runner: ["ubuntu-22.04"]
-        # include:
-        #   - tox-environments: h-scaling-integration
-        #     runner: "Ubuntu_4C_16G"
+        include:
+          - tox-environments: h-scaling-integration
+            runner: "Ubuntu_4C_16G"
     name: ${{ matrix.tox-environments }}
     runs-on: ${{ matrix.runner }}
-    needs:
-      - build
     timeout-minutes: 120
     steps:
       - name: Checkout
@@ -79,5 +72,5 @@ jobs:
           echo ${{ matrix.tox-environments }}
           tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
-          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+          CI_PACKED_CHARMS: ${{inputs.charms}}
           LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}

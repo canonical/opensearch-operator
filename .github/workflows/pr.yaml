@@ -13,19 +13,15 @@ jobs:
   pre-integration-checks:
     uses: ./.github/workflows/pre_integration_checks.yaml
 
+  build:
+    name: Build charms
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2.3.9
+
   integration:
     needs:
       - pre-integration-checks
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - snap: 3.1/stable
-            libjuju: ==3.1.0.1
-          - snap: 2.9/stable
-            libjuju: ==2.9.42.1
     uses: ./.github/workflows/integration.yaml
     with:
-      juju-snap-channel: ${{ matrix.snap }}
-      libjuju-version-specifier: ${{ matrix.libjuju }}
-      # artifact-name: ${{ needs.build.outputs.artifact-name }}
+      juju-snap-channel: 3.1/stable
+      libjuju-version-specifier: ==3.1.0.1
+      charms: ${{ needs.build.outputs.charms }}
