@@ -12,12 +12,15 @@ on:
       libjuju-version-specifier:
         default: ==3.1.0.1
         type: string
-      charms:
-        description: Built charm file.
-        type: string
 
 jobs:
+  build:
+    name: Build charms
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2.3.9
+
   integration-test:
+    needs:
+      - build
     strategy:
       fail-fast: false
       matrix:
@@ -68,5 +71,5 @@ jobs:
           sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
           tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
-          CI_PACKED_CHARMS: ${{inputs.charms}}
+          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
           LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
