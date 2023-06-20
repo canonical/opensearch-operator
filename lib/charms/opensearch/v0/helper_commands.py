@@ -50,11 +50,8 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
             env=os.environ,
         )
 
-        if output.stdout:
-            logger.debug(f"out: {output.stdout}")
-
         if output.returncode != 0:
-            logger.error(f"err: {output.stderr}")
+            logger.error(f"err: {output.stderr} / out: {output.stdout}")
             raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
 
         return SimpleNamespace(cmd=command, out=output.stdout, err=output.stderr)

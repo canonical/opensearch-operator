@@ -159,7 +159,7 @@ class OpenSearchBaseCharm(CharmBase):
                 event.defer()
                 return
 
-            if self.health.apply() == HealthColors.YELLOW_TEMP:
+            if self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
                 event.defer()
 
             self._compute_and_broadcast_updated_topology(self._get_nodes(True))
@@ -241,7 +241,7 @@ class OpenSearchBaseCharm(CharmBase):
         if (
             self.unit.is_leader()
             and self.opensearch.is_node_up()
-            and self.health.apply() == HealthColors.YELLOW_TEMP
+            and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
         ):
             # we defer because we want the temporary status to be updated
             event.defer()
@@ -249,19 +249,14 @@ class OpenSearchBaseCharm(CharmBase):
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
+        # remove old ca if all units have completely finished renewing it and are running
+        if self.opensearch.is_node_up() and self._is_tls_fully_configured_in_all_units():
+            self.tls.remove_old_ca_if_any()
+
         app_data = event.relation.data.get(event.app)
         unit_data = event.relation.data.get(event.unit)
         if not unit_data and not app_data:
             return
-
-        # remove old ca if all units have completely finished renewing it
-        # rel = self.model.get_relation(PeerRelationName)
-        # all_units = rel.units.union({self.unit})
-        # units_with_fully_renewed_ca = sum(
-        #     1 for unit in all_units if rel.data[unit].get("tls_ca_renewing") != "True"
-        # )
-        # if units_with_fully_renewed_ca == len(all_units):
-        #     self.tls.remove_old_ca_if_any()
 
         if unit_data and self.unit.is_leader():
             if unit_data.get("bootstrap_contributor"):
@@ -368,7 +363,7 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
 
-            if self.health.apply() == HealthColors.YELLOW_TEMP:
+            if self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
                 event.defer()
                 return
 
@@ -441,7 +436,7 @@ class OpenSearchBaseCharm(CharmBase):
             }
         )
 
-    def on_tls_ca_renewal(self, event: CertificateAvailableEvent):
+    def on_tls_ca_renewal(self, _: CertificateAvailableEvent):
         """Called when adding new CA to the trust store."""
         self.on[self.service_manager.name].acquire_lock.emit(
             callback_override="_restart_opensearch"
@@ -460,9 +455,6 @@ class OpenSearchBaseCharm(CharmBase):
         - Update the corresponding yaml conf files
         - Run the security admin script
         """
-        # Get the list of stored secrets for this cert
-        current_secrets = self.secrets.get_object(scope, cert_type.val)
-
         if scope == Scope.UNIT:
             # node http or transport cert
             self.opensearch_config.set_node_tls_conf(
@@ -472,36 +464,23 @@ class OpenSearchBaseCharm(CharmBase):
             )
         else:
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
-            self.opensearch_config.set_admin_tls_conf(current_secrets)
+            current_admin_secrets = self.secrets.get_object(scope, cert_type.val)
+            self.opensearch_config.set_admin_tls_conf(current_admin_secrets)
 
         if not self._are_security_resources_configured():
             return
-
-        # In case of renewal of the unit transport layer cert - restart opensearch
-        # if ca_renewal:
-        #     self.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
-        #
-        #     if not self._is_tls_configured_in_all_units():
-        #         event.defer()
-        #         return
-        #
-        #     # no rolling restart - full cluster restart
-        #     self._restart_opensearch(event)
-        #     return
 
         # update client relations
         for relation in self.opensearch_provider.relations:
             self.opensearch_provider.update_certs(relation.id, event.chain)
 
-        self.status.clear(TLSNotFullyConfigured)
-
         if cert_renewal:
             self.peers_data.delete(Scope.UNIT, "tls_rel_broken")
-
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
-            return
+
+        self.status.clear(TLSNotFullyConfigured)
 
     def on_tls_relation_joined(self) -> None:
         """We clean up any residue from the previous TLS relation if any."""
@@ -521,20 +500,22 @@ class OpenSearchBaseCharm(CharmBase):
             and self.tls.all_tls_resources_stored()  # all certificates stored on disk
         )
 
-    def _is_tls_configured_in_all_units(self) -> bool:
+    def _is_tls_fully_configured_in_all_units(self) -> bool:
         """Checks whether TLS is well configured in all units for a rolling restart."""
-        if not self.peers_data.get(Scope.APP, f"tls_{CertType.APP_ADMIN}_configured", False):
-            return False
-
+        # check if all certificates have been well generated and opensearch started in all nodes.
         rel = self.model.get_relation(PeerRelationName)
         for unit in rel.units.union({self.unit}):
+            rel_data = rel.data[unit]
+            if "tls_ca_renewing" in rel_data or "tls_ca_renewed" in rel_data:
+                return False
+
             if (
-                rel.data[unit].get(f"tls_{CertType.UNIT_TRANSPORT}_configured") != "True"
-                or rel.data[unit].get(f"tls_{CertType.UNIT_HTTP}_configured") != "True"
+                rel_data.get(f"tls_{CertType.UNIT_TRANSPORT}_configured") != "True"
+                or rel_data.get(f"tls_{CertType.UNIT_HTTP}_configured") != "True"
             ):
                 return False
 
-        return True
+        return self.peers_data.get(Scope.APP, f"tls_{CertType.APP_ADMIN}_configured", False)
 
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
@@ -566,25 +547,29 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.peers_data.put(Scope.UNIT, "starting", True)
 
-        # todo this should not be needed once trust store hot reload works
-        # if not self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
-        try:
-            # Retrieve the nodes of the cluster, needed to configure this node
-            nodes = self._get_nodes(False)
+        # The hot reloading of certificates only works when they're issued from the same CA
+        # if that's not the case, we skip the querying of nodes and simply reboot
+        if not self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
+            try:
+                # Retrieve the nodes of the cluster, needed to configure this node
+                nodes = self._get_nodes(False)
 
-            # Set the configuration of the node
-            self._set_node_conf(nodes)
-        except OpenSearchHttpError:
-            self.peers_data.delete(Scope.UNIT, "starting")
-            event.defer()
-            self._post_start_init()
-            return
+                # Set the configuration of the node
+                self._set_node_conf(nodes)
+            except OpenSearchHttpError:
+                self.peers_data.delete(Scope.UNIT, "starting")
+                event.defer()
+                self._post_start_init()
+                return
 
         try:
             self.opensearch.start(
                 wait_until_http_200=(
-                    not self.unit.is_leader()
-                    or self.peers_data.get(Scope.APP, "security_index_initialised", False)
+                    not self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
+                    and (
+                        not self.unit.is_leader()
+                        or self.peers_data.get(Scope.APP, "security_index_initialised", False)
+                    )
                 )
             )
             self._post_start_init()
@@ -608,7 +593,10 @@ class OpenSearchBaseCharm(CharmBase):
         # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
         # may be thrown when calling a node - we want to ensure this node is perfectly ready
         # before marking it as ready
-        if not self.opensearch.is_node_up():
+        if (
+            not self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
+            and not self.opensearch.is_node_up()
+        ):
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
         # cleanup bootstrap conf in the node
@@ -643,10 +631,6 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _restart_opensearch(self, event: EventBase) -> None:
         """Restart OpenSearch if possible."""
-        if not self._are_security_resources_configured():
-            event.defer()
-            return
-
         if self.opensearch.is_started() and not self.peers_data.get(Scope.UNIT, "starting", False):
             try:
                 self._stop_opensearch()
@@ -665,6 +649,9 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader() and not self.peers_data.get(
             Scope.APP, "security_index_initialised", False
         ):
+            return self.opensearch.is_started()
+
+        if self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
             return self.opensearch.is_started()
 
         # any other case
@@ -693,14 +680,12 @@ class OpenSearchBaseCharm(CharmBase):
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
         # overloading the cluster, units must be started one at a time. So we defer starting
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
-        try:
-            if self.health.apply(use_localhost=False, app=False) == HealthColors.YELLOW_TEMP:
-                return False
-        except OpenSearchHttpError:
-            # this means that the leader unit is not reachable (not started yet),
-            # meaning it's a new cluster, so we can safely start the OpenSearch service
-            pass
+        if self.health.apply(use_localhost=False, app=False) == HealthColors.YELLOW_TEMP:
+            return False
 
+        # if the health is UNKNOWN, this usually means that the leader unit is not
+        # reachable (not started yet), meaning it's a new cluster, or that the admin certificate
+        # is unable to auth a request, so we can safely start the OpenSearch service
         return True
 
     def _purge_users(self):

@@ -196,7 +196,9 @@ class OpenSearchTLS(Object):
             return
 
         # CA renewal still in progress (rolling restart)
-        if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
+        if self.charm.peers_data.get(
+            Scope.UNIT, "tls_ca_renewing", False
+        ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
             event.defer()
             return
 
@@ -217,6 +219,7 @@ class OpenSearchTLS(Object):
             if current_stored_ca:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
                 self.charm.on_tls_ca_renewal(event)
+                event.defer()
                 return
 
         # seems like the admin certificate is also broadcast to non leader units on refresh request
@@ -236,27 +239,8 @@ class OpenSearchTLS(Object):
             or self.charm.peers_data.get(Scope.UNIT, "tls_rel_broken", False)
         )
 
-        self.charm.secrets.put_object(
-            scope,
-            cert_type.val,
-            {
-                "cert": event.certificate,
-                "cert-chain": event.chain[::-1],
-                "ca": event.ca,
-            },
-            merge=True,
-        )
-
-        # store the certificates and keys in a key store
-        self._store_new_tls_resources(
-            scope, cert_type, self.charm.secrets.get_object(scope, cert_type.val)
-        )
-
-        # set flag to indicate cert type well configured
-        # if self.charm.unit.is_leader() and cert_type == CertType.APP_ADMIN:
-        #     self.charm.peers_data.put(Scope.APP, f"tls_{cert_type}_configured", True)
-        # else:
-        #     self.charm.peers_data.put(Scope.UNIT, f"tls_{cert_type}_configured", True)
+        # persist the certificate on the secrets + disk
+        self._persist_certificate(event, scope, cert_type)
 
         # store the admin certificates in non-leader units
         if not self.charm.unit.is_leader():
@@ -280,6 +264,32 @@ class OpenSearchTLS(Object):
             return
 
         self._request_certificate_renewal(scope, cert_type, secrets)
+
+    def _persist_certificate(
+        self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType
+    ) -> None:
+        """Persist the certificate on the secrets store and on disk."""
+        self.charm.secrets.put_object(
+            scope,
+            cert_type.val,
+            {
+                "cert": event.certificate,
+                "cert-chain": event.chain[::-1],
+                "ca": event.ca,
+            },
+            merge=True,
+        )
+
+        # store the certificates and keys in a key store
+        self._store_new_tls_resources(
+            scope, cert_type, self.charm.secrets.get_object(scope, cert_type.val)
+        )
+
+        # set flag to indicate cert type well configured
+        if self.charm.unit.is_leader() and cert_type == CertType.APP_ADMIN:
+            self.charm.peers_data.put(Scope.APP, f"tls_{cert_type}_configured", True)
+        else:
+            self.charm.peers_data.put(Scope.UNIT, f"tls_{cert_type}_configured", True)
 
     def _request_certificate(
         self,
@@ -463,7 +473,7 @@ class OpenSearchTLS(Object):
         return len(cert_cas) == 1
 
     def all_certificates_available(self) -> bool:
-        """Method that checks if all certificates are available in secrets store."""
+        """Method that checks if all certs available and issued from same CA."""
         secrets = self.charm.secrets
 
         admin_secrets = secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
@@ -553,13 +563,23 @@ class OpenSearchTLS(Object):
             f"{keytool} -list -v -keystore {store_path} -storepass {store_pwd} -storetype PKCS12"
         )
 
-    def remove_old_ca_if_any(self):
+    def remove_old_ca_if_any(self) -> None:
         """Remove old CA cert from trust store."""
-        self._remove_key_store_content_by_alias(
-            self.charm.secrets.get(Scope.APP, "keystore-password-ca"),
-            alias="old-ca",
-            key_store_name="ca",
-        )
+        keytool = f"sudo {self.jdk_path}/bin/keytool"
+        store_path = f"{self.certs_path}/ca.p12"
+        old_alias = "old-ca"
+
+        store_pwd = self.charm.secrets.get(Scope.APP, "keystore-password-ca")
+        try:
+            run_cmd(
+                f"{keytool} -list -keystore {store_path} -storepass {store_pwd} -alias {old_alias} -storetype PKCS12"
+            )
+        except OpenSearchCmdError as e:
+            # This message means there was no "ca" alias or store before, if it happens ignore
+            if f"Alias <{old_alias}> does not exist" in e.out:
+                return
+
+        self._remove_key_store_content_by_alias(store_pwd, alias=old_alias, key_store_name="ca")
 
     def _store_new_tls_resources(self, scope: Scope, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
@@ -657,7 +677,7 @@ class OpenSearchTLS(Object):
 
     def _ca_renewal_complete_in_cluster(self) -> bool:
         """Check whether the CA renewal completed in all units."""
-        rel = self.model.get_relation(self.peer_relation)
+        rel = self.charm.model.get_relation(self.peer_relation)
         for unit in rel.units.union({self.charm.unit}):
             rel_data = rel.data[unit]
             ca_renewing = rel_data.get("tls_ca_renewing")

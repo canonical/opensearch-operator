@@ -331,7 +331,7 @@ class OpenSearchProvider(Object):
         if not ca_chain:
             try:
                 ca_chain = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val).get(
-                    "chain"
+                    "cert-chain"
                 )
             except AttributeError:
                 # cert doesn't exist - presumably we don't yet have a TLS relation.

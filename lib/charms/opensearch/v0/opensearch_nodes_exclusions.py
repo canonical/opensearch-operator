@@ -87,6 +87,7 @@ class OpenSearchExclusions:
             self._opensearch.request(
                 "POST",
                 f"/_cluster/voting_config_exclusions?node_names={self._node.name}&timeout=1m",
+                host=self._charm.unit_ip,
                 alt_hosts=self._charm.alt_hosts,
                 resp_status_code=True,
                 retries=3,
@@ -123,7 +124,9 @@ class OpenSearchExclusions:
                 "PUT",
                 "/_cluster/settings",
                 {"persistent": {"cluster.routing.allocation.exclude._name": ",".join(all_allocs)}},
+                host=self._charm.unit_ip,
                 alt_hosts=self._charm.alt_hosts,
+                retries=3,
             )
             return "acknowledged" in response
         except OpenSearchHttpError:
@@ -144,7 +147,10 @@ class OpenSearchExclusions:
         allocation_exclusions = set()
         try:
             resp = self._opensearch.request(
-                "GET", "/_cluster/settings", alt_hosts=self._charm.alt_hosts
+                "GET",
+                "/_cluster/settings",
+                host=self._charm.unit_ip,
+                alt_hosts=self._charm.alt_hosts,
             )
             exclusions = resp["persistent"]["cluster"]["routing"]["allocation"]["exclude"]["_name"]
             if exclusions:
