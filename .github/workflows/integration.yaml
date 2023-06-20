@@ -79,5 +79,5 @@ jobs:
           echo ${{ matrix.tox-environments }}
           tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
-          CI_PACKED_CHARMS: ${{ needs.build.outputs.artifact-name }}
+          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
           LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
