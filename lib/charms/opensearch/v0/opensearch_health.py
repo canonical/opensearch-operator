@@ -38,6 +38,7 @@ class HealthColors:
     YELLOW = "yellow"
     YELLOW_TEMP = "yellow-temp"
     RED = "red"
+    UNKNOWN = "unknown"
 
 
 class OpenSearchHealth:
@@ -54,15 +55,20 @@ class OpenSearchHealth:
         app: bool = True,
     ) -> str:
         """Fetch cluster health and set it on the app status."""
-        host = self._charm.unit_ip if use_localhost else None
-        status = self._fetch_status(host, wait_for_green_first)
+        try:
+            host = self._charm.unit_ip if use_localhost else None
+            status = self._fetch_status(host, wait_for_green_first)
+            if not status:
+                return HealthColors.UNKNOWN
 
-        if app:
-            self.apply_for_app(status)
-        else:
-            self.apply_for_unit(status)
+            if app:
+                self.apply_for_app(status)
+            else:
+                self.apply_for_unit(status)
 
-        return status
+            return status
+        except OpenSearchHttpError:
+            return HealthColors.UNKNOWN
 
     def apply_for_app(self, status: str) -> None:
         """Cluster wide / app status."""
@@ -131,6 +137,9 @@ class OpenSearchHealth:
                 host=host,
                 alt_hosts=self._charm.alt_hosts,
             )
+
+        if not response:
+            return None
 
         status = response["status"].lower()
         if status != HealthColors.YELLOW:

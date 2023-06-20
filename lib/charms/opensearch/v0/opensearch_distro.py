@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Set, Union
 import requests
 import urllib3.exceptions
 from charms.opensearch.v0.helper_cluster import Node
+from charms.opensearch.v0.helper_commands import run_cmd
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import (
@@ -26,7 +27,6 @@ from charms.opensearch.v0.helper_networking import (
     reachable_hosts,
 )
 from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHttpError,
     OpenSearchStartTimeoutError,
@@ -160,16 +160,16 @@ class OpenSearchDistribution(ABC):
     def run_bin(self, bin_script_name: str, args: str = None):
         """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin."""
         script_path = f"{self.paths.home}/bin/{bin_script_name}"
-        self._run_cmd(f"chmod a+x {script_path}")
+        run_cmd(f"chmod a+x {script_path}")
 
-        self._run_cmd(script_path, args)
+        run_cmd(script_path, args)
 
     def run_script(self, script_name: str, args: str = None):
         """Run script provided by Opensearch in another directory, relative to OPENSEARCH_HOME."""
         script_path = f"{self.paths.home}/{script_name}"
-        self._run_cmd(f"chmod a+x {script_path}")
+        run_cmd(f"chmod a+x {script_path}")
 
-        self._run_cmd(f"{script_path}", args)
+        run_cmd(f"{script_path}", args)
 
     def request(  # noqa
         self,
@@ -250,7 +250,7 @@ class OpenSearchDistribution(ABC):
                     request_kwargs = {
                         "method": method.upper(),
                         "url": urls[0],
-                        "verify": f"{self.paths.certs}/chain.pem",
+                        "verify": f"{self.paths.certs}/admin-cert-chain.pem",
                         "headers": {
                             "Accept": "application/json",
                             "Content-Type": "application/json",
@@ -288,7 +288,10 @@ class OpenSearchDistribution(ABC):
         if resp_status_code:
             return resp.status_code
 
-        return resp.json()
+        try:
+            return resp.json()
+        except requests.JSONDecodeError:
+            raise OpenSearchHttpError(response_body=resp.text)
 
     def write_file(self, path: str, data: str, override: bool = True):
         """Persists data into file. Useful for files generated on the fly, such as certs etc."""
@@ -301,39 +304,6 @@ class OpenSearchDistribution(ABC):
 
         with open(path, mode="w") as f:
             f.write(data)
-
-    @staticmethod
-    def _run_cmd(command: str, args: str = None):
-        """Run command.
-
-        Arg:
-            command: can contain arguments
-            args: command line arguments
-        """
-        if args is not None:
-            command = f"{command} {args}"
-
-        logger.debug(f"Executing command: {command}")
-
-        try:
-            output = subprocess.run(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=True,
-                text=True,
-                encoding="utf-8",
-                timeout=25,
-                env=os.environ,
-            )
-
-            logger.debug(f"{command}:\n{output.stdout}")
-
-            if output.returncode != 0:
-                logger.error(f"{command}:\n Stderr: {output.stderr}\n Stdout: {output.stdout}")
-                raise OpenSearchCmdError()
-        except (TimeoutError, subprocess.TimeoutExpired):
-            raise OpenSearchCmdError()
 
     @abstractmethod
     def _build_paths(self) -> Paths:
