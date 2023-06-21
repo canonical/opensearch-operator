@@ -200,6 +200,16 @@ async def test_replication_across_members(
     logger.info(f"\n----\nShards:\n{shards}")
 
     logger.info("\n\n\n-------\n")
+
+    health = await http_request(ops_test, "GET", f"https://{leader_unit_ip}:9200/_cluster/health")
+    logger.info(f"health:\n{health}")
+
+    logger.info("\nsleeping 60s...\n")
+    time.sleep(60)
+    health = await http_request(ops_test, "GET", f"https://{leader_unit_ip}:9200/_cluster/health")
+    logger.info(f"health:\n{health}")
+
+    logger.info("\n\n\n")
     # check that the doc can be retrieved from any node
     for u_id, u_ip in units.items():
         docs = await search(
