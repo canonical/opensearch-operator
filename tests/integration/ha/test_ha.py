@@ -202,12 +202,29 @@ async def test_replication_across_members(
     logger.info("\n\n\n-------\n")
 
     health = await http_request(ops_test, "GET", f"https://{leader_unit_ip}:9200/_cluster/health")
-    logger.info(f"health:\n{health}")
+    logger.info(f"\n----\nhealth:\n{health}")
+
+    cluster_allocation_explain = await http_request(
+        ops_test,
+        "GET",
+        f"https://{leader_unit_ip}:9200/_cluster/allocation/explain?filter_path=index,shard,primary,**.node_name,**.node_decision,**.decider,**.decision,**.*explanation,**.unassigned_info,**.*delay"
+    )
+    logger.info(f"cluster_allocation_explain:\n{cluster_allocation_explain}")
 
     logger.info("\nsleeping 60s...\n")
     time.sleep(60)
     health = await http_request(ops_test, "GET", f"https://{leader_unit_ip}:9200/_cluster/health")
-    logger.info(f"health:\n{health}")
+    logger.info(f"\n--- health:\n{health}")
+
+    try:
+        cluster_allocation_explain = await http_request(
+            ops_test,
+            "GET",
+            f"https://{leader_unit_ip}:9200/_cluster/allocation/explain?filter_path=index,shard,primary,**.node_name,**.node_decision,**.decider,**.decision,**.*explanation,**.unassigned_info,**.*delay"
+        )
+        logger.info(f"\n----\ncluster_allocation_explain:\n{cluster_allocation_explain}")
+    except Exception as e:
+        logger.error(e)
 
     logger.info("\n\n\n")
     # check that the doc can be retrieved from any node
