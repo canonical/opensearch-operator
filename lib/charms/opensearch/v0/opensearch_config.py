@@ -174,11 +174,11 @@ class OpenSearchConfig:
 
     def add_seed_hosts(self, cm_ips: List[str]):
         """Add CM nodes ips / host names to the seed host list of this unit."""
-        cm_ips_hostnames = cm_ips.copy()
+        cm_ips_hostnames = set(cm_ips)
         for ip in cm_ips:
             try:
                 name, aliases, addresses = socket.gethostbyaddr(ip)
-                cm_ips_hostnames.extend([name] + aliases + addresses)
+                cm_ips_hostnames.update([name] + aliases + addresses)
             except socket.herror:
                 # no ptr record - the IP is enough and the only thing we have
                 pass

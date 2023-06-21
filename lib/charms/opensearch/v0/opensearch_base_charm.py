@@ -284,8 +284,7 @@ class OpenSearchBaseCharm(CharmBase):
                 self.opensearch_exclusions.cleanup()
 
         # Run restart node on the concerned unit
-        if app_data:
-            self._reconfigure_and_restart_unit_if_needed()
+        self._reconfigure_and_restart_unit_if_needed()
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
