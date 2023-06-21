@@ -153,34 +153,53 @@ async def test_replication_across_members(
     units = await get_application_unit_ids_ips(ops_test, app=app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
-    logger.info(await http_request(ops_test, "GET", f"https://{leader_unit_ip}:9200/_cluster/settings"))
-    logger.info(await http_request(
+    cluster_settings = await http_request(
+        ops_test, "GET", f"https://{leader_unit_ip}:9200/_cluster/settings?include_defaults=true"
+    )
+    logger.info(f"Cluster settings: \n{cluster_settings}")
+
+    alloc_enabling = await http_request(
         ops_test,
         method="PUT",
         endpoint=f"https://{leader_unit_ip}:9200/_cluster/settings",
         payload={"persistent": {"cluster.routing.allocation.enable": "all"}},
-    ))
-    logger.info(await http_request(ops_test, "GET", f"https://{leader_unit_ip}:9200/_cluster/settings"))
+    )
+    logger.info(f'\n----\nEnabling allocation: \n{alloc_enabling}')
+
+    cluster_settings = await http_request(
+        ops_test, "GET", f"https://{leader_unit_ip}:9200/_cluster/settings?include_defaults=true"
+    )
+    logger.info(f'\n----\nNew Cluster settings: \n{cluster_settings}')
     logger.info("\n\n\n")
 
     # create index with r_shards = nodes - 1
     index_name = "test_index"
     await create_index(ops_test, app, leader_unit_ip, index_name, r_shards=len(units) - 1)
 
+    # print index settings
+    index_settings = await http_request(
+        ops_test, "GET", f"https://{leader_unit_ip}:9200/{index_name}/_settings?include_defaults=true"
+    )
+    logger.info(f"\n----\n{index_name} settings:\n{index_settings}")
+
     # index document
     doc_id = 12
     await index_doc(ops_test, app, leader_unit_ip, index_name, doc_id)
 
-    # print index settings
-    settings_resp = await http_request(
-        ops_test, "GET", f"https://{leader_unit_ip}:9200/{index_name}/_settings"
+    get_docs = await http_request(
+        ops_test,
+        "GET",
+        f"https://{leader_unit_ip}:9200/{index_name}/_search",
+        payload={"query": {"match_all": {}}},
     )
-    logger.info(f"{index_name} settings:\n{settings_resp}")
+    logger.info(f"\n----\n{index_name} docs:\n{get_docs}")
 
-    await http_request(
+    shards = await http_request(
         ops_test, "GET", f"https://{leader_unit_ip}:9200/_cat/shards", json_resp=False
     )
+    logger.info(f"\n----\nShards:\n{shards}")
 
+    logger.info("\n\n\n-------\n")
     # check that the doc can be retrieved from any node
     for u_id, u_ip in units.items():
         docs = await search(
