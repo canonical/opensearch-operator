@@ -1,6 +1,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-name: Nightly CI
+name: Scheduled CI
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,6 +12,7 @@ on:
 
 jobs:
   pre-integration-checks:
+    secrets: inherit
     uses: ./.github/workflows/pre_integration_checks.yaml
 
   integration:

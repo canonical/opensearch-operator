@@ -55,7 +55,7 @@ tox -e h-scaling-integration  # HA tests specific to horizontal scaling
 If you're running tests on juju 3, run the following command to change libjuju to the correct version:
 
 ```shell
-export LIBJUJU_VERSION_SPECIFIER=\=\=3.1.0.1
+export LIBJUJU_VERSION_SPECIFIER="==3.1.0.1"
 ```
 
 ## Build charm
