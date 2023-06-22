@@ -283,8 +283,12 @@ class OpenSearchBaseCharm(CharmBase):
             if unit_data.get(VOTING_TO_DELETE) or unit_data.get(ALLOCS_TO_DELETE):
                 self.opensearch_exclusions.cleanup()
 
+        # register new cm addresses on every node
+        self._add_cm_addresses_to_conf()
+
         # Run restart node on the concerned unit
-        self._reconfigure_and_restart_unit_if_needed()
+        if app_data:
+            self._reconfigure_and_restart_unit_if_needed()
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
@@ -790,6 +794,20 @@ class OpenSearchBaseCharm(CharmBase):
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
         self.peers_data.delete(Scope.UNIT, "bootstrap_contributor")
         self.opensearch_config.cleanup_bootstrap_conf()
+
+    def _add_cm_addresses_to_conf(self):
+        """Add the new IP addresses of the current CM units."""
+        try:
+            # fetch nodes
+            nodes = ClusterTopology.nodes(
+                self.opensearch, use_localhost=self.opensearch.is_node_up(), hosts=self.alt_hosts
+            )
+            # update (append) CM IPs
+            self.opensearch_config.add_seed_hosts(
+                [node.ip for node in nodes if node.is_cm_eligible()]
+            )
+        except OpenSearchHttpError:
+            return
 
     def _reconfigure_and_restart_unit_if_needed(self):
         """Reconfigure the current unit if a new config was computed for it, then restart."""
