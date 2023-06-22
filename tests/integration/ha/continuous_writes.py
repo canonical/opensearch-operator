@@ -154,14 +154,6 @@ class ContinuousWrites:
 
         result = SimpleNamespace()
 
-        # flush the data on disk
-        client = await self._client()
-        try:
-            # create index with a replica shard on every node
-            client.indices.flush(index=ContinuousWrites.INDEX_NAME)
-        finally:
-            client.close()
-
         # max stored document id
         result.max_stored_id = await self.max_stored_id()
 

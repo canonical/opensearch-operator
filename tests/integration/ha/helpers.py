@@ -396,3 +396,18 @@ def storage_id(ops_test: OpsTest, app: str, unit_id: int):
     for entry in storage_entries:
         if entry.split()[0] == f"{app}/{unit_id}":
             return entry.split()[1]
+
+
+async def print_logs(ops_test: OpsTest, app: str, unit_id: int, msg: str) -> str:
+    unit_name = f"{app}/{unit_id}"
+    snap_path = "/var/snap/opensearch"
+
+    unicast_hosts = f"ssh {unit_name} -- sudo cat {snap_path}/current/config/unicast_hosts.txt"
+    return_code, stdout, stderr = await ops_test.juju(*unicast_hosts.split(), check=False)
+    logger.info(f"\n\nUnicast_hosts.txt:\n{stdout}")
+
+    logs = f"ssh {unit_name} -- sudo tail -50 {snap_path}/common/logs/{ops_test.model.info.name}.log"
+    return_code, stdout, stderr = await ops_test.juju(*logs.split(), check=False)
+    logger.info(f"\n\n\nServer Logs:\n{stdout}")
+
+    return msg

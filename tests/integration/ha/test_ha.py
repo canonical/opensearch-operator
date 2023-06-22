@@ -21,6 +21,7 @@ from tests.integration.ha.helpers import (
     get_shards_by_index,
     is_network_restored_after_ip_change,
     is_unit_reachable,
+    print_logs,
     restore_network_for_unit_with_ip_change,
     restore_network_for_unit_without_ip_change,
     send_kill_signal_to_process,
@@ -161,24 +162,15 @@ async def test_replication_across_members(
     doc_id = 12
     await index_doc(ops_test, app, leader_unit_ip, index_name, doc_id)
 
-    shards = await http_request(
-        ops_test, "GET", f"https://{leader_unit_ip}:9200/_cat/shards", json_resp=False
-    )
-    logger.info(f"\n----\nShards:\n{shards}")
-
-    logger.info("\n\n\n-------\n")
-
     health = await http_request(ops_test, "GET", f"https://{leader_unit_ip}:9200/_cluster/health")
-    logger.info(f"\n----\nhealth:\n{health}")
+    if health["status"] != "green":
+        cluster_alloc_explain = await http_request(
+            ops_test,
+            "GET",
+            f"https://{leader_unit_ip}:9200/_cluster/allocation/explain?filter_path=index,shard,primary,**.node_name,**.node_decision,**.decider,**.decision,**.*explanation,**.unassigned_info,**.*delay"
+        )
+        logger.info(f"cluster_allocation_explain:\n{cluster_alloc_explain}")
 
-    cluster_allocation_explain = await http_request(
-        ops_test,
-        "GET",
-        f"https://{leader_unit_ip}:9200/_cluster/allocation/explain?filter_path=index,shard,primary,**.node_name,**.node_decision,**.decider,**.decision,**.*explanation,**.unassigned_info,**.*delay"
-    )
-    logger.info(f"cluster_allocation_explain:\n{cluster_allocation_explain}")
-
-    logger.info("\n\n\n")
     # check that the doc can be retrieved from any node
     for u_id, u_ip in units.items():
         docs = await search(
@@ -237,7 +229,9 @@ async def test_kill_db_process_node_with_primary_shard(
     # verify that the opensearch service is back running on the old primary unit
     assert await is_up(
         ops_test, units_ips[first_unit_with_primary_shard]
-    ), "OpenSearch service hasn't restarted."
+    ), (
+        await print_logs(ops_test, app, first_unit_with_primary_shard, "OpenSearch service hasn't restarted.")
+    )
 
     # fetch unit hosting the new primary shard of the previous index
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
@@ -297,7 +291,9 @@ async def test_kill_db_process_node_with_elected_cm(
     # verify that the opensearch service is back running on the old elected cm unit
     assert await is_up(
         ops_test, units_ips[first_elected_cm_unit_id]
-    ), "OpenSearch service hasn't restarted."
+    ), (
+        await print_logs(ops_test, app, first_elected_cm_unit_id, "OpenSearch service hasn't restarted.")
+    )
 
     # fetch the current elected cluster manager
     current_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
@@ -382,7 +378,7 @@ async def test_freeze_db_process_node_with_primary_shard(
     # verify that the opensearch service is back running on the unit previously hosting the p_shard
     assert await is_up(
         ops_test, units_ips[first_unit_with_primary_shard], retries=3
-    ), "OpenSearch service hasn't restarted."
+    ), (await print_logs(ops_test, app, first_unit_with_primary_shard, "OpenSearch service hasn't restarted."))
 
     # fetch unit hosting the new primary shard of the previous index
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
@@ -464,7 +460,7 @@ async def test_freeze_db_process_node_with_elected_cm(
     # verify that the opensearch service is back running on the unit previously elected CM unit
     assert await is_up(
         ops_test, units_ips[first_elected_cm_unit_id], retries=3
-    ), "OpenSearch service hasn't restarted."
+    ), (await print_logs(ops_test, app, first_elected_cm_unit_id, "OpenSearch service hasn't restarted."))
 
     # verify the previously elected CM node successfully joined back the rest of the fleet
     assert await check_cluster_formation_successful(
