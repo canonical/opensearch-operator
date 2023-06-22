@@ -339,7 +339,7 @@ async def is_unit_reachable(from_host: str, to_host: str, retries: int = 5) -> b
 
 
 async def is_network_restored_after_ip_change(
-    ops_test: OpsTest, app: str, unit_id: int, unit_ip: str, retries: int = 25
+    ops_test: OpsTest, app: str, unit_id: int, unit_ip: str, retries: int = 50
 ) -> bool:
     try:
         for attempt in Retrying(stop=stop_after_attempt(retries), wait=wait_fixed(wait=30)):

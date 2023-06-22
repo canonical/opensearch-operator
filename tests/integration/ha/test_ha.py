@@ -1017,7 +1017,7 @@ async def test_full_cluster_crash(
     time.sleep(ORIGINAL_RESTART_DELAY + 45)
 
     # verify all units are up and running
-    for unit_id, unit_ip in await get_application_unit_ids_ips(ops_test, app).items():
+    for unit_id, unit_ip in (await get_application_unit_ids_ips(ops_test, app)).items():
         assert await is_up(ops_test, unit_ip), f"Unit {unit_id} not restarted after cluster crash."
 
     # check all nodes successfully joined the same cluster
@@ -1073,7 +1073,7 @@ async def test_full_cluster_restart(
     time.sleep(ORIGINAL_RESTART_DELAY + 45)
 
     # verify all units are up and running
-    for unit_id, unit_ip in await get_application_unit_ids_ips(ops_test, app).items():
+    for unit_id, unit_ip in (await get_application_unit_ids_ips(ops_test, app)).items():
         assert await is_up(ops_test, unit_ip), f"Unit {unit_id} not restarted after cluster crash."
 
     # check all nodes successfully joined the same cluster
