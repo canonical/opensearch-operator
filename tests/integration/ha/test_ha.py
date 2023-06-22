@@ -780,7 +780,11 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     # check if node up and is included in the cluster formation
     assert is_up(ops_test, first_unit_with_primary_shard_new_ip), "Unit still not up."
 
+    # get new leader unit ip
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
     # check that the unit previously hosting the primary shard now hosts a replica
+    shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     units_with_r_shards = [shard.unit_id for shard in shards if not shard.is_prim]
     assert first_unit_with_primary_shard in units_with_r_shards
 
