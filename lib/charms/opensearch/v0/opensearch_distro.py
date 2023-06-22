@@ -288,7 +288,10 @@ class OpenSearchDistribution(ABC):
         if resp_status_code:
             return resp.status_code
 
-        return resp.json()
+        try:
+            return resp.json()
+        except requests.JSONDecodeError:
+            raise OpenSearchHttpError(response_body=resp.text)
 
     def write_file(self, path: str, data: str, override: bool = True):
         """Persists data into file. Useful for files generated on the fly, such as certs etc."""
