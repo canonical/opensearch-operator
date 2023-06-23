@@ -324,20 +324,6 @@ async def restore_network_for_unit_without_ip_change(unit_hostname: str) -> None
     subprocess.check_call(limit_set_command.split())
 
 
-async def is_unit_reachable(from_host: str, to_host: str, retries: int = 5) -> bool:
-    """Test network reachability between hosts."""
-    try:
-        for attempt in Retrying(stop=stop_after_attempt(retries), wait=wait_fixed(wait=30)):
-            with attempt:
-                try:
-                    subprocess.check_call(f"lxc exec {from_host} -- ping -c 5 {to_host}".split())
-                    raise Exception
-                except subprocess.CalledProcessError:
-                    return False
-    except RetryError:
-        return True
-
-
 async def is_network_restored_after_ip_change(
     ops_test: OpsTest, app: str, unit_id: int, unit_ip: str, retries: int = 50
 ) -> bool:
@@ -406,7 +392,9 @@ async def print_logs(ops_test: OpsTest, app: str, unit_id: int, msg: str) -> str
     return_code, stdout, stderr = await ops_test.juju(*unicast_hosts.split(), check=False)
     logger.info(f"\n\nUnicast_hosts.txt:\n{stdout}")
 
-    logs = f"ssh {unit_name} -- sudo tail -50 {snap_path}/common/logs/{ops_test.model.info.name}.log"
+    logs = (
+        f"ssh {unit_name} -- sudo tail -50 {snap_path}/common/logs/{ops_test.model.info.name}.log"
+    )
     return_code, stdout, stderr = await ops_test.juju(*logs.split(), check=False)
     logger.info(f"\n\n\nServer Logs:\n{stdout}")
 

@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import json
 import logging
+import random
 import subprocess
 import tempfile
 from pathlib import Path
@@ -84,6 +85,7 @@ async def app_name(ops_test: OpsTest) -> Optional[str]:
     return None
 
 
+@retry(wait=wait_fixed(wait=15), stop=stop_after_attempt(15))
 async def run_action(
     ops_test: OpsTest,
     unit_id: Optional[int],
@@ -97,11 +99,17 @@ async def run_action(
         A SimpleNamespace with "status, response (results)"
     """
     if unit_id is None:
-        unit_id = [
-            unit
-            for unit in (await get_application_units(ops_test, app))
-            if unit.status == "active"
-        ][0].id
+        controller_host = await get_controller_hostname(ops_test)
+        unit_id = random.choice(
+            [
+                unit
+                for unit in (await get_application_units(ops_test, app))
+                if (  # checking on status not enough as it takes time for the status to be reported
+                    unit.status == "active"
+                    and await is_unit_reachable(from_host=controller_host, to_host=unit.hostname)
+                )
+            ]
+        ).id
 
     unit_name = [
         unit.name
@@ -283,6 +291,19 @@ async def get_leader_unit_id(ops_test: OpsTest, app: str = APP_NAME) -> int:
     return int(leader_unit.name.split("/")[1])
 
 
+async def is_unit_reachable(from_host: str, to_host: str) -> bool:
+    """Test network reachability between hosts."""
+    try:
+        subprocess.check_call(
+            f"lxc exec {from_host} -- ping -c 5 {to_host}".split(),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
 async def get_controller_hostname(ops_test: OpsTest) -> str:
     """Return controller machine hostname."""
     _, raw_controller, _ = await ops_test.juju("show-controller")
@@ -362,7 +383,7 @@ async def http_request(
         request_kwargs = {
             "method": method,
             "url": endpoint,
-            "timeout": 15,
+            "timeout": (17, 17),
         }
         if json_resp:
             request_kwargs["headers"] = {
