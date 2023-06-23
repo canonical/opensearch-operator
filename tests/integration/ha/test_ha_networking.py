@@ -4,7 +4,6 @@
 
 import asyncio
 import logging
-import random
 import time
 
 import pytest
@@ -19,9 +18,9 @@ from tests.integration.ha.helpers import (
     get_elected_cm_unit_id,
     get_shards_by_index,
     is_network_restored_after_ip_change,
+    is_unit_reachable,
     restore_network_for_unit_with_ip_change,
     restore_network_for_unit_without_ip_change,
-    update_restart_delay,
 )
 from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
@@ -29,34 +28,16 @@ from tests.integration.helpers import (
     MODEL_CONFIG,
     SERIES,
     check_cluster_formation_successful,
-    get_application_unit_ids,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
     get_application_unit_names,
     get_controller_hostname,
     get_leader_unit_ip,
-    get_reachable_unit_ips,
-    http_request,
-    is_unit_reachable,
     is_up,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
-
-
-SECOND_APP_NAME = "second-opensearch"
-ORIGINAL_RESTART_DELAY = 20
-RESTART_DELAY = 360
-
-
-@pytest.fixture()
-async def reset_restart_delay(ops_test: OpsTest):
-    """Resets service file delay on all units."""
-    yield
-    app = (await app_name(ops_test)) or APP_NAME
-    for unit_id in get_application_unit_ids(ops_test, app):
-        await update_restart_delay(ops_test, app, unit_id, ORIGINAL_RESTART_DELAY)
 
 
 @pytest.fixture()
@@ -67,33 +48,10 @@ async def c_writes(ops_test: OpsTest):
 
 
 @pytest.fixture()
-async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Starts continuous write operations and clears writes at the end of the test."""
-    await c_writes.start()
-    yield
-
-    reachable_ip = random.choice(await get_reachable_unit_ips(ops_test))
-    await http_request(ops_test, "GET", f"https://{reachable_ip}:9200/_cat/nodes", json_resp=False)
-    await http_request(
-        ops_test, "GET", f"https://{reachable_ip}:9200/_cat/shards", json_resp=False
-    )
-
-    await c_writes.clear()
-    logger.info("\n\n\n\n--------\n\n\n\n")
-
-
-@pytest.fixture()
 async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     """Same as previous runner, but starts continuous writes on cluster wide replicated index."""
     await c_writes.start(repl_on_all_nodes=True)
     yield
-
-    reachable_ip = random.choice(await get_reachable_unit_ips(ops_test))
-    await http_request(ops_test, "GET", f"https://{reachable_ip}:9200/_cat/nodes", json_resp=False)
-    await http_request(
-        ops_test, "GET", f"https://{reachable_ip}:9200/_cat/shards", json_resp=False
-    )
-
     await c_writes.clear()
     logger.info("\n\n\n\n--------\n\n\n\n")
 
@@ -167,15 +125,15 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
     # verify machine not reachable from / to peer units
     for unit_id, unit_hostname in unit_ids_hostnames.items():
         if unit_id != first_elected_cm_unit_id:
-            assert not await is_unit_reachable(
+            assert not is_unit_reachable(
                 from_host=unit_hostname, to_host=first_elected_cm_unit_hostname
             ), "Unit is still reachable from other units."
-            assert not await is_unit_reachable(
+            assert not is_unit_reachable(
                 from_host=first_elected_cm_unit_hostname, to_host=unit_hostname
             ), "Unit can still reach other units."
 
     # check reach from controller - noticed that the controller is able to ping the unit for longer
-    assert not await is_unit_reachable(
+    assert not is_unit_reachable(
         from_host=await get_controller_hostname(ops_test), to_host=first_elected_cm_unit_hostname
     ), "Unit is still reachable from controller"
 
@@ -267,15 +225,15 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     # verify machine not reachable from / to peer units
     for unit_id, unit_hostname in unit_ids_hostnames.items():
         if unit_id != first_unit_with_primary_shard:
-            assert not await is_unit_reachable(
+            assert not is_unit_reachable(
                 from_host=unit_hostname, to_host=first_unit_with_primary_shard_hostname
             ), "Unit is still reachable from other units."
-            assert not await is_unit_reachable(
+            assert not is_unit_reachable(
                 from_host=first_unit_with_primary_shard_hostname, to_host=unit_hostname
             ), "Unit can still reach other units."
 
     # check reach from controller - noticed that the controller is able to ping the unit for longer
-    assert not await is_unit_reachable(
+    assert not is_unit_reachable(
         from_host=await get_controller_hostname(ops_test),
         to_host=first_unit_with_primary_shard_hostname,
     ), "Unit is still reachable from controller"
@@ -381,12 +339,12 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
     # verify machine not reachable from / to peer units
     for unit_id, unit_hostname in unit_ids_hostnames.items():
         if unit_id != first_elected_cm_unit_id:
-            assert not await is_unit_reachable(
+            assert not is_unit_reachable(
                 from_host=unit_hostname, to_host=first_elected_cm_unit_hostname
             ), "Unit is still reachable from other units."
 
     # check reach from controller - noticed that the controller is able to ping the unit for longer
-    assert not await is_unit_reachable(
+    assert not is_unit_reachable(
         from_host=await get_controller_hostname(ops_test), to_host=first_elected_cm_unit_hostname
     ), "Unit is still reachable from controller"
 
@@ -469,12 +427,12 @@ async def test_full_network_cut_without_ip_change_node_with_primary_shard(
     # verify machine not reachable from / to peer units
     for unit_id, unit_hostname in unit_ids_hostnames.items():
         if unit_id != first_unit_with_primary_shard:
-            assert not await is_unit_reachable(
+            assert not is_unit_reachable(
                 from_host=unit_hostname, to_host=first_unit_with_primary_shard_hostname
             ), "Unit is still reachable from other units."
 
     # check reach from controller - noticed that the controller is able to ping the unit for longer
-    assert not await is_unit_reachable(
+    assert not is_unit_reachable(
         from_host=await get_controller_hostname(ops_test),
         to_host=first_unit_with_primary_shard_hostname,
     ), "Unit is still reachable from controller"

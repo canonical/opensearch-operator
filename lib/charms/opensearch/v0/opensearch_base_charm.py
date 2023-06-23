@@ -272,7 +272,7 @@ class OpenSearchBaseCharm(CharmBase):
         app_data = event.relation.data.get(event.app)
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
-            self._force_recompute_roles_if_needed(event)
+            self._recompute_roles_if_needed(event)
         elif app_data:
             # if app_data and app_data.get("nodes_config"):
             # Reconfigure and restart node on the concerned unit
@@ -843,7 +843,7 @@ class OpenSearchBaseCharm(CharmBase):
             callback_override="_restart_opensearch"
         )
 
-    def _force_recompute_roles_if_needed(self, event: RelationChangedEvent):
+    def _recompute_roles_if_needed(self, event: RelationChangedEvent):
         """Recompute node roles:self-healing that didn't trigger leader related event occurred."""
         try:
             nodes = self._get_nodes(self.opensearch.is_node_up())

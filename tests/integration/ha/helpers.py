@@ -324,6 +324,16 @@ async def restore_network_for_unit_without_ip_change(unit_hostname: str) -> None
     subprocess.check_call(limit_set_command.split())
 
 
+def is_unit_reachable(from_host: str, to_host: str) -> bool:
+    """Test network reachability between hosts."""
+    ping = subprocess.call(
+        f"lxc exec {from_host} -- ping -c 5 {to_host}".split(),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return ping == 0
+
+
 async def is_network_restored_after_ip_change(
     ops_test: OpsTest, app: str, unit_id: int, unit_ip: str, retries: int = 50
 ) -> bool:

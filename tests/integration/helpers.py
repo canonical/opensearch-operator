@@ -99,17 +99,20 @@ async def run_action(
         A SimpleNamespace with "status, response (results)"
     """
     if unit_id is None:
-        controller_host = await get_controller_hostname(ops_test)
-        unit_id = random.choice(
-            [
-                unit
-                for unit in (await get_application_units(ops_test, app))
-                if (  # checking on status not enough as it takes time for the status to be reported
-                    unit.status == "active"
-                    and await is_unit_reachable(from_host=controller_host, to_host=unit.hostname)
-                )
-            ]
-        ).id
+        online_units = []
+        for unit in await get_application_units(ops_test, app):
+            if unit.status != "active":
+                continue
+
+            ping = subprocess.call(
+                f"ping -c 1 {unit.ip}".split(),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            if ping == 0:
+                online_units.append(unit)
+
+        unit_id = random.choice(online_units).id
 
     unit_name = [
         unit.name
@@ -289,19 +292,6 @@ async def get_leader_unit_id(ops_test: OpsTest, app: str = APP_NAME) -> int:
             break
 
     return int(leader_unit.name.split("/")[1])
-
-
-async def is_unit_reachable(from_host: str, to_host: str) -> bool:
-    """Test network reachability between hosts."""
-    try:
-        subprocess.check_call(
-            f"lxc exec {from_host} -- ping -c 5 {to_host}".split(),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
-        )
-        return True
-    except subprocess.CalledProcessError:
-        return False
 
 
 async def get_controller_hostname(ops_test: OpsTest) -> str:
