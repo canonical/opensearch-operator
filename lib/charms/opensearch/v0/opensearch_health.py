@@ -141,6 +141,7 @@ class OpenSearchHealth:
         if not response:
             return None
 
+        logger.info(f"Health: {response['status']}")
         status = response["status"].lower()
         if status != HealthColors.YELLOW:
             return status
