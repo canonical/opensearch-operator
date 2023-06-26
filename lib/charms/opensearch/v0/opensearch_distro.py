@@ -255,7 +255,7 @@ class OpenSearchDistribution(ABC):
                             "Accept": "application/json",
                             "Content-Type": "application/json",
                         },
-                        "timeout": timeout,
+                        "timeout": (timeout, timeout),
                     }
                     if payload:
                         request_kwargs["data"] = (
