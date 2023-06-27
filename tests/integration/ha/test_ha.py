@@ -72,7 +72,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     await c_writes.start()
     yield
     await c_writes.clear()
-    logger.info("\n\n\n\n--------\n\n\n\n")
+    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
 @pytest.fixture()
@@ -81,7 +81,7 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
     await c_writes.start(repl_on_all_nodes=True)
     yield
     await c_writes.clear()
-    logger.info("\n\n\n\n--------\n\n\n\n")
+    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
 @pytest.mark.abort_on_fail
