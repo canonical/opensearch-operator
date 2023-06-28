@@ -390,7 +390,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         status="active",
         timeout=1000,
-        wait_for_exact_units=init_units_count,
+        wait_for_exact_units=init_units_count + 1,
         idle_period=IDLE_PERIOD,
     )
 
