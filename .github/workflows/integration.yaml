@@ -1,7 +1,5 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-name: Integration Tests
-
 on:
   workflow_call:
     inputs:
@@ -10,13 +8,16 @@ on:
         default: 3.1/stable
         type: string
       libjuju-version-specifier:
-        default: ==3.1.0.1
+        description: |
+            python-libjuju version specifier (e.g. ">=1.3")
+            https://packaging.python.org/en/latest/glossary/#term-Version-Specifier
+        required: false
         type: string
 
 jobs:
   build:
     name: Build charms
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2.3.9
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
 
   integration-test:
     needs:
