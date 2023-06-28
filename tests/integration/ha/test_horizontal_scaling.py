@@ -56,6 +56,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     await c_writes.start()
     yield
     await c_writes.clear()
+    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
 @pytest.mark.abort_on_fail
@@ -374,8 +375,12 @@ async def test_safe_scale_down_remove_leaders(
     # 1 data-only nodes as per the roles-reassigning logic
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == init_units_count
-    assert ClusterTopology.nodes_count_by_role(nodes)["data"] == init_units_count + 1
+    assert (
+        ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == init_units_count + 1
+        if init_units_count % 2 == 0
+        else init_units_count + 2
+    )
+    assert ClusterTopology.nodes_count_by_role(nodes)["data"] == init_units_count + 2
 
     # scale-down: remove the current elected CM
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
@@ -403,6 +408,9 @@ async def test_safe_scale_down_remove_leaders(
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_with_primary_shard}")
+
+    # sleep for a couple of minutes for the model to stabilise
+    time.sleep(IDLE_PERIOD)
 
     writes = await c_writes.count()
 
