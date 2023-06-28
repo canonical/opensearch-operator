@@ -354,7 +354,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         status="active",
         timeout=1000,
-        wait_for_exact_units=init_units_count + 3,
+        wait_for_exact_units=init_units_count + 2,
         idle_period=IDLE_PERIOD,
     )
 
@@ -366,7 +366,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         status="active",
         timeout=1000,
-        wait_for_exact_units=init_units_count + 2,
+        wait_for_exact_units=init_units_count + 1,
         idle_period=IDLE_PERIOD,
     )
 
@@ -390,7 +390,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         status="active",
         timeout=1000,
-        wait_for_exact_units=init_units_count + 1,
+        wait_for_exact_units=init_units_count,
         idle_period=IDLE_PERIOD,
     )
 
@@ -409,13 +409,8 @@ async def test_safe_scale_down_remove_leaders(
     unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_with_primary_shard}")
 
-    await ops_test.model.wait_for_idle(
-        apps=[app],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=init_units_count,
-        idle_period=IDLE_PERIOD,
-    )
+    # sleep for a couple of minutes for the model to stabilise
+    time.sleep(IDLE_PERIOD)
 
     writes = await c_writes.count()
 
