@@ -162,7 +162,7 @@ class OpenSearchBaseCharm(CharmBase):
                 event.defer()
                 return
 
-            if self.health.apply() == HealthColors.YELLOW_TEMP:
+            if self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
                 event.defer()
 
             self._compute_and_broadcast_updated_topology(self._get_nodes(True))
@@ -258,7 +258,7 @@ class OpenSearchBaseCharm(CharmBase):
         if (
             self.unit.is_leader()
             and self.opensearch.is_node_up()
-            and self.health.apply() == HealthColors.YELLOW_TEMP
+            and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
         ):
             # we defer because we want the temporary status to be updated
             event.defer()
@@ -266,26 +266,28 @@ class OpenSearchBaseCharm(CharmBase):
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
+        # register new cm addresses on every node
+        self._add_cm_addresses_to_conf()
+
         app_data = event.relation.data.get(event.app)
+        if self.unit.is_leader():
+            # Recompute the node roles in case self-healing didn't trigger leader related event
+            self._recompute_roles_if_needed(event)
+        elif app_data:
+            # if app_data and app_data.get("nodes_config"):
+            # Reconfigure and restart node on the concerned unit
+            self._reconfigure_and_restart_unit_if_needed()
+
         unit_data = event.relation.data.get(event.unit)
-        if not unit_data and not app_data:
+        if not unit_data:
             return
 
-        if unit_data and self.unit.is_leader():
-            if unit_data.get("bootstrap_contributor"):
-                contributor_count = self.peers_data.get(
-                    Scope.APP, "bootstrap_contributors_count", 0
-                )
-                self.peers_data.put(
-                    Scope.APP, "bootstrap_contributors_count", contributor_count + 1
-                )
+        if unit_data.get(VOTING_TO_DELETE) or unit_data.get(ALLOCS_TO_DELETE):
+            self.opensearch_exclusions.cleanup()
 
-            if unit_data.get(VOTING_TO_DELETE) or unit_data.get(ALLOCS_TO_DELETE):
-                self.opensearch_exclusions.cleanup()
-
-        # Run restart node on the concerned unit
-        if app_data:
-            self._reconfigure_and_restart_unit_if_needed()
+        if self.unit.is_leader() and unit_data.get("bootstrap_contributor"):
+            contributor_count = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
+            self.peers_data.put(Scope.APP, "bootstrap_contributors_count", contributor_count + 1)
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
@@ -376,7 +378,7 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
 
-            if self.health.apply() == HealthColors.YELLOW_TEMP:
+            if self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
                 event.defer()
                 return
 
@@ -385,7 +387,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.user_manager.remove_users_and_roles()
 
-        # If relation broken - leave
+        # If relation not broken - leave
         if self.model.get_relation("certificates") is not None:
             return
 
@@ -519,6 +521,9 @@ class OpenSearchBaseCharm(CharmBase):
         if not self._can_service_start():
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
+
+            # emit update_status event which won't do anything to force retry of current event
+            self.on.update_status.emit()
             return
 
         if self.peers_data.get(Scope.UNIT, "starting", False) and self.opensearch.is_failed():
@@ -559,6 +564,8 @@ class OpenSearchBaseCharm(CharmBase):
             self.status.clear(WaitingToStart)
         except (OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
+            # emit update_status event which won't do anything to force retry of current event
+            self.on.update_status.emit()
         except OpenSearchStartError as e:
             logger.error(e)
             self.peers_data.delete(Scope.UNIT, "starting")
@@ -765,7 +772,7 @@ class OpenSearchBaseCharm(CharmBase):
             cm_names.append(self.unit_name)
             cm_ips.append(self.unit_ip)
 
-            cms_in_bootstrap = self.peers_data.get(Scope.APP, "bootstrap_contributors", 0)
+            cms_in_bootstrap = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
             if cms_in_bootstrap < self.app.planned_units():
                 contribute_to_bootstrap = True
 
@@ -791,6 +798,20 @@ class OpenSearchBaseCharm(CharmBase):
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
         self.peers_data.delete(Scope.UNIT, "bootstrap_contributor")
         self.opensearch_config.cleanup_bootstrap_conf()
+
+    def _add_cm_addresses_to_conf(self):
+        """Add the new IP addresses of the current CM units."""
+        try:
+            # fetch nodes
+            nodes = ClusterTopology.nodes(
+                self.opensearch, use_localhost=self.opensearch.is_node_up(), hosts=self.alt_hosts
+            )
+            # update (append) CM IPs
+            self.opensearch_config.add_seed_hosts(
+                [node.ip for node in nodes if node.is_cm_eligible()]
+            )
+        except OpenSearchHttpError:
+            return
 
     def _reconfigure_and_restart_unit_if_needed(self):
         """Reconfigure the current unit if a new config was computed for it, then restart."""
@@ -822,16 +843,35 @@ class OpenSearchBaseCharm(CharmBase):
             callback_override="_restart_opensearch"
         )
 
+    def _recompute_roles_if_needed(self, event: RelationChangedEvent):
+        """Recompute node roles:self-healing that didn't trigger leader related event occurred."""
+        try:
+            nodes = self._get_nodes(self.opensearch.is_node_up())
+            if len(nodes) < self.app.planned_units():
+                event.defer()
+                return
+
+            self._compute_and_broadcast_updated_topology(nodes)
+        except OpenSearchHttpError:
+            pass
+
     def _compute_and_broadcast_updated_topology(self, current_nodes: List[Node]):
         """Compute cluster topology and broadcast node configs (roles for now) to change if any."""
         if not current_nodes:
             return
 
+        current_reported_nodes = {
+            name: Node.from_dict(node)
+            for name, node in (self.peers_data.get_object(Scope.APP, "nodes_config") or {}).items()
+        }
         updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
+        if current_reported_nodes == updated_nodes:
+            return
+
         self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
 
-        # since the above won't trigger a peer rel changed on leader, we'll trigger it manually
-        self.on[PeerRelationName].relation_changed.emit(self.model.get_relation(PeerRelationName))
+        # all units will get a peer_rel_changed event, for leader we do as follows
+        self._reconfigure_and_restart_unit_if_needed()
 
     def _check_certs_expiration(self, event: UpdateStatusEvent) -> None:
         """Checks the certificates' expiration."""

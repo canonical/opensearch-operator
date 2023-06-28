@@ -5,6 +5,7 @@
 
 import unittest
 import uuid
+from unittest.mock import MagicMock
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_networking import (
@@ -51,6 +52,7 @@ class TestHelperNetworking(unittest.TestCase):
         self.harness.add_relation_unit(self.rel_id, f"{self.charm.app.name}/1")
         self.harness.add_relation_unit(self.rel_id, f"{self.charm.app.name}/2")
 
+        self.charm.opensearch_config = MagicMock()
         self.harness.update_relation_data(
             self.rel_id, f"{self.charm.app.name}/1", {"private-address": "2.2.2.2"}
         )
