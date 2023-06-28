@@ -354,7 +354,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         status="active",
         timeout=1000,
-        wait_for_exact_units=init_units_count + 2,
+        wait_for_exact_units=init_units_count + 3,
         idle_period=IDLE_PERIOD,
     )
 
@@ -366,7 +366,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         status="active",
         timeout=1000,
-        wait_for_exact_units=init_units_count + 1,
+        wait_for_exact_units=init_units_count + 2,
         idle_period=IDLE_PERIOD,
     )
 
@@ -375,8 +375,12 @@ async def test_safe_scale_down_remove_leaders(
     # 1 data-only nodes as per the roles-reassigning logic
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == init_units_count
-    assert ClusterTopology.nodes_count_by_role(nodes)["data"] == init_units_count + 1
+    assert (
+        ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == init_units_count + 1
+        if init_units_count % 2 == 0
+        else init_units_count + 2
+    )
+    assert ClusterTopology.nodes_count_by_role(nodes)["data"] == init_units_count + 2
 
     # scale-down: remove the current elected CM
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
@@ -386,7 +390,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         status="active",
         timeout=1000,
-        wait_for_exact_units=init_units_count,
+        wait_for_exact_units=init_units_count + 1,
         idle_period=IDLE_PERIOD,
     )
 
@@ -409,7 +413,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         status="active",
         timeout=1000,
-        wait_for_exact_units=init_units_count - 1,
+        wait_for_exact_units=init_units_count,
         idle_period=IDLE_PERIOD,
     )
 
