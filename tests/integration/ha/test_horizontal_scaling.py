@@ -349,12 +349,12 @@ async def test_safe_scale_down_remove_leaders(
     init_units_count = len(ops_test.model.applications[app].units)
 
     # scale up by 2 units
-    await ops_test.model.applications[app].add_unit(count=2)
+    await ops_test.model.applications[app].add_unit(count=3)
     await ops_test.model.wait_for_idle(
         apps=[app],
         status="active",
         timeout=1000,
-        wait_for_exact_units=init_units_count + 2,
+        wait_for_exact_units=init_units_count + 3,
         idle_period=IDLE_PERIOD,
     )
 
@@ -366,7 +366,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         status="active",
         timeout=1000,
-        wait_for_exact_units=init_units_count + 1,
+        wait_for_exact_units=init_units_count + 2,
         idle_period=IDLE_PERIOD,
     )
 
@@ -376,9 +376,9 @@ async def test_safe_scale_down_remove_leaders(
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     nodes = await all_nodes(ops_test, leader_unit_ip)
     assert (
-        ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == init_units_count + 1
-        if init_units_count % 2 == 0
-        else init_units_count + 2
+        ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == init_units_count + 2
+        if init_units_count % 2 != 0
+        else init_units_count + 1
     )
     assert ClusterTopology.nodes_count_by_role(nodes)["data"] == init_units_count + 2
 
@@ -390,7 +390,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         status="active",
         timeout=1000,
-        wait_for_exact_units=init_units_count,
+        wait_for_exact_units=init_units_count + 1,
         idle_period=IDLE_PERIOD,
     )
 
@@ -410,7 +410,7 @@ async def test_safe_scale_down_remove_leaders(
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_with_primary_shard}")
 
     # sleep for a couple of minutes for the model to stabilise
-    time.sleep(IDLE_PERIOD)
+    time.sleep(IDLE_PERIOD + 60)
 
     writes = await c_writes.count()
 
