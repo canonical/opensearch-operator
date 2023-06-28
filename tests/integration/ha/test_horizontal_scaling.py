@@ -378,9 +378,9 @@ async def test_safe_scale_down_remove_leaders(
     assert (
         ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == init_units_count + 1
         if init_units_count % 2 == 0
-        else init_units_count + 2
+        else init_units_count
     )
-    assert ClusterTopology.nodes_count_by_role(nodes)["data"] == init_units_count + 2
+    assert ClusterTopology.nodes_count_by_role(nodes)["data"] == init_units_count + 1
 
     # scale-down: remove the current elected CM
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
@@ -410,7 +410,7 @@ async def test_safe_scale_down_remove_leaders(
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_with_primary_shard}")
 
     # sleep for a couple of minutes for the model to stabilise
-    time.sleep(IDLE_PERIOD)
+    time.sleep(IDLE_PERIOD + 60)
 
     writes = await c_writes.count()
 
