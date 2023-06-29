@@ -30,6 +30,7 @@ jobs:
           - tls-integration
           - client-integration
           - ha-integration
+          - ha-networking-integration
         runner: ["ubuntu-22.04"]
         include:
           - tox-environments: h-scaling-integration
@@ -68,6 +69,12 @@ jobs:
 
       - name: Run integration tests
         run: |
+          # free space in the runner
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
           # Set kernel params
           sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
           tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
