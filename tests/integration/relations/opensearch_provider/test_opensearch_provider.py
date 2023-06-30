@@ -81,7 +81,6 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
         apps=ALL_APPS,
         timeout=1600,
         status="active",
-        idle_period=70,
     )
 
 
