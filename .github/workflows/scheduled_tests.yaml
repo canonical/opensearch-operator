@@ -1,0 +1,32 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Scheduled CI
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  schedule:
+    - cron: '53 0 * * *' # Daily at 00:53 UTC
+
+jobs:
+  pre-integration-checks:
+    secrets: inherit
+    uses: ./.github/workflows/pre_integration_checks.yaml
+
+  integration:
+    needs:
+      - pre-integration-checks
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - snap: 3.1/stable
+            libjuju: ==3.1.0.1
+          - snap: 2.9/stable
+            libjuju: ==2.9.42.4
+    uses: ./.github/workflows/integration.yaml
+    with:
+      juju-snap-channel: ${{ matrix.snap }}
+      libjuju-version-specifier: ${{ matrix.libjuju }}

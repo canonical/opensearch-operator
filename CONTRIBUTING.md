@@ -32,12 +32,30 @@ source venv/bin/activate
 
 ### Testing
 
+To run tests, run the following
+
 ```shell
-tox run -e format        # update your code according to linting rules
-tox run -e lint          # code style
-tox run -e unit          # unit tests
-tox run -e integration   # integration tests
-tox                      # runs 'format', 'lint', and 'unit' environments
+tox -e format       # update your code according to linting rules
+tox -e lint         # code style
+tox -e unit         # unit tests
+tox -m integration  # integration tests, running on juju 2.
+tox                 # runs 'format', 'lint', and 'unit' environments
+```
+
+Integration tests can be run for separate areas of functionality:
+
+```shell
+tox -e charm-integration      # basic charm integration tests
+tox -e tls-integration        # TLS-specific integration tests
+tox -e client-integration     # Validates the `opensearch-client` integration
+tox -e ha-integration         # HA tests
+tox -e h-scaling-integration  # HA tests specific to horizontal scaling
+```
+
+If you're running tests on juju 3, run the following command to change libjuju to the correct version:
+
+```shell
+export LIBJUJU_VERSION_SPECIFIER="==3.1.0.1"
 ```
 
 ## Build charm

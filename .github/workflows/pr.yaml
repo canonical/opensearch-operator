@@ -1,0 +1,23 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: PR CI
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+
+jobs:
+  pre-integration-checks:
+    secrets: inherit
+    uses: ./.github/workflows/pre_integration_checks.yaml
+
+  integration:
+    needs:
+      - pre-integration-checks
+    uses: ./.github/workflows/integration.yaml
+    with:
+      juju-snap-channel: 2.9/stable
+      libjuju-version-specifier: ==2.9.42.4
