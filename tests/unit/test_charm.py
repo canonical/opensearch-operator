@@ -76,14 +76,18 @@ class TestCharm(TestOpenSearchBaseCharm):
 
             self.charm._store_tls_resources(
                 CertType.UNIT_TRANSPORT,
-                {"ca": "ca", "cert": "cert_transport", "key": create_utf8_encoded_private_key()},
+                {
+                    "ca-cert": "ca",
+                    "cert": "cert_transport",
+                    "key": create_utf8_encoded_private_key(),
+                },
             )
             self.assertFalse(self.charm._are_all_tls_resources_stored())
 
             self.charm._store_tls_resources(
                 CertType.APP_ADMIN,
                 {
-                    "ca": "ca",
+                    "ca-cert": "ca",
                     "cert": "cert_admin",
                     "chain": "chain",
                     "key": create_utf8_encoded_private_key(),
