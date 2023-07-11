@@ -4,6 +4,13 @@ name: Pre-integration checks
 
 on:
   workflow_call:
+    inputs:
+      libjuju-version-specifier:
+        description: |
+            python-libjuju version specifier (e.g. ">=1.3")
+            https://packaging.python.org/en/latest/glossary/#term-Version-Specifier
+        required: false
+        type: string
 
 jobs:
   lint:
@@ -33,6 +40,8 @@ jobs:
         run: python3 -m pip install tox
       - name: Run tests
         run: tox run -e unit
+        env:
+          LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
 
   lib-check:
     name: Check libraries
