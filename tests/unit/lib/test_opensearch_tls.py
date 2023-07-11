@@ -162,7 +162,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         """Test _on_certificate_available event."""
         csr = "csr_12345"
         cert = "cert_12345"
-        chain = "chain_12345"
+        chain = ["chain_12345"]
         ca = "ca_12345"
         secret_key = CertType.UNIT_TRANSPORT.val
 
@@ -175,7 +175,7 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         self.assertDictEqual(
             self.secret_store.get_object(Scope.UNIT, secret_key),
-            {"csr": csr, "chain": chain, "cert": cert, "ca": ca},
+            {"csr": csr, "chain": chain[0], "cert": cert, "ca": ca},
         )
 
         on_tls_conf_set.assert_called()
