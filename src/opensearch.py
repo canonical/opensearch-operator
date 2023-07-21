@@ -125,6 +125,10 @@ class OpenSearchSnap(OpenSearchDistribution):
         gid = grp.getgrnam("root").gr_gid
         os.chown(path, uid, gid)
 
+    @property
+    def _plugin(self):
+        return "opensearch.plugin"
+
 
 class OpenSearchTarball(OpenSearchDistribution):
     """Tarball distro of opensearch, only overrides properties and logic proper to the tar."""

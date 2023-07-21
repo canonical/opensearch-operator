@@ -92,3 +92,7 @@ class OpenSearchScaleDownError(OpenSearchError):
 
 class OpenSearchIndexError(OpenSearchError):
     """Exception thrown when an opensearch index is invalid."""
+
+
+class OpenSearchPluginError(OpenSearchError):
+    """Exception thrown when an opensearch plugin is invalid."""

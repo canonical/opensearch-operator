@@ -20,6 +20,17 @@ LIBAPI = 0
 # to 0 if you are raising the major API version
 LIBPATCH = 1
 
+# Extra values that are not set via relation
+S3_OPENSEARCH_EXTRA_VALUES = {
+    "s3.client.default.max_retries": 3,
+    "s3.client.default.disable_chunked_encoding": False,
+    "s3.client.default.path_style_access": False,
+    "s3.client.default.protocol": "https",
+    "s3.client.default.read_timeout": "50s",
+    "s3.client.default.use_throttle_retries": True,
+}
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -186,6 +197,22 @@ class OpenSearchConfig:
         with open(self._opensearch.paths.seed_hosts, "w+") as f:
             lines = "\n".join([entry for entry in cm_ips_hostnames if entry.strip()])
             f.write(f"{lines}\n")
+
+    def set_s3_parameters(self, s3_credentials: Dict[str, any]):
+        """Add CM nodes ips / host names to the seed host list of this unit."""
+        self._opensearch.config.put(
+            self.CONFIG_YML, "s3.client.default.endpoint", s3_credentials["endpoint"]
+        )
+        for k, v in S3_OPENSEARCH_EXTRA_VALUES.items():
+            self._opensearch.config.put(
+                self.CONFIG_YML, k, v
+            )
+        self._opensearch.add_to_keystore(
+            "s3.client.default.access_key", s3_credentials["access-key"], force=True
+        )
+        self._opensearch.add_to_keystore(
+            "s3.client.default.secret_key", s3_credentials["secret-key"], force=True
+        )
 
     def cleanup_bootstrap_conf(self):
         """Remove some conf entries when the cluster is bootstrapped."""

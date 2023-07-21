@@ -29,6 +29,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHttpError,
+    OpenSearchPluginError,
     OpenSearchStartTimeoutError,
 )
 
@@ -304,6 +305,52 @@ class OpenSearchDistribution(ABC):
 
         with open(path, mode="w") as f:
             f.write(data)
+
+    @property
+    def _plugin(self):
+        """Returns the executable path. Should be overloaded, e.g. by the snap command."""
+        return f"{self.paths.home}/bin/opensearch-plugin"
+
+    def add_plugin_without_restart(self, plugin: str, batch: bool = False) -> bool:
+        """Add a plugin to this node. Restart must be managed in separated."""
+        try:
+            args = "install"
+            if batch:
+                args = " --batch"
+            args += f" {plugin}"
+            self._run_cmd(self._plugin, args)
+        except: # noqa
+            raise OpenSearchPluginError(f"Failed to install plugin {plugin}")
+
+    def remove_plugin_without_restart(self, plugin):
+        """Remove a plugin without restarting the node."""
+        try:
+            args = f"remove {plugin}"
+            self._run_cmd(self._plugin, args)
+        except: # noqa
+            raise OpenSearchPluginError(f"Failed to remove plugin {plugin}")
+
+    def list_plugins(self):
+        """List plugins."""
+        return self.request(
+            "GET",
+            "/_cat/plugins",
+            check_hosts_reach=False,
+            timeout=10)
+
+    @property
+    def _keystore(self):
+        return f"{self.paths.home}/bin/opensearch-keystore"
+
+    def add_to_keystore(self, key: str, value: str, force=False):
+        """Adds a given key to the "opensearch" keystore."""
+        args = "" if not force else "--force"
+        args += f" {key} {value}"
+        self._run_cmd(self._keystore, key, value)
+
+    def remove_from_keystore(self, key: str):
+        """Removes a given key from "opensearch" keystore."""
+        self._run_cmd(self._keystore, key)
 
     @staticmethod
     def _run_cmd(command: str, args: str = None):
