@@ -29,8 +29,8 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHttpError,
-    OpenSearchPluginError,
     OpenSearchKeystoreError,
+    OpenSearchPluginError,
     OpenSearchStartTimeoutError,
 )
 
@@ -320,7 +320,7 @@ class OpenSearchDistribution(ABC):
                 args = " --batch"
             args += f" {plugin}"
             self._run_cmd(self._plugin, args)
-        except: # noqa
+        except:  # noqa
             raise OpenSearchPluginError(f"Failed to install plugin {plugin}")
 
     def remove_plugin_without_restart(self, plugin):
@@ -328,16 +328,12 @@ class OpenSearchDistribution(ABC):
         try:
             args = f"remove {plugin}"
             self._run_cmd(self._plugin, args)
-        except: # noqa
+        except:  # noqa
             raise OpenSearchPluginError(f"Failed to remove plugin {plugin}")
 
     def list_plugins(self):
         """List plugins."""
-        return self.request(
-            "GET",
-            "/_cat/plugins",
-            check_hosts_reach=False,
-            timeout=10)
+        return self.request("GET", "/_cat/plugins", check_hosts_reach=False, timeout=10)
 
     @property
     def _keystore(self):

@@ -6,24 +6,18 @@
 This class must load the opensearch plugin: s3-repository; and configure it.
 """
 
+import json
 import logging
 
-from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
-from ops.framework import Object
-from ops.model import (
-    ActiveStatus,
-    BlockedStatus,
-    MaintenanceStatus,
-    StatusBase,
-)
+from charms.data_platform_libs.v0.s3 import S3Requirer
+from charms.opensearch.v0.constants_charm import OPENSEARCH_REPOSITORY_NAME, S3_RELATION
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchBackupBusyError,
     OpenSearchHttpError,
-    OpenSearchUnknownBackupRestoreError
+    OpenSearchUnknownBackupRestoreError,
 )
-
-
-from lib.charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from ops.framework import Object
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase
 
 # The unique Charmhub library identifier, never change it
 LIBID = "d704d9bd5688480a9cf408d62cff3bcb"
@@ -37,21 +31,15 @@ LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 
-OPENSEARCH_SNAP_DATA_DIR = "/var/snap/opensearch/current/"
 
-S3_RELATION = "s3-credentials"
-
-OPENSEARCH_REPOSITORY_NAME = "charmed-s3-repository"
-
-
-class OpenSearchBackups(Object):
+class OpenSearchBackup(Object):
     """In this class, we manage OpenSearch backups."""
 
     def __init__(self, charm):
         """Manager of OpenSearch client relations."""
-        super().__init__(charm)
+        super().__init__(charm, S3_RELATION)
         self.charm = charm
-        self.distro = self.charm.distro
+        self.distro = self.charm.opensearch
 
         # s3 relation handles the config options for s3 backups
         self.s3_client = S3Requirer(self.charm, S3_RELATION)
@@ -79,28 +67,29 @@ class OpenSearchBackups(Object):
         """Unloads the s3 plugin."""
         self.distro.remove_plugin_without_restart("repository-s3")
         self.charm.opensearch_config.del_s3_parameters()
-        self.on[self.charm.service_manager.name].acquire_lock.emit(
+        self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
             callback_override="self.charm._restart_opensearch"
         )
 
     def _on_s3_credential_changed(self, _) -> None:
         """Sets credentials, resyncs if necessary and reports config errors."""
-        self.charm.opensearch_config.set_s3_parameters(
-            self.s3_client.get_s3_connection_info()
-        )
-        self.on[self.charm.service_manager.name].acquire_lock.emit(
+        self.charm.opensearch_config.set_s3_parameters(self.s3_client.get_s3_connection_info())
+        self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
             callback_override="self.charm._restart_opensearch"
         )
 
     def _get_backup_status(self) -> StatusBase:
-        """Get the backup status"""
+        """Get the backup status."""
         try:
             response = self.request("GET", "/_snapshot/_status").text
         except OpenSearchHttpError as e:
             raise e
         except Exception as e:
-            raise OpenSearchHttpError()
-        
+            raise OpenSearchUnknownBackupRestoreError(
+                f"""Unknown backup failure, response: {response.text}
+                    Error: {e.__traceback__}"""
+            )
+
         logger.debug(f"_get_backup_status response: {response}")
 
         # Check state:
@@ -111,14 +100,13 @@ class OpenSearchBackups(Object):
         if "PARTIAL" in response:
             return BlockedStatus("partial backup: at least one shard failed to backup")
         if "INCOMPATIBLE" in response:
-           return BlockedStatus("backup failed: compatibility problems")
+            return BlockedStatus("backup failed: compatibility problems")
         if "FAILED" in response:
             return BlockedStatus("backup failed: unknown")
-        return ActiveStatus("")            
+        return ActiveStatus("")
 
     def _on_action_run_prechecks(self, event: StatusBase) -> bool:
         """Runs the standard checks for backups: is it leader and backup status."""
-
         if self.model.get_relation(S3_RELATION) is None:
             event.fail("Relation with s3-integrator charm missing, cannot create backup.")
             return False
@@ -143,12 +131,12 @@ class OpenSearchBackups(Object):
             return False
         return True
 
-
     def _get_latest_backup_code(self) -> int:
         """Returns the latest backup code performed."""
         try:
             response = self.request(
-                "GET", f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/_all",
+                "GET",
+                f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/_all",
             )
             if isinstance(response.text, str):
                 r = json.dumps(response.text)
@@ -160,13 +148,14 @@ class OpenSearchBackups(Object):
                 if res < b:
                     res = b
             return res
-            
-        except (OpenSearchHttpError,OpenSearchBackupBusyError) as e:
+
+        except (OpenSearchHttpError, OpenSearchBackupBusyError) as e:
             raise e
         except Exception as e:
             raise OpenSearchUnknownBackupRestoreError(
                 f"""Unknown backup failure, response: {response.text}
-                    Error: {e.__traceback__}""")        
+                    Error: {e.__traceback__}"""
+            )
 
     def _on_get_backup_status_action(self, event: StatusBase) -> None:
         """Returns the status of the backup plugin."""
@@ -193,34 +182,38 @@ class OpenSearchBackups(Object):
             code += 1
 
             response = self.request(
-                "PUT", f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/{code}",
+                "PUT",
+                f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/{code}",
                 payload={
                     "indices": event.params.get("indices"),
                     "ignore_unavailable": "false",
                     "include_global_state": "true",
-                    "partial": "false"
-                }
+                    "partial": "false",
+                },
             )
             event.set_results({"backup-status": "backup started"})
             self.charm.unit.status = MaintenanceStatus("backup started")
-        except (OpenSearchHttpError,OpenSearchBackupBusyError) as e:
+        except (OpenSearchHttpError, OpenSearchBackupBusyError) as e:
             raise e
         except Exception as e:
             raise OpenSearchUnknownBackupRestoreError(
                 f"""Unknown backup failure, response: {response.text}
-                    Error: {e.__traceback__}""")
+                    Error: {e.__traceback__}"""
+            )
 
     def _on_list_backups_action(self, event: StatusBase) -> None:
         try:
             response = self.request(
-                "GET", f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/_alls",
+                "GET",
+                f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/_alls",
             )
-        except (OpenSearchHttpError,OpenSearchBackupBusyError) as e:
+        except (OpenSearchHttpError, OpenSearchBackupBusyError) as e:
             raise e
         except Exception as e:
             raise OpenSearchUnknownBackupRestoreError(
                 f"""Unknown backup failure, response: {response}
-                    Error: {e.__traceback__}""")
+                    Error: {e.__traceback__}"""
+            )
         event.set_result(f"{response.text}")
 
     def _on_restore_action(self, event: StatusBase) -> None:
@@ -235,21 +228,27 @@ class OpenSearchBackups(Object):
                 "include_global_state": "true",
                 "include_aliases": "true",
                 "partial": "false",
-                "storage_type": "local"
+                "storage_type": "local",
             }
             # Add optional payloads
-            for p in ["rename-pattern", "rename-replacement",
-                      "index-settings", "ignore-index-settings"]:
+            for p in [
+                "rename-pattern",
+                "rename-replacement",
+                "index-settings",
+                "ignore-index-settings",
+            ]:
                 if event.params.get(p):
                     payload[p.replace("-", "_")] = event.params.get(p)
 
             response = self.request(
-                "PUT", f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/{backup_id}/_restore",
-                payload=payload
+                "PUT",
+                f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/{backup_id}/_restore",
+                payload=payload,
             )
-        except (OpenSearchHttpError,OpenSearchBackupBusyError) as e:
+        except (OpenSearchHttpError, OpenSearchBackupBusyError) as e:
             raise e
         except Exception as e:
             raise OpenSearchUnknownBackupRestoreError(
                 f"""Unknown backup failure, response: {response.text}
-                    Error: {e.__traceback__}""")
+                    Error: {e.__traceback__}"""
+            )

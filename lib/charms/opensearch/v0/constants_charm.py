@@ -66,3 +66,7 @@ PeerRelationName = "opensearch-peers"
 # Opensearch Users
 OpenSearchUsers = {"admin"}
 OpenSearchRoles = set()
+
+# OpenSearch Backups
+S3_RELATION = "s3-credentials"
+OPENSEARCH_REPOSITORY_NAME = "charmed-s3-repository"

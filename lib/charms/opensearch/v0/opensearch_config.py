@@ -204,9 +204,7 @@ class OpenSearchConfig:
             self.CONFIG_YML, "s3.client.default.endpoint", s3_credentials["endpoint"]
         )
         for k, v in S3_OPENSEARCH_EXTRA_VALUES.items():
-            self._opensearch.config.put(
-                self.CONFIG_YML, k, v
-            )
+            self._opensearch.config.put(self.CONFIG_YML, k, v)
         self._opensearch.add_to_keystore(
             "s3.client.default.access_key", s3_credentials["access-key"], force=True
         )
@@ -216,13 +214,9 @@ class OpenSearchConfig:
 
     def del_s3_parameters(self):
         """Remove s3 parameters from both opensearch.yml and keystore."""
-        self._opensearch.config.delete(
-            self.CONFIG_YML, "s3.client.default.endpoint", s3_credentials["endpoint"]
-        )
+        self._opensearch.config.delete(self.CONFIG_YML, "s3.client.default.endpoint")
         for k, v in S3_OPENSEARCH_EXTRA_VALUES.items():
-            self._opensearch.config.delete(
-                self.CONFIG_YML, k, v
-            )
+            self._opensearch.config.delete(self.CONFIG_YML, k)
         self._opensearch.remove_from_keystore("s3.client.default.access_key")
         self._opensearch.remove_from_keystore("s3.client.default.secret_key")
 
