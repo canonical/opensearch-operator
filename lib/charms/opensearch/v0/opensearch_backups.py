@@ -14,6 +14,8 @@ from charms.opensearch.v0.constants_charm import OPENSEARCH_REPOSITORY_NAME, S3_
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchBackupBusyError,
     OpenSearchHttpError,
+    OpenSearchPluginError,
+    OpenSearchKeystoreError,
     OpenSearchUnknownBackupRestoreError,
 )
 from ops.framework import Object
@@ -59,9 +61,14 @@ class OpenSearchBackup(Object):
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
         self.framework.observe(self.charm.on.restore_action, self._on_get_backup_status_action)
 
-    def _on_s3_credential_joined(self, _):
+    def _on_s3_credential_joined(self, event):
         """Loads the s3 plugin."""
-        self.distro.add_plugin_without_restart("repository-s3")
+        try:
+            self.distro.add_plugin_without_restart("repository-s3", batch=True)
+        except OpenSearchPluginError:
+            logger.info("Plugin error registered, expected if plugin already installed")
+            event.defer()
+            return
 
     def _on_s3_credential_departed(self, _):
         """Unloads the s3 plugin."""
@@ -71,9 +78,14 @@ class OpenSearchBackup(Object):
             callback_override="self.charm._restart_opensearch"
         )
 
-    def _on_s3_credential_changed(self, _) -> None:
+    def _on_s3_credential_changed(self, event) -> None:
         """Sets credentials, resyncs if necessary and reports config errors."""
-        self.charm.opensearch_config.set_s3_parameters(self.s3_client.get_s3_connection_info())
+        try:
+            self.charm.opensearch_config.set_s3_parameters(self.s3_client.get_s3_connection_info())
+        except OpenSearchKeystoreError:
+            logger.warn("Keystore error: missing credential, defer event...")
+            event.defer()
+            return
         self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
             callback_override="self.charm._restart_opensearch"
         )

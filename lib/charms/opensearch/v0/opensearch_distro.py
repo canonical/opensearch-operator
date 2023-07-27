@@ -317,7 +317,7 @@ class OpenSearchDistribution(ABC):
         try:
             args = "install"
             if batch:
-                args = " --batch"
+                args += " --batch"
             args += f" {plugin}"
             self._run_cmd(self._plugin, args)
         except:  # noqa
@@ -343,7 +343,7 @@ class OpenSearchDistribution(ABC):
         """Adds a given key to the "opensearch" keystore."""
         if not value:
             raise OpenSearchKeystoreError("Missing keystore value")
-        args = "" if not force else "--force "
+        args = "add " if not force else "add --force "
         args += f"{key} {value}"
         try:
             # Add newline to the end of the key, if missing
