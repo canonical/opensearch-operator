@@ -30,6 +30,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
     OpenSearchPluginError,
+    OpenSearchKeystoreError,
     OpenSearchStartTimeoutError,
 )
 
@@ -342,23 +343,32 @@ class OpenSearchDistribution(ABC):
     def _keystore(self):
         return f"{self.paths.home}/bin/opensearch-keystore"
 
-    def add_to_keystore(self, key: str, value: str, force=False):
+    def add_to_keystore(self, key: str, value: str, force: bool = False):
         """Adds a given key to the "opensearch" keystore."""
-        args = "" if not force else "--force"
-        args += f" {key} {value}"
-        self._run_cmd(self._keystore, key, value)
+        if not value:
+            raise OpenSearchKeystoreError("Missing keystore value")
+        args = "" if not force else "--force "
+        args += f"{key} {value}"
+        try:
+            # Add newline to the end of the key, if missing
+            v = value + ("" if value[-1] == "\n" else "\n")
+            self._run_cmd(self._keystore, args, input=v)
+        except Exception as e:
+            raise OpenSearchKeystoreError(e)
 
     def remove_from_keystore(self, key: str):
         """Removes a given key from "opensearch" keystore."""
-        self._run_cmd(self._keystore, key)
+        args = f"remove {key}"
+        self._run_cmd(self._keystore, args)
 
     @staticmethod
-    def _run_cmd(command: str, args: str = None):
+    def _run_cmd(command: str, args: str = None, input: str = None):
         """Run command.
 
         Arg:
             command: can contain arguments
             args: command line arguments
+            input: enter string to the process
         """
         if args is not None:
             command = f"{command} {args}"
@@ -368,6 +378,7 @@ class OpenSearchDistribution(ABC):
         try:
             output = subprocess.run(
                 command,
+                input=input,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 shell=True,

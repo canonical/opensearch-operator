@@ -96,3 +96,15 @@ class OpenSearchIndexError(OpenSearchError):
 
 class OpenSearchPluginError(OpenSearchError):
     """Exception thrown when an opensearch plugin is invalid."""
+
+
+class OpenSearchUnknownBackupRestoreError(OpenSearchError):
+    """Exception thrown when an opensearch backup-related action fails."""
+
+
+class OpenSearchKeystoreError(OpenSearchError):
+    """Exception thrown when an opensearch keystore is invalid."""
+
+
+class OpenSearchBackupBusyError(OpenSearchError):
+    """Raised when backup is busy and cannot run another operation."""

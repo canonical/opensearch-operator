@@ -199,7 +199,7 @@ class OpenSearchConfig:
             f.write(f"{lines}\n")
 
     def set_s3_parameters(self, s3_credentials: Dict[str, any]):
-        """Add CM nodes ips / host names to the seed host list of this unit."""
+        """Add S3 parameters to both opensearch.yml and keystore."""
         self._opensearch.config.put(
             self.CONFIG_YML, "s3.client.default.endpoint", s3_credentials["endpoint"]
         )
@@ -213,6 +213,18 @@ class OpenSearchConfig:
         self._opensearch.add_to_keystore(
             "s3.client.default.secret_key", s3_credentials["secret-key"], force=True
         )
+
+    def del_s3_parameters(self):
+        """Remove s3 parameters from both opensearch.yml and keystore."""
+        self._opensearch.config.delete(
+            self.CONFIG_YML, "s3.client.default.endpoint", s3_credentials["endpoint"]
+        )
+        for k, v in S3_OPENSEARCH_EXTRA_VALUES.items():
+            self._opensearch.config.delete(
+                self.CONFIG_YML, k, v
+            )
+        self._opensearch.remove_from_keystore("s3.client.default.access_key")
+        self._opensearch.remove_from_keystore("s3.client.default.secret_key")
 
     def cleanup_bootstrap_conf(self):
         """Remove some conf entries when the cluster is bootstrapped."""

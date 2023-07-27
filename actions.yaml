@@ -42,14 +42,56 @@ get-password:
 create-backup:
   description: Create a database backup.
     S3 credentials are retrieved from a relation with the S3 integrator charm.
+  indices:
+      type: string
+      default: "*,-.opensearch-security"
+      description: |
+        OPTIONAL, use this option to specify a subset of indices to restore
+        More info: https://opensearch.org/docs/latest/tuning-your-cluster/availability-and-recovery/snapshots/snapshot-restore/#restore-snapshots
+
+get-backup-status:
+  description: Check the status of the backup plugin
 
 list-backups:
   description: List available backup_ids in the S3 bucket and path provided by the S3 integrator charm.
 
 restore:
-  description: Restore a database backup.
+  description: | 
+    Restore a database backup.
     S3 credentials are retrieved from a relation with the S3 integrator charm.
   params:
     backup-id:
       type: string
-      description: A backup-id to identify the backup to restore. Format of <%Y-%m-%dT%H:%M:%SZ>
+      description: A backup-id to identify the backup to restore
+    indices:
+      type: string
+      default: "*,-.opensearch-security"
+      description: |
+        OPTIONAL, use this option to specify a subset of indices to restore
+        More info: https://opensearch.org/docs/latest/tuning-your-cluster/availability-and-recovery/snapshots/snapshot-restore/#restore-snapshots
+    rename-pattern:
+      type: string
+      default: ""
+      description: |
+        OPTIONAL, use this option to specify a regex that matches all indices you want to restore.
+        More info: https://opensearch.org/docs/latest/tuning-your-cluster/availability-and-recovery/snapshots/snapshot-restore/#restore-snapshots
+    rename-replacement:
+      type: string
+      default: ""
+      description: |
+        OPTIONAL, use this option to rename indices as they get restored
+        More info: https://opensearch.org/docs/latest/tuning-your-cluster/availability-and-recovery/snapshots/snapshot-restore/#restore-snapshots
+    index-settings:
+      type: string
+      default: ""
+      description: |
+        OPTIONAL, use this option to change settings of the index, you cannot change shard.
+        More info: https://opensearch.org/docs/latest/tuning-your-cluster/availability-and-recovery/snapshots/snapshot-restore/#restore-snapshots
+    ignore-index-settings:
+      type: string
+      default: ""
+      description: |
+        OPTIONAL, use this option to ignore certain settings in the index-settings option.
+        More info: https://opensearch.org/docs/latest/tuning-your-cluster/availability-and-recovery/snapshots/snapshot-restore/#restore-snapshots      
+  required:
+    - backup-id
