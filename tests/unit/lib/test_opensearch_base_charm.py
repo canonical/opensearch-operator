@@ -188,14 +188,14 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
     def test_app_peers_data(self):
         """Test getting data from the app relation data bag."""
-        self.assertEqual(self.peers_data.all(Scope.APP), {})
+        self.assertIsNone(self.peers_data.get(Scope.APP, "app-key"))
 
         self.peers_data.put(Scope.APP, "app-key", "app-val")
         self.assertEqual(self.peers_data.get(Scope.APP, "app-key"), "app-val")
 
     def test_unit_peers_data(self):
         """Test getting data from the unit relation data bag."""
-        self.assertEqual(self.peers_data.all(Scope.UNIT), {})
+        self.assertIsNone(self.peers_data.get(Scope.UNIT, "unit-key"))
 
         self.peers_data.put(Scope.UNIT, "unit-key", "unit-val")
         self.assertEqual(self.peers_data.get(Scope.UNIT, "unit-key"), "unit-val")
