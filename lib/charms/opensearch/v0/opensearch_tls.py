@@ -208,9 +208,20 @@ class OpenSearchTLS(Object):
         self, scope: Scope, cert_type: CertType, secrets: Dict[str, str]
     ):
         """Request new certificate and store the key/key-password/csr in the scope's data bag."""
-        key = secrets["key"].encode("utf-8")
+        key = secrets.get("key")
+        if not key:
+            logger.error("Key %s key not found")
+            return
+
+        key = key.encode("utf-8")
         key_password = secrets.get("key-password", None)
-        old_csr = secrets["csr"].encode("utf-8")
+
+        old_csr = secrets.get("csr")
+        if not old_csr:
+            logger.error("Certificate request not found")
+            return
+
+        old_csr = old_csr.encode("utf-8")
 
         subject = self._get_subject(cert_type)
         new_csr = generate_csr(
@@ -321,16 +332,16 @@ class OpenSearchTLS(Object):
         certs = {}
 
         transport_secrets = self.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)
-        if transport_secrets and "cert" in transport_secrets:
+        if transport_secrets and transport_secrets.get("cert"):
             certs[CertType.UNIT_TRANSPORT] = transport_secrets["cert"]
 
         http_secrets = self.get_object(Scope.UNIT, CertType.UNIT_HTTP.val)
-        if http_secrets and "cert" in http_secrets:
+        if http_secrets and http_secrets.get("cert"):
             certs[CertType.UNIT_HTTP] = http_secrets["cert"]
 
         if self._charm.unit.is_leader():
             admin_secrets = self.get_object(Scope.APP, CertType.APP_ADMIN.val)
-            if admin_secrets and "cert" in admin_secrets:
+            if admin_secrets and admin_secrets.get("cert"):
                 certs[CertType.APP_ADMIN] = admin_secrets["cert"]
 
         return certs
