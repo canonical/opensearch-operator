@@ -53,11 +53,6 @@ class DataStore(ABC):
         pass
 
     @abstractmethod
-    def all(self, scope: Scope) -> Dict[str, str]:
-        """Get all content of a store."""
-        pass
-
-    @abstractmethod
     def get(
         self, scope: Scope, key: str, default: Optional[Union[int, float, str, bool]] = None
     ) -> Optional[Union[int, float, str, bool]]:
@@ -138,14 +133,6 @@ class RelationDataStore(DataStore):
             raise ValueError("Scope undefined.")
 
         return key in self._get_relation_data(scope)
-
-    @override
-    def all(self, scope: Scope) -> Dict[str, str]:
-        """Get all content of a store."""
-        if scope is None:
-            raise ValueError("Scope undefined.")
-
-        return self._get_relation_data(scope)
 
     @override
     def get(
