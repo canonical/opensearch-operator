@@ -48,6 +48,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         """Write certificates and keys on disk."""
         certs_dir = self.opensearch.paths.certs
 
+        if not secrets.get("key"):
+            logging.error("TLS key not found, quitting.")
+            return
+
         self.opensearch.write_file(
             f"{certs_dir}/{cert_type}.key",
             to_pkcs8(secrets["key"], secrets.get("key-password")),
