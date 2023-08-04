@@ -14,8 +14,8 @@ from charms.opensearch.v0.constants_charm import OPENSEARCH_REPOSITORY_NAME, S3_
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchBackupBusyError,
     OpenSearchHttpError,
-    OpenSearchPluginError,
     OpenSearchKeystoreError,
+    OpenSearchPluginError,
     OpenSearchUnknownBackupRestoreError,
 )
 from ops.framework import Object
@@ -45,14 +45,9 @@ class OpenSearchBackup(Object):
 
         # s3 relation handles the config options for s3 backups
         self.s3_client = S3Requirer(self.charm, S3_RELATION)
-        # Used to ensure s3-repository plugin is loaded
-        self.framework.observe(
-            self.charm.on[S3_RELATION].relation_joined, self._on_s3_credential_joined
-        )
         self.framework.observe(
             self.charm.on[S3_RELATION].relation_departed, self._on_s3_credential_departed
         )
-
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credential_changed
         )
@@ -61,33 +56,45 @@ class OpenSearchBackup(Object):
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
         self.framework.observe(self.charm.on.restore_action, self._on_get_backup_status_action)
 
-    def _on_s3_credential_joined(self, event):
-        """Loads the s3 plugin."""
+    def _is_started(self) -> bool:
+        return self.distro.is_started()
+
+    def _on_s3_credential_departed(self, event):
+        """Unloads the s3 plugin."""
         try:
-            self.distro.add_plugin_without_restart("repository-s3", batch=True)
-        except OpenSearchPluginError:
-            logger.info("Plugin error registered, expected if plugin already installed")
+            if not self._is_started():
+                event.defer()
+                return
+            self.distro.remove_plugin_without_restart("repository-s3")
+            self.charm.opensearch_config.del_s3_parameters()
+        except OpenSearchKeystoreError:
+            logger.warn("Keystore error: missing credential, defer event...")
             event.defer()
             return
-
-    def _on_s3_credential_departed(self, _):
-        """Unloads the s3 plugin."""
-        self.distro.remove_plugin_without_restart("repository-s3")
-        self.charm.opensearch_config.del_s3_parameters()
+        self.distro._run_cmd(
+            "chown", "snap_daemon:snap_daemon /var/snap/current/etc/opensearch/opensearch.keystore"
+        )
         self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
-            callback_override="self.charm._restart_opensearch"
+            callback_override="_restart_opensearch"
         )
 
     def _on_s3_credential_changed(self, event) -> None:
         """Sets credentials, resyncs if necessary and reports config errors."""
         try:
+            if not self._is_started():
+                event.defer()
+                return
+            self.distro.add_plugin_without_restart("repository-s3", batch=True)
             self.charm.opensearch_config.set_s3_parameters(self.s3_client.get_s3_connection_info())
-        except OpenSearchKeystoreError:
-            logger.warn("Keystore error: missing credential, defer event...")
+        except (OpenSearchKeystoreError, OpenSearchPluginError):
+            logger.warn("missing credential, defer event...")
             event.defer()
             return
         self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
-            callback_override="self.charm._restart_opensearch"
+            callback_override="_restart_opensearch"
+        )
+        self.distro._run_cmd(
+            "chown", "snap_daemon:snap_daemon /var/snap/current/etc/opensearch/opensearch.keystore"
         )
 
     def _get_backup_status(self) -> StatusBase:
@@ -217,10 +224,10 @@ class OpenSearchBackup(Object):
         try:
             response = self.request(
                 "GET",
-                f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/_alls",
+                f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/_all",
             )
-        except (OpenSearchHttpError, OpenSearchBackupBusyError) as e:
-            raise e
+        except OpenSearchBackupBusyError:
+            event.fail("Backup is busy")
         except Exception as e:
             raise OpenSearchUnknownBackupRestoreError(
                 f"""Unknown backup failure, response: {response}

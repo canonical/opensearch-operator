@@ -68,7 +68,15 @@ class OpenSearchOpsLockAlreadyAcquiredError(OpenSearchError):
 
 
 class OpenSearchCmdError(OpenSearchError):
-    """Exception thrown when an OpenSearch bin command fails."""
+    """Exception thrown when an OpenSearch bin command fails.
+
+    Stores the stderr and error code so parent methods can act on this exception.
+    If unknown error, returns 0
+    """
+
+    def __init__(self, errorcode, stderr):
+        self.code = errorcode
+        self.stderr = stderr
 
 
 class OpenSearchHttpError(OpenSearchError):

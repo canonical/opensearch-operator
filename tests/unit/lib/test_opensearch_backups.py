@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, call, patch
 
 from charms.opensearch.v0.constants_charm import S3_RELATION, PeerRelationName
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
+from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.testing import Harness
 
@@ -28,17 +29,19 @@ class TestOpenSearchBackups(unittest.TestCase):
 
         self.secret_store = self.charm.secrets
 
+    @patch.object(OpenSearchBackup, "_is_started")
     @patch.object(YamlConfigSetter, "delete")
     @patch.object(RollingOpsManager, "_on_acquire_lock")
     @patch.object(YamlConfigSetter, "put")
     def test_add_remove_relation(
-        self, mock_yaml_setter_put, mock_acquire_lock, mock_yaml_setter_delete
+        self, mock_yaml_setter_put, mock_acquire_lock, mock_yaml_setter_delete, mock_started
     ):
         """Test the add and remove relation and its access to plugin, keystore, config."""
         self.charm.opensearch.add_plugin_without_restart = MagicMock()
         mock_add_plugin = self.charm.opensearch.add_plugin_without_restart
         self.charm.opensearch.add_to_keystore = MagicMock()
         mock_add_ks = self.charm.opensearch.add_to_keystore
+        mock_started.return_value = True
 
         s3_rel = self.harness.add_relation(S3_RELATION, "s3-integrator")
         self.harness.add_relation_unit(s3_rel, "s3-integrator/0")
@@ -55,7 +58,7 @@ class TestOpenSearchBackups(unittest.TestCase):
                 "storage-class": "storageclass",
             },
         )
-        mock_add_plugin.assert_called_once_with("repository-s3")
+        mock_add_plugin.assert_called_once_with("repository-s3", batch=True)
         mock_acquire_lock.assert_called()
         yaml_setter_put_calls = [
             call("opensearch.yml", "s3.client.default.endpoint", "localhost"),
