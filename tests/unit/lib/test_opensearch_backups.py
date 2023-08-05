@@ -29,12 +29,18 @@ class TestOpenSearchBackups(unittest.TestCase):
 
         self.secret_store = self.charm.secrets
 
+    @patch.object(OpenSearchBackup, "register_snapshot_repo")
     @patch.object(OpenSearchBackup, "_is_started")
     @patch.object(YamlConfigSetter, "delete")
     @patch.object(RollingOpsManager, "_on_acquire_lock")
     @patch.object(YamlConfigSetter, "put")
     def test_add_remove_relation(
-        self, mock_yaml_setter_put, mock_acquire_lock, mock_yaml_setter_delete, mock_started
+        self,
+        mock_yaml_setter_put,
+        mock_acquire_lock,
+        mock_yaml_setter_delete,
+        mock_started,
+        mock_register_repo,
     ):
         """Test the add and remove relation and its access to plugin, keystore, config."""
         self.charm.opensearch.add_plugin_without_restart = MagicMock()
@@ -42,6 +48,7 @@ class TestOpenSearchBackups(unittest.TestCase):
         self.charm.opensearch.add_to_keystore = MagicMock()
         mock_add_ks = self.charm.opensearch.add_to_keystore
         mock_started.return_value = True
+        mock_register_repo.return_value = False
 
         s3_rel = self.harness.add_relation(S3_RELATION, "s3-integrator")
         self.harness.add_relation_unit(s3_rel, "s3-integrator/0")
@@ -62,8 +69,8 @@ class TestOpenSearchBackups(unittest.TestCase):
         mock_acquire_lock.assert_called()
         yaml_setter_put_calls = [
             call("opensearch.yml", "s3.client.default.endpoint", "localhost"),
+            call("opensearch.yml", "s3.client.default.region", "testing-region"),
             call("opensearch.yml", "s3.client.default.max_retries", 3),
-            call("opensearch.yml", "s3.client.default.disable_chunked_encoding", False),
             call("opensearch.yml", "s3.client.default.path_style_access", False),
             call("opensearch.yml", "s3.client.default.protocol", "https"),
             call("opensearch.yml", "s3.client.default.read_timeout", "50s"),
@@ -87,8 +94,8 @@ class TestOpenSearchBackups(unittest.TestCase):
         mock_remove_plugin.assert_called_once_with("repository-s3")
         yaml_setter_delete_calls = [
             call("opensearch.yml", "s3.client.default.endpoint"),
+            call("opensearch.yml", "s3.client.default.region"),
             call("opensearch.yml", "s3.client.default.max_retries"),
-            call("opensearch.yml", "s3.client.default.disable_chunked_encoding"),
             call("opensearch.yml", "s3.client.default.path_style_access"),
             call("opensearch.yml", "s3.client.default.protocol"),
             call("opensearch.yml", "s3.client.default.read_timeout"),

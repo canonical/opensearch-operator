@@ -23,7 +23,6 @@ LIBPATCH = 1
 # Extra values that are not set via relation
 S3_OPENSEARCH_EXTRA_VALUES = {
     "s3.client.default.max_retries": 3,
-    "s3.client.default.disable_chunked_encoding": False,
     "s3.client.default.path_style_access": False,
     "s3.client.default.protocol": "https",
     "s3.client.default.read_timeout": "50s",
@@ -203,6 +202,9 @@ class OpenSearchConfig:
         self._opensearch.config.put(
             self.CONFIG_YML, "s3.client.default.endpoint", s3_credentials["endpoint"]
         )
+        self._opensearch.config.put(
+            self.CONFIG_YML, "s3.client.default.region", s3_credentials["region"]
+        )
         for k, v in S3_OPENSEARCH_EXTRA_VALUES.items():
             self._opensearch.config.put(self.CONFIG_YML, k, v)
         self._opensearch.add_to_keystore(
@@ -215,6 +217,7 @@ class OpenSearchConfig:
     def del_s3_parameters(self):
         """Remove s3 parameters from both opensearch.yml and keystore."""
         self._opensearch.config.delete(self.CONFIG_YML, "s3.client.default.endpoint")
+        self._opensearch.config.delete(self.CONFIG_YML, "s3.client.default.region")
         for k, v in S3_OPENSEARCH_EXTRA_VALUES.items():
             self._opensearch.config.delete(self.CONFIG_YML, k)
         self._opensearch.remove_from_keystore("s3.client.default.access_key")
