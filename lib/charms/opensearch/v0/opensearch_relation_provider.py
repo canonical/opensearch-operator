@@ -245,7 +245,8 @@ class OpenSearchProvider(Object):
         forbidden_chars = [" ", ",", ":", '"', "*", "+", "\\", "/", "|", "?", "#", ">", "<"]
         if any([char in index_name for char in forbidden_chars]):
             logger.error(
-                f"invalid index name {index_name} - index name includes one or more of the following forbidden characters: {forbidden_chars}"
+                f"invalid index name {index_name} - index name includes one or more of "
+                f"the following forbidden characters: {forbidden_chars}"
             )
             return False
 
