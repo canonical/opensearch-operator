@@ -285,6 +285,7 @@ from collections import namedtuple
 from datetime import datetime
 from typing import List, Optional
 
+from ops import JujuVersion
 from ops.charm import (
     CharmBase,
     CharmEvents,
@@ -481,6 +482,7 @@ class DataRequires(Object, ABC):
         self.framework.observe(
             self.charm.on[relation_name].relation_changed, self._on_relation_changed_event
         )
+        self._has_secrets = False
 
     @abstractmethod
     def _on_relation_joined_event(self, event: RelationJoinedEvent) -> None:
@@ -490,6 +492,14 @@ class DataRequires(Object, ABC):
     @abstractmethod
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
         raise NotImplementedError
+
+    @property
+    def has_secrets(self):
+        """Property to cache resutls from a Juju call."""
+        if not self._jujuversion:
+            self._jujuversion = JujuVersion.from_environ()
+        if self._jujuversion and hasattr(self._jujuversion, "has_secrets"):
+            return self._jujuversion.has_secrets
 
     def fetch_relation_data(self) -> dict:
         """Retrieves data from relation.
