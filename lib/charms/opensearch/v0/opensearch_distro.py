@@ -47,7 +47,7 @@ LIBPATCH = 2
 logger = logging.getLogger(__name__)
 
 
-OpenSearchPluginsAvailable = {"opensearch-knn": OpenSearchPlugin}
+OpenSearchPluginsAvailable = {}
 
 
 class Paths:
@@ -129,12 +129,32 @@ class OpenSearchDistribution(ABC):
 
     @property
     def plugins(self):
-        """Returns list of enabled plugins."""
-        return [
-            cls(p, self._charm)
-            for p, cls in OpenSearchPluginsAvailable.items()
-            if cls(p, self._charm).is_enabled()
-        ]
+        """Returns dict of installed plugins."""
+        ret = {}
+        for p, v in OpenSearchPluginsAvailable.items():
+            classname = v["class"]
+            ret[p] = classname(p, self._charm)
+        return ret
+
+    def plugin_map_config_name_to_class(self):
+        """Returns dict of plugins installed either via config or relation.
+
+        The dict has the format:
+            {
+                "{relation,config}-name": <class>,
+            }
+
+        Relation names will take precedence over config.
+        """
+        ret = {}
+        for p, v in OpenSearchPluginsAvailable.items():
+            if v.get("relation-name", None):
+                charm_name = v["relation-name"]
+            else:
+                charm_name = v["config-name"]
+            classname = v["class"]
+            ret[charm_name] = classname(p, self._charm)
+        return ret
 
     @abstractmethod
     def _start_service(self):

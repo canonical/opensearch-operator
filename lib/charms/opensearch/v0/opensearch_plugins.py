@@ -37,8 +37,28 @@ The meaning of each step is, as follows:
 
 ========================================================================================
 
+                             STEPS TO ADD A NEW PLUGIN
+
+========================================================================================
+
+
 For a new plugin, add the plugin to the list of "OpenSearchPluginsAvailable" in
 opensearch_distro.py and override the abstract OpenSearchPlugin.
+
+Add a new configuration in the config.yaml with "plugin_" as prefix to its name.
+Add the corresponding config-name to the OpenSearchPluginsAvailable.
+
+If a given plugin depends on a relation, e.g. repository-s3, then add relation name
+as well. For example:
+    OpenSearchPluginsAvailable = {
+        ...
+        "opensearch-knn": {
+            "class": OpenSearchPlugin,
+            "config-name": "plugin_opensearch_knn",
+            "relation-name": ""
+        },
+    }
+
 """
 
 import logging

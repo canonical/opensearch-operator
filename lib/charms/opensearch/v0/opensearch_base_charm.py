@@ -407,6 +407,10 @@ class OpenSearchBaseCharm(CharmBase):
             self.on[PeerRelationName].relation_joined.emit(
                 self.model.get_relation(PeerRelationName)
             )
+        if self.opensearch_config.check_charmconfig_if_plugins_updated():
+            self.on[self.service_manager.name].acquire_lock.emit(
+                callback_override="_restart_opensearch"
+            )
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
