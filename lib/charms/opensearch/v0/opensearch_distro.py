@@ -32,6 +32,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
+from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -45,6 +46,9 @@ LIBPATCH = 2
 
 
 logger = logging.getLogger(__name__)
+
+
+OpenSearchPluginsAvailable = {"opensearch-knn": OpenSearchPlugin}
 
 
 class Paths:
@@ -123,6 +127,15 @@ class OpenSearchDistribution(ABC):
         start = datetime.now()
         while self.is_started() and (datetime.now() - start).seconds < 60:
             time.sleep(3)
+
+    @property
+    def plugins(self):
+        """Returns list of enabled plugins."""
+        return [
+            cls(p, self._charm)
+            for p, cls in OpenSearchPluginsAvailable.items()
+            if cls(p, self._charm).is_enabled()
+        ]
 
     @abstractmethod
     def _start_service(self):
