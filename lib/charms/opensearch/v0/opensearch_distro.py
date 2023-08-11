@@ -47,7 +47,13 @@ LIBPATCH = 2
 logger = logging.getLogger(__name__)
 
 
-OpenSearchPluginsAvailable = {}
+OpenSearchPluginsAvailable = {
+    "opensearch-knn": {
+        "class": OpenSearchPlugin,
+        "config-name": "plugin_opensearch_knn",
+        "relation-name": None
+    }
+}
 
 
 class Paths:
