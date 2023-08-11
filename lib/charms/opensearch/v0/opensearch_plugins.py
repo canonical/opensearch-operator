@@ -85,19 +85,19 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-class OpenSearchPlugin(Object):
+class OpenSearchPlugin:
     """Abstract class describing an OpenSearch plugin."""
 
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
     SECURITY_POLICY = "plugin-security.policy"
     CONFIG_YML = "opensearch.yml"
 
-    def __init__(self, name: str, charm: Object, relname: Optional[str]):
+    def __init__(self, name: str, charm: Object, relname: Optional[str] = None):
         """Creates the OpenSearchPlugin object.
 
         The *args enable children classes to pass relations.
         """
-        super().__init__(charm, relname)
+        self.relname = relname
         self.charm = charm
         self.distro = self.charm.opensearch
         self.CONFIG_YML = self.charm.opensearch_config.CONFIG_YML

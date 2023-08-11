@@ -9,7 +9,6 @@ from typing import Optional
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin
 from ops.framework import Object
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -27,8 +26,8 @@ LIBPATCH = 1
 class OpenSearchKnn(OpenSearchPlugin):
     """Implements the opensearch-knn plugin."""
 
-    def __init__(self, name: str, charm: Object, relname: Optional[str]):
-        super().__init__(charm, relname)
+    def __init__(self, name: str, charm: Object, relname: Optional[str] = None):
+        super().__init__(name, charm, relname)
 
     def upgrade(self, uri: str) -> None:
         """Runs the upgrade process in this plugin."""
@@ -37,13 +36,17 @@ class OpenSearchKnn(OpenSearchPlugin):
 
     def is_enabled(self) -> bool:
         """Returns True if the plugin is enabled."""
-        return True if self.distro.config.load(self.CONFIG_YML).get(
-            "knn.plugin.enabled", "false") == "true" else False
+        return (
+            True
+            if self.distro.config.load(self.CONFIG_YML).get("knn.plugin.enabled", "false")
+            == "true"
+            else False
+        )
 
     def disable(self) -> bool:
         """Disables the plugin."""
-        return self.configure(opensearch_yml={"knn.plugin.enabled": "false"})
+        return self.configure(opensearch_yml={"knn.plugin.enabled": False})
 
     def enable(self) -> bool:
         """Enables the plugin."""
-        return self.configure(opensearch_yml={"knn.plugin.enabled": "true"})
+        return self.configure(opensearch_yml={"knn.plugin.enabled": True})
