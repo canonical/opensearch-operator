@@ -17,9 +17,10 @@ from typing import Dict, List, Optional, Set, Union
 
 import requests
 import urllib3.exceptions
+from charms.opensearch.v0.constants_charm import Scope
+from charms.opensearch.v0.constants_secrets import SECRET_LABEL_ADMIN_PW
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
-from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
     is_reachable,

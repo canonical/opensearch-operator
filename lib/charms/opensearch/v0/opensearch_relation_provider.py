@@ -30,10 +30,10 @@ from charms.opensearch.v0.constants_charm import (
     IndexCreationFailed,
     NewIndexRequested,
     PeerRelationName,
+    Scope,
     UserCreationFailed,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import unit_ip
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_exceptions import (

@@ -8,8 +8,8 @@ from abc import ABC, abstractmethod
 from ast import literal_eval
 from typing import Dict, Optional, Union
 
+from charms.opensearch.v0.constants_charm import Scope
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_enums import BaseStrEnum
 from overrides import override
 
 # The unique Charmhub library identifier, never change it
@@ -21,13 +21,6 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
-
-
-class Scope(BaseStrEnum):
-    """Peer relations scope."""
-
-    APP = "app"
-    UNIT = "unit"
 
 
 class DataStore(ABC):

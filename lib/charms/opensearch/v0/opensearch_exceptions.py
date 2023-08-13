@@ -92,3 +92,11 @@ class OpenSearchScaleDownError(OpenSearchError):
 
 class OpenSearchIndexError(OpenSearchError):
     """Exception thrown when an opensearch index is invalid."""
+
+
+class OpenSearchSecretError(OpenSearchError):
+    """Parent exception for secrets related issues within OpenSearch."""
+
+
+class OpenSearchSecretNotFoundError(OpenSearchSecretError):
+    """Exception thrown when a secret (group) was not found."""
