@@ -4,8 +4,7 @@
 """Class for Setting configuration in opensearch config files."""
 import logging
 
-from charms.opensearch.v0.constants_charm import PeerRelationName
-from charms.opensearch.v0.helper_databag import Scope
+from charms.opensearch.v0.constants_charm import PeerRelationName, Scope
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchOpsLockAlreadyAcquiredError,

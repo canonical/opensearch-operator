@@ -6,7 +6,7 @@ import logging
 from functools import cached_property
 from typing import List, Optional, Set
 
-from charms.opensearch.v0.helper_databag import Scope
+from charms.opensearch.v0.constants_charm import Scope
 from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,

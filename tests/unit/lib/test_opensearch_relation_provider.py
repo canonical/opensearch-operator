@@ -4,8 +4,11 @@
 import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
-from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
-from charms.opensearch.v0.helper_databag import Scope
+from charms.opensearch.v0.constants_charm import (
+    ClientRelationName,
+    PeerRelationName,
+    Scope,
+)
 from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.model import ActiveStatus, BlockedStatus
