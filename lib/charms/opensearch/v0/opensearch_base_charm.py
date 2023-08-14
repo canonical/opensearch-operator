@@ -42,11 +42,6 @@ from charms.opensearch.v0.helper_security import (
     generate_password,
 )
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
-from charms.opensearch.v0.opensearch_internal_data import (
-    RelationDataStore,
-    Scope,
-    SecretsDataStore,
-)
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
@@ -59,6 +54,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 )
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
+from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
@@ -66,6 +62,7 @@ from charms.opensearch.v0.opensearch_nodes_exclusions import (
     OpenSearchExclusions,
 )
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
+from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
@@ -121,7 +118,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch_exclusions = OpenSearchExclusions(self)
         self.opensearch_fixes = OpenSearchFixes(self)
         self.peers_data = RelationDataStore(self, PeerRelationName)
-        self.secrets = SecretsDataStore(self, PeerRelationName)
+        self.secrets = OpenSearchSecrets(self, PeerRelationName)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
@@ -153,7 +150,6 @@ class OpenSearchBaseCharm(CharmBase):
         self.framework.observe(
             self.on[STORAGE_NAME].storage_detaching, self._on_opensearch_data_storage_detaching
         )
-        self.framework.observe(self.on.secret_changed, self._on_secret_changed)
 
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
@@ -430,26 +426,6 @@ class OpenSearchBaseCharm(CharmBase):
             event.set_results({f"{user_name}-password": password})
         except OpenSearchError as e:
             event.fail(f"Failed changing the password: {e}")
-
-    def _on_secret_changed(self, event: ActionEvent):
-        """Refresh secret and re-run corresponding actions if needed."""
-        scope_type, scope_name = event.secret.label.split("-")[0:2]
-        if scope_type == "app" and scope_name == self.app.name:
-            scope = Scope.APP
-        elif scope_type == "unit" and scope_name == self.unit.name:
-            scope = Scope.UNIT
-        else:
-            logging.info(f"Secret {event._label} was not relevant for us.")
-            return
-
-        if scope:
-            logging.debug(f"Secret change for {scope}")
-        else:
-            logging.debug(f"Secret change for {event._label}")
-
-        if any([str(tls_secret_name) in event.secret.label for tls_secret_name in CertType]):
-            for relation in self.opensearch_provider.relations:
-                self.opensearch_provider.update_certs(relation.id, event.chain)
 
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
