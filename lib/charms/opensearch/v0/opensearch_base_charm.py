@@ -25,14 +25,10 @@ from charms.opensearch.v0.constants_charm import (
     TLSRelationBrokenError,
     WaitingToStart,
 )
+from charms.opensearch.v0.constants_secrets import OpensearchSecretConst
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
-from charms.opensearch.v0.helper_databag import (
-    RelationDataStore,
-    Scope,
-    SecretsDataStore,
-)
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
     is_reachable,
@@ -46,6 +42,11 @@ from charms.opensearch.v0.helper_security import (
     generate_password,
 )
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
+from charms.opensearch.v0.opensearch_internal_data import (
+    RelationDataStore,
+    Scope,
+    SecretsDataStore,
+)
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
@@ -152,6 +153,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.framework.observe(
             self.on[STORAGE_NAME].storage_detaching, self._on_opensearch_data_storage_detaching
         )
+        self.framework.observe(self.on.secret_changed, self._on_secret_changed)
 
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
@@ -424,10 +426,30 @@ class OpenSearchBaseCharm(CharmBase):
         password = event.params.get("password") or generate_password()
         try:
             self._put_admin_user(password)
-            password = self.secrets.get(Scope.APP, f"{user_name}_password")
+            password = self.secrets.get(Scope.APP, f"{user_name}-password")
             event.set_results({f"{user_name}-password": password})
         except OpenSearchError as e:
             event.fail(f"Failed changing the password: {e}")
+
+    def _on_secret_changed(self, event: ActionEvent):
+        """Refresh secret and re-run corresponding actions if needed."""
+        scope_type, scope_name = event.secret.label.split("-")[0:2]
+        if scope_type == "app" and scope_name == self.app.name:
+            scope = Scope.APP
+        elif scope_type == "unit" and scope_name == self.unit.name:
+            scope = Scope.UNIT
+        else:
+            logging.info(f"Secret {event._label} was not relevant for us.")
+            return
+
+        if scope:
+            logging.debug(f"Secret change for {scope}")
+        else:
+            logging.debug(f"Secret change for {event._label}")
+
+        if any([str(tls_secret_name) in event.secret.label for tls_secret_name in CertType]):
+            for relation in self.opensearch_provider.relations:
+                self.opensearch_provider.update_certs(relation.id, event.chain)
 
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
@@ -440,17 +462,16 @@ class OpenSearchBaseCharm(CharmBase):
             event.fail("admin user or TLS certificates not configured yet.")
             return
 
-        password = self.secrets.get(Scope.APP, f"{user_name}_password")
+        password = self.secrets.get(Scope.APP, f"{user_name}-password")
         cert = self.secrets.get_object(
             Scope.APP, CertType.APP_ADMIN.val
         )  # replace later with new user certs
-        ca_chain = "\n".join(cert["chain"][::-1])
 
         event.set_results(
             {
                 "username": user_name,
                 "password": password,
-                "ca-chain": ca_chain,
+                "ca-chain": cert["chain"],
             }
         )
 
@@ -693,7 +714,7 @@ class OpenSearchBaseCharm(CharmBase):
             if resp.get("status") != "OK":
                 raise OpenSearchError(f"{resp}")
         else:
-            hashed_pwd = self.secrets.get(Scope.APP, "admin_password_hash")
+            hashed_pwd = self.secrets.get(Scope.APP, OpensearchSecretConst.ADMIN_PW_HASH.val)
             if not hashed_pwd:
                 hashed_pwd, pwd = generate_hashed_password()
 
@@ -715,8 +736,8 @@ class OpenSearchBaseCharm(CharmBase):
                 },
             )
 
-        self.secrets.put(Scope.APP, "admin_password", pwd)
-        self.secrets.put(Scope.APP, "admin_password_hash", hashed_pwd)
+        self.secrets.put(Scope.APP, OpensearchSecretConst.ADMIN_PW.val, pwd)
+        self.secrets.put(Scope.APP, OpensearchSecretConst.ADMIN_PW_HASH.val, hashed_pwd)
         self.peers_data.put(Scope.APP, "admin_user_initialized", True)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
@@ -890,7 +911,7 @@ class OpenSearchBaseCharm(CharmBase):
         if (datetime.now() - last_cert_check).seconds < 6 * 3600:
             return
 
-        certs = self.secrets.get_unit_certificates()
+        certs = self.tls.get_unit_certificates()
 
         # keep certificates that are expiring in less than 24h
         for cert_type in list(certs.keys()):
