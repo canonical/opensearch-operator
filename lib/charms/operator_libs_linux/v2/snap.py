@@ -79,11 +79,11 @@ logger = logging.getLogger(__name__)
 LIBID = "05394e5893f94f2d90feb7cbe6b633cd"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 1
+LIBAPI = 2
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 10
+LIBPATCH = 1
 
 
 # Regex to locate 7-bit C1 ANSI sequences
@@ -273,13 +273,13 @@ class Snap(object):
           SnapError if there is a problem encountered
         """
         optargs = optargs or []
-        _cmd = ["snap", command, self._name, *optargs]
+        args = ["snap", command, self._name, *optargs]
         try:
-            return subprocess.check_output(_cmd, universal_newlines=True)
+            return subprocess.check_output(args, universal_newlines=True)
         except CalledProcessError as e:
             raise SnapError(
                 "Snap: {!r}; command {!r} failed with output = {!r}".format(
-                    self._name, _cmd, e.output
+                    self._name, args, e.output
                 )
             )
 
@@ -303,12 +303,12 @@ class Snap(object):
         else:
             services = [self._name]
 
-        _cmd = ["snap", *command, *services]
+        args = ["snap", *command, *services]
 
         try:
-            return subprocess.run(_cmd, universal_newlines=True, check=True, capture_output=True)
+            return subprocess.run(args, universal_newlines=True, check=True, capture_output=True)
         except CalledProcessError as e:
-            raise SnapError("Could not {} for snap [{}]: {}".format(_cmd, self._name, e.stderr))
+            raise SnapError("Could not {} for snap [{}]: {}".format(args, self._name, e.stderr))
 
     def get(self, key) -> str:
         """Fetch a snap configuration value.
@@ -387,11 +387,46 @@ class Snap(object):
         elif slot:
             command = command + [slot]
 
-        _cmd = ["snap", *command]
+        args = ["snap", *command]
         try:
-            subprocess.run(_cmd, universal_newlines=True, check=True, capture_output=True)
+            subprocess.run(args, universal_newlines=True, check=True, capture_output=True)
         except CalledProcessError as e:
-            raise SnapError("Could not {} for snap [{}]: {}".format(_cmd, self._name, e.stderr))
+            raise SnapError("Could not {} for snap [{}]: {}".format(args, self._name, e.stderr))
+
+    def hold(self, duration: Optional[timedelta] = None) -> None:
+        """Add a refresh hold to a snap.
+
+        Args:
+            duration: duration for the hold, or None (the default) to hold this snap indefinitely.
+        """
+        hold_str = "forever"
+        if duration is not None:
+            seconds = round(duration.total_seconds())
+            hold_str = f"{seconds}s"
+        self._snap("refresh", [f"--hold={hold_str}"])
+
+    def unhold(self) -> None:
+        """Remove the refresh hold of a snap."""
+        self._snap("refresh", ["--unhold"])
+
+    def alias(self, application: str, alias: Optional[str] = None) -> None:
+        """Create an alias for a given application.
+
+        Args:
+            application: application to get an alias.
+            alias: (optional) name of the alias; if not provided, the application name is used.
+        """
+        if alias is None:
+            alias = application
+        args = ["snap", "alias", f"{self.name}.{application}", alias]
+        try:
+            subprocess.check_output(args, universal_newlines=True)
+        except CalledProcessError as e:
+            raise SnapError(
+                "Snap: {!r}; command {!r} failed with output = {!r}".format(
+                    self._name, args, e.output
+                )
+            )
 
     def restart(
         self, services: Optional[List[str]] = None, reload: Optional[bool] = False
@@ -399,7 +434,7 @@ class Snap(object):
         """Restarts a snap's services.
 
         Args:
-            services (list): (optional) list of individual snap services to show logs from.
+            services (list): (optional) list of individual snap services to restart.
                 (otherwise all)
             reload (bool): (optional) flag to use the service reload command, if available.
                 Default `False`
@@ -407,12 +442,18 @@ class Snap(object):
         args = ["restart", "--reload"] if reload else ["restart"]
         self._snap_daemons(args, services)
 
-    def _install(self, channel: Optional[str] = "", cohort: Optional[str] = "") -> None:
+    def _install(
+        self,
+        channel: Optional[str] = "",
+        cohort: Optional[str] = "",
+        revision: Optional[str] = None,
+    ) -> None:
         """Add a snap to the system.
 
         Args:
           channel: the channel to install from
           cohort: optional, the key of a cohort that this snap belongs to
+          revision: optional, the revision of the snap to install
         """
         cohort = cohort or self._cohort
 
@@ -421,6 +462,8 @@ class Snap(object):
             args.append("--classic")
         if channel:
             args.append('--channel="{}"'.format(channel))
+        if revision:
+            args.append('--revision="{}"'.format(revision))
         if cohort:
             args.append('--cohort="{}"'.format(cohort))
 
@@ -430,6 +473,7 @@ class Snap(object):
         self,
         channel: Optional[str] = "",
         cohort: Optional[str] = "",
+        revision: Optional[str] = None,
         leave_cohort: Optional[bool] = False,
     ) -> None:
         """Refresh a snap.
@@ -437,11 +481,15 @@ class Snap(object):
         Args:
           channel: the channel to install from
           cohort: optionally, specify a cohort.
+          revision: optionally, specify the revision of the snap to refresh
           leave_cohort: leave the current cohort.
         """
         args = []
         if channel:
             args.append('--channel="{}"'.format(channel))
+
+        if revision:
+            args.append('--revision="{}"'.format(revision))
 
         if not cohort:
             cohort = self._cohort
@@ -469,6 +517,7 @@ class Snap(object):
         classic: Optional[bool] = False,
         channel: Optional[str] = "",
         cohort: Optional[str] = "",
+        revision: Optional[str] = None,
     ):
         """Ensure that a snap is in a given state.
 
@@ -477,6 +526,10 @@ class Snap(object):
           classic: an (Optional) boolean indicating whether classic confinement should be used
           channel: the channel to install from
           cohort: optional. Specify the key of a snap cohort.
+          revision: optional. the revision of the snap to install/refresh
+
+        While both channel and revision could be specified, the underlying snap install/refresh
+        command will determine which one takes precedence (revision at this time)
 
         Raises:
           SnapError if an error is encountered
@@ -495,10 +548,10 @@ class Snap(object):
             # We are installing or refreshing a snap.
             if self._state not in (SnapState.Present, SnapState.Latest):
                 # The snap is not installed, so we install it.
-                self._install(channel, cohort)
+                self._install(channel, cohort, revision)
             else:
                 # The snap is installed, but we are changing it (e.g., switching channels).
-                self._refresh(channel, cohort)
+                self._refresh(channel, cohort, revision)
 
         self._update_snap_apps()
         self._state = state
@@ -571,6 +624,12 @@ class Snap(object):
                 services[app["name"]] = SnapService(**app).as_dict()
 
         return services
+
+    @property
+    def held(self) -> bool:
+        """Report whether the snap has a hold."""
+        info = self._snap("info")
+        return "hold:" in info
 
 
 class _UnixSocketConnection(http.client.HTTPConnection):
@@ -816,9 +875,10 @@ class SnapCache(Mapping):
 def add(
     snap_names: Union[str, List[str]],
     state: Union[str, SnapState] = SnapState.Latest,
-    channel: Optional[str] = "latest",
+    channel: Optional[str] = "",
     classic: Optional[bool] = False,
     cohort: Optional[str] = "",
+    revision: Optional[str] = None,
 ) -> Union[Snap, List[Snap]]:
     """Add a snap to the system.
 
@@ -830,10 +890,14 @@ def add(
         classic: an (Optional) boolean specifying whether it should be added with classic
             confinement. Default `False`
         cohort: an (Optional) string specifying the snap cohort to use
+        revision: an (Optional) string specifying the snap revision to use
 
     Raises:
         SnapError if some snaps failed to install or were not found.
     """
+    if not channel and not revision:
+        channel = "latest"
+
     snap_names = [snap_names] if type(snap_names) is str else snap_names
     if not snap_names:
         raise TypeError("Expected at least one snap to add, received zero!")
@@ -841,7 +905,7 @@ def add(
     if type(state) is str:
         state = SnapState(state)
 
-    return _wrap_snap_operations(snap_names, state, channel, classic, cohort)
+    return _wrap_snap_operations(snap_names, state, channel, classic, cohort, revision)
 
 
 @_cache_init
@@ -865,9 +929,10 @@ def remove(snap_names: Union[str, List[str]]) -> Union[Snap, List[Snap]]:
 def ensure(
     snap_names: Union[str, List[str]],
     state: str,
-    channel: Optional[str] = "latest",
+    channel: Optional[str] = "",
     classic: Optional[bool] = False,
     cohort: Optional[str] = "",
+    revision: Optional[int] = None,
 ) -> Union[Snap, List[Snap]]:
     """Ensure specified snaps are in a given state on the system.
 
@@ -878,12 +943,19 @@ def ensure(
         classic: an (Optional) boolean specifying whether it should be added with classic
             confinement. Default `False`
         cohort: an (Optional) string specifying the snap cohort to use
+        revision: an (Optional) integer specifying the snap revision to use
+
+    When both channel and revision are specified, the underlying snap install/refresh
+    command will determine the precedence (revision at the time of adding this)
 
     Raises:
         SnapError if the snap is not in the cache.
     """
-    if state in ("present", "latest"):
-        return add(snap_names, SnapState(state), channel, classic, cohort)
+    if not revision and not channel:
+        channel = "latest"
+
+    if state in ("present", "latest") or revision:
+        return add(snap_names, SnapState(state), channel, classic, cohort, revision)
     else:
         return remove(snap_names)
 
@@ -894,6 +966,7 @@ def _wrap_snap_operations(
     channel: str,
     classic: bool,
     cohort: Optional[str] = "",
+    revision: Optional[str] = None,
 ) -> Union[Snap, List[Snap]]:
     """Wrap common operations for bare commands."""
     snaps = {"success": [], "failed": []}
@@ -906,7 +979,9 @@ def _wrap_snap_operations(
             if state is SnapState.Absent:
                 snap.ensure(state=SnapState.Absent)
             else:
-                snap.ensure(state=state, classic=classic, channel=channel, cohort=cohort)
+                snap.ensure(
+                    state=state, classic=classic, channel=channel, cohort=cohort, revision=revision
+                )
             snaps["success"].append(snap)
         except SnapError as e:
             logger.warning("Failed to {} snap {}: {}!".format(op, s, e.message))
@@ -936,17 +1011,17 @@ def install_local(
     Raises:
         SnapError if there is a problem encountered
     """
-    _cmd = [
+    args = [
         "snap",
         "install",
         filename,
     ]
     if classic:
-        _cmd.append("--classic")
+        args.append("--classic")
     if dangerous:
-        _cmd.append("--dangerous")
+        args.append("--dangerous")
     try:
-        result = subprocess.check_output(_cmd, universal_newlines=True).splitlines()[-1]
+        result = subprocess.check_output(args, universal_newlines=True).splitlines()[-1]
         snap_name, _ = result.split(" ", 1)
         snap_name = ansi_filter.sub("", snap_name)
 
@@ -970,9 +1045,9 @@ def _system_set(config_item: str, value: str) -> None:
         config_item: name of snap system setting. E.g. 'refresh.hold'
         value: value to assign
     """
-    _cmd = ["snap", "set", "system", "{}={}".format(config_item, value)]
+    args = ["snap", "set", "system", "{}={}".format(config_item, value)]
     try:
-        subprocess.check_call(_cmd, universal_newlines=True)
+        subprocess.check_call(args, universal_newlines=True)
     except CalledProcessError:
         raise SnapError("Failed setting system config '{}' to '{}'".format(config_item, value))
 
