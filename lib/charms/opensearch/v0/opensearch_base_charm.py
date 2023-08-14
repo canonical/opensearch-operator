@@ -407,7 +407,10 @@ class OpenSearchBaseCharm(CharmBase):
             self.on[PeerRelationName].relation_joined.emit(
                 self.model.get_relation(PeerRelationName)
             )
-        if self.opensearch_config.check_charmconfig_if_plugins_updated():
+        if (
+            self.opensearch_config.check_charmconfig_if_plugins_updated()
+            and self.opensearch.is_started()
+        ):
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
