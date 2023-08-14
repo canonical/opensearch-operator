@@ -53,12 +53,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             to_pkcs8(secrets["key"], secrets.get("key-password")),
         )
         self.opensearch.write_file(f"{certs_dir}/{cert_type}.cert", secrets["cert"])
-        self.opensearch.write_file(f"{certs_dir}/root-ca.cert", secrets["ca"], override=False)
+        self.opensearch.write_file(f"{certs_dir}/root-ca.cert", secrets["ca-cert"], override=False)
 
         if cert_type == CertType.APP_ADMIN:
             self.opensearch.write_file(
                 f"{certs_dir}/chain.pem",
-                "\n".join(secrets["chain"][::-1]),
+                secrets["chain"],
                 override=override_admin,
             )
 
