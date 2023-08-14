@@ -32,7 +32,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -144,7 +143,6 @@ class OpenSearchDistribution(ABC):
             {
                 "{relation,config}-name": <class>,
             }
-
         Relation names will take precedence over config.
         """
         ret = {}
