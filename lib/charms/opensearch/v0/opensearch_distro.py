@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Set, Union
 import requests
 import urllib3.exceptions
 from charms.opensearch.v0.constants_charm import Scope
-from charms.opensearch.v0.constants_secrets import SECRET_LABEL_ADMIN_PW
+from charms.opensearch.v0.constants_secrets import OpensearchSecretConst
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_networking import (
@@ -246,7 +246,10 @@ class OpenSearchDistribution(ABC):
 
             try:
                 with requests.Session() as s:
-                    s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
+                    s.auth = (
+                        "admin",
+                        self._charm.secrets.get(Scope.APP, OpensearchSecretConst.ADMIN_PW.val),
+                    )
 
                     request_kwargs = {
                         "method": method.upper(),

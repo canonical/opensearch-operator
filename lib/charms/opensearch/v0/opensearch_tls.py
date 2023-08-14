@@ -100,7 +100,7 @@ class OpenSearchTLS(Object):
 
     def _on_tls_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Request certificate when TLS relation joined."""
-        admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN)
+        admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         if self.charm.unit.is_leader() and admin_cert is None:
             self._request_certificate(Scope.APP, CertType.APP_ADMIN)
 
@@ -130,19 +130,21 @@ class OpenSearchTLS(Object):
         old_cert = secrets.get("cert", None)
         renewal = old_cert is not None and old_cert != event.certificate
 
+        ca_chain = "\n".join(event.chain[::-1])
+
         self.charm.secrets.put_object(
             scope,
             cert_type.val,
             {
-                "chain": event.chain,
+                "chain": ca_chain,
                 "cert": event.certificate,
-                "ca": event.ca,
+                "ca-cert": event.ca,
             },
             merge=True,
         )
 
         for relation in self.charm.opensearch_provider.relations:
-            self.charm.opensearch_provider.update_certs(relation.id, event.chain)
+            self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
 
         try:
             self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
@@ -188,9 +190,9 @@ class OpenSearchTLS(Object):
         )
 
         self.charm.secrets.put_object(
-            scope,
-            cert_type.val,
-            {
+            scope=scope,
+            key=cert_type.val,
+            value={
                 "key": key.decode("utf-8"),
                 "key-password": password,
                 "csr": csr.decode("utf-8"),
@@ -313,3 +315,22 @@ class OpenSearchTLS(Object):
             return Scope.UNIT, CertType.UNIT_HTTP, u_http_secrets
 
         return None
+
+    def get_unit_certificates(self) -> Dict[CertType, str]:
+        """Retrieve the list of certificates for this unit."""
+        certs = {}
+
+        transport_secrets = self.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)
+        if transport_secrets and "cert" in transport_secrets:
+            certs[CertType.UNIT_TRANSPORT] = transport_secrets["cert"]
+
+        http_secrets = self.get_object(Scope.UNIT, CertType.UNIT_HTTP.val)
+        if http_secrets and "cert" in http_secrets:
+            certs[CertType.UNIT_HTTP] = http_secrets["cert"]
+
+        if self._charm.unit.is_leader():
+            admin_secrets = self.get_object(Scope.APP, CertType.APP_ADMIN.val)
+            if admin_secrets and "cert" in admin_secrets:
+                certs[CertType.APP_ADMIN] = admin_secrets["cert"]
+
+        return certs

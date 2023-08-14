@@ -6,8 +6,7 @@
 import unittest
 
 import pytest
-from charms.opensearch.v0.constants_charm import PeerRelationName
-from charms.opensearch.v0.opensearch_data import Scope
+from charms.opensearch.v0.constants_charm import PeerRelationName, Scope
 from ops import JujuVersion
 from ops.testing import Harness
 from overrides import override
