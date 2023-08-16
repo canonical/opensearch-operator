@@ -25,7 +25,7 @@ class TestCharm(TestOpenSearchBaseCharm):
         with tempfile.TemporaryDirectory() as tmp_dir:
             self.opensearch.paths.certs = tmp_dir
 
-            self.charm._store_tls_resources(
+            self.charm.store_tls_resources(
                 CertType.UNIT_TRANSPORT,
                 {
                     "ca-cert": "ca",
@@ -41,7 +41,7 @@ class TestCharm(TestOpenSearchBaseCharm):
                 stored_files, ["root-ca.cert", f"{t_prefix}.cert", f"{t_prefix}.key"]
             )
 
-            self.charm._store_tls_resources(
+            self.charm.store_tls_resources(
                 CertType.APP_ADMIN,
                 {
                     "ca-cert": "ca",
@@ -78,7 +78,7 @@ class TestCharm(TestOpenSearchBaseCharm):
 
             self.assertFalse(self.charm._are_all_tls_resources_stored())
 
-            self.charm._store_tls_resources(
+            self.charm.store_tls_resources(
                 CertType.UNIT_TRANSPORT,
                 {
                     "ca-cert": "ca",
@@ -88,7 +88,7 @@ class TestCharm(TestOpenSearchBaseCharm):
             )
             self.assertFalse(self.charm._are_all_tls_resources_stored())
 
-            self.charm._store_tls_resources(
+            self.charm.store_tls_resources(
                 CertType.APP_ADMIN,
                 {
                     "ca-cert": "ca",
@@ -99,7 +99,7 @@ class TestCharm(TestOpenSearchBaseCharm):
             )
             self.assertFalse(self.charm._are_all_tls_resources_stored())
 
-            self.charm._store_tls_resources(
+            self.charm.store_tls_resources(
                 CertType.UNIT_HTTP,
                 {"ca-cert": "ca", "cert": "cert_http", "key": create_utf8_encoded_private_key()},
             )

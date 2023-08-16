@@ -227,7 +227,7 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         # Store the "Admin" certificate, key and CA on the disk of the new unit
-        self._store_tls_resources(CertType.APP_ADMIN, current_secrets, override_admin=False)
+        self.store_tls_resources(CertType.APP_ADMIN, current_secrets, override_admin=False)
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units when a new node joins the cluster."""
@@ -488,7 +488,7 @@ class OpenSearchBaseCharm(CharmBase):
         current_secrets = self.secrets.get_object(scope, cert_type.val)
 
         # Store cert/key on disk - must happen after opensearch stop for transport certs renewal
-        self._store_tls_resources(cert_type, current_secrets)
+        self.store_tls_resources(cert_type, current_secrets)
 
         if scope == Scope.UNIT:
             # node http or transport cert
@@ -936,7 +936,7 @@ class OpenSearchBaseCharm(CharmBase):
         )
 
     @abstractmethod
-    def _store_tls_resources(
+    def store_tls_resources(
         self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
     ):
         """Write certificates and keys on disk."""
