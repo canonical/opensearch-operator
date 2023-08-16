@@ -267,22 +267,17 @@ class SecretsDataStore(RelationDataStore):
         if len(components) == 3:
             key = components[2]
         elif len(components) == 4:
-            try:
-                unit_id = int(components[2])
-            except ValueError:
-                logging.error(
-                    "Invalid label %s, length suggest unit secret yet no unit_id (int) was found",
-                    label,
-                )
-                return
+            unit_id = int(components[2])
             key = components[3]
-        else:
-            logging.error("Invalid label %s", label)
-            return
+
+        if components[1] == Scope.APP.val:
+            scope = Scope.APP
+        elif components[1] == Scope.UNIT.val:
+            scope = Scope.UNIT
 
         return {
             "application_name": components[0],
-            "scope": components[1],
+            "scope": scope,
             "unit_id": unit_id,
             "key": key,
         }

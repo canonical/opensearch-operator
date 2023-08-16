@@ -183,3 +183,37 @@ class TestHelperSecrets(TestHelperDatabag):
         self.secret_store.put_object(scope, "key-obj", {"key1": None, "key2": "val2"}, merge=True)
         self.secret_store.put_object(scope, "key-obj", {"key2": None}, merge=True)
         self.assertFalse(self.secret_store.has(scope, "key-obj"))
+
+    def test_label_app(self):
+        scope = Scope.APP
+        label = self.secret_store.label(scope, "key1")
+        self.assertEqual(label, f"opensearch:{scope}:key1")
+        self.assertEqual(
+            self.secret_store.breakdown_label(label),
+            {"application_name": "opensearch", "scope": scope, "unit_id": None, "key": "key1"},
+        )
+
+    def test_label_unit(self):
+        scope = Scope.UNIT
+        label = self.secret_store.label(scope, "key1")
+        self.assertEqual(self.secret_store.label(scope, "key1"), f"opensearch:{scope}:0:key1")
+        self.assertEqual(
+            self.secret_store.breakdown_label(label),
+            {"application_name": "opensearch", "scope": scope, "unit_id": 0, "key": "key1"},
+        )
+
+    def test_bad_label(self):
+        with self.assertRaises(IndexError):
+            self.secret_store.breakdown_label("bla")
+
+        with self.assertRaises(IndexError):
+            self.secret_store.breakdown_label("bla-bla-bla")
+
+        with self.assertRaises(UnboundLocalError):
+            self.secret_store.breakdown_label("bla:bla")
+
+        with self.assertRaises(UnboundLocalError):
+            self.secret_store.breakdown_label("bla:bla:bla")
+
+        with self.assertRaises(ValueError):
+            self.secret_store.breakdown_label("bla:bla:bla:bla")
