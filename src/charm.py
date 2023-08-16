@@ -42,7 +42,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = BlockedStatus(InstallError)
 
     @override
-    def _store_tls_resources(
+    def store_tls_resources(
         self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
     ):
         """Write certificates and keys on disk."""
