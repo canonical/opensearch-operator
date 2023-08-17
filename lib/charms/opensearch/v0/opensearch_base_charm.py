@@ -25,7 +25,7 @@ from charms.opensearch.v0.constants_charm import (
     TLSRelationBrokenError,
     WaitingToStart,
 )
-from charms.opensearch.v0.constants_secrets import OpensearchSecretConst
+from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
@@ -690,7 +690,7 @@ class OpenSearchBaseCharm(CharmBase):
             if resp.get("status") != "OK":
                 raise OpenSearchError(f"{resp}")
         else:
-            hashed_pwd = self.secrets.get(Scope.APP, OpensearchSecretConst.ADMIN_PW_HASH.val)
+            hashed_pwd = self.secrets.get(Scope.APP, ADMIN_PW_HASH)
             if not hashed_pwd:
                 hashed_pwd, pwd = generate_hashed_password()
 
@@ -712,8 +712,8 @@ class OpenSearchBaseCharm(CharmBase):
                 },
             )
 
-        self.secrets.put(Scope.APP, OpensearchSecretConst.ADMIN_PW.val, pwd)
-        self.secrets.put(Scope.APP, OpensearchSecretConst.ADMIN_PW_HASH.val, hashed_pwd)
+        self.secrets.put(Scope.APP, ADMIN_PW, pwd)
+        self.secrets.put(Scope.APP, ADMIN_PW_HASH, hashed_pwd)
         self.peers_data.put(Scope.APP, "admin_user_initialized", True)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
