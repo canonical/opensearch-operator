@@ -10,7 +10,7 @@ from ast import literal_eval
 from typing import Dict, Optional, Union
 
 from charms.opensearch.v0.constants_charm import Scope
-from ops import JujuVersion, Secret, SecretNotFoundError
+from ops import Application, JujuVersion, Secret, SecretNotFoundError, Unit
 from overrides import override
 
 # The unique Charmhub library identifier, never change it
@@ -318,6 +318,11 @@ class SecretsDataStore(RelationDataStore):
         self.cached_secrets.set_content(scope, self.label(scope, key), content=content)
         return content
 
+    def _save_secret_id(self, scope_obj: Union[Application, Unit], label: str, secret_id: str):
+        """Keeping a reference of the secret's ID just for sure."""
+        relation = self.model.get_relation(self.relation_name)
+        relation.data[scope_obj][label] = secret_id
+
     def _add_juju_secret(self, scope: Scope, key: str, value: Dict[str, str]) -> Optional[Secret]:
         safe_value = self._safe_obj_data(value)
 
@@ -330,13 +335,15 @@ class SecretsDataStore(RelationDataStore):
         if scope == Scope.UNIT:
             scope_obj = self._charm.unit
 
+        label = self.label(scope, key)
         try:
-            secret = scope_obj.add_secret(safe_value, label=self.label(scope, key))
+            secret = scope_obj.add_secret(safe_value, label=label)
         except ValueError:
             logging.error("Secert %s:%s couldn't be added", str(scope.val), str(key))
             return None
 
-        self.cached_secrets.update(scope, self.label(scope, key), secret, safe_value)
+        self.cached_secrets.update(scope, label, secret, safe_value)
+        self._save_secret_id(scope_obj, label, secret.id)
         return secret
 
     def _update_juju_secret(

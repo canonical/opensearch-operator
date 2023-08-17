@@ -202,6 +202,23 @@ class TestHelperSecrets(TestHelperDatabag):
             {"application_name": "opensearch", "scope": scope, "unit_id": 0, "key": "key1"},
         )
 
+    @parameterized.expand([(Scope.APP), (Scope.UNIT)])
+    def test_save_secret_id(self, scope):
+        """Test putting and getting objects in/from the secret store."""
+        self.secret_store.put(scope, "key", "val1")
+        secret_id = self.secret_store._get_relation_data(scope)[
+            self.secret_store.label(scope, "key")
+        ]
+        secret_content = self.charm.model.get_secret(id=secret_id).get_content()
+        self.assertEqual(secret_content["key"], "val1")
+
+        self.secret_store.put_object(scope, "key-obj", {"name1": "val1"}, merge=True)
+        secret_id2 = self.secret_store._get_relation_data(scope)[
+            self.secret_store.label(scope, "key-obj")
+        ]
+        secret_content = self.charm.model.get_secret(id=secret_id2).get_content()
+        self.assertEqual(secret_content["name1"], "val1")
+
     def test_bad_label(self):
         with self.assertRaises(IndexError):
             self.secret_store.breakdown_label("bla")
