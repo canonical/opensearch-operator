@@ -5,17 +5,14 @@
 
 import unittest
 
-import pytest
 from charms.opensearch.v0.constants_charm import PeerRelationName, Scope
-from ops import JujuVersion
 from ops.testing import Harness
-from overrides import override
 from parameterized import parameterized
 
 from charm import OpenSearchOperatorCharm
 
 
-class TestHelperDatabag(unittest.TestCase):
+class TestOpenserchInternalData(unittest.TestCase):
     def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
@@ -146,91 +143,3 @@ class TestHelperDatabag(unittest.TestCase):
         secret = self.secret_store.get_object(scope, "key-obj")
         self.assertIsNone(secret.get("key1"))
         self.assertIsNone(secret.get("key2"))
-
-
-@pytest.mark.usefixtures("only_with_juju_secrets")
-class TestHelperSecrets(TestHelperDatabag):
-    """Ensuring that secrets interfaces and expected behavior are preserved.
-
-    Additionally the class also highlights the difference introdced in SecretsDataStore
-    """
-
-    def setUp(self) -> None:
-        super().setUp()
-        self.secret_store = self.charm.secrets
-
-    def test_implements_secrets(self):
-        """Property determining whether secerts are available."""
-        self.assertEqual(
-            self.secret_store.implements_secrets, JujuVersion.from_environ().has_secrets
-        )
-
-    @override
-    @parameterized.expand([(Scope.APP), (Scope.UNIT)])
-    def test_put_get_set_object_implementation_specific_behavior(self, scope):
-        """Test putting and getting objects in/from the secret store."""
-        self.secret_store.put_object(scope, "key-obj", {"name1": "val1"}, merge=True)
-        self.secret_store.put_object(
-            scope, "key-obj", {"name1": None, "name2": "val2"}, merge=True
-        )
-        self.assertDictEqual(self.secret_store.get_object(scope, "key-obj"), {"name2": "val2"})
-
-    @override
-    @parameterized.expand([(Scope.APP), (Scope.UNIT)])
-    def test_nullify_obj(self, scope):
-        """Test iteratively filling up an object with `None` values."""
-        self.secret_store.put_object(scope, "key-obj", {"key1": "val1", "key2": "val2"})
-        self.secret_store.put_object(scope, "key-obj", {"key1": None, "key2": "val2"}, merge=True)
-        self.secret_store.put_object(scope, "key-obj", {"key2": None}, merge=True)
-        self.assertFalse(self.secret_store.has(scope, "key-obj"))
-
-    def test_label_app(self):
-        scope = Scope.APP
-        label = self.secret_store.label(scope, "key1")
-        self.assertEqual(label, f"opensearch:{scope}:key1")
-        self.assertEqual(
-            self.secret_store.breakdown_label(label),
-            {"application_name": "opensearch", "scope": scope, "unit_id": None, "key": "key1"},
-        )
-
-    def test_label_unit(self):
-        scope = Scope.UNIT
-        label = self.secret_store.label(scope, "key1")
-        self.assertEqual(self.secret_store.label(scope, "key1"), f"opensearch:{scope}:0:key1")
-        self.assertEqual(
-            self.secret_store.breakdown_label(label),
-            {"application_name": "opensearch", "scope": scope, "unit_id": 0, "key": "key1"},
-        )
-
-    @parameterized.expand([(Scope.APP), (Scope.UNIT)])
-    def test_save_secret_id(self, scope):
-        """Test putting and getting objects in/from the secret store."""
-        self.secret_store.put(scope, "key", "val1")
-        secret_id = self.secret_store._get_relation_data(scope)[
-            self.secret_store.label(scope, "key")
-        ]
-        secret_content = self.charm.model.get_secret(id=secret_id).get_content()
-        self.assertEqual(secret_content["key"], "val1")
-
-        self.secret_store.put_object(scope, "key-obj", {"name1": "val1"}, merge=True)
-        secret_id2 = self.secret_store._get_relation_data(scope)[
-            self.secret_store.label(scope, "key-obj")
-        ]
-        secret_content = self.charm.model.get_secret(id=secret_id2).get_content()
-        self.assertEqual(secret_content["name1"], "val1")
-
-    def test_bad_label(self):
-        with self.assertRaises(IndexError):
-            self.secret_store.breakdown_label("bla")
-
-        with self.assertRaises(IndexError):
-            self.secret_store.breakdown_label("bla-bla-bla")
-
-        with self.assertRaises(UnboundLocalError):
-            self.secret_store.breakdown_label("bla:bla")
-
-        with self.assertRaises(UnboundLocalError):
-            self.secret_store.breakdown_label("bla:bla:bla")
-
-        with self.assertRaises(ValueError):
-            self.secret_store.breakdown_label("bla:bla:bla:bla")
