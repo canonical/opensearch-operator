@@ -7,8 +7,9 @@ import unittest
 from unittest import mock
 from unittest.mock import MagicMock, Mock, patch
 
-from charms.opensearch.v0.constants_charm import PeerRelationName, Scope
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm

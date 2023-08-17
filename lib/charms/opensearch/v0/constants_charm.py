@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 """In this file we declare the constants and enums used by the charm."""
-from charms.opensearch.v0.helper_enums import BaseStrEnum
 
 # The unique Charmhub library identifier, never change it
 LIBID = "a8e3e482b22f4552ad6211ea77b46f7b"
@@ -67,10 +66,3 @@ PeerRelationName = "opensearch-peers"
 # Opensearch Users
 OpenSearchUsers = {"admin"}
 OpenSearchRoles = set()
-
-
-class Scope(BaseStrEnum):
-    """Peer relations scope."""
-
-    APP = "app"
-    UNIT = "unit"

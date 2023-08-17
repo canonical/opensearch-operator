@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from ast import literal_eval
 from typing import Dict, Optional, Union
 
-from charms.opensearch.v0.constants_charm import Scope
+from charms.opensearch.v0.helper_enums import BaseStrEnum
 from ops import Secret
 from overrides import override
 
@@ -25,6 +25,13 @@ LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
+
+
+class Scope(BaseStrEnum):
+    """Peer relations scope."""
+
+    APP = "app"
+    UNIT = "unit"
 
 
 class DataStore(ABC):

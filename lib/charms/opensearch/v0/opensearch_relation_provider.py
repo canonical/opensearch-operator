@@ -30,7 +30,6 @@ from charms.opensearch.v0.constants_charm import (
     IndexCreationFailed,
     NewIndexRequested,
     PeerRelationName,
-    Scope,
     UserCreationFailed,
 )
 from charms.opensearch.v0.constants_tls import CertType
@@ -40,6 +39,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchIndexError,
 )
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import (
     CharmBase,

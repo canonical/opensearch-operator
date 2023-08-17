@@ -14,9 +14,12 @@ information for the Opensearch charm.
 import logging
 from typing import Dict, Optional, Union
 
-from charms.opensearch.v0.constants_charm import Scope
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, SecretCache
+from charms.opensearch.v0.opensearch_internal_data import (
+    RelationDataStore,
+    Scope,
+    SecretCache,
+)
 from ops import Application, JujuVersion, Secret, SecretNotFoundError, Unit
 from ops.charm import ActionEvent
 from ops.framework import Object

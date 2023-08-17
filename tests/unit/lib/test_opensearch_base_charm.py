@@ -7,7 +7,6 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
-from charms.opensearch.v0.constants_charm import Scope
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER, PeerRelationName
@@ -15,6 +14,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchInstallError,
 )
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 

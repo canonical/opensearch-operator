@@ -8,13 +8,13 @@ from typing import Dict, Optional
 from charms.opensearch.v0.constants_charm import (
     ClusterHealthRed,
     ClusterHealthYellow,
-    Scope,
     WaitingForBusyShards,
     WaitingForSpecificBusyShards,
 )
 from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops.model import BlockedStatus, WaitingStatus
 
 # The unique Charmhub library identifier, never change it

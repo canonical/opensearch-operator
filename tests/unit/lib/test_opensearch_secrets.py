@@ -4,13 +4,10 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from charms.opensearch.v0.constants_charm import (
-    ClientRelationName,
-    PeerRelationName,
-    Scope,
-)
+from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import JujuVersion
 from ops.testing import Harness
 from overrides import override

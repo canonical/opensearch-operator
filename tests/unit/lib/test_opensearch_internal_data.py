@@ -5,7 +5,8 @@
 
 import unittest
 
-from charms.opensearch.v0.constants_charm import PeerRelationName, Scope
+from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops.testing import Harness
 from parameterized import parameterized
 

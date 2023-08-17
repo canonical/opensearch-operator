@@ -4,11 +4,12 @@
 """Class for Setting configuration in opensearch config files."""
 import logging
 
-from charms.opensearch.v0.constants_charm import PeerRelationName, Scope
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchOpsLockAlreadyAcquiredError,
 )
+from charms.opensearch.v0.opensearch_internal_data import Scope
 
 # The unique Charmhub library identifier, never change it
 LIBID = "0924c6d81c604a15873ad43498cd6895"

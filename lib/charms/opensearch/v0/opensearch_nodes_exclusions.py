@@ -6,12 +6,12 @@ import logging
 from functools import cached_property
 from typing import List, Optional, Set
 
-from charms.opensearch.v0.constants_charm import Scope
 from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
 )
+from charms.opensearch.v0.opensearch_internal_data import Scope
 
 # The unique Charmhub library identifier, never change it
 LIBID = "51c1ac864e9a4d12b1d1ef27c0ff2e50"
