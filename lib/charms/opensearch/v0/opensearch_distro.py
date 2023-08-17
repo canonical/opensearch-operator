@@ -29,9 +29,12 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHttpError,
+    OpenSearchKeystoreError,
+    OpenSearchPluginError,
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
+from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -128,15 +131,14 @@ class OpenSearchDistribution(ABC):
             time.sleep(3)
 
     @property
-    def plugins(self):
+    def plugins(self) -> Dict[str, OpenSearchPlugin]:
         """Returns dict of installed plugins."""
-        ret = {}
-        for p, v in OpenSearchPluginsAvailable.items():
-            classname = v["class"]
-            ret[p] = classname(p, self._charm)
-        return ret
+        return {
+            key: plugin_data["class"](key, self._charm)
+            for key, plugin_data in OpenSearchPluginsAvailable.items()
+        }
 
-    def plugin_map_config_name_to_class(self):
+    def plugin_map_config_name_to_class(self) -> Dict[str, OpenSearchPlugin]:
         """Returns dict of plugins installed either via config or relation.
 
         The dict has the format:
@@ -145,15 +147,12 @@ class OpenSearchDistribution(ABC):
             }
         Relation names will take precedence over config.
         """
-        ret = {}
-        for p, v in OpenSearchPluginsAvailable.items():
-            if v.get("relation-name", None):
-                charm_name = v["relation-name"]
-            else:
-                charm_name = v["config-name"]
-            classname = v["class"]
-            ret[charm_name] = classname(p, self._charm)
-        return ret
+        return {
+            plugin_data["relation-name"]
+            if plugin_data.get("relation-name", None)
+            else plugin_data["config-name"]: plugin_data["class"](key, self._charm)
+            for key, plugin_data in OpenSearchPluginsAvailable.items()
+        }
 
     @abstractmethod
     def _start_service(self):
@@ -340,13 +339,79 @@ class OpenSearchDistribution(ABC):
         with open(path, mode="w") as f:
             f.write(data)
 
+    @property
+    def _plugin(self):
+        """Returns the executable path. Should be overloaded, e.g. by the snap command."""
+        return f"{self.paths.home}/bin/opensearch-plugin"
+
+    def add_plugin_without_restart(self, plugin: str, batch: bool = False) -> bool:
+        """Add a plugin to this node. Restart must be managed in separated."""
+        try:
+            args = "install"
+            if batch:
+                args += " --batch"
+            args += f" {plugin}"
+            self._run_cmd(self._plugin, args)
+        except OpenSearchCmdError as e:
+            if "already exists" in e.stderr:
+                return
+            raise OpenSearchPluginError(f"Failed to install plugin {plugin}")
+
+    def remove_plugin_without_restart(self, plugin):
+        """Remove a plugin without restarting the node."""
+        try:
+            args = f"remove {plugin}"
+            self._run_cmd(self._plugin, args)
+        except OpenSearchCmdError as e:
+            if "not found" in e.stderr:
+                logger.info("Plugin {plugin} not found, leaving remove method")
+                return
+            raise OpenSearchPluginError(f"Failed to remove plugin {plugin}")
+
+    def list_plugins(self):
+        """List plugins."""
+        try:
+            self._run_cmd(self._plugin, "list")
+        except OpenSearchCmdError:
+            raise OpenSearchPluginError("Failed to list plugins")
+
+    @property
+    def _keystore(self):
+        return f"{self.paths.home}/bin/opensearch-keystore"
+
+    def add_to_keystore(self, key: str, value: str, force: bool = False):
+        """Adds a given key to the "opensearch" keystore."""
+        if not value:
+            raise OpenSearchKeystoreError("Missing keystore value")
+        args = "add " if not force else "add --force "
+        args += f"{key}"
+        try:
+            # Add newline to the end of the key, if missing
+            v = value + ("" if value[-1] == "\n" else "\n")
+            self._run_cmd(self._keystore, args, input=v)
+        except OpenSearchCmdError as e:
+            raise OpenSearchKeystoreError(e)
+
+    def remove_from_keystore(self, key: str):
+        """Removes a given key from "opensearch" keystore."""
+        args = f"remove {key}"
+        try:
+            self._run_cmd(self._keystore, args)
+        except OpenSearchCmdError as e:
+            if "does not exist in the keystore" in e.stderr:
+                return
+            raise OpenSearchKeystoreError(e)
+
     @staticmethod
-    def _run_cmd(command: str, args: str = None):
+    def _run_cmd(command: str, args: str = None, input: str = None) -> str:
         """Run command.
 
         Arg:
             command: can contain arguments
             args: command line arguments
+            input: enter string to the process
+
+        Returns the stdout
         """
         if args is not None:
             command = f"{command} {args}"
@@ -356,6 +421,7 @@ class OpenSearchDistribution(ABC):
         try:
             output = subprocess.run(
                 command,
+                input=input,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 shell=True,
