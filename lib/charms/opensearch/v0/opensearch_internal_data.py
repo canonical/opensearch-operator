@@ -11,7 +11,6 @@ from ast import literal_eval
 from typing import Dict, Optional, Union
 
 from charms.opensearch.v0.constants_charm import Scope
-from charms.opensearch.v0.constants_secrets import SecretData
 from ops import JujuVersion, Secret, SecretNotFoundError
 from overrides import override
 
@@ -185,6 +184,9 @@ class RelationDataStore(DataStore):
 class SecretCache:
     """Internal helper class to objectify cached secrets."""
 
+    CACHED_META = "meta"
+    CACHED_CONTENT = "content"
+
     def __init__(self):
         # Structure:
         # self.secrets = {
@@ -202,19 +204,19 @@ class SecretCache:
 
     def get_meta(self, scope: Scope, label: str) -> Optional[Secret]:
         """Getting cached secret meta-information."""
-        return self.secrets[scope].get(label, {}).get(SecretData.CACHED_META.val)
+        return self.secrets[scope].get(label, {}).get(self.CACHED_META)
 
     def set_meta(self, scope: Scope, label: str, secret: Secret) -> None:
         """Setting cached secret meta-information."""
-        self.secrets[scope].setdefault(label, {}).update({SecretData.CACHED_META.val: secret})
+        self.secrets[scope].setdefault(label, {}).update({self.CACHED_META: secret})
 
     def get_content(self, scope: Scope, label: str) -> Dict[str, str]:
         """Getting cached secret content."""
-        return self.secrets[scope].get(label, {}).get(SecretData.CACHED_CONTENT.val)
+        return self.secrets[scope].get(label, {}).get(self.CACHED_CONTENT)
 
-    def set_content(self, scope: Scope, label: str, content: Union[str, dict]):
+    def set_content(self, scope: Scope, label: str, content: Union[str, Dict[str, str]]):
         """Setting cached secret content."""
-        self.secrets[scope].setdefault(label, {}).update({SecretData.CACHED_CONTENT.val: content})
+        self.secrets[scope].setdefault(label, {}).update({self.CACHED_CONTENT: content})
 
     def update(
         self,
@@ -241,6 +243,8 @@ class SecretsDataStore(RelationDataStore):
     For now, it is simply a base class for regular Relation data store
     """
 
+    LABEL_SEPARATOR = ":"
+
     def __init__(self, charm, relation_name: str):
         super().__init__(charm, relation_name)
         self.cached_secrets = SecretCache()
@@ -266,11 +270,11 @@ class SecretsDataStore(RelationDataStore):
         if scope == Scope.UNIT:
             components.append(str(self._charm.unit_id))
         components.append(key)
-        return SecretData.LABEL_SEPARATOR.val.join(components)
+        return self.LABEL_SEPARATOR.join(components)
 
     def breakdown_label(self, label) -> Optional[Dict[str, str]]:
         """Return meaningful components resolved from a secret label."""
-        components = label.split(SecretData.LABEL_SEPARATOR.val)
+        components = label.split(self.LABEL_SEPARATOR)
 
         unit_id = None
         key = None
