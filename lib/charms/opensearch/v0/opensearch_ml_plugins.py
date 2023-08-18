@@ -4,7 +4,7 @@
 """Implements the KNN and ML-Commons plugins for OpenSearch."""
 
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin
 from ops.framework import Object
@@ -28,11 +28,11 @@ class OpenSearchPluginKnn(OpenSearchPlugin):
 
     def __init__(self, name: str, charm: Object, relname: Optional[str] = None):
         super().__init__(name, charm, relname)
+        self._depends_on = []
 
     def upgrade(self, uri: str) -> None:
         """Runs the upgrade process in this plugin."""
-        # TODO: Not implemented yet
-        return
+        raise NotImplementedError
 
     def is_enabled(self) -> bool:
         """Returns True if the plugin is enabled."""
@@ -50,3 +50,8 @@ class OpenSearchPluginKnn(OpenSearchPlugin):
     def enable(self) -> bool:
         """Enables the plugin."""
         return self.configure(opensearch_yml={"knn.plugin.enabled": True})
+
+    @property
+    def depends_on(self) -> List[str]:
+        """Returns a list of plugins it depends on."""
+        return self._depends_on
