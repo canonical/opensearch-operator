@@ -65,7 +65,10 @@ import os
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Union
 
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchPluginError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchKeystoreError,
+    OpenSearchPluginError,
+)
 from jproperties import Properties
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, StatusBase
@@ -123,22 +126,27 @@ class OpenSearchPlugin(ABC):
             return True
         return len(self.charm.framework.model.relations[self.relname] or {}) > 0
 
-    def _update_keystore_and_reload(self, keystore: Dict[str, str], force: bool = True) -> None:
+    def _update_keystore_and_reload(
+        self, keystore: Dict[str, str], force: bool = True, remove_keys: bool = False
+    ) -> None:
         if not keystore:
             return
-        for key, value in keystore.items():
-            self.distro.add_to_keystore(key, value, force=force)
-        # Now, reload the security settings and return if opensearch needs restart
         try:
+            for key, value in keystore.items():
+                if remove_keys:
+                    self.distro.remove_from_keystore(key)
+                else:
+                    self.distro.add_to_keystore(key, value, force=force)
+            # Now, reload the security settings and return if opensearch needs restart
             post = self._request("POST", "_nodes/reload_secure_settings")
+            logger.debug(f"_update_keystore_and_reload: response received {post}")
+        except OpenSearchKeystoreError as ek:
+            raise ek
         except Exception as e:
-            raise OpenSearchPluginError(
-                f"configure of {self.name}:lugin error at secure reload: {e}"
-            )
+            logger.exception(e)
+            raise OpenSearchPluginError("Unknown error during keystore reload")
         if post["status"] < 200 or post["status"] >= 300:
-            raise OpenSearchPluginError(
-                f"configure of {self.name}: error when posting secure reload"
-            )
+            raise OpenSearchPluginError("Error while processing _nodes reload")
 
     @property
     def name(self) -> str:
