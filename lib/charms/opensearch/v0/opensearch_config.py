@@ -194,9 +194,10 @@ class OpenSearchConfig:
     def check_charmconfig_if_plugins_updated(self) -> bool:
         """Runs over plugins available in charm config and updates opensearch.yml."""
         charm = self._opensearch._charm
+        plugin_manager = self._opensearch._plugin_manager
 
         configs = [c for c in charm.model.config.keys() if c.startswith("plugin_")]
-        plugins = self._opensearch.plugin_map_config_name_to_class()
+        plugins = plugin_manager.plugin_map_config_name_to_class()
         ret = False
         for c in configs:
             if charm.config[c] != plugins[c].is_enabled():
