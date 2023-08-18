@@ -42,8 +42,8 @@ The meaning of each step is, as follows:
 ========================================================================================
 
 
-For a new plugin, add the plugin to the list of "OpenSearchPluginsAvailable" below and
-override the abstract OpenSearchPlugin.
+For a new plugin, add the plugin to the list of "OpenSearchPluginsAvailable" available
+in opensearch_plugin_manager.py and override the abstract OpenSearchPlugin.
 
 Add a new configuration in the config.yaml with "plugin_" as prefix to its name.
 Add the corresponding config-name to the OpenSearchPluginsAvailable.
@@ -84,9 +84,6 @@ LIBAPI = 0
 LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
-
-
-OpenSearchPluginsAvailable = {}
 
 
 class OpenSearchPlugin(ABC):
@@ -278,45 +275,3 @@ class OpenSearchPlugin(ABC):
             return code, ActiveStatus(f"Plugin {self.name} active")
         code = 3
         return code, BlockedStatus(f"Plugin {self.name} waiting for upgrade to be executed")
-
-
-class OpenSearchPluginManager:
-    """Manages the currently enabled plugins."""
-
-    def __init__(self, charm: Object):
-        self._charm = charm
-
-    @property
-    def plugins(self) -> Dict[str, OpenSearchPlugin]:
-        """Returns dict of installed plugins."""
-        return {
-            key: plugin_data["class"](key, self._charm)
-            for key, plugin_data in OpenSearchPluginsAvailable.items()
-        }
-
-    def plugin_map_config_name_to_class(self) -> Dict[str, OpenSearchPlugin]:
-        """Returns dict of plugins installed either via config or relation.
-
-        The dict has the format:
-            {
-                "{relation,config}-name": <class>,
-            }
-        Relation names will take precedence over config.
-        """
-        return {
-            plugin_data["relation-name"]
-            if plugin_data.get("relation-name", None)
-            else plugin_data["config-name"]: plugin_data["class"](key, self._charm)
-            for key, plugin_data in OpenSearchPluginsAvailable.items()
-        }
-
-    def get_status(self) -> StatusBase:
-        """Returns if one of the plugins are not active, otherwise, returns active status."""
-        for stat in self.plugins:
-            if not isinstance(stat, ActiveStatus):
-                return stat
-        return ActiveStatus("")
-
-    def plugins_need_upgrade(self) -> List[OpenSearchPlugin]:
-        """Returns a list of plugins that need upgrade."""
-        return [name for name, obj in self.plugins.items() if obj.needs_upgrade]
