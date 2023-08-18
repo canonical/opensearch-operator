@@ -53,7 +53,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.charm.opensearch.paths.plugins = "tests/unit/resources"
         self.plugin_manager = self.charm.opensearch._plugin_manager
         # Override the OpenSearchPluginsAvailable
-        charms.opensearch.v0.opensearch_plugins.OpenSearchPluginsAvailable = {
+        charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginsAvailable = {
             "test": {
                 "class": TestPlugin,
                 "config-name": "plugin_test",
