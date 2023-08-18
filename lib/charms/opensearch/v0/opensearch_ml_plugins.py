@@ -23,7 +23,7 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-class OpenSearchKnn(OpenSearchPlugin):
+class OpenSearchPluginKnn(OpenSearchPlugin):
     """Implements the opensearch-knn plugin."""
 
     def __init__(self, name: str, charm: Object, relname: Optional[str] = None):
