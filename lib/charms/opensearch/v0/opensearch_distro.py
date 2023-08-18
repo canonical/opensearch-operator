@@ -34,7 +34,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin
+from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginManager
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -48,9 +48,6 @@ LIBPATCH = 2
 
 
 logger = logging.getLogger(__name__)
-
-
-OpenSearchPluginsAvailable = {}
 
 
 class Paths:
@@ -91,6 +88,7 @@ class OpenSearchDistribution(ABC):
         self.config = YamlConfigSetter(base_path=self.paths.conf)
         self._charm = charm
         self._peer_relation_name = peer_relation_name
+        self._plugin_manager = OpenSearchPluginManager(self._charm)
 
     def install(self):
         """Install the package."""
@@ -129,30 +127,6 @@ class OpenSearchDistribution(ABC):
         start = datetime.now()
         while self.is_started() and (datetime.now() - start).seconds < 60:
             time.sleep(3)
-
-    @property
-    def plugins(self) -> Dict[str, OpenSearchPlugin]:
-        """Returns dict of installed plugins."""
-        return {
-            key: plugin_data["class"](key, self._charm)
-            for key, plugin_data in OpenSearchPluginsAvailable.items()
-        }
-
-    def plugin_map_config_name_to_class(self) -> Dict[str, OpenSearchPlugin]:
-        """Returns dict of plugins installed either via config or relation.
-
-        The dict has the format:
-            {
-                "{relation,config}-name": <class>,
-            }
-        Relation names will take precedence over config.
-        """
-        return {
-            plugin_data["relation-name"]
-            if plugin_data.get("relation-name", None)
-            else plugin_data["config-name"]: plugin_data["class"](key, self._charm)
-            for key, plugin_data in OpenSearchPluginsAvailable.items()
-        }
 
     @abstractmethod
     def _start_service(self):
