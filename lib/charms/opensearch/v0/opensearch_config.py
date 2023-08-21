@@ -191,6 +191,23 @@ class OpenSearchConfig:
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
 
+    def check_charmconfig_if_plugins_updated(self) -> bool:
+        """Runs over plugins available in charm config and updates opensearch.yml."""
+        charm = self._opensearch._charm
+        plugin_manager = self._opensearch._plugin_manager
+
+        configs = [c for c in charm.model.config.keys() if c.startswith("plugin_")]
+        plugins = plugin_manager.plugin_map_config_name_to_class()
+        ret = False
+        for c in configs:
+            if charm.config[c] != plugins[c].is_enabled():
+                # Toggle the plugin
+                if plugins[c].is_enabled():
+                    ret = ret or plugins[c].disable()
+                else:
+                    ret = ret or plugins[c].enable()
+        return ret
+
     def update_host_if_needed(self) -> bool:
         """Update the opensearch config with the current network hosts, after having started.
 
