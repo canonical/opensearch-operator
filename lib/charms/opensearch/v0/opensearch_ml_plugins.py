@@ -4,7 +4,7 @@
 """Implements the KNN and ML-Commons plugins for OpenSearch."""
 
 import logging
-from typing import Optional, List
+from typing import List, Optional
 
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin
 from ops.framework import Object
@@ -55,3 +55,57 @@ class OpenSearchPluginKnn(OpenSearchPlugin):
     def depends_on(self) -> List[str]:
         """Returns a list of plugins it depends on."""
         return self._depends_on
+
+
+class OpenSearchPluginMLCommons(OpenSearchPlugin):
+    """Implements the opensearch-ml-commons plugin."""
+
+    def __init__(self, name: str, charm: Object, relname: Optional[str] = None):
+        super().__init__(name, charm, relname)
+        self._depends_on = []
+
+    def upgrade(self, uri: str) -> None:
+        """Runs the upgrade process in this plugin. No actions needed."""
+        return
+
+    def is_enabled(self) -> bool:
+        """Returns True always, as this plugin cannot be disabled."""
+        return True
+
+    def enable(self) -> bool:
+        """Enables the plugin."""
+        return self.configure(
+            opensearch_yml={
+                "plugins.ml_commons.only_run_on_ml_node": True,
+                "plugins.ml_commons.task_dispatch_policy": "round_robin",
+                "plugins.ml_commons.max_ml_task_per_node": 20,
+                "plugins.ml_commons.max_model_on_node": 100,
+                "plugins.ml_commons.sync_up_job_interval_in_seconds": 3,
+                "plugins.ml_commons.monitoring_request_count": 100,
+                "plugins.ml_commons.max_register_model_tasks_per_node": 10,
+                "plugins.ml_commons.allow_registering_model_via_url": False,
+                "plugins.ml_commons.allow_registering_model_via_local_file": False,
+                "plugins.ml_commons.trusted_url_regex": '"^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"',
+                "plugins.ml_commons.ml_task_timeout_in_seconds": 600,
+                "plugins.ml_commons.native_memory_threshold": 90,
+                "plugins.ml_commons.allow_custom_deployment_plan": False,
+                "plugins.ml_commons.model_auto_redeploy.enable": False,
+                "plugins.ml_commons.model_auto_redeploy.lifetime_retry_times": 3,
+                "plugins.ml_commons.model_auto_redeploy_success_ratio": 0.8,
+                "plugins.ml_commons.enable_inhouse_python_model": False,
+                "plugins.ml_commons.connector_access_control_enabled": True,
+            }
+        )
+
+    def disable(self) -> bool:
+        """Disables the plugin."""
+        return False
+
+    @property
+    def depends_on(self) -> List[str]:
+        """Returns a list of plugins it depends on."""
+        return self._depends_on
+
+    def install(self, uri: str, batch=True) -> bool:
+        """Installs the plugin: ML Commons is a default plugin, no action needed."""
+        return

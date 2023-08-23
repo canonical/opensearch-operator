@@ -5,7 +5,10 @@
 
 from typing import Dict, List
 
-from charms.opensearch.v0.opensearch_ml_plugins import OpenSearchPluginKnn
+from charms.opensearch.v0.opensearch_ml_plugins import (
+    OpenSearchPluginKnn,
+    OpenSearchPluginMLCommons,
+)
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin
 from ops.framework import Object
 from ops.model import ActiveStatus, StatusBase
@@ -26,7 +29,12 @@ OpenSearchPluginsAvailable = {
         "class": OpenSearchPluginKnn,
         "config-name": "plugin_opensearch_knn",
         "relation-name": None,
-    }
+    },
+    "opensearch-mlcommons": {
+        "class": OpenSearchPluginMLCommons,
+        "config-name": "plugin_opensearch_mlcommons",
+        "relation-name": None,
+    },
 }
 
 

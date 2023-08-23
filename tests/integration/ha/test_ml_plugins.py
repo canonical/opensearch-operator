@@ -13,6 +13,10 @@ from tests.integration.ha.helpers import app_name
 from tests.integration.ha.helpers_data import (
     bulk_insert,
     create_index,
+    mlcommons_load_model_to_node,
+    mlcommons_predict_model,
+    mlcommons_upload_model,
+    mlcommons_wait_task_model,
     search,
     set_knn_training,
     wait_for_knn_training,
@@ -64,7 +68,10 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(
-            my_charm, num_units=3, series=SERIES, config={"plugin_opensearch_knn": True}
+            my_charm,
+            num_units=3,
+            series=SERIES,
+            config={"plugin_opensearch_knn": True, "plugin_opensearch_mlcommons": True},
         ),
     )
 
@@ -253,3 +260,55 @@ async def test_train_search_with_ivf_faiss(ops_test: OpsTest) -> None:
         await asyncio.sleep(15)
 
     assert finished
+
+
+@pytest.mark.abort_on_fail
+async def test_mlcommons_upload_and_predict_model(ops_test: OpsTest) -> None:
+    """Uploads and predicts a model."""
+
+    async def __wait_model_task(task_id: str):
+        for _ in range(5):
+            model_id = await mlcommons_wait_task_model(ops_test, app, leader_unit_ip, task_id)
+        assert model_id is not None
+        return model_id
+
+    app = (await app_name(ops_test)) or APP_NAME
+
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    task_id = (
+        await mlcommons_upload_model(
+            ops_test,
+            app,
+            leader_unit_ip,
+            model_config={
+                "name": "huggingface/sentence-transformers/all-MiniLM-L12-v2",
+                "version": "1.0.1",
+                "model_format": "TORCH_SCRIPT",
+            },
+        )
+    ).get("task_id", None)
+
+    assert task_id is not None
+    model_id = await __wait_model_task(task_id)
+
+    task_id = (await mlcommons_load_model_to_node(ops_test, app, leader_unit_ip, model_id)).get(
+        "task_id", None
+    )
+
+    assert task_id is not None
+    model_id = await __wait_model_task(task_id)
+
+    result = await mlcommons_predict_model(
+        ops_test,
+        app,
+        leader_unit_ip,
+        model_id,
+        text_docs={
+            "text_docs": ["This test worked?"],
+            "return_number": True,
+            "target_response": ["sentence_embedding"],
+        },
+    )
+    shape_count = result["inference_results"][0]["output"][0]["shape"][0]
+    assert shape_count == len(result["inference_results"][0]["output"][0]["data"])

@@ -223,6 +223,77 @@ async def wait_for_knn_training(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
+async def mlcommons_upload_model(
+    ops_test: OpsTest,
+    app: str,
+    unit_ip: str,
+    model_config: Dict[str, Any],
+) -> Optional[List[Dict[str, Any]]]:
+    """Uploads models."""
+    endpoint = f"https://{unit_ip}:9200/_plugins/_ml/models/_upload"
+
+    resp = await http_request(ops_test, "POST", endpoint, payload=model_config, app=app)
+    return resp
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
+async def mlcommons_wait_task_model(
+    ops_test: OpsTest,
+    app: str,
+    unit_ip: str,
+    task_id: str,
+) -> Optional[str]:
+    """Waits to load model and returns model_id or None."""
+    endpoint = f"https://{unit_ip}:9200/_plugins/_ml/tasks/{task_id}"
+
+    resp = await http_request(ops_test, "GET", endpoint, app=app)
+    return resp["model_id"] if "COMPLETED" in resp.get("state", "") else None
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
+async def mlcommons_load_model_to_node(
+    ops_test: OpsTest,
+    app: str,
+    unit_ip: str,
+    model_id: str,
+    node_ids: Dict[Any, Any] = {},
+) -> Optional[List[Dict[str, Any]]]:
+    """Loads model_id to the node."""
+    endpoint = f"https://{unit_ip}:9200/_plugins/_ml/models/{model_id}/_load"
+
+    resp = await http_request(ops_test, "POST", endpoint, payload=node_ids, app=app)
+    return resp
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
+async def mlcommons_predict_model(
+    ops_test: OpsTest,
+    app: str,
+    unit_ip: str,
+    model_id: str,
+    prediction_type: str = "text_embedding",
+    text_docs: Dict[str, Any] = {},
+) -> str:
+    """Waits to load model and returns model_id or None."""
+    endpoint = f"https://{unit_ip}:9200/_plugins/_ml/_predict/{prediction_type}/{model_id}"
+
+    resp = await http_request(ops_test, "POST", endpoint, payload=text_docs, app=app)
+    return resp
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
 async def delete_doc(
     ops_test: OpsTest, app: str, unit_ip: str, index_name: str, doc_id: int
 ) -> None:
