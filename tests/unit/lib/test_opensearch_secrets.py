@@ -153,17 +153,17 @@ class TestOpenSearchSecrets(TestOpenserchInternalData):
         self.assertEqual(secret_content["name1"], "val1")
 
     def test_bad_label(self):
-        with self.assertRaises(IndexError):
+        with self.assertRaises(ValueError):
             self.secret_store.breakdown_label("bla")
 
-        with self.assertRaises(IndexError):
+        with self.assertRaises(ValueError):
             self.secret_store.breakdown_label("bla-bla-bla")
 
-        with self.assertRaises(UnboundLocalError):
+        with self.assertRaises(ValueError):
             self.secret_store.breakdown_label("bla:bla")
 
-        with self.assertRaises(UnboundLocalError):
+        with self.assertRaises(KeyError):
             self.secret_store.breakdown_label("bla:bla:bla")
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(KeyError):
             self.secret_store.breakdown_label("bla:bla:bla:bla")

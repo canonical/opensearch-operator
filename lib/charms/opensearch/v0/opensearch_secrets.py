@@ -20,10 +20,12 @@ from charms.opensearch.v0.opensearch_internal_data import (
     Scope,
     SecretCache,
 )
-from ops import Application, JujuVersion, Secret, SecretNotFoundError, Unit
+from ops import JujuVersion, Secret, SecretNotFoundError
 from ops.charm import ActionEvent
 from ops.framework import Object
 from overrides import override
+
+from .opensearch_exceptions import OpenSearchSecretInsertionError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "d2bcf5b34e064adf9e27d8fbff36bc55"
@@ -56,20 +58,18 @@ class OpenSearchSecrets(Object, RelationDataStore):
     def _on_secret_changed(self, event: ActionEvent):
         """Refresh secret and re-run corresponding actions if needed."""
         if not event.secret.label:
-            logger.info("Secret %s has no label, ignoring it", event.secret.id)
+            logger.info("Secret %s has no label, ignoring it.", event.secret.id)
 
         label_parts = self.breakdown_label(event.secret.label)
         if (
-            label_parts["application_name"] == self._charm.app.name
-            and label_parts["scope"] == Scope.APP
-            and label_parts["key"] == CertType.APP_ADMIN.val
+            label_parts["application_name"] != self._charm.app.name
+            or label_parts["scope"] != Scope.APP
+            or label_parts["key"] != CertType.APP_ADMIN.val
         ):
-            scope = Scope.APP
-        else:
             logger.info("Secret %s was not relevant for us.", event.secret.label)
             return
 
-        logger.debug("Secret change for %s, %s", scope, label_parts["key"])
+        logger.debug("Secret change for %s", str(label_parts["key"]))
 
         if not self._charm.unit.is_leader():
             self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
@@ -87,22 +87,20 @@ class OpenSearchSecrets(Object, RelationDataStore):
         components.append(key)
         return self.LABEL_SEPARATOR.join(components)
 
-    def breakdown_label(self, label) -> Optional[Dict[str, str]]:
+    def breakdown_label(self, label) -> Dict[str, str]:
         """Return meaningful components resolved from a secret label."""
         components = label.split(self.LABEL_SEPARATOR)
+        if len(components) < 3 or len(components) > 4:
+            raise ValueError("Invalid label %s", label)
 
-        unit_id = None
-        key = None
-        if len(components) == 3:
+        scope = Scope[components[1].upper()]
+
+        if scope == Scope.APP:
             key = components[2]
-        elif len(components) == 4:
-            unit_id = int(components[2])
+            unit_id = None
+        else:
             key = components[3]
-
-        if components[1] == Scope.APP.val:
-            scope = Scope.APP
-        elif components[1] == Scope.UNIT.val:
-            scope = Scope.UNIT
+            unit_id = int(components[2])
 
         return {
             "application_name": components[0],
@@ -112,8 +110,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
         }
 
     @staticmethod
-    def _safe_obj_data(indict: Dict) -> Dict:
-        return {key: str(val) for key, val in indict.items() if val is not None}
+    def _safe_obj_data(indict: Dict) -> Dict[str, any]:
+        return {
+            key: str(val) for key, val in indict.items() if val is not None and str(val).strip()
+        }
 
     def _get_juju_secret(self, scope: Scope, key: str) -> Optional[Secret]:
         label = self.label(scope, key)
@@ -130,7 +130,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         self.cached_secrets.set_meta(scope, label, secret)
         return secret
 
-    def _get_juju_secret_content(self, scope: Scope, key: str) -> Optional[Dict]:
+    def _get_juju_secret_content(self, scope: Scope, key: str) -> Optional[Dict[str, str]]:
         cached_secret_content = self.cached_secrets.get_content(scope, self.label(scope, key))
         if cached_secret_content:
             return cached_secret_content
@@ -140,16 +140,8 @@ class OpenSearchSecrets(Object, RelationDataStore):
             return None
 
         content = secret.get_content()
-        self.cached_secrets.set_content(scope, self.label(scope, key), content=content)
+        self.cached_secrets.put_content(scope, self.label(scope, key), content=content)
         return content
-
-    def _save_secret_id(self, scope_obj: Union[Application, Unit], label: str, secret_id: str):
-        """Keeping a reference of the secret's ID just for sure."""
-        relation = self.model.get_relation(self.relation_name)
-        if relation:
-            relation.data[scope_obj][label] = secret_id
-        else:
-            logger.error("Couldn't save secret ID %s -- %s", label, secret_id)
 
     def _add_juju_secret(self, scope: Scope, key: str, value: Dict[str, str]) -> Optional[Secret]:
         safe_value = self._safe_obj_data(value)
@@ -157,21 +149,21 @@ class OpenSearchSecrets(Object, RelationDataStore):
         if not safe_value:
             return None
 
-        scope_obj = None
-        if scope == Scope.APP:
-            scope_obj = self._charm.app
-        if scope == Scope.UNIT:
-            scope_obj = self._charm.unit
+        scope_obj = self._charm.app if scope == Scope.APP else self._charm.unit
 
         label = self.label(scope, key)
         try:
             secret = scope_obj.add_secret(safe_value, label=label)
-        except ValueError:
+        except ValueError as e:
             logging.error("Secert %s:%s couldn't be added", str(scope.val), str(key))
-            return None
+            raise OpenSearchSecretInsertionError(e)
 
-        self.cached_secrets.update(scope, label, secret, safe_value)
-        self._save_secret_id(scope_obj, label, secret.id)
+        self.cached_secrets.put(scope, label, secret, safe_value)
+
+        # Keeping a reference of the secret's ID just for sure.
+        # May come handy for internal Observer Juju relation.
+        self._charm.peers_data.put(scope, label, secret.id)
+
         return secret
 
     def _update_juju_secret(
@@ -193,11 +185,11 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         try:
             secret.set_content(safe_content)
-        except ValueError:
-            logging.error("Secret %s:%s can't be updated", str(scope), str(key))
-            return None
+        except ValueError as e:
+            logging.error("Secert %s:%s couldn't be updated", str(scope.val), str(key))
+            raise OpenSearchSecretInsertionError(e)
 
-        self.cached_secrets.update(scope, self.label(scope, key), content=safe_content)
+        self.cached_secrets.put(scope, self.label(scope, key), content=safe_content)
         return secret
 
     def _add_or_update_juju_secret(
@@ -206,8 +198,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         # Existing secret?
         if not self._get_juju_secret(scope, key):
             return self._add_juju_secret(scope, key, value)
-        else:
-            return self._update_juju_secret(scope, key, value, merge)
+        return self._update_juju_secret(scope, key, value, merge)
 
     def _remove_juju_secret(self, scope: Scope, key: str):
         secret = self._get_juju_secret(scope, key)
@@ -216,7 +207,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
             return None
 
         secret.remove_all_revisions()
-        self.cached_secrets.remove(scope, self.label(scope, key))
+        self.cached_secrets.delete(scope, self.label(scope, key))
 
     @override
     def has(self, scope: Scope, key: str):

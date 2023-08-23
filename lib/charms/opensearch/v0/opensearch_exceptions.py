@@ -98,5 +98,5 @@ class OpenSearchSecretError(OpenSearchError):
     """Parent exception for secrets related issues within OpenSearch."""
 
 
-class OpenSearchSecretNotFoundError(OpenSearchSecretError):
+class OpenSearchSecretInsertionError(OpenSearchSecretError):
     """Exception thrown when a secret (group) was not found."""

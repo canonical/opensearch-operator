@@ -157,10 +157,10 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             _initialize_security_index.assert_called_once()
             self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
 
-    @patch(f"{BASE_LIB_PATH}.helper_security.cert_expiration_remaining_hours")
-    @patch("ops.model.Model.get_relation")
-    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
-    def test_on_update_status(self, _, get_relation, cert_expiration_remaining_hours):
+    @patch(f"{BASE_CHARM_CLASS}._stop_opensearch")
+    @patch(f"{BASE_LIB_PATH}.opensearch_base_charm.cert_expiration_remaining_hours")
+    @patch(f"{BASE_LIB_PATH}.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
+    def test_on_update_status(self, _, cert_expiration_remaining_hours, _stop_opensearch):
         """Test on update status."""
         with patch(
             f"{self.OPENSEARCH_DISTRO}.missing_sys_requirements"
@@ -172,7 +172,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
             # test when TLS relation is broken and cert is expiring soon
-            get_relation.return_value = None
             is_node_up.return_value = True
             self.peers_data.put(
                 Scope.UNIT,

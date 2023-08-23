@@ -188,22 +188,37 @@ class RelationDataStore(DataStore):
 
 
 class SecretCache:
-    """Internal helper class to objectify cached secrets."""
+    """Internal helper class locally cache secrets.
+
+    The data structure is precisely re-using/simulating as in the actual Secret Storage
+    """
 
     CACHED_META = "meta"
     CACHED_CONTENT = "content"
 
     def __init__(self):
         # Structure:
+        # NOTE: "objects" (i.e. dict-s) and scalar values are handled in a unified way
+        # precisely as done for the Secret objects themselves.
+        #
         # self.secrets = {
         #   "app": {
-        #       "opensearch:app:admin-password": "bla"
+        #       "opensearch:app:admin-password": {
+        #           "meta": <Secret instance>,
+        #           "content": {
+        #               "opensearch:app:admin-password": "bla"
+        #           }
+        #       }
         #   },
         #   "unit": {
         #       "opensearch:unit:0:certificates": {
-        #           "ca-cert": "<certificate>",
-        #           "cert": "<certificate>",
-        #           "chain": "<certificate>"
+        #           "meta": <Secret instance>,
+        #           "content": {
+        #               "ca-cert": "<certificate>",
+        #               "cert": "<certificate>",
+        #               "chain": "<certificate>"
+        #           }
+        #       }
         #   }
         # }
         self.secrets = {Scope.APP: {}, Scope.UNIT: {}}
@@ -220,11 +235,11 @@ class SecretCache:
         """Getting cached secret content."""
         return self.secrets[scope].get(label, {}).get(self.CACHED_CONTENT)
 
-    def set_content(self, scope: Scope, label: str, content: Union[str, Dict[str, str]]):
+    def put_content(self, scope: Scope, label: str, content: Union[str, Dict[str, str]]):
         """Setting cached secret content."""
         self.secrets[scope].setdefault(label, {}).update({self.CACHED_CONTENT: content})
 
-    def update(
+    def put(
         self,
         scope: Scope,
         label: str,
@@ -235,9 +250,8 @@ class SecretCache:
         if secret:
             self.set_meta(scope, label, secret)
         if content:
-            self.set_content(scope, label, content)
+            self.put_content(scope, label, content)
 
-    def remove(self, scope: Scope, label: str) -> None:
+    def delete(self, scope: Scope, label: str) -> None:
         """Removing cached secret information."""
-        if label in self.secrets[scope]:
-            self.secrets[scope].pop(label)
+        self.secrets[scope].pop(label, None)
