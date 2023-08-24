@@ -76,5 +76,5 @@ jobs:
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
           LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
-      # - name: Print logs
-      #   run: juju switch testing; juju debug-log --replay --no-tail
+      - name: Print logs
+        run: juju switch testing; juju debug-log --replay --no-tail | grep -r secret
