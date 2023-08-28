@@ -191,7 +191,7 @@ class OpenSearchConfig:
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
 
-    def check_charmconfig_if_plugins_updated(self) -> bool:
+    def update_plugin_conf_if_needed(self) -> bool:
         """Runs over plugins available in charm config and updates opensearch.yml."""
         charm = self._opensearch._charm
         plugin_manager = self._opensearch._plugin_manager
