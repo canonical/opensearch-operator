@@ -114,4 +114,4 @@ class TestOpenSearchPlugin(unittest.TestCase):
             "plugin_test": False,
             "ignore_this_setting": False,
         }
-        self.assertTrue(self.charm.opensearch_config.check_charmconfig_if_plugins_updated())
+        self.assertTrue(self.charm.opensearch_config.update_plugin_conf_if_needed())
