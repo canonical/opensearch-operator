@@ -313,11 +313,6 @@ class OpenSearchDistribution(ABC):
         with open(path, mode="w") as f:
             f.write(data)
 
-    @property
-    def _plugin(self):
-        """Returns the executable path. Should be overloaded, e.g. by the snap command."""
-        return f"{self.paths.home}/bin/opensearch-plugin"
-
     def add_plugin_without_restart(self, plugin: str, batch: bool = False) -> bool:
         """Add a plugin to this node. Restart must be managed in separated."""
         try:
@@ -325,7 +320,7 @@ class OpenSearchDistribution(ABC):
             if batch:
                 args += " --batch"
             args += f" {plugin}"
-            self._run_cmd(self._plugin, args)
+            self._run_cmd(f"{self.paths.home}/bin/opensearch-plugin", args)
         except OpenSearchCmdError as e:
             if "already exists" in e.stderr:
                 return
@@ -335,7 +330,7 @@ class OpenSearchDistribution(ABC):
         """Remove a plugin without restarting the node."""
         try:
             args = f"remove {plugin}"
-            self._run_cmd(self._plugin, args)
+            self._run_cmd(f"{self.paths.home}/bin/opensearch-plugin", args)
         except OpenSearchCmdError as e:
             if "not found" in e.stderr:
                 logger.info("Plugin {plugin} not found, leaving remove method")
@@ -345,13 +340,9 @@ class OpenSearchDistribution(ABC):
     def list_plugins(self):
         """List plugins."""
         try:
-            self._run_cmd(self._plugin, "list")
+            self._run_cmd(f"{self.paths.home}/bin/opensearch-plugin", "list")
         except OpenSearchCmdError:
             raise OpenSearchPluginError("Failed to list plugins")
-
-    @property
-    def _keystore(self):
-        return f"{self.paths.home}/bin/opensearch-keystore"
 
     def add_to_keystore(self, key: str, value: str, force: bool = False):
         """Adds a given key to the "opensearch" keystore."""
@@ -362,7 +353,7 @@ class OpenSearchDistribution(ABC):
         try:
             # Add newline to the end of the key, if missing
             v = value + ("" if value[-1] == "\n" else "\n")
-            self._run_cmd(self._keystore, args, input=v)
+            self._run_cmd(f"{self.paths.home}/bin/opensearch-keystore", args, input=v)
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(e)
 
@@ -370,7 +361,7 @@ class OpenSearchDistribution(ABC):
         """Removes a given key from "opensearch" keystore."""
         args = f"remove {key}"
         try:
-            self._run_cmd(self._keystore, args)
+            self._run_cmd(f"{self.paths.home}/bin/opensearch-keystore", args)
         except OpenSearchCmdError as e:
             if "does not exist in the keystore" in e.stderr:
                 return
