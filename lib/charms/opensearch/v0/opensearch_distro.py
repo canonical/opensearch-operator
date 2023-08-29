@@ -162,12 +162,12 @@ class OpenSearchDistribution(ABC):
         except (OpenSearchHttpError, Exception):
             return False
 
-    def run_bin(self, bin_script_name: str, args: str = None):
+    def run_bin(self, bin_script_name: str, args: str = None, input: str = None):
         """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin."""
         script_path = f"{self.paths.home}/bin/{bin_script_name}"
         self._run_cmd(f"chmod a+x {script_path}")
 
-        self._run_cmd(script_path, args)
+        self._run_cmd(script_path, args, input=input)
 
     def run_script(self, script_name: str, args: str = None):
         """Run script provided by Opensearch in another directory, relative to OPENSEARCH_HOME."""
@@ -313,59 +313,55 @@ class OpenSearchDistribution(ABC):
         with open(path, mode="w") as f:
             f.write(data)
 
-    def add_plugin_without_restart(self, plugin: str, batch: bool = False) -> bool:
+    def add_plugin_without_restart(self, plugin: str) -> bool:
         """Add a plugin to this node. Restart must be managed in separated."""
         try:
-            args = "install"
-            if batch:
-                args += " --batch"
-            args += f" {plugin}"
-            self._run_cmd(f"{self.paths.home}/bin/opensearch-plugin", args)
+            args = f"install --batch {plugin}"
+            self.run_bin("opensearch-plugin", args)
         except OpenSearchCmdError as e:
-            if "already exists" in e.stderr:
+            if "already exists" in str(e):
                 return
-            raise OpenSearchPluginError(f"Failed to install plugin {plugin}")
+            raise OpenSearchPluginError(f"Failed to install plugin {plugin}: " + str(e))
 
     def remove_plugin_without_restart(self, plugin):
         """Remove a plugin without restarting the node."""
         try:
             args = f"remove {plugin}"
-            self._run_cmd(f"{self.paths.home}/bin/opensearch-plugin", args)
+            self.run_bin("opensearch-plugin", args)
         except OpenSearchCmdError as e:
-            if "not found" in e.stderr:
-                logger.info("Plugin {plugin} not found, leaving remove method")
+            if "not found" in str(e):
+                logger.warn("Plugin {plugin} not found, leaving remove method")
                 return
-            raise OpenSearchPluginError(f"Failed to remove plugin {plugin}")
+            raise OpenSearchPluginError(f"Failed to remove plugin {plugin}: " + str(e))
 
     def list_plugins(self):
         """List plugins."""
         try:
-            self._run_cmd(f"{self.paths.home}/bin/opensearch-plugin", "list")
-        except OpenSearchCmdError:
-            raise OpenSearchPluginError("Failed to list plugins")
+            self.run_bin("opensearch-plugin", "list")
+        except OpenSearchCmdError as e:
+            raise OpenSearchPluginError("Failed to list plugins: " + str(e))
 
-    def add_to_keystore(self, key: str, value: str, force: bool = False):
+    def add_to_keystore(self, key: str, value: str):
         """Adds a given key to the "opensearch" keystore."""
         if not value:
             raise OpenSearchKeystoreError("Missing keystore value")
-        args = "add " if not force else "add --force "
-        args += f"{key}"
+        args = f"add --force {key}"
         try:
             # Add newline to the end of the key, if missing
             v = value + ("" if value[-1] == "\n" else "\n")
-            self._run_cmd(f"{self.paths.home}/bin/opensearch-keystore", args, input=v)
+            self.run_bin("opensearch-keystore", args, input=v)
         except OpenSearchCmdError as e:
-            raise OpenSearchKeystoreError(e)
+            raise OpenSearchKeystoreError(str(e))
 
     def remove_from_keystore(self, key: str):
         """Removes a given key from "opensearch" keystore."""
         args = f"remove {key}"
         try:
-            self._run_cmd(f"{self.paths.home}/bin/opensearch-keystore", args)
+            self.run_bin("opensearch-keystore", args)
         except OpenSearchCmdError as e:
-            if "does not exist in the keystore" in e.stderr:
+            if "does not exist in the keystore" in str(e):
                 return
-            raise OpenSearchKeystoreError(e)
+            raise OpenSearchKeystoreError(str(e))
 
     @staticmethod
     def _run_cmd(command: str, args: str = None, input: str = None) -> str:
@@ -400,9 +396,9 @@ class OpenSearchDistribution(ABC):
 
             if output.returncode != 0:
                 logger.error(f"{command}:\n Stderr: {output.stderr}\n Stdout: {output.stdout}")
-                raise OpenSearchCmdError()
+                raise OpenSearchCmdError(returncode=output.returncode, stderr=output.stderr)
         except (TimeoutError, subprocess.TimeoutExpired):
-            raise OpenSearchCmdError()
+            raise OpenSearchCmdError(returncode=2, stderr="Timeout Error - command failed")
 
     @abstractmethod
     def _build_paths(self) -> Paths:

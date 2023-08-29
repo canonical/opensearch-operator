@@ -228,7 +228,7 @@ class OpenSearchPlugin(ABC):
             return False
         return self.name in self.distro.list_plugins()
 
-    def install(self, uri: str, batch=True) -> bool:
+    def install(self, uri: str) -> bool:
         """Installs the plugin specified in the URI.
 
         The URI can have one of the following formats:
@@ -242,12 +242,14 @@ class OpenSearchPlugin(ABC):
         if self._depends_on:
             plugins = self.distro.list_plugins()
             missing = []
-            for dependency in self.depends_on:
+            for dependency in self._depends_on:
                 if dependency not in plugins:
                     missing.append(dependency)
-                if dependency:
-                    raise OpenSearchPluginError("Missing dependencies")
-        self.distro.add_plugin_without_restart(uri, batch=batch)
+            if missing:
+                raise OpenSearchPluginError(
+                    f"Failed to install {uri}, missing dependencies: {missing}"
+                )
+        self.distro.add_plugin_without_restart(uri)
 
     @property
     @abstractmethod

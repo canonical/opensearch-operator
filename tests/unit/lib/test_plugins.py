@@ -6,6 +6,10 @@ import unittest
 from unittest.mock import MagicMock, call, patch
 
 import charms
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
+    OpenSearchPluginError,
+)
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin
 from ops.testing import Harness
 
@@ -20,6 +24,7 @@ class TestPlugin(OpenSearchPlugin):
 
     def __init__(self, name, charm):
         super().__init__(name, charm, None)
+        self._depends_on = ["test-plugin-dependency"]
 
     def is_enabled(self) -> bool:
         return True
@@ -36,8 +41,8 @@ class TestPlugin(OpenSearchPlugin):
         raise NotImplementedError
 
     def depends_on(self):
-        """This method is not used."""
-        raise NotImplementedError
+        """Returns a list of pseudo-dependencies."""
+        return self._depends_on
 
     def _is_started(self):
         return True
@@ -65,6 +70,60 @@ class TestOpenSearchPlugin(unittest.TestCase):
         """Reconfigure the plugin at main configuration file."""
         test_plugin = self.plugin_manager.plugins["test"]
         assert test_plugin.version == "2.9.0.0"
+
+    def test_failed_install_plugin(self) -> None:
+        """Tests a failed command."""
+        succeeded = False
+        self.charm.opensearch._run_cmd = MagicMock(
+            side_effect=OpenSearchCmdError(returncode=100, stderr="this is a test")
+        )
+        self.charm.opensearch.list_plugins = MagicMock(return_value=["test-plugin-dependency"])
+        try:
+            test_plugin = self.plugin_manager.plugins["test"]
+            test_plugin.install(uri="test")
+        except OpenSearchPluginError as e:
+            assert (
+                str(e)
+                == "Failed to install plugin test: Command error, code: 100, stderr: this is a test"
+            )
+            succeeded = True
+        finally:
+            # We may reach this point because of another exception, check it:
+            assert succeeded is True
+
+    def test_failed_install_plugin_already_exists(self) -> None:
+        """Tests a failed command when the plugin already exists."""
+        succeeded = True
+        self.charm.opensearch._run_cmd = MagicMock(
+            side_effect=OpenSearchCmdError(
+                returncode=101, stderr="this is a test - already exists"
+            )
+        )
+        self.charm.opensearch.list_plugins = MagicMock(return_value=["test-plugin-dependency"])
+        try:
+            test_plugin = self.plugin_manager.plugins["test"]
+            test_plugin.install(uri="test")
+        except Exception:
+            # We are interested on any exception
+            succeeded = False
+        # Check if we had any exception
+        assert succeeded is True
+
+    def test_failed_install_plugin_missing_dependency(self) -> None:
+        """Tests a failed install plugin because of missing dependency."""
+        succeeded = False
+        self.charm.opensearch.list_plugins = MagicMock(return_value=[])
+        try:
+            test_plugin = self.plugin_manager.plugins["test"]
+            test_plugin.install(uri="test")
+        except OpenSearchPluginError as e:
+            assert (
+                str(e)
+                == "Failed to install test, missing dependencies: ['test-plugin-dependency']"
+            )
+            succeeded = True
+        # Check if we had any other exception
+        assert succeeded is True
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     def test_check_manager_if_plugins_need_upgrade(self, mock_request) -> None:

@@ -196,16 +196,16 @@ class OpenSearchConfig:
         charm = self._opensearch._charm
         plugin_manager = self._opensearch._plugin_manager
 
-        configs = [c for c in charm.model.config.keys() if c.startswith("plugin_")]
+        configs = [option for option in charm.model.config.keys() if option.startswith("plugin_")]
         plugins = plugin_manager.plugin_map_config_name_to_class()
         ret = False
-        for c in configs:
-            if charm.config[c] != plugins[c].is_enabled():
+        for option in configs:
+            if charm.config[option] != plugins[option].is_enabled():
                 # Toggle the plugin
-                if plugins[c].is_enabled():
-                    ret = ret or plugins[c].disable()
+                if plugins[option].is_enabled():
+                    ret = ret or plugins[option].disable()
                 else:
-                    ret = ret or plugins[c].enable()
+                    ret = ret or plugins[option].enable()
         return ret
 
     def update_host_if_needed(self) -> bool:
