@@ -62,7 +62,7 @@ as well. For example:
 
 import logging
 import os
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Dict, List, Optional, Union
 
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -86,7 +86,7 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-class OpenSearchPlugin(ABC):
+class OpenSearchPlugin(Object):
     """Abstract class describing an OpenSearch plugin."""
 
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
@@ -97,12 +97,17 @@ class OpenSearchPlugin(ABC):
 
         The *args enable children classes to pass relations.
         """
+        super().__init__(charm, relname)
         self.relname = relname
         self.charm = charm
-        self.distro = self.charm.opensearch
         self.CONFIG_YML = self.charm.opensearch_config.CONFIG_YML
         self._name = name
         self._plugin_properties = Properties()
+
+    @property
+    def distro(self):
+        """Returns distro object from the charm."""
+        return self.charm.opensearch
 
     @property
     def version(self) -> str:
@@ -124,7 +129,7 @@ class OpenSearchPlugin(ABC):
         return len(self.charm.framework.model.relations[self.relname] or {}) > 0
 
     def _update_keystore_and_reload(
-        self, keystore: Dict[str, str], force: bool = True, remove_keys: bool = False
+        self, keystore: Dict[str, str], remove_keys: bool = False
     ) -> None:
         if not keystore:
             return
@@ -133,7 +138,7 @@ class OpenSearchPlugin(ABC):
                 if remove_keys:
                     self.distro.remove_from_keystore(key)
                 else:
-                    self.distro.add_to_keystore(key, value, force=force)
+                    self.distro.add_to_keystore(key, value, force=True)
             # Now, reload the security settings and return if opensearch needs restart
             post = self._request("POST", "_nodes/reload_secure_settings")
             logger.debug(f"_update_keystore_and_reload: response received {post}")
@@ -158,9 +163,10 @@ class OpenSearchPlugin(ABC):
         """Erases relevant data for this plugin. Returns True if restart needed."""
         if not self._is_started():
             return False
-        self._update_keystore_and_reload(keystore)
+        self._update_keystore_and_reload(keystore, remove_keys=True)
         return any(
-            [
+            [self.distro.remove_plugin_without_restart(self._name)]
+            + [
                 self.distro.config.delete(self.CONFIG_YML, c, v)[c] == v
                 for c, v in opensearch_yml.items()
             ]

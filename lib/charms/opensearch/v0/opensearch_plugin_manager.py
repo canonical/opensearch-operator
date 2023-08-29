@@ -33,7 +33,7 @@ class OpenSearchPluginManager:
     def plugins(self) -> Dict[str, OpenSearchPlugin]:
         """Returns dict of installed plugins."""
         return {
-            key: plugin_data["class"](key, self._charm)
+            key: plugin_data["class"](key, self._charm, relname=plugin_data["relation-name"])
             for key, plugin_data in OpenSearchPluginsAvailable.items()
         }
 
@@ -49,7 +49,9 @@ class OpenSearchPluginManager:
         return {
             plugin_data["relation-name"]
             if plugin_data.get("relation-name", None)
-            else plugin_data["config-name"]: plugin_data["class"](key, self._charm)
+            else plugin_data["config-name"]: plugin_data["class"](
+                key, self._charm, relname=plugin_data["relation-name"]
+            )
             for key, plugin_data in OpenSearchPluginsAvailable.items()
         }
 

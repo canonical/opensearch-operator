@@ -22,7 +22,7 @@ class TestPlugin(OpenSearchPlugin):
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
 
-    def __init__(self, name, charm):
+    def __init__(self, name, charm, relname=None):
         super().__init__(name, charm, None)
         self._depends_on = ["test-plugin-dependency"]
 
