@@ -27,7 +27,7 @@ from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
 from charms.operator_libs_linux.v1.systemd import service_failed
 from overrides import override
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, Retrying, wait_fixed
 
 from utils import extract_tarball
 
@@ -44,8 +44,10 @@ class OpenSearchSnap(OpenSearchDistribution):
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
 
-        cache = snap.SnapCache()
-        self._opensearch = cache["opensearch"]
+        for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=5)):
+            with attempt:
+                cache = snap.SnapCache()
+                self._opensearch = cache["opensearch"]
 
     @retry(
         stop=stop_after_attempt(3),
