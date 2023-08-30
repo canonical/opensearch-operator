@@ -600,7 +600,7 @@ class OpenSearchBaseCharm(CharmBase):
         # Remove the 'starting' flag on the unit
         self.peers_data.delete(Scope.UNIT, "starting")
 
-        # apply post_start fixes (to work around upstream bugs)
+        # apply post_start fixes to resolve start related upstream bugs
         self.opensearch_fixes.apply_on_start()
 
         # apply cluster health
