@@ -27,7 +27,7 @@ from charms.operator_libs_linux.v1 import snap
 from charms.operator_libs_linux.v1.snap import SnapError
 from charms.operator_libs_linux.v1.systemd import service_failed
 from overrides import override
-from tenacity import retry, stop_after_attempt, wait_exponential, Retrying, wait_fixed
+from tenacity import Retrying, retry, stop_after_attempt, wait_exponential, wait_fixed
 
 from utils import extract_tarball
 
