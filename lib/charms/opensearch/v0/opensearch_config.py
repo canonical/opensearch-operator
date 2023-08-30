@@ -4,7 +4,7 @@
 """Class for Setting configuration in opensearch config files."""
 import logging
 import socket
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import normalized_tls_subject
@@ -191,22 +191,23 @@ class OpenSearchConfig:
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
 
-    def update_plugin_conf_if_needed(self) -> bool:
-        """Runs over plugins available in charm config and updates opensearch.yml."""
-        charm = self._opensearch._charm
-        plugin_manager = self._opensearch._plugin_manager
+    def config_put_list(self, put_dict: Dict[str, Any]) -> bool:
+        """Puts a list of configurations into opensearch.yml."""
+        return any(
+            [
+                self._opensearch.config.put(self.CONFIG_YML, config, value)[config] == value
+                for config, value in put_dict.items()
+            ]
+        )
 
-        configs = [option for option in charm.model.config.keys() if option.startswith("plugin_")]
-        plugins = plugin_manager.plugin_map_config_name_to_class()
-        ret = False
-        for option in configs:
-            if charm.config[option] != plugins[option].is_enabled():
-                # Toggle the plugin
-                if plugins[option].is_enabled():
-                    ret = ret or plugins[option].disable()
-                else:
-                    ret = ret or plugins[option].enable()
-        return ret
+    def config_delete_list(self, delete_list: List[str]) -> bool:
+        """Removes a list of configurations from opensearch.yml."""
+        return any(
+            [
+                config not in self._opensearch.config.delete(self.CONFIG_YML, config).keys()
+                for config in delete_list
+            ]
+        )
 
     def update_host_if_needed(self) -> bool:
         """Update the opensearch config with the current network hosts, after having started.

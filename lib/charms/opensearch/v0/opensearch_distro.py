@@ -29,12 +29,9 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHttpError,
-    OpenSearchKeystoreError,
-    OpenSearchPluginError,
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginManager
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -88,7 +85,6 @@ class OpenSearchDistribution(ABC):
         self.config = YamlConfigSetter(base_path=self.paths.conf)
         self._charm = charm
         self._peer_relation_name = peer_relation_name
-        self._plugin_manager = OpenSearchPluginManager(self._charm)
 
     def install(self):
         """Install the package."""
@@ -312,56 +308,6 @@ class OpenSearchDistribution(ABC):
 
         with open(path, mode="w") as f:
             f.write(data)
-
-    def add_plugin_without_restart(self, plugin: str) -> bool:
-        """Add a plugin to this node. Restart must be managed in separated."""
-        try:
-            args = f"install --batch {plugin}"
-            self.run_bin("opensearch-plugin", args)
-        except OpenSearchCmdError as e:
-            if "already exists" in str(e):
-                return
-            raise OpenSearchPluginError(f"Failed to install plugin {plugin}: " + str(e))
-
-    def remove_plugin_without_restart(self, plugin):
-        """Remove a plugin without restarting the node."""
-        try:
-            args = f"remove {plugin}"
-            self.run_bin("opensearch-plugin", args)
-        except OpenSearchCmdError as e:
-            if "not found" in str(e):
-                logger.warn("Plugin {plugin} not found, leaving remove method")
-                return
-            raise OpenSearchPluginError(f"Failed to remove plugin {plugin}: " + str(e))
-
-    def list_plugins(self):
-        """List plugins."""
-        try:
-            self.run_bin("opensearch-plugin", "list")
-        except OpenSearchCmdError as e:
-            raise OpenSearchPluginError("Failed to list plugins: " + str(e))
-
-    def add_to_keystore(self, key: str, value: str):
-        """Adds a given key to the "opensearch" keystore."""
-        if not value:
-            raise OpenSearchKeystoreError("Missing keystore value")
-        args = f"add --force {key}"
-        try:
-            # Add newline to the end of the key, if missing
-            v = value + ("" if value[-1] == "\n" else "\n")
-            self.run_bin("opensearch-keystore", args, input=v)
-        except OpenSearchCmdError as e:
-            raise OpenSearchKeystoreError(str(e))
-
-    def remove_from_keystore(self, key: str):
-        """Removes a given key from "opensearch" keystore."""
-        args = f"remove {key}"
-        try:
-            self.run_bin("opensearch-keystore", args)
-        except OpenSearchCmdError as e:
-            if "does not exist in the keystore" in str(e):
-                return
-            raise OpenSearchKeystoreError(str(e))
 
     @staticmethod
     def _run_cmd(command: str, args: str = None, input: str = None) -> str:

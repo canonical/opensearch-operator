@@ -26,10 +26,14 @@ upgrade, uninstall, etc).
 
 The plugin lifecycle runs through the following steps:
 
-INSTALL > is_installed > is_enabled > needs_upgrade > upgrade > UNINSTALL
+MISSING (not installed yet) > AVAILABLE (plugin installed, but not configured yet) >
+ENABLED (configuration has been applied) > WAITING_FOR_UPGRADE (if an upgrade is needed)
+> ENABLED (back to enabled state once upgrade has been applied)
 
 The meaning of each step is, as follows:
+* install: installs the plugin JAR files
 * is_installed: the installation happened correctly and the JAR files are set
+* configure: sets all the necessary configuration for the plugin
 * is_enabled: all the configurations have been applied and restart is done, if needed
 * needs_upgrade: once the main OpenSearch is upgraded, the plugin needs to check if an
                  upgrade is also needed or not.
@@ -42,15 +46,17 @@ The meaning of each step is, as follows:
 ========================================================================================
 
 
-For a new plugin, add the plugin to the list of "OpenSearchPluginsAvailable" available
+For a new plugin, add the plugin to the list of "ConfigExposedPlugins" available
 in opensearch_plugin_manager.py and override the abstract OpenSearchPlugin.
 
+Optionally, PluginState can also be overridden to add more status.
+
 Add a new configuration in the config.yaml with "plugin_" as prefix to its name.
-Add the corresponding config-name to the OpenSearchPluginsAvailable.
+Add the corresponding config-name to the ConfigExposedPlugins.
 
 If a given plugin depends on a relation, e.g. repository-s3, then add relation name
 as well. For example:
-    OpenSearchPluginsAvailable = {
+    ConfigExposedPlugins = {
         ...
         "opensearch-knn": {
             "class": OpenSearchPlugin,
@@ -63,15 +69,11 @@ as well. For example:
 import logging
 import os
 from abc import abstractmethod
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict
 
-from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchKeystoreError,
-    OpenSearchPluginError,
-)
+from charms.opensearch.v0.helper_enums import BaseStrEnum
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchPluginError
 from jproperties import Properties
-from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, StatusBase
 
 # The unique Charmhub library identifier, never change it
 LIBID = "3b05456c6e304680b4af8e20dae246a2"
@@ -86,94 +88,87 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-class OpenSearchPlugin(Object):
+class PluginState(BaseStrEnum):
+    """Enum for the states possible in plugins' lifecycle."""
+
+    MISSING = "missing"
+    AVAILABLE = "available"
+    ENABLED = "enabled"
+    WAITING_FOR_UPGRADE = "waiting-for-upgrade"
+
+
+class OpenSearchPlugin:
     """Abstract class describing an OpenSearch plugin."""
 
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
     CONFIG_YML = "opensearch.yml"
 
-    def __init__(self, name: str, charm: Object, relname: Optional[str] = None):
+    def __init__(self, name: str, plugin_manager):
         """Creates the OpenSearchPlugin object.
 
         The *args enable children classes to pass relations.
         """
-        super().__init__(charm, relname)
-        self.relname = relname
-        self.charm = charm
-        self.CONFIG_YML = self.charm.opensearch_config.CONFIG_YML
         self._name = name
-        self._plugin_properties = Properties()
-
-    @property
-    def distro(self):
-        """Returns distro object from the charm."""
-        return self.charm.opensearch
+        self._plugin_manager = plugin_manager
+        self._properties = Properties()
+        self._depends_on = []
 
     @property
     def version(self) -> str:
         """Returns the current version of the plugin."""
-        with open(os.path.join(f"{self.distro.paths.plugins}", f"{self.PLUGIN_PROPERTIES}")) as f:
-            self._plugin_properties.load(f.read())
-        return self._plugin_properties._properties["version"]
-
-    def _is_started(self) -> bool:
-        return self.distro.is_started()
-
-    def _request(self, *args, **kwargs) -> dict:
-        return self.distro.request(*args, **kwargs)
-
-    def is_related(self) -> bool:
-        """Returns True if a relation is expected and it is set."""
-        if not self.relname:
-            return True
-        return len(self.charm.framework.model.relations[self.relname] or {}) > 0
-
-    def _update_keystore_and_reload(
-        self, keystore: Dict[str, str], remove_keys: bool = False
-    ) -> None:
-        if not keystore:
-            return
-        try:
-            for key, value in keystore.items():
-                if remove_keys:
-                    self.distro.remove_from_keystore(key)
-                else:
-                    self.distro.add_to_keystore(key, value, force=True)
-            # Now, reload the security settings and return if opensearch needs restart
-            post = self._request("POST", "_nodes/reload_secure_settings")
-            logger.debug(f"_update_keystore_and_reload: response received {post}")
-        except OpenSearchKeystoreError as ek:
-            raise ek
-        except Exception as e:
-            logger.exception(e)
-            raise OpenSearchPluginError("Unknown error during keystore reload")
-        if post["status"] < 200 or post["status"] >= 300:
-            raise OpenSearchPluginError("Error while processing _nodes reload")
-
-    @property
-    def name(self) -> str:
-        """Returns the name of the plugin."""
-        return self._name
-
-    def uninstall(
-        self,
-        opensearch_yml: Dict[str, str],
-        keystore: Dict[str, str],
-    ) -> bool:
-        """Erases relevant data for this plugin. Returns True if restart needed."""
-        if not self._is_started():
-            return False
-        self._update_keystore_and_reload(keystore, remove_keys=True)
-        return any(
-            [self.distro.remove_plugin_without_restart(self._name)]
-            + [
-                self.distro.config.delete(self.CONFIG_YML, c, v)[c] == v
-                for c, v in opensearch_yml.items()
-            ]
+        plugin_props_path = os.path.join(
+            f"{self._plugin_manager._plugins_path}", f"{self.PLUGIN_PROPERTIES}"
         )
+        try:
+            with open(plugin_props_path) as f:
+                self._properties.load(f.read())
+        except FileNotFoundError:
+            raise OpenSearchPluginError(f"Plugin is missing - not found: {plugin_props_path}")
+        except PermissionError:
+            raise OpenSearchPluginError(
+                f"Plugin incorrectly installed - permission denied: {plugin_props_path}"
+            )
+        except Exception:
+            raise OpenSearchPluginError("Plugin Error - Unknown reason")
+        return self._properties._properties["version"]
+
+    @abstractmethod
+    def install(self) -> Any:
+        """Executes any additional steps needed for the installation.
+
+        Should only execute steps that are not covered in PluginManager.
+        """
+        pass
 
     @property
-    def needs_upgrade(self) -> bool:
+    def is_installed(self) -> bool:
+        """Check if plugin is installed by checking if plugin properties file exists."""
+        try:
+            # Consider it is installed if properties file is present and readable.
+            _ = self.version
+        except Exception:
+            return False
+        return True
+
+    @abstractmethod
+    def configure(self) -> Dict[str, Any]:
+        """Returns a dict containing all the configuration needed to be applied in the form.
+
+        Format:
+        {
+            "opensearch.yml": {...},
+            "keystore": {...},
+        }
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def is_enabled(self) -> bool:
+        """Runs any specific steps to check if the plugin is enabled."""
+        pass
+
+    def needs_upgrade(self, os_version) -> bool:
         """Returns if the plugin needs an upgrade or not.
 
         Needs upgrade must be set if an upgrade on the charm happens and plugins must
@@ -184,102 +179,39 @@ class OpenSearchPlugin(Object):
         current_version = self.version
         # Now check if the format of this plugin and OpenSearch's match
         num_points = len(self.distro.version.split("."))
-        return self.distro.version != current_version[:num_points]
+        return os_version != current_version[:num_points]
 
     @abstractmethod
-    def upgrade(self, uri: str) -> None:
-        """Runs the upgrade process in this plugin."""
+    def upgrade(self, uri: str) -> Any:
+        """Runs specific extra steps for upgrade for this plugin."""
         pass
 
-    @abstractmethod
-    def is_enabled(self) -> bool:
-        """Returns True if the plugin is enabled."""
-        pass
+    def disable(self) -> Dict[str, Any]:
+        """Returns a dict containing different config changes.
 
-    @abstractmethod
-    def disable(self) -> bool:
-        """Disables the plugin.
-
-        Runs the configure() method with the configuration to disable the plugin.
+        The dict should return:
+        (1) all the configs to remove
+        (2) all the configs to add
+        (3) all the keystore values to be remmoved.
         """
-        pass
-
-    @abstractmethod
-    def enable(self) -> bool:
-        """Enables the plugin.
-
-        Runs the configure() method with the configuration to enable the plugin.
-        """
-        pass
-
-    def configure(
-        self,
-        opensearch_yml: Dict[str, str],
-        keystore: Dict[str, str] = {},
-    ) -> bool:
-        """Sets the plugin configuration. Returns True if restart needed."""
-        if not self._is_started():
-            return False
-        self._update_keystore_and_reload(keystore)
-        return any(
-            [
-                self.distro.config.put(self.CONFIG_YML, c, v)[c] == v
-                for c, v in opensearch_yml.items()
-            ]
-        )
-
-    def is_installed(self) -> bool:
-        """Returns True if the plugin name is present in the list of installed plugins."""
-        if not self._is_started():
-            return False
-        return self.name in self.distro.list_plugins()
-
-    def install(self, uri: str) -> bool:
-        """Installs the plugin specified in the URI.
-
-        The URI can have one of the following formats:
-        * A zip file
-        * An URL that downloads a zip file
-        * A maven coded dependency
-        """
-        if self.is_installed():
-            # It is already available as a plugin, return True
-            return True
-        if self._depends_on:
-            plugins = self.distro.list_plugins()
-            missing = []
-            for dependency in self._depends_on:
-                if dependency not in plugins:
-                    missing.append(dependency)
-            if missing:
-                raise OpenSearchPluginError(
-                    f"Failed to install {uri}, missing dependencies: {missing}"
-                )
-        self.distro.add_plugin_without_restart(uri)
+        return {"to_remove_opensearch": [], "to_add_opensearch": [], "to_remove_keystore": []}
 
     @property
-    @abstractmethod
-    def depends_on(self) -> List[str]:
-        """Returns a list of plugins it depends on."""
-        pass
+    def status(self) -> PluginState:
+        """Returns the current state of the plugin."""
+        if not self.is_installed:
+            return PluginState.MISSING
+        if not self.is_enabled:
+            return PluginState.AVAILABLE
+        if self.needs_upgrade:
+            return PluginState.WAITING_FOR_UPGRADE
+        return PluginState.ENABLED
 
-    def get_status(self) -> Union[int, StatusBase]:
-        """Returns the status of the plugin.
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return self._name
 
-        Status:
-            0: blocked, not installed
-            1: blocked, not enabled
-            2: active
-            3: blocked, waiting for an upgrade action
-        """
-        code = 0
-        if not self.is_installed():
-            return code, BlockedStatus(f"Plugin {self.name} waiting to be installed")
-        elif self.is_enabled():
-            code = 1
-            return code, BlockedStatus(f"Plugin {self.name} waiting to be enabled")
-        elif not self.needs_upgrade:
-            code = 2
-            return code, ActiveStatus(f"Plugin {self.name} active")
-        code = 3
-        return code, BlockedStatus(f"Plugin {self.name} waiting for upgrade to be executed")
+    def _get_config(self, config_name: str) -> Any:
+        """Gets a configuration from opensearch.yml."""
+        return self._plugin_manager.check_plugin_config(self.name, config_name)
