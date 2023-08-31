@@ -158,12 +158,12 @@ class OpenSearchDistribution(ABC):
         except (OpenSearchHttpError, Exception):
             return False
 
-    def run_bin(self, bin_script_name: str, args: str = None, input: str = None):
+    def run_bin(self, bin_script_name: str, args: str = None, input: str = None) -> str:
         """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin."""
         script_path = f"{self.paths.home}/bin/{bin_script_name}"
         self._run_cmd(f"chmod a+x {script_path}")
 
-        self._run_cmd(script_path, args, input=input)
+        return self._run_cmd(script_path, args, input=input)
 
     def run_script(self, script_name: str, args: str = None):
         """Run script provided by Opensearch in another directory, relative to OPENSEARCH_HOME."""
@@ -345,6 +345,7 @@ class OpenSearchDistribution(ABC):
                 raise OpenSearchCmdError(returncode=output.returncode, stderr=output.stderr)
         except (TimeoutError, subprocess.TimeoutExpired):
             raise OpenSearchCmdError(returncode=2, stderr="Timeout Error - command failed")
+        return output.stdout
 
     @abstractmethod
     def _build_paths(self) -> Paths:
