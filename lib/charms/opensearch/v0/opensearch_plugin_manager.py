@@ -49,11 +49,12 @@ class OpenSearchPluginManager:
         Stores the home path and, optionally, plugins path can also be passed if it is
         not available in {home_path}/plugins.
         """
-        self._home_path = charm.opensearch.paths.home
+        self._conf_path = charm.opensearch.paths.conf
         self._charm = charm
         self._distro = charm.opensearch
         self._config = charm.opensearch_config
-        self._plugins_path = plugins_path or os.path.join(f"{self._home_path}", "plugins/")
+        self._charm_config = self._charm.framework.model.config
+        self._plugins_path = plugins_path or os.path.join(f"{self._conf_path}", "plugins/")
 
     @property
     def plugins(self) -> Dict[str, OpenSearchPlugin]:
@@ -77,16 +78,23 @@ class OpenSearchPluginManager:
         Returns True if a restart is needed.
         """
         needs_restart = False
-        for plugin in self.plugins:
-            plugin_data = ConfigExposedPlugins[plugin.name]
+        installed_plugins = self._list_plugins()
+        for plugin_name, plugin in self.plugins.items():
+            plugin_data = ConfigExposedPlugins[plugin_name]
             config_name = plugin_data["config-name"]
             relation_name = plugin_data["relation-name"]
             if plugin.status == PluginState.MISSING and (
-                (config_name and self._charm.config[config_name])
+                (config_name and self._charm_config[config_name])
                 or self._is_plugin_relation_set(relation_name)
             ):
+                # Check for dependencies
+                missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
+                if missing_deps:
+                    raise OpenSearchPluginError(
+                        f"Failed to install {plugin_name}, missing dependencies: {missing_deps}"
+                    )
                 # Execute the installation
-                self._add_plugin(plugin.name)
+                self._add_plugin(plugin_name)
                 # Call any specifics for post-installation
                 plugin.install()
                 needs_restart = True
@@ -94,13 +102,15 @@ class OpenSearchPluginManager:
 
     def configure(self) -> bool:
         """Gathers all the configuration changes needed and applies them."""
-        configs = {self.CONFIG_YML: [], "keystore": []}
-        for plugin in self.plugins:
+        configs = {self.CONFIG_YML: {}, "keystore": {}}
+        for plugin in self.plugins.values():
             if plugin.status != PluginState.AVAILABLE:
                 continue
             c = plugin.configure()
-            configs[self.CONFIG_YML] += c[self.CONFIG_YML]
-            configs["keystore"] += c["keystore"]
+            # Merge the dict, where in case of conflict, the plugin.configure() keys get
+            # the priority
+            configs[self.CONFIG_YML] = {**configs[self.CONFIG_YML], **c[self.CONFIG_YML]}
+            configs["keystore"] = {**configs["keystore"], **c["keystore"]}
 
         self._update_keystore_and_reload(configs["keystore"])
         return self._config.config_put_list(configs[self.CONFIG_YML])
@@ -108,7 +118,7 @@ class OpenSearchPluginManager:
     def disable(self) -> bool:
         """If enabled, removes plugin configuration or sets it to other values."""
         configs = {"to_remove_opensearch": [], "to_add_opensearch": [], "to_remove_keystore": []}
-        for plugin in self.plugins:
+        for plugin in self.plugins.values():
             if (
                 plugin.status != PluginState.ENABLED
                 or plugin.status != PluginState.WAITING_FOR_UPGRADE
@@ -128,12 +138,12 @@ class OpenSearchPluginManager:
         It can be converted to str and used in the message status or for logging.
         """
         full_status = {}
-        for plugin in self.plugins:
+        for plugin_name, plugin in self.plugins.items():
             stat = plugin.status
             if isinstance(full_status[stat], list):
-                full_status[stat].append(plugin.name)
+                full_status[stat].append(plugin_name)
             else:
-                full_status[stat] = [plugin.name]
+                full_status[stat] = [plugin_name]
         return full_status
 
     def plugins_need_upgrade(self) -> List[OpenSearchPlugin]:
@@ -159,9 +169,9 @@ class OpenSearchPluginManager:
                 if remove_keys:
                     self._remove_from_keystore(key)
                 else:
-                    self._add_to_keystore(key, value, force=True)
+                    self._add_to_keystore(key, value)
             # Now, reload the security settings and return if opensearch needs restart
-            post = self.distro.request("POST", "_nodes/reload_secure_settings")
+            post = self._distro.request("POST", "_nodes/reload_secure_settings")
             logger.debug(f"_update_keystore_and_reload: response received {post}")
         except OpenSearchKeystoreError as ek:
             raise ek
@@ -195,7 +205,7 @@ class OpenSearchPluginManager:
     def _list_plugins(self):
         """List plugins."""
         try:
-            return self._distro.run_bin("opensearch-plugin", "list")
+            return self._distro.run_bin("opensearch-plugin", "list").split("\n")
         except OpenSearchCmdError as e:
             raise OpenSearchPluginError("Failed to list plugins: " + str(e))
 

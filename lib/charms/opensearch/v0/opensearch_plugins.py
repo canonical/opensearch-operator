@@ -69,7 +69,7 @@ as well. For example:
 import logging
 import os
 from abc import abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchPluginError
@@ -132,6 +132,11 @@ class OpenSearchPlugin:
             raise OpenSearchPluginError("Plugin Error - Unknown reason")
         return self._properties._properties["version"]
 
+    @property
+    def dependencies(self) -> List[str]:
+        """Returns a list of plugin name dependencies."""
+        return self._depends_on
+
     @abstractmethod
     def install(self) -> Any:
         """Executes any additional steps needed for the installation.
@@ -151,7 +156,7 @@ class OpenSearchPlugin:
         return True
 
     @abstractmethod
-    def configure(self) -> Dict[str, Any]:
+    def configure(self) -> Dict[str, Dict[str, str]]:
         """Returns a dict containing all the configuration needed to be applied in the form.
 
         Format:
@@ -178,7 +183,7 @@ class OpenSearchPlugin:
         """
         current_version = self.version
         # Now check if the format of this plugin and OpenSearch's match
-        num_points = len(self.distro.version.split("."))
+        num_points = len(self._plugin_manager._distro.version.split("."))
         return os_version != current_version[:num_points]
 
     @abstractmethod
