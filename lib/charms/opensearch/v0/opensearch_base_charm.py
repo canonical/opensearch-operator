@@ -56,6 +56,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
     OpenSearchStopError,
 )
+from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
@@ -117,6 +118,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch = distro(self, PeerRelationName)
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.opensearch_exclusions = OpenSearchExclusions(self)
+        self.opensearch_fixes = OpenSearchFixes(self)
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = SecretsDataStore(self, PeerRelationName)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
@@ -597,6 +599,9 @@ class OpenSearchBaseCharm(CharmBase):
 
         # Remove the 'starting' flag on the unit
         self.peers_data.delete(Scope.UNIT, "starting")
+
+        # apply post_start fixes to resolve start related upstream bugs
+        self.opensearch_fixes.apply_on_start()
 
         # apply cluster health
         self.health.apply()
