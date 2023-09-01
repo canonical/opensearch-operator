@@ -17,9 +17,9 @@ from typing import Dict, List, Optional, Set, Union
 
 import requests
 import urllib3.exceptions
+from charms.opensearch.v0.constants_secrets import ADMIN_PW
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
-from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
     is_reachable,
@@ -31,6 +31,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchStartTimeoutError,
 )
+from charms.opensearch.v0.opensearch_internal_data import Scope
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -245,7 +246,10 @@ class OpenSearchDistribution(ABC):
 
             try:
                 with requests.Session() as s:
-                    s.auth = ("admin", self._charm.secrets.get(Scope.APP, "admin_password"))
+                    s.auth = (
+                        "admin",
+                        self._charm.secrets.get(Scope.APP, ADMIN_PW),
+                    )
 
                     request_kwargs = {
                         "method": method.upper(),

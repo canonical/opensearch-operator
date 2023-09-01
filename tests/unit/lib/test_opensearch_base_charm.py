@@ -8,13 +8,13 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER, PeerRelationName
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchInstallError,
 )
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
@@ -157,10 +157,10 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             _initialize_security_index.assert_called_once()
             self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
 
-    @patch(f"{BASE_LIB_PATH}.helper_security.cert_expiration_remaining_hours")
-    @patch("ops.model.Model.get_relation")
-    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
-    def test_on_update_status(self, _, get_relation, cert_expiration_remaining_hours):
+    @patch(f"{BASE_CHARM_CLASS}._stop_opensearch")
+    @patch(f"{BASE_LIB_PATH}.opensearch_base_charm.cert_expiration_remaining_hours")
+    @patch(f"{BASE_LIB_PATH}.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
+    def test_on_update_status(self, _, cert_expiration_remaining_hours, _stop_opensearch):
         """Test on update status."""
         with patch(
             f"{self.OPENSEARCH_DISTRO}.missing_sys_requirements"
@@ -172,7 +172,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
             # test when TLS relation is broken and cert is expiring soon
-            get_relation.return_value = None
             is_node_up.return_value = True
             self.peers_data.put(
                 Scope.UNIT,
@@ -188,14 +187,14 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
     def test_app_peers_data(self):
         """Test getting data from the app relation data bag."""
-        self.assertEqual(self.peers_data.all(Scope.APP), {})
+        self.assertIsNone(self.peers_data.get(Scope.APP, "app-key"))
 
         self.peers_data.put(Scope.APP, "app-key", "app-val")
         self.assertEqual(self.peers_data.get(Scope.APP, "app-key"), "app-val")
 
     def test_unit_peers_data(self):
         """Test getting data from the unit relation data bag."""
-        self.assertEqual(self.peers_data.all(Scope.UNIT), {})
+        self.assertIsNone(self.peers_data.get(Scope.UNIT, "unit-key"))
 
         self.peers_data.put(Scope.UNIT, "unit-key", "unit-val")
         self.assertEqual(self.peers_data.get(Scope.UNIT, "unit-key"), "unit-val")
