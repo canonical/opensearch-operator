@@ -42,23 +42,27 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = BlockedStatus(InstallError)
 
     @override
-    def _store_tls_resources(
+    def store_tls_resources(
         self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
     ):
         """Write certificates and keys on disk."""
         certs_dir = self.opensearch.paths.certs
+
+        if not secrets.get("key"):
+            logging.error("TLS key not found, quitting.")
+            return
 
         self.opensearch.write_file(
             f"{certs_dir}/{cert_type}.key",
             to_pkcs8(secrets["key"], secrets.get("key-password")),
         )
         self.opensearch.write_file(f"{certs_dir}/{cert_type}.cert", secrets["cert"])
-        self.opensearch.write_file(f"{certs_dir}/root-ca.cert", secrets["ca"], override=False)
+        self.opensearch.write_file(f"{certs_dir}/root-ca.cert", secrets["ca-cert"], override=False)
 
         if cert_type == CertType.APP_ADMIN:
             self.opensearch.write_file(
                 f"{certs_dir}/chain.pem",
-                "\n".join(secrets["chain"][::-1]),
+                secrets["chain"],
                 override=override_admin,
             )
 

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_databag import Scope
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -162,7 +162,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         """Test _on_certificate_available event."""
         csr = "csr_12345"
         cert = "cert_12345"
-        chain = "chain_12345"
+        chain = ["chain_12345"]
         ca = "ca_12345"
         secret_key = CertType.UNIT_TRANSPORT.val
 
@@ -175,7 +175,7 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         self.assertDictEqual(
             self.secret_store.get_object(Scope.UNIT, secret_key),
-            {"csr": csr, "chain": chain, "cert": cert, "ca": ca},
+            {"csr": csr, "chain": chain[0], "cert": cert, "ca-cert": ca},
         )
 
         on_tls_conf_set.assert_called()

@@ -33,13 +33,13 @@ from charms.opensearch.v0.constants_charm import (
     UserCreationFailed,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_databag import Scope
 from charms.opensearch.v0.helper_networking import unit_ip
 from charms.opensearch.v0.helper_security import generate_hashed_password
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchIndexError,
 )
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import (
     CharmBase,
@@ -336,7 +336,8 @@ class OpenSearchProvider(Object):
             except AttributeError:
                 # cert doesn't exist - presumably we don't yet have a TLS relation.
                 return
-        self.opensearch_provides.set_tls_ca(relation_id, "\n".join(ca_chain[::-1]))
+
+        self.opensearch_provides.set_tls_ca(relation_id, ca_chain)
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         if not self.unit.is_leader():

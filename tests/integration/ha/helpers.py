@@ -97,13 +97,13 @@ async def get_shards_by_state(ops_test: OpsTest, unit_ip: str) -> Dict[str, List
         f"https://{unit_ip}:9200/_cat/shards",
     )
 
+    logger.info(f"Shards:\n{response}")
+
     indexes_by_status = {}
     for shard in response:
-        state = shard["state"]
-        if state not in indexes_by_status:
-            indexes_by_status[state] = []
-
-        indexes_by_status[state].append(f"{shard['node']}/{shard['index']}")
+        indexes_by_status.setdefault(shard["state"], []).append(
+            f"{shard['node']}/{shard['index']}"
+        )
 
     return indexes_by_status
 

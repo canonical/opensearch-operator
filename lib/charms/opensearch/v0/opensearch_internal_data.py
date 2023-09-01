@@ -4,12 +4,13 @@
 """Utility classes for app / unit data bag related operations."""
 
 import json
+import logging
 from abc import ABC, abstractmethod
 from ast import literal_eval
 from typing import Dict, Optional, Union
 
-from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_enums import BaseStrEnum
+from ops import Secret
 from overrides import override
 
 # The unique Charmhub library identifier, never change it
@@ -21,6 +22,9 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
+
+
+logger = logging.getLogger(__name__)
 
 
 class Scope(BaseStrEnum):
@@ -51,11 +55,6 @@ class DataStore(ABC):
     @abstractmethod
     def has(self, scope: Scope, key: str):
         """Check if the said key is contained in the store."""
-        pass
-
-    @abstractmethod
-    def all(self, scope: Scope) -> Dict[str, str]:
-        """Get all content of a store."""
         pass
 
     @abstractmethod
@@ -141,14 +140,6 @@ class RelationDataStore(DataStore):
         return key in self._get_relation_data(scope)
 
     @override
-    def all(self, scope: Scope) -> Dict[str, str]:
-        """Get all content of a store."""
-        if scope is None:
-            raise ValueError("Scope undefined.")
-
-        return self._get_relation_data(scope)
-
-    @override
     def get(
         self,
         scope: Scope,
@@ -196,27 +187,71 @@ class RelationDataStore(DataStore):
         return relation.data[relation_scope]
 
 
-class SecretsDataStore(RelationDataStore):
-    """Class representing a secret store for a charm.
+class SecretCache:
+    """Internal helper class locally cache secrets.
 
-    For now, it is simply a base class for regular Relation data store
+    The data structure is precisely re-using/simulating as in the actual Secret Storage
     """
 
-    def get_unit_certificates(self) -> Dict[CertType, str]:
-        """Retrieve the list of certificates for this unit."""
-        certs = {}
+    CACHED_META = "meta"
+    CACHED_CONTENT = "content"
 
-        transport_secrets = self.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)
-        if transport_secrets and "cert" in transport_secrets:
-            certs[CertType.UNIT_TRANSPORT] = transport_secrets["cert"]
+    def __init__(self):
+        # Structure:
+        # NOTE: "objects" (i.e. dict-s) and scalar values are handled in a unified way
+        # precisely as done for the Secret objects themselves.
+        #
+        # self.secrets = {
+        #   "app": {
+        #       "opensearch:app:admin-password": {
+        #           "meta": <Secret instance>,
+        #           "content": {
+        #               "opensearch:app:admin-password": "bla"
+        #           }
+        #       }
+        #   },
+        #   "unit": {
+        #       "opensearch:unit:0:certificates": {
+        #           "meta": <Secret instance>,
+        #           "content": {
+        #               "ca-cert": "<certificate>",
+        #               "cert": "<certificate>",
+        #               "chain": "<certificate>"
+        #           }
+        #       }
+        #   }
+        # }
+        self.secrets = {Scope.APP: {}, Scope.UNIT: {}}
 
-        http_secrets = self.get_object(Scope.UNIT, CertType.UNIT_HTTP.val)
-        if http_secrets and "cert" in http_secrets:
-            certs[CertType.UNIT_HTTP] = http_secrets["cert"]
+    def get_meta(self, scope: Scope, label: str) -> Optional[Secret]:
+        """Getting cached secret meta-information."""
+        return self.secrets[scope].get(label, {}).get(self.CACHED_META)
 
-        if self._charm.unit.is_leader():
-            admin_secrets = self.get_object(Scope.APP, CertType.APP_ADMIN.val)
-            if admin_secrets and "cert" in admin_secrets:
-                certs[CertType.APP_ADMIN] = admin_secrets["cert"]
+    def set_meta(self, scope: Scope, label: str, secret: Secret) -> None:
+        """Setting cached secret meta-information."""
+        self.secrets[scope].setdefault(label, {}).update({self.CACHED_META: secret})
 
-        return certs
+    def get_content(self, scope: Scope, label: str) -> Dict[str, str]:
+        """Getting cached secret content."""
+        return self.secrets[scope].get(label, {}).get(self.CACHED_CONTENT)
+
+    def put_content(self, scope: Scope, label: str, content: Union[str, Dict[str, str]]):
+        """Setting cached secret content."""
+        self.secrets[scope].setdefault(label, {}).update({self.CACHED_CONTENT: content})
+
+    def put(
+        self,
+        scope: Scope,
+        label: str,
+        secret: Optional[Secret] = None,
+        content: Optional[Union[str, Dict[str, str]]] = None,
+    ) -> None:
+        """Updating cached secret information."""
+        if secret:
+            self.set_meta(scope, label, secret)
+        if content:
+            self.put_content(scope, label, content)
+
+    def delete(self, scope: Scope, label: str) -> None:
+        """Removing cached secret information."""
+        self.secrets[scope].pop(label, None)
