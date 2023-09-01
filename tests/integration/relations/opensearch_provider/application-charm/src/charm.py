@@ -158,25 +158,14 @@ class ApplicationCharm(CharmBase):
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request to a specific relation."""
         requires = self._get_reqires(relation_name)
-<<<<<<< HEAD
-        username = requires.get_relation_field(relation_id, "username")
-        password = requires.get_relation_field(relation_id, "password")
-        hosts = requires.get_relation_field(relation_id, "endpoints").split(",")
-||||||| parent of 3a5b91e (fixup! Application test charm changes)
-        username = requires.get_relation_field(relation_id, "username")
-        password = requires.get_relation_field(relation_id, "password")
-        hosts = requires.get_relation_field(relation_id, "endpoints")
-=======
         username = requires.fetch_relation_data([relation_id], ["username"])[relation_id]["username"]
         password = requires.fetch_relation_data([relation_id], ["password"])[relation_id]["password"]
         hosts = requires.fetch_relation_data([relation_id], ["endpoints"])[relation_id]["endpoints"]
->>>>>>> 3a5b91e (fixup! Application test charm changes)
 
         if None in [username, password] or not hosts:
             raise OpenSearchHttpError
 
-        host = hosts.split(",")
-        host, port = host[0].split(":")
+        host, port = hosts.split(",")[0].split(":")
 
         return self.request(
             method,
