@@ -61,6 +61,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
 
         label_parts = self.breakdown_label(event.secret.label)
+        if not label_parts:
+            return
+
         if (
             label_parts["application_name"] != self._charm.app.name
             or label_parts["scope"] != Scope.APP
@@ -91,7 +94,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
         """Return meaningful components resolved from a secret label."""
         components = label.split(self.LABEL_SEPARATOR)
         if len(components) < 3 or len(components) > 4:
-            raise ValueError("Invalid label %s", label)
+            # raise ValueError("Invalid label %s", label)
+            logger.error(f"**************** Invalid label '{label}' *****************")
+            return
 
         scope = Scope[components[1].upper()]
 
