@@ -387,7 +387,11 @@ class OpenSearchProvider(Object):
 
         port = self.opensearch.port
         endpoints = ",".join([f"{ip}:{port}" for ip in ips - omit_endpoints])
-        databag_endpoints = relation.data[relation.app].get("endpoints")
+        databag_endpoints_data = self.opensearch_provides.get_relation_secret_data(relation.id, "endpoints")
+
+        databag_endpoints = None
+        if databag_endpoints_data:
+            databag_endpoints = databag_endpoints_data.get("endpoints")
 
         if endpoints != databag_endpoints:
             self.opensearch_provides.set_endpoints(relation.id, endpoints)
