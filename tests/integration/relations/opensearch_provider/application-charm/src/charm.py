@@ -88,11 +88,22 @@ class ApplicationCharm(CharmBase):
 
         return connected
 
+    def _get_reqires(self, relation_name):
+        for requires in [self.admin_opensearch, self.first_opensearch, self.second_opensearch]:
+            if requires.relation_name == relation_name:
+                return requires
+
     def _on_authentication_updated(self, event: AuthenticationEvent):
-        tls_ca = event.tls_ca
-        if not event.tls_ca:
+        if not hasattr(event, "relation"):
+            return
+
+        requires = self._get_reqires(event.relation.name)
+        tls_ca = requires.get_relation_field(event.relation.id, "tls-ca")
+
+        if not tls_ca:
             event.defer()  # We're waiting until we get a CA.
             return
+
         logger.error(f"writing cert to {CERT_PATH}.")
         with open(CERT_PATH, "w") as f:
             f.write(tls_ca)
@@ -103,18 +114,17 @@ class ApplicationCharm(CharmBase):
 
     def _on_run_request_action(self, event: ActionEvent):
         logger.info(event.params)
-        relation = self.relations[event.params["relation-name"]]
         relation_id = event.params["relation-id"]
-        databag = relation.fetch_relation_data()[relation_id]
         method = event.params["method"]
         endpoint = event.params["endpoint"]
         payload = event.params.get("payload", None)
         if payload:
             payload = payload.replace("\\", "")
 
-        username = databag.get("username")
-        password = databag.get("password")
-        host = databag.get("endpoints").split(",")[0]
+        requires = self._get_reqires(event.params["relation-name"])
+        username = requires.get_relation_field(relation_id, "username")
+        password = requires.get_relation_field(relation_id, "password")
+        host = requires.get_relation_field(relation_id, "endpoints").split(",")[0]
         host_addr, port = host.split(":")
 
         logger.info(f"sending {method} request to {endpoint}")
@@ -141,11 +151,10 @@ class ApplicationCharm(CharmBase):
         payload: Optional[Dict[str, any]] = None,
     ) -> Union[Dict[str, any], List[any]]:
         """Make an HTTP request to a specific relation."""
-        relation = self.relations[relation_name]
-        databag = relation.fetch_relation_data()[relation_id]
-        username = databag.get("username")
-        password = databag.get("password")
-        hosts = databag.get("endpoints", "").split(",")
+        requires = self._get_reqires(relation_name)
+        username = requires.get_relation_field(relation_id, "username")
+        password = requires.get_relation_field(relation_id, "password")
+        hosts = requires.get_relation_field(relation_id, "endpoints").split(",")
 
         if None in [username, password] or not hosts:
             raise OpenSearchHttpError
