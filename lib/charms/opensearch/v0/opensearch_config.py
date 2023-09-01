@@ -191,6 +191,10 @@ class OpenSearchConfig:
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
 
+    def config_get_list(self, get_list: List[str]) -> bool:
+        """Gets a list of configurations from opensearch.yml."""
+        return get_list in [self._opensearch.config.load(self.CONFIG_YML).keys()]
+
     def config_put_list(self, put_dict: Dict[str, Any]) -> bool:
         """Puts a list of configurations into opensearch.yml."""
         return any(

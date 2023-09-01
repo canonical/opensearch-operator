@@ -39,9 +39,13 @@ class TestPlugin(OpenSearchPlugin):
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
 
-    def __init__(self, name, plugin_manager):
-        super().__init__(name, plugin_manager)
+    def __init__(self, plugins_path, relation_data):
+        super().__init__(plugins_path, relation_data)
         self._depends_on = ["test-plugin-dependency"]
+
+    @property
+    def name(self):
+        return "test"
 
     @property
     def is_installed(self):

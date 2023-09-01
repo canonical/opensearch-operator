@@ -103,22 +103,17 @@ class OpenSearchPlugin:
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
     CONFIG_YML = "opensearch.yml"
 
-    def __init__(self, name: str, plugin_manager):
-        """Creates the OpenSearchPlugin object.
-
-        The *args enable children classes to pass relations.
-        """
-        self._name = name
-        self._plugin_manager = plugin_manager
+    def __init__(self, plugins_path: str, relation_data: Dict[str, Any]):
+        """Creates the OpenSearchPlugin object."""
+        self._plugins_path = plugins_path
+        self._relation_data = relation_data
         self._properties = Properties()
         self._depends_on = []
 
     @property
     def version(self) -> str:
         """Returns the current version of the plugin."""
-        plugin_props_path = os.path.join(
-            f"{self._plugin_manager._plugins_path}", f"{self.PLUGIN_PROPERTIES}"
-        )
+        plugin_props_path = os.path.join(f"{self._plugins_path}", f"{self.PLUGIN_PROPERTIES}")
         try:
             with open(plugin_props_path) as f:
                 self._properties.load(f.read())
@@ -182,9 +177,8 @@ class OpenSearchPlugin:
         Consider overriding this method only if the plugin needs an special care at upgrade.
         """
         current_version = self.version
-        # Now check if the format of this plugin and OpenSearch's match
-        num_points = len(self._plugin_manager._distro.version.split("."))
-        return os_version != current_version[:num_points]
+        # OpenSearch uses A.B.C format
+        return os_version != current_version[:2]
 
     @abstractmethod
     def upgrade(self, uri: str) -> Any:
@@ -213,10 +207,7 @@ class OpenSearchPlugin:
         return PluginState.ENABLED
 
     @property
+    @abstractmethod
     def name(self) -> str:
         """Returns the name of the plugin."""
-        return self._name
-
-    def _get_config(self, config_name: str) -> Any:
-        """Gets a configuration from opensearch.yml."""
-        return self._plugin_manager.check_plugin_config(self.name, config_name)
+        pass
