@@ -58,6 +58,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         """Refresh secret and re-run corresponding actions if needed."""
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
+            return
 
         try:
             label_parts = self.breakdown_label(event.secret.label)
