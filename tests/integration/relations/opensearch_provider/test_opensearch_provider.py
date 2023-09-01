@@ -181,6 +181,13 @@ async def test_version(ops_test: OpsTest):
     assert version == results.get("version", {}).get("number"), results
 
 
+async def get_secret_data(ops_test, secret_uri):
+    secret_unique_id = secret_uri.split("/")[-1]
+    complete_command = f"show-secret {secret_uri} --reveal --format=json"
+    _, stdout, _ = await ops_test.juju(*complete_command.split())
+    return json.loads(stdout)[secret_unique_id]["content"]["Data"]
+
+
 @pytest.mark.abort_on_fail
 async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag.
@@ -190,9 +197,15 @@ async def test_scaling(ops_test: OpsTest):
     """
 
     async def rel_endpoints(app_name: str, rel_name: str) -> str:
-        return await get_application_relation_data(
-            ops_test, f"{app_name}/0", rel_name, "endpoints"
+        # return await get_application_relation_data(
+        #     ops_test, f"{app_name}/0", rel_name, "endpoints"
+        # )
+
+        secret_uri = await get_application_relation_data(
+            ops_test, f"{app_name}/0", rel_name, "secret-endpoints"
         )
+        secret_data = await get_secret_data(ops_test, secret_uri)
+        return secret_data.get("endpoints")
 
     async def get_num_of_endpoints(app_name: str, rel_name: str) -> int:
         return len((await rel_endpoints(app_name, rel_name)).split(","))
@@ -379,9 +392,13 @@ async def test_admin_permissions(ops_test: OpsTest):
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
     # verify admin can't delete users
-    first_relation_user = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
+    secret_uri = await get_application_relation_data(
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "secret-user"
     )
+
+    first_relation_user_data = await get_secret_data(ops_test, secret_uri)
+    first_relation_user = first_relation_user_data.get("username")
+
     first_relation_user_endpoint = f"/_plugins/_security/api/internalusers/{first_relation_user}"
     run_delete_users = await run_request(
         ops_test,
@@ -436,9 +453,12 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
     # verify normal users can't delete users
-    first_relation_user = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
+    secret_uri = await get_application_relation_data(
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "secret-user"
     )
+    first_relation_user_data = await get_secret_data(ops_test, secret_uri)
+    first_relation_user = first_relation_user_data.get("username")
+
     first_relation_user_endpoint = f"/_plugins/_security/api/internalusers/{first_relation_user}"
     run_delete_users = await run_request(
         ops_test,
@@ -472,9 +492,12 @@ async def test_normal_user_permissions(ops_test: OpsTest):
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
-    relation_user = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
+    secret_uri = await get_application_relation_data(
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "secret-user"
     )
+    relation_user_data = await get_secret_data(ops_test, secret_uri)
+    relation_user = relation_user_data.get("username")
+
     await ops_test.model.wait_for_idle(
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
