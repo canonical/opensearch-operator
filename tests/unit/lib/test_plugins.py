@@ -200,5 +200,6 @@ class TestOpenSearchPlugin(unittest.TestCase):
         """Triggers a config change and should call plugin manager."""
         self.plugin_manager.on_config_change = MagicMock(return_value=False)
         self.charm.opensearch_config.update_host_if_needed = MagicMock(return_value=False)
+        self.charm.opensearch.is_started = MagicMock(return_value=True)
         self.harness.update_config({})
         self.plugin_manager.on_config_change.assert_called()
