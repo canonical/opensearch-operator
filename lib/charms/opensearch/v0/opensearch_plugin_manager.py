@@ -60,7 +60,12 @@ class OpenSearchPluginManager:
     def plugins(self) -> Dict[str, OpenSearchPlugin]:
         """Returns dict of installed plugins."""
         return {
-            key: plugin_data["class"](key, self)
+            key: plugin_data["class"](
+                self._plugins_path,
+                self.charm.model.get_relation(plugin_data["relation-name"])
+                if plugin_data["relation-name"]
+                else None,
+            )
             for key, plugin_data in ConfigExposedPlugins.items()
         }
 
