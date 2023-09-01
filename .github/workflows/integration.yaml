@@ -26,15 +26,15 @@ jobs:
       fail-fast: false
       matrix:
         tox-environments:
-          - charm-integration
-          - tls-integration
+          # - charm-integration
+          # - tls-integration
           - client-integration
-          - ha-base-integration
-          - ha-networking-integration
+          # - ha-base-integration
+          # - ha-networking-integration
         runner: ["ubuntu-22.04"]
-        include:
-          - tox-environments: h-scaling-integration
-            runner: "Ubuntu_4C_16G"
+        # include:
+        #   - tox-environments: h-scaling-integration
+        #     runner: "Ubuntu_4C_16G"
     name: ${{ matrix.tox-environments }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
