@@ -10,7 +10,15 @@ on:
 jobs:
   pre-integration-checks:
     secrets: inherit
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - libjuju: ==3.1.0.1
+          - libjuju: ==2.9.42.4
     uses: ./.github/workflows/pre_integration_checks.yaml
+    with:
+      libjuju-version-specifier: ${{ matrix.libjuju }}
 
   integration:
     needs:
