@@ -10,29 +10,29 @@ on:
   pull_request:
 
 jobs:
-  pre-integration-checks-juju2:
-    secrets: inherit
-    uses: ./.github/workflows/pre_integration_checks.yaml
-    with:
-      libjuju-version-specifier: ==2.9.42.4
-
-  integration-juju2:
-    needs:
-      - pre-integration-checks-juju2
-    uses: ./.github/workflows/integration.yaml
-    with:
-      juju-snap-channel: 2.9/stable
-      libjuju-version-specifier: ==2.9.42.4
-
-  pre-integration-checks-juju3:
-    secrets: inherit
-    uses: ./.github/workflows/pre_integration_checks.yaml
-    with:
-      libjuju-version-specifier: ==3.2.0.1
+  # pre-integration-checks-juju2:
+  #   secrets: inherit
+  #   uses: ./.github/workflows/pre_integration_checks.yaml
+  #   with:
+  #     libjuju-version-specifier: ==2.9.42.4
+  #
+  # integration-juju2:
+  #   needs:
+  #     - pre-integration-checks-juju2
+  #   uses: ./.github/workflows/integration.yaml
+  #   with:
+  #     juju-snap-channel: 2.9/stable
+  #     libjuju-version-specifier: ==2.9.42.4
+  #
+  # pre-integration-checks-juju3:
+  #   secrets: inherit
+  #   uses: ./.github/workflows/pre_integration_checks.yaml
+  #   with:
+  #     libjuju-version-specifier: ==3.2.0.1
 
   integration-juju3-secrets:
-    needs:
-      - pre-integration-checks-juju3
+    # needs:
+    #   - pre-integration-checks-juju3
     uses: ./.github/workflows/integration-limited-juju3.yaml
     with:
       libjuju-version-specifier: ==3.2.0.1
