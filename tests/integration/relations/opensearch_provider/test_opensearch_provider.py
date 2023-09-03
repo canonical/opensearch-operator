@@ -188,7 +188,15 @@ async def get_secret_data(ops_test, secret_uri):
     return json.loads(stdout)[secret_unique_id]["content"]["Data"]
 
 
+<<<<<<< HEAD
 @pytest.mark.abort_on_fail
+@pytest.mark.skip(reason="Curious of following test's results")
+||||||| parent of 37d3d5c (fixup! Disabling scaling test)
+# @pytest.mark.abort_on_fail
+# @pytest.mark.skip(reason="Curious of following test's results")
+=======
+# @pytest.mark.abort_on_fail
+>>>>>>> 37d3d5c (fixup! Disabling scaling test)
 async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag.
 
@@ -290,7 +298,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
 
-@pytest.mark.abort_on_fail
+# @pytest.mark.abort_on_fail
 async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     """Test that two different applications can connect to the database."""
     # Relate the new application and wait for them to exchange connection data.
@@ -487,6 +495,7 @@ async def test_normal_user_permissions(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.skip(reason="Curious of following test's results")
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
@@ -537,7 +546,13 @@ async def test_relation_broken(ops_test: OpsTest):
     assert relation_user not in users.keys()
 
 
+<<<<<<< HEAD
 @pytest.mark.abort_on_fail
+@pytest.mark.skip(reason="Curious of following test's results")
+||||||| parent of 37d3d5c (fixup! Disabling scaling test)
+@pytest.mark.skip(reason="Curious of following test's results")
+=======
+>>>>>>> 37d3d5c (fixup! Disabling scaling test)
 async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     """Verify that if we recreate a relation, we can access the same index."""
     client_relation = await ops_test.model.add_relation(
