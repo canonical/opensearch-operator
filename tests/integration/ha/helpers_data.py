@@ -40,6 +40,17 @@ async def create_dummy_indexes(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
+async def update_dummy_indexes(
+    ops_test: OpsTest, app: str, unit_ip: str, max_r_shards: int, count: int = 5
+) -> None:
+    """Update the replication factors of dummy indexes."""
+    await create_dummy_indexes(ops_test, app, unit_ip, max_r_shards, count)
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
 async def delete_dummy_indexes(ops_test: OpsTest, app: str, unit_ip: str, count: int = 5) -> None:
     """Delete dummy indexes."""
     for index_id in range(count):

@@ -23,6 +23,7 @@ from tests.integration.ha.helpers_data import (
     create_dummy_docs,
     create_dummy_indexes,
     delete_dummy_indexes,
+    update_dummy_indexes,
 )
 from tests.integration.helpers import (
     APP_NAME,
@@ -177,6 +178,8 @@ async def test_safe_scale_down_shards_realloc(
 
     # remove the service in the chosen unit
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
+
+    await update_dummy_indexes(ops_test, app, leader_unit_ip, max_r_shards=init_units_count - 1)
     await ops_test.model.wait_for_idle(
         apps=[app],
         status="active",
