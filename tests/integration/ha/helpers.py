@@ -6,7 +6,6 @@ import subprocess
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
-from ops import JujuVersion
 from pytest_operator.plugin import OpsTest
 from tenacity import (
     RetryError,
@@ -23,6 +22,7 @@ from tests.integration.helpers import (
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
     http_request,
+    juju_version_major,
 )
 
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
@@ -232,7 +232,7 @@ async def send_kill_signal_to_process(
     """Run kill with signal in specific unit."""
     unit_name = f"{app}/{unit_id}"
 
-    bin_cmd = "exec" if JujuVersion.from_environ().major > 2 else "run"
+    bin_cmd = "exec" if juju_version_major() > 2 else "run"
     if opensearch_pid is None:
         get_pid_cmd = f"{bin_cmd} --unit {unit_name} -- sudo lsof -ti:9200"
         _, opensearch_pid, _ = await ops_test.juju(*get_pid_cmd.split(), check=False)
@@ -252,7 +252,7 @@ async def update_restart_delay(ops_test: OpsTest, app: str, unit_id: int, delay:
     """Updates the restart delay in the DB service file."""
     unit_name = f"{app}/{unit_id}"
 
-    bin_cmd = "exec" if JujuVersion.from_environ().major > 2 else "run"
+    bin_cmd = "exec" if juju_version_major() > 2 else "run"
 
     # load the service file from the unit and update it with the new delay
     replace_delay_cmd = (
@@ -269,7 +269,7 @@ async def update_restart_delay(ops_test: OpsTest, app: str, unit_id: int, delay:
 
 async def all_processes_down(ops_test: OpsTest, app: str) -> bool:
     """Check if all processes are down."""
-    bin_cmd = "exec" if JujuVersion.from_environ().major > 2 else "run"
+    bin_cmd = "exec" if juju_version_major() > 2 else "run"
 
     for unit_id in get_application_unit_ids(ops_test, app):
         unit_name = f"{app}/{unit_id}"
