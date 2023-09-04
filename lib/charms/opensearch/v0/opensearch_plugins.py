@@ -69,7 +69,7 @@ as well. For example:
 import logging
 import os
 from abc import abstractmethod
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchPluginError
@@ -103,9 +103,15 @@ class OpenSearchPlugin:
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
     CONFIG_YML = "opensearch.yml"
 
-    def __init__(self, plugins_path: str, relation_data: Dict[str, Any]):
+    def __init__(
+        self,
+        plugins_path: str,
+        os_version: Optional[str] = "",
+        relation_data: Optional[Dict[str, Any]] = {},
+    ):
         """Creates the OpenSearchPlugin object."""
         self._plugins_path = plugins_path
+        self._os_version = os_version
         self._relation_data = relation_data
         self._properties = Properties()
         self._depends_on = []
@@ -168,7 +174,7 @@ class OpenSearchPlugin:
         """Runs any specific steps to check if the plugin is enabled."""
         pass
 
-    def needs_upgrade(self, os_version) -> bool:
+    def needs_upgrade(self) -> bool:
         """Returns if the plugin needs an upgrade or not.
 
         Needs upgrade must be set if an upgrade on the charm happens and plugins must
@@ -177,8 +183,8 @@ class OpenSearchPlugin:
         Consider overriding this method only if the plugin needs an special care at upgrade.
         """
         current_version = self.version
-        # OpenSearch uses A.B.C format
-        return os_version != current_version[:2]
+        num_points = len(self._os_version.split("."))
+        return self._os_version != current_version[:num_points]
 
     @abstractmethod
     def upgrade(self, uri: str) -> Any:

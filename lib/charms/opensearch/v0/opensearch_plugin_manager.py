@@ -62,7 +62,8 @@ class OpenSearchPluginManager:
         return {
             key: plugin_data["class"](
                 self._plugins_path,
-                self.charm.model.get_relation(plugin_data["relation-name"])
+                os_version=self._distro.version,
+                relation_data=self.charm.model.get_relation(plugin_data["relation-name"]).data
                 if plugin_data["relation-name"]
                 else None,
             )
@@ -153,15 +154,13 @@ class OpenSearchPluginManager:
 
     def plugins_need_upgrade(self) -> List[OpenSearchPlugin]:
         """Returns a list of plugins that need upgrade."""
-        return [
-            name for name, obj in self.plugins.items() if obj.needs_upgrade(self._distro.version)
-        ]
+        return [name for name, obj in self.plugins.items() if obj.needs_upgrade]
 
     def _is_plugin_relation_set(self, relation_name: str) -> bool:
         """Returns True if a relation is expected and it is set."""
         if not relation_name:
             return True
-        return len(self.charm.framework.model.relations[relation_name] or {}) > 0
+        return len(self._charm.framework.model.relations[relation_name] or {}) > 0
 
     def _update_keystore_and_reload(
         self, keystore: Dict[str, str], remove_keys: bool = False
