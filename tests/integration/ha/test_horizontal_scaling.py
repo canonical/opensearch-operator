@@ -23,7 +23,6 @@ from tests.integration.ha.helpers_data import (
     create_dummy_docs,
     create_dummy_indexes,
     delete_dummy_indexes,
-    update_dummy_indexes,
 )
 from tests.integration.helpers import (
     APP_NAME,
