@@ -186,6 +186,6 @@ class OpenSearchPluginManager:
     def _list_plugins(self):
         """List plugins."""
         try:
-            return self._opensearch.run_bin("opensearch-plugin", "list").split("\n")
+            return list(filter(None, self._opensearch.run_bin("opensearch-plugin", "list").split("\n")))
         except OpenSearchCmdError as e:
             raise OpenSearchPluginError("Failed to list plugins: " + str(e))
