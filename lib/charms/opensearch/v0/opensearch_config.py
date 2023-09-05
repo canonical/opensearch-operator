@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import normalized_tls_subject
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin
 
 # The unique Charmhub library identifier, never change it
 LIBID = "b02ab02d4fd644fdabe02c61e509093f"
@@ -191,27 +192,22 @@ class OpenSearchConfig:
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
 
-    def config_get_list(self, get_list: List[str]) -> bool:
+    def get_plugin(self, plugin: OpenSearchPlugin) -> Dict[str, Any]:
         """Gets a list of configurations from opensearch.yml."""
-        return get_list in [self._opensearch.config.load(self.CONFIG_YML).keys()]
+        result = {}
+        for key in plugin.config()[self.CONFIG_YML].keys():
+            result[key] = self._opensearch.config.get(key, None)
+        return result
 
-    def config_put_list(self, put_dict: Dict[str, Any]) -> bool:
-        """Puts a list of configurations into opensearch.yml."""
-        return any(
-            [
-                self._opensearch.config.put(self.CONFIG_YML, config, value)[config] == value
-                for config, value in put_dict.items()
-            ]
-        )
+    def add_plugin(self, plugin: OpenSearchPlugin) -> None:
+        """Adds a plugin configurations into opensearch.yml."""
+        for key, val in plugin.config()[self.CONFIG_YML].items():
+            self._opensearch.config.put(self.CONFIG_YML, key, val)
 
-    def config_delete_list(self, delete_list: List[str]) -> bool:
-        """Removes a list of configurations from opensearch.yml."""
-        return any(
-            [
-                config not in self._opensearch.config.delete(self.CONFIG_YML, config).keys()
-                for config in delete_list
-            ]
-        )
+    def delete_plugin(self, plugin: OpenSearchPlugin) -> None:
+        """Adds a plugin configurations into opensearch.yml."""
+        for key, val in plugin.config()[self.CONFIG_YML]:
+            self._opensearch.config.delete(self.CONFIG_YML, key, val)
 
     def update_host_if_needed(self) -> bool:
         """Update the opensearch config with the current network hosts, after having started.

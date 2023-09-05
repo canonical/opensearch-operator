@@ -54,7 +54,7 @@ class TestPlugin(OpenSearchPlugin):
     def install(self):
         return
 
-    def configure(self):
+    def config(self):
         return {}
 
     @property
@@ -83,7 +83,7 @@ class TestPluginAlreadyInstalled(TestPlugin):
     def is_installed(self):
         return True
 
-    def configure(self):
+    def config(self):
         return {self.CONFIG_YML: {"param": "tested"}, "keystore": {"key1": "secret1"}}
 
 
@@ -123,7 +123,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_version.return_value = "2.8.0"
         mock_is_installed.return_value = True
         mock_is_enabled.return_value = True
-        test_plugin = self.plugin_manager.plugins["test"]
+        test_plugin = self.plugin_manager.plugins[0]
         assert test_plugin.version == "2.9.0.0"
         assert test_plugin.status == PluginState.WAITING_FOR_UPGRADE
 
@@ -131,22 +131,18 @@ class TestOpenSearchPlugin(unittest.TestCase):
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
-    #    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
     def test_failed_install_plugin(self, mock_version) -> None:
         """Tests a failed command."""
         mock_version.return_value = "2.8.0"
         succeeded = False
         self.charm.opensearch._run_cmd = MagicMock(
-            side_effect=OpenSearchCmdError(returncode=100, stderr="this is a test")
+            side_effect=OpenSearchCmdError("this is a test")
         )
         self.plugin_manager._list_plugins = MagicMock(return_value=["test-plugin-dependency"])
         try:
             self.plugin_manager.install()
         except OpenSearchPluginError as e:
-            assert (
-                str(e)
-                == "Failed to install plugin test: Command error, code: 100, stderr: this is a test"
-            )
+            assert str(e) == "Failed to install plugin test: this is a test"
             succeeded = True
         finally:
             # We may reach this point because of another exception, check it:
@@ -161,9 +157,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_version.return_value = "2.8.0"
         succeeded = True
         self.charm.opensearch._run_cmd = MagicMock(
-            side_effect=OpenSearchCmdError(
-                returncode=101, stderr="this is a test - already exists"
-            )
+            side_effect=OpenSearchCmdError("this is a test - already exists")
         )
         self.plugin_manager._list_plugins = MagicMock(return_value=["test-plugin-dependency"])
         try:
@@ -205,19 +199,27 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_request.return_value = {"version": {"number": "3.0"}}
         assert self.plugin_manager.plugins_need_upgrade() == ["test"]
 
+    @patch(
+        "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
+        new_callable=PropertyMock,
+    )
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
     # Test the integration between opensearch_config and plugin
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
-    def test_reconfigure_add_keystore_plugin(self, mock_put, mock_version) -> None:
+    def test_reconfigure_add_keystore_plugin(
+        self, mock_put, mock_version, mock_load, mock_exists
+    ) -> None:
         """Reconfigure the keystore only.
 
-        Should not trigger restart, hence return False in the configure() method.
+        Should not trigger restart, hence return False in the config() method.
         """
         mock_version.return_value = "2.8.0"
+        mock_exists.return_value = True
         config = {"param": "tested"}
         mock_put.return_value = config
-        self.plugin_manager._add_to_keystore = MagicMock()
-        self.plugin_manager._distro.request = MagicMock(return_value={"status": 200})
+        self.plugin_manager._keystore._add = MagicMock()
+        self.plugin_manager._opensearch.request = MagicMock(return_value={"status": 200})
         # Override the ConfigExposedPlugins with another class type
         charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
             "test": {
@@ -226,12 +228,50 @@ class TestOpenSearchPlugin(unittest.TestCase):
                 "relation-name": None,
             },
         }
+        mock_load.side_effect = [{}, {"param": "tested"}]
         self.assertTrue(self.plugin_manager.configure())
-        self.plugin_manager._add_to_keystore.assert_has_calls([call("key1", "secret1")])
+        self.plugin_manager._keystore._add.assert_has_calls([call("key1", "secret1")])
         self.charm.opensearch.config.put.assert_has_calls(
-            [call(self.plugin_manager.CONFIG_YML, "param", "tested")]
+            [call(self.charm.opensearch_config.CONFIG_YML, "param", "tested")]
         )
-        self.plugin_manager._distro.request.assert_has_calls(
+        self.plugin_manager._opensearch.request.assert_has_calls(
+            [call("POST", "_nodes/reload_secure_settings")]
+        )
+
+    @patch(
+        "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
+        new_callable=PropertyMock,
+    )
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
+    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
+    # Test the integration between opensearch_config and plugin
+    @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
+    def test_plugin_setup_with_relation(
+        self, mock_put, mock_version, mock_load, mock_exists
+    ) -> None:
+        """Triggers a config change and should call plugin manager."""
+        mock_version.return_value = "2.8.0"
+        mock_exists.return_value = True
+        config = {"param": "tested"}
+        mock_put.return_value = config
+        self.plugin_manager._keystore._add = MagicMock()
+        self.plugin_manager._opensearch.request = MagicMock(return_value={"status": 200})
+        # Override the ConfigExposedPlugins with another class type
+        charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
+            "test": {
+                "class": TestPluginAlreadyInstalled,
+                "config-name": None,
+                "relation-name": "test-relation",
+            },
+        }
+        self.charm.model.get_relation = MagicMock()
+        mock_load.side_effect = [{}, {"param": "tested"}]
+        self.assertTrue(self.plugin_manager.configure())
+        self.plugin_manager._keystore._add.assert_has_calls([call("key1", "secret1")])
+        self.charm.opensearch.config.put.assert_has_calls(
+            [call(self.charm.opensearch_config.CONFIG_YML, "param", "tested")]
+        )
+        self.plugin_manager._opensearch.request.assert_has_calls(
             [call("POST", "_nodes/reload_secure_settings")]
         )
 
@@ -242,8 +282,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
     def test_check_plugin_called_on_config_changed(self, mock_version) -> None:
         """Triggers a config change and should call plugin manager."""
         mock_version.return_value = "2.8.0"
-        self.plugin_manager.on_config_change = MagicMock(return_value=False)
+        self.plugin_manager.run = MagicMock(return_value=False)
         self.charm.opensearch_config.update_host_if_needed = MagicMock(return_value=False)
         self.charm.opensearch.is_started = MagicMock(return_value=True)
         self.harness.update_config({})
-        self.plugin_manager.on_config_change.assert_called()
+        self.plugin_manager.run.assert_called()

@@ -157,7 +157,7 @@ class OpenSearchPlugin:
         return True
 
     @abstractmethod
-    def configure(self) -> Dict[str, Dict[str, str]]:
+    def config(self) -> Dict[str, Dict[str, str]]:
         """Returns a dict containing all the configuration needed to be applied in the form.
 
         Format:

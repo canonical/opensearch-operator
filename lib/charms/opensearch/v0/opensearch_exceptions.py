@@ -70,15 +70,6 @@ class OpenSearchOpsLockAlreadyAcquiredError(OpenSearchError):
 class OpenSearchCmdError(OpenSearchError):
     """Exception thrown when an OpenSearch bin command fails."""
 
-    def __init__(self, returncode: int = None, stderr: str = None):
-        super().__init__()
-        self.return_code = returncode
-        self.stderr = stderr
-
-    def __str__(self):
-        """Returns the string for the command error."""
-        return f"Command error, code: {self.return_code}, stderr: {self.stderr}"
-
 
 class OpenSearchHttpError(OpenSearchError):
     """Exception thrown when an OpenSearch REST call fails."""
