@@ -30,7 +30,8 @@ opensearch-observability
 opensearch-performance-analyzer
 opensearch-reports-scheduler
 opensearch-security
-opensearch-sql"""
+opensearch-sql
+"""
 
 
 class TestPlugin(OpenSearchPlugin):
