@@ -158,12 +158,12 @@ class OpenSearchDistribution(ABC):
         except (OpenSearchHttpError, Exception):
             return False
 
-    def run_bin(self, bin_script_name: str, args: str = None, input: str = None) -> str:
+    def run_bin(self, bin_script_name: str, args: str = None, stdin: str = None) -> str:
         """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin."""
         script_path = f"{self.paths.home}/bin/{bin_script_name}"
         self._run_cmd(f"chmod a+x {script_path}")
 
-        return self._run_cmd(script_path, args, input=input)
+        return self._run_cmd(script_path, args, stdin=stdin)
 
     def run_script(self, script_name: str, args: str = None):
         """Run script provided by Opensearch in another directory, relative to OPENSEARCH_HOME."""
@@ -310,13 +310,13 @@ class OpenSearchDistribution(ABC):
             f.write(data)
 
     @staticmethod
-    def _run_cmd(command: str, args: str = None, input: str = None) -> str:
+    def _run_cmd(command: str, args: str = None, stdin: str = None) -> str:
         """Run command.
 
         Arg:
             command: can contain arguments
             args: command line arguments
-            input: enter string to the process
+            stdin: enter string to the process
 
         Returns the stdout
         """
@@ -328,7 +328,7 @@ class OpenSearchDistribution(ABC):
         try:
             output = subprocess.run(
                 command,
-                input=input,
+                input=stdin,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 shell=True,
@@ -342,9 +342,9 @@ class OpenSearchDistribution(ABC):
 
             if output.returncode != 0:
                 logger.error(f"{command}:\n Stderr: {output.stderr}\n Stdout: {output.stdout}")
-                raise OpenSearchCmdError(returncode=output.returncode, stderr=output.stderr)
+                raise OpenSearchCmdError(output.stderr)
         except (TimeoutError, subprocess.TimeoutExpired):
-            raise OpenSearchCmdError(returncode=2, stderr="Timeout Error - command failed")
+            raise OpenSearchCmdError("Timeout Error - command failed")
         return output.stdout
 
     @abstractmethod

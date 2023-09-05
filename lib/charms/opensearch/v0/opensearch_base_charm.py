@@ -55,6 +55,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
@@ -124,6 +125,8 @@ class OpenSearchBaseCharm(CharmBase):
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.ops_lock = OpenSearchOpsLock(self)
+
+        self.opensearch_keystore = OpenSearchKeystore(self)
         self.plugin_manager = OpenSearchPluginManager(self)
 
         self.service_manager = RollingOpsManager(
@@ -409,7 +412,7 @@ class OpenSearchBaseCharm(CharmBase):
             self.on[PeerRelationName].relation_joined.emit(
                 self.model.get_relation(PeerRelationName)
             )
-        if self.opensearch.is_started() and self.plugin_manager.on_config_change():
+        if self.opensearch.is_started() and self.plugin_manager.run():
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
