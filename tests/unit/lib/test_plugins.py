@@ -37,6 +37,8 @@ opensearch-sql
 class TestPlugin(OpenSearchPlugin):
     """Overrides the OpenSearchPlugin and returns a is_enabled=True always."""
 
+    __test__ = False
+
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
 
@@ -73,6 +75,8 @@ class TestPlugin(OpenSearchPlugin):
 
 class TestPluginAlreadyInstalled(TestPlugin):
     """Overrides the OpenSearchPlugin and returns a is_enabled=True always."""
+
+    __test__ = False
 
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
