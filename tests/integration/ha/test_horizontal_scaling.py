@@ -180,7 +180,7 @@ async def test_safe_scale_down_shards_realloc(
 
     await ops_test.model.wait_for_idle(
         apps=[app],
-        status="waiting",
+        status="active",
         timeout=1000,
         wait_for_exact_units=init_units_count,
         idle_period=IDLE_PERIOD,
