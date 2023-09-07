@@ -106,15 +106,24 @@ class OpenSearchPlugin:
     def __init__(
         self,
         plugins_path: str,
+        opensearch_config: Optional[Dict[str, Any]] = {},
         os_version: Optional[str] = "",
         relation_data: Optional[Dict[str, Any]] = {},
     ):
-        """Creates the OpenSearchPlugin object."""
+        """Creates the OpenSearchPlugin object.
+
+        Arguments:
+          plugins_path: str, path to the plugins folder
+          opensearch_config: Dict, holds the opensearch config, to check if plugin is enabled
+          os_version: str, current OpenSearch version, to compare with plugin's
+          relation_data: Dict, databag available if this plugin depends on a relation
+        """
         self._plugins_path = plugins_path
         self._os_version = os_version
         self._relation_data = relation_data
         self._properties = Properties()
         self._depends_on = []
+        self._enabled = self._is_enabled(opensearch_config)
 
     @property
     def version(self) -> str:
@@ -169,10 +178,16 @@ class OpenSearchPlugin:
         pass
 
     @property
-    @abstractmethod
     def is_enabled(self) -> bool:
         """Runs any specific steps to check if the plugin is enabled."""
-        pass
+        return self._enabled
+
+    def _is_enabled(self, opensearch_config: Dict[str, Any]) -> None:
+        """Checks if the plugin is enabled based on configs set.
+
+        This method is ran only once, at initialization and should set self._enabled.
+        """
+        self._enabled = False
 
     def needs_upgrade(self) -> bool:
         """Returns if the plugin needs an upgrade or not.

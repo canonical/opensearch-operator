@@ -58,6 +58,7 @@ class OpenSearchPluginManager:
         return [
             plugin_data["class"](
                 self._plugins_path,
+                opensearch_config=self._opensearch_config.load_node(),
                 os_version=self._opensearch.version,
                 relation_data=self._charm.model.get_relation(plugin_data["relation-name"]).data
                 if plugin_data["relation-name"]
@@ -71,7 +72,7 @@ class OpenSearchPluginManager:
 
         This method should be called at config-changed event. Returns if needed restart.
         """
-        return self.install() or self.configure() or self.disable()
+        return any([self.install(), self.configure(), self.disable()])
 
     def install(self) -> bool:
         """Installs all the plugins enabled via the config/relation.
@@ -121,13 +122,15 @@ class OpenSearchPluginManager:
         return False
 
     def disable(self) -> bool:
-        """If enabled, removes plugin configuration or sets it to other values."""
+        """If disabled, removes plugin configuration or sets it to other values."""
         original_config = self._opensearch_config.load_node()
         for plugin in self.plugins:
-            if (
-                plugin.status != PluginState.ENABLED
-                or plugin.status != PluginState.WAITING_FOR_UPGRADE
-            ):
+            # Disable if customer requests
+            plugin_data = ConfigExposedPlugins[plugin.name]
+            if self._charm.config.get(
+                plugin_data["config-name"], None
+            ) or self._is_plugin_relation_set(plugin_data["relation-name"]):
+                # Customer did not asked to disable
                 continue
             self._opensearch_config.delete_plugin(plugin)
             self._keystore.delete(plugin.config()["keystore"])
