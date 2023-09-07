@@ -42,8 +42,8 @@ class TestPlugin(OpenSearchPlugin):
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
 
-    def __init__(self, plugins_path, os_version="", relation_data=None):
-        super().__init__(plugins_path, os_version, relation_data)
+    def __init__(self, plugins_path, opensearch_config, os_version="", relation_data=None):
+        super().__init__(plugins_path, opensearch_config, os_version, relation_data)
         self._depends_on = ["test-plugin-dependency"]
 
     @property
@@ -81,8 +81,8 @@ class TestPluginAlreadyInstalled(TestPlugin):
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
 
-    def __init__(self, plugins_path, os_version="", relation_data=None):
-        super().__init__(plugins_path, os_version, relation_data)
+    def __init__(self, plugins_path, opensearch_config, os_version="", relation_data=None):
+        super().__init__(plugins_path, opensearch_config, os_version, relation_data)
 
     @property
     def is_installed(self):
@@ -121,8 +121,9 @@ class TestOpenSearchPlugin(unittest.TestCase):
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     def test_install_plugin_and_check_status(
-        self, mock_version, mock_is_installed, mock_is_enabled
+        self, mock_load, mock_version, mock_is_installed, mock_is_enabled
     ) -> None:
         """Reconfigure the plugin at main configuration file."""
         mock_version.return_value = "2.8.0"
@@ -136,7 +137,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
-    def test_failed_install_plugin(self, mock_version) -> None:
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
+    def test_failed_install_plugin(self, _, mock_version) -> None:
         """Tests a failed command."""
         mock_version.return_value = "2.8.0"
         succeeded = False
@@ -157,7 +159,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
-    def test_failed_install_plugin_already_exists(self, mock_version) -> None:
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
+    def test_failed_install_plugin_already_exists(self, _, mock_version) -> None:
         """Tests a failed command when the plugin already exists."""
         mock_version.return_value = "2.8.0"
         succeeded = True
@@ -177,7 +180,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
-    def test_failed_install_plugin_missing_dependency(self, mock_version) -> None:
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
+    def test_failed_install_plugin_missing_dependency(self, _, mock_version) -> None:
         """Tests a failed install plugin because of missing dependency."""
         mock_version.return_value = "2.8.0"
         succeeded = False
@@ -197,11 +201,16 @@ class TestOpenSearchPlugin(unittest.TestCase):
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
-    def test_check_manager_if_plugins_need_upgrade(self, mock_request, mock_version) -> None:
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
+    def test_check_manager_if_plugins_need_upgrade(
+        self, _, mock_request, mock_load, mock_version
+    ) -> None:
         """Validates the plugin manager when checking for an upgrade."""
         mock_version.return_value = "2.8.0"
         mock_request.return_value = {"version": {"number": "3.0"}}
+        mock_load.return_value = {}
         assert self.plugin_manager.plugins_need_upgrade() == ["test"]
 
     @patch(
@@ -233,7 +242,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
                 "relation-name": None,
             },
         }
-        mock_load.side_effect = [{}, {"param": "tested"}]
+        mock_load.side_effect = [{}, {}, {"param": "tested"}]
         self.assertTrue(self.plugin_manager.configure())
         self.plugin_manager._keystore._add.assert_has_calls([call("key1", "secret1")])
         self.charm.opensearch.config.put.assert_has_calls(
@@ -251,8 +260,9 @@ class TestOpenSearchPlugin(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
     # Test the integration between opensearch_config and plugin
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     def test_plugin_setup_with_relation(
-        self, mock_put, mock_version, mock_load, mock_exists
+        self, _, mock_put, mock_version, mock_load, mock_exists
     ) -> None:
         """Triggers a config change and should call plugin manager."""
         mock_version.return_value = "2.8.0"
@@ -270,7 +280,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
             },
         }
         self.charm.model.get_relation = MagicMock()
-        mock_load.side_effect = [{}, {"param": "tested"}]
+        mock_load.side_effect = [{}, {}, {"param": "tested"}]
         self.assertTrue(self.plugin_manager.configure())
         self.plugin_manager._keystore._add.assert_has_calls([call("key1", "secret1")])
         self.charm.opensearch.config.put.assert_has_calls(
