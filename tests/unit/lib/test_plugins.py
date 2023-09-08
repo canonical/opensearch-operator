@@ -115,8 +115,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
             },
         }
 
-    @patch("test_plugins.TestPlugin.is_enabled", new_callable=PropertyMock)
-    @patch("test_plugins.TestPlugin.is_installed", new_callable=PropertyMock)
+    @patch("unit.lib.test_plugins.TestPlugin.is_enabled", new_callable=PropertyMock)
+    @patch("unit.lib.test_plugins.TestPlugin.is_installed", new_callable=PropertyMock)
     @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
