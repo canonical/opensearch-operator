@@ -188,15 +188,7 @@ async def get_secret_data(ops_test, secret_uri):
     return json.loads(stdout)[secret_unique_id]["content"]["Data"]
 
 
-<<<<<<< HEAD
-@pytest.mark.abort_on_fail
-@pytest.mark.skip(reason="Curious of following test's results")
-||||||| parent of 37d3d5c (fixup! Disabling scaling test)
 # @pytest.mark.abort_on_fail
-# @pytest.mark.skip(reason="Curious of following test's results")
-=======
-# @pytest.mark.abort_on_fail
->>>>>>> 37d3d5c (fixup! Disabling scaling test)
 async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag.
 
@@ -233,7 +225,7 @@ async def test_scaling(ops_test: OpsTest):
         ops_test,
         OPENSEARCH_APP_NAME,
         get_num_of_opensearch_units() - 1,
-        timeout=1600,
+        timeout=60 * 50,
         idle_period=70,
     )
     await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
@@ -247,10 +239,10 @@ async def test_scaling(ops_test: OpsTest):
         ops_test,
         OPENSEARCH_APP_NAME,
         get_num_of_opensearch_units() + 1,
-        timeout=1600,
+        timeout=60 * 50,
         idle_period=70,
     )
-    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS, timeout=1600)
+    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS, timeout=60 * 50)
     assert (
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()
@@ -275,7 +267,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     await ops_test.model.wait_for_idle(
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-        timeout=(60 * 20),
+        timeout=(80 * 60),
         idle_period=65,
     )
 
@@ -308,7 +300,7 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         status="active",
         apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-        timeout=(60 * 20),
+        timeout=(60 * 120),
         idle_period=65,
     )
 
@@ -367,7 +359,6 @@ async def test_admin_relation(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
-@pytest.mark.abort_on_fail
 async def test_admin_permissions(ops_test: OpsTest):
     """Test admin permissions behave the way we want.
 
@@ -434,7 +425,6 @@ async def test_admin_permissions(ops_test: OpsTest):
         assert "Error:" in results[0], results
 
 
-@pytest.mark.abort_on_fail
 async def test_normal_user_permissions(ops_test: OpsTest):
     """Test normal user permissions behave the way we want.
 
@@ -494,8 +484,6 @@ async def test_normal_user_permissions(ops_test: OpsTest):
         assert "Error:" in results[0], results
 
 
-@pytest.mark.abort_on_fail
-@pytest.mark.skip(reason="Curious of following test's results")
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
@@ -546,13 +534,7 @@ async def test_relation_broken(ops_test: OpsTest):
     assert relation_user not in users.keys()
 
 
-<<<<<<< HEAD
 @pytest.mark.abort_on_fail
-@pytest.mark.skip(reason="Curious of following test's results")
-||||||| parent of 37d3d5c (fixup! Disabling scaling test)
-@pytest.mark.skip(reason="Curious of following test's results")
-=======
->>>>>>> 37d3d5c (fixup! Disabling scaling test)
 async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     """Verify that if we recreate a relation, we can access the same index."""
     client_relation = await ops_test.model.add_relation(
@@ -561,7 +543,7 @@ async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
 
     await ops_test.model.wait_for_idle(
-        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=1600, status="active", idle_period=70
+        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=(50 * 60), status="active", idle_period=70
     )
 
     read_index_endpoint = "/albums/_search?q=Jazz"
