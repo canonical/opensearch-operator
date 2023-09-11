@@ -149,8 +149,8 @@ class OpenSearchPluginManager:
         """Returns True if user requested plugin to be enabled."""
         plugin_data = ConfigExposedPlugins[plugin.name]
         if not self._charm.config.get(
-            plugin_data["config-name"], None
-        ) and not self._is_plugin_relation_set(plugin_data["relation-name"]):
+            plugin_data["config"], None
+        ) and not self._is_plugin_relation_set(plugin_data["relation"]):
             # Customer asked to disable this plugin
             return False
         return True
@@ -179,8 +179,7 @@ class OpenSearchPluginManager:
     def _add_plugin(self, name: str) -> None:
         """Add a plugin to this node. Restart must be managed in separated."""
         try:
-            args = f"install --batch {name}"
-            self._opensearch.run_bin("opensearch-plugin", args)
+            self._opensearch.run_bin("opensearch-plugin", f"install --batch {name}")
         except OpenSearchCmdError as e:
             if "already exists" in str(e):
                 return
@@ -189,8 +188,7 @@ class OpenSearchPluginManager:
     def _remove_plugin(self, name: str) -> None:
         """Remove a plugin without restarting the node."""
         try:
-            args = f"remove {name}"
-            self._opensearch.run_bin("opensearch-plugin", args)
+            self._opensearch.run_bin("opensearch-plugin", f"remove {name}")
         except OpenSearchCmdError as e:
             if "not found" in str(e):
                 logger.warn("Plugin {name} not found, leaving remove method")
