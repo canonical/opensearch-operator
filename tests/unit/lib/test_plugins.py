@@ -9,6 +9,7 @@ import charms
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPlugin,
+    OpenSearchPluginConfig,
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingDepsError,
     PluginState,
@@ -52,7 +53,7 @@ class TestPlugin(OpenSearchPlugin):
         return "test"
 
     def config(self):
-        return {}
+        return OpenSearchPluginConfig()
 
     def upgrade(self, _: str) -> None:
         """Runs the upgrade process in this plugin."""
@@ -61,6 +62,9 @@ class TestPlugin(OpenSearchPlugin):
     @property
     def dependencies(self):
         return ["test-plugin-dependency"]
+
+    def disable(self):
+        return (OpenSearchPluginConfig(), OpenSearchPluginConfig())
 
 
 class TestPluginAlreadyInstalled(TestPlugin):
@@ -75,7 +79,17 @@ class TestPluginAlreadyInstalled(TestPlugin):
         super().__init__(plugins_path)
 
     def config(self):
-        return {"opensearch": {"param": "tested"}, "keystore": {"key1": "secret1"}}
+        return OpenSearchPluginConfig(
+            config_entries={"param": "tested"}, secret_entries={"key1": "secret1"}
+        )
+
+    def disable(self):
+        return (
+            OpenSearchPluginConfig(
+                config_entries={"param": "tested"}, secret_entries={"key1": "secret1"}
+            ),
+            OpenSearchPluginConfig(),
+        )
 
 
 class TestOpenSearchPlugin(unittest.TestCase):
@@ -323,4 +337,59 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_plugin_relation.assert_called_with("test-relation")
         self.plugin_manager._opensearch.request.assert_has_calls(
             [call("POST", "_nodes/reload_secure_settings")]
+        )
+
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
+    @patch(
+        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_plugin_relation_set"
+    )
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._list_plugins")
+    @patch(
+        "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
+        new_callable=PropertyMock,
+    )
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
+    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
+    def test_disable_plugin(
+        self,
+        _,
+        mock_load,
+        mock_exists,
+        mock_list_plugins,
+        mock_plugin_relation,
+        mock_is_enabled,
+    ) -> None:
+        """Tests end-to-end the disable of a plugin."""
+        mock_exists.return_value = True
+        # Keystore-related mocks
+        self.plugin_manager._keystore._add = MagicMock()
+        self.plugin_manager._keystore._delete = MagicMock()
+        self.plugin_manager._opensearch_config.delete_plugin = MagicMock()
+        self.plugin_manager._opensearch.request = MagicMock(return_value={"status": 200})
+
+        # Override the ConfigExposedPlugins with another class type
+        charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
+            "test": {
+                "class": TestPluginAlreadyInstalled,
+                "config": None,
+                "relation": "test-relation",
+            },
+        }
+        # Mock _list_plugins to return test
+        mock_list_plugins.return_value = ["test"]
+
+        # load_node will be called multiple times
+        mock_load.side_effect = [{"param": "tested"}, {}]
+        mock_plugin_relation.return_value = False
+        # plugin is initially disabled and enabled when method self._disable calls self.status
+        mock_is_enabled.side_effect = [
+            True,  # called by self.status, in self._install
+            True,  # called by self._configure
+            True,  # called by self.status, in self._disable
+        ]
+        self.assertTrue(self.plugin_manager.run())
+        self.plugin_manager._keystore._add.assert_not_called()
+        self.plugin_manager._keystore._delete.assert_called()
+        self.plugin_manager._opensearch_config.delete_plugin.assert_has_calls(
+            [call({"param": "tested"})]
         )
