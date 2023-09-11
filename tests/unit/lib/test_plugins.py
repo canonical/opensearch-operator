@@ -46,7 +46,6 @@ class TestPlugin(OpenSearchPlugin):
 
     def __init__(self, plugins_path):
         super().__init__(plugins_path)
-        self._depends_on = ["test-plugin-dependency"]
 
     @property
     def name(self):
@@ -58,6 +57,10 @@ class TestPlugin(OpenSearchPlugin):
     def upgrade(self, _: str) -> None:
         """Runs the upgrade process in this plugin."""
         raise NotImplementedError
+
+    @property
+    def dependencies(self):
+        return ["test-plugin-dependency"]
 
 
 class TestPluginAlreadyInstalled(TestPlugin):
@@ -93,8 +96,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
         charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
             "test": {
                 "class": TestPlugin,
-                "config-name": "plugin_test",
-                "relation-name": None,
+                "config": "plugin_test",
+                "relation": None,
             },
         }
 
@@ -233,8 +236,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
         charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
             "test": {
                 "class": TestPluginAlreadyInstalled,
-                "config-name": "plugin_test",
-                "relation-name": None,
+                "config": "plugin_test",
+                "relation": None,
             },
         }
         # Mock _list_plugins to return test
@@ -296,8 +299,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
         charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
             "test": {
                 "class": TestPluginAlreadyInstalled,
-                "config-name": None,
-                "relation-name": "test-relation",
+                "config": None,
+                "relation": "test-relation",
             },
         }
         # Mock _list_plugins to return test

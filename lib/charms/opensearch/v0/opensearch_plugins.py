@@ -50,7 +50,7 @@ For a new plugin, add the plugin to the list of "ConfigExposedPlugins" available
 in opensearch_plugin_manager.py and override the abstract OpenSearchPlugin.
 
 Add a new configuration in the config.yaml with "plugin_" as prefix to its name.
-Add the corresponding config-name to the ConfigExposedPlugins.
+Add the corresponding config to the ConfigExposedPlugins.
 
 If a given plugin depends on a relation, e.g. repository-s3, then add relation name
 as well. For example:
@@ -58,8 +58,8 @@ as well. For example:
         ...
         "opensearch-knn": {
             "class": OpenSearchPlugin,
-            "config-name": "plugin_opensearch_knn",
-            "relation-name": ""
+            "config": "plugin_opensearch_knn",
+            "relation": ""
         },
     }
 """
@@ -148,29 +148,26 @@ class OpenSearchPlugin:
         """
         self._plugins_path = plugins_path
         self._properties = Properties()
-        self._depends_on = []
 
     @property
     def version(self) -> str:
-        """Returns the current version of the plugin."""
+        """Returns the current version of the plugin.
+
+        Returns: str, string with the version code for this plugin
+        Raises:
+            FileNotFoundError: if plugin file is not present
+            PermissionError: if plugin file is present, but not set with correct permissions
+        """
         plugin_props_path = os.path.join(f"{self._plugins_path}", f"{self.PLUGIN_PROPERTIES}")
-        try:
-            with open(plugin_props_path) as f:
-                self._properties.load(f.read())
-        except FileNotFoundError:
-            raise OpenSearchPluginError(f"Plugin is missing - not found: {plugin_props_path}")
-        except PermissionError:
-            raise OpenSearchPluginError(
-                f"Plugin incorrectly installed - permission denied: {plugin_props_path}"
-            )
-        except Exception:
-            raise OpenSearchPluginError("Plugin Error - Unknown reason")
+        with open(plugin_props_path) as f:
+            self._properties.load(f.read())
         return self._properties._properties["version"]
 
     @property
+    @abstractmethod
     def dependencies(self) -> List[str]:
         """Returns a list of plugin name dependencies."""
-        return self._depends_on
+        pass
 
     @abstractmethod
     def config(self) -> Dict[str, Dict[str, str]]:
