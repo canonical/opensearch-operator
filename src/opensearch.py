@@ -48,6 +48,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             with attempt:
                 cache = snap.SnapCache()
                 self._opensearch = cache["opensearch"]
+                self._snapd = cache["snapd"]
 
     @retry(
         stop=stop_after_attempt(3),
@@ -61,8 +62,10 @@ class OpenSearchSnap(OpenSearchDistribution):
             return
 
         try:
+            self._snapd.ensure(snap.SnapState.Latest, channel="latest/stable")
             self._opensearch.ensure(snap.SnapState.Latest, channel="edge")
             self._opensearch.connect("process-control")
+            self._opensearch.connect("shmem-perf-analyzer")
         except SnapError as e:
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()

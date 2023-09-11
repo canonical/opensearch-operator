@@ -83,13 +83,40 @@ async def create_index(
     index_name: str,
     p_shards: int = 1,
     r_shards: int = 1,
+    extra_index_settings: Dict[str, Any] = {},
+    extra_mappings: Dict[str, Any] = {},
 ) -> None:
-    """Create an index with a set number of primary and replica shards."""
+    """Create an index with a set number of primary and replica shards.
+
+    Optionally, add extra settings and mappings to the new index.
+    """
+    content = {
+        "settings": {"index": {"number_of_shards": p_shards, "number_of_replicas": r_shards}}
+    }
+    if extra_index_settings:
+        content["settings"]["index"] = {**content["settings"]["index"], **extra_index_settings}
+    if extra_mappings:
+        content["mappings"] = extra_mappings
     await http_request(
         ops_test,
         "PUT",
         f"https://{unit_ip}:9200/{index_name}",
-        {"settings": {"index": {"number_of_shards": p_shards, "number_of_replicas": r_shards}}},
+        content,
+        app=app,
+    )
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
+async def bulk_insert(ops_test: OpsTest, app: str, unit_ip: str, payload: str) -> None:
+    """Insert a set of docs in a single bulk request."""
+    await http_request(
+        ops_test,
+        "PUT",
+        f"https://{unit_ip}:9200/_bulk",
+        payload=payload,
         app=app,
     )
 
@@ -155,6 +182,41 @@ async def search(
 
     resp = await http_request(ops_test, "GET", endpoint, payload=query, app=app)
     return resp["hits"]["hits"]
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
+async def set_knn_training(
+    ops_test: OpsTest,
+    app: str,
+    unit_ip: str,
+    model_name: str,
+    payload: Dict[str, Any],
+) -> Optional[List[Dict[str, Any]]]:
+    """Sets models."""
+    endpoint = f"https://{unit_ip}:9200/_plugins/_knn/models/{model_name}/_train"
+
+    resp = await http_request(ops_test, "POST", endpoint, payload=payload, app=app)
+    return resp
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
+async def wait_for_knn_training(
+    ops_test: OpsTest,
+    app: str,
+    unit_ip: str,
+    model_name: str,
+) -> bool:
+    """Train models."""
+    endpoint = f"https://{unit_ip}:9200/_plugins/_knn/models/{model_name}"
+
+    resp = await http_request(ops_test, "GET", endpoint, app=app)
+    return "created" in resp.get("state", "")
 
 
 @retry(
