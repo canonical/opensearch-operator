@@ -90,6 +90,42 @@ class OpenSearchPluginError(OpenSearchError):
     """Exception thrown when an opensearch plugin is invalid."""
 
 
+class OpenSearchPluginMissingDepsError(OpenSearchPluginError):
+    """Exception thrown when an opensearch plugin misses installed dependencies."""
+
+    def __init__(self, name: str, missing_dependencies: List[str]):
+        self._deps = missing_dependencies
+        self._name = name
+
+    def __str__(self):
+        """Converts exception to a string."""
+        return f"Failed to install {self._name}, missing dependencies: {self._deps}"
+
+
+class OpenSearchPluginInstallError(OpenSearchPluginError):
+    """Exception thrown when opensearch plugin installation fails."""
+
+    def __init__(self, name: str, msg: str):
+        self._msg = msg
+        self._name = name
+
+    def __str__(self):
+        """Converts exception to a string."""
+        return f"Failed to install plugin {self._name}: {self._msg}"
+
+
+class OpenSearchPluginRemoveError(OpenSearchPluginError):
+    """Exception thrown when opensearch plugin removal fails."""
+
+    def __init__(self, name: str, msg: str):
+        self._msg = msg
+        self._name = name
+
+    def __str__(self):
+        """Converts exception to a string."""
+        return f"Failed to remove plugin {self._name}: {self._msg}"
+
+
 class PluginState(BaseStrEnum):
     """Enum for the states possible in plugins' lifecycle."""
 
@@ -103,7 +139,6 @@ class OpenSearchPlugin:
     """Abstract class describing an OpenSearch plugin."""
 
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
-    CONFIG_YML = "opensearch.yml"
 
     def __init__(self, plugins_path: str):
         """Creates the OpenSearchPlugin object.
@@ -143,7 +178,7 @@ class OpenSearchPlugin:
 
         Format:
         {
-            "opensearch.yml": {...},
+            "opensearch": {...},
             "keystore": {...},
         }
         """

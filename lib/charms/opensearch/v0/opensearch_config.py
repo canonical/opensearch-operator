@@ -9,7 +9,6 @@ from typing import Any, Dict, List
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import normalized_tls_subject
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin
 
 # The unique Charmhub library identifier, never change it
 LIBID = "b02ab02d4fd644fdabe02c61e509093f"
@@ -192,22 +191,22 @@ class OpenSearchConfig:
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
 
-    def get_plugin(self, plugin: OpenSearchPlugin) -> Dict[str, Any]:
+    def get_plugin(self, plugin_config: Dict[str, str]) -> Dict[str, Any]:
         """Gets a list of configurations from opensearch.yml."""
         result = {}
         loaded_configs = self.load_node()
-        for key in plugin.config()[self.CONFIG_YML].keys():
+        for key in plugin_config.keys():
             result[key] = loaded_configs.get(key, None)
         return result
 
-    def add_plugin(self, plugin: OpenSearchPlugin) -> None:
+    def add_plugin(self, plugin_config: Dict[str, str]) -> None:
         """Adds a plugin configurations into opensearch.yml."""
-        for key, val in plugin.config()[self.CONFIG_YML].items():
+        for key, val in plugin_config.items():
             self._opensearch.config.put(self.CONFIG_YML, key, val)
 
-    def delete_plugin(self, plugin: OpenSearchPlugin) -> None:
+    def delete_plugin(self, plugin_config: Dict[str, str]) -> None:
         """Adds a plugin configurations into opensearch.yml."""
-        for key, val in plugin.config()[self.CONFIG_YML]:
+        for key, val in plugin_config.items():
             self._opensearch.config.delete(self.CONFIG_YML, key, val)
 
     def update_host_if_needed(self) -> bool:
