@@ -195,8 +195,9 @@ class OpenSearchConfig:
     def get_plugin(self, plugin: OpenSearchPlugin) -> Dict[str, Any]:
         """Gets a list of configurations from opensearch.yml."""
         result = {}
+        loaded_configs = self.load_node()
         for key in plugin.config()[self.CONFIG_YML].keys():
-            result[key] = self._opensearch.config.get(key, None)
+            result[key] = loaded_configs.get(key, None)
         return result
 
     def add_plugin(self, plugin: OpenSearchPlugin) -> None:

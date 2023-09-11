@@ -12,8 +12,8 @@ from typing import Dict, List
 import requests
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
+    OpenSearchError,
     OpenSearchHttpError,
-    OpenSearchKeystoreError,
 )
 
 # The unique Charmhub library identifier, never change it
@@ -28,6 +28,10 @@ LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
+
+
+class OpenSearchKeystoreError(OpenSearchError):
+    """Exception thrown when an opensearch keystore is invalid."""
 
 
 class OpenSearchKeystore:
