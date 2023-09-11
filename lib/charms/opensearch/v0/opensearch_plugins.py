@@ -67,7 +67,7 @@ as well. For example:
 import logging
 import os
 from abc import abstractmethod
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
@@ -135,6 +135,18 @@ class PluginState(BaseStrEnum):
     WAITING_FOR_UPGRADE = "waiting-for-upgrade"
 
 
+class OpenSearchPluginConfig:
+    """Represents the default configuration for a plugin."""
+
+    def __init__(
+        self,
+        config_entries: Optional[Dict[str, Any]] = None,
+        secret_entries: Optional[Dict[str, str]] = None,
+    ):
+        self.config_entries = config_entries
+        self.secret_entries = secret_entries
+
+
 class OpenSearchPlugin:
     """Abstract class describing an OpenSearch plugin."""
 
@@ -170,26 +182,24 @@ class OpenSearchPlugin:
         pass
 
     @abstractmethod
-    def config(self) -> Dict[str, Dict[str, str]]:
+    def config(self) -> OpenSearchPluginConfig:
         """Returns a dict containing all the configuration needed to be applied in the form.
 
         Format:
-        {
-            "opensearch": {...},
-            "keystore": {...},
-        }
+        OpenSearchPluginConfig(
+            self.config_entries = {...},
+            self.secret_entries = {...},
+        )
         """
         pass
 
-    def disable(self) -> Dict[str, Any]:
-        """Returns a dict containing different config changes.
+    def disable(self) -> Tuple[OpenSearchPluginConfig, OpenSearchPluginConfig]:
+        """Returns a tuple composed of configs that should be removed and ones to add.
 
-        The dict should return:
-        (1) all the configs to remove
-        (2) all the configs to add
-        (3) all the keystore values to be remmoved.
+        The tuple is formatted as follows
+        (<Configuration to be removed>, <Configuration to be added>)
         """
-        return {"to_remove_opensearch": [], "to_add_opensearch": [], "to_remove_keystore": []}
+        pass
 
     @property
     @abstractmethod

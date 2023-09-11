@@ -201,11 +201,15 @@ class OpenSearchConfig:
 
     def add_plugin(self, plugin_config: Dict[str, str]) -> None:
         """Adds a plugin configurations into opensearch.yml."""
+        if not plugin_config:
+            return
         for key, val in plugin_config.items():
             self._opensearch.config.put(self.CONFIG_YML, key, val)
 
     def delete_plugin(self, plugin_config: Dict[str, str]) -> None:
         """Adds a plugin configurations into opensearch.yml."""
+        if not plugin_config:
+            return
         for key, val in plugin_config.items():
             self._opensearch.config.delete(self.CONFIG_YML, key, val)
 

@@ -81,6 +81,9 @@ class OpenSearchPluginManager:
 
         # Compare configurations, if there was a change, request a restart
         new_config = self._opensearch_config.load_node()
+        if original_config and not new_config:
+            # Different values, as new_config is empty
+            return True
         for c in new_config.keys():
             if c not in original_config or new_config[c] != original_config[c]:
                 return True
@@ -113,8 +116,8 @@ class OpenSearchPluginManager:
             # Leave this method if either user did not request to enable this plugin
             # or plugin has been already enabled.
             return
-        self._opensearch_config.add_plugin(plugin.config()["opensearch"])
-        self._keystore.add(plugin.config()["keystore"])
+        self._opensearch_config.add_plugin(plugin.config().config_entries)
+        self._keystore.add(plugin.config().secret_entries)
 
     def _disable(self, plugin: OpenSearchPlugin) -> None:
         """If disabled, removes plugin configuration or sets it to other values."""
@@ -122,8 +125,13 @@ class OpenSearchPluginManager:
             # Only considering "available" status as it represents a plugin that has
             # been installed but either not yet configured or user explicitly disabled.
             return
-        self._opensearch_config.delete_plugin(plugin.config()["opensearch"])
-        self._keystore.delete(plugin.config()["keystore"])
+        config_to_remove, config_to_add = plugin.disable()
+        if config_to_remove:
+            self._opensearch_config.delete_plugin(config_to_remove.config_entries)
+            self._keystore.delete(config_to_remove.secret_entries)
+        if config_to_add:
+            self._opensearch_config.add_plugin(config_to_add.config_entries)
+            self._keystore.add(config_to_add.secret_entries)
 
     def plugins_need_upgrade(self) -> List[OpenSearchPlugin]:
         """Returns a list of plugins that need upgrade."""
@@ -158,9 +166,9 @@ class OpenSearchPluginManager:
     def _is_enabled(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is enabled."""
         # If not requested to be disabled, check if options are configured or not
-        os_yaml = self._opensearch_config.get_plugin(plugin.config()["opensearch"])
+        os_yaml = self._opensearch_config.get_plugin(plugin.config().config_entries)
         for config, param in os_yaml.items():
-            if plugin.config()["opensearch"].get(config) != param:
+            if plugin.config().config_entries.get(config) != param:
                 return False
         return True
 
