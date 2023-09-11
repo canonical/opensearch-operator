@@ -100,11 +100,3 @@ class OpenSearchSecretError(OpenSearchError):
 
 class OpenSearchSecretInsertionError(OpenSearchSecretError):
     """Exception thrown when a secret (group) was not found."""
-
-
-class OpenSearchPluginError(OpenSearchError):
-    """Exception thrown when an opensearch plugin is invalid."""
-
-
-class OpenSearchKeystoreError(OpenSearchError):
-    """Exception thrown when an opensearch keystore is invalid."""

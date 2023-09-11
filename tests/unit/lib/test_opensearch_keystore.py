@@ -5,10 +5,8 @@
 import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
-from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchCmdError,
-    OpenSearchKeystoreError,
-)
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreError
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm

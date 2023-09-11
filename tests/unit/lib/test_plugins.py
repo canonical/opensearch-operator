@@ -6,11 +6,12 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import charms
-from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchCmdError,
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchPlugin,
     OpenSearchPluginError,
+    PluginState,
 )
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin, PluginState
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -42,27 +43,16 @@ class TestPlugin(OpenSearchPlugin):
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
 
-    def __init__(self, plugins_path, opensearch_config, os_version="", relation_data=None):
-        super().__init__(plugins_path, opensearch_config, os_version, relation_data)
+    def __init__(self, plugins_path):
+        super().__init__(plugins_path)
         self._depends_on = ["test-plugin-dependency"]
 
     @property
     def name(self):
         return "test"
 
-    @property
-    def is_installed(self):
-        return False
-
-    def install(self):
-        return
-
     def config(self):
         return {}
-
-    @property
-    def is_enabled(self):
-        return False
 
     def disable(self) -> bool:
         """This method is not used."""
@@ -81,12 +71,8 @@ class TestPluginAlreadyInstalled(TestPlugin):
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
 
-    def __init__(self, plugins_path, opensearch_config, os_version="", relation_data=None):
-        super().__init__(plugins_path, opensearch_config, os_version, relation_data)
-
-    @property
-    def is_installed(self):
-        return True
+    def __init__(self, plugins_path):
+        super().__init__(plugins_path)
 
     def config(self):
         return {self.CONFIG_YML: {"param": "tested"}, "keystore": {"key1": "secret1"}}
@@ -115,8 +101,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
             },
         }
 
-    @patch("unit.lib.test_plugins.TestPlugin.is_enabled", new_callable=PropertyMock)
-    @patch("unit.lib.test_plugins.TestPlugin.is_installed", new_callable=PropertyMock)
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.is_enabled")
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.is_installed")
     @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
@@ -131,7 +117,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_is_enabled.return_value = True
         test_plugin = self.plugin_manager.plugins[0]
         assert test_plugin.version == "2.9.0.0"
-        assert test_plugin.status == PluginState.WAITING_FOR_UPGRADE
+        assert self.plugin_manager.status(test_plugin) == PluginState.WAITING_FOR_UPGRADE
 
     @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
@@ -213,6 +199,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_load.return_value = {}
         assert self.plugin_manager.plugins_need_upgrade() == ["test"]
 
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._list_plugins")
     @patch(
         "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
         new_callable=PropertyMock,
@@ -222,7 +209,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
     # Test the integration between opensearch_config and plugin
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
     def test_reconfigure_add_keystore_plugin(
-        self, mock_put, mock_version, mock_load, mock_exists
+        self, mock_put, mock_version, mock_load, mock_exists, mock_list_plugins
     ) -> None:
         """Reconfigure the keystore only.
 
@@ -242,6 +229,9 @@ class TestOpenSearchPlugin(unittest.TestCase):
                 "relation-name": None,
             },
         }
+        # Mock _list_plugins to return test
+        mock_list_plugins.return_value = ["test"]
+
         mock_load.side_effect = [{}, {}, {"param": "tested"}]
         self.assertTrue(self.plugin_manager.configure())
         self.plugin_manager._keystore._add.assert_has_calls([call("key1", "secret1")])
@@ -253,6 +243,10 @@ class TestOpenSearchPlugin(unittest.TestCase):
         )
 
     @patch(
+        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_plugin_relation_set"
+    )
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._list_plugins")
+    @patch(
         "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
         new_callable=PropertyMock,
     )
@@ -262,7 +256,14 @@ class TestOpenSearchPlugin(unittest.TestCase):
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     def test_plugin_setup_with_relation(
-        self, _, mock_put, mock_version, mock_load, mock_exists
+        self,
+        _,
+        mock_put,
+        mock_version,
+        mock_load,
+        mock_exists,
+        mock_list_plugins,
+        mock_plugin_relation,
     ) -> None:
         """Triggers a config change and should call plugin manager."""
         mock_version.return_value = "2.8.0"
@@ -279,13 +280,18 @@ class TestOpenSearchPlugin(unittest.TestCase):
                 "relation-name": "test-relation",
             },
         }
+        # Mock _list_plugins to return test
+        mock_list_plugins.return_value = ["test"]
+
         self.charm.model.get_relation = MagicMock()
         mock_load.side_effect = [{}, {}, {"param": "tested"}]
+        mock_plugin_relation.return_value = True
         self.assertTrue(self.plugin_manager.configure())
         self.plugin_manager._keystore._add.assert_has_calls([call("key1", "secret1")])
         self.charm.opensearch.config.put.assert_has_calls(
             [call(self.charm.opensearch_config.CONFIG_YML, "param", "tested")]
         )
+        mock_plugin_relation.assert_called_once()
         self.plugin_manager._opensearch.request.assert_has_calls(
             [call("POST", "_nodes/reload_secure_settings")]
         )

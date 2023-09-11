@@ -49,8 +49,6 @@ The meaning of each step is, as follows:
 For a new plugin, add the plugin to the list of "ConfigExposedPlugins" available
 in opensearch_plugin_manager.py and override the abstract OpenSearchPlugin.
 
-Optionally, PluginState can also be overridden to add more status.
-
 Add a new configuration in the config.yaml with "plugin_" as prefix to its name.
 Add the corresponding config-name to the ConfigExposedPlugins.
 
@@ -69,10 +67,10 @@ as well. For example:
 import logging
 import os
 from abc import abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchPluginError
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from jproperties import Properties
 
 # The unique Charmhub library identifier, never change it
@@ -86,6 +84,10 @@ LIBAPI = 0
 LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
+
+
+class OpenSearchPluginError(OpenSearchError):
+    """Exception thrown when an opensearch plugin is invalid."""
 
 
 class PluginState(BaseStrEnum):
@@ -103,27 +105,15 @@ class OpenSearchPlugin:
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
     CONFIG_YML = "opensearch.yml"
 
-    def __init__(
-        self,
-        plugins_path: str,
-        opensearch_config: Optional[Dict[str, Any]] = {},
-        os_version: Optional[str] = "",
-        relation_data: Optional[Dict[str, Any]] = {},
-    ):
+    def __init__(self, plugins_path: str):
         """Creates the OpenSearchPlugin object.
 
         Arguments:
           plugins_path: str, path to the plugins folder
-          opensearch_config: Dict, holds the opensearch config, to check if plugin is enabled
-          os_version: str, current OpenSearch version, to compare with plugin's
-          relation_data: Dict, databag available if this plugin depends on a relation
         """
         self._plugins_path = plugins_path
-        self._os_version = os_version
-        self._relation_data = relation_data
         self._properties = Properties()
         self._depends_on = []
-        self._enabled = self._is_enabled(opensearch_config)
 
     @property
     def version(self) -> str:
@@ -148,24 +138,6 @@ class OpenSearchPlugin:
         return self._depends_on
 
     @abstractmethod
-    def install(self) -> Any:
-        """Executes any additional steps needed for the installation.
-
-        Should only execute steps that are not covered in PluginManager.
-        """
-        pass
-
-    @property
-    def is_installed(self) -> bool:
-        """Check if plugin is installed by checking if plugin properties file exists."""
-        try:
-            # Consider it is installed if properties file is present and readable.
-            _ = self.version
-        except Exception:
-            return False
-        return True
-
-    @abstractmethod
     def config(self) -> Dict[str, Dict[str, str]]:
         """Returns a dict containing all the configuration needed to be applied in the form.
 
@@ -177,35 +149,6 @@ class OpenSearchPlugin:
         """
         pass
 
-    @property
-    def is_enabled(self) -> bool:
-        """Runs any specific steps to check if the plugin is enabled."""
-        return self._enabled
-
-    def _is_enabled(self, opensearch_config: Dict[str, Any]) -> None:
-        """Checks if the plugin is enabled based on configs set.
-
-        This method is ran only once, at initialization and should set self._enabled.
-        """
-        self._enabled = False
-
-    def needs_upgrade(self) -> bool:
-        """Returns if the plugin needs an upgrade or not.
-
-        Needs upgrade must be set if an upgrade on the charm happens and plugins must
-        be updated.
-
-        Consider overriding this method only if the plugin needs an special care at upgrade.
-        """
-        current_version = self.version
-        num_points = len(self._os_version.split("."))
-        return self._os_version != current_version[:num_points]
-
-    @abstractmethod
-    def upgrade(self, uri: str) -> Any:
-        """Runs specific extra steps for upgrade for this plugin."""
-        pass
-
     def disable(self) -> Dict[str, Any]:
         """Returns a dict containing different config changes.
 
@@ -215,17 +158,6 @@ class OpenSearchPlugin:
         (3) all the keystore values to be remmoved.
         """
         return {"to_remove_opensearch": [], "to_add_opensearch": [], "to_remove_keystore": []}
-
-    @property
-    def status(self) -> PluginState:
-        """Returns the current state of the plugin."""
-        if not self.is_installed:
-            return PluginState.MISSING
-        if not self.is_enabled:
-            return PluginState.AVAILABLE
-        if self.needs_upgrade:
-            return PluginState.WAITING_FOR_UPGRADE
-        return PluginState.ENABLED
 
     @property
     @abstractmethod

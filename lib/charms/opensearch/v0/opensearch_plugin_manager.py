@@ -11,13 +11,14 @@ config-changed, upgrade, s3-credentials-changed, etc.
 """
 
 import logging
-from typing import Dict, List
+from typing import List
 
-from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchCmdError,
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchPlugin,
     OpenSearchPluginError,
+    PluginState,
 )
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin, PluginState
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -39,6 +40,8 @@ ConfigExposedPlugins = {}
 class OpenSearchPluginManager:
     """Manages plugins."""
 
+    CONFIG_YML = "opensearch.yml"
+
     def __init__(self, charm, plugins_path: str = None):
         """Creates the plugin manager object based on the charm and home_path.
 
@@ -58,11 +61,6 @@ class OpenSearchPluginManager:
         return [
             plugin_data["class"](
                 self._plugins_path,
-                opensearch_config=self._opensearch_config.load_node(),
-                os_version=self._opensearch.version,
-                relation_data=self._charm.model.get_relation(plugin_data["relation-name"]).data
-                if plugin_data["relation-name"]
-                else None,
             )
             for _, plugin_data in ConfigExposedPlugins.items()
         ]
@@ -86,7 +84,7 @@ class OpenSearchPluginManager:
             plugin_data = ConfigExposedPlugins[plugin.name]
             config_name = plugin_data["config-name"]
             relation_name = plugin_data["relation-name"]
-            if plugin.status == PluginState.MISSING and (
+            if self.status(plugin) == PluginState.MISSING and (
                 (config_name and self._charm_config[config_name])
                 or self._is_plugin_relation_set(relation_name)
             ):
@@ -98,8 +96,6 @@ class OpenSearchPluginManager:
                     )
                 # Execute the installation
                 self._add_plugin(plugin.name)
-                # Call any specifics for post-installation
-                plugin.install()
                 needs_restart = True
         return needs_restart
 
@@ -110,7 +106,7 @@ class OpenSearchPluginManager:
         """
         original_config = self._opensearch_config.load_node()
         for plugin in self.plugins:
-            if plugin.status != PluginState.AVAILABLE:
+            if self.status(plugin) != PluginState.AVAILABLE:
                 continue
             self._opensearch_config.add_plugin(plugin)
             self._keystore.add(plugin.config()["keystore"])
@@ -126,11 +122,9 @@ class OpenSearchPluginManager:
         original_config = self._opensearch_config.load_node()
         for plugin in self.plugins:
             # Disable if customer requests
-            plugin_data = ConfigExposedPlugins[plugin.name]
-            if self._charm.config.get(
-                plugin_data["config-name"], None
-            ) or self._is_plugin_relation_set(plugin_data["relation-name"]):
-                # Customer did not asked to disable
+            if self.is_enabled(plugin):
+                # Customer did not ask to disable it OR there is no configuration
+                # applied to openserch.yaml config
                 continue
             self._opensearch_config.delete_plugin(plugin)
             self._keystore.delete(plugin.config()["keystore"])
@@ -141,23 +135,47 @@ class OpenSearchPluginManager:
                 return True
         return False
 
-    def status(self) -> Dict[PluginState, List[str]]:
-        """Returns a dict summarizing the status of each plugin.
+    def status(self, plugin: OpenSearchPlugin) -> PluginState:
+        """Returns the status for a given plugin."""
+        if not self.is_installed(plugin):
+            return PluginState.MISSING
+        if not self.is_enabled(plugin):
+            return PluginState.AVAILABLE
+        if self.needs_upgrade(plugin):
+            return PluginState.WAITING_FOR_UPGRADE
+        return PluginState.ENABLED
 
-        It can be converted to str and used in the message status or for logging.
-        """
-        full_status = {}
-        for plugin in self.plugins:
-            stat = plugin.status
-            if isinstance(full_status[stat], list):
-                full_status[stat].append(plugin.name)
-            else:
-                full_status[stat] = [plugin.name]
-        return full_status
+    def is_installed(self, plugin: OpenSearchPlugin) -> bool:
+        """Returns true if plugin is installed."""
+        if plugin.name in self._list_plugins():
+            return True
+        return False
+
+    def is_enabled(self, plugin: OpenSearchPlugin) -> bool:
+        """Returns true if plugin is enabled."""
+        # First, check if customer asked to disable the plugin
+        plugin_data = ConfigExposedPlugins[plugin.name]
+        if not self._charm.config.get(
+            plugin_data["config-name"], None
+        ) and not self._is_plugin_relation_set(plugin_data["relation-name"]):
+            # Customer asked to disable this plugin
+            return False
+
+        # If not requested to be disabled, check if options are configured or not
+        for config, param in self._opensearch_config.get_plugin(plugin).items():
+            if plugin.config()[self.CONFIG_YML].get(config) != param:
+                return False
+        return True
+
+    def needs_upgrade(self, plugin: OpenSearchPlugin) -> bool:
+        """Returns true if plugin needs upgrade."""
+        current_version = plugin.version
+        num_points = len(self._opensearch.version.split("."))
+        return self._opensearch.version != current_version[:num_points]
 
     def plugins_need_upgrade(self) -> List[OpenSearchPlugin]:
         """Returns a list of plugins that need upgrade."""
-        return [plugin.name for plugin in self.plugins if plugin.needs_upgrade]
+        return [plugin.name for plugin in self.plugins if self.needs_upgrade(plugin)]
 
     def _is_plugin_relation_set(self, relation_name: str) -> bool:
         """Returns True if a relation is expected and it is set."""
@@ -165,7 +183,7 @@ class OpenSearchPluginManager:
             return True
         return len(self._charm.framework.model.relations[relation_name] or {}) > 0
 
-    def _add_plugin(self, plugin: str) -> bool:
+    def _add_plugin(self, plugin: str) -> None:
         """Add a plugin to this node. Restart must be managed in separated."""
         try:
             args = f"install --batch {plugin}"
@@ -175,7 +193,7 @@ class OpenSearchPluginManager:
                 return
             raise OpenSearchPluginError(f"Failed to install plugin {plugin}: " + str(e))
 
-    def _remove_plugin(self, plugin):
+    def _remove_plugin(self, plugin: str) -> None:
         """Remove a plugin without restarting the node."""
         try:
             args = f"remove {plugin}"
@@ -186,7 +204,7 @@ class OpenSearchPluginManager:
                 return
             raise OpenSearchPluginError(f"Failed to remove plugin {plugin}: " + str(e))
 
-    def _list_plugins(self):
+    def _list_plugins(self) -> List[str]:
         """List plugins."""
         try:
             return list(
