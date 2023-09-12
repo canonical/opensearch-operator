@@ -46,22 +46,158 @@ The meaning of each step is, as follows:
 ========================================================================================
 
 
+Every plugin is defined either by a configuration parameter or a relation passed to the
+OpenSearch charm. When enabled, a class named "OpenSearchPluginManager" will allocate
+the OpenSearchPlugin and pass the config/relation data to be processed by the new plugin
+class.
+
+
+The development of a new plugin should be broken into 3x classes:
+1) The OpenSearchPlugin, that represents everything related to the configuration
+2) Optionally, the OpenSearchPluginConfig, a data class that contains the configuration
+   options as dicts
+3) Optionally, a charm-level class, that should be managed directly by the charm and is
+   is used to handle the APIs and relation events
+
+
+One example:
+
+
+from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchPlugin,
+    OpenSearchPluginConfig
+)
+
+
+class MyPluginConfig(OpenSearchPluginConfig):
+    def __init__(
+        self,
+        config_entries: Optional[Dict[str, Any]] = None,
+        secret_entries: Optional[Dict[str, str]] = None,
+        some_extra_config: ... = None
+    ):
+        super().__init__(config_entries, secret_entries)
+        self.some_extra_config = some_extra_config
+
+
+class MyPlugin(OpenSearchPlugin):
+
+    PLUGIN_PROPERTIES = "plugin-descriptor.properties"
+
+    def __init__(self, plugins_path: str, extra_config: Dict[str, Any] = None):
+        super().__init__(plugins_path, extra_config)
+
+        # self._extra_config is defined in the super constructor above
+        # Plugin Manager will always pass either the config value or the
+
+        ...
+
+    @property
+    def dependencies(self) -> List[str]:
+        return [...] # List of names of plugins that MyPlugin needs before installation
+
+    def config(self) -> OpenSearchPluginConfig:
+        # Use the self._extra_config to retrieve any extra configuration.
+
+        return MyPluginConfig(
+            config_entries={...}, # Key-value pairs to be added to opensearch.yaml
+            secret_entries={...}  # Key-value pairs to be added to opensearch-keystore
+        )
+
+    def disable(self) -> Tuple[OpenSearchPluginConfig, OpenSearchPluginConfig]:
+        # Use the self._extra_config to retrieve any extra configuration.
+
+        return (
+            MyPluginConfig(...), # Configuration to be removed from yaml/keystore
+            MyPluginConfig(...)  # Configuration to be added, e.g. in the case we need
+                                 # to restore original values or set the plugin config
+                                 # as false
+
+    @property
+    def name(self) -> str:
+        return "my-plugin"
+
+
+-------------------
+
 For a new plugin, add the plugin to the list of "ConfigExposedPlugins" available
 in opensearch_plugin_manager.py and override the abstract OpenSearchPlugin.
 
 Add a new configuration in the config.yaml with "plugin_" as prefix to its name.
-Add the corresponding config to the ConfigExposedPlugins.
-
-If a given plugin depends on a relation, e.g. repository-s3, then add relation name
-as well. For example:
+Add the corresponding config to the ConfigExposedPlugins. For example:
     ConfigExposedPlugins = {
         ...
         "opensearch-knn": {
             "class": OpenSearchPlugin,
             "config": "plugin_opensearch_knn",
-            "relation": ""
+            "relation": None
         },
     }
+
+If a given plugin depends on a relation, e.g. repository-s3, then add relation name
+instead:
+    ConfigExposedPlugins = {
+        ...
+        "repository-s3": {
+            "class": MyOpenSearchBackupPlugin,
+            "config": None,
+            "relation": "backup-relation"
+        },
+    }
+
+
+-------------------
+
+In case the plugin depends on API calls to finish configuration or a relation to be
+configured, create an extra class at the charm level to manage plugin events:
+
+
+class MyPlugin(Object):
+
+    def __init__(self, charm: OpenSearchBaseCharm, relation_name: str):
+        super().__init__(charm, relation_name)
+        self._charm = charm
+        self._relation_name = relation_name
+
+        self.my_client = MyPluginRelationRequirer(self.charm, relation_name)
+        self.framework.observe(
+            self.charm.on[relation_name].relation_departed, self.on_change
+        )
+
+    def on_change(self, event):
+        ...
+        # Call the plugin manager to process the new relation data
+        self._charm.plugin_manager.run()
+
+
+...
+
+
+class OpenSearchBaseCharm(CharmBase):
+
+    def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
+        ...
+
+        self.my_plugin = MyPlugin(self)
+
+    ...
+
+    def _on_update_status(self, event):
+        ...
+
+        # Check my plugin status
+        if self.model.get_relation("my-plugin-relation") is not None:
+            self.unit.status = self.my_plugin.status()
+
+        for relation in self.model.relations.get(ClientRelationName, []):
+            self.opensearch_provider.update_endpoints(relation)
+
+        self.user_manager.remove_users_and_roles()
+        # If relation not broken - leave
+        if self.model.get_relation("certificates") is not None:
+            return
+        # handle when/if certificates are expired
+        self._check_certs_expiration(event)
 """
 
 import logging
@@ -152,13 +288,16 @@ class OpenSearchPlugin:
 
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
 
-    def __init__(self, plugins_path: str):
+    def __init__(self, plugins_path: str, extra_config: Dict[str, Any] = None):
         """Creates the OpenSearchPlugin object.
 
         Arguments:
           plugins_path: str, path to the plugins folder
+          extra_config: dict, contains the data coming from either the config option
+                              or the relation bag
         """
         self._plugins_path = plugins_path
+        self._extra_config = extra_config
         self._properties = Properties()
 
     @property
@@ -193,6 +332,7 @@ class OpenSearchPlugin:
         """
         pass
 
+    @abstractmethod
     def disable(self) -> Tuple[OpenSearchPluginConfig, OpenSearchPluginConfig]:
         """Returns a tuple composed of configs that should be removed and ones to add.
 

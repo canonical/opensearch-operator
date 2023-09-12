@@ -11,7 +11,7 @@ config-changed, upgrade, s3-credentials-changed, etc.
 """
 
 import logging
-from typing import List
+from typing import Any, Dict, List
 
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_plugins import (
@@ -61,10 +61,24 @@ class OpenSearchPluginManager:
         """Returns List of installed plugins."""
         return [
             plugin_data["class"](
-                self._plugins_path,
+                self._plugins_path, extra_config=self._process_plugin_extra_config(plugin_data)
             )
             for _, plugin_data in ConfigExposedPlugins.items()
         ]
+
+    def _process_plugin_extra_config(self, plugin_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Returns either the config or relation data for the target plugin."""
+        if plugin_data["relation"]:
+            if self._is_plugin_relation_set(plugin_data["relation"]):
+                result = {}
+                relation = self._charm.framework.model.relations[plugin_data["relation"]]
+                for i in range(len(relation)):
+                    result = {**relation[i].data, **result}
+                return result
+            return {}
+        # Relation is not defined, return config value then
+        config = plugin_data["config"]
+        return {config: self._charm_config[config]}
 
     def run(self) -> bool:
         """Runs a check on each plugin: install, execute config changes or remove.

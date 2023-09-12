@@ -45,8 +45,8 @@ class TestPlugin(OpenSearchPlugin):
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
 
-    def __init__(self, plugins_path):
-        super().__init__(plugins_path)
+    def __init__(self, plugins_path, extra_config):
+        super().__init__(plugins_path, extra_config)
 
     @property
     def name(self):
@@ -75,8 +75,8 @@ class TestPluginAlreadyInstalled(TestPlugin):
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
 
-    def __init__(self, plugins_path):
-        super().__init__(plugins_path)
+    def __init__(self, plugins_path, extra_config):
+        super().__init__(plugins_path, extra_config)
 
     def config(self):
         return OpenSearchPluginConfig(
@@ -280,6 +280,9 @@ class TestOpenSearchPlugin(unittest.TestCase):
         "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
         new_callable=PropertyMock,
     )
+    @patch(
+        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._process_plugin_extra_config"
+    )
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
     # Test the integration between opensearch_config and plugin
@@ -289,6 +292,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_put,
         _,
         mock_load,
+        mock_process_relation,
         mock_exists,
         mock_list_plugins,
         mock_plugin_relation,
@@ -304,6 +308,9 @@ class TestOpenSearchPlugin(unittest.TestCase):
         # As there is no real plugin, mock the config option
         config = {"param": "tested"}
         mock_put.return_value = config
+
+        # Return a fake content of the relation
+        mock_process_relation.return_value = {"param": "tested"}
 
         # Keystore-related mocks
         self.plugin_manager._keystore._add = MagicMock()
