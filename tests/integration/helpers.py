@@ -543,3 +543,9 @@ async def scale_application(
         wait_for_exact_units=count,
         idle_period=idle_period,
     )
+
+
+def juju_version_major() -> int:
+    """Fetch the juju version."""
+    version = subprocess.run(["juju", "--version"], check=True, stdout=subprocess.PIPE).stdout
+    return int(version.strip().decode("utf-8").split(".")[0])
