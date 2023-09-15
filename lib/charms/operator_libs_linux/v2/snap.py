@@ -79,11 +79,11 @@ logger = logging.getLogger(__name__)
 LIBID = "05394e5893f94f2d90feb7cbe6b633cd"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 1
+LIBAPI = 2
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 12
+LIBPATCH = 2
 
 
 # Regex to locate 7-bit C1 ANSI sequences
@@ -222,7 +222,7 @@ class Snap(object):
         name,
         state: SnapState,
         channel: str,
-        revision: int,
+        revision: str,
         confinement: str,
         apps: Optional[List[Dict[str, str]]] = None,
         cohort: Optional[str] = "",
@@ -273,13 +273,13 @@ class Snap(object):
           SnapError if there is a problem encountered
         """
         optargs = optargs or []
-        _cmd = ["snap", command, self._name, *optargs]
+        args = ["snap", command, self._name, *optargs]
         try:
-            return subprocess.check_output(_cmd, universal_newlines=True)
+            return subprocess.check_output(args, universal_newlines=True)
         except CalledProcessError as e:
             raise SnapError(
                 "Snap: {!r}; command {!r} failed with output = {!r}".format(
-                    self._name, _cmd, e.output
+                    self._name, args, e.output
                 )
             )
 
@@ -303,30 +303,45 @@ class Snap(object):
         else:
             services = [self._name]
 
-        _cmd = ["snap", *command, *services]
+        args = ["snap", *command, *services]
 
         try:
-            return subprocess.run(_cmd, universal_newlines=True, check=True, capture_output=True)
+            return subprocess.run(args, universal_newlines=True, check=True, capture_output=True)
         except CalledProcessError as e:
-            raise SnapError("Could not {} for snap [{}]: {}".format(_cmd, self._name, e.stderr))
+            raise SnapError("Could not {} for snap [{}]: {}".format(args, self._name, e.stderr))
 
-    def get(self, key) -> str:
-        """Fetch a snap configuration value.
+    def get(self, key: Optional[str], *, typed: bool = False) -> Any:
+        """Fetch snap configuration values.
 
         Args:
-            key: the key to retrieve
+            key: the key to retrieve. Default to retrieve all values for typed=True.
+            typed: set to True to retrieve typed values (set with typed=True).
+                Default is to return a string.
         """
+        if typed:
+            config = json.loads(self._snap("get", ["-d", key]))
+            if key:
+                return config.get(key)
+            return config
+
+        if not key:
+            raise TypeError("Key must be provided when typed=False")
+
         return self._snap("get", [key]).strip()
 
-    def set(self, config: Dict) -> str:
+    def set(self, config: Dict[str, Any], *, typed: bool = False) -> str:
         """Set a snap configuration value.
 
         Args:
            config: a dictionary containing keys and values specifying the config to set.
+           typed: set to True to convert all values in the config into typed values while
+                configuring the snap (set with typed=True). Default is not to convert.
         """
-        args = ['{}="{}"'.format(key, val) for key, val in config.items()]
+        if typed:
+            kv = [f"{key}={json.dumps(val)}" for key, val in config.items()]
+            return self._snap("set", ["-t"] + kv)
 
-        return self._snap("set", [*args])
+        return self._snap("set", [f"{key}={val}" for key, val in config.items()])
 
     def unset(self, key) -> str:
         """Unset a snap configuration value.
@@ -387,11 +402,11 @@ class Snap(object):
         elif slot:
             command = command + [slot]
 
-        _cmd = ["snap", *command]
+        args = ["snap", *command]
         try:
-            subprocess.run(_cmd, universal_newlines=True, check=True, capture_output=True)
+            subprocess.run(args, universal_newlines=True, check=True, capture_output=True)
         except CalledProcessError as e:
-            raise SnapError("Could not {} for snap [{}]: {}".format(_cmd, self._name, e.stderr))
+            raise SnapError("Could not {} for snap [{}]: {}".format(args, self._name, e.stderr))
 
     def hold(self, duration: Optional[timedelta] = None) -> None:
         """Add a refresh hold to a snap.
@@ -409,13 +424,32 @@ class Snap(object):
         """Remove the refresh hold of a snap."""
         self._snap("refresh", ["--unhold"])
 
+    def alias(self, application: str, alias: Optional[str] = None) -> None:
+        """Create an alias for a given application.
+
+        Args:
+            application: application to get an alias.
+            alias: (optional) name of the alias; if not provided, the application name is used.
+        """
+        if alias is None:
+            alias = application
+        args = ["snap", "alias", f"{self.name}.{application}", alias]
+        try:
+            subprocess.check_output(args, universal_newlines=True)
+        except CalledProcessError as e:
+            raise SnapError(
+                "Snap: {!r}; command {!r} failed with output = {!r}".format(
+                    self._name, args, e.output
+                )
+            )
+
     def restart(
         self, services: Optional[List[str]] = None, reload: Optional[bool] = False
     ) -> None:
         """Restarts a snap's services.
 
         Args:
-            services (list): (optional) list of individual snap services to show logs from.
+            services (list): (optional) list of individual snap services to restart.
                 (otherwise all)
             reload (bool): (optional) flag to use the service reload command, if available.
                 Default `False`
@@ -427,7 +461,7 @@ class Snap(object):
         self,
         channel: Optional[str] = "",
         cohort: Optional[str] = "",
-        revision: Optional[int] = None,
+        revision: Optional[str] = None,
     ) -> None:
         """Add a snap to the system.
 
@@ -454,7 +488,7 @@ class Snap(object):
         self,
         channel: Optional[str] = "",
         cohort: Optional[str] = "",
-        revision: Optional[int] = None,
+        revision: Optional[str] = None,
         leave_cohort: Optional[bool] = False,
     ) -> None:
         """Refresh a snap.
@@ -498,7 +532,7 @@ class Snap(object):
         classic: Optional[bool] = False,
         channel: Optional[str] = "",
         cohort: Optional[str] = "",
-        revision: Optional[int] = None,
+        revision: Optional[str] = None,
     ):
         """Ensure that a snap is in a given state.
 
@@ -575,7 +609,7 @@ class Snap(object):
         self._state = state
 
     @property
-    def revision(self) -> int:
+    def revision(self) -> str:
         """Returns the revision for a snap."""
         return self._revision
 
@@ -828,7 +862,7 @@ class SnapCache(Mapping):
                 name=i["name"],
                 state=SnapState.Latest,
                 channel=i["channel"],
-                revision=int(i["revision"]),
+                revision=i["revision"],
                 confinement=i["confinement"],
                 apps=i.get("apps", None),
             )
@@ -846,7 +880,7 @@ class SnapCache(Mapping):
             name=info["name"],
             state=SnapState.Available,
             channel=info["channel"],
-            revision=int(info["revision"]),
+            revision=info["revision"],
             confinement=info["confinement"],
             apps=None,
         )
@@ -859,7 +893,7 @@ def add(
     channel: Optional[str] = "",
     classic: Optional[bool] = False,
     cohort: Optional[str] = "",
-    revision: Optional[int] = None,
+    revision: Optional[str] = None,
 ) -> Union[Snap, List[Snap]]:
     """Add a snap to the system.
 
@@ -871,7 +905,7 @@ def add(
         classic: an (Optional) boolean specifying whether it should be added with classic
             confinement. Default `False`
         cohort: an (Optional) string specifying the snap cohort to use
-        revision: an (Optional) integer specifying the snap revision to use
+        revision: an (Optional) string specifying the snap revision to use
 
     Raises:
         SnapError if some snaps failed to install or were not found.
@@ -879,11 +913,11 @@ def add(
     if not channel and not revision:
         channel = "latest"
 
-    snap_names = [snap_names] if type(snap_names) is str else snap_names
+    snap_names = [snap_names] if isinstance(snap_names, str) else snap_names
     if not snap_names:
         raise TypeError("Expected at least one snap to add, received zero!")
 
-    if type(state) is str:
+    if isinstance(state, str):
         state = SnapState(state)
 
     return _wrap_snap_operations(snap_names, state, channel, classic, cohort, revision)
@@ -899,7 +933,7 @@ def remove(snap_names: Union[str, List[str]]) -> Union[Snap, List[Snap]]:
     Raises:
         SnapError if some snaps failed to install.
     """
-    snap_names = [snap_names] if type(snap_names) is str else snap_names
+    snap_names = [snap_names] if isinstance(snap_names, str) else snap_names
     if not snap_names:
         raise TypeError("Expected at least one snap to add, received zero!")
 
@@ -947,7 +981,7 @@ def _wrap_snap_operations(
     channel: str,
     classic: bool,
     cohort: Optional[str] = "",
-    revision: Optional[int] = None,
+    revision: Optional[str] = None,
 ) -> Union[Snap, List[Snap]]:
     """Wrap common operations for bare commands."""
     snaps = {"success": [], "failed": []}
@@ -992,17 +1026,17 @@ def install_local(
     Raises:
         SnapError if there is a problem encountered
     """
-    _cmd = [
+    args = [
         "snap",
         "install",
         filename,
     ]
     if classic:
-        _cmd.append("--classic")
+        args.append("--classic")
     if dangerous:
-        _cmd.append("--dangerous")
+        args.append("--dangerous")
     try:
-        result = subprocess.check_output(_cmd, universal_newlines=True).splitlines()[-1]
+        result = subprocess.check_output(args, universal_newlines=True).splitlines()[-1]
         snap_name, _ = result.split(" ", 1)
         snap_name = ansi_filter.sub("", snap_name)
 
@@ -1026,9 +1060,9 @@ def _system_set(config_item: str, value: str) -> None:
         config_item: name of snap system setting. E.g. 'refresh.hold'
         value: value to assign
     """
-    _cmd = ["snap", "set", "system", "{}={}".format(config_item, value)]
+    args = ["snap", "set", "system", "{}={}".format(config_item, value)]
     try:
-        subprocess.check_call(_cmd, universal_newlines=True)
+        subprocess.check_call(args, universal_newlines=True)
     except CalledProcessError:
         raise SnapError("Failed setting system config '{}' to '{}'".format(config_item, value))
 

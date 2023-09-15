@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Helper functions for data related tests, such as indexing, searching etc.."""
+import logging
 from random import randint
 from typing import Any, Dict, List, Optional
 
@@ -10,6 +11,8 @@ from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.helpers import http_request
+
+logger = logging.getLogger(__name__)
 
 
 @retry(
@@ -23,6 +26,9 @@ async def create_dummy_indexes(
     for index_id in range(count):
         p_shards = index_id % 2 + 2
         r_shards = max_r_shards if p_shards == 2 else max_r_shards - 1
+        logger.info(
+            f"Creating: index_{index_id} -- number_of_shards: {p_shards} -- number_of_replicas: {r_shards}"
+        )
         await http_request(
             ops_test,
             "PUT",
@@ -32,6 +38,30 @@ async def create_dummy_indexes(
                     "index": {"number_of_shards": p_shards, "number_of_replicas": r_shards}
                 }
             },
+            app=app,
+        )
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
+async def update_dummy_indexes(
+    ops_test: OpsTest, app: str, unit_ip: str, max_r_shards: int, count: int = 5
+) -> None:
+    """Update the replication factors of dummy indexes."""
+    for index_id in range(count):
+        p_shards = index_id % 2 + 2
+        r_shards = max_r_shards if p_shards == 2 else max_r_shards - 1
+        logger.info(
+            f"Updating: index_{index_id} -- number_of_shards: {p_shards} -- number_of_replicas: {r_shards}"
+        )
+
+        await http_request(
+            ops_test,
+            "PUT",
+            f"https://{unit_ip}:9200/index_{index_id}/_settings",
+            {"index": {"number_of_replicas": r_shards}},
             app=app,
         )
 
