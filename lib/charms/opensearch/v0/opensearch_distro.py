@@ -343,9 +343,9 @@ class OpenSearchDistribution(ABC):
             if output.returncode != 0:
                 logger.error(f"{command}:\n Stderr: {output.stderr}\n Stdout: {output.stdout}")
                 raise OpenSearchCmdError(output.stderr)
-        except (TimeoutError, subprocess.TimeoutExpired):
-            raise OpenSearchCmdError("Timeout Error - command failed")
-        return output.stdout
+        except (TimeoutError, subprocess.TimeoutExpired) as e:
+            raise OpenSearchCmdError(e)
+        return output.stdout.strip()
 
     @abstractmethod
     def _build_paths(self) -> Paths:

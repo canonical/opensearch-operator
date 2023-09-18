@@ -3,7 +3,7 @@
 
 """Unit test for the opensearch_plugins library."""
 import unittest
-from unittest.mock import MagicMock, PropertyMock, call, patch
+from unittest.mock import MagicMock, call
 
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreError
@@ -25,13 +25,8 @@ class TestOpenSearchKeystore(unittest.TestCase):
         self.charm = self.harness.charm
         self.keystore = self.charm.opensearch_keystore
 
-    @patch(
-        "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
-        new_callable=PropertyMock,
-    )
-    def test_list_except_keystore_not_found(self, mock_exists):
+    def test_list_except_keystore_not_found(self):
         """Throws exception for missing file when calling list."""
-        mock_exists.return_value = True
         self.charm.opensearch.run_bin = MagicMock(
             side_effect=OpenSearchCmdError(
                 "ERROR: OpenSearch keystore not found at ["
@@ -49,23 +44,13 @@ class TestOpenSearchKeystore(unittest.TestCase):
             # We may reach this point because of another exception, check it:
             assert succeeded is True
 
-    @patch(
-        "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
-        new_callable=PropertyMock,
-    )
-    def test_keystore_list(self, mock_exists):
+    def test_keystore_list(self):
         """Tests opensearch-keystore list with real output."""
-        mock_exists.return_value = True
         self.charm.opensearch.run_bin = MagicMock(return_value=RETURN_LIST_KEYSTORE)
         assert ["key1", "key2", "keystore.seed"] == self.keystore.list()
 
-    @patch(
-        "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
-        new_callable=PropertyMock,
-    )
-    def test_keystore_add_keypair(self, mock_exists) -> None:
+    def test_keystore_add_keypair(self) -> None:
         """Add data to keystore."""
-        mock_exists.return_value = True
         self.charm.opensearch.request = MagicMock(return_value={"status": 200})
         self.charm.opensearch.run_bin = MagicMock(return_value="")
         self.keystore.add({"key1": "secret1"})

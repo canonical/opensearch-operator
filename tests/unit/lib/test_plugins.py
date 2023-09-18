@@ -145,10 +145,10 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.charm.opensearch._run_cmd = MagicMock(
             side_effect=OpenSearchCmdError("this is a test")
         )
-        self.plugin_manager._list_plugins = MagicMock(return_value=["test-plugin-dependency"])
+        self.plugin_manager._installed_plugins = MagicMock(return_value=["test-plugin-dependency"])
         try:
             test_plugin = self.plugin_manager.plugins[0]
-            self.plugin_manager._install(test_plugin)
+            self.plugin_manager._install_if_needed(test_plugin)
         except OpenSearchPluginInstallError as e:
             assert str(e) == "Failed to install plugin test: this is a test"
             succeeded = True
@@ -167,10 +167,10 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.charm.opensearch._run_cmd = MagicMock(
             side_effect=OpenSearchCmdError("this is a test - already exists")
         )
-        self.plugin_manager._list_plugins = MagicMock(return_value=["test-plugin-dependency"])
+        self.plugin_manager._installed_plugins = MagicMock(return_value=["test-plugin-dependency"])
         try:
             test_plugin = self.plugin_manager.plugins[0]
-            self.plugin_manager._install(test_plugin)
+            self.plugin_manager._install_if_needed(test_plugin)
         except Exception:
             # We are interested on any exception
             succeeded = False
@@ -188,7 +188,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.charm.opensearch._run_cmd = MagicMock(return_value=RETURN_LIST_PLUGINS)
         try:
             test_plugin = self.plugin_manager.plugins[0]
-            self.plugin_manager._install(test_plugin)
+            self.plugin_manager._install_if_needed(test_plugin)
         except OpenSearchPluginMissingDepsError as e:
             assert (
                 str(e)
@@ -211,37 +211,19 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.plugin_manager.run.assert_called()
 
     @patch(
-        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
-        new_callable=PropertyMock,
-    )
-    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
-    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
-    def test_check_manager_if_plugins_need_upgrade(
-        self, mock_request, mock_load, mock_version
-    ) -> None:
-        """Validates the plugin manager when checking for an upgrade."""
-        mock_version.return_value = "2.8.0"
-        mock_request.return_value = {"version": {"number": "3.0"}}
-        mock_load.return_value = {}
-        assert self.plugin_manager.plugins_need_upgrade() == ["test"]
-
-    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._list_plugins")
-    @patch(
-        "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
-        new_callable=PropertyMock,
+        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._installed_plugins"
     )
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
     # Test the integration between opensearch_config and plugin
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
     def test_reconfigure_and_add_keystore_plugin(
-        self, mock_put, _, mock_load, mock_exists, mock_list_plugins
+        self, mock_put, _, mock_load, mock_installed_plugins
     ) -> None:
         """Reconfigure the opensearch.yaml and keystore.
 
         Should trigger a restart and, hence, run() must return True.
         """
-        mock_exists.return_value = True
         config = {"param": "tested"}
         mock_put.return_value = config
         self.plugin_manager._keystore._add = MagicMock()
@@ -254,8 +236,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
                 "relation": None,
             },
         }
-        # Mock _list_plugins to return test
-        mock_list_plugins.return_value = ["test"]
+        # Mock _installed_plugins to return test
+        mock_installed_plugins.return_value = ["test"]
 
         mock_load.side_effect = [{}, {}, {"param": "tested"}]
         # run is called, but only _configure method really matter:
@@ -275,14 +257,10 @@ class TestOpenSearchPlugin(unittest.TestCase):
     @patch(
         "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_plugin_relation_set"
     )
-    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._list_plugins")
     @patch(
-        "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
-        new_callable=PropertyMock,
+        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._installed_plugins"
     )
-    @patch(
-        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._process_plugin_extra_config"
-    )
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._extra_conf")
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
     # Test the integration between opensearch_config and plugin
@@ -293,18 +271,16 @@ class TestOpenSearchPlugin(unittest.TestCase):
         _,
         mock_load,
         mock_process_relation,
-        mock_exists,
-        mock_list_plugins,
+        mock_installed_plugins,
         mock_plugin_relation,
         mock_is_enabled,
     ) -> None:
         """Tests end-to-end the feature.
 
         Mock _is_plugin_relation_set=True and will execute every step of run() method.
-        The plugin is considered installed, but not enabled. Therefore, _list_plugins must
+        The plugin is considered installed, but not enabled. Therefore, _installed_plugins must
         return the plugin name in its list; whereas _is_enabled is set to False.
         """
-        mock_exists.return_value = True
         # As there is no real plugin, mock the config option
         config = {"param": "tested"}
         mock_put.return_value = config
@@ -324,8 +300,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
                 "relation": "test-relation",
             },
         }
-        # Mock _list_plugins to return test
-        mock_list_plugins.return_value = ["test"]
+        # Mock _installed_plugins to return test
+        mock_installed_plugins.return_value = ["test"]
 
         # load_node will be called multiple times
         mock_load.side_effect = [{}, {"param": "tested"}]
@@ -346,14 +322,13 @@ class TestOpenSearchPlugin(unittest.TestCase):
             [call("POST", "_nodes/reload_secure_settings")]
         )
 
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._extra_conf")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
     @patch(
         "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_plugin_relation_set"
     )
-    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._list_plugins")
     @patch(
-        "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.exists",
-        new_callable=PropertyMock,
+        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._installed_plugins"
     )
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
@@ -361,13 +336,12 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self,
         _,
         mock_load,
-        mock_exists,
-        mock_list_plugins,
+        mock_installed_plugins,
         mock_plugin_relation,
         mock_is_enabled,
+        mock_extra_conf,
     ) -> None:
         """Tests end-to-end the disable of a plugin."""
-        mock_exists.return_value = True
         # Keystore-related mocks
         self.plugin_manager._keystore._add = MagicMock()
         self.plugin_manager._keystore._delete = MagicMock()
@@ -382,8 +356,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
                 "relation": "test-relation",
             },
         }
-        # Mock _list_plugins to return test
-        mock_list_plugins.return_value = ["test"]
+        # Mock _installed_plugins to return test
+        mock_installed_plugins.return_value = ["test"]
 
         # load_node will be called multiple times
         mock_load.side_effect = [{"param": "tested"}, {}]
