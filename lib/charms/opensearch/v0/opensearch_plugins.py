@@ -26,7 +26,7 @@ upgrade, uninstall, etc).
 
 The plugin lifecycle runs through the following steps:
 
-MISSING (not installed yet) > AVAILABLE (plugin installed, but not configured yet) >
+MISSING (not installed yet) > INSTALLED (plugin installed, but not configured yet) >
 ENABLED (configuration has been applied) > WAITING_FOR_UPGRADE (if an upgrade is needed)
 > ENABLED (back to enabled state once upgrade has been applied)
 
@@ -201,7 +201,6 @@ class OpenSearchBaseCharm(CharmBase):
 """
 
 import logging
-import os
 from abc import abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -229,44 +228,20 @@ class OpenSearchPluginError(OpenSearchError):
 class OpenSearchPluginMissingDepsError(OpenSearchPluginError):
     """Exception thrown when an opensearch plugin misses installed dependencies."""
 
-    def __init__(self, name: str, missing_dependencies: List[str]):
-        self._deps = missing_dependencies
-        self._name = name
-
-    def __str__(self):
-        """Converts exception to a string."""
-        return f"Failed to install {self._name}, missing dependencies: {self._deps}"
-
 
 class OpenSearchPluginInstallError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin installation fails."""
 
-    def __init__(self, name: str, msg: str):
-        self._msg = msg
-        self._name = name
-
-    def __str__(self):
-        """Converts exception to a string."""
-        return f"Failed to install plugin {self._name}: {self._msg}"
-
 
 class OpenSearchPluginRemoveError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin removal fails."""
-
-    def __init__(self, name: str, msg: str):
-        self._msg = msg
-        self._name = name
-
-    def __str__(self):
-        """Converts exception to a string."""
-        return f"Failed to remove plugin {self._name}: {self._msg}"
 
 
 class PluginState(BaseStrEnum):
     """Enum for the states possible in plugins' lifecycle."""
 
     MISSING = "missing"
-    AVAILABLE = "available"
+    INSTALLED = "installed"
     ENABLED = "enabled"
     WAITING_FOR_UPGRADE = "waiting-for-upgrade"
 
@@ -296,9 +271,8 @@ class OpenSearchPlugin:
           extra_config: dict, contains the data coming from either the config option
                               or the relation bag
         """
-        self._plugins_path = plugins_path
+        self._plugins_path = f"{plugins_path}/{self.PLUGIN_PROPERTIES}"
         self._extra_config = extra_config
-        self._properties = Properties()
 
     @property
     def version(self) -> str:
@@ -309,16 +283,16 @@ class OpenSearchPlugin:
             FileNotFoundError: if plugin file is not present
             PermissionError: if plugin file is present, but not set with correct permissions
         """
-        plugin_props_path = os.path.join(f"{self._plugins_path}", f"{self.PLUGIN_PROPERTIES}")
-        with open(plugin_props_path) as f:
-            self._properties.load(f.read())
-        return self._properties._properties["version"]
+        properties = Properties()
+        with open(self._plugins_path) as f:
+            properties.load(f.read())
+        return properties._properties["version"]
 
     @property
     @abstractmethod
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> Optional[List[str]]:
         """Returns a list of plugin name dependencies."""
-        pass
+        return None
 
     @abstractmethod
     def config(self) -> OpenSearchPluginConfig:
