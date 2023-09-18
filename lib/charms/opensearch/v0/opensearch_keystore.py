@@ -78,9 +78,8 @@ class OpenSearchKeystore:
             raise OpenSearchKeystoreError(str(e))
 
     def _delete(self, key: str):
-        args = f"remove {key}"
         try:
-            self._opensearch.run_bin("opensearch-keystore", args)
+            self._opensearch.run_bin("opensearch-keystore", f"remove {key}")
         except OpenSearchCmdError as e:
             if "does not exist in the keystore" in str(e):
                 logger.info(

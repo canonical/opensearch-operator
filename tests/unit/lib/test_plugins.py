@@ -64,7 +64,7 @@ class TestPlugin(OpenSearchPlugin):
         return ["test-plugin-dependency"]
 
     def disable(self):
-        return (OpenSearchPluginConfig(), OpenSearchPluginConfig())
+        return OpenSearchPluginConfig()
 
 
 class TestPluginAlreadyInstalled(TestPlugin):
@@ -80,15 +80,14 @@ class TestPluginAlreadyInstalled(TestPlugin):
 
     def config(self):
         return OpenSearchPluginConfig(
-            config_entries={"param": "tested"}, secret_entries={"key1": "secret1"}
+            config_entries_on_enable={"param": "tested"},
+            secret_entries_on_enable={"key1": "secret1"},
         )
 
     def disable(self):
-        return (
-            OpenSearchPluginConfig(
-                config_entries={"param": "tested"}, secret_entries={"key1": "secret1"}
-            ),
-            OpenSearchPluginConfig(),
+        return OpenSearchPluginConfig(
+            config_entries_on_disable={"param": "tested"},
+            secret_entries_on_disable={"key1": "secret1"},
         )
 
 

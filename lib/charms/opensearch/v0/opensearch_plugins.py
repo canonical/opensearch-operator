@@ -70,14 +70,19 @@ from charms.opensearch.v0.opensearch_plugins import (
 
 
 class MyPluginConfig(OpenSearchPluginConfig):
-    def __init__(
-        self,
-        config_entries: Optional[Dict[str, Any]] = None,
-        secret_entries: Optional[Dict[str, str]] = None,
-        some_extra_config: ... = None
-    ):
-        super().__init__(config_entries, secret_entries)
-        self.some_extra_config = some_extra_config
+
+    config_entries_on_enable: Dict[str, str] = {
+        ... key, values to add to the config as plugin gets enabled ...
+    }
+    config_entries_on_disable: Dict[str, str] = {
+        ... key, values to remove to the config as plugin gets disabled ...
+    }
+    secret_entries_on_enable: Dict[str, str] = {
+        ... key, values to add to to keystore as plugin gets enabled ...
+    }
+    secret_entries_on_disable: Dict[str, str] = {
+        ... key, values to remove from keystore as plugin gets disabled ...
+    }
 
 
 class MyPlugin(OpenSearchPlugin):
@@ -202,11 +207,12 @@ class OpenSearchBaseCharm(CharmBase):
 
 import logging
 from abc import abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, NamedTuple, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from jproperties import Properties
+
 
 # The unique Charmhub library identifier, never change it
 LIBID = "3b05456c6e304680b4af8e20dae246a2"
@@ -246,16 +252,13 @@ class PluginState(BaseStrEnum):
     WAITING_FOR_UPGRADE = "waiting-for-upgrade"
 
 
-class OpenSearchPluginConfig:
+class OpenSearchPluginConfig(NamedTuple):
     """Represents the default configuration for a plugin."""
 
-    def __init__(
-        self,
-        config_entries: Optional[Dict[str, Any]] = None,
-        secret_entries: Optional[Dict[str, str]] = None,
-    ):
-        self.config_entries = config_entries
-        self.secret_entries = secret_entries
+    config_entries_on_enable: Dict[str, str] = {}
+    config_entries_on_disable: Dict[str, str] = {}
+    secret_entries_on_enable: Dict[str, str] = {}
+    secret_entries_on_disable: Dict[str, str] = {}
 
 
 class OpenSearchPlugin:
@@ -296,22 +299,29 @@ class OpenSearchPlugin:
 
     @abstractmethod
     def config(self) -> OpenSearchPluginConfig:
-        """Returns a dict containing all the configuration needed to be applied in the form.
+        """Returns OpenSearchPluginConfig composed of configs used at plugin addition.
 
         Format:
         OpenSearchPluginConfig(
-            self.config_entries = {...},
-            self.secret_entries = {...},
+            config_entries_on_enable = {...},
+            config_entries_on_disable = {...},
+            secret_entries_on_enable = {...},
+            secret_entries_on_disable = {...},
         )
         """
         pass
 
     @abstractmethod
-    def disable(self) -> Tuple[OpenSearchPluginConfig, OpenSearchPluginConfig]:
-        """Returns a tuple composed of configs that should be removed and ones to add.
+    def disable(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin removal.
 
-        The tuple is formatted as follows
-        (<Configuration to be removed>, <Configuration to be added>)
+        Format:
+        OpenSearchPluginConfig(
+            config_entries_on_enable = {...},
+            config_entries_on_disable = {...},
+            secret_entries_on_enable = {...},
+            secret_entries_on_disable = {...},
+        )
         """
         pass
 
