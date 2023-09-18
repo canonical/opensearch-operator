@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPlugin,
+    OpenSearchPluginConfig,
     OpenSearchPluginError,
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingDepsError,
@@ -128,9 +129,7 @@ class OpenSearchPluginManager:
             # Leave this method if either user did not request to enable this plugin
             # or plugin has been already enabled.
             return False
-        if plugin.config().secret_entries:
-            self._keystore.add(plugin.config().secret_entries)
-        return self._opensearch_config.add_plugin(plugin.config().config_entries)
+        return self._apply_config(plugin.config())
 
     def _disable_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""
@@ -138,17 +137,25 @@ class OpenSearchPluginManager:
             # Only considering "INSTALLED" status as it represents a plugin that has
             # been installed but either not yet configured or user explicitly disabled.
             return False
-        config_to_remove, config_to_add = plugin.disable()
-        disabled = False
-        if config_to_remove.config_entries:
-            disabled = (
-                self._opensearch_config.delete_plugin(config_to_remove.config_entries) or disabled
-            )
-            self._keystore.delete(config_to_remove.secret_entries)
-        if config_to_add.config_entries:
-            disabled = self._opensearch_config.add_plugin(config_to_add.config_entries) or disabled
-            self._keystore.add(config_to_add.secret_entries)
-        return disabled
+        return self._apply_config(plugin.disable())
+
+    def _apply_config(self, config: OpenSearchPluginConfig) -> bool:
+        """Runs the configuration changed as passed via OpenSearchPluginConfig.
+
+        First, add and remove the corresponding configuration from opensearch.yml.
+        Then, set / unset the keystore.
+
+        Returns True if restart is needed.
+        """
+        self._keystore.add(config.secret_entries_on_enable)
+        self._keystore.delete(config.secret_entries_on_disable)
+        # Add and remove configuration, return True if a reboot is needed
+        return any(
+            [
+                self._opensearch_config.add_plugin(config.config_entries_on_enable),
+                self._opensearch_config.delete_plugin(config.config_entries_on_disable),
+            ]
+        )
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""
@@ -177,9 +184,10 @@ class OpenSearchPluginManager:
     def _is_enabled(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is enabled."""
         # If not requested to be disabled, check if options are configured or not
-        stored_plugin_conf = self._opensearch_config.get_plugin(plugin.config().config_entries)
+        are_configs_enabled = plugin.config().config_entries_on_enable
+        stored_plugin_conf = self._opensearch_config.get_plugin(are_configs_enabled)
         for key, val in stored_plugin_conf.items():
-            if plugin.config().config_entries.get(key) != val:
+            if are_configs_enabled.get(key) != val:
                 return False
         return True
 

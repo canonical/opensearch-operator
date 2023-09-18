@@ -204,6 +204,8 @@ class OpenSearchConfig:
 
         Returns True if all the configurations have been set correctly.
         """
+        if not plugin_config:
+            return False
         return all(
             [
                 self._opensearch.config.put(self.CONFIG_YML, key, val).get(key, None) == val
@@ -216,6 +218,8 @@ class OpenSearchConfig:
 
         Returns True if all the configurations have been removed successfully.
         """
+        if not plugin_config:
+            return False
         return all(
             [
                 config not in self._opensearch.config.delete(self.CONFIG_YML, config).keys()
