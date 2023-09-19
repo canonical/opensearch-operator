@@ -69,22 +69,6 @@ from charms.opensearch.v0.opensearch_plugins import (
 )
 
 
-class MyPluginConfig(OpenSearchPluginConfig):
-
-    config_entries_on_enable: Dict[str, str] = {
-        ... key, values to add to the config as plugin gets enabled ...
-    }
-    config_entries_on_disable: Dict[str, str] = {
-        ... key, values to remove to the config as plugin gets disabled ...
-    }
-    secret_entries_on_enable: Dict[str, str] = {
-        ... key, values to add to to keystore as plugin gets enabled ...
-    }
-    secret_entries_on_disable: Dict[str, str] = {
-        ... key, values to remove from keystore as plugin gets disabled ...
-    }
-
-
 class MyPlugin(OpenSearchPlugin):
 
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
@@ -104,24 +88,42 @@ class MyPlugin(OpenSearchPlugin):
     def config(self) -> OpenSearchPluginConfig:
         # Use the self._extra_config to retrieve any extra configuration.
 
-        return MyPluginConfig(
-            config_entries={...}, # Key-value pairs to be added to opensearch.yaml
-            secret_entries={...}  # Key-value pairs to be added to opensearch-keystore
+        return OpenSearchPluginConfig(
+            config_entries_on_add={...}, # Key-value pairs to be added to opensearch.yaml
+            secret_entries_on_add={...}  # Key-value pairs to be added to keystore
         )
 
     def disable(self) -> Tuple[OpenSearchPluginConfig, OpenSearchPluginConfig]:
         # Use the self._extra_config to retrieve any extra configuration.
 
         return (
-            MyPluginConfig(...), # Configuration to be removed from yaml/keystore
-            MyPluginConfig(...)  # Configuration to be added, e.g. in the case we need
-                                 # to restore original values or set the plugin config
-                                 # as false
+            OpenSearchPluginConfig(...), # Configuration to be removed from yaml/keystore
+                                         # Configuration to be added, e.g. in the case we need
+                                         # to restore original values or set the plugin config
+                                         # as false
 
     @property
     def name(self) -> str:
         return "my-plugin"
 
+
+-------------------
+
+Optionally:
+class MyPluginConfig(OpenSearchPluginConfig):
+
+    config_entries_to_add: Dict[str, str] = {
+        ... key, values to add to the config as plugin gets enabled ...
+    }
+    config_entries_to_del: Dict[str, str] = {
+        ... key, values to remove to the config as plugin gets disabled ...
+    }
+    secret_entries_to_add: Dict[str, str] = {
+        ... key, values to add to to keystore as plugin gets enabled ...
+    }
+    secret_entries_to_del: Dict[str, str] = {
+        ... key, values to remove from keystore as plugin gets disabled ...
+    }
 
 -------------------
 
@@ -213,7 +215,6 @@ from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from jproperties import Properties
 
-
 # The unique Charmhub library identifier, never change it
 LIBID = "3b05456c6e304680b4af8e20dae246a2"
 
@@ -253,12 +254,17 @@ class PluginState(BaseStrEnum):
 
 
 class OpenSearchPluginConfig(NamedTuple):
-    """Represents the default configuration for a plugin."""
+    """Represents configuration of a plugin to be applied in a given action.
 
-    config_entries_on_enable: Dict[str, str] = {}
-    config_entries_on_disable: Dict[str, str] = {}
-    secret_entries_on_enable: Dict[str, str] = {}
-    secret_entries_on_disable: Dict[str, str] = {}
+    An action can be: config() or disable().
+    Each returns a namedtuple containing the configurations and secrets to be added and
+    removed in that operation.
+    """
+
+    config_entries_to_add: Dict[str, str] = {}
+    config_entries_to_del: Dict[str, str] = {}
+    secret_entries_to_add: Dict[str, str] = {}
+    secret_entries_to_del: Dict[str, str] = {}
 
 
 class OpenSearchPlugin:
@@ -303,10 +309,10 @@ class OpenSearchPlugin:
 
         Format:
         OpenSearchPluginConfig(
-            config_entries_on_enable = {...},
-            config_entries_on_disable = {...},
-            secret_entries_on_enable = {...},
-            secret_entries_on_disable = {...},
+            config_entries_to_add = {...},
+            config_entries_to_del = {...},
+            secret_entries_to_add = {...},
+            secret_entries_to_del = {...},
         )
         """
         pass
@@ -317,10 +323,10 @@ class OpenSearchPlugin:
 
         Format:
         OpenSearchPluginConfig(
-            config_entries_on_enable = {...},
-            config_entries_on_disable = {...},
-            secret_entries_on_enable = {...},
-            secret_entries_on_disable = {...},
+            config_entries_to_add = {...},
+            config_entries_to_del = {...},
+            secret_entries_to_add = {...},
+            secret_entries_to_del = {...},
         )
         """
         pass
