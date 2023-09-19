@@ -142,18 +142,24 @@ class OpenSearchPluginManager:
     def _apply_config(self, config: OpenSearchPluginConfig) -> bool:
         """Runs the configuration changed as passed via OpenSearchPluginConfig.
 
-        First, add and remove the corresponding configuration from opensearch.yml.
-        Then, set / unset the keystore.
+        For each: configuration and secret
+        1) Remove the entries to be deleted in each one
+        2) Add entries, if available
+
+        For example:
+            KNN needs to:
+            1) Remove from configuration: {"knn.plugin.enabled": "True"}
+            2) Add to configuration: {"knn.plugin.enabled": "False"}
 
         Returns True if restart is needed.
         """
-        self._keystore.add(config.secret_entries_on_enable)
-        self._keystore.delete(config.secret_entries_on_disable)
+        self._keystore.delete(config.secret_entries_to_del)
+        self._keystore.add(config.secret_entries_to_add)
         # Add and remove configuration, return True if a reboot is needed
         return any(
             [
-                self._opensearch_config.add_plugin(config.config_entries_on_enable),
-                self._opensearch_config.delete_plugin(config.config_entries_on_disable),
+                self._opensearch_config.delete_plugin(config.config_entries_to_del),
+                self._opensearch_config.add_plugin(config.config_entries_to_add),
             ]
         )
 
@@ -184,7 +190,7 @@ class OpenSearchPluginManager:
     def _is_enabled(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is enabled."""
         # If not requested to be disabled, check if options are configured or not
-        are_configs_enabled = plugin.config().config_entries_on_enable
+        are_configs_enabled = plugin.config().config_entries_to_add
         stored_plugin_conf = self._opensearch_config.get_plugin(are_configs_enabled)
         for key, val in stored_plugin_conf.items():
             if are_configs_enabled.get(key) != val:

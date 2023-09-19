@@ -80,14 +80,14 @@ class TestPluginAlreadyInstalled(TestPlugin):
 
     def config(self):
         return OpenSearchPluginConfig(
-            config_entries_on_enable={"param": "tested"},
-            secret_entries_on_enable={"key1": "secret1"},
+            config_entries_to_add={"param": "tested"},
+            secret_entries_to_add={"key1": "secret1"},
         )
 
     def disable(self):
         return OpenSearchPluginConfig(
-            config_entries_on_disable={"param": "tested"},
-            secret_entries_on_disable={"key1": "secret1"},
+            config_entries_to_del={"param": "tested"},
+            secret_entries_to_del={"key1": "secret1"},
         )
 
 
