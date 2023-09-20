@@ -206,12 +206,11 @@ class OpenSearchConfig:
         """
         if not plugin_config:
             return False
-        return all(
-            [
-                self._opensearch.config.put(self.CONFIG_YML, key, val).get(key, None) == val
-                for key, val in plugin_config.items()
-            ]
-        )
+        for key, val in plugin_config.items():
+            new_data = self._opensearch.config.put(self.CONFIG_YML, key, val)
+            if new_data.get(key, None) != val:
+                return False
+        return True
 
     def delete_plugin(self, plugin_config: Dict[str, str]) -> None:
         """Removes plugin configuration into opensearch.yml.
@@ -220,12 +219,10 @@ class OpenSearchConfig:
         """
         if not plugin_config:
             return False
-        return all(
-            [
-                config not in self._opensearch.config.delete(self.CONFIG_YML, config).keys()
-                for config in plugin_config.keys()
-            ]
-        )
+        for config in plugin_config.keys():
+            if config in self._opensearch.config.delete(self.CONFIG_YML, config).keys():
+                return False
+        return True
 
     def update_host_if_needed(self) -> bool:
         """Update the opensearch config with the current network hosts, after having started.

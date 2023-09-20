@@ -72,7 +72,7 @@ class OpenSearchKeystore:
             raise OpenSearchKeystoreError("Missing keystore value")
         try:
             # Add newline to the end of the key, if missing
-            v = value + ("" if value[-1] == "\n" else "\n")
+            v = value + ("" if value.endswith("\n") else "\n")
             self._opensearch.run_bin("opensearch-keystore", f"add --force {key}", stdin=v)
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
