@@ -102,35 +102,41 @@ class OpenSearchPluginManager:
         """
         installed_plugins = self._installed_plugins()
 
-        if self.status(plugin) == PluginState.MISSING and self._user_requested_to_enable(plugin):
-            # Check for dependencies
-            missing_deps = list(
-                filter(lambda dep: dep not in installed_plugins, plugin.dependencies)
+        if self.status(plugin) != PluginState.MISSING or not self._user_requested_to_enable(
+            plugin
+        ):
+            # Nothing to do here
+            return False
+
+        # Check for dependencies
+        missing_deps = list(filter(lambda dep: dep not in installed_plugins, plugin.dependencies))
+        if missing_deps:
+            raise OpenSearchPluginMissingDepsError(
+                f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
             )
-            if missing_deps:
-                raise OpenSearchPluginMissingDepsError(
-                    f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
+
+        # Add the plugin
+        try:
+            self._opensearch.run_bin("opensearch-plugin", f"install --batch {plugin.name}")
+        except OpenSearchCmdError as e:
+            if "already exists" in str(e):
+                logger.info(
+                    "opensearch_plugin_manager._install_if_needed:"
+                    f" Plugin {plugin.name} already exists, continuing..."
                 )
-
-            # Add the plugin
-            try:
-                self._opensearch.run_bin("opensearch-plugin", f"install --batch {plugin.name}")
-            except OpenSearchCmdError as e:
-                if "already exists" in str(e):
-                    logger.info(
-                        "opensearch_plugin_manager._add_plugin:"
-                        f" Plugin {plugin.name} already exists, continuing..."
-                    )
-                    return
-                raise OpenSearchPluginInstallError(f"Failed to install plugin {plugin.name}: {e}")
-            return True
-
-        # Nothing was installed
-        return False
+                # Nothing installed, as plugin already exists
+                return False
+            # Otherwise, we had an unknown error
+            raise OpenSearchPluginInstallError(f"Failed to install plugin {plugin.name}: {e}")
+        # Install successful
+        return True
 
     def _configure_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """Gathers all the configuration changes needed and applies them."""
-        if not self._user_requested_to_enable(plugin) or self._is_enabled(plugin):
+        if (
+            not self._user_requested_to_enable(plugin)
+            or self.status(plugin) != PluginState.INSTALLED
+        ):
             # Leave this method if either user did not request to enable this plugin
             # or plugin has been already enabled.
             return False
@@ -138,9 +144,13 @@ class OpenSearchPluginManager:
 
     def _disable_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""
-        if self.status(plugin) != PluginState.INSTALLED:
-            # Only considering "INSTALLED" status as it represents a plugin that has
-            # been installed but either not yet configured or user explicitly disabled.
+        if self._user_requested_to_enable(plugin) or self.status(plugin) not in [
+            PluginState.ENABLED,
+            PluginState.WAITING_FOR_UPGRADE,
+        ]:
+            # Only considering "INSTALLED" or "WAITING FOR UPGRADE" status as it
+            # represents a plugin that has been installed but either not yet configured
+            # or user explicitly disabled.
             return False
         return self._apply_config(plugin.disable())
 
@@ -173,7 +183,7 @@ class OpenSearchPluginManager:
         ):
             # There is configuration to add and it failed
             raise OpenSearchPluginApplyConfigError(
-                f"Failed adding configuration: {config.config_entries_to_del}"
+                f"Failed adding configuration: {config.config_entries_to_add}"
             )
 
         # Return True only if we actually had some configuration changed
@@ -183,7 +193,7 @@ class OpenSearchPluginManager:
         """Returns the status for a given plugin."""
         if not self._is_installed(plugin):
             return PluginState.MISSING
-        if not self._user_requested_to_enable(plugin) or not self._is_enabled(plugin):
+        if not self._is_enabled(plugin):
             return PluginState.INSTALLED
         if self._needs_upgrade(plugin):
             return PluginState.WAITING_FOR_UPGRADE
