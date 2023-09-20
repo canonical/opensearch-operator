@@ -196,7 +196,8 @@ class OpenSearchConfig:
         result = {}
         loaded_configs = self.load_node()
         for key in plugin_config.keys():
-            result[key] = loaded_configs.get(key, None)
+            if loaded_configs.get(key, None):
+                result[key] = loaded_configs[key]
         return result
 
     def add_plugin(self, plugin_config: Dict[str, str]) -> bool:
@@ -219,8 +220,11 @@ class OpenSearchConfig:
         """
         if not plugin_config:
             return False
+        orig_config = self.get_plugin(plugin_config)
         for config in plugin_config.keys():
-            if config in self._opensearch.config.delete(self.CONFIG_YML, config).keys():
+            deleted_key = self._opensearch.config.delete(self.CONFIG_YML, config).keys()
+            if config not in deleted_key and config in orig_config.keys():
+                # config is present in original opensearch.yml, but failed to remove.
                 return False
         return True
 

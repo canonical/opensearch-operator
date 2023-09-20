@@ -209,6 +209,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.harness.update_config({})
         self.plugin_manager.run.assert_called()
 
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
     @patch(
         "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._installed_plugins"
     )
@@ -217,7 +218,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
     # Test the integration between opensearch_config and plugin
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
     def test_reconfigure_and_add_keystore_plugin(
-        self, mock_put, _, mock_load, mock_installed_plugins
+        self, mock_put, _, mock_load, mock_installed_plugins, mock_status
     ) -> None:
         """Reconfigure the opensearch.yaml and keystore.
 
@@ -225,6 +226,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         """
         config = {"param": "tested"}
         mock_put.return_value = config
+        mock_status.return_value = PluginState.INSTALLED
         self.plugin_manager._keystore._add = MagicMock()
         self.plugin_manager._opensearch.request = MagicMock(return_value={"status": 200})
         # Override the ConfigExposedPlugins with another class type
@@ -238,11 +240,11 @@ class TestOpenSearchPlugin(unittest.TestCase):
         # Mock _installed_plugins to return test
         mock_installed_plugins.return_value = ["test"]
 
-        mock_load.side_effect = [{}, {}, {"param": "tested"}]
+        mock_load.return_value = {}
         # run is called, but only _configure method really matter:
         # Set install to false, so only _configure is evaluated
-        self.plugin_manager._install = MagicMock(return_value=False)
-        self.plugin_manager._disable = MagicMock()
+        self.plugin_manager._install_if_needed = MagicMock(return_value=False)
+        self.plugin_manager._disable_if_needed = MagicMock(return_value=False)
         self.assertTrue(self.plugin_manager.run())
         self.plugin_manager._keystore._add.assert_has_calls([call("key1", "secret1")])
         self.charm.opensearch.config.put.assert_has_calls(
@@ -359,14 +361,10 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_installed_plugins.return_value = ["test"]
 
         # load_node will be called multiple times
-        mock_load.side_effect = [{"param": "tested"}, {}]
+        mock_load.side_effect = {"param": "tested"}
         mock_plugin_relation.return_value = False
         # plugin is initially disabled and enabled when method self._disable calls self.status
-        mock_is_enabled.side_effect = [
-            True,  # called by self.status, in self._install
-            True,  # called by self._configure
-            True,  # called by self.status, in self._disable
-        ]
+        mock_is_enabled.return_value = True
         self.assertTrue(self.plugin_manager.run())
         self.plugin_manager._keystore._add.assert_not_called()
         self.plugin_manager._keystore._delete.assert_called()
