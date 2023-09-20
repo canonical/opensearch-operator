@@ -159,7 +159,13 @@ class OpenSearchDistribution(ABC):
             return False
 
     def run_bin(self, bin_script_name: str, args: str = None, stdin: str = None) -> str:
-        """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin."""
+        """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin.
+
+        Args:
+            bin_script_name: script to be executed from self.paths.home
+            args: arguments passed to the script at execution
+            stdin: enter a string to the subprocess as if an user was typing
+        """
         script_path = f"{self.paths.home}/bin/{bin_script_name}"
         self._run_cmd(f"chmod a+x {script_path}")
 
@@ -316,7 +322,7 @@ class OpenSearchDistribution(ABC):
         Arg:
             command: can contain arguments
             args: command line arguments
-            stdin: enter string to the process
+            stdin: enter a string to the subprocess as if an user was typing
 
         Returns the stdout
         """

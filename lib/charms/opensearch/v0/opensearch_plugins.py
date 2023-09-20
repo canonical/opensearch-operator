@@ -244,6 +244,10 @@ class OpenSearchPluginRemoveError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin removal fails."""
 
 
+class OpenSearchPluginApplyConfigError(OpenSearchPluginError):
+    """Exception thrown when opensearch plugin applies a config (add or remove)."""
+
+
 class PluginState(BaseStrEnum):
     """Enum for the states possible in plugins' lifecycle."""
 

@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPlugin,
+    OpenSearchPluginApplyConfigError,
     OpenSearchPluginConfig,
     OpenSearchPluginError,
     OpenSearchPluginInstallError,
@@ -60,10 +61,13 @@ class OpenSearchPluginManager:
     @property
     def plugins(self) -> List[OpenSearchPlugin]:
         """Returns List of installed plugins."""
-        return [
-            plugin_data["class"](self._plugins_path, extra_config=self._extra_conf(plugin_data))
-            for _, plugin_data in ConfigExposedPlugins.items()
-        ]
+        plugin_list = []
+        for plugin_data in ConfigExposedPlugins.values():
+            new_plugin = plugin_data["class"](
+                self._plugins_path, extra_config=self._extra_conf(plugin_data)
+            )
+            plugin_list += [new_plugin]
+        return plugin_list
 
     def _extra_conf(self, plugin_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Returns either the config or relation data for the target plugin."""
@@ -96,14 +100,13 @@ class OpenSearchPluginManager:
         Check if plugin in status: PluginState.MISSING and config/relation is set.
         Returns True if a restart is needed.
         """
-        # installed is needed because we may have a plugin already installed
-        # i.e. we fail the install command but we do not need to do anything else.
-        installed = False
         installed_plugins = self._installed_plugins()
 
         if self.status(plugin) == PluginState.MISSING and self._user_requested_to_enable(plugin):
             # Check for dependencies
-            missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
+            missing_deps = list(
+                filter(lambda dep: dep not in installed_plugins, plugin.dependencies)
+            )
             if missing_deps:
                 raise OpenSearchPluginMissingDepsError(
                     f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
@@ -120,8 +123,10 @@ class OpenSearchPluginManager:
                     )
                     return
                 raise OpenSearchPluginInstallError(f"Failed to install plugin {plugin.name}: {e}")
-            installed = True
-        return installed
+            return True
+
+        # Nothing was installed
+        return False
 
     def _configure_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """Gathers all the configuration changes needed and applies them."""
@@ -156,12 +161,23 @@ class OpenSearchPluginManager:
         self._keystore.delete(config.secret_entries_to_del)
         self._keystore.add(config.secret_entries_to_add)
         # Add and remove configuration, return True if a reboot is needed
-        return any(
-            [
-                self._opensearch_config.delete_plugin(config.config_entries_to_del),
-                self._opensearch_config.add_plugin(config.config_entries_to_add),
-            ]
-        )
+        if config.config_entries_to_del and not self._opensearch_config.delete_plugin(
+            config.config_entries_to_del
+        ):
+            # There is configuration to remove and it failed
+            raise OpenSearchPluginApplyConfigError(
+                f"Failed removing configuration: {config.config_entries_to_del}"
+            )
+        if config.config_entries_to_add and not self._opensearch_config.add_plugin(
+            config.config_entries_to_add
+        ):
+            # There is configuration to add and it failed
+            raise OpenSearchPluginApplyConfigError(
+                f"Failed adding configuration: {config.config_entries_to_del}"
+            )
+
+        # Return True only if we actually had some configuration changed
+        return True if config.config_entries_to_add or config.config_entries_to_del else False
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""
