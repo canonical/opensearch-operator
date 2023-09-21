@@ -206,19 +206,9 @@ class OpenSearchConfig:
             self._opensearch.config.put(self.CONFIG_YML, key, val)
 
     def delete_plugin(self, plugin_config: Dict[str, str]) -> None:
-        """Removes plugin configuration into opensearch.yml.
-
-        Returns True if all the configurations have been removed successfully.
-        """
-        if not plugin_config:
-            return False
-        orig_config = self.get_plugin(plugin_config)
-        for config in plugin_config.keys():
-            deleted_key = self._opensearch.config.delete(self.CONFIG_YML, config).keys()
-            if config not in deleted_key and config in orig_config.keys():
-                # config is present in original opensearch.yml, but failed to remove.
-                return False
-        return True
+        """Removes plugin configuration from opensearch.yml. """
+        for key in plugin_config.keys():
+            self._opensearch.config.delete(self.CONFIG_YML, key)
 
     def update_host_if_needed(self) -> bool:
         """Update the opensearch config with the current network hosts, after having started.
