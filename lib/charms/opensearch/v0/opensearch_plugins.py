@@ -9,10 +9,11 @@ A plugin configuration footprint is composed of:
 * Jar files installed in one of the
   ${OPENSEARCH_HOME}/plugins
   ${OPENSEARCH_HOME}/modules
-* Configuration passed to the main opensearch.yml, must be removed at plugin removal
+* Configuration passed to the main opensearch.yml
 * Secrets stored in the keystore
-* The file: plugin.properties
-* And the security policy in: security.policy
+* The plugin description: plugin.properties
+* The security policy in: security.policy
+* API calls to opensearch cluster to configure or remove configuration
 * Other plugins which it depends upon
 
 One last piece of the configuration is any index data uploaded to the cluster using
@@ -30,15 +31,6 @@ MISSING (not installed yet) > INSTALLED (plugin installed, but not configured ye
 ENABLED (configuration has been applied) > WAITING_FOR_UPGRADE (if an upgrade is needed)
 > ENABLED (back to enabled state once upgrade has been applied)
 
-The meaning of each step is, as follows:
-* install: installs the plugin JAR files
-* is_installed: the installation happened correctly and the JAR files are set
-* configure: sets all the necessary configuration for the plugin
-* is_enabled: all the configurations have been applied and restart is done, if needed
-* needs_upgrade: once the main OpenSearch is upgraded, the plugin needs to check if an
-                 upgrade is also needed or not.
-* upgrade: run the necessary actions to upgrade the plugin
-
 ========================================================================================
 
                              STEPS TO ADD A NEW PLUGIN
@@ -54,8 +46,8 @@ class.
 
 The development of a new plugin should be broken into 3x classes:
 1) The OpenSearchPlugin, that represents everything related to the configuration
-2) Optionally, the OpenSearchPluginConfig, a data class that contains the configuration
-   options as dicts
+2) Optionally, the OpenSearchPluginConfig, a class that contains the configuration
+   options as dictionaries
 3) Optionally, a charm-level class, that should be managed directly by the charm and is
    is used to handle the APIs and relation events
 
@@ -70,8 +62,6 @@ from charms.opensearch.v0.opensearch_plugins import (
 
 
 class MyPlugin(OpenSearchPlugin):
-
-    PLUGIN_PROPERTIES = "plugin-descriptor.properties"
 
     def __init__(self, plugins_path: str, extra_config: Dict[str, Any] = None):
         super().__init__(plugins_path, extra_config)
@@ -159,7 +149,9 @@ In case the plugin depends on API calls to finish configuration or a relation to
 configured, create an extra class at the charm level to manage plugin events:
 
 
-class MyPlugin(Object):
+class MyPluginRelationManager(Object):
+
+    PLUGIN_NAME = "MyPlugin"
 
     def __init__(self, charm: OpenSearchBaseCharm, relation_name: str):
         super().__init__(charm, relation_name)
@@ -176,6 +168,12 @@ class MyPlugin(Object):
         # Call the plugin manager to process the new relation data
         self._charm.plugin_manager.run()
 
+        # Or search for the specific plugin
+        # That may be relevant if we need to recover configuration data, for example
+        # to submit in an API call
+        for plugin in self._charm.plugin_manager.plugins():
+            if plugin.name == PLUGIN_NAME:
+                self._run_the_api_call_here(plugin.config())
 
 ...
 
@@ -185,7 +183,7 @@ class OpenSearchBaseCharm(CharmBase):
     def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
         ...
 
-        self.my_plugin = MyPlugin(self)
+        self.my_plugin_relation = MyPluginRelationManager(self)
 
     ...
 
