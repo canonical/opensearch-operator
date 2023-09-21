@@ -18,6 +18,7 @@ from tests.integration.helpers import (
     get_application_unit_ids,
     get_leader_unit_ip,
     http_request,
+    scale_application,
 )
 from tests.integration.helpers_deployments import wait_until
 from tests.integration.relations.opensearch_provider.helpers import (
@@ -184,6 +185,13 @@ async def test_version(ops_test: OpsTest):
     logging.info(version)
     results = json.loads(run_version_request["results"])
     assert version == results.get("version", {}).get("number"), results
+
+
+async def get_secret_data(ops_test, secret_uri):
+    secret_unique_id = secret_uri.split("/")[-1]
+    complete_command = f"show-secret {secret_uri} --reveal --format=json"
+    _, stdout, _ = await ops_test.juju(*complete_command.split())
+    return json.loads(stdout)[secret_unique_id]["content"]["Data"]
 
 
 @pytest.mark.abort_on_fail
@@ -413,9 +421,13 @@ async def test_admin_permissions(ops_test: OpsTest):
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
     # verify admin can't delete users
-    first_relation_user = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
+    secret_uri = await get_application_relation_data(
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "secret-user"
     )
+
+    first_relation_user_data = await get_secret_data(ops_test, secret_uri)
+    first_relation_user = first_relation_user_data.get("username")
+
     first_relation_user_endpoint = f"/_plugins/_security/api/internalusers/{first_relation_user}"
     run_delete_users = await run_request(
         ops_test,
@@ -470,9 +482,12 @@ async def test_normal_user_permissions(ops_test: OpsTest):
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
     # verify normal users can't delete users
-    first_relation_user = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
+    secret_uri = await get_application_relation_data(
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "secret-user"
     )
+    first_relation_user_data = await get_secret_data(ops_test, secret_uri)
+    first_relation_user = first_relation_user_data.get("username")
+
     first_relation_user_endpoint = f"/_plugins/_security/api/internalusers/{first_relation_user}"
     run_delete_users = await run_request(
         ops_test,
@@ -506,9 +521,13 @@ async def test_normal_user_permissions(ops_test: OpsTest):
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
-    relation_user = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
+    secret_uri = await get_application_relation_data(
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "secret-user"
     )
+
+    client_app_user_data = await get_secret_data(ops_test, secret_uri)
+    relation_user = client_app_user_data.get("username")
+
     await wait_until(
         ops_test,
         apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
