@@ -174,7 +174,7 @@ class OpenSearchPluginManager:
             self._opensearch_config.add_plugin(config.config_entries_to_add)
 
         # Return True if some configuration entries changed
-        return len(config.config_entries_to_add) + len(config.config_entries_to_del) > 0
+        return True if config.config_entries_to_add or config.config_entries_to_del else False
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""
