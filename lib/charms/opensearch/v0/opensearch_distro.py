@@ -322,7 +322,7 @@ class OpenSearchDistribution(ABC):
         Arg:
             command: can contain arguments
             args: command line arguments
-            stdin: enter a string to the subprocess as if an user was typing
+            stdin: string input to be passed on the standard input of the subprocess
 
         Returns the stdout
         """
