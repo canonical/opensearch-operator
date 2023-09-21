@@ -200,18 +200,10 @@ class OpenSearchConfig:
                 result[key] = loaded_configs[key]
         return result
 
-    def add_plugin(self, plugin_config: Dict[str, str]) -> bool:
-        """Adds plugin configuration into opensearch.yml.
-
-        Returns True if all the configurations have been set correctly.
-        """
-        if not plugin_config:
-            return False
+    def add_plugin(self, plugin_config: Dict[str, str]) -> None:
+        """Adds plugin configuration to opensearch.yml."""
         for key, val in plugin_config.items():
-            new_data = self._opensearch.config.put(self.CONFIG_YML, key, val)
-            if new_data.get(key, None) != val:
-                return False
-        return True
+            self._opensearch.config.put(self.CONFIG_YML, key, val)
 
     def delete_plugin(self, plugin_config: Dict[str, str]) -> None:
         """Removes plugin configuration into opensearch.yml.
