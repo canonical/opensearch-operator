@@ -528,7 +528,7 @@ class CachedSecret:
             self._secret_content = content
 
     def get_info(self) -> Optional[SecretInfo]:
-        """Apply the corresponding call on the Secret object within CachedSecret if any."""
+        """Wrapper function to apply the corresponding call on the Secret object within CachedSecret if any."""
         if self.meta:
             return self.meta.get_info()
 
@@ -619,7 +619,13 @@ class DataRelation(Object, ABC):
     def _fetch_my_specific_relation_data(
         self, relation: Relation, fields: Optional[List[str]]
     ) -> Dict[str, str]:
+<<<<<<< HEAD
         """Fetch data available from the relation for owner/this_app."""
+||||||| parent of 11d711f (Adding back Juju2 compatibility)
+        """Fetch data available, (in)directly i.e. secrets, from the rel for owner/this_app."""
+=======
+        """Fetch data available (directily or indirectly -- i.e. secrets) from the relation for owner/this_app."""
+>>>>>>> 11d711f (Adding back Juju2 compatibility)
         raise NotImplementedError
 
     # Internal helper methods
@@ -762,8 +768,14 @@ class DataRelation(Object, ABC):
                     ):
                         result.update(contents)
                     else:
+<<<<<<< HEAD
                         # If it wasn't found as a secret,
                         # let's give it a 2nd chance as "normal" field
+||||||| parent of 11d711f (Adding back Juju2 compatibility)
+                        # If it wasn't found as a secret, give it a 2nd chance as a "normal" field
+=======
+                        # If it wasn't found as a secret, let's give it a 2nd chance as "normal" field
+>>>>>>> 11d711f (Adding back Juju2 compatibility)
                         normal_fields |= set(secret_fieldnames_grouped[group])
             else:
                 # Processing from what is given, i.e. retrieving all
@@ -776,8 +788,14 @@ class DataRelation(Object, ABC):
                         self._retrieve_group_secret_contents(relation.id, group, req_secret_fields)
                     )
 
-        # Processing "normal" fields.
-        # May include leftover from what we couldn't retrieve as a secret.
+<<<<<<< HEAD
+        # Processing "normal" fields. May include leftover
+        # from what we couldn't retrieve as a secret.
+||||||| parent of 11d711f (Adding back Juju2 compatibility)
+        # Processing "normal" fields. May include leftover from what we couldn't retrieve as secret
+=======
+        # Processing "normal" fields. May include leftover from what we couldn't retrieve as a secret.
+>>>>>>> 11d711f (Adding back Juju2 compatibility)
         result.update({k: relation.data[app][k] for k in normal_fields if k in relation.data[app]})
         return result
 
@@ -993,8 +1011,15 @@ class DataProvides(DataRelation):
     ) -> Dict[str, str]:
         """Fetching relation data for Provides.
 
+<<<<<<< HEAD
         NOTE: Since all secret fields are in the Provides side of the databag,
         we don't need to worry about that
+||||||| parent of 11d711f (Adding back Juju2 compatibility)
+        All secret fields are in the Provides side of the databag, so we don't need to worry
+        about that
+=======
+        NOTE: Since all secret fields are in the Provides side of the databag, we don't need to worry about that
+>>>>>>> 11d711f (Adding back Juju2 compatibility)
         """
         if not relation.app:
             return {}
