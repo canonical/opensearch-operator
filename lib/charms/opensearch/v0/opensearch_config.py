@@ -206,7 +206,7 @@ class OpenSearchConfig:
             self._opensearch.config.put(self.CONFIG_YML, key, val)
 
     def delete_plugin(self, plugin_config: Dict[str, str]) -> None:
-        """Removes plugin configuration from opensearch.yml. """
+        """Removes plugin configuration from opensearch.yml."""
         for key in plugin_config.keys():
             self._opensearch.config.delete(self.CONFIG_YML, key)
 

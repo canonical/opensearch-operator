@@ -17,7 +17,6 @@ from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPlugin,
-    OpenSearchPluginApplyConfigError,
     OpenSearchPluginConfig,
     OpenSearchPluginError,
     OpenSearchPluginInstallError,
@@ -62,16 +61,16 @@ class OpenSearchPluginManager:
     @property
     def plugins(self) -> List[OpenSearchPlugin]:
         """Returns List of installed plugins."""
-        plugin_list = []
+        plugins_list = []
         for plugin_data in ConfigExposedPlugins.values():
             new_plugin = plugin_data["class"](
                 self._plugins_path, extra_config=self._extra_conf(plugin_data)
             )
-            plugin_list += [new_plugin]
-        return plugin_list
+            plugins_list.append(new_plugin)
+        return plugins_list
 
     def _extra_conf(self, plugin_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Returns either the config or relation data for the target plugin."""
+        """Returns the config from the relation data of the target plugin if applies."""
         relation_name = plugin_data.get("relation")
         relation = self._charm.model.get_relation(relation_name) if relation_name else None
         if not relation:
@@ -99,7 +98,7 @@ class OpenSearchPluginManager:
         """Installs all the plugins enabled via the config/relation.
 
         Check if plugin in status: PluginState.MISSING and config/relation is set.
-        Returns True if a restart is needed.
+        Returns True if the plugin was installed.
         """
         installed_plugins = self._installed_plugins()
 
@@ -110,7 +109,7 @@ class OpenSearchPluginManager:
             return False
 
         # Check for dependencies
-        missing_deps = list(filter(lambda dep: dep not in installed_plugins, plugin.dependencies))
+        missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
         if missing_deps:
             raise OpenSearchPluginMissingDepsError(
                 f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
@@ -121,13 +120,9 @@ class OpenSearchPluginManager:
             self._opensearch.run_bin("opensearch-plugin", f"install --batch {plugin.name}")
         except OpenSearchCmdError as e:
             if "already exists" in str(e):
-                logger.info(
-                    "opensearch_plugin_manager._install_if_needed:"
-                    f" Plugin {plugin.name} already exists, continuing..."
-                )
+                logger.info(f"Plugin {plugin.name} already installed, continuing...")
                 # Nothing installed, as plugin already exists
                 return False
-            # Otherwise, we had an unknown error
             raise OpenSearchPluginInstallError(f"Failed to install plugin {plugin.name}: {e}")
         # Install successful
         return True
@@ -156,10 +151,10 @@ class OpenSearchPluginManager:
         return self._apply_config(plugin.disable())
 
     def _apply_config(self, config: OpenSearchPluginConfig) -> bool:
-        """Runs the configuration changed as passed via OpenSearchPluginConfig.
+        """Runs the configuration changes as passed via OpenSearchPluginConfig.
 
         For each: configuration and secret
-        1) Remove the entries to be deleted in each one
+        1) Remove the entries to be deleted
         2) Add entries, if available
 
         For example:
@@ -167,28 +162,19 @@ class OpenSearchPluginManager:
             1) Remove from configuration: {"knn.plugin.enabled": "True"}
             2) Add to configuration: {"knn.plugin.enabled": "False"}
 
-        Returns True if restart is needed.
+        Returns True if a configuration change was performed.
         """
         self._keystore.delete(config.secret_entries_to_del)
         self._keystore.add(config.secret_entries_to_add)
-        # Add and remove configuration, return True if a reboot is needed
-        if config.config_entries_to_del and not self._opensearch_config.delete_plugin(
-            config.config_entries_to_del
-        ):
-            # There is configuration to remove and it failed
-            raise OpenSearchPluginApplyConfigError(
-                f"Failed removing configuration: {config.config_entries_to_del}"
-            )
-        if config.config_entries_to_add and not self._opensearch_config.add_plugin(
-            config.config_entries_to_add
-        ):
-            # There is configuration to add and it failed
-            raise OpenSearchPluginApplyConfigError(
-                f"Failed adding configuration: {config.config_entries_to_add}"
-            )
+        # Add and remove configuration if applies
+        if config.config_entries_to_del:
+            self._opensearch_config.delete_plugin(config.config_entries_to_del)
 
-        # Return True only if we actually had some configuration changed
-        return True if config.config_entries_to_add or config.config_entries_to_del else False
+        if config.config_entries_to_add:
+            self._opensearch_config.add_plugin(config.config_entries_to_add)
+
+        # Return True if some configuration entries changed
+        return len(config.config_entries_to_add) + len(config.config_entries_to_del) > 0
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""
@@ -234,7 +220,7 @@ class OpenSearchPluginManager:
         """Returns True if a relation is expected and it is set."""
         if not relation_name:
             return False
-        return len(self._charm.framework.model.relations[relation_name] or {}) > 0
+        return self._charm.model.get_relation(relation_name) is not None
 
     def _remove_plugin(self, name: str) -> None:
         """Remove a plugin without restarting the node."""
@@ -242,18 +228,13 @@ class OpenSearchPluginManager:
             self._opensearch.run_bin("opensearch-plugin", f"remove {name}")
         except OpenSearchCmdError as e:
             if "not found" in str(e):
-                logger.warn(
-                    "opensearch_plugin_manager._remove_plugin:"
-                    " Plugin {name} not found, leaving remove method"
-                )
+                logger.info(f"Plugin {name} to be deleted, not found. Continuing...")
                 return
             raise OpenSearchPluginRemoveError(f"Failed to remove plugin {name}: {e}")
 
     def _installed_plugins(self) -> List[str]:
         """List plugins."""
         try:
-            return list(
-                filter(None, self._opensearch.run_bin("opensearch-plugin", "list").split("\n"))
-            )
+            return self._opensearch.run_bin("opensearch-plugin", "list").split("\n")
         except OpenSearchCmdError as e:
             raise OpenSearchPluginError("Failed to list plugins: " + str(e))

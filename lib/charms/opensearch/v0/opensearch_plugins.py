@@ -208,8 +208,8 @@ class OpenSearchBaseCharm(CharmBase):
 """
 
 import logging
-from abc import abstractmethod
-from typing import Any, Dict, List, NamedTuple, Optional
+from abc import abstractmethod, abstractproperty
+from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
@@ -244,10 +244,6 @@ class OpenSearchPluginRemoveError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin removal fails."""
 
 
-class OpenSearchPluginApplyConfigError(OpenSearchPluginError):
-    """Exception thrown when opensearch plugin applies a config (add or remove)."""
-
-
 class PluginState(BaseStrEnum):
     """Enum for the states possible in plugins' lifecycle."""
 
@@ -257,18 +253,20 @@ class PluginState(BaseStrEnum):
     WAITING_FOR_UPGRADE = "waiting-for-upgrade"
 
 
-class OpenSearchPluginConfig(NamedTuple):
-    """Represents configuration of a plugin to be applied in a given action.
+class OpenSearchPluginConfig:
+    """Represent the configuration of a plugin to be applied when configuring or disabling it."""
 
-    An action can be: config() or disable().
-    Each returns a namedtuple containing the configurations and secrets to be added and
-    removed in that operation.
-    """
-
-    config_entries_to_add: Dict[str, str] = {}
-    config_entries_to_del: Dict[str, str] = {}
-    secret_entries_to_add: Dict[str, str] = {}
-    secret_entries_to_del: Dict[str, str] = {}
+    def __init__(
+        self,
+        config_entries_to_add: Optional[Dict[str, str]] = None,
+        config_entries_to_del: Optional[Dict[str, str]] = None,
+        secret_entries_to_add: Optional[Dict[str, str]] = None,
+        secret_entries_to_del: Optional[Dict[str, str]] = None,
+    ):
+        self.config_entries_to_add = config_entries_to_add or {}
+        self.config_entries_to_del = config_entries_to_del or {}
+        self.secret_entries_to_add = secret_entries_to_add or {}
+        self.secret_entries_to_del = secret_entries_to_del or {}
 
 
 class OpenSearchPlugin:
@@ -301,7 +299,6 @@ class OpenSearchPlugin:
         return properties._properties["version"]
 
     @property
-    @abstractmethod
     def dependencies(self) -> Optional[List[str]]:
         """Returns a list of plugin name dependencies."""
         return None
@@ -334,8 +331,7 @@ class OpenSearchPlugin:
         """
         pass
 
-    @property
-    @abstractmethod
+    @abstractproperty
     def name(self) -> str:
         """Returns the name of the plugin."""
         pass
