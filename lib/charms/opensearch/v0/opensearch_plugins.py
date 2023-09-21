@@ -281,8 +281,7 @@ class OpenSearchPlugin:
 
         Arguments:
           plugins_path: str, path to the plugins folder
-          extra_config: dict, contains the data coming from either the config option
-                              or the relation bag
+          extra_config: dict, contains config entries coming from optional relation data
         """
         self._plugins_path = f"{plugins_path}/{self.PLUGIN_PROPERTIES}"
         self._extra_config = extra_config
