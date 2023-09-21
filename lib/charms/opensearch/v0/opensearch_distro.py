@@ -162,9 +162,9 @@ class OpenSearchDistribution(ABC):
         """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin.
 
         Args:
-            bin_script_name: script to be executed from self.paths.home
-            args: arguments passed to the script at execution
-            stdin: enter a string to the subprocess as if an user was typing
+            bin_script_name: opensearch script located in OPENSEARCH_HOME/bin to be executed
+            args: arguments passed to the script
+            stdin: string input to be passed on the standard input of the subprocess.
         """
         script_path = f"{self.paths.home}/bin/{bin_script_name}"
         self._run_cmd(f"chmod a+x {script_path}")
