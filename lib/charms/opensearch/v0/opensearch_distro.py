@@ -434,7 +434,7 @@ class OpenSearchDistribution(ABC):
 
         return missing_requirements
 
-    @property
+    @cached_property
     def version(self) -> str:
         """Returns the version number of this opensearch instance.
 
