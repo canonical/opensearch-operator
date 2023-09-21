@@ -13,8 +13,7 @@ from charm import OpenSearchOperatorCharm
 
 RETURN_LIST_KEYSTORE = """key1
 key2
-keystore.seed
-"""
+keystore.seed"""
 
 
 class TestOpenSearchKeystore(unittest.TestCase):
@@ -23,7 +22,7 @@ class TestOpenSearchKeystore(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.charm = self.harness.charm
-        self.keystore = self.charm.opensearch_keystore
+        self.keystore = self.charm.plugin_manager._keystore
 
     def test_list_except_keystore_not_found(self):
         """Throws exception for missing file when calling list."""

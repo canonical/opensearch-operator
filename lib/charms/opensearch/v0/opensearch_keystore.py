@@ -61,9 +61,7 @@ class OpenSearchKeystore:
     def list(self) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
         try:
-            return list(
-                filter(None, self._opensearch.run_bin("opensearch-keystore", "list").split("\n"))
-            )
+            return self._opensearch.run_bin("opensearch-keystore", "list").split("\n")
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
@@ -72,12 +70,12 @@ class OpenSearchKeystore:
             raise OpenSearchKeystoreError("Missing keystore value")
         try:
             # Add newline to the end of the key, if missing
-            v = value + ("" if value.endswith("\n") else "\n")
-            self._opensearch.run_bin("opensearch-keystore", f"add --force {key}", stdin=v)
+            value += "" if value.endswith("\n") else "\n"
+            self._opensearch.run_bin("opensearch-keystore", f"add --force {key}", stdin=value)
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
-    def _delete(self, key: str):
+    def _delete(self, key: str) -> None:
         try:
             self._opensearch.run_bin("opensearch-keystore", f"remove {key}")
         except OpenSearchCmdError as e:
