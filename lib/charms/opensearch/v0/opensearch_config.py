@@ -4,7 +4,7 @@
 """Class for Setting configuration in opensearch config files."""
 import logging
 import socket
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import normalized_tls_subject
@@ -190,6 +190,25 @@ class OpenSearchConfig:
     def cleanup_bootstrap_conf(self):
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
+
+    def get_plugin(self, plugin_config: Dict[str, str]) -> Dict[str, Any]:
+        """Gets a list of configuration from opensearch.yml."""
+        result = {}
+        loaded_configs = self.load_node()
+        for key in plugin_config.keys():
+            if loaded_configs.get(key, None):
+                result[key] = loaded_configs[key]
+        return result
+
+    def add_plugin(self, plugin_config: Dict[str, str]) -> None:
+        """Adds plugin configuration to opensearch.yml."""
+        for key, val in plugin_config.items():
+            self._opensearch.config.put(self.CONFIG_YML, key, val)
+
+    def delete_plugin(self, plugin_config: Dict[str, str]) -> None:
+        """Removes plugin configuration from opensearch.yml."""
+        for key in plugin_config.keys():
+            self._opensearch.config.delete(self.CONFIG_YML, key)
 
     def update_host_if_needed(self) -> bool:
         """Update the opensearch config with the current network hosts, after having started.

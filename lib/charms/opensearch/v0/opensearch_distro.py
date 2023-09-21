@@ -158,12 +158,18 @@ class OpenSearchDistribution(ABC):
         except (OpenSearchHttpError, Exception):
             return False
 
-    def run_bin(self, bin_script_name: str, args: str = None):
-        """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin."""
+    def run_bin(self, bin_script_name: str, args: str = None, stdin: str = None) -> str:
+        """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin.
+
+        Args:
+            bin_script_name: opensearch script located in OPENSEARCH_HOME/bin to be executed
+            args: arguments passed to the script
+            stdin: string input to be passed on the standard input of the subprocess.
+        """
         script_path = f"{self.paths.home}/bin/{bin_script_name}"
         self._run_cmd(f"chmod a+x {script_path}")
 
-        self._run_cmd(script_path, args)
+        return self._run_cmd(script_path, args, stdin=stdin)
 
     def run_script(self, script_name: str, args: str = None):
         """Run script provided by Opensearch in another directory, relative to OPENSEARCH_HOME."""
@@ -310,12 +316,15 @@ class OpenSearchDistribution(ABC):
             f.write(data)
 
     @staticmethod
-    def _run_cmd(command: str, args: str = None):
+    def _run_cmd(command: str, args: str = None, stdin: str = None) -> str:
         """Run command.
 
         Arg:
             command: can contain arguments
             args: command line arguments
+            stdin: string input to be passed on the standard input of the subprocess
+
+        Returns the stdout
         """
         if args is not None:
             command = f"{command} {args}"
@@ -325,6 +334,7 @@ class OpenSearchDistribution(ABC):
         try:
             output = subprocess.run(
                 command,
+                input=stdin,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 shell=True,
@@ -338,9 +348,10 @@ class OpenSearchDistribution(ABC):
 
             if output.returncode != 0:
                 logger.error(f"{command}:\n Stderr: {output.stderr}\n Stdout: {output.stdout}")
-                raise OpenSearchCmdError()
-        except (TimeoutError, subprocess.TimeoutExpired):
-            raise OpenSearchCmdError()
+                raise OpenSearchCmdError(output.stderr)
+        except (TimeoutError, subprocess.TimeoutExpired) as e:
+            raise OpenSearchCmdError(e)
+        return output.stdout.strip()
 
     @abstractmethod
     def _build_paths(self) -> Paths:
@@ -423,7 +434,7 @@ class OpenSearchDistribution(ABC):
 
         return missing_requirements
 
-    @property
+    @cached_property
     def version(self) -> str:
         """Returns the version number of this opensearch instance.
 

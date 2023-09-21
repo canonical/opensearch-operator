@@ -1,7 +1,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 import os
-from importlib.metadata import version
 from unittest.mock import PropertyMock
 
 import pytest
@@ -16,12 +15,7 @@ def juju_has_secrets(mocker: MockerFixture):
     NOTE: This is needed, as normally JujuVersion is set to 0.0.0 in tests
     (i.e. not the real juju version)
     """
-    if juju_version := os.environ.get("LIBJUJU_VERSION_SPECIFIER"):
-        juju_version.replace("==", "")
-        juju_version = juju_version[2:].split(".")[0]
-    else:
-        juju_version = version("juju")
-
+    juju_version = os.environ["LIBJUJU_VERSION_SPECIFIER"][:2]  # Removing == symbol
     if juju_version < "3":
         mocker.patch.object(
             JujuVersion, "has_secrets", new_callable=PropertyMock
