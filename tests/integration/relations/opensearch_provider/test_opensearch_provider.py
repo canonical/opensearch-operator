@@ -181,6 +181,64 @@ async def test_version(ops_test: OpsTest):
     assert version == results.get("version", {}).get("number"), results
 
 
+@pytest.mark.abort_on_fail
+@pytest.mark.usefixtures("only_without_juju_secrets")
+async def test_scaling(ops_test: OpsTest):
+    """Test that scaling correctly updates endpoints in databag.
+
+    scale_application also contains a wait_for_idle check, including checking for active status.
+    Idle_period checks must be greater than 1 minute to guarantee update_status fires correctly.
+    """
+
+    async def rel_endpoints(app_name: str, rel_name: str) -> str:
+        return await get_application_relation_data(
+            ops_test, f"{app_name}/0", rel_name, "endpoints"
+        )
+
+    async def get_num_of_endpoints(app_name: str, rel_name: str) -> int:
+        return len((await rel_endpoints(app_name, rel_name)).split(","))
+
+    def get_num_of_opensearch_units() -> int:
+        return len(ops_test.model.applications[OPENSEARCH_APP_NAME].units)
+
+    # Test things are already working fine
+    assert (
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+        == get_num_of_opensearch_units()
+    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+    await ops_test.model.wait_for_idle(
+        status="active", apps=ALL_APPS, timeout=1600, idle_period=70
+    )
+
+    # Test scale down
+    await scale_application(
+        ops_test,
+        OPENSEARCH_APP_NAME,
+        get_num_of_opensearch_units() - 1,
+        timeout=1600,
+        idle_period=70,
+    )
+    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+    assert (
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+        == get_num_of_opensearch_units()
+    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+
+    # test scale back up again
+    await scale_application(
+        ops_test,
+        OPENSEARCH_APP_NAME,
+        get_num_of_opensearch_units() + 1,
+        timeout=1600,
+        idle_period=70,
+    )
+    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS, timeout=1600)
+    assert (
+        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+        == get_num_of_opensearch_units()
+    ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
+
+
 async def get_secret_data(ops_test, secret_uri):
     secret_unique_id = secret_uri.split("/")[-1]
     complete_command = f"show-secret {secret_uri} --reveal --format=json"
@@ -189,7 +247,8 @@ async def get_secret_data(ops_test, secret_uri):
 
 
 @pytest.mark.abort_on_fail
-async def test_scaling(ops_test: OpsTest):
+@pytest.mark.usefixtures("only_with_juju_secrets")
+async def test_scaling_secrets(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag.
 
     scale_application also contains a wait_for_idle check, including checking for active status.
@@ -359,7 +418,72 @@ async def test_admin_relation(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.usefixtures("only_without_juju_secrets")
 async def test_admin_permissions(ops_test: OpsTest):
+    """Test admin permissions behave the way we want.
+
+    admin-only actions include:
+    - creating multiple indices
+    - removing indices they've created
+    - set cluster roles.
+
+    verify that:
+    - we can't remove .opendistro_security index
+      - otherwise create client-admin-role
+    - verify neither admin nor default users can access user api
+      - otherwise create client-default-role
+    """
+    test_unit = ops_test.model.applications[CLIENT_APP_NAME].units[0]
+    # Verify admin can't access security API
+    security_api_endpoint = "/_plugins/_security/api/internalusers"
+    run_dump_users = await run_request(
+        ops_test,
+        unit_name=test_unit.name,
+        endpoint=security_api_endpoint,
+        method="GET",
+        relation_id=admin_relation.id,
+        relation_name=ADMIN_RELATION_NAME,
+    )
+    results = json.loads(run_dump_users["results"])
+    logging.info(results)
+    assert "403 Client Error: Forbidden for url:" in results[0], results
+
+    # verify admin can't delete users
+    first_relation_user = await get_application_relation_data(
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
+    )
+    first_relation_user_endpoint = f"/_plugins/_security/api/internalusers/{first_relation_user}"
+    run_delete_users = await run_request(
+        ops_test,
+        unit_name=test_unit.name,
+        endpoint=first_relation_user_endpoint,
+        method="DELETE",
+        relation_id=admin_relation.id,
+        relation_name=ADMIN_RELATION_NAME,
+    )
+    results = json.loads(run_delete_users["results"])
+    logging.info(results)
+    assert "403 Client Error: Forbidden for url:" in results[0], results
+
+    # verify admin can't modify protected indices
+    for protected_index in PROTECTED_INDICES:
+        protected_index_endpoint = f"/{protected_index}"
+        run_remove_distro = await run_request(
+            ops_test,
+            unit_name=test_unit.name,
+            endpoint=protected_index_endpoint,
+            method="DELETE",
+            relation_id=admin_relation.id,
+            relation_name=ADMIN_RELATION_NAME,
+        )
+        results = json.loads(run_remove_distro["results"])
+        logging.info(results)
+        assert "Error:" in results[0], results
+
+
+@pytest.mark.abort_on_fail
+@pytest.mark.usefixtures("only_with_juju_secrets")
+async def test_admin_permissions_secrets(ops_test: OpsTest):
     """Test admin permissions behave the way we want.
 
     admin-only actions include:
@@ -426,7 +550,66 @@ async def test_admin_permissions(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.usefixtures("only_without_juju_secrets")
 async def test_normal_user_permissions(ops_test: OpsTest):
+    """Test normal user permissions behave the way we want.
+
+    verify that:
+    - we can't remove .opendistro_security index
+    - verify neither admin nor default users can access user api
+    """
+    test_unit = ops_test.model.applications[CLIENT_APP_NAME].units[0]
+
+    # Verify normal users can't access security API
+    security_api_endpoint = "/_plugins/_security/api/internalusers"
+    run_dump_users = await run_request(
+        ops_test,
+        unit_name=test_unit.name,
+        endpoint=security_api_endpoint,
+        method="GET",
+        relation_id=client_relation.id,
+        relation_name=FIRST_RELATION_NAME,
+    )
+    results = json.loads(run_dump_users["results"])
+    logging.info(results)
+    assert "403 Client Error: Forbidden for url:" in results[0], results
+
+    # verify normal users can't delete users
+    first_relation_user = await get_application_relation_data(
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
+    )
+    first_relation_user_endpoint = f"/_plugins/_security/api/internalusers/{first_relation_user}"
+    run_delete_users = await run_request(
+        ops_test,
+        unit_name=test_unit.name,
+        endpoint=first_relation_user_endpoint,
+        method="DELETE",
+        relation_id=client_relation.id,
+        relation_name=FIRST_RELATION_NAME,
+    )
+    results = json.loads(run_delete_users["results"])
+    logging.info(results)
+    assert "403 Client Error: Forbidden for url:" in results[0], results
+
+    # verify user can't modify protected indices
+    for protected_index in PROTECTED_INDICES:
+        protected_index_endpoint = f"/{protected_index}"
+        run_remove_index = await run_request(
+            ops_test,
+            unit_name=test_unit.name,
+            endpoint=protected_index_endpoint,
+            method="DELETE",
+            relation_id=client_relation.id,
+            relation_name=FIRST_RELATION_NAME,
+        )
+        results = json.loads(run_remove_index["results"])
+        logging.info(results)
+        assert "Error:" in results[0], results
+
+
+@pytest.mark.abort_on_fail
+@pytest.mark.usefixtures("only_with_juju_secrets")
+async def test_normal_user_permissions_secrets(ops_test: OpsTest):
     """Test normal user permissions behave the way we want.
 
     verify that:
@@ -486,7 +669,57 @@ async def test_normal_user_permissions(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.usefixtures("only_without_juju_secrets")
 async def test_relation_broken(ops_test: OpsTest):
+    """Test that the user is removed when the relation is broken."""
+    # Retrieve the relation user.
+    relation_user = await get_application_relation_data(
+        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
+    )
+    await ops_test.model.wait_for_idle(
+        status="active",
+        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
+        idle_period=70,
+        timeout=1600,
+    )
+
+    # Break the relation.
+    await asyncio.gather(
+        ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
+            f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
+            f"{CLIENT_APP_NAME}:{FIRST_RELATION_NAME}",
+        ),
+        ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
+            f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
+            f"{CLIENT_APP_NAME}:{ADMIN_RELATION_NAME}",
+        ),
+    )
+
+    await asyncio.gather(
+        ops_test.model.wait_for_idle(apps=[CLIENT_APP_NAME], status="blocked", idle_period=70),
+        ops_test.model.wait_for_idle(
+            apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
+            status="active",
+            idle_period=70,
+            timeout=1600,
+        ),
+    )
+
+    leader_ip = await get_leader_unit_ip(ops_test)
+    users = await http_request(
+        ops_test,
+        "GET",
+        f"https://{leader_ip}:9200/_plugins/_security/api/internalusers/",
+        verify=False,
+    )
+    logger.info(relation_user)
+    logger.info(users)
+    assert relation_user not in users.keys()
+
+
+@pytest.mark.abort_on_fail
+@pytest.mark.usefixtures("only_with_juju_secrets")
+async def test_relation_broken_secrets(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
     secret_uri = await get_application_relation_data(
@@ -545,10 +778,7 @@ async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
 
     await ops_test.model.wait_for_idle(
-        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-        timeout=(50 * 60),
-        status="active",
-        idle_period=70,
+        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=1600, status="active", idle_period=70
     )
 
     read_index_endpoint = "/albums/_search?q=Jazz"
