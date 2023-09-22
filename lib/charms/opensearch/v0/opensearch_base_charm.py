@@ -56,6 +56,7 @@ from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
+from charms.opensearch.v0.opensearch_multi_clusters_config import OpenSearchPeerClustersManager
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
     VOTING_TO_DELETE,
@@ -117,6 +118,8 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.opensearch_exclusions = OpenSearchExclusions(self)
         self.opensearch_fixes = OpenSearchFixes(self)
+        self.opensearch_peer_clusters_manager = OpenSearchPeerClustersManager(self)
+
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = OpenSearchSecrets(self, PeerRelationName)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
@@ -714,6 +717,8 @@ class OpenSearchBaseCharm(CharmBase):
                     "description": "Admin user",
                 },
             )
+
+        self.framework.model.relations
 
         self.secrets.put(Scope.APP, ADMIN_PW, pwd)
         self.secrets.put(Scope.APP, ADMIN_PW_HASH, hashed_pwd)
