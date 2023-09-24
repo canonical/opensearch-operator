@@ -104,6 +104,15 @@ class OpenSearchSnap(OpenSearchDistribution):
 
         return service_failed("snap.opensearch.daemon.service")
 
+    def active_since_timestamp(self) -> str:
+        """Returns latest active timestamp."""
+        if not self._opensearch.services[self.SERVICE_NAME]["active"]:
+            return None
+        # Returns the timestamp from the last restart
+        return self._run_cmd(
+            "systemctl", args="show snap.opensearch.daemon --property=ActiveEnterTimestamp"
+        ).split("ActiveEnterTimestamp=")[1]
+
     @override
     def _build_paths(self) -> Paths:
         """Builds a Path object.
