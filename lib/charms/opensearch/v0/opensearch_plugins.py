@@ -279,7 +279,7 @@ class OpenSearchPlugin:
           plugins_path: str, path to the plugins folder
           extra_config: dict, contains config entries coming from optional relation data
         """
-        self._plugins_path = f"{plugins_path}/{self.PLUGIN_PROPERTIES}"
+        self._plugins_path = f"{plugins_path}/{self.name}/{self.PLUGIN_PROPERTIES}"
         self._extra_config = extra_config
 
     @property
@@ -333,3 +333,24 @@ class OpenSearchPlugin:
     def name(self) -> str:
         """Returns the name of the plugin."""
         pass
+
+
+class OpenSearchKnn(OpenSearchPlugin):
+    """Implements the opensearch-knn plugin."""
+
+    def config(self) -> OpenSearchPluginConfig:
+        """Returns a plugin config object to be applied for enabling the current plugin."""
+        return OpenSearchPluginConfig(
+            config_entries_to_add={"knn.plugin.enabled": True},
+        )
+
+    def disable(self) -> OpenSearchPluginConfig:
+        """Returns a plugin config object to be applied for disabling the current plugin."""
+        return OpenSearchPluginConfig(
+            config_entries_to_add={"knn.plugin.enabled": False},
+        )
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return "opensearch-knn"

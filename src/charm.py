@@ -14,7 +14,7 @@ from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import to_pkcs8
 from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchInstallError
-from ops.charm import InstallEvent
+from ops.charm import ActionEvent, InstallEvent
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus
 from overrides import override
@@ -31,6 +31,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         super().__init__(*args, distro=OpenSearchSnap)  # OpenSearchTarball
 
         self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.active_since_action, self._on_active_since_action)
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
@@ -40,6 +41,15 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.status.clear(InstallProgress)
         except OpenSearchInstallError:
             self.unit.status = BlockedStatus(InstallError)
+
+    def _on_active_since_action(self, event: ActionEvent):
+        """Returns since when the service is running active, if cluster is reachable."""
+        if not self.opensearch.active_since_timestamp():
+            event.fail("Service not active")
+            return
+        if not self.opensearch.is_started():
+            event.fail("Service active in unit, but cluster not started")
+        event.set_results({"timestamp": self.opensearch.active_since_timestamp()})
 
     @override
     def store_tls_resources(

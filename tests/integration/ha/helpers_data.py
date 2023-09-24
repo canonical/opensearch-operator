@@ -113,8 +113,8 @@ async def create_index(
     index_name: str,
     p_shards: int = 1,
     r_shards: int = 1,
-    extra_index_settings: Dict[str, Any] = {},
-    extra_mappings: Dict[str, Any] = {},
+    extra_index_settings: Optional[Dict[str, Any]] = None,
+    extra_mappings: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Create an index with a set number of primary and replica shards.
 
@@ -191,62 +191,6 @@ async def get_doc(
     return await http_request(
         ops_test, "GET", f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}", app=app
     )
-
-
-@retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
-)
-async def search(
-    ops_test: OpsTest,
-    app: str,
-    unit_ip: str,
-    index_name: str,
-    query: Optional[Dict[str, Any]] = None,
-    preference: Optional[str] = None,
-) -> Optional[List[Dict[str, Any]]]:
-    """Search documents."""
-    endpoint = f"https://{unit_ip}:9200/{index_name}/_search"
-    if preference:
-        endpoint = f"{endpoint}?preference={preference}"
-
-    resp = await http_request(ops_test, "GET", endpoint, payload=query, app=app)
-    return resp["hits"]["hits"]
-
-
-@retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
-)
-async def set_knn_training(
-    ops_test: OpsTest,
-    app: str,
-    unit_ip: str,
-    model_name: str,
-    payload: Dict[str, Any],
-) -> Optional[List[Dict[str, Any]]]:
-    """Sets models."""
-    endpoint = f"https://{unit_ip}:9200/_plugins/_knn/models/{model_name}/_train"
-
-    resp = await http_request(ops_test, "POST", endpoint, payload=payload, app=app)
-    return resp
-
-
-@retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
-)
-async def wait_for_knn_training(
-    ops_test: OpsTest,
-    app: str,
-    unit_ip: str,
-    model_name: str,
-) -> bool:
-    """Train models."""
-    endpoint = f"https://{unit_ip}:9200/_plugins/_knn/models/{model_name}"
-
-    resp = await http_request(ops_test, "GET", endpoint, app=app)
-    return "created" in resp.get("state", "")
 
 
 @retry(
