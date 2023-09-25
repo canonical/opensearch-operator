@@ -196,7 +196,7 @@ class OpenSearchConfig:
         result = {}
         loaded_configs = self.load_node()
         for key in plugin_config.keys():
-            if loaded_configs.get(key, None):
+            if key in loaded_configs:
                 result[key] = loaded_configs[key]
         return result
 
