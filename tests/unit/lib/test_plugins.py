@@ -86,8 +86,8 @@ class TestPluginAlreadyInstalled(TestPlugin):
 
     def disable(self):
         return OpenSearchPluginConfig(
-            config_entries_to_del={"param": "tested"},
-            secret_entries_to_del={"key1": "secret1"},
+            config_entries_to_del=["param"],
+            secret_entries_to_del=["key1"],
         )
 
 
@@ -368,6 +368,4 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.assertTrue(self.plugin_manager.run())
         self.plugin_manager._keystore._add.assert_not_called()
         self.plugin_manager._keystore._delete.assert_called()
-        self.plugin_manager._opensearch_config.delete_plugin.assert_has_calls(
-            [call({"param": "tested"})]
-        )
+        self.plugin_manager._opensearch_config.delete_plugin.assert_has_calls([call(["param"])])

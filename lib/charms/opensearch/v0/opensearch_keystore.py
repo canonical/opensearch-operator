@@ -50,11 +50,11 @@ class OpenSearchKeystore:
             self._add(key, value)
         self._reload_keystore()
 
-    def delete(self, entries: Dict[str, str]) -> None:
+    def delete(self, entries: List[str]) -> None:
         """Removes a given key from "opensearch" keystore."""
         if not entries:
             return  # no key/value to remove, no need to request reload of keystore either
-        for key, value in entries.items():
+        for key in entries:
             self._delete(key)
         self._reload_keystore()
 
