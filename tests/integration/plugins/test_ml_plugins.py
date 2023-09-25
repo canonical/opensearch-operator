@@ -22,9 +22,9 @@ from tests.integration.plugins.helpers import (
     create_index_and_bulk_insert,
     generate_bulk_training_data,
     run_knn_training,
+    search,
     wait_all_units_restarted_or_fail,
     wait_for_knn_training,
-    search,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
@@ -237,14 +237,19 @@ async def test_disable_re_enable_knn(ops_test: OpsTest) -> None:
 
     # Set the config to false, then to true
     for conf in [False, True]:
-        await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": str(conf)})
+        await ops_test.model.applications[APP_NAME].set_config(
+            {"plugin_opensearch_knn": str(conf)}
+        )
         await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
         active_since = await wait_all_units_restarted_or_fail(active_since)
         query_works = True
         try:
-            query = {"size": 2, "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}}}
-            s = await search(ops_test, app, leader_unit_ip, index_name, query)
+            query = {
+                "size": 2,
+                "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}},
+            }
+            await search(ops_test, app, leader_unit_ip, index_name, query)
         except Exception as e:
             print(f"test_disable_re_enable_knn: training fails with {e}")
             query_works = False
-        assert query_works == conf # If config is false, then query should fail, and vice-versa
+        assert query_works == conf  # If config is false, then query should fail, and vice-versa

@@ -5,7 +5,7 @@
 """Helper functions for data related tests, such as indexing, searching etc.."""
 import logging
 from random import randint
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
