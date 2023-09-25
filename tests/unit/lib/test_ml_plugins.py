@@ -6,8 +6,7 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
-from charms.opensearch.v0.opensearch_ml_plugins import OpenSearchKnn
-from charms.opensearch.v0.opensearch_plugins import PluginState
+from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn, PluginState
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.testing import Harness
 
@@ -59,12 +58,10 @@ class TestOpenSearchKNN(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_started")
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
-    @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.delete")
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
     def test_enable_first_time_via_config_change(
         self,
         mock_put,
-        mock_delete,
         mock_load,
         mock_is_started,
         mock_status,
@@ -83,13 +80,11 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_version.return_value = "2.9.0"
         self.charm.opensearch.run_bin = MagicMock(return_value=RETURN_LIST_PLUGINS)
         mock_load.return_value = {}
-        mock_put.return_value = {"knn.plugin.enabled": "True"}
-        mock_delete.return_value = {}
+        mock_put.return_value = {"knn.plugin.enabled": "true"}
 
         self.harness.update_config({"plugin_opensearch_knn": True})
         mock_acquire_lock.assert_called_once()
-        mock_delete.assert_called_once()
-        mock_put.assert_called_once_with("opensearch.yml", "knn.plugin.enabled", "True")
+        mock_put.assert_called_once_with("opensearch.yml", "knn.plugin.enabled", True)
 
     @patch.object(RollingOpsManager, "_on_acquire_lock")
     @patch(
@@ -100,12 +95,10 @@ class TestOpenSearchKNN(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_started")
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
-    @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.delete")
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
     def test_disable_via_config_change(
         self,
         mock_put,
-        mock_delete,
         mock_load,
         mock_is_started,
         mock_status,
@@ -121,12 +114,10 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.plugin_manager._keystore.add = MagicMock()
         self.plugin_manager._add_plugin = MagicMock()
         self.charm.opensearch.run_bin = MagicMock(return_value=RETURN_LIST_PLUGINS)
-        mock_load.return_value = {"knn.plugin.enabled": "True"}
-        mock_put.return_value = {"knn.plugin.enabled": "False"}
-        mock_delete.return_value = {"knn.plugin.enabled": "True"}
+        mock_load.return_value = {"knn.plugin.enabled": "true"}
+        mock_put.return_value = {"knn.plugin.enabled": "false"}
 
         self.harness.update_config({"plugin_opensearch_knn": False})
         self.plugin_manager._add_plugin.assert_not_called()
         mock_acquire_lock.assert_called_once()
-        mock_delete.assert_called_once_with("opensearch.yml", "knn.plugin.enabled")
-        mock_put.assert_called_once_with("opensearch.yml", "knn.plugin.enabled", "False")
+        mock_put.assert_called_once_with("opensearch.yml", "knn.plugin.enabled", False)
