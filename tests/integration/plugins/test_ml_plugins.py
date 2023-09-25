@@ -23,6 +23,7 @@ from tests.integration.plugins.helpers import (
     generate_bulk_training_data,
     run_knn_training,
     search,
+    try_search,
     wait_all_units_restarted_or_fail,
     wait_for_knn_training,
 )
@@ -248,7 +249,7 @@ async def test_disable_re_enable_knn(ops_test: OpsTest) -> None:
                 "size": 2,
                 "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}},
             }
-            await search(ops_test, app, leader_unit_ip, index_name, query)
+            await try_search(ops_test, app, leader_unit_ip, index_name, query)
         except Exception as e:
             print(f"test_disable_re_enable_knn: training fails with {e}")
             query_works = False
