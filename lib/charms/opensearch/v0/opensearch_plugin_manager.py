@@ -52,7 +52,7 @@ ConfigExposedPlugins = {
 class OpenSearchPluginManager:
     """Manages plugins."""
 
-    def __init__(self, charm, plugins_path: str = None):
+    def __init__(self, charm):
         """Creates the plugin manager object based on the charm and home_path.
 
         Stores the home path and, optionally, plugins path can also be passed if it is

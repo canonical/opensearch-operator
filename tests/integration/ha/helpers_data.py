@@ -5,10 +5,10 @@
 """Helper functions for data related tests, such as indexing, searching etc.."""
 import logging
 from random import randint
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
+from tenacity import Retrying, retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.helpers import http_request
 
@@ -226,3 +226,24 @@ async def delete_index(ops_test: OpsTest, app: str, unit_ip: str, index_name: st
 def default_doc(index_name: str, doc_id: int) -> Dict[str, Any]:
     """Return a default document used in the tests."""
     return {"title": f"title_{doc_id}", "val": doc_id, "path": f"{index_name}/{doc_id}"}
+
+
+async def search(
+    ops_test: OpsTest,
+    app: str,
+    unit_ip: str,
+    index_name: str,
+    query: Optional[Dict[str, Any]] = None,
+    preference: Optional[str] = None,
+    retries: int = 15,
+) -> Optional[List[Dict[str, Any]]]:
+    """Search documents."""
+    endpoint = f"https://{unit_ip}:9200/{index_name}/_search"
+    if preference:
+        endpoint = f"{endpoint}?preference={preference}"
+    for attempt in Retrying(
+        stop=stop_after_attempt(retries), wait=wait_fixed(wait=5) + wait_random(0, 5)
+    ):
+        with attempt:  # Raises RetryError if failed after "retries"
+            resp = await http_request(ops_test, "GET", endpoint, payload=query, app=app)
+    return resp["hits"]["hits"]

@@ -9,7 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.helpers import app_name
-from tests.integration.ha.helpers_data import bulk_insert, create_index
+from tests.integration.ha.helpers_data import bulk_insert, create_index, search
 from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
     APP_NAME,
@@ -21,9 +21,8 @@ from tests.integration.helpers import (
 from tests.integration.plugins.helpers import (
     create_index_and_bulk_insert,
     generate_bulk_training_data,
+    get_systemd_timestamp,
     run_knn_training,
-    search,
-    try_search,
     wait_all_units_restarted_or_fail,
     wait_for_knn_training,
 )
@@ -61,7 +60,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
+async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
     app = (await app_name(ops_test)) or APP_NAME
 
@@ -94,18 +93,18 @@ async def test_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
         },
     )
     payload, payload_list = generate_bulk_training_data(
-        100, 4, index_name, vector_name, has_result=True
+        index_name, vector_name, docs_count=100, number_dims=4, has_result=True
     )
     # Insert data in bulk
     await bulk_insert(ops_test, app, leader_unit_ip, payload)
     query = {"size": 2, "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}}}
-    s = await search(ops_test, app, leader_unit_ip, index_name, query)
-    assert len(s) == 2
-    assert "query_shard_exception" not in json.dumps(s)
+    docs = await search(ops_test, app, leader_unit_ip, index_name, query)
+    assert len(docs) == 2
+    assert "query_shard_exception" not in json.dumps(docs)
 
 
 @pytest.mark.abort_on_fail
-async def test_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
+async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
     """Uploads data and runs a query search against the NMSLIB KNNEngine."""
     app = (await app_name(ops_test)) or APP_NAME
 
@@ -137,19 +136,17 @@ async def test_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
             }
         },
     )
-    payload, payload_list = generate_bulk_training_data(
-        100, 4, index_name, vector_name, has_result=True
-    )
+    payload, payload_list = generate_bulk_training_data(index_name, vector_name, has_result=True)
     # Insert data in bulk
     await bulk_insert(ops_test, app, leader_unit_ip, payload)
     query = {"size": 2, "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}}}
-    s = await search(ops_test, app, leader_unit_ip, index_name, query)
-    assert len(s) == 2
-    assert "query_shard_exception" not in json.dumps(s)
+    docs = await search(ops_test, app, leader_unit_ip, index_name, query)
+    assert len(docs) == 2
+    assert "query_shard_exception" not in json.dumps(docs)
 
 
 @pytest.mark.abort_on_fail
-async def test_train_search_with_ivf_faiss(ops_test: OpsTest) -> None:
+async def test_knn_train_search_with_ivf_faiss(ops_test: OpsTest) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
     app = (await app_name(ops_test)) or APP_NAME
 
@@ -182,29 +179,18 @@ async def test_train_search_with_ivf_faiss(ops_test: OpsTest) -> None:
             },
         },
     )
-
-    # wait for training to finish
-    finished = False
-    for i in range(10):
-        if await wait_for_knn_training(ops_test, app, leader_unit_ip, model_name):
-            finished = True
-            break
-        print("test_train_search_with_ivf_faiss - Waiting for training to finish...")
-        await asyncio.sleep(15)
-
-    assert finished
+    # wait for training to finish -> fails with an exception otherwise
+    await wait_for_knn_training(ops_test, app, leader_unit_ip, model_name)
 
 
 @pytest.mark.abort_on_fail
-async def test_disable_re_enable_knn(ops_test: OpsTest) -> None:
+async def test_knn_disable_re_enable_knn(ops_test: OpsTest) -> None:
     """Disables the KNN plugin, check restart happened, test unreachable and re-enable it."""
     app = (await app_name(ops_test)) or APP_NAME
 
     units = await get_application_unit_ids_ips(ops_test, app=app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     # Get since when each unit has been active
-    active_since = {unit: None for unit in ops_test.model.applications[APP_NAME].units}
-    active_since = await wait_all_units_restarted_or_fail(active_since)
 
     # create index with r_shards = nodes - 1
     index_name = "test_end_to_end_with_ivf_faiss_training"
@@ -226,31 +212,22 @@ async def test_disable_re_enable_knn(ops_test: OpsTest) -> None:
         },
     }
     await run_knn_training(ops_test, app, leader_unit_ip, model_name, training_config)
-    # wait for training to finish
-    finished = False
-    for i in range(10):
-        if await wait_for_knn_training(ops_test, app, leader_unit_ip, model_name):
-            finished = True
-            break
-        print("test_disable_re_enable_knn - Waiting for training to finish...")
-        await asyncio.sleep(15)
-    assert finished
+    # wait for training to finish -> fails with an exception otherwise
+    await wait_for_knn_training(ops_test, app, leader_unit_ip, model_name)
 
     # Set the config to false, then to true
     for conf in [False, True]:
+        # get current timestamp, to compare with rstarts later
+        ts = get_systemd_timestamp()
         await ops_test.model.applications[APP_NAME].set_config(
             {"plugin_opensearch_knn": str(conf)}
         )
         await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
-        active_since = await wait_all_units_restarted_or_fail(active_since)
-        query_works = True
-        try:
-            query = {
-                "size": 2,
-                "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}},
-            }
-            await try_search(ops_test, app, leader_unit_ip, index_name, query)
-        except Exception as e:
-            print(f"test_disable_re_enable_knn: training fails with {e}")
-            query_works = False
-        assert query_works == conf  # If config is false, then query should fail, and vice-versa
+        # Now use it to compare with the restart
+        assert wait_all_units_restarted_or_fail(ops_test, ts)
+        query = {
+            "size": 2,
+            "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}},
+        }
+        # If search eventually fails, then an exception is raised and the test fails as well
+        await search(ops_test, app, leader_unit_ip, index_name, query, retries=3)

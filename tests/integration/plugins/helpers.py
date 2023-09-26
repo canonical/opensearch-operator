@@ -6,60 +6,60 @@
 import json
 import logging
 import random
-from typing import Any, Dict, List, Optional
+import subprocess
+from typing import Any, Dict, List, Optional, Tuple
 
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.ha.helpers_data import bulk_insert, create_index
-from tests.integration.helpers import http_request
+from tests.integration.helpers import APP_NAME, http_request
 
 logger = logging.getLogger(__name__)
+
+
+def get_systemd_timestamp() -> str:
+    """Returns the timestamp from systemd."""
+    return subprocess.check_output(["timedatectl", "show", "--property=TimeUSec", "--value"])
 
 
 @retry(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def wait_all_units_restarted_or_fail(active_since: Dict[Any, str]) -> Dict[Any, str]:
+async def wait_all_units_restarted_or_fail(ops_test: OpsTest, timestamp: str) -> bool:
     """Waits for all the units of the application to restart or fails.
-
-    Args:
-        active_since: dict, dictionary containing each unit and its latest timestamp as string.
-                            if unit's value is None, then set found timestamp.
 
     Raises:
         Exception: raised if action fails or if timestamp shows restart did not happen yet
-                   https://github.com/juju/python-libjuju/blob/ \
-                       48570bb8d51d38c430d12b86e39706ffd6969fcc/juju/unit.py#L301
     """
-    result = {}
-    for unit, timestamp in active_since.items():
+    for unit in ops_test.model.applications[APP_NAME].units:
         output = await unit.run(
-            "systemctl show snap.opensearch.daemon --property=ActiveEnterTimestamp"
+            "systemctl show snap.opensearch.daemon --property=ActiveEnterTimestamp --value"
         )
-        timestamp = output.results["Stdout"].split("ActiveEnterTimestamp=")[1].rstrip()
-        if not active_since[unit] or active_since[unit] < timestamp:
-            result[unit] = timestamp
-        else:
+        if timestamp >= output.results["Stdout"].rstrip():
             raise Exception()
-    return result
+    return True
 
 
 def generate_bulk_training_data(
-    n: int, ndims: int, index_name: str, vector_name: str, has_result: bool = False
-) -> str:
+    index_name: str,
+    vector_name: str,
+    docs_count: int = 100,
+    number_dims: int = 4,
+    has_result: bool = False,
+) -> Tuple[str, List[str]]:
     random.seed("seed")
     print("The seed for randomness is: 'seed'")
 
-    data = random.randbytes(n * ndims)
+    data = random.randbytes(docs_count * number_dims)
     if has_result:
-        responses = random.randbytes(n)
+        responses = random.randbytes(docs_count)
     result = ""
     result_list = []
-    for i in range(n):
+    for i in range(docs_count):
         result += json.dumps({"index": {"_index": index_name, "_id": i}}) + "\n"
-        result_list.append([float(data[j]) for j in range(i * ndims, (i + 1) * ndims)])
+        result_list.append([float(data[j]) for j in range(i * number_dims, (i + 1) * number_dims)])
         inter = {vector_name: result_list[i]}
         if has_result:
             inter["price"] = float(responses[i])
@@ -80,9 +80,7 @@ async def run_knn_training(
 ) -> Optional[List[Dict[str, Any]]]:
     """Sets models."""
     endpoint = f"https://{unit_ip}:9200/_plugins/_knn/models/{model_name}/_train"
-
-    resp = await http_request(ops_test, "POST", endpoint, payload=payload, app=app)
-    return resp
+    return await http_request(ops_test, "POST", endpoint, payload=payload, app=app)
 
 
 @retry(
@@ -103,8 +101,14 @@ async def wait_for_knn_training(
 
 
 async def create_index_and_bulk_insert(
-    ops_test, app, endpoint, index_name, shards, vector_name, model_name=None
-):
+    ops_test: OpsTest,
+    app: str,
+    endpoint: str,
+    index_name: str,
+    shards: int,
+    vector_name: str,
+    model_name: str = None,
+) -> List[float]:
     if model_name:
         extra_mappings = {
             "properties": {
@@ -141,48 +145,3 @@ async def create_index_and_bulk_insert(
     # Insert data in bulk
     await bulk_insert(ops_test, app, endpoint, payload)
     return payload_list
-
-
-@retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
-)
-async def search(
-    ops_test: OpsTest,
-    app: str,
-    unit_ip: str,
-    index_name: str,
-    query: Optional[Dict[str, Any]] = None,
-    preference: Optional[str] = None,
-) -> Optional[List[Dict[str, Any]]]:
-    """Search documents."""
-    endpoint = f"https://{unit_ip}:9200/{index_name}/_search"
-    if preference:
-        endpoint = f"{endpoint}?preference={preference}"
-
-    resp = await http_request(ops_test, "GET", endpoint, payload=query, app=app)
-    return resp["hits"]["hits"]
-
-
-@retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(3),
-)
-async def try_search(
-    ops_test: OpsTest,
-    app: str,
-    unit_ip: str,
-    index_name: str,
-    query: Optional[Dict[str, Any]] = None,
-    preference: Optional[str] = None,
-) -> Optional[List[Dict[str, Any]]]:
-    """Similar as search method, but with a smaller wait delay.
-
-    The goal is to probe if the search command would fail directly or not.
-    """
-    endpoint = f"https://{unit_ip}:9200/{index_name}/_search"
-    if preference:
-        endpoint = f"{endpoint}?preference={preference}"
-
-    resp = await http_request(ops_test, "GET", endpoint, payload=query, app=app)
-    return resp["hits"]["hits"]
