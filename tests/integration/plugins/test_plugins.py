@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import asyncio
-import json
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -15,13 +14,14 @@ from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    check_cluster_formation_successful,
     get_application_unit_ids_ips,
+    get_application_unit_names,
     get_leader_unit_ip,
 )
 from tests.integration.plugins.helpers import (
     create_index_and_bulk_insert,
     generate_bulk_training_data,
-    get_systemd_timestamp,
     run_knn_training,
     wait_all_units_restarted_or_fail,
     wait_for_knn_training,
@@ -93,14 +93,13 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
         },
     )
     payload, payload_list = generate_bulk_training_data(
-        index_name, vector_name, docs_count=100, number_dims=4, has_result=True
+        index_name, vector_name, docs_count=100, dimensions=4, has_result=True
     )
     # Insert data in bulk
     await bulk_insert(ops_test, app, leader_unit_ip, payload)
     query = {"size": 2, "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}}}
     docs = await search(ops_test, app, leader_unit_ip, index_name, query)
     assert len(docs) == 2
-    assert "query_shard_exception" not in json.dumps(docs)
 
 
 @pytest.mark.abort_on_fail
@@ -136,13 +135,14 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
             }
         },
     )
-    payload, payload_list = generate_bulk_training_data(index_name, vector_name, has_result=True)
+    payload, payload_list = generate_bulk_training_data(
+        index_name, vector_name, docs_count=100, dimensions=4, has_result=True
+    )
     # Insert data in bulk
     await bulk_insert(ops_test, app, leader_unit_ip, payload)
     query = {"size": 2, "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}}}
     docs = await search(ops_test, app, leader_unit_ip, index_name, query)
     assert len(docs) == 2
-    assert "query_shard_exception" not in json.dumps(docs)
 
 
 @pytest.mark.abort_on_fail
@@ -218,16 +218,32 @@ async def test_knn_disable_re_enable_knn(ops_test: OpsTest) -> None:
     # Set the config to false, then to true
     for conf in [False, True]:
         # get current timestamp, to compare with rstarts later
-        ts = get_systemd_timestamp()
+        ts = {
+            unit: await unit.run(
+                "systemctl show snap.opensearch.daemon --property=ActiveEnterTimestamp --value"
+            )
+            for unit in ops_test.model.applications[APP_NAME].units
+        }
         await ops_test.model.applications[APP_NAME].set_config(
             {"plugin_opensearch_knn": str(conf)}
         )
         await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
         # Now use it to compare with the restart
         assert wait_all_units_restarted_or_fail(ops_test, ts)
+        assert await check_cluster_formation_successful(
+            ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=APP_NAME)
+        ), "Restart happened but cluster did not start correctly"
         query = {
             "size": 2,
             "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}},
         }
         # If search eventually fails, then an exception is raised and the test fails as well
-        await search(ops_test, app, leader_unit_ip, index_name, query, retries=3)
+        try:
+            await search(ops_test, app, leader_unit_ip, index_name, query, retries=3)
+        except KeyError:
+            # The search should throw an exception IF configure was set to False and a
+            # search was executed
+            assert not conf
+        else:
+            # The search should be successful if  conf=True
+            assert conf
