@@ -40,6 +40,7 @@ class OpenSearchSnap(OpenSearchDistribution):
     _BASE_SNAP_DIR = "/var/snap/opensearch"
     _SNAP_DATA = f"{_BASE_SNAP_DIR}/current"
     _SNAP_COMMON = f"{_BASE_SNAP_DIR}/common"
+    _SNAP = "/snap/opensearch/current"
 
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
@@ -60,7 +61,6 @@ class OpenSearchSnap(OpenSearchDistribution):
         """Install opensearch from the snapcraft store."""
         if self._opensearch.present:
             return
-
         try:
             self._snapd.ensure(snap.SnapState.Latest, channel="latest/stable")
             self._opensearch.ensure(snap.SnapState.Latest, channel="edge")
@@ -104,6 +104,21 @@ class OpenSearchSnap(OpenSearchDistribution):
 
         return service_failed("snap.opensearch.daemon.service")
 
+    def _set_env_variables(self):
+        """Set the necessary environment variables."""
+        super()._set_env_variables()
+
+        os.environ["SNAP_LOG_DIR"] = f"${self._SNAP_COMMON}/ops/snap/logs"
+        os.environ["OPS_ROOT"] = f"{self._SNAP}/opt/opensearch"
+        os.environ["OPENSEARCH_BIN"] = f"{self._SNAP}/usr/share/opensearch/bin"
+        os.environ["OPENSEARCH_LIB"] = f"{self.paths.home}/lib"
+        os.environ["OPENSEARCH_MODULES"] = f"{self.paths.home}/modules"
+
+        os.environ["OPENSEARCH_VARLIB"] = self.paths.data
+        os.environ["OPENSEARCH_VARLOG"] = self.paths.logs
+
+        os.environ["KNN_LIB_DIR"] = f"{self.paths.plugins}/opensearch-knn/lib"
+
     @override
     def _build_paths(self) -> Paths:
         """Builds a Path object.
@@ -117,7 +132,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             conf=f"{self._SNAP_DATA}/etc/opensearch",
             data=f"{self._SNAP_COMMON}/var/lib/opensearch",
             logs=f"{self._SNAP_COMMON}/var/log/opensearch",
-            jdk=f"{self._SNAP_DATA}/usr/share/opensearch/jdk",
+            jdk=f"{self._SNAP}/usr/share/opensearch/jdk",
             tmp=f"{self._SNAP_COMMON}/usr/share/tmp",
         )
 
