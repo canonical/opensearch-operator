@@ -2,19 +2,12 @@
 # See LICENSE file for licensing details.
 
 """Class for Setting configuration in opensearch config files."""
-import enum
-import json
 import logging
-import socket
-from typing import Dict, List, Optional
-
 import shortuuid
-from ops import Object, CharmBase
 
-from charms.opensearch.v0.constants_tls import CertType
+from typing import List, Optional
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.helper_security import normalized_tls_subject
-from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.models import Model
 from charms.opensearch.v0.opensearch_internal_data import Scope
 
 # The unique Charmhub library identifier, never change it
@@ -30,12 +23,23 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
+class DeploymentType(BaseStrEnum):
+    CLUSTER_MANAGER = "cluster-manager"
+    CLUSTER_MANAGER_FAILOVER = "cluster-manager-failover"
+    OTHER = "other"
+
+
 class Directive(BaseStrEnum):
     WAIT_FOR_PEER_CLUSTER_RELATION = "wait-for-peer-cluster-relation"
     WAIT = "wait"
-    START = "start"
-    INHERIT_NAME = "inherit-name"
+    START_WITH_PROVIDED_ROLES = "start-with-provided-roles"
+    START_WITH_GENERATED_ROLES = "start-with-generated-roles"
+    VALIDATE_CLUSTER_NAME = "validate-cluster-name"
+    INHERIT_CLUSTER_NAME = "inherit-name"
     WELL_SETUP = "well-setup"
+    RECONFIGURE = "reset-config"
+    SHOW_STATUS = "show-status"
+    NONE = "none"
 
 
 class DeploymentState(BaseStrEnum):
@@ -46,7 +50,14 @@ class DeploymentState(BaseStrEnum):
     BLOCKED_CANNOT_START_WITH_ROLES = "blocked-cannot-start-with-current-set-roles"
 
 
-class PeerClusterConfig:
+class PeerClusterRelConfig(Model):
+
+    def __init__(self, cluster_name: Optional[str], cm_nodes: List[str]):
+        self.cluster_name = cluster_name
+        self.cm_nodes = cm_nodes
+
+
+class PeerClusterConfig(Model):
 
     def __init__(self, cluster_name: Optional[str], init_hold: bool, roles: List[str]):
         self.cluster_name = cluster_name
@@ -54,39 +65,19 @@ class PeerClusterConfig:
         self.roles = roles
 
 
-class DeploymentDescription:
+class DeploymentDescription(Model):
 
     def __init__(
         self,
         config: PeerClusterConfig,
+        directives: List[Directive],
         state: DeploymentState = DeploymentState.ACTIVE,
-        directive: Directive = Directive.WAIT,
         started: bool = False,
     ):
         self.config = config
+        self.directives = directives
         self.state = state
-        self.directive = directive
         self.started = started
-
-    def update(self, config: PeerClusterConfig, directive: Directive):
-        """Update the cluster config and directive."""
-        self.config = config
-        self.directive = directive
-
-    @staticmethod
-    def from_dict(input_dict):
-        """Create a new instance of this class from a json/dict repr."""
-        return DeploymentDescription(
-            input_dict["config"],
-            input_dict.get("state", DeploymentState.ACTIVE),
-            input_dict.get("directive", Directive.WAIT),
-            input_dict.get("started", False),
-        )
-
-    @staticmethod
-    def from_str(input_str_dict):
-        """Create a new instance of this class from a stringified json/dict repr."""
-        return DeploymentDescription.from_dict(json.loads(input_str_dict))
 
 
 class OpenSearchPeerClustersManager:
@@ -95,40 +86,80 @@ class OpenSearchPeerClustersManager:
     def __init__(self, charm):
         self._charm = charm
 
-    def run(self) -> None:
+    def run(self, peer_cluster_rel_conf: Optional[PeerClusterRelConfig] = None) -> DeploymentDescription:
         """Updates and recomputes current peer cluster related config if applies."""
         # TODO pass config as a method attribute for when on_relation_joined conf inherited
         # TODO  and set directive accordingly
         if not self._charm.unit.is_leader():
             return
 
-        config = PeerClusterConfig(
+        user_config = PeerClusterConfig(
             cluster_name=self._charm.config.get("cluster_name"),
             init_hold=self._charm.config.get("init_hold", False),
             roles=[option.strip().lower() for option in self._charm.config.get("roles", "").split(",")]
         )
 
-        deployment_desc = self._charm.peers_data.get_object(Scope.APP, "deployment-description")
-        if deployment_desc:
-            deployment_desc = DeploymentDescription.from_dict(deployment_desc)
-            directive = self._existing_cluster_setup(config, deployment_desc)
+        current_deployment_desc = self._charm.peers_data.get_object(Scope.APP, "deployment-description")
+        if current_deployment_desc:
+            current_deployment_desc = DeploymentDescription.from_dict(current_deployment_desc)
+            deployment_desc = self._existing_cluster_setup(user_config, current_deployment_desc)
         else:
-            deployment_desc = DeploymentDescription(config)
-            directive = self._new_cluster_setup(config)
+            deployment_desc = self._new_cluster_setup(user_config)
 
-        deployment_desc.update(config, directive)
-        self._charm.peers_data.put(Scope.APP, "deployment-description", json.dumps(deployment_desc))
+        # important to set as this is what we base our immutability checks on
+        if current_deployment_desc != deployment_desc:
+            self._charm.peers_data.put_object(
+                Scope.APP, "deployment-description", deployment_desc.to_dict()
+            )
 
-    def _new_cluster_setup(self, config: PeerClusterConfig) -> Directive:
-        cluster_name = self._charm.config.get("cluster_name")
+    def _new_cluster_setup(self, config: PeerClusterConfig) -> DeploymentDescription:
+        directives = []
+        deployment_state = DeploymentState.ACTIVE
         if config.init_hold:
-            directive = Directive.WAIT_FOR_PEER_CLUSTER_RELATION
+            if not self._is_peer_cluster_rel_set():
+                directives.append(Directive.SHOW_STATUS)
+                deployment_state = DeploymentState.BLOCKED_WAITING_FOR_RELATION
+
+            directives.extend([
+                Directive.WAIT_FOR_PEER_CLUSTER_RELATION,
+                Directive.VALIDATE_CLUSTER_NAME if config.cluster_name else Directive.INHERIT_CLUSTER_NAME,
+                Directive.START_WITH_PROVIDED_ROLES if config.roles else Directive.START_WITH_GENERATED_ROLES,
+            ])
+            return DeploymentDescription(config, directives=directives, state=deployment_state)
+
+        cluster_name = config.cluster_name
+        if not cluster_name:
+            cluster_name = f"{self._charm.app.name}-{shortuuid.ShortUUID().random(length=4)}"
+
+        if not config.roles:
+            directives.append(Directive.START_WITH_GENERATED_ROLES)
+        elif "cluster_manager" in config.roles:
+            directives.append(Directive.START_WITH_PROVIDED_ROLES)
         else:
-            cluster_name = f"{self._charm.app.name}-{shortuuid.ShortUUID().random(length=4)}"
+            directives.extend([Directive.WAIT_FOR_PEER_CLUSTER_RELATION, Directive.SHOW_STATUS])
+            deployment_state = DeploymentState.BLOCKED_CANNOT_START_WITH_ROLES
 
+        return DeploymentDescription(
+            config=PeerClusterConfig(cluster_name, config.init_hold, config.roles),
+            directives=directives,
+            state=deployment_state,
+        )
+
+    def _existing_cluster_setup(
+        self, config: PeerClusterConfig, prev_deployment: DeploymentDescription
+    ) -> DeploymentDescription:
+        # directives = []
+        # deployment_state = DeploymentState.ACTIVE
+        # if config.cluster_name !=
+        # return DeploymentDescription()
         pass
 
-    def _existing_cluster_setup(self, config: PeerClusterConfig, prev_deployment_desc: DeploymentDescription) -> Directive:
+    def _is_peer_cluster_rel_set(self) -> bool:
+        return self._charm.model.get_relation(self.relation_name) is not None
+
+    # TODO: on peer cluster relation broken --> delete deployment desc from databag
+
+    def _validate_immutability(self):
         pass
 
 
@@ -138,29 +169,3 @@ class OpenSearchPeerClustersManager:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-# def  _peer_cluster_directive(self):
-def apply_config_if_needed(self) -> bool:
-        #Apply multi clusters related config changes if applies.
-
-        if cluster_name and not init_hold:
-            cluster_name = f"{self._charm.app.name}-{shortuuid.ShortUUID().random(length=4)}"
-            directive = Directive.START
-
-
-        self._charm.peers_data.put(Scope.APP, "deployment-directive", Directive.INHERIT_NAME)
-
-"""

@@ -3,7 +3,8 @@
 
 """Cluster-related data structures / model classes."""
 import json
-from typing import List
+from abc import ABC
+from typing import Any, Dict, List
 
 # The unique Charmhub library identifier, never change it
 LIBID = "6007e8030e4542e6b189e2873c8fbfef"
@@ -16,7 +17,46 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-class Node:
+class Model(ABC):
+    """Base model class."""
+
+    def to_str(self) -> str:
+        """Deserialize object into a string."""
+        return json.dumps(
+            vars(self), default=lambda x: x.value if isinstance(x, enum.Enum) else vars(x)
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Deserialize object into a dict."""
+        return json.loads(self.to_str())
+
+    @classmethod
+    def from_dict(cls, input_dict: Dict[str, Any]):
+        """Create a new instance of this class from a json/dict repr."""
+        return cls(**input_dict)
+
+    @classmethod
+    def from_str(cls, input_str_dict: str):
+        """Create a new instance of this class from a stringified json/dict repr."""
+        return cls.from_dict(json.loads(input_str_dict))
+
+    def __eq__(self, other) -> bool:
+        """Implement equality."""
+        if other is None:
+            return False
+
+        equal = True
+        for attr_key, attr_val in self.__dict__.items():
+            other_attr_val = getattr(other, attr_key)
+            if isinstance(attr_val, list):
+                equal = equal and sorted(attr_val) == sorted(other_attr_val)
+            else:
+                equal = equal and (attr_val == other_attr_val)
+
+        return equal
+
+
+class Node(Model):
     """Data class representing a node in a cluster."""
 
     def __init__(self, name: str, roles: List[str], ip: str):
@@ -39,24 +79,3 @@ class Node:
                 return True
 
         return False
-
-    def __eq__(self, other):
-        """Implement equality."""
-        if other is None:
-            return False
-
-        return (
-            self.name == other.name
-            and sorted(self.roles) == sorted(other.roles)
-            and self.ip == other.ip
-        )
-
-    @staticmethod
-    def from_dict(input_dict):
-        """Create a new instance of this class from a json/dict repr."""
-        return Node(input_dict.get("name"), input_dict.get("roles"), input_dict.get("ip"))
-
-    @staticmethod
-    def from_str(input_str_dict):
-        """Create a new instance of this class from a stringified json/dict repr."""
-        return Node.from_dict(json.loads(input_str_dict))

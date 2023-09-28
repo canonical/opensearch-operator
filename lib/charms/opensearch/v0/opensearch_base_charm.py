@@ -115,6 +115,7 @@ class OpenSearchBaseCharm(CharmBase):
             raise ValueError("The type of the opensearch distro must be specified.")
 
         self.opensearch = distro(self, PeerRelationName)
+        self.opensearch_cluster_manager = OpenSearchPeerClustersManager(self)
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.opensearch_exclusions = OpenSearchExclusions(self)
         self.opensearch_fixes = OpenSearchFixes(self)
