@@ -62,6 +62,7 @@ from charms.opensearch.v0.opensearch_nodes_exclusions import (
     VOTING_TO_DELETE,
     OpenSearchExclusions,
 )
+from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
@@ -127,6 +128,8 @@ class OpenSearchBaseCharm(CharmBase):
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.ops_lock = OpenSearchOpsLock(self)
+
+        self.plugin_manager = OpenSearchPluginManager(self)
 
         self.service_manager = RollingOpsManager(
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
@@ -410,6 +413,10 @@ class OpenSearchBaseCharm(CharmBase):
             # roles were changed while the current unit was cut-off from the rest of the network
             self.on[PeerRelationName].relation_joined.emit(
                 self.model.get_relation(PeerRelationName)
+            )
+        if self.opensearch.is_started() and self.plugin_manager.run():
+            self.on[self.service_manager.name].acquire_lock.emit(
+                callback_override="_restart_opensearch"
             )
 
         # node roles changes
