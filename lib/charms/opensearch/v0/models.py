@@ -4,6 +4,7 @@
 """Cluster-related data structures / model classes."""
 import json
 from abc import ABC
+from enum import Enum
 from typing import Any, Dict, List
 
 # The unique Charmhub library identifier, never change it
@@ -23,7 +24,7 @@ class Model(ABC):
     def to_str(self) -> str:
         """Deserialize object into a string."""
         return json.dumps(
-            vars(self), default=lambda x: x.value if isinstance(x, enum.Enum) else vars(x)
+            vars(self), default=lambda x: x.value if isinstance(x, Enum) else vars(x)
         )
 
     def to_dict(self) -> Dict[str, Any]:
