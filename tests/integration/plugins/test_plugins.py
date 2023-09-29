@@ -22,9 +22,10 @@ from tests.integration.helpers import (
 from tests.integration.plugins.helpers import (
     create_index_and_bulk_insert,
     generate_bulk_training_data,
+    get_application_unit_ids_start_time,
+    is_each_unit_restarted,
+    is_knn_training_complete,
     run_knn_training,
-    wait_all_units_restarted_or_fail,
-    wait_for_knn_training,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
@@ -180,7 +181,7 @@ async def test_knn_train_search_with_ivf_faiss(ops_test: OpsTest) -> None:
         },
     )
     # wait for training to finish -> fails with an exception otherwise
-    await wait_for_knn_training(ops_test, app, leader_unit_ip, model_name)
+    await is_knn_training_complete(ops_test, app, leader_unit_ip, model_name)
 
 
 @pytest.mark.abort_on_fail
@@ -199,37 +200,38 @@ async def test_knn_disable_re_enable_knn(ops_test: OpsTest) -> None:
     payload_list = await create_index_and_bulk_insert(
         ops_test, app, leader_unit_ip, index_name, len(units) - 1, vector_name
     )
-
-    training_config = {
-        "training_index": index_name,
-        "training_field": vector_name,
-        "dimension": 4,
-        "method": {
-            "name": "ivf",
-            "engine": "faiss",
-            "space_type": "l2",
-            "parameters": {"nlist": 4, "nprobes": 2},
+    await run_knn_training(
+        ops_test,
+        app,
+        leader_unit_ip,
+        model_name,
+        {
+            "training_index": index_name,
+            "training_field": vector_name,
+            "dimension": 4,
+            "method": {
+                "name": "ivf",
+                "engine": "faiss",
+                "space_type": "l2",
+                "parameters": {"nlist": 4, "nprobes": 2},
+            },
         },
-    }
-    await run_knn_training(ops_test, app, leader_unit_ip, model_name, training_config)
+    )
     # wait for training to finish -> fails with an exception otherwise
-    await wait_for_knn_training(ops_test, app, leader_unit_ip, model_name)
+    assert await is_knn_training_complete(
+        ops_test, app, leader_unit_ip, model_name
+    ), "KNN training did not complete."
 
     # Set the config to false, then to true
-    for conf in [False, True]:
+    for knn_enabled in [False, True]:
         # get current timestamp, to compare with rstarts later
-        ts = {
-            unit: await unit.run(
-                "systemctl show snap.opensearch.daemon --property=ActiveEnterTimestamp --value"
-            )
-            for unit in ops_test.model.applications[APP_NAME].units
-        }
+        ts = get_application_unit_ids_start_time(ops_test, APP_NAME)
         await ops_test.model.applications[APP_NAME].set_config(
-            {"plugin_opensearch_knn": str(conf)}
+            {"plugin_opensearch_knn": str(knn_enabled)}
         )
         await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
         # Now use it to compare with the restart
-        assert wait_all_units_restarted_or_fail(ops_test, ts)
+        assert is_each_unit_restarted(ops_test, APP_NAME, ts)
         assert await check_cluster_formation_successful(
             ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=APP_NAME)
         ), "Restart happened but cluster did not start correctly"
@@ -239,11 +241,10 @@ async def test_knn_disable_re_enable_knn(ops_test: OpsTest) -> None:
         }
         # If search eventually fails, then an exception is raised and the test fails as well
         try:
-            await search(ops_test, app, leader_unit_ip, index_name, query, retries=3)
+            docs = await search(ops_test, app, leader_unit_ip, index_name, query, retries=3)
+            assert (
+                knn_enabled and len(docs) == 2
+            ), f"KNN enabled: {knn_enabled} and search results: {len(docs)}."
         except KeyError:
-            # The search should throw an exception IF configure was set to False and a
-            # search was executed
-            assert not conf
-        else:
-            # The search should be successful if  conf=True
-            assert conf
+            # The search should fail if knn_enabled is false
+            assert not knn_enabled
