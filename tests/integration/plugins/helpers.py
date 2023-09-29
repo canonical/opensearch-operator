@@ -28,13 +28,13 @@ async def service_start_time(ops_test: OpsTest, app: str, unit_id: int) -> float
     """Get the start date unix timestamp of the opensearch service."""
     unit_name = f"{app}/{unit_id}"
 
-    boot_time_cmd = f"ssh {unit_name}" + "awk '/btime/ {print $2}' /proc/stat"
+    boot_time_cmd = f"ssh {unit_name} awk '/btime/ {{print $2}}' /proc/stat"
     _, unit_boot_time, _ = await ops_test.juju(*boot_time_cmd.split(), check=True)
-    unit_boot_time = int(unit_boot_time.strip())
+    unit_boot_time = int(unit_boot_time.rstrip())
 
-    active_since_cmd = f"ssh {unit_name} systemctl show snap.opensearch.daemon --property=ActiveEnterTimestampMonotonic --value"
+    active_since_cmd = f"exec --unit {unit_name} -- systemctl show snap.opensearch.daemon --property=ActiveEnterTimestampMonotonic --value"
     _, active_time_since_boot, _ = await ops_test.juju(*active_since_cmd.split(), check=True)
-    active_time_since_boot = int(active_time_since_boot.strip()) / 1000000
+    active_time_since_boot = int(active_time_since_boot.rstrip()) / 1000000
 
     return unit_boot_time + active_time_since_boot
 
@@ -42,7 +42,8 @@ async def service_start_time(ops_test: OpsTest, app: str, unit_id: int) -> float
 async def get_application_unit_ids_start_time(ops_test: OpsTest, app: str) -> Dict[int, float]:
     """Get opensearch start time by unit."""
     result = {}
-    for u_id in await get_application_unit_ids(ops_test, app):
+
+    for u_id in get_application_unit_ids(ops_test, app):
         result[u_id] = await service_start_time(ops_test, app, u_id)
     return result
 
@@ -54,9 +55,9 @@ async def is_each_unit_restarted(
     try:
         for attempt in Retrying(stop=stop_after_attempt(15), wait=wait_fixed(wait=5)):
             with attempt:
-                for u_id, new_timestamp in (await get_application_unit_ids_start_time(
-                    ops_test, app
-                )).items():
+                for u_id, new_timestamp in (
+                    await get_application_unit_ids_start_time(ops_test, app)
+                ).items():
                     if new_timestamp <= previous_timestamps[u_id]:
                         raise Exception
                 return True

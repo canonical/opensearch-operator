@@ -124,7 +124,7 @@ async def create_index(
         "settings": {"index": {"number_of_shards": p_shards, "number_of_replicas": r_shards}}
     }
     if extra_index_settings:
-        content["settings"]["index"] = {**content["settings"]["index"], **extra_index_settings}
+        content["settings"] = {**content["settings"]["index"], **extra_index_settings}
     if extra_mappings:
         content["mappings"] = extra_mappings
     await http_request(

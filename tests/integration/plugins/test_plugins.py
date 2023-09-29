@@ -185,8 +185,15 @@ async def test_knn_train_search_with_ivf_faiss(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_knn_disable_re_enable_knn(ops_test: OpsTest) -> None:
-    """Disables the KNN plugin, check restart happened, test unreachable and re-enable it."""
+async def test_knn_end_to_end(ops_test: OpsTest) -> None:
+    """Tests the entire cycle of KNN plugin.
+
+    1) Enters data and trains a model in "test_end_to_end_with_ivf_faiss_training"
+    2) Trains model: "test_end_to_end_with_ivf_faiss_model"
+    3) Once training is complete, creates a target index and connects with the model
+    4) Disables KNN plugin: the search must fail
+    5) Re-enables the plugin: search must succeed and return two vectors.
+    """
     app = (await app_name(ops_test)) or APP_NAME
 
     units = await get_application_unit_ids_ips(ops_test, app=app)
@@ -197,7 +204,7 @@ async def test_knn_disable_re_enable_knn(ops_test: OpsTest) -> None:
     index_name = "test_end_to_end_with_ivf_faiss_training"
     vector_name = "test_end_to_end_with_ivf_faiss_vector"
     model_name = "test_end_to_end_with_ivf_faiss_model"
-    payload_list = await create_index_and_bulk_insert(
+    await create_index_and_bulk_insert(
         ops_test, app, leader_unit_ip, index_name, len(units) - 1, vector_name
     )
     await run_knn_training(
@@ -222,26 +229,44 @@ async def test_knn_disable_re_enable_knn(ops_test: OpsTest) -> None:
         ops_test, app, leader_unit_ip, model_name
     ), "KNN training did not complete."
 
+    # Creates the target index, to use the model
+    payload_list = await create_index_and_bulk_insert(
+        ops_test,
+        app,
+        leader_unit_ip,
+        "test_end_to_end_with_ivf_faiss_target",
+        len(units) - 1,
+        vector_name="target-field",
+        model_name=model_name,
+    )
+
     # Set the config to false, then to true
     for knn_enabled in [False, True]:
         # get current timestamp, to compare with rstarts later
-        ts = get_application_unit_ids_start_time(ops_test, APP_NAME)
+        ts = await get_application_unit_ids_start_time(ops_test, APP_NAME)
         await ops_test.model.applications[APP_NAME].set_config(
             {"plugin_opensearch_knn": str(knn_enabled)}
         )
         await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
         # Now use it to compare with the restart
-        assert is_each_unit_restarted(ops_test, APP_NAME, ts)
+        assert await is_each_unit_restarted(ops_test, APP_NAME, ts)
         assert await check_cluster_formation_successful(
             ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=APP_NAME)
         ), "Restart happened but cluster did not start correctly"
         query = {
             "size": 2,
-            "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}},
+            "query": {"knn": {"target-field": {"vector": payload_list[0], "k": 2}}},
         }
         # If search eventually fails, then an exception is raised and the test fails as well
         try:
-            docs = await search(ops_test, app, leader_unit_ip, index_name, query, retries=3)
+            docs = await search(
+                ops_test,
+                app,
+                leader_unit_ip,
+                "test_end_to_end_with_ivf_faiss_target",
+                query,
+                retries=3,
+            )
             assert (
                 knn_enabled and len(docs) == 2
             ), f"KNN enabled: {knn_enabled} and search results: {len(docs)}."
