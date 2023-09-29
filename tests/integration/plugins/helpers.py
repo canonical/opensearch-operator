@@ -54,9 +54,9 @@ async def is_each_unit_restarted(
     try:
         for attempt in Retrying(stop=stop_after_attempt(15), wait=wait_fixed(wait=5)):
             with attempt:
-                for u_id, new_timestamp in get_application_unit_ids_start_time(
+                for u_id, new_timestamp in (await get_application_unit_ids_start_time(
                     ops_test, app
-                ).items():
+                )).items():
                     if new_timestamp <= previous_timestamps[u_id]:
                         raise Exception
                 return True
