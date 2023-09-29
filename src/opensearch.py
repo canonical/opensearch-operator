@@ -104,6 +104,7 @@ class OpenSearchSnap(OpenSearchDistribution):
 
         return service_failed("snap.opensearch.daemon.service")
 
+    @override
     def _set_env_variables(self):
         """Set the necessary environment variables."""
         super()._set_env_variables()
