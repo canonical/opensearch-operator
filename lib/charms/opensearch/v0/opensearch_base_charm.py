@@ -56,7 +56,10 @@ from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
-from charms.opensearch.v0.opensearch_multi_clusters_config import OpenSearchPeerClustersManager
+from charms.opensearch.v0.opensearch_multi_clusters import (
+    OpenSearchPeerClustersManager,
+    OpenSearchProvidedRolesException,
+)
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
     VOTING_TO_DELETE,
@@ -116,7 +119,7 @@ class OpenSearchBaseCharm(CharmBase):
             raise ValueError("The type of the opensearch distro must be specified.")
 
         self.opensearch = distro(self, PeerRelationName)
-        self.opensearch_cluster_manager = OpenSearchPeerClustersManager(self)
+        self.opensearch_peer_cm = OpenSearchPeerClustersManager(self)
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.opensearch_exclusions = OpenSearchExclusions(self)
         self.opensearch_fixes = OpenSearchFixes(self)
@@ -175,6 +178,8 @@ class OpenSearchBaseCharm(CharmBase):
             self._compute_and_broadcast_updated_topology(self._get_nodes(True))
             return
 
+        # TODO: check if cluster can start independently
+
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             self.unit.status = MaintenanceStatus(AdminUserInitProgress)
 
@@ -209,9 +214,29 @@ class OpenSearchBaseCharm(CharmBase):
         # configure clients auth
         self.opensearch_config.set_client_auth()
 
-        # request the start of OpenSearch
-        self.unit.status = WaitingStatus(RequestUnitServiceOps.format("start"))
-        self.on[self.service_manager.name].acquire_lock.emit(callback_override="_start_opensearch")
+        # apply the directives computed and emitted by the peer cluster manager
+        if not self._apply_peer_cm_directives_and_start():
+            event.defer()
+            return
+
+    def _apply_peer_cm_directives_and_start(self) -> bool:
+        """Apply the directives computed by the opensearch peer cluster manager."""
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        if not deployment_desc:
+            # the deployment description hasn't finished being computed by the leader
+            return False
+
+        # check possibility to start
+        if self.opensearch_peer_cm.can_start(deployment_desc):
+            # request the start of OpenSearch
+            self.unit.status = WaitingStatus(RequestUnitServiceOps.format("start"))
+            self.on[self.service_manager.name].acquire_lock.emit(callback_override="_start_opensearch")
+            return True
+
+        if self.unit.is_leader():
+            self.opensearch_peer_cm.apply_status_if_needed(deployment_desc)
+
+        return False
 
     def _on_peer_relation_created(self, event: RelationCreatedEvent):
         """Event received by the new node joining the cluster."""
@@ -401,7 +426,7 @@ class OpenSearchBaseCharm(CharmBase):
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
 
-    def _on_config_changed(self, event: ConfigChangedEvent):
+    def _on_config_changed(self, _: ConfigChangedEvent):
         """On config changed event. Useful for IP changes or for user provided config changes."""
         if self.opensearch_config.update_host_if_needed():
             self.unit.status = MaintenanceStatus(TLSNewCertsRequested)
@@ -414,13 +439,15 @@ class OpenSearchBaseCharm(CharmBase):
             self.on[PeerRelationName].relation_joined.emit(
                 self.model.get_relation(PeerRelationName)
             )
+
+        # manage config changes related to the multi clusters deployment
+        if self.unit.is_leader():
+            self.opensearch_peer_cm.run()
+
         if self.opensearch.is_started() and self.plugin_manager.run():
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
-
-        # node roles changes
-        self.config.get("roles")
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -558,12 +585,20 @@ class OpenSearchBaseCharm(CharmBase):
             # Retrieve the nodes of the cluster, needed to configure this node
             nodes = self._get_nodes(False)
 
+            # validate roles / "quorum maintaining" in case user provided roles
+            self.opensearch_peer_cm.validate_roles(nodes)
+
             # Set the configuration of the node
             self._set_node_conf(nodes)
         except OpenSearchHttpError:
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
             self._post_start_init()
+            return
+        except OpenSearchProvidedRolesException as e:
+            self.peers_data.delete(Scope.UNIT, "starting")
+            event.defer()
+            self.unit.status = BlockedStatus(str(e))
             return
 
         try:
@@ -725,8 +760,6 @@ class OpenSearchBaseCharm(CharmBase):
                     "description": "Admin user",
                 },
             )
-
-        self.framework.model.relations
 
         self.secrets.put(Scope.APP, ADMIN_PW, pwd)
         self.secrets.put(Scope.APP, ADMIN_PW_HASH, hashed_pwd)
