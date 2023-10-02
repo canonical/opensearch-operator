@@ -3,21 +3,22 @@
 
 """Class for Managing configuration related changes in multi cluster deployment context."""
 import logging
-import shortuuid
-
 from typing import List, Optional
 
-from ops import BlockedStatus
-
+import shortuuid
 from charms.opensearch.v0.constants_charm import (
+    PClusterNoRelation,
+    PClusterWrongNodesCountForQuorum,
+    PClusterWrongRelation,
+    PClusterWrongRolesProvided,
     PeerClusterRelationName,
     PeerRelationName,
-    PClusterWrongNodesCountForQuorum, PClusterNoRelation, PClusterWrongRelation, PClusterWrongRolesProvided,
 )
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import Model, Node
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
-from charms.opensearch.v0.opensearch_internal_data import Scope, RelationDataStore
+from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
+from ops import BlockedStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "b02ab02d4fd644fdabe02c61e509093f"
@@ -37,12 +38,16 @@ class OpenSearchProvidedRolesException(OpenSearchError):
 
 
 class DeploymentType(BaseStrEnum):
+    """Nature of a sub cluster deployment."""
+
     CLUSTER_MANAGER = "cluster-manager"
     CLUSTER_MANAGER_FAILOVER = "cluster-manager-failover"
     OTHER = "other"
 
 
 class Directive(BaseStrEnum):
+    """Directive indicating what the pending actions for the current deployments are."""
+
     NONE = "none"
     SHOW_STATUS = "show-status"
     START_WITH_PROVIDED_ROLES = "start-with-provided-roles"
@@ -54,6 +59,8 @@ class Directive(BaseStrEnum):
 
 
 class DeploymentState(BaseStrEnum):
+    """State of a deployment, directly mapping to the juju statuses."""
+
     ACTIVE = "active"
     BLOCKED_WAITING_FOR_RELATION = "blocked-waiting-for-peer-cluster-relation"
     BLOCKED_WRONG_RELATED_CLUSTER = "blocked-wrong-related-cluster"
@@ -61,48 +68,37 @@ class DeploymentState(BaseStrEnum):
 
 
 class PeerClusterRelDataCredentials(Model):
+    """Model class for credentials passed on the PCluster relation."""
 
-    def __init__(self, admin_username: str, admin_password: str):
-        self.admin_username = admin_username
-        self.admin_password = admin_password
+    # TODO: replace password by label."""
+    admin_username: str
+    admin_password: str
 
 
 class PeerClusterRelData(Model):
+    """Model class for the PCluster relation data."""
 
-    def __init__(
-        self,
-        cluster_name: Optional[str],
-        cm_nodes: List[str],
-        credentials: PeerClusterRelDataCredentials,
-        tls_ca: str
-    ):
-        self.cluster_name = cluster_name
-        self.cm_nodes = cm_nodes
-        self.credentials = credentials
-        self.tls_ca = tls_ca
+    cluster_name: Optional[str]
+    cm_nodes: List[str]
+    credentials: PeerClusterRelDataCredentials
+    tls_ca: str
 
 
 class PeerClusterConfig(Model):
+    """Model class for the multi-clusters related config set by the user."""
 
-    def __init__(self, cluster_name: Optional[str], init_hold: bool, roles: List[str]):
-        self.cluster_name = cluster_name
-        self.init_hold = init_hold
-        self.roles = roles
+    cluster_name: str
+    init_hold: bool
+    roles: List[str]
 
 
 class DeploymentDescription(Model):
+    """Model class describing the current state of a deployment / sub-cluster."""
 
-    def __init__(
-        self,
-        config: PeerClusterConfig,
-        directives: List[Directive],
-        state: DeploymentState = DeploymentState.ACTIVE,
-        started: bool = False,
-    ):
-        self.config = config
-        self.directives = directives
-        self.state = state
-        self.started = started
+    config: PeerClusterConfig
+    directives: List[Directive]
+    state: DeploymentState = DeploymentState.ACTIVE
+    started: bool = False
 
 
 class OpenSearchPeerClustersManager:
@@ -118,7 +114,9 @@ class OpenSearchPeerClustersManager:
         user_config = PeerClusterConfig(
             cluster_name=self._charm.config.get("cluster_name"),
             init_hold=self._charm.config.get("init_hold", False),
-            roles=[option.strip().lower() for option in self._charm.config.get("roles", "").split(",")]
+            roles=[
+                option.strip().lower() for option in self._charm.config.get("roles", "").split(",")
+            ],
         )
 
         current_deployment_desc = self.deployment_desc()
@@ -142,12 +140,21 @@ class OpenSearchPeerClustersManager:
                 directives.append(Directive.SHOW_STATUS)
                 deployment_state = DeploymentState.BLOCKED_WAITING_FOR_RELATION
 
-            directives.extend([
-                Directive.WAIT_FOR_PEER_CLUSTER_RELATION,
-                Directive.VALIDATE_CLUSTER_NAME if config.cluster_name else Directive.INHERIT_CLUSTER_NAME,
-                Directive.START_WITH_PROVIDED_ROLES if config.roles else Directive.START_WITH_GENERATED_ROLES,
-            ])
-            return DeploymentDescription(config, directives=directives, state=deployment_state)
+            directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
+            directives.append(
+                Directive.VALIDATE_CLUSTER_NAME
+                if config.cluster_name
+                else Directive.INHERIT_CLUSTER_NAME
+            )
+            directives.append(
+                Directive.START_WITH_PROVIDED_ROLES
+                if config.roles
+                else Directive.START_WITH_GENERATED_ROLES
+            )
+
+            return DeploymentDescription(
+                config=config, directives=directives, state=deployment_state
+            )
 
         cluster_name = config.cluster_name
         if not cluster_name:
@@ -162,7 +169,9 @@ class OpenSearchPeerClustersManager:
             deployment_state = DeploymentState.BLOCKED_CANNOT_START_WITH_ROLES
 
         return DeploymentDescription(
-            config=PeerClusterConfig(cluster_name, config.init_hold, config.roles),
+            config=PeerClusterConfig(
+                cluster_name=cluster_name, init_hold=config.init_hold, roles=config.roles
+            ),
             directives=directives,
             state=deployment_state,
         )
@@ -195,7 +204,9 @@ class OpenSearchPeerClustersManager:
 
         return True
 
-    def apply_status_if_needed(self, deployment_desc: Optional[DeploymentDescription] = None) -> None:
+    def apply_status_if_needed(
+        self, deployment_desc: Optional[DeploymentDescription] = None
+    ) -> None:
         """Resolve and applies corresponding status from the deployment state."""
         deployment_desc = deployment_desc or self.deployment_desc()
         if not deployment_desc:
@@ -219,14 +230,9 @@ class OpenSearchPeerClustersManager:
     def is_main_sub_cluster(self) -> bool:
         """Check if the current cluster is an independent cluster."""
         deployment_desc = self.deployment_desc()
-        has_cm_roles = (
-            Directive.START_WITH_GENERATED_ROLES in deployment_desc.directives
-            or
-            (
-                Directive.START_WITH_PROVIDED_ROLES in deployment_desc.directives
-                and
-                "cluster_manager" in deployment_desc.config.roles
-            )
+        has_cm_roles = Directive.START_WITH_GENERATED_ROLES in deployment_desc.directives or (
+            Directive.START_WITH_PROVIDED_ROLES in deployment_desc.directives
+            and "cluster_manager" in deployment_desc.config.roles
         )
         return has_cm_roles and not deployment_desc.config.init_hold
 
@@ -241,7 +247,7 @@ class OpenSearchPeerClustersManager:
         return DeploymentDescription.from_dict(current_deployment_desc)
 
     def validate_roles(self, nodes: List[Node]):
-        """Validates roles on services start regarding the CM / voting_only counts full-cluster wide."""
+        """Validate full-cluster wide the quorum for CM/voting_only nodes on services start."""
         deployment_desc = self.deployment_desc()
         if not set(deployment_desc.config.roles or []) & {"cluster_manager", "voting_only"}:
             # the user is not adding any cm nor voting_only roles to the nodes
@@ -255,10 +261,11 @@ class OpenSearchPeerClustersManager:
         current_cluster_planned_units = self._charm.app.planned_units
         current_cluster_units = [
             unit.name.replace("/", "-")
-            for unit
-            in self._charm.model.get_relation(PeerRelationName).units
+            for unit in self._charm.model.get_relation(PeerRelationName).units
         ]
-        current_cluster_online_nodes = [node for node in nodes if node.name in current_cluster_units]
+        current_cluster_online_nodes = [
+            node for node in nodes if node.name in current_cluster_units
+        ]
 
         if len(current_cluster_online_nodes) < current_cluster_planned_units - 1:
             # this is not the latest unit to be brought online, we can continue
@@ -274,15 +281,17 @@ class OpenSearchPeerClustersManager:
         raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
 
     @staticmethod
-    def _pre_validate_roles_change(config: PeerClusterConfig, prev_deployment: DeploymentDescription):
+    def _pre_validate_roles_change(
+        config: PeerClusterConfig, prev_deployment: DeploymentDescription
+    ):
         """Validate that the config changes of roles are allowed to happen."""
         if not config.roles:
             # user requests the auto-generation logic of roles, this will have the
             # cluster_manager role generated, so nothing to validate
             return
 
-        # if prev_roles None, means auto-generated roles, and will therefore have cluster_manager
-        # role for all the units - up to the latest if even number of units, which will be voting_only
+        # if prev_roles None, means auto-generated roles, and will therefore include the cm role
+        # for all the units up to the latest if even number of units, which will be voting_only
         prev_roles = set(prev_deployment.config.roles or ["cluster_manager"])
         new_roles = set(config.roles)
 

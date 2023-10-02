@@ -230,7 +230,9 @@ class OpenSearchBaseCharm(CharmBase):
         if self.opensearch_peer_cm.can_start(deployment_desc):
             # request the start of OpenSearch
             self.unit.status = WaitingStatus(RequestUnitServiceOps.format("start"))
-            self.on[self.service_manager.name].acquire_lock.emit(callback_override="_start_opensearch")
+            self.on[self.service_manager.name].acquire_lock.emit(
+                callback_override="_start_opensearch"
+            )
             return True
 
         if self.unit.is_leader():

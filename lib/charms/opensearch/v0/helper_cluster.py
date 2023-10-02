@@ -78,7 +78,9 @@ class ClusterTopology:
             # remove cm from a node
             cm = choice(nodes_by_roles["cluster_manager"])
             logger.debug(f"Suggesting - removal of 'CM': {cm.name}")
-            return Node(cm.name, [r for r in cm.roles if r != "cluster_manager"], cm.ip)
+            return Node(
+                name=cm.name, roles=[r for r in cm.roles if r != "cluster_manager"], ip=cm.ip
+            )
 
         # when cm count smaller than expected
         data_only_nodes = [
@@ -93,7 +95,7 @@ class ClusterTopology:
         # add cm to a data only (non cm) node
         data = choice(data_only_nodes)
         logger.debug(f"Suggesting - Addition of 'CM' to data: {data.name}")
-        return Node(data.name, data.roles + ["cluster_manager"], data.ip)
+        return Node(name=data.name, roles=data.roles + ["cluster_manager"], ip=data.ip)
 
     @staticmethod
     def max_cluster_manager_nodes(planned_units) -> int:
@@ -168,7 +170,7 @@ class ClusterTopology:
             )
             if "nodes" in response:
                 for obj in response["nodes"].values():
-                    nodes.append(Node(obj["name"], obj["roles"], obj["ip"]))
+                    nodes.append(Node(name=obj["name"], roles=obj["roles"], ip=obj["ip"]))
 
         return nodes
 

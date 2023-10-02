@@ -4,8 +4,9 @@
 """Cluster-related data structures / model classes."""
 import json
 from abc import ABC
-from enum import Enum
 from typing import Any, Dict, List
+
+from pydantic import BaseModel, field_validator
 
 # The unique Charmhub library identifier, never change it
 LIBID = "6007e8030e4542e6b189e2873c8fbfef"
@@ -18,18 +19,16 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-class Model(ABC):
+class Model(ABC, BaseModel):
     """Base model class."""
 
     def to_str(self) -> str:
         """Deserialize object into a string."""
-        return json.dumps(
-            vars(self), default=lambda x: x.value if isinstance(x, Enum) else vars(x)
-        )
+        return self.model_dump_json()
 
     def to_dict(self) -> Dict[str, Any]:
         """Deserialize object into a dict."""
-        return json.loads(self.to_str())
+        return self.model_dump()
 
     @classmethod
     def from_dict(cls, input_dict: Dict[str, Any]):
@@ -60,10 +59,15 @@ class Model(ABC):
 class Node(Model):
     """Data class representing a node in a cluster."""
 
-    def __init__(self, name: str, roles: List[str], ip: str):
-        self.name = name
-        self.roles = list(set(roles))
-        self.ip = ip
+    name: str
+    roles: List[str]
+    ip: str
+
+    @classmethod
+    @field_validator("roles")
+    def roles_set(cls, v):
+        """Returns deduplicated list of roles."""
+        return list(set(v))
 
     def is_cm_eligible(self):
         """Returns whether this node is a cluster manager eligible member."""

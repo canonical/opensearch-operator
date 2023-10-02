@@ -158,4 +158,6 @@ class OpenSearchExclusions:
     @cached_property
     def _node(self) -> Node:
         """Returns current node."""
-        return Node(self._charm.unit_name, self._charm.opensearch.roles, self._charm.unit_ip)
+        return Node(
+            name=self._charm.unit_name, roles=self._charm.opensearch.roles, ip=self._charm.unit_ip
+        )

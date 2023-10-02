@@ -16,8 +16,12 @@ LIBPATCH = 1
 
 
 class OpenSearchPeerClusterProvider(Object):
+    """Peer cluster relation provider class."""
+
     pass
 
 
 class OpenSearchPeerClusterRequirer(Object):
+    """Peer cluster relation requirer class."""
+
     pass

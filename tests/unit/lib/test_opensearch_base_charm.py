@@ -36,7 +36,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.charm = self.harness.charm
         self.opensearch = self.charm.opensearch
         self.opensearch.current = MagicMock()
-        self.opensearch.current.return_value = Node("cm1", ["cluster_manager", "data"], "1.1.1.1")
+        self.opensearch.current.return_value = Node(
+            name="cm1", roles=["cluster_manager", "data"], ip="1.1.1.1"
+        )
         self.opensearch.is_failed = MagicMock()
         self.opensearch.is_failed.return_value = False
 

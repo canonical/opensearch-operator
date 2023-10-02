@@ -187,7 +187,10 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
         "GET",
         f"https://{unit_ip}:9200/_cat/nodes?format=json",
     )
-    return [Node(node["name"], node["node.roles"].split(","), node["ip"]) for node in nodes]
+    return [
+        Node(name=node["name"], roles=node["node.roles"].split(","), ip=node["ip"])
+        for node in nodes
+    ]
 
 
 async def assert_continuous_writes_consistency(

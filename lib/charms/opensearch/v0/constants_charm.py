@@ -45,9 +45,7 @@ UserCreationFailed = "failed to create users for {rel_name} relation {id}"
 PClusterNoRelation = "Waiting for peer cluster relation..."
 PClusterWrongRelation = "Cluster name don't match with related cluster. Remove relation."
 PClusterWrongRolesProvided = "Cannot start cluster with current set of roles."
-PClusterWrongNodesCountForQuorum = (
-    "Even number of cluster_manager+voting_only nodes if current unit started. Add or remove 1 unit."
-)
+PClusterWrongNodesCountForQuorum = "Even number of cluster_manager+voting_only nodes if current unit started. Add or remove 1 unit."
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"

@@ -19,17 +19,17 @@ class TestHelperCluster(unittest.TestCase):
     def cluster_5_nodes_conf(self) -> List[Node]:
         """Returns the expected config of a 5 "planned" nodes cluster."""
         return [
-            Node("cm1", self.cm_roles, "0.0.0.1"),
-            Node("cm2", self.cm_roles, "0.0.0.2"),
-            Node("cm3", self.cm_roles, "0.0.0.3"),
-            Node("cm4", self.cm_roles, "0.0.0.4"),
-            Node("cm5", self.cm_roles, "0.0.0.5"),
+            Node(name="cm1", roles=self.cm_roles, ip="0.0.0.1"),
+            Node(name="cm2", roles=self.cm_roles, ip="0.0.0.2"),
+            Node(name="cm3", roles=self.cm_roles, ip="0.0.0.3"),
+            Node(name="cm4", roles=self.cm_roles, ip="0.0.0.4"),
+            Node(name="cm5", roles=self.cm_roles, ip="0.0.0.5"),
         ]
 
     def cluster_6_nodes_conf(self):
         """Returns the expected config of a 6 "planned" nodes cluster."""
         nodes = self.cluster_5_nodes_conf()
-        nodes.append(Node("data1", self.base_roles, "0.0.0.6"))
+        nodes.append(Node(name="data1", roles=self.base_roles, ip="0.0.0.6"))
         return nodes
 
     def setUp(self) -> None:
@@ -143,7 +143,7 @@ class TestHelperCluster(unittest.TestCase):
 
     def test_node_obj_creation_from_json(self):
         """Test the creation of a Node object from a dict representation."""
-        raw_node = Node("cm1", ["cluster_manager"], "0.0.0.11")
+        raw_node = Node(name="cm1", roles=["cluster_manager"], ip="0.0.0.11")
         from_json_node = Node.from_dict(
             {"name": "cm1", "roles": ["cluster_manager"], "ip": "0.0.0.11"}
         )

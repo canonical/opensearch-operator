@@ -401,7 +401,7 @@ class OpenSearchDistribution(ABC):
 
     def current(self) -> Node:
         """Returns current Node."""
-        return Node(self._charm.unit_name, self.roles, self.host)
+        return Node(name=self._charm.unit_name, roles=self.roles, ip=self.host)
 
     @staticmethod
     def normalize_allocation_exclusions(exclusions: Union[List[str], Set[str], str]) -> Set[str]:
