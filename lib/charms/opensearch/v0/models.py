@@ -24,11 +24,11 @@ class Model(ABC, BaseModel):
 
     def to_str(self) -> str:
         """Deserialize object into a string."""
-        return self.model_dump_json()
+        return self.json()
 
     def to_dict(self) -> Dict[str, Any]:
         """Deserialize object into a dict."""
-        return self.model_dump()
+        return self.dict()
 
     @classmethod
     def from_dict(cls, input_dict: Dict[str, Any]):
