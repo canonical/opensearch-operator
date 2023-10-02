@@ -6,7 +6,7 @@ import json
 from abc import ABC
 from typing import Any, Dict, List
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, validator
 
 # The unique Charmhub library identifier, never change it
 LIBID = "6007e8030e4542e6b189e2873c8fbfef"
@@ -64,7 +64,7 @@ class Node(Model):
     ip: str
 
     @classmethod
-    @field_validator("roles")
+    @validator("roles")
     def roles_set(cls, v):
         """Returns deduplicated list of roles."""
         return list(set(v))
