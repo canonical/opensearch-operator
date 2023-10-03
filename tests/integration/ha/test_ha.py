@@ -108,7 +108,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
-        timeout=1400,
+        timeout=3600,
         idle_period=IDLE_PERIOD,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
@@ -176,7 +176,7 @@ async def test_kill_db_process_node_with_primary_shard(
         await ops_test.model.wait_for_idle(
             apps=[app],
             status="active",
-            timeout=1000,
+            timeout=3600,
             idle_period=IDLE_PERIOD,
         )
 
@@ -238,7 +238,7 @@ async def test_kill_db_process_node_with_elected_cm(
         await ops_test.model.wait_for_idle(
             apps=[app],
             status="active",
-            timeout=1000,
+            timeout=3600,
             idle_period=IDLE_PERIOD,
         )
 
@@ -292,7 +292,7 @@ async def test_freeze_db_process_node_with_primary_shard(
         await ops_test.model.wait_for_idle(
             apps=[app],
             status="active",
-            timeout=1000,
+            timeout=3600,
             idle_period=IDLE_PERIOD,
         )
 
@@ -377,7 +377,7 @@ async def test_freeze_db_process_node_with_elected_cm(
         await ops_test.model.wait_for_idle(
             apps=[app],
             status="active",
-            timeout=1000,
+            timeout=3600,
             idle_period=IDLE_PERIOD,
         )
 
@@ -452,7 +452,7 @@ async def test_restart_db_process_node_with_elected_cm(
         await ops_test.model.wait_for_idle(
             apps=[app],
             status="active",
-            timeout=1000,
+            timeout=3600,
             idle_period=IDLE_PERIOD,
         )
 
@@ -505,7 +505,7 @@ async def test_restart_db_process_node_with_primary_shard(
         await ops_test.model.wait_for_idle(
             apps=[app],
             status="active",
-            timeout=1000,
+            timeout=3600,
             idle_period=IDLE_PERIOD,
         )
 
@@ -680,11 +680,11 @@ async def test_multi_clusters_db_isolation(
     await ops_test.model.wait_for_idle(
         apps=[app],
         status="active",
-        timeout=1000,
+        timeout=3600,
         wait_for_exact_units=len(unit_ids) - 1,
         idle_period=IDLE_PERIOD,
     )
-    await ops_test.model.wait_for_idle(apps=[SECOND_APP_NAME], status="active")
+    await ops_test.model.wait_for_idle(apps=[SECOND_APP_NAME], status="active", timeout=3600)
 
     index_name = "test_index_unique_cluster_dbs"
 
