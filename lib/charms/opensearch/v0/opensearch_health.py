@@ -142,6 +142,9 @@ class OpenSearchHealth:
             return None
 
         logger.info(f"Health: {response['status']}")
+        if "status" not in response or not isinstance(response["status"], str):
+            # Error while fetching current cluster status, return status unknown
+            return HealthColors.UNKNOWN
         status = response["status"].lower()
         if status != HealthColors.YELLOW:
             return status

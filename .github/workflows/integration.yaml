@@ -28,9 +28,9 @@ jobs:
         tox-environments:
           - charm-integration
           - tls-integration
-          - client-integration
           - ha-base-integration
           - ha-networking-integration
+          - client-integration
         runner: ["ubuntu-22.04"]
         include:
           - tox-environments: h-scaling-integration
@@ -58,6 +58,18 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ needs.build.outputs.artifact-name }}
+
+      - name: Set snapd in debug mode
+        id: snapd-debug-mode
+        run: |
+          sudo snap refresh snapd
+          sudo mkdir -p /usr/lib/systemd/system/snapd.service.d/
+          echo '[Service]
+          Environment="SNAPD_DEBUG=1"
+          Environment="SNAPD_DEBUG_HTTP=7"' | sudo tee /usr/lib/systemd/system/snapd.service.d/override.conf
+          sudo cat /usr/lib/systemd/system/snapd.service.d/override.conf # Just to check it
+          sudo systemctl daemon-reload
+          sudo systemctl restart snapd
 
       - name: Select tests
         id: select-tests
