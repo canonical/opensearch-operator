@@ -42,6 +42,8 @@ ClusterHealthYellow = (
 )
 IndexCreationFailed = "failed to create {index} index - deferring index-requested event..."
 UserCreationFailed = "failed to create users for {rel_name} relation {id}"
+RolesProvidedInvalid = "cluster_manager and voting_only roles cannot be both set on the same nodes."
+CMRoleRemovalForbidden = "Removal of cluster_manager role from deployment not allowed."
 PClusterNoRelation = "Waiting for peer cluster relation..."
 PClusterWrongRelation = "Cluster name don't match with related cluster. Remove relation."
 PClusterWrongRolesProvided = "Cannot start cluster with current set of roles."

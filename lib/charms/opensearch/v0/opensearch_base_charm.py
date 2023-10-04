@@ -16,6 +16,7 @@ from charms.opensearch.v0.constants_charm import (
     ClusterHealthUnknown,
     PeerRelationName,
     RequestUnitServiceOps,
+    RolesProvidedInvalid,
     SecurityIndexInitProgress,
     ServiceIsStopping,
     ServiceStartError,
@@ -58,7 +59,7 @@ from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Sco
 from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
 from charms.opensearch.v0.opensearch_multi_clusters import (
     OpenSearchPeerClustersManager,
-    OpenSearchProvidedRolesException,
+    OpenSearchProvidedRolesException, Directive,
 )
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
@@ -443,8 +444,14 @@ class OpenSearchBaseCharm(CharmBase):
             )
 
         # manage config changes related to the multi clusters deployment
-        if self.unit.is_leader():
+        try:
             self.opensearch_peer_cm.run()
+            self.status.clear(RolesProvidedInvalid)
+        except OpenSearchProvidedRolesException as e:
+            logger.error(e)
+            if self.unit.is_leader():
+                self.app.status = BlockedStatus(str(e))
+            return
 
         if self.opensearch.is_started() and self.plugin_manager.run():
             self.on[self.service_manager.name].acquire_lock.emit(
@@ -898,6 +905,15 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _recompute_roles_if_needed(self, event: RelationChangedEvent):
         """Recompute node roles:self-healing that didn't trigger leader related event occurred."""
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        if Directive.START_WITH_PROVIDED_ROLES in deployment_desc.directives:
+            nodes = [
+                Node(name=name, roles=deployment_desc.config.roles, ip=ip)
+                for name, ip in units_ips(self, PeerRelationName).items()
+            ]
+            self._compute_and_broadcast_updated_topology(nodes, roles_auto_compute=False)
+            return
+
         try:
             nodes = self._get_nodes(self.opensearch.is_node_up())
             if len(nodes) < self.app.planned_units():
@@ -908,7 +924,9 @@ class OpenSearchBaseCharm(CharmBase):
         except OpenSearchHttpError:
             pass
 
-    def _compute_and_broadcast_updated_topology(self, current_nodes: List[Node]):
+    def _compute_and_broadcast_updated_topology(
+        self, current_nodes: List[Node], roles_auto_compute: bool = True
+    ):
         """Compute cluster topology and broadcast node configs (roles for now) to change if any."""
         if not current_nodes:
             return
@@ -917,7 +935,11 @@ class OpenSearchBaseCharm(CharmBase):
             name: Node.from_dict(node)
             for name, node in (self.peers_data.get_object(Scope.APP, "nodes_config") or {}).items()
         }
-        updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
+
+        updated_nodes = current_nodes
+        if roles_auto_compute:
+            updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
+
         if current_reported_nodes == updated_nodes:
             return
 

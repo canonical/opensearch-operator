@@ -7,12 +7,14 @@ from typing import List, Optional
 
 import shortuuid
 from charms.opensearch.v0.constants_charm import (
+    CMRoleRemovalForbidden,
     PClusterNoRelation,
     PClusterWrongNodesCountForQuorum,
     PClusterWrongRelation,
     PClusterWrongRolesProvided,
     PeerClusterRelationName,
     PeerRelationName,
+    RolesProvidedInvalid,
 )
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import Model, Node
@@ -115,19 +117,27 @@ class OpenSearchPeerClustersManager:
             cluster_name=self._charm.config.get("cluster_name"),
             init_hold=self._charm.config.get("init_hold", False),
             roles=[
-                option.strip().lower() for option in self._charm.config.get("roles", "").split(",")
+                option.strip().lower()
+                for option in self._charm.config.get("roles", "").split(",")
+                if option
             ],
         )
 
         current_deployment_desc = self.deployment_desc()
+        self._pre_validate_roles_change(user_config, current_deployment_desc)
+
         if current_deployment_desc:
-            self._pre_validate_roles_change(user_config, current_deployment_desc)
             deployment_desc = self._existing_cluster_setup(user_config, current_deployment_desc)
         else:
+            if not self._charm.unit.is_leader():
+                return
             deployment_desc = self._new_cluster_setup(user_config)
 
         # important to set as this is what we base our immutability checks on
+        logger.debug(f"\n\n\nCM Manager:\ncurrent dep desc: {current_deployment_desc.to_str() if current_deployment_desc else None}\n"
+                     f"New deployment desc: {deployment_desc.to_str() if deployment_desc else None}\n\n\n")
         if current_deployment_desc != deployment_desc:
+            logger.debug(f"Storing deployment desc: {deployment_desc.to_dict()}\n\n\n\n")
             self._charm.peers_data.put_object(
                 Scope.APP, "deployment-description", deployment_desc.to_dict()
             )
@@ -179,6 +189,10 @@ class OpenSearchPeerClustersManager:
     def _existing_cluster_setup(
         self, config: PeerClusterConfig, prev_deployment: DeploymentDescription
     ) -> DeploymentDescription:
+        # TODO: how to implement role generation logic?
+        #return DeploymentDescription(
+        #    config=PeerClusterConfig(prev_deployment.config.cluster_name),
+        #)
         # directives = []
         # deployment_state = DeploymentState.ACTIVE
         # if config.cluster_name !=
@@ -208,12 +222,16 @@ class OpenSearchPeerClustersManager:
         self, deployment_desc: Optional[DeploymentDescription] = None
     ) -> None:
         """Resolve and applies corresponding status from the deployment state."""
+        logger.debug(f"Apply status if needed with: {deployment_desc.to_str()}")
         deployment_desc = deployment_desc or self.deployment_desc()
         if not deployment_desc:
             return
 
         if Directive.SHOW_STATUS not in deployment_desc.directives:
             return
+
+        # remove show_status directive which is applied below
+        self.clear_directive(Directive.SHOW_STATUS)
 
         blocked_statuses = {
             DeploymentState.BLOCKED_WAITING_FOR_RELATION: PClusterNoRelation,
@@ -226,6 +244,20 @@ class OpenSearchPeerClustersManager:
             return
 
         self._charm.app.status = BlockedStatus(blocked_statuses[deployment_desc.state])
+
+    def clear_directive(self, directive: Directive):
+        """Remove directive after having applied it."""
+        deployment_desc = self.deployment_desc()
+        if not deployment_desc:
+            return
+
+        if directive not in deployment_desc.directives:
+            return
+
+        deployment_desc.directives = deployment_desc.directives.remove(directive)
+        self._charm.peers_data.put_object(
+            Scope.APP, "deployment-description", deployment_desc.to_dict()
+        )
 
     def is_main_sub_cluster(self) -> bool:
         """Check if the current cluster is an independent cluster."""
@@ -285,6 +317,10 @@ class OpenSearchPeerClustersManager:
         config: PeerClusterConfig, prev_deployment: DeploymentDescription
     ):
         """Validate that the config changes of roles are allowed to happen."""
+        if sorted(prev_deployment.config.roles) == sorted(config.roles):
+            # nothing changed, leave
+            return
+
         if not config.roles:
             # user requests the auto-generation logic of roles, this will have the
             # cluster_manager role generated, so nothing to validate
@@ -297,11 +333,11 @@ class OpenSearchPeerClustersManager:
 
         if "cluster_manager" in new_roles and "voting_only" in new_roles:
             # Invalid combination of roles - we cannot have both roles set to a node
-            raise Exception
+            raise OpenSearchProvidedRolesException(RolesProvidedInvalid)
 
         if "cluster_manager" in prev_roles and "cluster_manager" not in new_roles:
             # user requests a forbidden removal of "cluster_manager" role from node
-            raise Exception
+            raise OpenSearchProvidedRolesException(CMRoleRemovalForbidden)
 
     # TODO: register cluster as Cluster Manager in PEER _ RELATION _ DATA
     # TODO: on peer cluster relation broken --> delete deployment desc from databag

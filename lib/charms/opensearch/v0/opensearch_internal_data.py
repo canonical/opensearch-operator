@@ -2,12 +2,12 @@
 # See LICENSE file for licensing details.
 
 """Utility classes for app / unit data bag related operations."""
-
+import enum
 import json
 import logging
 from abc import ABC, abstractmethod
 from ast import literal_eval
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, Any
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from ops import Secret
@@ -127,7 +127,7 @@ class RelationDataStore(DataStore):
 
         payload_str = None
         if value is not None:
-            payload_str = json.dumps(value, default=vars)
+            payload_str = json.dumps(value, default=RelationDataStore._default_encoder)
 
         self.put(scope, key, payload_str)
 
@@ -185,6 +185,17 @@ class RelationDataStore(DataStore):
         relation_scope = self._charm.app if scope == Scope.APP else self._charm.unit
 
         return relation.data[relation_scope]
+
+    @staticmethod
+    def _default_encoder(o: Any) -> Any:
+        """Default encoder for json dumps."""
+        if isinstance(o, enum.Enum):
+            return o.value
+
+        if hasattr(o, "__dict__"):
+            return vars(o)
+
+        raise TypeError(f"Unserializable {o.__class__.__name__}")
 
 
 class SecretCache:
