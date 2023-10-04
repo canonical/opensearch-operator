@@ -135,6 +135,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             logs=f"{self._SNAP_COMMON}/var/log/opensearch",
             jdk=f"{self._SNAP}/usr/share/opensearch/jdk",
             tmp=f"{self._SNAP_COMMON}/usr/share/tmp",
+            bin=f"{self._SNAP}/usr/share/opensearch/bin",
         )
 
     def write_file(self, path: str, data: str, override: bool = True):

@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 class Paths:
     """This class represents the group of Paths that need to be exposed."""
 
-    def __init__(self, home: str, conf: str, data: str, logs: str, jdk: str, tmp: str):
+    def __init__(self, home: str, conf: str, data: str, logs: str, jdk: str, tmp: str, bin: str=None):
         """Constructor of Paths.
 
         Args:
@@ -68,6 +68,7 @@ class Paths:
         self.logs = logs
         self.jdk = jdk
         self.tmp = tmp
+        self.bin = bin or f"{home}/bin"
         self.certs = f"{conf}/certificates"  # must be under config
         self.certs_relative = "certificates"
         self.seed_hosts = f"{conf}/unicast_hosts.txt"
@@ -166,8 +167,9 @@ class OpenSearchDistribution(ABC):
             args: arguments passed to the script
             stdin: string input to be passed on the standard input of the subprocess.
         """
-        script_path = f"{self.paths.home}/bin/{bin_script_name}"
-        self._run_cmd(f"chmod a+x {script_path}")
+        script_path = f"{self.paths.bin}/{bin_script_name}"
+        if not os.access(script_path, os.X_OK):
+            self._run_cmd(f"chmod a+x {script_path}")
 
         return self._run_cmd(script_path, args, stdin=stdin)
 
