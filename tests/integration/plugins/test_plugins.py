@@ -147,45 +147,7 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_knn_train_search_with_ivf_faiss(ops_test: OpsTest) -> None:
-    """Uploads data and runs a query search against the FAISS KNNEngine."""
-    app = (await app_name(ops_test)) or APP_NAME
-
-    units = await get_application_unit_ids_ips(ops_test, app=app)
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    # create index with r_shards = nodes - 1
-    index_name = "test_train_search_with_ivf_faiss_training"
-    vector_name = "test_train_search_with_ivf_faiss_vector"
-    model_name = "test_train_search_with_ivf_faiss_model"
-    await create_index_and_bulk_insert(
-        ops_test, app, leader_unit_ip, index_name, len(units) - 1, vector_name
-    )
-
-    # train the model
-    await run_knn_training(
-        ops_test,
-        app,
-        leader_unit_ip,
-        "test_train_search_with_ivf_faiss_model",
-        {
-            "training_index": index_name,
-            "training_field": vector_name,
-            "dimension": 4,
-            "method": {
-                "name": "ivf",
-                "engine": "faiss",
-                "space_type": "l2",
-                "parameters": {"nlist": 4, "nprobes": 2},
-            },
-        },
-    )
-    # wait for training to finish -> fails with an exception otherwise
-    await is_knn_training_complete(ops_test, app, leader_unit_ip, model_name)
-
-
-@pytest.mark.abort_on_fail
-async def test_knn_end_to_end(ops_test: OpsTest) -> None:
+async def test_knn_training_search(ops_test: OpsTest) -> None:
     """Tests the entire cycle of KNN plugin.
 
     1) Enters data and trains a model in "test_end_to_end_with_ivf_faiss_training"

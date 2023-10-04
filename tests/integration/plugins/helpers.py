@@ -30,11 +30,11 @@ async def service_start_time(ops_test: OpsTest, app: str, unit_id: int) -> float
 
     boot_time_cmd = f"ssh {unit_name} awk '/btime/ {{print $2}}' /proc/stat"
     _, unit_boot_time, _ = await ops_test.juju(*boot_time_cmd.split(), check=True)
-    unit_boot_time = int(unit_boot_time.rstrip())
+    unit_boot_time = int(unit_boot_time.strip())
 
     active_since_cmd = f"exec --unit {unit_name} -- systemctl show snap.opensearch.daemon --property=ActiveEnterTimestampMonotonic --value"
     _, active_time_since_boot, _ = await ops_test.juju(*active_since_cmd.split(), check=True)
-    active_time_since_boot = int(active_time_since_boot.rstrip()) / 1000000
+    active_time_since_boot = int(active_time_since_boot.strip()) / 1000000
 
     return unit_boot_time + active_time_since_boot
 
@@ -143,7 +143,7 @@ async def create_index_and_bulk_insert(
                 }
             }
         }
-        extra_settings = {"index.knn": "true"}
+        extra_index_settings = {"knn": "true"}
     else:
         extra_mappings = {
             "properties": {
@@ -153,7 +153,7 @@ async def create_index_and_bulk_insert(
                 }
             }
         }
-        extra_settings = {}
+        extra_index_settings = {}
 
     await create_index(
         ops_test,
@@ -161,7 +161,7 @@ async def create_index_and_bulk_insert(
         endpoint,
         index_name,
         r_shards=shards,
-        extra_index_settings=extra_settings,
+        extra_index_settings=extra_index_settings,
         extra_mappings=extra_mappings,
     )
     payload, payload_list = generate_bulk_training_data(
