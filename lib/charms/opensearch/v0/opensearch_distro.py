@@ -50,7 +50,9 @@ logger = logging.getLogger(__name__)
 class Paths:
     """This class represents the group of Paths that need to be exposed."""
 
-    def __init__(self, home: str, conf: str, data: str, logs: str, jdk: str, tmp: str, bin: str=None):
+    def __init__(
+        self, home: str, conf: str, data: str, logs: str, jdk: str, tmp: str, bin: str = None
+    ):
         """Constructor of Paths.
 
         Args:
@@ -60,6 +62,7 @@ class Paths:
             logs: Path to the logs folder of opensearch
             jdk: Path of the jdk that comes bundled with the opensearch distro
             tmp: JNA temporary directory
+            bin: optional, Path to the bin/ folder
         """
         self.home = home
         self.conf = conf
