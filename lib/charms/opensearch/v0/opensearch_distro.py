@@ -176,7 +176,7 @@ class OpenSearchDistribution(ABC):
         script_path = f"{self.paths.home}/{script_name}"
         self._run_cmd(f"chmod a+x {script_path}")
 
-        self._run_cmd(f"{script_path}", args)
+        self._run_cmd(f"{script_path}", args, timeout=60)
 
     def request(  # noqa
         self,
@@ -316,13 +316,14 @@ class OpenSearchDistribution(ABC):
             f.write(data)
 
     @staticmethod
-    def _run_cmd(command: str, args: str = None, stdin: str = None) -> str:
+    def _run_cmd(command: str, args: str = None, stdin: str = None, timeout: int = 25) -> str:
         """Run command.
 
         Arg:
             command: can contain arguments
             args: command line arguments
             stdin: string input to be passed on the standard input of the subprocess
+            timeout: subprocess run timeout
 
         Returns the stdout
         """
@@ -340,7 +341,7 @@ class OpenSearchDistribution(ABC):
                 shell=True,
                 text=True,
                 encoding="utf-8",
-                timeout=25,
+                timeout=timeout,
                 env=os.environ,
             )
 

@@ -59,18 +59,6 @@ jobs:
         with:
           name: ${{ needs.build.outputs.artifact-name }}
 
-      - name: Set snapd in debug mode
-        id: snapd-debug-mode
-        run: |
-          sudo snap refresh snapd
-          sudo mkdir -p /usr/lib/systemd/system/snapd.service.d/
-          echo '[Service]
-          Environment="SNAPD_DEBUG=1"
-          Environment="SNAPD_DEBUG_HTTP=7"' | sudo tee /usr/lib/systemd/system/snapd.service.d/override.conf
-          sudo cat /usr/lib/systemd/system/snapd.service.d/override.conf # Just to check it
-          sudo systemctl daemon-reload
-          sudo systemctl restart snapd
-
       - name: Select tests
         id: select-tests
         run: |
@@ -90,6 +78,9 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf /usr/local/share/boost
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+          free
+          cat /proc/cpuinfo
 
           # Set kernel params
           sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5

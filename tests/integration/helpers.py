@@ -7,6 +7,8 @@ import random
 import subprocess
 import tempfile
 from pathlib import Path
+import datetime
+from dateutil import parser
 from types import SimpleNamespace
 from typing import Dict, List, Optional, Union
 
@@ -60,6 +62,9 @@ class Unit:
         is_leader: bool,
         machine_id: int,
         status: str,
+        status_since: datetime.datetime,
+        agent_status: str,
+        agent_status_since: datetime.datetime,
     ):
         self.id = id
         self.name = name
@@ -68,6 +73,9 @@ class Unit:
         self.is_leader = is_leader
         self.machine_id = machine_id
         self.status = status
+        self.since = since
+        self.agent_status = agent_status
+        self.agent_status_since = agent_status_since
 
 
 async def app_name(ops_test: OpsTest) -> Optional[str]:
@@ -155,11 +163,14 @@ async def get_application_units(ops_test: OpsTest, app: str = APP_NAME) -> List[
         unit = Unit(
             id=unit_id,
             name=u_name.replace("/", "-"),
-            ip=unit["public-address"],
+            ip=unit.get("public-address", None),
             hostname=await get_unit_hostname(ops_test, unit_id, app),
             is_leader=unit.get("leader", False),
             machine_id=int(unit["machine"]),
             status=unit["workload-status"]["current"],
+            status_since=parser.parse(unit["workload-status"]["since"]),
+            agent_status=unit["agent-status"]["current"],
+            agent_status_since=parser.parse(unit["agent-status"]["since"]),
         )
         units.append(unit)
 

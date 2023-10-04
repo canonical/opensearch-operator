@@ -16,6 +16,7 @@ from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops.model import BlockedStatus, WaitingStatus
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "93d2c27f38974a59b3bbe39fb27ac98d"
@@ -118,40 +119,38 @@ class OpenSearchHealth:
     def _fetch_status(self, host: Optional[str] = None, wait_for_green_first: bool = False):
         """Fetch the current cluster status."""
         response: Optional[Dict[str, any]] = None
-        if wait_for_green_first:
-            try:
-                response = ClusterState.health(
-                    self._opensearch,
-                    True,
-                    host=host,
-                    alt_hosts=self._charm.alt_hosts,
-                )
-            except OpenSearchHttpError:
-                # it timed out, settle with current status, fetched next without the 1min wait
-                pass
 
-        if not response:
-            response = ClusterState.health(
-                self._opensearch,
-                False,
-                host=host,
-                alt_hosts=self._charm.alt_hosts,
-            )
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(5)):
+                with attempt:
+                    response = ClusterState.health(
+                        self._opensearch,
+                        False,
+                        host=host,
+                        alt_hosts=self._charm.alt_hosts,
+                    )
 
-        if not response:
-            return None
+                    logger.info(f"Health: {response}")
+                    status = response["status"].lower()
+                    # If we must wait for green
+                    if wait_for_green_first and status == HealthColors.GREEN:
+                        return status
+                    elif wait_for_green_first:
+                        raise Exception()  # retry
 
-        logger.info(f"Health: {response['status']}")
-        if "status" not in response or not isinstance(response["status"], str):
-            # Error while fetching current cluster status, return status unknown
+                    if status in [HealthColors.RED, HealthColors.UNKNOWN]:
+                        # Status may be int or different strs, make sure they fit RED or UNKNOWN
+                        return status
+
+                    # we differentiate between a temp yellow (moving shards)
+                    # and perm one (missing replicas)
+                    shards_by_state = ClusterState.shards_by_state(
+                        self._opensearch, host=host, alt_hosts=self._charm.alt_hosts
+                    )
+                    busy_shards = shards_by_state.get("INITIALIZING", 0) + shards_by_state.get(
+                        "RELOCATING", 0
+                    )
+                    return HealthColors.YELLOW_TEMP if busy_shards > 0 else HealthColors.YELLOW
+
+        except RetryError:
             return HealthColors.UNKNOWN
-        status = response["status"].lower()
-        if status != HealthColors.YELLOW:
-            return status
-
-        # we differentiate between a temp yellow (moving shards) and perm one (missing replicas)
-        shards_by_state = ClusterState.shards_by_state(
-            self._opensearch, host=host, alt_hosts=self._charm.alt_hosts
-        )
-        busy_shards = shards_by_state.get("INITIALIZING", 0) + shards_by_state.get("RELOCATING", 0)
-        return HealthColors.YELLOW_TEMP if busy_shards > 0 else HealthColors.YELLOW
