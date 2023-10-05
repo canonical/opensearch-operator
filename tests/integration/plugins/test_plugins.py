@@ -6,6 +6,7 @@ import asyncio
 
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import RetryError
 
 from tests.integration.ha.helpers import app_name
 from tests.integration.ha.helpers_data import bulk_insert, create_index, search
@@ -28,7 +29,6 @@ from tests.integration.plugins.helpers import (
     run_knn_training,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
-from tenacity import RetryError
 
 
 @pytest.mark.abort_on_fail
