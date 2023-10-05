@@ -28,6 +28,7 @@ from tests.integration.plugins.helpers import (
     run_knn_training,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from tenacity import RetryError
 
 
 @pytest.mark.abort_on_fail
@@ -232,6 +233,6 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
             assert (
                 knn_enabled and len(docs) == 2
             ), f"KNN enabled: {knn_enabled} and search results: {len(docs)}."
-        except KeyError:
+        except RetryError:
             # The search should fail if knn_enabled is false
             assert not knn_enabled
