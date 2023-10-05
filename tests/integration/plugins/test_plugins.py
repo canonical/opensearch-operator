@@ -26,6 +26,10 @@ from tests.integration.plugins.helpers import (
     get_application_unit_ids_start_time,
     is_each_unit_restarted,
     is_knn_training_complete,
+    mlcommons_load_model_to_node,
+    mlcommons_predict_model,
+    mlcommons_upload_model,
+    mlcommons_wait_task_model,
     run_knn_training,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -236,3 +240,56 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
         except RetryError:
             # The search should fail if knn_enabled is false
             assert not knn_enabled
+
+
+@pytest.mark.abort_on_fail
+async def test_mlcommons_upload_and_predict_model(ops_test: OpsTest) -> None:
+    """Uploads and runs the model."""
+
+    async def __wait_model_task(task_id: str):
+        for _ in range(5):
+            model_id = await mlcommons_wait_task_model(ops_test, app, leader_unit_ip, task_id)
+        assert model_id is not None
+        return model_id
+
+    app = (await app_name(ops_test)) or APP_NAME
+
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    task_id = (
+        await mlcommons_upload_model(
+            ops_test,
+            app,
+            leader_unit_ip,
+            model_config={
+                "name": "huggingface/sentence-transformers/all-MiniLM-L12-v2",
+                "version": "1.0.1",
+                "model_format": "TORCH_SCRIPT",
+            },
+        )
+    ).get("task_id", None)
+
+    assert task_id is not None
+    model_id = await __wait_model_task(task_id)
+
+    task_id = (await mlcommons_load_model_to_node(ops_test, app, leader_unit_ip, model_id)).get(
+        "task_id", None
+    )
+
+    assert task_id is not None
+    model_id = await __wait_model_task(task_id)
+
+    result = await mlcommons_predict_model(
+        ops_test,
+        app,
+        leader_unit_ip,
+        model_id,
+        text_docs={
+            "text_docs": ["This test worked?"],
+            "return_number": True,
+            "target_response": ["sentence_embedding"],
+        },
+    )
+    shape_count = result["inference_results"][0]["output"][0]["shape"][0]
+    assert shape_count > 0
+    assert shape_count == len(result["inference_results"][0]["output"][0]["data"])
