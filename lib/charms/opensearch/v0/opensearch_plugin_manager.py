@@ -13,6 +13,7 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import Any, Dict, List, Optional
 
+from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
@@ -25,8 +26,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginRemoveError,
     PluginState,
 )
-from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
-
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -50,8 +49,8 @@ ConfigExposedPlugins = {
     },
     "repository-s3": {
         "class": OpenSearchBackupPlugin,
-        "config-name": None,
-        "relation-name": "s3-credentials",
+        "config": None,
+        "relation": "s3-credentials",
     },
 }
 
@@ -85,10 +84,11 @@ class OpenSearchPluginManager:
         return plugins_list
 
     def get_plugin(self, plugin_class: OpenSearchPlugin) -> OpenSearchPlugin:
-        for plugin in self.plugins():
-            if plugin == plugin_class:
+        """Returns a given plugin based on its class."""
+        for plugin in self.plugins:
+            if type(plugin) == plugin_class:
                 return plugin
-        raise KeyError("Plugin manager did not find plugin: {plugin_class}")
+        raise KeyError(f"Plugin manager did not find plugin: {plugin_class}")
 
     def _extra_conf(self, plugin_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Returns the config from the relation data of the target plugin if applies."""
