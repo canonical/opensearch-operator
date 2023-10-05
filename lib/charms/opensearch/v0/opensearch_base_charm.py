@@ -44,6 +44,7 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
+from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -79,7 +80,6 @@ from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
-from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
 from ops.charm import (
     ActionEvent,
     CharmBase,

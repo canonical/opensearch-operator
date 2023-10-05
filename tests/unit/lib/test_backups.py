@@ -3,7 +3,7 @@
 
 """Unit test for the opensearch_plugins library."""
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from charms.opensearch.v0.opensearch_backups import (
     OPENSEARCH_REPOSITORY_NAME,
@@ -68,7 +68,9 @@ class TestBackups(unittest.TestCase):
             },
         )
         mock_install.assert_called_once()
-        assert mock_apply_config.call_args[0][0].__dict__ == OpenSearchPluginConfig(
+        assert (
+            mock_apply_config.call_args[0][0].__dict__
+            == OpenSearchPluginConfig(
                 config_entries_to_add={
                     **S3_OPENSEARCH_EXTRA_VALUES,
                     "s3.client.default.region": "testing-region",
@@ -79,21 +81,7 @@ class TestBackups(unittest.TestCase):
                     "s3.client.default.secret_key": "bbbb",
                 },
             ).__dict__
-        """
-        mock_apply_config.assert_called_once_with(
-            OpenSearchPluginConfig(
-                config_entries_to_add={
-                    **S3_OPENSEARCH_EXTRA_VALUES,
-                    "s3.client.default.region": "testing-region",
-                    "s3.client.default.endpoint": "localhost",
-                },
-                secret_entries_to_add={
-                    "s3.client.default.access_key": "aaaa",
-                    "s3.client.default.secret_key": "bbbb",
-                },
-            )
         )
-        """
         mock_acquire_lock.assert_called_once()
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
@@ -155,7 +143,9 @@ class TestBackups(unittest.TestCase):
         mock_execute_s3_depart_calls.assert_called_once()
         # As plugin_manager's run() is called, then so install(), config() and disable():
         mock_install.assert_called_once()
-        assert mock_apply_config.call_args[0][0].__dict__ == OpenSearchPluginConfig(
+        assert (
+            mock_apply_config.call_args[0][0].__dict__
+            == OpenSearchPluginConfig(
                 config_entries_to_del=[
                     *(S3_OPENSEARCH_EXTRA_VALUES.keys()),
                     "s3.client.default.region",
@@ -166,19 +156,5 @@ class TestBackups(unittest.TestCase):
                     "s3.client.default.secret_key",
                 ],
             ).__dict__
-        """
-        mock_apply_config.assert_called_once_with(
-            OpenSearchPluginConfig(
-                config_entries_to_del=[
-                    *(S3_OPENSEARCH_EXTRA_VALUES.keys()),
-                    "s3.client.default.region",
-                    "s3.client.default.endpoint",
-                ],
-                secret_entries_to_del=[
-                    "s3.client.default.access_key",
-                    "s3.client.default.secret_key",
-                ],
-            )
         )
-        """
         mock_acquire_lock.assert_called_once()

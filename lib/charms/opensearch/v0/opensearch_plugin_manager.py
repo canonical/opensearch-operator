@@ -86,7 +86,7 @@ class OpenSearchPluginManager:
     def get_plugin(self, plugin_class: OpenSearchPlugin) -> OpenSearchPlugin:
         """Returns a given plugin based on its class."""
         for plugin in self.plugins:
-            if type(plugin) == plugin_class:
+            if isinstance(plugin, plugin_class):
                 return plugin
         raise KeyError(f"Plugin manager did not find plugin: {plugin_class}")
 
