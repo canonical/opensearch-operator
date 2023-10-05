@@ -72,6 +72,7 @@ from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
 )
+from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -130,6 +131,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.ops_lock = OpenSearchOpsLock(self)
 
         self.plugin_manager = OpenSearchPluginManager(self)
+        self.backup = OpenSearchBackup(self)
 
         self.service_manager = RollingOpsManager(
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch

@@ -13,6 +13,7 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import Any, Dict, List, Optional
 
+from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
@@ -25,8 +26,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginRemoveError,
     PluginState,
 )
-from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
-
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -50,8 +49,8 @@ ConfigExposedPlugins = {
     },
     "repository-s3": {
         "class": OpenSearchBackupPlugin,
-        "config-name": None,
-        "relation-name": "s3-credentials",
+        "config": None,
+        "relation": "s3-credentials",
     },
 }
 
@@ -84,10 +83,11 @@ class OpenSearchPluginManager:
         return plugins_list
 
     def get_plugin(self, plugin_class: OpenSearchPlugin) -> OpenSearchPlugin:
-        for plugin in self.plugins():
-            if plugin == plugin_class:
+        """Returns a given plugin based on its class."""
+        for plugin in self.plugins:
+            if type(plugin) == plugin_class:
                 return plugin
-        raise KeyError("Plugin manager did not find plugin: {plugin_class}")
+        raise KeyError(f"Plugin manager did not find plugin: {plugin_class}")
 
     def _extra_conf(self, plugin_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Returns the config from the relation data of the target plugin if applies."""
@@ -95,7 +95,8 @@ class OpenSearchPluginManager:
         relation = self._charm.model.get_relation(relation_name) if relation_name else None
         if not relation:
             return None
-        return relation.data[self._charm.app]
+        app = self._charm.model.get_relation(relation_name).app
+        return relation.data[app]
 
     def run(self) -> bool:
         """Runs a check on each plugin: install, execute config changes or remove.
@@ -240,7 +241,7 @@ class OpenSearchPluginManager:
         """Returns True if a relation is expected and it is set."""
         if not relation_name:
             return False
-        return self._charm.model.get_relation(relation_name) is not None
+        return len(self._charm.model.get_relation(relation_name).units) > 0
 
     def _remove_plugin(self, name: str) -> None:
         """Remove a plugin without restarting the node."""

@@ -1,7 +1,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Manages the backup events within the charm.
+"""OpenSearch Backup.
 
 This file holds the implementation of the OpenSearchBackup, OpenSearchBackupPlugin classes
 as well as the configuration and state enum.
@@ -22,7 +22,8 @@ snapshots in the S3 repo.
 
 
 The main class to interact with is the OpenSearchBackup. This class will observe the s3
-relation and backup-related actions. 
+relation and backup-related actions.
+
 OpenSearchBackup finishes the config of the backup service once opensearch.yml has bee
 set/unset and a restart has been applied. That means, in the case s3 has been related,
 this class will apply the new configuration to opensearch.yml and keystore, then issue a
@@ -34,58 +35,54 @@ A charm implementing this class must setup the following:
 
 --> metadata.yaml
     ...
-    s3-credentials:
-      interface: s3
-      limit: 1
+s3-credentials:
+    interface: s3
+    limit: 1
+
 
 --> main charm file
     ...
-    from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
-
-    
-    class OpenSearchBaseCharm(CharmBase):
-    
-        def __init__(...):
-            ...
-            self.backup = OpenSearchBackup(self)
+from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
 
 
-        def _restart_opensearch(self, event: EventBase) -> None:
-            ...
-            # After a restart has been successfully executed,
-            if not self.peers_data.get(Scope.UNIT, "starting", False):
-                try:
-                    self._stop_opensearch()
-                except OpenSearchStopError as e:
-                    logger.error(e)
-                    event.defer()
-                    self.unit.status = WaitingStatus(ServiceIsStopping)
-                    return
+class OpenSearchBaseCharm(CharmBase):
 
-            self._start_opensearch(event)
+    def __init__(...):
+        ...
+        self.backup = OpenSearchBackup(self)
 
-            # call the backup method to check if there are any remaining methods:
-            self.backup.apply_post_restart_if_needed()            
+    def _restart_opensearch(self, event: EventBase) -> None:
+        ...
+        # After a restart has been successfully executed,
+        if not self.peers_data.get(Scope.UNIT, "starting", False):
+            try:
+                self._stop_opensearch()
+            except OpenSearchStopError as e:
+                ...
 
+        self._start_opensearch(event)
+
+        # call the backup method to check if there are any remaining methods:
+        self.backup.apply_post_restart_if_needed()
 """
 
 import logging
-import requests
 from typing import Any, Dict, List
 
+import requests
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
-    OpenSearchHttpError
+    OpenSearchHttpError,
 )
-
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPlugin, OpenSearchPluginConfig
-
-
-from ops.framework import Object
-from ops.model import ActiveStatus, WaitingStatus, ErrorStatus, BlockedStatus, MaintenanceStatus, StatusBase
-
+from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchPlugin,
+    OpenSearchPluginConfig,
+    PluginState,
+)
+from ops.framework import EventBase, Object
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "d301deee4d2c4c1b8e30cd3df8034be2"
@@ -155,6 +152,7 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
     This class must load the opensearch plugin: repository-s3 and configure it.
     """
 
+    @property
     def name(self) -> str:
         """Returns the name of the plugin."""
         return "repository-s3"
@@ -171,12 +169,12 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         )
         """
         return OpenSearchPluginConfig(
-            config_entries_to_add = {
+            config_entries_to_add={
                 **S3_OPENSEARCH_EXTRA_VALUES,
                 "s3.client.default.region": self._extra_config["region"],
                 "s3.client.default.endpoint": self._extra_config["endpoint"],
             },
-            secret_entries_to_add = {
+            secret_entries_to_add={
                 "s3.client.default.access_key": self._extra_config["access-key"],
                 "s3.client.default.secret_key": self._extra_config["secret-key"],
             },
@@ -194,12 +192,12 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         )
         """
         return OpenSearchPluginConfig(
-            config_entries_to_del = [
+            config_entries_to_del=[
                 *(S3_OPENSEARCH_EXTRA_VALUES.keys()),
                 "s3.client.default.region",
                 "s3.client.default.endpoint",
             ],
-            secret_entries_to_del = [
+            secret_entries_to_del=[
                 "s3.client.default.access_key",
                 "s3.client.default.secret_key",
             ],
@@ -210,30 +208,26 @@ class OpenSearchBackup(Object):
     """Implements backup relation and API management."""
 
     def __init__(self, charm: Object):
-        """Manager of OpenSearch client relations."""
-        super().__init__(charm)
+        """Manager of OpenSearch backup relations."""
+        super().__init__(charm, S3_RELATION)
         self.charm = charm
         # s3 relation handles the config options for s3 backups
         self.s3_client = S3Requirer(self.charm, S3_RELATION)
-        self.framework.observe(
-            self.charm.on[S3_RELATION].relation_departed, self.on_s3_depart
-        )
-        self.framework.observe(
-            self.s3_client.on.credentials_changed, self.on_s3_change
-        )
+        self.framework.observe(self.charm.on[S3_RELATION].relation_departed, self.on_s3_depart)
+        self.framework.observe(self.s3_client.on.credentials_changed, self.on_s3_change)
 
     @property
     def _plugin(self) -> OpenSearchPlugin:
-        return self.charm.plugin_manager.get_plugin(type(self))
+        return self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
 
     def on_s3_change(self, _) -> None:
         """Calls the plugin manager config handler.
 
-        The S3 change will run over the plugin and verify if the relation is availble if
+        The S3 change will run over the plugin and verify if the relation is available if
         the s3 config was completely provided. Otherwise, abandon the event and wait for
         a next relation change.
         """
-        if not self._check_missing_s3_config_completeness():
+        if self._check_missing_s3_config_completeness():
             # Abandon this event, as it is still missing data
             return
         # Let run() happens: it will check if the relation is present, and if yes, return
@@ -248,17 +242,20 @@ class OpenSearchBackup(Object):
 
         This method should be called by the charm in its restart callback resolution.
         """
-        if not self.charm.is_leader():
+        if not self.charm.unit.is_leader():
             return
 
-        if not self._check_missing_s3_config_completeness():
+        if self._check_missing_s3_config_completeness():
             # Always check if a relation actually exists and if options are available
             # in this case, seems one of the conditions above is not yet present
             # abandon this restart event, as it will be called later once s3 configuration
             # is correctly set
             return
 
-        if self.charm.plugin_manager.status(self._plugin) not in [PluginState.ENABLED, PluginState.WAITING_FOR_UPGRADE]:
+        if self.charm.plugin_manager.status(self._plugin) not in [
+            PluginState.ENABLED,
+            PluginState.WAITING_FOR_UPGRADE,
+        ]:
             # Configuration is available, but this restart was not done to implement the
             # new backup configs. Abandon the event.
             return
@@ -269,7 +266,7 @@ class OpenSearchBackup(Object):
             return
 
         # Backup relation has been recently made available with all the parameters needed.
-        # Steps: 
+        # Steps:
         #     (1) set up as maintenance;
         self.charm.unit.status = MaintenanceStatus("Configuring backup service...")
         #     (2) run the request; and
@@ -281,8 +278,9 @@ class OpenSearchBackup(Object):
             self.charm.unit.status = BlockedStatus(f"Backup setup failed with {state}")
 
     def on_s3_depart(self, event: EventBase) -> None:
-        """Processes the departure of s3. It runs the reverse process of on_s3_change:
+        """Processes the departure of s3.
 
+        It runs the reverse process of on_s3_change:
         1) Check if the cluster is currently taking a snapshot, if yes, set status as blocked
            and defer this event.
         2) If leader, run API calls to signal disable is needed
@@ -290,16 +288,18 @@ class OpenSearchBackup(Object):
         4) Emit a restart event
         """
         self.charm.unit.status = MaintenanceStatus("Disabling backup service...")
-        snap_status = self._check_snapshot_status()
-        if snap_status in [
+        snapshot_status = self._check_snapshot_status()
+        if snapshot_status in [
             BackupServiceState.SNAPSHOT_IN_PROGRESS,
-            BackupServiceState.SNAPSHOT_PARTIALLY_TAKEN
+            BackupServiceState.SNAPSHOT_PARTIALLY_TAKEN,
         ]:
             # 1) snapshot is either in progress or partially taken: block and defer this event
-            self.charm.unit.status = BlockedStatus(f"Disabling backup not possible: {snap_status}")
+            self.charm.unit.status = BlockedStatus(
+                f"Disabling backup not possible: {snapshot_status}"
+            )
             event.defer()
 
-        if self.charm.is_leader():
+        if self.charm.unit.is_leader():
             # 2) Run the API calls
             self._execute_s3_depart_calls()
 
@@ -316,7 +316,9 @@ class OpenSearchBackup(Object):
 
     def _check_repo_status(self) -> BackupServiceState:
         try:
-            return self.get_snapshot_status(self._request("GET", f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}"))
+            return self.get_service_status(
+                self._request("GET", f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}")
+            )
         except OpenSearchBackupNeworkError:
             return BackupServiceState.RESPONSE_FAILED_NETWORK
 
@@ -342,7 +344,7 @@ class OpenSearchBackup(Object):
         info = self.s3_client.get_s3_connection_info()
         bucket_name = info["bucket"]
         return self.get_service_status(
-                self._request(
+            self._request(
                 "PUT",
                 f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}",
                 payload={
@@ -378,22 +380,17 @@ class OpenSearchBackup(Object):
 
         If int is returned, then throws an exception informing the HTTP request failed.
         """
-
         try:
             result = self.charm.opensearch.request(args, kwargs)
-        except (
-            ValueError, OpenSearchHttpError, requests.HTTPError
-        ):
+        except (ValueError, OpenSearchHttpError, requests.HTTPError):
             raise OpenSearchBackupNeworkError()
-        
-        # The request() method returns some possible exceptions. Let it raise these
-        # exceptions in this case. If the return is an int type, then there was a
-        # request error:
+
+        # If the return is an int type, then there was a request error:
         if isinstance(result, int):
             raise OpenSearchBackupNeworkError(f"Request failed with code {result}")
         return result
 
-    def get_service_status(self, response: Dict[str, Any]) -> BackupServiceState:
+    def get_service_status(self, response: Dict[str, Any]) -> BackupServiceState:  # noqa: C901
         """Returns the response status in a Enum.
 
         Based on:
@@ -428,11 +425,11 @@ class OpenSearchBackup(Object):
         if type == "snapshot_restore_exception":
             return BackupServiceState.SNAPSHOT_RESTORE_ERROR
         if (
-            "bucket" in self.s3_client.get_s3_connection_info() and
-            OPENSEARCH_REPOSITORY_NAME in response and
-            "settings" in response[OPENSEARCH_REPOSITORY_NAME] and
-            self.s3_client.get_s3_connection_info()["bucket"] == \
-                response[OPENSEARCH_REPOSITORY_NAME]["settings"]["bucket"]
+            "bucket" in self.s3_client.get_s3_connection_info()
+            and OPENSEARCH_REPOSITORY_NAME in response
+            and "settings" in response[OPENSEARCH_REPOSITORY_NAME]
+            and self.s3_client.get_s3_connection_info()["bucket"]
+            == response[OPENSEARCH_REPOSITORY_NAME]["settings"]["bucket"]
         ):
             return BackupServiceState.REPO_NOT_CREATED_ALREADY_EXISTS
         return BackupServiceState.SUCCESS
