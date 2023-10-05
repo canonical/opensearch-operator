@@ -123,7 +123,7 @@ async def test_storage_reuse_after_scale_down(
 
     if storage_type(ops_test, app) == "rootfs":
         pytest.skip(
-            "re-use of storage can only be used on deployments with persistent storage not on rootfs deployments"
+            "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
 
     # scale-down to 1 if multiple units
@@ -185,7 +185,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
 
     if storage_type(ops_test, app) == "rootfs":
         pytest.skip(
-            "re-use of storage can only be used on deployments with persistent storage not on rootfs deployments"
+            "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
 
     # scale-down to 1 if multiple units
