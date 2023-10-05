@@ -133,10 +133,10 @@ class OpenSearchHealth:
                     logger.info(f"Health: {response}")
                     status = response["status"].lower()
                     # If we must wait for green
-                    if wait_for_green_first and status == HealthColors.GREEN:
-                        return status
+                    if status == HealthColors.GREEN:
+                        return status  # status is green, nothing to do here
                     elif wait_for_green_first:
-                        raise Exception()  # retry
+                        raise Exception()  # retry, as status is not green
 
                     if status in [HealthColors.RED, HealthColors.UNKNOWN]:
                         # Status may be int or different strs, make sure they fit RED or UNKNOWN

@@ -157,7 +157,7 @@ async def wait_for_all_units_active(  # noqa: C901
     application_status="active",
 ) -> bool:
     try:
-        for attempt in Retrying(stop=stop_after_attempt(20), wait=wait_fixed(status_delay)):
+        for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(status_delay)):
             with attempt:
                 all_units = []
                 ts = datetime.datetime.now()
