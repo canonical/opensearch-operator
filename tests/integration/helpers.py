@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import datetime
 import json
 import logging
 import random
 import subprocess
 import tempfile
 from pathlib import Path
-import datetime
-from dateutil import parser
 from types import SimpleNamespace
 from typing import Dict, List, Optional, Union
 
 import requests
 import yaml
 from charms.opensearch.v0.helper_networking import is_reachable
+from dateutil import parser
 from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -58,7 +58,6 @@ class Unit:
         id: int,
         name: str,
         ip: str,
-        hostname: str,
         is_leader: bool,
         machine_id: int,
         status: str,
@@ -69,11 +68,10 @@ class Unit:
         self.id = id
         self.name = name
         self.ip = ip
-        self.hostname = hostname
         self.is_leader = is_leader
         self.machine_id = machine_id
         self.status = status
-        self.since = since
+        self.status_since = status_since
         self.agent_status = agent_status
         self.agent_status_since = agent_status_since
 
@@ -146,8 +144,52 @@ async def get_admin_secrets(
     return (await run_action(ops_test, unit_id, "get-password", app=app)).response
 
 
+async def wait_for_all_units_active(
+    ops_test, apps, status="active", status_delay: int = 60, agent="idle"
+) -> bool:
+    try:
+        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(60)):
+            with attempt:
+                all_units = []
+                for a in apps:
+                    units = await get_application_units(ops_test, a)
+                    all_units.extend(units)
+                for unit in all_units:
+                    if unit.status != status or unit.agent_status != agent:
+                        print(
+                            f"{unit.name} - current status: {unit.status}/{unit.agent_status}, waiting for: {status}/{agent}"
+                        )
+                        raise Exception()
+                    ts = datetime.datetime.now()
+                    print(f"wait_for_all_units_active: time now is: {ts}")
+                    ts = int(ts.timestamp())
+                    if ts - int(unit.status_since.timestamp()) <= status_delay:
+                        print(
+                            f"{unit.name}: current timestamp: {ts} - unit timestamp: {int(unit.status_since.timestamp())} <= {status_delay}s, unit active since {unit.status_since}"
+                        )
+                        raise Exception()
+                    if ts - int(unit.agent_status_since.timestamp()) <= status_delay:
+                        print(
+                            f"{unit.name}: current timestamp: {ts} - unit timestamp: {int(unit.agent_status_since.timestamp())} <= {status_delay}s, agent idle since {unit.agent_status_since}"
+                        )
+                        raise Exception()
+                print("wait_for_all_units_active: successful!")
+                return True
+    except RetryError as e:
+        raise RetryError(e)  # keeping it as an exception
+
+
 async def get_application_units(ops_test: OpsTest, app: str = APP_NAME) -> List[Unit]:
     """Get fully detailed units of an application."""
+
+    def __get_agent_status(unit):
+        # Differentiate between 2.9 and 3.1:
+        if "agent-status" in unit:
+            # 3.1 style:
+            return unit["agent-status"]["current"], unit["agent-status"]["since"]
+        # 2.9
+        return unit["juju-status"]["current"], unit["juju-status"]["since"]
+
     # Juju incorrectly reports the IP addresses after the network is restored this is reported as a
     # bug here: https://github.com/juju/python-libjuju/issues/738. Once this bug is resolved use of
     # `get_unit_ip` should be replaced with `.public_address`
@@ -160,17 +202,18 @@ async def get_application_units(ops_test: OpsTest, app: str = APP_NAME) -> List[
     units = []
     for u_name, unit in resp_units.items():
         unit_id = int(u_name.split("/")[-1])
+        agent_status, agent_status_since = __get_agent_status(unit)
+
         unit = Unit(
             id=unit_id,
             name=u_name.replace("/", "-"),
             ip=unit.get("public-address", None),
-            hostname=await get_unit_hostname(ops_test, unit_id, app),
             is_leader=unit.get("leader", False),
             machine_id=int(unit["machine"]),
             status=unit["workload-status"]["current"],
             status_since=parser.parse(unit["workload-status"]["since"]),
-            agent_status=unit["agent-status"]["current"],
-            agent_status_since=parser.parse(unit["agent-status"]["since"]),
+            agent_status=agent_status,
+            agent_status_since=parser.parse(agent_status_since),
         )
         units.append(unit)
 
