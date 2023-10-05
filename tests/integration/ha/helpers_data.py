@@ -246,4 +246,4 @@ async def search(
     ):
         with attempt:  # Raises RetryError if failed after "retries"
             resp = await http_request(ops_test, "GET", endpoint, payload=query, app=app)
-    return resp["hits"]["hits"]
+            return resp["hits"]["hits"]
