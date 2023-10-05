@@ -173,8 +173,8 @@ async def create_index_and_bulk_insert(
 
 
 @retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
+    wait=wait_fixed(wait=5),
+    stop=stop_after_attempt(5),
 )
 async def mlcommons_upload_model(
     ops_test: OpsTest,
@@ -190,8 +190,8 @@ async def mlcommons_upload_model(
 
 
 @retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
+    wait=wait_fixed(wait=5),
+    stop=stop_after_attempt(5),
 )
 async def mlcommons_wait_task_model(
     ops_test: OpsTest,
@@ -207,8 +207,8 @@ async def mlcommons_wait_task_model(
 
 
 @retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
+    wait=wait_fixed(wait=5),
+    stop=stop_after_attempt(5),
 )
 async def mlcommons_load_model_to_node(
     ops_test: OpsTest,
@@ -225,8 +225,8 @@ async def mlcommons_load_model_to_node(
 
 
 @retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
+    wait=wait_fixed(wait=5),
+    stop=stop_after_attempt(5),
 )
 async def mlcommons_predict_model(
     ops_test: OpsTest,

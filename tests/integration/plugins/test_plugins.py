@@ -275,21 +275,33 @@ async def test_mlcommons_upload_and_predict_model(ops_test: OpsTest) -> None:
     task_id = (await mlcommons_load_model_to_node(ops_test, app, leader_unit_ip, model_id)).get(
         "task_id", None
     )
-
     assert task_id is not None
     model_id = await __wait_model_task(task_id)
 
-    result = await mlcommons_predict_model(
-        ops_test,
-        app,
-        leader_unit_ip,
-        model_id,
-        text_docs={
-            "text_docs": ["This test worked?"],
-            "return_number": True,
-            "target_response": ["sentence_embedding"],
-        },
-    )
-    shape_count = result["inference_results"][0]["output"][0]["shape"][0]
-    assert shape_count > 0
-    assert shape_count == len(result["inference_results"][0]["output"][0]["data"])
+    # Test disabling and re-enabling
+    for ml_enabled in [False, True]:
+        # get current timestamp, to compare with rstarts later
+        ts = await get_application_unit_ids_start_time(ops_test, APP_NAME)
+        await ops_test.model.applications[APP_NAME].set_config(
+            {"plugin_opensearch_mlcommons": str(ml_enabled)}
+        )
+        await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
+
+        try:
+            result = await mlcommons_predict_model(
+                ops_test,
+                app,
+                leader_unit_ip,
+                model_id,
+                text_docs={
+                    "text_docs": ["This test worked?"],
+                    "return_number": True,
+                    "target_response": ["sentence_embedding"],
+                },
+            )
+            shape_count = result["inference_results"][0]["output"][0]["shape"][0]
+            assert shape_count > 0
+            assert shape_count == len(result["inference_results"][0]["output"][0]["data"])
+        except RetryError:
+            # The search should fail if knn_enabled is false
+            assert not ml_enabled
