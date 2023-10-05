@@ -50,9 +50,7 @@ logger = logging.getLogger(__name__)
 class Paths:
     """This class represents the group of Paths that need to be exposed."""
 
-    def __init__(
-        self, home: str, conf: str, data: str, logs: str, jdk: str, tmp: str, bin: str = None
-    ):
+    def __init__(self, home: str, conf: str, data: str, logs: str, jdk: str, tmp: str, bin: str):
         """Constructor of Paths.
 
         Args:
@@ -71,7 +69,7 @@ class Paths:
         self.logs = logs
         self.jdk = jdk
         self.tmp = tmp
-        self.bin = bin or f"{home}/bin"
+        self.bin = bin
         self.certs = f"{conf}/certificates"  # must be under config
         self.certs_relative = "certificates"
         self.seed_hosts = f"{conf}/unicast_hosts.txt"
@@ -163,23 +161,21 @@ class OpenSearchDistribution(ABC):
             return False
 
     def run_bin(self, bin_script_name: str, args: str = None, stdin: str = None) -> str:
-        """Run opensearch provided bin command, relative to OPENSEARCH_HOME/bin.
+        """Run opensearch provided bin command, relative to OPENSEARCH_BIN.
 
         Args:
-            bin_script_name: opensearch script located in OPENSEARCH_HOME/bin to be executed
+            bin_script_name: opensearch script located in OPENSEARCH_BIN to be executed
             args: arguments passed to the script
             stdin: string input to be passed on the standard input of the subprocess.
         """
         script_path = f"{self.paths.bin}/{bin_script_name}"
-        if not os.access(script_path, os.X_OK):
-            self._run_cmd(f"chmod a+x {script_path}")
-
         return self._run_cmd(script_path, args, stdin=stdin)
 
     def run_script(self, script_name: str, args: str = None):
         """Run script provided by Opensearch in another directory, relative to OPENSEARCH_HOME."""
         script_path = f"{self.paths.home}/{script_name}"
-        self._run_cmd(f"chmod a+x {script_path}")
+        if not os.access(script_path, os.X_OK):
+            self._run_cmd(f"chmod a+x {script_path}")
 
         self._run_cmd(f"{script_path}", args)
 
