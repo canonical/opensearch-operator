@@ -47,13 +47,18 @@ class DeploymentType(BaseStrEnum):
     OTHER = "other"
 
 
+class StartMode(BaseStrEnum):
+    """Mode of start of units in this deployment."""
+
+    WITH_PROVIDED_ROLES = "start-with-provided-roles"
+    WITH_GENERATED_ROLES = "start-with-generated-roles"
+
+
 class Directive(BaseStrEnum):
     """Directive indicating what the pending actions for the current deployments are."""
 
     NONE = "none"
     SHOW_STATUS = "show-status"
-    START_WITH_PROVIDED_ROLES = "start-with-provided-roles"
-    START_WITH_GENERATED_ROLES = "start-with-generated-roles"
     WAIT_FOR_PEER_CLUSTER_RELATION = "wait-for-peer-cluster-relation"
     INHERIT_CLUSTER_NAME = "inherit-name"
     VALIDATE_CLUSTER_NAME = "validate-cluster-name"
@@ -98,6 +103,7 @@ class DeploymentDescription(Model):
     """Model class describing the current state of a deployment / sub-cluster."""
 
     config: PeerClusterConfig
+    start: StartMode
     directives: List[Directive]
     state: DeploymentState = DeploymentState.ACTIVE
     started: bool = False
@@ -146,24 +152,18 @@ class OpenSearchPeerClustersManager:
         directives = []
         deployment_state = DeploymentState.ACTIVE
         if config.init_hold:
-            if not self.peer_cluster_data.get_object("data"):  # todo check if relation is set
-                directives.append(Directive.SHOW_STATUS)
+            if not self.peer_cluster_data.get_object("data"):  # this checks if relation is set
                 deployment_state = DeploymentState.BLOCKED_WAITING_FOR_RELATION
+                directives.append(Directive.SHOW_STATUS)
 
             directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
             directives.append(
-                Directive.VALIDATE_CLUSTER_NAME
-                if config.cluster_name
-                else Directive.INHERIT_CLUSTER_NAME
-            )
-            directives.append(
-                Directive.START_WITH_PROVIDED_ROLES
-                if config.roles
-                else Directive.START_WITH_GENERATED_ROLES
+                Directive.VALIDATE_CLUSTER_NAME if config.cluster_name else Directive.INHERIT_CLUSTER_NAME
             )
 
+            start_mode = StartMode.WITH_PROVIDED_ROLES if config.roles else StartMode.WITH_GENERATED_ROLES
             return DeploymentDescription(
-                config=config, directives=directives, state=deployment_state
+                config=config, start=start_mode, directives=directives, state=deployment_state
             )
 
         cluster_name = config.cluster_name
@@ -171,17 +171,19 @@ class OpenSearchPeerClustersManager:
             cluster_name = f"{self._charm.app.name}-{shortuuid.ShortUUID().random(length=4)}"
 
         if not config.roles:
-            directives.append(Directive.START_WITH_GENERATED_ROLES)
-        elif "cluster_manager" in config.roles:
-            directives.append(Directive.START_WITH_PROVIDED_ROLES)
+            start_mode = StartMode.WITH_GENERATED_ROLES
         else:
-            directives.extend([Directive.WAIT_FOR_PEER_CLUSTER_RELATION, Directive.SHOW_STATUS])
-            deployment_state = DeploymentState.BLOCKED_CANNOT_START_WITH_ROLES
+            start_mode = StartMode.WITH_PROVIDED_ROLES
+            if "cluster_manager" not in config.roles:
+                deployment_state = DeploymentState.BLOCKED_CANNOT_START_WITH_ROLES
+                directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
+                directives.append(Directive.SHOW_STATUS)
 
         return DeploymentDescription(
             config=PeerClusterConfig(
                 cluster_name=cluster_name, init_hold=config.init_hold, roles=config.roles
             ),
+            start=start_mode,
             directives=directives,
             state=deployment_state,
         )
@@ -262,8 +264,8 @@ class OpenSearchPeerClustersManager:
     def is_main_sub_cluster(self) -> bool:
         """Check if the current cluster is an independent cluster."""
         deployment_desc = self.deployment_desc()
-        has_cm_roles = Directive.START_WITH_GENERATED_ROLES in deployment_desc.directives or (
-            Directive.START_WITH_PROVIDED_ROLES in deployment_desc.directives
+        has_cm_roles = deployment_desc.start == StartMode.WITH_GENERATED_ROLES or (
+            deployment_desc.start == StartMode.WITH_PROVIDED_ROLES
             and "cluster_manager" in deployment_desc.config.roles
         )
         return has_cm_roles and not deployment_desc.config.init_hold
@@ -278,19 +280,19 @@ class OpenSearchPeerClustersManager:
 
         return DeploymentDescription.from_dict(current_deployment_desc)
 
-    def validate_roles(self, nodes: List[Node]):
+    def validate_roles(self, nodes: List[Node]) -> None:
         """Validate full-cluster wide the quorum for CM/voting_only nodes on services start."""
         deployment_desc = self.deployment_desc()
         if not set(deployment_desc.config.roles or []) & {"cluster_manager", "voting_only"}:
             # the user is not adding any cm nor voting_only roles to the nodes
             return
 
-        if Directive.START_WITH_PROVIDED_ROLES not in deployment_desc.directives:
+        if deployment_desc.start == StartMode.WITH_PROVIDED_ROLES:
             # the roles are automatically generated, we trust the correctness
             return
 
         # validate the full-cluster wide count of cm+voting_only nodes to keep the quorum
-        current_cluster_planned_units = self._charm.app.planned_units
+        current_cluster_planned_units = self._charm.app.planned_units()
         current_cluster_units = [
             unit.name.replace("/", "-")
             for unit in self._charm.model.get_relation(PeerRelationName).units
@@ -311,6 +313,10 @@ class OpenSearchPeerClustersManager:
             return
 
         raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
+
+    def roles_provided_by_user(self) -> bool:
+        """Return whether the roles were provided by the user of self-generated."""
+        return self.deployment_desc().start == StartMode.WITH_PROVIDED_ROLES
 
     @staticmethod
     def _pre_validate_roles_change(
