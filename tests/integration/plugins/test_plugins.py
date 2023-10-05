@@ -287,6 +287,12 @@ async def test_mlcommons_upload_and_predict_model(ops_test: OpsTest) -> None:
         )
         await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
 
+        # Now use it to compare with the restart
+        assert await is_each_unit_restarted(ops_test, APP_NAME, ts)
+        assert await check_cluster_formation_successful(
+            ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=APP_NAME)
+        ), "Restart happened but cluster did not start correctly"
+
         try:
             result = await mlcommons_predict_model(
                 ops_test,
