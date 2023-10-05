@@ -64,6 +64,8 @@ class Unit:
         status_since: datetime.datetime,
         agent_status: str,
         agent_status_since: datetime.datetime,
+        app_status: str,
+        app_status_since: datetime.datetime,
     ):
         self.id = id
         self.name = name
@@ -74,6 +76,8 @@ class Unit:
         self.status_since = status_since
         self.agent_status = agent_status
         self.agent_status_since = agent_status_since
+        self.app_status = app_status
+        self.app_status_since = app_status_since
 
 
 async def app_name(ops_test: OpsTest) -> Optional[str]:
@@ -144,28 +148,61 @@ async def get_admin_secrets(
     return (await run_action(ops_test, unit_id, "get-password", app=app)).response
 
 
-async def wait_for_all_units_active(
-    ops_test, apps, status="active", status_delay: int = 60, agent="idle"
+async def wait_for_all_units_active(  # noqa: C901
+    ops_test,
+    apps,
+    status="active",
+    status_delay: int = 60,
+    agent="idle",
+    application_status="active",
 ) -> bool:
     try:
-        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(60)):
+        for attempt in Retrying(stop=stop_after_attempt(20), wait=wait_fixed(status_delay)):
             with attempt:
                 all_units = []
+                ts = datetime.datetime.now()
+                print(f"wait_for_all_units_active: time now is: {ts}")
+                ts = int(ts.timestamp())
+
                 for a in apps:
                     units = await get_application_units(ops_test, a)
                     all_units.extend(units)
-                for unit in all_units:
-                    if unit.status != status or unit.agent_status != agent:
+                    if not application_status:
+                        continue
+                    if not units:
+                        print(f"No units found for app {a}")
+                        raise Exception()
+                    unit = units[0]  # grab the first unit
+                    # we are interested in the app status in this case
+                    # check here, once per app
+                    if unit.app_status != application_status:
                         print(
-                            f"{unit.name} - current status: {unit.status}/{unit.agent_status}, waiting for: {status}/{agent}"
+                            f"{unit.name} - app status: {unit.app_status}, waiting for: {application_status}"
                         )
                         raise Exception()
-                    ts = datetime.datetime.now()
-                    print(f"wait_for_all_units_active: time now is: {ts}")
-                    ts = int(ts.timestamp())
+                    if ts - int(unit.app_status_since.timestamp()) <= status_delay:
+                        print(
+                            f"{unit.name}: current timestamp: {ts} - app timestamp: {int(unit.app_status_since.timestamp())} <= {status_delay}s, app idle since {unit.app_status_since}"
+                        )
+                        raise Exception()
+
+                for unit in all_units:
+                    if unit.status != status:
+                        print(
+                            f"{unit.name} - current status: {unit.status}, waiting for: {status}"
+                        )
+                        raise Exception()
                     if ts - int(unit.status_since.timestamp()) <= status_delay:
                         print(
                             f"{unit.name}: current timestamp: {ts} - unit timestamp: {int(unit.status_since.timestamp())} <= {status_delay}s, unit active since {unit.status_since}"
+                        )
+                        raise Exception()
+                    if not agent:
+                        # Not interested in the agent status in this run
+                        continue
+                    if unit.agent_status != agent:
+                        print(
+                            f"{unit.name} - current status: {unit.status}/{unit.agent_status}, waiting for: {status}/{agent}"
                         )
                         raise Exception()
                     if ts - int(unit.agent_status_since.timestamp()) <= status_delay:
@@ -193,11 +230,12 @@ async def get_application_units(ops_test: OpsTest, app: str = APP_NAME) -> List[
     # Juju incorrectly reports the IP addresses after the network is restored this is reported as a
     # bug here: https://github.com/juju/python-libjuju/issues/738. Once this bug is resolved use of
     # `get_unit_ip` should be replaced with `.public_address`
-    resp_units = json.loads(
+    resp_app = json.loads(
         subprocess.check_output(
             f"juju status --model {ops_test.model.info.name} {app} --format=json".split()
         )
-    )["applications"][app]["units"]
+    )["applications"][app]
+    resp_units = resp_app["units"]
 
     units = []
     for u_name, unit in resp_units.items():
@@ -214,6 +252,8 @@ async def get_application_units(ops_test: OpsTest, app: str = APP_NAME) -> List[
             status_since=parser.parse(unit["workload-status"]["since"]),
             agent_status=agent_status,
             agent_status_since=parser.parse(agent_status_since),
+            app_status=resp_app["application-status"]["current"],
+            app_status_since=parser.parse(resp_app["application-status"]["since"]),
         )
         units.append(unit)
 
