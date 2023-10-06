@@ -169,7 +169,7 @@ async def test_safe_scale_down_shards_realloc(
     # remove the service in the chosen unit
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
 
-    await wait_for_all_units_active(ops_test, [APP_NAME])
+    await wait_for_all_units_active(ops_test, [APP_NAME], application_status=None)
 
     # check if at least partial shard re-allocation happened
     new_shards_per_node = await get_number_of_shards_by_node(ops_test, leader_unit_ip)
