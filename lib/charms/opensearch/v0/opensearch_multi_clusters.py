@@ -8,6 +8,7 @@ from typing import List, Optional
 import shortuuid
 from charms.opensearch.v0.constants_charm import (
     CMRoleRemovalForbidden,
+    CmVoRolesProvidedInvalid,
     DataRoleRemovalForbidden,
     PClusterNoRelation,
     PClusterWrongNodesCountForQuorum,
@@ -15,7 +16,6 @@ from charms.opensearch.v0.constants_charm import (
     PClusterWrongRolesProvided,
     PeerClusterRelationName,
     PeerRelationName,
-    CmVoRolesProvidedInvalid,
 )
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
@@ -112,8 +112,8 @@ class OpenSearchPeerClustersManager:
         if config.init_hold:
             # checks if peer cluster relation is set
             if not (
-                    self.is_peer_cluster_relation_set()
-                    and self.peer_cluster_data.get_object(Scope.APP, "data")
+                self.is_peer_cluster_relation_set()
+                and self.peer_cluster_data.get_object(Scope.APP, "data")
             ):
                 deployment_state = DeploymentState(
                     value=State.BLOCKED_WAITING_FOR_RELATION, message=PClusterNoRelation
@@ -122,10 +122,14 @@ class OpenSearchPeerClustersManager:
 
             directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
             directives.append(
-                Directive.VALIDATE_CLUSTER_NAME if config.cluster_name else Directive.INHERIT_CLUSTER_NAME
+                Directive.VALIDATE_CLUSTER_NAME
+                if config.cluster_name
+                else Directive.INHERIT_CLUSTER_NAME
             )
 
-            start_mode = StartMode.WITH_PROVIDED_ROLES if config.roles else StartMode.WITH_GENERATED_ROLES
+            start_mode = (
+                StartMode.WITH_PROVIDED_ROLES if config.roles else StartMode.WITH_GENERATED_ROLES
+            )
             return DeploymentDescription(
                 config=config,
                 start=start_mode,
@@ -134,9 +138,10 @@ class OpenSearchPeerClustersManager:
                 state=deployment_state,
             )
 
-        cluster_name = config.cluster_name
-        if not cluster_name:
-            cluster_name = f"{self._charm.app.name}-{shortuuid.ShortUUID().random(length=4)}".lower()
+        cluster_name = (
+            config.cluster_name.strip()
+            or f"{self._charm.app.name}-{shortuuid.ShortUUID().random(length=4)}".lower()
+        )
 
         if not config.roles:
             start_mode = StartMode.WITH_GENERATED_ROLES
@@ -164,7 +169,7 @@ class OpenSearchPeerClustersManager:
         )
 
     def _existing_cluster_setup(
-            self, config: PeerClusterConfig, prev_deployment: DeploymentDescription
+        self, config: PeerClusterConfig, prev_deployment: DeploymentDescription
     ) -> DeploymentDescription:
         """Build deployment description of an existing (started or not) cluster."""
         directives = prev_deployment.directives
@@ -173,7 +178,6 @@ class OpenSearchPeerClustersManager:
             self._pre_validate_roles_change(
                 new_roles=config.roles, prev_roles=prev_deployment.config.roles
             )
-            logger.debug(f"_existing_cluster_setup: validated roles changes...")
             # todo: should we further handle states here?
         except OpenSearchProvidedRolesException as e:
             logger.error(e)
@@ -181,9 +185,10 @@ class OpenSearchPeerClustersManager:
             deployment_state = DeploymentState(
                 value=State.BLOCKED_CANNOT_APPLY_NEW_ROLES, message=str(e)
             )
-            logger.debug(f"_existing_cluster_setup: validated roles changes --- errored...")
 
-        start_mode = StartMode.WITH_PROVIDED_ROLES if config.roles else StartMode.WITH_GENERATED_ROLES
+        start_mode = (
+            StartMode.WITH_PROVIDED_ROLES if config.roles else StartMode.WITH_GENERATED_ROLES
+        )
         return DeploymentDescription(
             config=PeerClusterConfig(
                 cluster_name=prev_deployment.config.cluster_name,
@@ -216,15 +221,12 @@ class OpenSearchPeerClustersManager:
         return True
 
     def apply_status_if_needed(
-            self, deployment_desc: Optional[DeploymentDescription] = None
+        self, deployment_desc: Optional[DeploymentDescription] = None
     ) -> None:
         """Resolve and applies corresponding status from the deployment state."""
         deployment_desc = deployment_desc or self.deployment_desc()
         if not deployment_desc:
-            logger.debug(f"Apply status if needed with: None")
             return
-
-        logger.debug(f"Apply status if needed with: {deployment_desc.to_str()}")
 
         if Directive.SHOW_STATUS not in deployment_desc.directives:
             return
@@ -233,8 +235,12 @@ class OpenSearchPeerClustersManager:
         self.clear_directive(Directive.SHOW_STATUS)
 
         blocked_status_messages = [
-            CMRoleRemovalForbidden, CmVoRolesProvidedInvalid, DataRoleRemovalForbidden,
-            PClusterNoRelation, PClusterWrongNodesCountForQuorum, PClusterWrongRelation,
+            CMRoleRemovalForbidden,
+            CmVoRolesProvidedInvalid,
+            DataRoleRemovalForbidden,
+            PClusterNoRelation,
+            PClusterWrongNodesCountForQuorum,
+            PClusterWrongRelation,
             PClusterWrongRolesProvided,
         ]
         if deployment_desc.state.message not in blocked_status_messages:
@@ -312,7 +318,6 @@ class OpenSearchPeerClustersManager:
 
     def _pre_validate_roles_change(self, new_roles: List[str], prev_roles: List[str]):
         """Validate that the config changes of roles are allowed to happen."""
-        logger.debug(f"_pre_validate_roles_change: new_roles: {new_roles} VS prev_roles: {prev_roles}")
         if sorted(prev_roles) == sorted(new_roles):
             # nothing changed, leave
             return
@@ -350,7 +355,8 @@ class OpenSearchPeerClustersManager:
                 self._charm.opensearch, self._opensearch.is_node_up(), self._charm.alt_hosts
             )
             other_clusters_data_nodes = [
-                node for node in ClusterTopology.nodes_by_role(all_nodes)["data"]
+                node
+                for node in ClusterTopology.nodes_by_role(all_nodes)["data"]
                 if node.name not in current_cluster_units
             ]
             if not other_clusters_data_nodes:
@@ -360,8 +366,7 @@ class OpenSearchPeerClustersManager:
     def _deployment_type(config: PeerClusterConfig, start_mode: StartMode) -> DeploymentType:
         """Check if the current cluster is an independent cluster."""
         has_cm_roles = start_mode == StartMode.WITH_GENERATED_ROLES or (
-            start_mode == StartMode.WITH_PROVIDED_ROLES
-            and "cluster_manager" in config.roles
+            start_mode == StartMode.WITH_PROVIDED_ROLES and "cluster_manager" in config.roles
         )
 
         if has_cm_roles and not config.init_hold:

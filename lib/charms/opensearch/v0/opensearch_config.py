@@ -126,7 +126,7 @@ class OpenSearchConfig:
         cm_names: List[str],
         cm_ips: List[str],
         contribute_to_bootstrap: bool,
-        node_temperature: Optional[str] = None
+        node_temperature: Optional[str] = None,
     ) -> None:
         """Set base config for each node in the cluster."""
         self._opensearch.config.put(self.CONFIG_YML, "cluster.name", f"{cluster_name}")

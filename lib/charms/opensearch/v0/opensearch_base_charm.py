@@ -317,13 +317,11 @@ class OpenSearchBaseCharm(CharmBase):
         self._add_cm_addresses_to_conf()
 
         app_data = event.relation.data.get(event.app)
-        logger.debug("\n\n\n\npeer rel changed")
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
-            logger.debug("is leader:")
             self._recompute_roles_if_needed(event)
         elif app_data:
-            # if app_data & app_data["nodes_config"]: Reconfigure and restart node on the concerned unit
+            # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
 
         unit_data = event.relation.data.get(event.unit)
@@ -895,7 +893,6 @@ class OpenSearchBaseCharm(CharmBase):
     def _reconfigure_and_restart_unit_if_needed(self):
         """Reconfigure the current unit if a new config was computed for it, then restart."""
         nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
-        logger.debug(f"\n\n\n_reconfigure_and_restart_unit_if_needed:\n{nodes_config}\n\n\n")
         if not nodes_config:
             return
 
@@ -927,18 +924,14 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _recompute_roles_if_needed(self, event: RelationChangedEvent):
         """Recompute node roles:self-healing that didn't trigger leader related event occurred."""
-        logger.debug("_recompute_roles_if_needed")
         try:
             nodes = self._get_nodes(self.opensearch.is_node_up())
             if len(nodes) < self.app.planned_units():
                 event.defer()
-                logger.debug(f"_recompute_roles_if_needed: deferring because len(nodes) == {len(nodes)} vs {self.app.planned_units()}")
                 return
 
-            logger.debug(f"_recompute_roles_if_needed: _compute_and_broadcast_updated_topology: \n{[n.to_dict() for n in nodes]}\n")
             self._compute_and_broadcast_updated_topology(nodes)
-        except OpenSearchHttpError as e:
-            logger.error(f"_recompute_roles_if_needed: error:\n{str(e)}")
+        except OpenSearchHttpError:
             pass
 
     def _compute_and_broadcast_updated_topology(self, current_nodes: List[Node]) -> None:
@@ -950,13 +943,10 @@ class OpenSearchBaseCharm(CharmBase):
             name: Node.from_dict(node)
             for name, node in (self.peers_data.get_object(Scope.APP, "nodes_config") or {}).items()
         }
-        logger.debug(f"_compute_and_broadcast_updated_topology: current reported nodes:\n{current_nodes}.")
 
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
-        logger.debug(f"_compute_and_broadcast_updated_topology: deployment_desc: \n{deployment_desc}\n")
         if deployment_desc.start == StartMode.WITH_GENERATED_ROLES:
             updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
-            logger.debug(f"_compute_and_broadcast_updated_topology: --- nodes with generated roles: \n{updated_nodes}\n")
         else:
             updated_nodes = {
                 node.name: Node(
@@ -967,27 +957,15 @@ class OpenSearchBaseCharm(CharmBase):
                 )
                 for node in current_nodes
             }
-            logger.debug(f"_compute_and_broadcast_updated_topology: --- nodes with user provided roles: \n{updated_nodes}\n")
             try:
-                logger.debug(f"_compute_and_broadcast_updated_topology: roles validate...")
                 self.opensearch_peer_cm.validate_roles(current_nodes, on_new_unit=False)
-                logger.debug(f"_compute_and_broadcast_updated_topology: roles valid.")
             except OpenSearchProvidedRolesException as e:
                 logger.error(e)
                 self.app.status = BlockedStatus(str(e))
-                logger.debug(f"_compute_and_broadcast_updated_topology: roles INvalid.")
-
-        logger.debug("\n\n\n-------------------------------------------------------")
-        logger.debug("Massive comparison:")
-        logger.debug(f"current_reported_nodes:\n{current_reported_nodes}\n-----\n")
-        logger.debug(f"updated_nodes:\n{updated_nodes}\n-----\n")
-        logger.debug("-------------------------------------------------------\n\n\n")
 
         if current_reported_nodes == updated_nodes:
-            logger.debug(f"_compute_and_broadcast_updated_topology: current_reported_nodes == updated_nodes.")
             return
 
-        logger.debug(f"_compute_and_broadcast_updated_topology: storing the updated nodes.")
         self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
 
         # all units will get a peer_rel_changed event, for leader we do as follows

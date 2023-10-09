@@ -6,9 +6,8 @@ import json
 from abc import ABC
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, validator, root_validator, Field
-
 from charms.opensearch.v0.helper_enums import BaseStrEnum
+from pydantic import BaseModel, Field, root_validator, validator
 
 # The unique Charmhub library identifier, never change it
 LIBID = "6007e8030e4542e6b189e2873c8fbfef"
@@ -132,7 +131,8 @@ class DeploymentState(Model):
     message: str = Field(default="")
 
     @root_validator
-    def prevent_none(cls, values):
+    def prevent_none(cls, values):  # noqa: N805
+        """Validate the message or lack of depending on the state."""
         if values["value"] == State.ACTIVE:
             values["message"] = ""
         elif not values["message"].strip():
@@ -166,7 +166,8 @@ class PeerClusterConfig(Model):
     data_temperature: Optional[str] = None
 
     @root_validator
-    def set_node_temperature(cls, values):
+    def set_node_temperature(cls, values):  # noqa: N805
+        """Set and validate the node temperature."""
         allowed_temps = ["hot", "warm", "cold", "frozen"]
 
         input_temps = set()

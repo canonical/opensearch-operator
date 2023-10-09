@@ -7,7 +7,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from ast import literal_eval
-from typing import Dict, Optional, Union, Any
+from typing import Any, Dict, Optional, Union
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from ops import Secret
