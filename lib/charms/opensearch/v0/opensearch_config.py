@@ -4,7 +4,7 @@
 """Class for Setting configuration in opensearch config files."""
 import logging
 import socket
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import normalized_tls_subject
@@ -120,22 +120,26 @@ class OpenSearchConfig:
 
     def set_node(
         self,
-        app_name: str,
-        model_name: str,
+        cluster_name: str,
         unit_name: str,
         roles: List[str],
         cm_names: List[str],
         cm_ips: List[str],
         contribute_to_bootstrap: bool,
+        node_temperature: Optional[str] = None
     ) -> None:
         """Set base config for each node in the cluster."""
-        self._opensearch.config.put(self.CONFIG_YML, "cluster.name", f"{app_name}-{model_name}")
+        self._opensearch.config.put(self.CONFIG_YML, "cluster.name", f"{cluster_name}")
         self._opensearch.config.put(self.CONFIG_YML, "node.name", unit_name)
         self._opensearch.config.put(
             self.CONFIG_YML, "network.host", ["_site_"] + self._opensearch.network_hosts
         )
 
         self._opensearch.config.put(self.CONFIG_YML, "node.roles", roles)
+        if node_temperature:
+            self._opensearch.config.put(self.CONFIG_YML, "node.attr.temp", node_temperature)
+        else:
+            self._opensearch.config.delete(self.CONFIG_YML, "node.attr.temp")
 
         # This allows the new CMs to be discovered automatically (hot reload of unicast_hosts.txt)
         self._opensearch.config.put(self.CONFIG_YML, "discovery.seed_providers", "file")

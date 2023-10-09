@@ -4,9 +4,11 @@
 """Cluster-related data structures / model classes."""
 import json
 from abc import ABC
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, root_validator, Field
+
+from charms.opensearch.v0.helper_enums import BaseStrEnum
 
 # The unique Charmhub library identifier, never change it
 LIBID = "6007e8030e4542e6b189e2873c8fbfef"
@@ -62,6 +64,7 @@ class Node(Model):
     name: str
     roles: List[str]
     ip: str
+    temperature: Optional[str] = None
 
     @classmethod
     @validator("roles")
@@ -84,3 +87,117 @@ class Node(Model):
                 return True
 
         return False
+
+
+class DeploymentType(BaseStrEnum):
+    """Nature of a sub cluster deployment."""
+
+    MAIN_CLUSTER_MANAGER = "main-cluster-manager"
+    CLUSTER_MANAGER_FAILOVER = "cluster-manager-failover"
+    OTHER = "other"
+
+
+class StartMode(BaseStrEnum):
+    """Mode of start of units in this deployment."""
+
+    WITH_PROVIDED_ROLES = "start-with-provided-roles"
+    WITH_GENERATED_ROLES = "start-with-generated-roles"
+
+
+class Directive(BaseStrEnum):
+    """Directive indicating what the pending actions for the current deployments are."""
+
+    NONE = "none"
+    SHOW_STATUS = "show-status"
+    WAIT_FOR_PEER_CLUSTER_RELATION = "wait-for-peer-cluster-relation"
+    INHERIT_CLUSTER_NAME = "inherit-name"
+    VALIDATE_CLUSTER_NAME = "validate-cluster-name"
+    RECONFIGURE = "reconfigure-cluster"
+
+
+class State(BaseStrEnum):
+    """State of a deployment, directly mapping to the juju statuses."""
+
+    ACTIVE = "active"
+    BLOCKED_WAITING_FOR_RELATION = "blocked-waiting-for-peer-cluster-relation"
+    BLOCKED_WRONG_RELATED_CLUSTER = "blocked-wrong-related-cluster"
+    BLOCKED_CANNOT_START_WITH_ROLES = "blocked-cannot-start-with-current-set-roles"
+    BLOCKED_CANNOT_APPLY_NEW_ROLES = "blocked-cannot-apply-new-roles"
+
+
+class DeploymentState(Model):
+    """Full state of a deployment, along with the juju status."""
+
+    value: State
+    message: str = Field(default="")
+
+    @root_validator
+    def prevent_none(cls, values):
+        if values["value"] == State.ACTIVE:
+            values["message"] = ""
+        elif not values["message"].strip():
+            raise ValueError("The message must be set when state not Active.")
+
+        return values
+
+
+class PeerClusterRelDataCredentials(Model):
+    """Model class for credentials passed on the PCluster relation."""
+
+    admin_username: str
+    admin_password: str
+
+
+class PeerClusterRelData(Model):
+    """Model class for the PCluster relation data."""
+
+    cluster_name: Optional[str]
+    cm_nodes: List[str]
+    credentials: PeerClusterRelDataCredentials
+    tls_ca: str
+
+
+class PeerClusterConfig(Model):
+    """Model class for the multi-clusters related config set by the user."""
+
+    cluster_name: str
+    init_hold: bool
+    roles: List[str]
+    data_temperature: Optional[str] = None
+
+    @root_validator
+    def set_node_temperature(cls, values):
+        allowed_temps = ["hot", "warm", "cold", "frozen"]
+
+        input_temps = set()
+        for role in values["roles"]:
+            if not role.startswith("data."):
+                continue
+
+            temp = role.split(".")[1]
+            if temp not in allowed_temps:
+                raise ValueError(f"data.'{temp}' not allowed. Allowed values: {allowed_temps}")
+
+            input_temps.add(temp)
+
+        if len(input_temps) > 1:
+            raise ValueError("More than 1 data temperature provided.")
+        elif input_temps:
+            temperature = input_temps.pop()
+            values["data_temperature"] = temperature
+
+            values["roles"].append("data")
+            values["roles"].remove(f"data.{temperature}")
+            values["roles"] = list(set(values["roles"]))
+
+        return values
+
+
+class DeploymentDescription(Model):
+    """Model class describing the current state of a deployment / sub-cluster."""
+
+    config: PeerClusterConfig
+    start: StartMode
+    directives: List[Directive]
+    typ: DeploymentType
+    state: DeploymentState = DeploymentState(value=State.ACTIVE)

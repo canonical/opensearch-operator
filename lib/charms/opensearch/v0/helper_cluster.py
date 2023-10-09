@@ -58,6 +58,11 @@ class ClusterTopology:
         if updated_node:
             nodes_by_name[updated_node.name] = updated_node
 
+        # this is in case the nodes had had a change in the "base roles", i.e: removed "ingest"
+        base_roles = ["data", "ingest", "ml", "coordinating_only"]
+        for name, node in nodes_by_name.items():
+            node.roles = list(set(node.roles + base_roles))
+
         return nodes_by_name
 
     @staticmethod
@@ -170,7 +175,13 @@ class ClusterTopology:
             )
             if "nodes" in response:
                 for obj in response["nodes"].values():
-                    nodes.append(Node(name=obj["name"], roles=obj["roles"], ip=obj["ip"]))
+                    node = Node(
+                        name=obj["name"],
+                        roles=obj["roles"],
+                        ip=obj["ip"],
+                        temperature=obj.get("attributes", {}).get("temp"),
+                    )
+                    nodes.append(node)
 
         return nodes
 
