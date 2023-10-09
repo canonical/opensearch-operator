@@ -81,8 +81,10 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginConfig,
     PluginState,
 )
+from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "d301deee4d2c4c1b8e30cd3df8034be2"
@@ -122,6 +124,10 @@ REPO_NOT_ACCESS_ERR = (
 
 class OpenSearchBackupError(OpenSearchError):
     """Exception thrown when an opensearch backup-related action fails."""
+
+
+class OpenSearchListBackupError(OpenSearchBackupError):
+    """Exception thrown when internal list backups call fails."""
 
 
 class OpenSearchBackupNeworkError(OpenSearchBackupError):
@@ -215,10 +221,126 @@ class OpenSearchBackup(Object):
         self.s3_client = S3Requirer(self.charm, S3_RELATION)
         self.framework.observe(self.charm.on[S3_RELATION].relation_departed, self.on_s3_depart)
         self.framework.observe(self.s3_client.on.credentials_changed, self.on_s3_change)
+        self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
+        self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
 
     @property
     def _plugin(self) -> OpenSearchPlugin:
         return self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
+
+    def _on_list_backups_action(self, event: ActionEvent) -> None:
+        """Returns the list of available backups to the user."""
+        if not self._check_action_can_run(event):
+            return
+        backups = {}
+        try:
+            backups = self._list_backups()
+        except OpenSearchBackupNeworkError as e:
+            event.fail(f"Failed: network error {e}")
+            return
+        except OpenSearchListBackupError():
+            event.fail("Failed: listing backups error, please check logs")
+            return
+        event.set_results({"snapshots": backups})
+
+    def _on_create_backup_action(self, event: ActionEvent) -> None:
+        """Creates a backup from the current cluster."""
+        if not self.unit.is_leader():
+            event.fail("Failed: the action can be run only on leader unit")
+            return
+
+        if not self._check_action_can_run(event):
+            return
+
+        new_backup_id = None
+        try:
+            # Check if any backup is not running already, or RetryError happens
+            self.wait_backup_success()
+            # gets the latest value
+            new_backup_id = max(self._list_backups().keys()) + 1
+            output = self.get_service_status(
+                self._request(
+                    "PUT",
+                    f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/{new_backup_id}",
+                    payload={
+                        "indices": "*",
+                        "ignore_unavailable": False,
+                        "include_global_state": True,
+                        "partial": False,
+                    },
+                )
+            )
+            logger.debug(f"Create backup action request id {new_backup_id} response is: {output}")
+            # Now, wait for backup success
+            self.wait_backup_success(new_backup_id)
+        except OpenSearchBackupNeworkError as e:
+            event.fail(f"Failed: network error {e}")
+            return
+        except OpenSearchListBackupError():
+            event.fail("Failed: listing backups error, please check logs")
+            return
+        except RetryError:
+            # There are two potential errors here: (1) error when waiting for overall backup status
+            # or (2) error when waiting for the actual backup to happen.
+            # (1) happens before new_backup_id actually gets a value.
+            if new_backup_id:
+                event.fail("Failed: timeout while waiting for backup to finish.")
+            else:
+                event.fail("Failed: backup system is busy, not creating backup now.")
+            return
+        event.set_results({"new_backup_id": new_backup_id})
+
+    def _check_action_can_run(self, event: ActionEvent) -> bool:
+        """Checks if the actions run from this unit can be executed or not.
+
+        If not, then register the reason as a failure in the event and returns False.
+        Returns True otherwise.
+
+        This method does not check if the unit is a leader, as list backups action does
+        not demand it.
+        """
+        plugin_status = self.charm.plugin_manager.status(self._plugin())
+        # First, validate the plugin is present and correctly configured.
+        if plugin_status != PluginState.ENABLED:
+            event.fail(f"Failed: plugin is not ready yet, current status is {plugin_status}")
+            return False
+
+        # Then, check the repo status
+        status = self._check_repo_status()
+        if status != BackupServiceState.SUCCESS:
+            event.fail(f"Failed: repo status is {status}")
+            return False
+        return True
+
+    def _list_backups(self) -> List[Dict[int, Any]]:
+        """Returns the list of backups and its relevant information."""
+        result = {}
+        output = self._request("GET", "_snapshot/{OPENSEARCH_REPOSITORY_NAME}/_all")
+        try:
+            for elem in output.get("snapshots", []):
+                result[elem["snapshot"]] = {
+                    field: elem[field] for field in ["version", "indices", "include_global_state"]
+                }
+                result[elem["snapshot"]]["state"] = self.get_snapshot_status(elem["state"])
+        except KeyError as e:
+            logger.exception(f"_list_backups failed for output: {output} with {e}")
+            raise OpenSearchListBackupError()
+        return result
+
+    def wait_backup_success(self, backup_id=None, timeout=60) -> None:
+        """Returns after waiting after retrying 5x times to wait for backup or raises RetryError.
+
+        If backup_id is not specified, then wait for _all backup status to return SUCCESS.
+        """
+        target = (
+            "_snapshot/{OPENSEARCH_REPOSITORY_NAME}/" + f"{backup_id}" if backup_id else "_all"
+        )
+        for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=timeout)):
+            with attempt:
+                output = self._request("GET", target)
+                logger.debug(f"Wait backup success return: {output}")
+                if self.get_snapshot_status(output) != BackupServiceState.SUCCESS:
+                    raise Exception()
 
     def on_s3_change(self, _) -> None:
         """Calls the plugin manager config handler.
@@ -438,8 +560,6 @@ class OpenSearchBackup(Object):
         """Returns the snapshot status."""
         # Now, check snapshot status:
         r_str = str(response)
-        if "SUCCESS" in r_str:
-            return BackupServiceState.SUCCESS
         if "IN_PROGRESS" in r_str:
             return BackupServiceState.SNAPSHOT_IN_PROGRESS
         if "PARTIAL" in r_str:
