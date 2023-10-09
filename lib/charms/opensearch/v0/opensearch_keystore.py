@@ -97,5 +97,3 @@ class OpenSearchKeystore:
             raise OpenSearchKeystoreError(
                 f"Failed to reload keystore: error code: {e.response_code}, error body: {e.response_body}"
             )
-        if response.get("status", 400) >= 400:
-            raise OpenSearchKeystoreError("Failed to reload keystore with: {response}")

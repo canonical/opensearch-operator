@@ -79,6 +79,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPlugin,
     OpenSearchPluginConfig,
+    OpenSearchPluginRelationClusterNotReadyError,
     PluginState,
 )
 from ops.charm import ActionEvent
@@ -230,6 +231,14 @@ class OpenSearchBackup(Object):
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Returns the list of available backups to the user."""
+        try:
+            self.apply_post_restart_if_needed()
+        except OpenSearchPluginRelationClusterNotReadyError:
+            event.fail(
+                "Failed: cluster must be active before applying the remaining backup config"
+            )
+            return
+
         if not self._check_action_can_run(event):
             return
         backups = {}
@@ -245,7 +254,15 @@ class OpenSearchBackup(Object):
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         """Creates a backup from the current cluster."""
-        if not self.unit.is_leader():
+        try:
+            self.apply_post_restart_if_needed()
+        except OpenSearchPluginRelationClusterNotReadyError:
+            event.fail(
+                "Failed: cluster must be active before applying the remaining backup config"
+            )
+            return
+
+        if not self.charm.unit.is_leader():
             event.fail("Failed: the action can be run only on leader unit")
             return
 
@@ -299,7 +316,7 @@ class OpenSearchBackup(Object):
         This method does not check if the unit is a leader, as list backups action does
         not demand it.
         """
-        plugin_status = self.charm.plugin_manager.status(self._plugin())
+        plugin_status = self.charm.plugin_manager.status(self._plugin)
         # First, validate the plugin is present and correctly configured.
         if plugin_status != PluginState.ENABLED:
             event.fail(f"Failed: plugin is not ready yet, current status is {plugin_status}")
@@ -332,9 +349,8 @@ class OpenSearchBackup(Object):
 
         If backup_id is not specified, then wait for _all backup status to return SUCCESS.
         """
-        target = (
-            "_snapshot/{OPENSEARCH_REPOSITORY_NAME}/" + f"{backup_id}" if backup_id else "_all"
-        )
+        target = f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/"
+        target += f"{backup_id}" if backup_id else "_all"
         for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=timeout)):
             with attempt:
                 output = self._request("GET", target)
@@ -342,7 +358,7 @@ class OpenSearchBackup(Object):
                 if self.get_snapshot_status(output) != BackupServiceState.SUCCESS:
                     raise Exception()
 
-    def on_s3_change(self, _) -> None:
+    def on_s3_change(self, event: EventBase) -> None:
         """Calls the plugin manager config handler.
 
         The S3 change will run over the plugin and verify if the relation is available if
@@ -354,10 +370,13 @@ class OpenSearchBackup(Object):
             return
         # Let run() happens: it will check if the relation is present, and if yes, return
         # true if the install / configuration / disabling of backup has happened.
-        if self.charm.plugin_manager.run():
-            self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
-                callback_override="_restart_opensearch"
-            )
+        try:
+            if self.charm.plugin_manager.run():
+                self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
+                    callback_override="_restart_opensearch"
+                )
+        except OpenSearchPluginRelationClusterNotReadyError:
+            event.defer()
 
     def apply_post_restart_if_needed(self) -> None:
         """Runs the post restart routine and API calls needed to setup/disable backup.
@@ -503,7 +522,7 @@ class OpenSearchBackup(Object):
         If int is returned, then throws an exception informing the HTTP request failed.
         """
         try:
-            result = self.charm.opensearch.request(args, kwargs)
+            result = self.charm.opensearch.request(*args, **kwargs)
         except (ValueError, OpenSearchHttpError, requests.HTTPError):
             raise OpenSearchBackupNeworkError()
 

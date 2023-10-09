@@ -14,7 +14,10 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
+    OpenSearchError,
+)
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchKnn,
@@ -23,6 +26,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginError,
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingDepsError,
+    OpenSearchPluginRelationClusterNotReadyError,
     OpenSearchPluginRemoveError,
     PluginState,
 )

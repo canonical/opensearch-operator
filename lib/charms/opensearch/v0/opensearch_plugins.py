@@ -230,6 +230,13 @@ class OpenSearchPluginError(OpenSearchError):
     """Exception thrown when an opensearch plugin is invalid."""
 
 
+class OpenSearchPluginRelationClusterNotReadyError(OpenSearchPluginError):
+    """Exception thrown when making API calls and cluster is not yet ready.
+
+    This exception in specific should be handled by classes managing the relations of plugins.
+    """
+
+
 class OpenSearchPluginMissingDepsError(OpenSearchPluginError):
     """Exception thrown when an opensearch plugin misses installed dependencies."""
 
@@ -301,7 +308,7 @@ class OpenSearchPlugin:
     @property
     def dependencies(self) -> Optional[List[str]]:
         """Returns a list of plugin name dependencies."""
-        return None
+        return []
 
     @abstractmethod
     def config(self) -> OpenSearchPluginConfig:

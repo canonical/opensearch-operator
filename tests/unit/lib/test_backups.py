@@ -5,11 +5,13 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+import charms
 from charms.opensearch.v0.opensearch_backups import (
     OPENSEARCH_REPOSITORY_NAME,
     S3_OPENSEARCH_EXTRA_VALUES,
     S3_RELATION,
     S3_REPO_BASE_PATH,
+    OpenSearchBackupPlugin,
 )
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginConfig, PluginState
 from ops.testing import Harness
@@ -29,6 +31,15 @@ class TestBackups(unittest.TestCase):
         # As config.yaml does not exist, the setup below simulates it
         self.charm.plugin_manager._charm_config = self.harness.model._config
         self.plugin_manager = self.charm.plugin_manager
+        # Override the ConfigExposedPlugins
+        charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
+            "repository-s3": {
+                "class": OpenSearchBackupPlugin,
+                "config": None,
+                "relation": "s3-credentials",
+            },
+        }
+
         # Replace some unused methods that will be called as part of set_leader with mock
         self.charm.service_manager._update_locks = MagicMock()
         self.charm._on_leader_elected = MagicMock()
