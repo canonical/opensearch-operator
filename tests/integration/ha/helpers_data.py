@@ -8,7 +8,7 @@ from random import randint
 from typing import Any, Dict, List, Optional
 
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
+from tenacity import Retrying, retry, stop_after_attempt, wait_fixed, wait_random
 
 from tests.integration.helpers import http_request
 
@@ -113,13 +113,40 @@ async def create_index(
     index_name: str,
     p_shards: int = 1,
     r_shards: int = 1,
+    extra_index_settings: Optional[Dict[str, Any]] = None,
+    extra_mappings: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """Create an index with a set number of primary and replica shards."""
+    """Create an index with a set number of primary and replica shards.
+
+    Optionally, add extra settings and mappings to the new index.
+    """
+    content = {
+        "settings": {"index": {"number_of_shards": p_shards, "number_of_replicas": r_shards}}
+    }
+    if extra_index_settings:
+        content["settings"]["index"] = {**content["settings"]["index"], **extra_index_settings}
+    if extra_mappings:
+        content["mappings"] = extra_mappings
     await http_request(
         ops_test,
         "PUT",
         f"https://{unit_ip}:9200/{index_name}",
-        {"settings": {"index": {"number_of_shards": p_shards, "number_of_replicas": r_shards}}},
+        content,
+        app=app,
+    )
+
+
+@retry(
+    wait=wait_fixed(wait=5) + wait_random(0, 5),
+    stop=stop_after_attempt(15),
+)
+async def bulk_insert(ops_test: OpsTest, app: str, unit_ip: str, payload: str) -> None:
+    """Insert a set of docs in a single bulk request."""
+    await http_request(
+        ops_test,
+        "PUT",
+        f"https://{unit_ip}:9200/_bulk",
+        payload=payload,
         app=app,
     )
 
@@ -170,27 +197,6 @@ async def get_doc(
     wait=wait_fixed(wait=5) + wait_random(0, 5),
     stop=stop_after_attempt(15),
 )
-async def search(
-    ops_test: OpsTest,
-    app: str,
-    unit_ip: str,
-    index_name: str,
-    query: Optional[Dict[str, Any]] = None,
-    preference: Optional[str] = None,
-) -> Optional[List[Dict[str, Any]]]:
-    """Search documents."""
-    endpoint = f"https://{unit_ip}:9200/{index_name}/_search"
-    if preference:
-        endpoint = f"{endpoint}?preference={preference}"
-
-    resp = await http_request(ops_test, "GET", endpoint, payload=query, app=app)
-    return resp["hits"]["hits"]
-
-
-@retry(
-    wait=wait_fixed(wait=5) + wait_random(0, 5),
-    stop=stop_after_attempt(15),
-)
 async def delete_doc(
     ops_test: OpsTest, app: str, unit_ip: str, index_name: str, doc_id: int
 ) -> None:
@@ -220,3 +226,24 @@ async def delete_index(ops_test: OpsTest, app: str, unit_ip: str, index_name: st
 def default_doc(index_name: str, doc_id: int) -> Dict[str, Any]:
     """Return a default document used in the tests."""
     return {"title": f"title_{doc_id}", "val": doc_id, "path": f"{index_name}/{doc_id}"}
+
+
+async def search(
+    ops_test: OpsTest,
+    app: str,
+    unit_ip: str,
+    index_name: str,
+    query: Optional[Dict[str, Any]] = None,
+    preference: Optional[str] = None,
+    retries: int = 15,
+) -> Optional[List[Dict[str, Any]]]:
+    """Search documents."""
+    endpoint = f"https://{unit_ip}:9200/{index_name}/_search"
+    if preference:
+        endpoint = f"{endpoint}?preference={preference}"
+    for attempt in Retrying(
+        stop=stop_after_attempt(retries), wait=wait_fixed(wait=5) + wait_random(0, 5)
+    ):
+        with attempt:  # Raises RetryError if failed after "retries"
+            resp = await http_request(ops_test, "GET", endpoint, payload=query, app=app)
+            return resp["hits"]["hits"]

@@ -31,13 +31,14 @@ jobs:
           - client-integration
           - ha-base-integration
           - ha-networking-integration
+          - plugins-integration
         runner: ["ubuntu-22.04"]
         include:
           - tox-environments: h-scaling-integration
             runner: "Ubuntu_4C_16G"
     name: ${{ matrix.tox-environments }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 120
+    timeout-minutes: 360
     steps:
       - name: Checkout
         uses: actions/checkout@v3

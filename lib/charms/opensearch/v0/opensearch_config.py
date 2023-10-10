@@ -200,7 +200,7 @@ class OpenSearchConfig:
         result = {}
         loaded_configs = self.load_node()
         for key in plugin_config.keys():
-            if loaded_configs.get(key, None):
+            if key in loaded_configs:
                 result[key] = loaded_configs[key]
         return result
 
@@ -209,9 +209,9 @@ class OpenSearchConfig:
         for key, val in plugin_config.items():
             self._opensearch.config.put(self.CONFIG_YML, key, val)
 
-    def delete_plugin(self, plugin_config: Dict[str, str]) -> None:
+    def delete_plugin(self, plugin_config: List[str]) -> None:
         """Removes plugin configuration from opensearch.yml."""
-        for key in plugin_config.keys():
+        for key in plugin_config:
             self._opensearch.config.delete(self.CONFIG_YML, key)
 
     def update_host_if_needed(self) -> bool:

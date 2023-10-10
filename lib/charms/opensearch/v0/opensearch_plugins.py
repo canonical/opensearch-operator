@@ -105,14 +105,14 @@ class MyPluginConfig(OpenSearchPluginConfig):
     config_entries_to_add: Dict[str, str] = {
         ... key, values to add to the config as plugin gets enabled ...
     }
-    config_entries_to_del: Dict[str, str] = {
-        ... key, values to remove to the config as plugin gets disabled ...
+    config_entries_to_del: List[str] = {
+        ... key to remove from the config as plugin gets disabled ...
     }
     secret_entries_to_add: Dict[str, str] = {
         ... key, values to add to to keystore as plugin gets enabled ...
     }
-    secret_entries_to_del: Dict[str, str] = {
-        ... key, values to remove from keystore as plugin gets disabled ...
+    secret_entries_to_del: List[str] = {
+        ... key to remove from keystore as plugin gets disabled ...
     }
 
 -------------------
@@ -257,14 +257,14 @@ class OpenSearchPluginConfig:
     def __init__(
         self,
         config_entries_to_add: Optional[Dict[str, str]] = None,
-        config_entries_to_del: Optional[Dict[str, str]] = None,
+        config_entries_to_del: Optional[List[str]] = None,
         secret_entries_to_add: Optional[Dict[str, str]] = None,
-        secret_entries_to_del: Optional[Dict[str, str]] = None,
+        secret_entries_to_del: Optional[List[str]] = None,
     ):
         self.config_entries_to_add = config_entries_to_add or {}
-        self.config_entries_to_del = config_entries_to_del or {}
+        self.config_entries_to_del = config_entries_to_del or []
         self.secret_entries_to_add = secret_entries_to_add or {}
-        self.secret_entries_to_del = secret_entries_to_del or {}
+        self.secret_entries_to_del = secret_entries_to_del or []
 
 
 class OpenSearchPlugin:
@@ -279,7 +279,7 @@ class OpenSearchPlugin:
           plugins_path: str, path to the plugins folder
           extra_config: dict, contains config entries coming from optional relation data
         """
-        self._plugins_path = f"{plugins_path}/{self.PLUGIN_PROPERTIES}"
+        self._plugins_path = f"{plugins_path}/{self.name}/{self.PLUGIN_PROPERTIES}"
         self._extra_config = extra_config
 
     @property
@@ -333,3 +333,24 @@ class OpenSearchPlugin:
     def name(self) -> str:
         """Returns the name of the plugin."""
         pass
+
+
+class OpenSearchKnn(OpenSearchPlugin):
+    """Implements the opensearch-knn plugin."""
+
+    def config(self) -> OpenSearchPluginConfig:
+        """Returns a plugin config object to be applied for enabling the current plugin."""
+        return OpenSearchPluginConfig(
+            config_entries_to_add={"knn.plugin.enabled": True},
+        )
+
+    def disable(self) -> OpenSearchPluginConfig:
+        """Returns a plugin config object to be applied for disabling the current plugin."""
+        return OpenSearchPluginConfig(
+            config_entries_to_add={"knn.plugin.enabled": False},
+        )
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return "opensearch-knn"

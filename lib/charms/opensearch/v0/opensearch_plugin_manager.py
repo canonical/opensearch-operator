@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
     OpenSearchPluginError,
@@ -39,13 +40,19 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-ConfigExposedPlugins = {}
+ConfigExposedPlugins = {
+    "opensearch-knn": {
+        "class": OpenSearchKnn,
+        "config": "plugin_opensearch_knn",
+        "relation": None,
+    }
+}
 
 
 class OpenSearchPluginManager:
     """Manages plugins."""
 
-    def __init__(self, charm, plugins_path: str = None):
+    def __init__(self, charm):
         """Creates the plugin manager object based on the charm and home_path.
 
         Stores the home path and, optionally, plugins path can also be passed if it is
@@ -55,7 +62,7 @@ class OpenSearchPluginManager:
         self._opensearch = charm.opensearch
         self._opensearch_config = charm.opensearch_config
         self._charm_config = self._charm.model.config
-        self._plugins_path = plugins_path
+        self._plugins_path = self._opensearch.paths.plugins
         self._keystore = OpenSearchKeystore(self._charm)
 
     @property
