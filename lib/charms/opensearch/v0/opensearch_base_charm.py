@@ -56,15 +56,15 @@ from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
-from charms.opensearch.v0.opensearch_multi_clusters import (
-    OpenSearchPeerClustersManager,
-    OpenSearchProvidedRolesException,
-    StartMode,
-)
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
     VOTING_TO_DELETE,
     OpenSearchExclusions,
+)
+from charms.opensearch.v0.opensearch_peer_clusters import (
+    OpenSearchPeerClustersManager,
+    OpenSearchProvidedRolesException,
+    StartMode,
 )
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
@@ -456,7 +456,6 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader():
             # run peer cluster manager processing
             self.opensearch_peer_cm.run()
-            # TODO run should include applying directives + removing them from queue ??
         elif not self.opensearch_peer_cm.deployment_desc():
             # deployment desc not initialized yet by leader
             event.defer()

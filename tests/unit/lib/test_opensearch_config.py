@@ -143,19 +143,18 @@ class TestOpenSearchConfig(unittest.TestCase):
         gethostbyaddr.return_value = "hostname.com", ["alias1", "alias2"], ["10.10.10.10"]
 
         self.opensearch_config.set_node(
-            self.charm.app.name,
-            self.charm.model.name,
-            self.charm.unit_name,
-            ["cluster_manager", "data"],
-            ["cm1"],
-            ["10.10.10.10"],
-            True,
+            cluster_name="opensearch-dev",
+            unit_name=self.charm.unit_name,
+            roles=["cluster_manager", "data"],
+            cm_names=["cm1"],
+            cm_ips=["10.10.10.10"],
+            contribute_to_bootstrap=True,
+            node_temperature="hot",
         )
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
-        self.assertEqual(
-            opensearch_conf["cluster.name"], f"{self.charm.app.name}-{self.charm.model.name}"
-        )
+        self.assertEqual(opensearch_conf["cluster.name"], "opensearch-dev")
         self.assertEqual(opensearch_conf["node.name"], self.charm.unit_name)
+        self.assertEqual(opensearch_conf["node.attr.temp"], "hot")
         self.assertEqual(opensearch_conf["network.host"], ["_site_", "10.10.10.10"])
         self.assertEqual(opensearch_conf["node.roles"], ["cluster_manager", "data"])
         self.assertEqual(opensearch_conf["discovery.seed_providers"], "file")

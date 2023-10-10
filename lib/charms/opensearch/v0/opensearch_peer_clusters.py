@@ -1,7 +1,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Class for Managing configuration related changes in multi cluster deployment context."""
+"""Class for Managing simple or large deployments and configuration related changes."""
 import logging
 from typing import List, Optional
 
@@ -33,7 +33,7 @@ from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Sco
 from ops import BlockedStatus
 
 # The unique Charmhub library identifier, never change it
-LIBID = "b02ab02d4fd644fdabe02c61e509093f"
+LIBID = "35ccf1a7eac946ec8f962c21401598d6"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
@@ -60,7 +60,6 @@ class OpenSearchPeerClustersManager:
     def run(self) -> None:
         """Init, or updates / recomputes current peer cluster related config if applies."""
         user_config = self._user_config()
-        logger.debug(f"\n\n\nOpensearch CM --- Run: \n{user_config}")
         current_deployment_desc = self.deployment_desc()
 
         if not current_deployment_desc:
@@ -74,14 +73,12 @@ class OpenSearchPeerClustersManager:
 
         # update cluster deployment desc
         deployment_desc = self._existing_cluster_setup(user_config, current_deployment_desc)
-        logger.debug(f"Current cluster setup: {current_deployment_desc}")
-        logger.debug(f"Existing cluster setup: {deployment_desc}")
         if current_deployment_desc == deployment_desc:
             return
 
         if deployment_desc.state.value == State.ACTIVE:
             # we only update the deployment desc if all is well.
-            # TODO: Should we add an entry on DeploymentDesc "errors"?
+            # TODO: Should we add an entry on DeploymentDesc "errors" to reflect on status?
             self._charm.peers_data.put_object(
                 Scope.APP, "deployment-description", deployment_desc.to_dict()
             )
@@ -93,6 +90,9 @@ class OpenSearchPeerClustersManager:
                 )
 
         self.apply_status_if_needed(deployment_desc)
+
+        # TODO: once peer clusters relation implemented, we should apply all directives
+        #  + removing them from queue. We currently only apply the status.
 
     def _user_config(self):
         """Build a user provided config object."""
@@ -307,10 +307,6 @@ class OpenSearchPeerClustersManager:
             return
 
         raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
-
-    def roles_provided_by_user(self) -> bool:
-        """Return whether the roles were provided by the user of self-generated."""
-        return self.deployment_desc().start == StartMode.WITH_PROVIDED_ROLES
 
     def is_peer_cluster_relation_set(self):
         """Return whether the peer cluster relation is established."""

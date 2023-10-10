@@ -8,7 +8,16 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.models import Node
+from charms.opensearch.v0.models import (
+    DeploymentDescription,
+    DeploymentState,
+    DeploymentType,
+    Directive,
+    Node,
+    PeerClusterConfig,
+    StartMode,
+    State,
+)
 from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER, PeerRelationName
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
@@ -28,6 +37,23 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
     OPENSEARCH_DISTRO = ""
 
+    deployment_descriptions = {
+        "ok": DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            start=StartMode.WITH_GENERATED_ROLES,
+            directives=[],
+            typ=DeploymentType.MAIN_CLUSTER_MANAGER,
+            state=DeploymentState(value=State.ACTIVE),
+        ),
+        "ko": DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="logs", init_hold=True, roles=["ml"]),
+            start=StartMode.WITH_PROVIDED_ROLES,
+            directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
+            typ=DeploymentType.OTHER,
+            state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
+        ),
+    }
+
     def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
@@ -43,6 +69,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.opensearch.is_failed.return_value = False
 
         self.peers_data = self.charm.peers_data
+        self.peer_cm = self.charm.opensearch_peer_clusters_manager
+
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
 
@@ -97,6 +125,10 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _put_admin_user.assert_called_once()
         _purge_users.assert_called_once()
 
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
+    @patch(f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.can_start")
     @patch(f"{BASE_CHARM_CLASS}._is_tls_fully_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_client_auth")
     @patch(f"{BASE_CHARM_CLASS}._get_nodes")
@@ -117,6 +149,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _get_nodes,
         set_client_auth,
         _is_tls_fully_configured,
+        can_start,
+        deployment_desc,
     ):
         """Test on start event."""
         with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
@@ -143,16 +177,21 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _get_nodes.side_effect = None
         _can_service_start.return_value = False
         self.charm.on.start.emit()
-        _get_nodes.assert_not_called()
+        _get_nodes.assert_called_once()
         _set_node_conf.assert_not_called()
         _initialize_security_index.assert_not_called()
 
         with patch(f"{self.OPENSEARCH_DISTRO}.start") as start:
             # initialisation of the security index
+            _get_nodes.reset_mock()
             self.peers_data.delete(Scope.APP, "security_index_initialised")
             _can_service_start.return_value = True
             self.harness.set_leader(True)
             self.charm.on.start.emit()
+
+            # peer cluster manager
+            deployment_desc.return_value = self.deployment_descriptions["ok"]
+            can_start.return_value = True
             _get_nodes.assert_called()
             _set_node_conf.assert_called()
             start.assert_called_once()
