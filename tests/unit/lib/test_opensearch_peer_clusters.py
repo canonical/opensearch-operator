@@ -50,7 +50,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
         "roles_temp": PeerClusterConfig(cluster_name="", init_hold=True, roles=["data.hot"]),
     }
 
-    units = [
+    p_units = [
         PatchedUnit(name="opensearch/0"),
         PatchedUnit(name="opensearch/1"),
         PatchedUnit(name="opensearch/2"),
@@ -99,7 +99,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     def test_validate_roles(self, deployment_desc):
         """Test the roles' validation."""
-        Relation.units = PropertyMock(return_value=self.units)
+        Relation.units = PropertyMock(return_value=self.p_units)
         deployment_desc.return_value = DeploymentDescription(
             config=self.user_configs["roles_ok"],
             start=StartMode.WITH_PROVIDED_ROLES,
@@ -116,7 +116,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     roles=["cluster_manager", "data"],
                     ip="1.1.1.1",
                 )
-                for node in self.units[0:3]
+                for node in self.p_units[0:3]
             ]
             self.peer_cm.validate_roles(nodes=nodes, on_new_unit=True)
 
@@ -129,7 +129,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     roles=["cluster_manager", "data"],
                     ip="1.1.1.1",
                 )
-                for node in self.units[0:4]
+                for node in self.p_units[0:4]
             ] + [Node(name="node", roles=["ml"], ip="0.0.0.0")]
             self.peer_cm.validate_roles(nodes=nodes, on_new_unit=False)
 
@@ -138,7 +138,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
     @patch(f"{PEER_CLUSTERS_MANAGER}.is_peer_cluster_relation_set")
     def test_pre_validate_roles_change(self, is_peer_cluster_relation_set, alt_hosts, nodes):
         """Test the pre_validation of roles change."""
-        Relation.units = PropertyMock(return_value=self.units)
+        Relation.units = PropertyMock(return_value=self.p_units)
         alt_hosts.return_value = []
 
         try:
@@ -151,7 +151,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             is_peer_cluster_relation_set.return_value = True
             nodes.return_value = [
                 Node(name=node.name.replace("/", "-"), roles=["data"], ip="1.1.1.1")
-                for node in self.units
+                for node in self.p_units
             ] + [Node(name="node-5", roles=["data"], ip="2.2.2.2")]
             self.peer_cm._pre_validate_roles_change(new_roles=["ml"], prev_roles=["data", "ml"])
         except OpenSearchProvidedRolesException:
@@ -173,6 +173,6 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             is_peer_cluster_relation_set.return_value = True
             nodes.return_value = [
                 Node(name=node.name.replace("/", "-"), roles=["data"], ip="1.1.1.1")
-                for node in self.units
+                for node in self.p_units
             ]
             self.peer_cm._pre_validate_roles_change(new_roles=["ml"], prev_roles=["data", "ml"])

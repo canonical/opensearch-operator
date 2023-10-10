@@ -181,16 +181,26 @@ async def get_number_of_shards_by_node(ops_test: OpsTest, unit_ip: str) -> Dict[
     stop=stop_after_attempt(25),
 )
 async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
-    """Fetch the cluster allocation of shards."""
-    nodes = await http_request(
-        ops_test,
-        "GET",
-        f"https://{unit_ip}:9200/_cat/nodes?format=json",
-    )
-    return [
-        Node(name=node["name"], roles=node["node.roles"].split(","), ip=node["ip"])
-        for node in nodes
-    ]
+    """Fetch all cluster nodes."""
+    nodes = (
+        await http_request(
+            ops_test,
+            "GET",
+            f"https://{unit_ip}:9200/_nodes",
+        )
+    ).get("nodes", {})
+
+    result = []
+    for node_id, node in nodes.items():
+        result.append(
+            Node(
+                name=node["name"],
+                roles=node["roles"],
+                ip=node["ip"],
+                temperature=node.get("attributes", {}).get("temp"),
+            )
+        )
+    return result
 
 
 async def assert_continuous_writes_consistency(

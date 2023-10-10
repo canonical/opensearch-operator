@@ -9,14 +9,16 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import app_name, update_restart_delay
+from tests.integration.ha.helpers import all_nodes, app_name, update_restart_delay
 from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    check_cluster_formation_successful,
+    cluster_health,
     get_application_unit_ids,
-    get_application_unit_ids_ips,
+    get_application_unit_names,
     get_leader_unit_ip,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -90,17 +92,57 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 3
+    assert len(ops_test.model.applications[APP_NAME].units) == 2
 
 
 @pytest.mark.abort_on_fail
-async def test_change_roles(
+async def test_set_roles_manually(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Check roles changes in all nodes."""
     app = (await app_name(ops_test)) or APP_NAME
 
-    units = await get_application_unit_ids_ips(ops_test, app=app)
-    print(units)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    print(leader_unit_ip)
+
+    cluster_name = (await cluster_health(ops_test, leader_unit_ip))["cluster_name"]
+    nodes = await all_nodes(ops_test, leader_unit_ip)
+    for node in nodes:
+        assert sorted(node.roles) == [
+            "cluster_manager",
+            "coordinating_only",
+            "data",
+            "ingest",
+            "ml",
+        ]
+        assert node.temperature is None, "Node temperature was erroneously set."
+
+    # change cluster name and roles + temperature, should trigger a rolling restart
+    await ops_test.model.applications[app].set_config(
+        {"cluster_name": "new_cluster_name", "roles": "cluster_manager, data.cold"}
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[app],
+        status="active",
+        timeout=1000,
+        idle_period=IDLE_PERIOD,
+    )
+    assert await check_cluster_formation_successful(
+        ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
+    )
+    new_cluster_name = (await cluster_health(ops_test, leader_unit_ip))["cluster_name"]
+    assert new_cluster_name == cluster_name, "Oops - cluster name changed."
+
+    nodes = await all_nodes(ops_test, leader_unit_ip)
+    for node in nodes:
+        assert sorted(node.roles) == ["cluster_manager", "data"], "roles unchanged"
+        assert node.temperature == "cold", "Temperature unchanged."
+
+    # scale up cluster by 1 unit, this should break the quorum and put the charm in a blocked state
+    await ops_test.model.applications[app].add_unit(count=1)
+    await ops_test.model.wait_for_idle(
+        apps=[app],
+        status="blocked",
+        timeout=1000,
+        wait_for_exact_units=4,
+        idle_period=IDLE_PERIOD,
+    )
