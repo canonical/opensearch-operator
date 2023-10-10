@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
+from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn, PluginState
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.testing import Harness
@@ -51,6 +52,8 @@ class TestOpenSearchKNN(unittest.TestCase):
                 "relation": None,
             }
         }
+        self.charm.opensearch.is_started = MagicMock(return_value=True)
+        self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
 
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"

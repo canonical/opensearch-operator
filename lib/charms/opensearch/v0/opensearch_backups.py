@@ -126,6 +126,7 @@ REPO_NOT_ACCESS_ERR = (
     if S3_REPO_BASE_PATH
     else "" + " is not accessible"
 )
+REPO_CREATING_ERR = "Could not determine repository generation from root blobs"
 
 
 class OpenSearchBackupError(OpenSearchError):
@@ -147,6 +148,8 @@ class BackupServiceState(BaseStrEnum):
     RESPONSE_FAILED_NETWORK = "response failed: network error"
     REPO_NOT_CREATED = "repository not created"
     REPO_NOT_CREATED_ALREADY_EXISTS = "repo not created as it already exists"
+    REPO_CREATION_ERR = "Failed creating repository"
+    REPO_ERR_UNKNOWN = "Repository exception: unknown"
     REPO_MISSING = "repository is missing from request"
     REPO_S3_UNREACHABLE = "repository s3 is unreachable"
     ILLEGAL_ARGUMENT = "request contained wrong argument"
@@ -362,7 +365,7 @@ class OpenSearchBackup(Object):
             with attempt:
                 output = self._request("GET", target)
                 logger.debug(f"Wait backup success return: {output}")
-                if self.get_snapshot_status(output) != BackupServiceState.SUCCESS:
+                if self.get_service_status(output) != BackupServiceState.SUCCESS:
                     raise Exception()
 
     def on_s3_change(self, event: EventBase) -> None:
@@ -523,10 +526,7 @@ class OpenSearchBackup(Object):
                 f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}",
                 payload={
                     "type": "s3",
-                    "settings": {
-                        "bucket": bucket_name,
-                        "base_path": S3_REPO_BASE_PATH,
-                    },
+                    "settings": {"bucket": bucket_name, "base_path": S3_REPO_BASE_PATH},
                 },
             )
         )
@@ -588,6 +588,10 @@ class OpenSearchBackup(Object):
         # waiting for the plugin to be configured
         if type == "repository_exception" and REPO_NOT_CREATED_ERR in reason:
             return BackupServiceState.REPO_NOT_CREATED
+        if type == "repository_exception" and REPO_CREATING_ERR in reason:
+            return BackupServiceState.REPO_CREATION_ERR
+        if type == "repository_exception":
+            return BackupServiceState.REPO_ERR_UNKNOWN
         if type == "repository_missing_exception":
             return BackupServiceState.REPO_MISSING
         if type == "repository_verification_exception" and REPO_NOT_ACCESS_ERR in reason:
@@ -606,7 +610,8 @@ class OpenSearchBackup(Object):
             == response[OPENSEARCH_REPOSITORY_NAME]["settings"]["bucket"]
         ):
             return BackupServiceState.REPO_NOT_CREATED_ALREADY_EXISTS
-        return BackupServiceState.SUCCESS
+        # Ensure this is not containing any information about snapshots, return SUCCESS
+        return self.get_snapshot_status(response)
 
     def get_snapshot_status(self, response: Dict[str, Any]) -> BackupServiceState:
         """Returns the snapshot status."""

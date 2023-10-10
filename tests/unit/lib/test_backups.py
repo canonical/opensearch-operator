@@ -13,6 +13,7 @@ from charms.opensearch.v0.opensearch_backups import (
     S3_REPO_BASE_PATH,
     OpenSearchBackupPlugin,
 )
+from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginConfig, PluginState
 from ops.testing import Harness
 
@@ -39,6 +40,8 @@ class TestBackups(unittest.TestCase):
                 "relation": "s3-credentials",
             },
         }
+        self.charm.opensearch.is_started = MagicMock(return_value=True)
+        self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
 
         # Replace some unused methods that will be called as part of set_leader with mock
         self.charm.service_manager._update_locks = MagicMock()

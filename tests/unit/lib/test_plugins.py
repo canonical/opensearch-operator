@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import charms
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPlugin,
     OpenSearchPluginConfig,
@@ -116,6 +117,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
                 "relation": None,
             },
         }
+        self.charm.opensearch.is_started = MagicMock(return_value=True)
+        self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
 
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_installed")
