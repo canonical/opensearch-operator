@@ -67,6 +67,7 @@ class OpenSearchBaseCharm(CharmBase):
 """
 
 import logging
+import os
 from typing import Any, Dict, List
 
 import requests
@@ -75,6 +76,10 @@ from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
+)
+from charms.opensearch.v0.opensearch_keystore import (
+    OpenSearchCATruststore,
+    OpenSearchKeystoreError,
 )
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPlugin,
@@ -274,7 +279,9 @@ class OpenSearchBackup(Object):
             # Check if any backup is not running already, or RetryError happens
             self.wait_backup_success()
             # gets the latest value
-            new_backup_id = max(self._list_backups().keys()) + 1
+            # the very firs time this action is executed, _list_backups returns empty
+            # hence, the "or [0]"
+            new_backup_id = max(self._list_backups().keys() or [0]) + 1
             output = self.get_service_status(
                 self._request(
                     "PUT",
@@ -368,10 +375,28 @@ class OpenSearchBackup(Object):
         if self._check_missing_s3_config_completeness():
             # Abandon this event, as it is still missing data
             return
+
+        if self.s3_client.get_s3_connection_info().get("tls-ca-chain", None):
+            restart_is_needed = os.path.exists(self.charm.opensearch.paths.certs + "/cacerts")
+            ca_truststore = OpenSearchCATruststore()
+            if not restart_is_needed and os.path.exists(
+                self.charm.opensearch.paths.certs + "/cacerts"
+            ):
+                # File has been created for the first time, then we need to add configuration
+                # to jvm.options and request a restart
+                restart_is_needed = True
+                self.charm.opensearch_config.configure_jvm_ca_truststore(
+                    ca_truststore.get_jvm_config()
+                )
+            # Always execute this method, we may need to replace the CA
+            ca_truststore.add(
+                key="s3", capath=self.s3_client.get_s3_connection_info()["tls-ca-chain"]
+            )
+
         # Let run() happens: it will check if the relation is present, and if yes, return
         # true if the install / configuration / disabling of backup has happened.
         try:
-            if self.charm.plugin_manager.run():
+            if self.charm.plugin_manager.run() or restart_is_needed:
                 self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
@@ -425,7 +450,7 @@ class OpenSearchBackup(Object):
         1) Check if the cluster is currently taking a snapshot, if yes, set status as blocked
            and defer this event.
         2) If leader, run API calls to signal disable is needed
-        3) Update opensearch.yml and keystore
+        3) Update opensearch.yml, CA truststore and keystore
         4) Emit a restart event
         """
         self.charm.unit.status = MaintenanceStatus("Disabling backup service...")
@@ -445,6 +470,14 @@ class OpenSearchBackup(Object):
             self._execute_s3_depart_calls()
 
         # 3) and 4) Remove configuration and issue restart request
+        try:
+            ca_truststore = OpenSearchCATruststore()
+            ca_truststore.delete(key="s3")
+        except OpenSearchKeystoreError:
+            # Ignore the delete error, as it may mean there was a certificate at a point
+            # and the user removed it from the configuration later on.
+            pass
+
         if self.charm.plugin_manager.run():
             self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"

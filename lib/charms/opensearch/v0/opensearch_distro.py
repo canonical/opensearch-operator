@@ -305,6 +305,11 @@ class OpenSearchDistribution(ABC):
         except requests.JSONDecodeError:
             raise OpenSearchHttpError(response_body=resp.text)
 
+    @abstractmethod
+    def set_truststore_file(self) -> str:
+        """Sets the truststore to be used to hold trusted CAs."""
+        pass
+
     def write_file(self, path: str, data: str, override: bool = True):
         """Persists data into file. Useful for files generated on the fly, such as certs etc."""
         if not override and exists(path):

@@ -6,6 +6,7 @@
 This module manages OpenSearch keystore access and lifecycle.
 """
 import logging
+from abc import ABC, abstractmethod
 from typing import Dict, List
 
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -32,15 +33,38 @@ class OpenSearchKeystoreError(OpenSearchError):
     """Exception thrown when an opensearch keystore is invalid."""
 
 
-class OpenSearchKeystore:
-    """Manages keystore."""
-
-    KEYSTORE = "opensearch-keystore"
+class Keystore(ABC):
+    """Abstract class that represents the keystore."""
 
     def __init__(self, charm):
         """Creates the keystore manager class."""
         self._charm = charm
         self._opensearch = charm.opensearch
+        self._keytool = "/snap/opensearch/current/usr/share/opensearch/jdk/bin/keytool"
+
+    @abstractmethod
+    def add(self, entries: Dict[str, str]) -> None:
+        """Adds a new set of entries to the keystore."""
+        pass
+
+    @abstractmethod
+    def delete(self, entries: List[str]) -> None:
+        """Removes a new set of entries to the keystore."""
+        pass
+
+    @abstractmethod
+    def list(self, alias: str = None) -> None:
+        """Lists all key/values in the keystore, or optionally, the specific alias."""
+        pass
+
+
+class OpenSearchKeystore(Keystore):
+    """Manages keystore."""
+
+    def __init__(self, charm):
+        """Creates the keystore manager class."""
+        super().__init__(charm)
+        self._keytool = "opensearch-keystore"
 
     def add(self, entries: Dict[str, str]) -> None:
         """Adds a given key to the "opensearch" keystore."""
@@ -58,10 +82,10 @@ class OpenSearchKeystore:
             self._delete(key)
         self._reload_keystore()
 
-    def list(self) -> List[str]:
+    def list(self, alias: str = None) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
         try:
-            return self._opensearch.run_bin("opensearch-keystore", "list").split("\n")
+            return self._opensearch.run_bin(self._keytool, "list").split("\n")
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
@@ -71,13 +95,13 @@ class OpenSearchKeystore:
         try:
             # Add newline to the end of the key, if missing
             value += "" if value.endswith("\n") else "\n"
-            self._opensearch.run_bin("opensearch-keystore", f"add --force {key}", stdin=value)
+            self._opensearch.run_bin(self._keytool, f"add --force {key}", stdin=value)
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
     def _delete(self, key: str) -> None:
         try:
-            self._opensearch.run_bin("opensearch-keystore", f"remove {key}")
+            self._opensearch.run_bin(self._keytool, f"remove {key}")
         except OpenSearchCmdError as e:
             if "does not exist in the keystore" in str(e):
                 logger.info(
@@ -97,3 +121,82 @@ class OpenSearchKeystore:
             raise OpenSearchKeystoreError(
                 f"Failed to reload keystore: error code: {e.response_code}, error body: {e.response_body}"
             )
+
+
+class OpenSearchCATruststore(OpenSearchKeystore):
+    """Manages the default CA truststore."""
+
+    def __init__(self, charm):
+        """Creates the keystore manager class."""
+        super().__init__(charm)
+        self._keystore = charm.opensearch.set_truststore_file()
+        self._password = "changeit"
+
+    def list(self, alias: str = None) -> List[str]:
+        """Lists the keys available in opensearch's keystore."""
+        try:
+            return self._opensearch.run_bin(self._keytool, "-v -list -keystore")
+        except OpenSearchCmdError as e:
+            raise OpenSearchKeystoreError(str(e))
+
+    def add(self, entries: Dict[str, str]) -> None:
+        """Adds a new set of entries to the keystore."""
+        if not entries:
+            raise OpenSearchKeystoreError("Missing entries for keystore")
+        for key, value in entries.items():
+            self._add(key, value)
+
+    def delete(self, entries: List[str]) -> None:
+        """Removes a new set of entries to the keystore."""
+        if not entries:
+            raise OpenSearchKeystoreError("Missing entries for keystore")
+        for key in entries:
+            self._delete(key)
+
+    def _add(self, key: str, capath: str):
+        if not capath:
+            raise OpenSearchKeystoreError("Missing keystore value")
+        # First, try removing the key, as a new capath will be added:
+        try:
+            self.delete(key)
+        except OpenSearchKeystoreError:
+            # Ignore, it means only the alias does not exist yet
+            pass
+
+        try:
+            self._opensearch.run_bin(
+                self._keytool,
+                f"keytool -import -alias {key} "
+                f"-file {capath} -storetype JKS "
+                f"-storepass {self._password} "
+                f"-keystore {self._keystore} -noprompt",
+            )
+        except OpenSearchCmdError as e:
+            raise OpenSearchKeystoreError(str(e))
+
+    def _delete(self, key: str) -> None:
+        try:
+            self._opensearch.run_bin(
+                self._keytool,
+                f"-delete -alias {key} "
+                f"-keystore {self._keystore} "
+                f"-storepass {self._password} -noprompt",
+            )
+        except OpenSearchCmdError as e:
+            if "does not exist in the keystore" in str(e):
+                logger.info(
+                    "opensearch_keystore._delete:"
+                    f" Key {key} not found in keystore, continuing..."
+                )
+                return
+            raise OpenSearchKeystoreError(str(e))
+
+    def get_jvm_config(self) -> Dict[str, str]:
+        """Returns a dict containing the jvm options to be added for this truststore.
+
+        These configs should be added to jvm.options.
+        """
+        return {
+            "-Djavax.net.ssl.trustStore": self._keystore,
+            "-Djavax.net.ssl.trustStorePassword": self._password,
+        }

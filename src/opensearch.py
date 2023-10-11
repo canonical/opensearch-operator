@@ -10,6 +10,7 @@ import grp
 import logging
 import os
 import pwd
+import shutil
 import time
 from datetime import datetime
 from pathlib import Path
@@ -252,3 +253,11 @@ class OpenSearchTarball(OpenSearchDistribution):
         )
 
         self._run_cmd("systemctl daemon-reload")
+
+    def set_truststore_file(self) -> str:
+        """Sets the truststore to be used to hold trusted CAs."""
+        keystore_file = self.paths.certs + "/cacerts"
+        shutil.copy(self.paths.jdk + "/lib/security/cacerts", keystore_file)
+        os.chmod(keystore_file, 0o660)
+        shutil.chown(keystore_file, user="snap_daemon", group="root")
+        return keystore_file
