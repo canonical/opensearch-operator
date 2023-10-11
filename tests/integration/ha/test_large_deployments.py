@@ -27,9 +27,7 @@ from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 logger = logging.getLogger(__name__)
 
 
-SECOND_APP_NAME = "second-opensearch"
 ORIGINAL_RESTART_DELAY = 20
-RESTART_DELAY = 360
 
 
 @pytest.fixture()
