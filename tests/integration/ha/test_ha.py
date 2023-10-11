@@ -9,6 +9,7 @@ import time
 import pytest
 from pytest_operator.plugin import OpsTest
 
+from integration.helpers_deployments import wait_until
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.ha.helpers import (
     all_processes_down,
@@ -105,6 +106,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await wait_until(
+        ops_test,
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME], wait_for_exact_units=len(UNIT_IDS))
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
