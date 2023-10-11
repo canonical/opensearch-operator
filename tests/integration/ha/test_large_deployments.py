@@ -91,7 +91,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 2
+    assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
 @pytest.mark.abort_on_fail
