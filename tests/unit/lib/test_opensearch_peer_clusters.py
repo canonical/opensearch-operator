@@ -3,12 +3,11 @@
 
 """Unit test for the opensearch_peer_clusters library."""
 import unittest
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchProvidedRolesException,
 )
-from ops import Relation
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -96,10 +95,12 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             can_start = self.peer_cm.can_start(deployment_desc)
             self.assertEqual(can_start, expected)
 
+    @patch("ops.model.Model.get_relation")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
-    def test_validate_roles(self, deployment_desc):
+    def test_validate_roles(self, deployment_desc, get_relation):
         """Test the roles' validation."""
-        Relation.units = PropertyMock(return_value=self.p_units)
+        get_relation.return_value.units = set(self.p_units)
+
         deployment_desc.return_value = DeploymentDescription(
             config=self.user_configs["roles_ok"],
             start=StartMode.WITH_PROVIDED_ROLES,
@@ -133,14 +134,17 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             ] + [Node(name="node", roles=["ml"], ip="0.0.0.0")]
             self.peer_cm.validate_roles(nodes=nodes, on_new_unit=False)
 
+    @patch("ops.model.Model.get_relation")
     @patch(f"{BASE_LIB_PATH}.helper_cluster.ClusterTopology.nodes")
     @patch(f"{BASE_CHARM_CLASS}.alt_hosts")
     @patch(f"{PEER_CLUSTERS_MANAGER}.is_peer_cluster_relation_set")
-    def test_pre_validate_roles_change(self, is_peer_cluster_relation_set, alt_hosts, nodes):
+    def test_pre_validate_roles_change(
+        self, is_peer_cluster_relation_set, alt_hosts, nodes, get_relation
+    ):
         """Test the pre_validation of roles change."""
-        Relation.units = PropertyMock(return_value=self.p_units)
-        alt_hosts.return_value = []
+        get_relation.return_value.units = set(self.p_units)
 
+        alt_hosts.return_value = []
         try:
             self.peer_cm._pre_validate_roles_change(
                 new_roles=["data", "ml"], prev_roles=["data", "ml"]

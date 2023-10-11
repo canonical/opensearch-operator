@@ -19,6 +19,7 @@ from tests.integration.helpers import (
     cluster_health,
     get_application_unit_ids,
     get_application_unit_names,
+    get_application_unit_status,
     get_leader_unit_ip,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -141,8 +142,13 @@ async def test_set_roles_manually(
     await ops_test.model.applications[app].add_unit(count=1)
     await ops_test.model.wait_for_idle(
         apps=[app],
-        status="blocked",
         timeout=1000,
         wait_for_exact_units=4,
         idle_period=IDLE_PERIOD,
+    )
+    new_unit_id = max(
+        [int(unit.name.split("/")[1]) for unit in ops_test.model.applications[app].units]
+    )
+    await ops_test.model.block_until(
+        lambda: get_application_unit_status(ops_test, app=app)[new_unit_id] == "blocked"
     )
