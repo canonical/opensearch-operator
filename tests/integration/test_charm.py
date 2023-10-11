@@ -7,7 +7,6 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from integration.helpers_deployments import wait_until
 from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
@@ -19,6 +18,7 @@ from tests.integration.helpers import (
     http_request,
     run_action,
 )
+from tests.integration.helpers_deployments import wait_until
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,10 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 async def test_status(ops_test: OpsTest) -> None:
     """Verifies that the application and unit are active."""
     await wait_until(
-        ops_test, apps=[APP_NAME], wait_for_exact_units=DEFAULT_NUM_UNITS, apps_statuses=["blocked"]
+        ops_test,
+        apps=[APP_NAME],
+        wait_for_exact_units=DEFAULT_NUM_UNITS,
+        apps_statuses=["blocked"],
     )
     # await ops_test.model.wait_for_idle(
     #     apps=[APP_NAME], status="blocked", timeout=1000, wait_for_exact_units=DEFAULT_NUM_UNITS
@@ -64,17 +67,15 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator.
     config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
-    await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME])
-    # await ops_test.model.wait_for_idle(
-    #     apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=1000
-    # )
+    await ops_test.model.wait_for_idle(
+        apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=1000
+    )
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await wait_until(ops_test, apps=[APP_NAME], wait_for_exact_units=DEFAULT_NUM_UNITS)
-    # await ops_test.model.wait_for_idle(
-    #     apps=[APP_NAME], status="active", timeout=1200, wait_for_exact_units=DEFAULT_NUM_UNITS
-    # )
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1200, wait_for_exact_units=DEFAULT_NUM_UNITS
+    )
 
     leader_ip = await get_leader_unit_ip(ops_test)
     test_url = f"https://{leader_ip}:9200/"

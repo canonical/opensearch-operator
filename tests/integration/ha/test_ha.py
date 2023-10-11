@@ -9,7 +9,6 @@ import time
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from integration.helpers_deployments import wait_until
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.ha.helpers import (
     all_processes_down,
@@ -41,6 +40,7 @@ from tests.integration.helpers import (
     get_reachable_unit_ips,
     is_up,
 )
+from tests.integration.helpers_deployments import wait_until
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
@@ -106,9 +106,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await wait_until(
-        ops_test,
-        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME], wait_for_exact_units=len(UNIT_IDS))
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
@@ -176,13 +173,22 @@ async def test_kill_db_process_node_with_primary_shard(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
+        # await ops_test.model.wait_for_idle(
+        #     apps=[app],
+        #     status="active",
+        #     timeout=1000,
+        #     idle_period=IDLE_PERIOD,
+        # )
 
     # Kill the opensearch process
     await send_kill_signal_to_process(
@@ -238,13 +244,22 @@ async def test_kill_db_process_node_with_elected_cm(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
+        # await ops_test.model.wait_for_idle(
+        #     apps=[app],
+        #     status="active",
+        #     timeout=1000,
+        #     idle_period=IDLE_PERIOD,
+        # )
 
     # Kill the opensearch process
     await send_kill_signal_to_process(ops_test, app, first_elected_cm_unit_id, signal="SIGKILL")
@@ -292,13 +307,22 @@ async def test_freeze_db_process_node_with_primary_shard(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
+        # await ops_test.model.wait_for_idle(
+        #     apps=[app],
+        #     status="active",
+        #     timeout=1000,
+        #     idle_period=IDLE_PERIOD,
+        # )
 
     # Freeze the opensearch process
     opensearch_pid = await send_kill_signal_to_process(
@@ -377,13 +401,22 @@ async def test_freeze_db_process_node_with_elected_cm(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
+        # await ops_test.model.wait_for_idle(
+        #     apps=[app],
+        #     status="active",
+        #     timeout=1000,
+        #     idle_period=IDLE_PERIOD,
+        # )
 
     # Freeze the opensearch process
     opensearch_pid = await send_kill_signal_to_process(
@@ -452,13 +485,22 @@ async def test_restart_db_process_node_with_elected_cm(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
+        # await ops_test.model.wait_for_idle(
+        #     apps=[app],
+        #     status="active",
+        #     timeout=1000,
+        #     idle_period=IDLE_PERIOD,
+        # )
 
     # restart the opensearch process
     await send_kill_signal_to_process(ops_test, app, first_elected_cm_unit_id, signal="SIGTERM")
@@ -505,13 +547,22 @@ async def test_restart_db_process_node_with_primary_shard(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
+        # await ops_test.model.wait_for_idle(
+        #     apps=[app],
+        #     status="active",
+        #     timeout=1000,
+        #     idle_period=IDLE_PERIOD,
+        # )
 
     # restart the opensearch process
     await send_kill_signal_to_process(
@@ -681,14 +732,23 @@ async def test_multi_clusters_db_isolation(
     await ops_test.model.relate(SECOND_APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
     # wait
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
         wait_for_exact_units=len(unit_ids) - 1,
         idle_period=IDLE_PERIOD,
     )
-    await ops_test.model.wait_for_idle(apps=[SECOND_APP_NAME], status="active")
+    await wait_until(
+        ops_test, apps=[SECOND_APP_NAME], apps_statuses=["active"], units_statuses=["active"]
+    )
+    # await ops_test.model.wait_for_idle(
+    #     apps=[app],
+    #     status="active",
+    #     timeout=1000,
+    #     wait_for_exact_units=len(unit_ids) - 1,
+    #     idle_period=IDLE_PERIOD,
+    # )
+    # await ops_test.model.wait_for_idle(apps=[SECOND_APP_NAME], status="active")
 
     index_name = "test_index_unique_cluster_dbs"
 

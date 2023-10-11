@@ -2,11 +2,14 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 import json
+import logging
 import subprocess
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pytest_operator.plugin import OpsTest
+
+logger = logging.getLogger(__name__)
 
 
 class Status:
@@ -119,18 +122,29 @@ async def _is_every_condition_on_app_met(
 
     if apps_statuses:
         if app_status.value not in apps_statuses:
+            logger.info(
+                f"UNMET - app: {app} -- app_status: {app_status.value} not in expected: {apps_statuses}"
+            )
             return False
     else:
         any_match = False
         for status_val, messages in apps_full_statuses[app].items():
+            logger.info(
+                f"app: {app} -- app_status: {app_status.value} vs {status_val} and message: {app_status.message} vs {messages or ['', None]}"
+            )
             any_match = any_match or (
                 app_status.value == status_val and app_status.message in (messages or ["", None])
             )
         if not any_match:
+            logger.info(f"UNMET - app: {app} -- app_full_statuses")
             return False
 
     if app_status.since + timedelta(seconds=idle_period) > datetime.now():
+        logger.info(f"UNMET - app: {app} -- app_status.since: {app_status.since} < {idle_period}")
         return False
+
+    logger.info(f"MET - app: {app}")
+    return True
 
 
 async def _is_every_condition_on_units_met(
@@ -143,41 +157,56 @@ async def _is_every_condition_on_units_met(
     """Evaluate if all the conditions of a unit are met."""
     for unit in units:
         if unit.agent_status != "idle":
+            logger.info(f"UNMET - unit: {unit.name} -- agent_status: {unit.agent_status}")
             return False
 
         if units_statuses:
             if unit.workload_status.value not in units_statuses:
+                logger.info(
+                    f"UNMET - unit: {unit.name} -- workload_status: {unit.workload_status.value} not in expected: {units_statuses}"
+                )
                 return False
         else:
             any_match = False
             for status_val, messages in units_full_statuses[app]["units"].items():
+                logger.info(
+                    f"unit: {unit.name} -- workload_status: {unit.workload_status.value} vs {status_val} and message: {unit.workload_status.message} vs {messages or ['', None]}"
+                )
                 any_match = any_match or (
                     unit.workload_status.value == status_val
                     and unit.workload_status.message in (messages or ["", None])
                 )
             if not any_match:
+                logger.info(f"UNMET - unit: {unit.name} -- unit_full_statuses")
                 return False
 
         if unit.agent_status.since + timedelta(seconds=idle_period) > datetime.now():
+            logger.info(
+                f"UNMET - unit: {unit.name} -- agent_status.since: {unit.agent_status.since} < {idle_period}"
+            )
             return False
 
+    logger.info("MET - all units")
     return True
 
 
 async def _is_every_condition_met(
     ops_test: OpsTest,
     apps: List[str],
+    wait_for_exact_units: Dict[str, int],
     apps_statuses: Optional[List[str]] = None,
     apps_full_statuses: Optional[Dict[str, Dict[str, List[str]]]] = None,
     units_statuses: Optional[List[str]] = None,
     units_full_statuses: Optional[Dict[str, Dict[str, Dict[str, List[str]]]]] = None,
-    wait_for_exact_units: int = 1,
     idle_period: int = 30,
 ) -> bool:
     """Evaluate if all the deployment status conditions are met."""
     for app in apps:
         units = await get_application_units(ops_test, app)
-        if len(units) != wait_for_exact_units:
+        if len(units) != wait_for_exact_units[app]:
+            logger.info(
+                f"UNMET - app: {app} -- len(units): {len(units)} vs expected: {wait_for_exact_units[app]}"
+            )
             return False
 
         if (apps_statuses or apps_full_statuses) and not _is_every_condition_on_app_met(
@@ -190,6 +219,7 @@ async def _is_every_condition_met(
         ):
             return False
 
+    logger.info("MET - everything!")
     return True
 
 
@@ -200,9 +230,9 @@ async def wait_until(
     apps_full_statuses: Optional[Dict[str, Dict[str, List[str]]]] = None,
     units_statuses: Optional[List[str]] = None,
     units_full_statuses: Optional[Dict[str, Dict[str, Dict[str, List[str]]]]] = None,
-    wait_for_exact_units: int = -1,
+    wait_for_exact_units: Optional[Union[int, Dict[str, int]]] = 1,
     idle_period: int = 30,
-    timeout: int = 1400,
+    timeout: int = 1000,
 ) -> None:
     """Block and wait until a set of statuses and timeouts are met.
 
@@ -218,6 +248,8 @@ async def wait_until(
         units_full_statuses: List of acceptable statuses to wait for, for all apps with more
             granularity: {"app1": "units": {"blocked": ["msg1", "msg2"], "active": []}}, "app2"...}
         wait_for_exact_units: The desired number of units to wait for, can be greater or equal to 0
+            if set as int, this value is expected for all apps, if more granularity needed set as
+            dictionary such as: {"app1": 2, "app2": 1, ...}
         idle_period: Seconds to wait for the agents of each application unit to be idle.
         timeout: Time to wait for application to become stable.
     """
@@ -227,6 +259,15 @@ async def wait_until(
     if not (apps_statuses or apps_full_statuses or units_statuses or units_full_statuses):
         apps_statuses = ["active"]
         units_statuses = ["active"]
+
+    if isinstance(wait_for_exact_units, int):
+        wait_for_exact_units = {app: wait_for_exact_units for app in apps}
+    elif not wait_for_exact_units:
+        wait_for_exact_units = {app: 1 for app in apps}
+    else:
+        for app in apps:
+            if app not in wait_for_exact_units:
+                wait_for_exact_units[app] = 1
 
     await ops_test.model.block_until(
         lambda: _is_every_condition_met(

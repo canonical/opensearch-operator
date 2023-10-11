@@ -18,6 +18,7 @@ from tests.integration.helpers import (
     http_request,
     scale_application,
 )
+from tests.integration.helpers_deployments import wait_until
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
     run_request,
@@ -210,14 +211,23 @@ async def test_scaling(ops_test: OpsTest):
     )
 
     # Test scale down
-    await scale_application(
+    # [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
+    await wait_until(
         ops_test,
-        OPENSEARCH_APP_NAME,
-        get_num_of_opensearch_units() - 1,
-        timeout=1600,
-        idle_period=70,
+        apps=ALL_APPS,
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=get_num_of_opensearch_units() - 1,
+        idle_period=120,
     )
-    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
+    # await scale_application(
+    #     ops_test,
+    #     OPENSEARCH_APP_NAME,
+    #     get_num_of_opensearch_units() - 1,
+    #     timeout=1600,
+    #     idle_period=120,
+    # )
+    # await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
     assert (
         await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
         == get_num_of_opensearch_units()

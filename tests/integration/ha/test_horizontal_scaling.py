@@ -7,6 +7,7 @@ import logging
 import time
 
 import pytest
+from charms.opensearch.v0.constants_charm import ClusterHealthYellow
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from pytest_operator.plugin import OpsTest
 
@@ -38,6 +39,7 @@ from tests.integration.helpers import (
     get_leader_unit_id,
     get_leader_unit_ip,
 )
+from tests.integration.helpers_deployments import wait_until
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
@@ -177,13 +179,20 @@ async def test_safe_scale_down_shards_realloc(
 
     # remove the service in the chosen unit
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
-
-    await ops_test.model.wait_for_idle(
-        apps=[app],  # TODO:  put back status="active",
-        timeout=1000,
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_full_statuses={app: {"blocked": [ClusterHealthYellow]}},
+        units_statuses=["active"],
         wait_for_exact_units=init_units_count,
         idle_period=IDLE_PERIOD,
     )
+    # await ops_test.model.wait_for_idle(
+    #     apps=[app],  # TODO:  put back status="active",
+    #     timeout=1000,
+    #     wait_for_exact_units=init_units_count,
+    #     idle_period=IDLE_PERIOD,
+    # )
 
     # check if at least partial shard re-allocation happened
     new_shards_per_node = await get_number_of_shards_by_node(ops_test, leader_unit_ip)
