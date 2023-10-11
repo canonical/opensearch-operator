@@ -173,8 +173,8 @@ async def create_index_and_bulk_insert(
 
 
 @retry(
-    wait=wait_fixed(wait=5),
-    stop=stop_after_attempt(5),
+    wait=wait_fixed(wait=10),
+    stop=stop_after_attempt(7),
 )
 async def mlcommons_upload_model(
     ops_test: OpsTest,
@@ -186,12 +186,12 @@ async def mlcommons_upload_model(
     endpoint = f"https://{unit_ip}:9200/_plugins/_ml/models/_upload"
 
     resp = await http_request(ops_test, "POST", endpoint, payload=model_config, app=app)
-    return resp
+    return resp["task_id"]
 
 
 @retry(
-    wait=wait_fixed(wait=5),
-    stop=stop_after_attempt(5),
+    wait=wait_fixed(wait=10),
+    stop=stop_after_attempt(7),
 )
 async def mlcommons_wait_task_model(
     ops_test: OpsTest,
@@ -203,12 +203,12 @@ async def mlcommons_wait_task_model(
     endpoint = f"https://{unit_ip}:9200/_plugins/_ml/tasks/{task_id}"
 
     resp = await http_request(ops_test, "GET", endpoint, app=app)
-    return resp["model_id"] if "COMPLETED" in resp.get("state", "") else None
+    return resp["model_id"]
 
 
 @retry(
-    wait=wait_fixed(wait=5),
-    stop=stop_after_attempt(5),
+    wait=wait_fixed(wait=10),
+    stop=stop_after_attempt(7),
 )
 async def mlcommons_load_model_to_node(
     ops_test: OpsTest,
@@ -228,7 +228,7 @@ async def mlcommons_load_model_to_node(
     wait=wait_fixed(wait=5),
     stop=stop_after_attempt(5),
 )
-async def mlcommons_predict_model(
+async def mlcommons_model_predict(
     ops_test: OpsTest,
     app: str,
     unit_ip: str,
@@ -236,7 +236,7 @@ async def mlcommons_predict_model(
     prediction_type: str = "text_embedding",
     text_docs: Dict[str, Any] = {},
 ) -> str:
-    """Waits to load model and returns model_id or None."""
+    """Returns model prediction response."""
     endpoint = f"https://{unit_ip}:9200/_plugins/_ml/_predict/{prediction_type}/{model_id}"
 
     resp = await http_request(ops_test, "POST", endpoint, payload=text_docs, app=app)
