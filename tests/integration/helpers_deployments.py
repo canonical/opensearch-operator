@@ -82,7 +82,7 @@ async def get_application_units(ops_test: OpsTest, app: str) -> List[Unit]:
             workload_status=Status(
                 value=unit["workload-status"]["current"],
                 since=unit["workload-status"]["since"],
-                message=unit["workload-status"]["message"],
+                message=unit["workload-status"].get("message"),
             ),
             agent_status=Status(
                 value=unit["agent-status" if "agent-status" in unit else "workload-status"][
@@ -95,7 +95,7 @@ async def get_application_units(ops_test: OpsTest, app: str) -> List[Unit]:
             app_status=Status(
                 value=raw_app["application-status"]["current"],
                 since=raw_app["application-status"]["since"],
-                message=raw_app["application-status"]["message"],
+                message=raw_app["application-status"].get("message"),
             ),
         )
         units.append(unit)
