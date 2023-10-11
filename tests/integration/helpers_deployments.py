@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import asyncio
 import json
 import logging
 import subprocess
@@ -103,7 +104,7 @@ async def get_application_units(ops_test: OpsTest, app: str) -> List[Unit]:
     return units
 
 
-async def _is_every_condition_on_app_met(
+def _is_every_condition_on_app_met(
     ops_test: OpsTest,
     app: str,
     units: List[Unit],
@@ -147,7 +148,7 @@ async def _is_every_condition_on_app_met(
     return True
 
 
-async def _is_every_condition_on_units_met(
+def _is_every_condition_on_units_met(
     app: str,
     units: List[Unit],
     units_statuses: Optional[List[str]],
@@ -270,15 +271,17 @@ async def wait_until(
                 wait_for_exact_units[app] = 1
 
     await ops_test.model.block_until(
-        lambda: _is_every_condition_met(
-            ops_test=ops_test,
-            apps=apps,
-            wait_for_exact_units=wait_for_exact_units,
-            apps_statuses=apps_statuses,
-            apps_full_statuses=apps_full_statuses,
-            units_statuses=units_statuses,
-            units_full_statuses=units_full_statuses,
-            idle_period=idle_period,
+        lambda: asyncio.run(
+            _is_every_condition_met(
+                ops_test=ops_test,
+                apps=apps,
+                wait_for_exact_units=wait_for_exact_units,
+                apps_statuses=apps_statuses,
+                apps_full_statuses=apps_full_statuses,
+                units_statuses=units_statuses,
+                units_full_statuses=units_full_statuses,
+                idle_period=idle_period,
+            )
         ),
         timeout=timeout,
         wait_period=5,
