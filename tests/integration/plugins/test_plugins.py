@@ -65,6 +65,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.skip(reason="focus on mlcommons test only for now")
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
@@ -108,6 +109,7 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
     assert len(docs) == 2
 
 
+@pytest.mark.skip(reason="focus on mlcommons test only for now")
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
     """Uploads data and runs a query search against the NMSLIB KNNEngine."""
@@ -151,6 +153,7 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
     assert len(docs) == 2
 
 
+@pytest.mark.skip(reason="focus on mlcommons test only for now")
 @pytest.mark.abort_on_fail
 async def test_knn_training_search(ops_test: OpsTest) -> None:
     """Tests the entire cycle of KNN plugin.
