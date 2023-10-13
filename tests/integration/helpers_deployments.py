@@ -111,6 +111,7 @@ async def get_application_units(ops_test: OpsTest, app: str) -> List[Unit]:
                 message=raw_app["application-status"].get("message"),
             ),
         )
+
         units.append(unit)
 
     return units
@@ -266,7 +267,7 @@ async def wait_until(  # noqa: C901
                 wait_for_exact_units[app] = 1
 
     try:
-        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(5)):
+        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
             with attempt:
                 if await _is_every_condition_met(
                     ops_test=ops_test,

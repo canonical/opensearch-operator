@@ -80,7 +80,7 @@ async def run_action(
     if unit_id is None:
         online_units = []
         for unit in await get_application_units(ops_test, app):
-            if unit.workload_status != "active":
+            if unit.workload_status.value != "active":
                 continue
 
             ping = subprocess.call(
