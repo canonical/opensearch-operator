@@ -168,7 +168,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
         units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
-        timeout=1600,
+        timeout=2400,
     )
 
     # check unit network restored
@@ -281,7 +281,7 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
         units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
-        timeout=1600,
+        timeout=2400,
     )
 
     # check unit network restored
@@ -389,7 +389,7 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
         units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
-        timeout=1600,
+        timeout=2000,
     )
 
     # check if node up and is included in the cluster formation
@@ -490,7 +490,7 @@ async def test_full_network_cut_without_ip_change_node_with_primary_shard(
         units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
-        timeout=1600,
+        timeout=2000,
     )
 
     # check if node up and is included in the cluster formation

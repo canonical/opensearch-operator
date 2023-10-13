@@ -246,9 +246,16 @@ async def test_scaling(ops_test: OpsTest):
 @pytest.mark.abort_on_fail
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
+    # scale-down for CI
+    opensearch_unit_ids = get_application_unit_ids(ops_test, app=OPENSEARCH_APP_NAME)
+    await ops_test.model.applications[OPENSEARCH_APP_NAME].destroy_unit(
+        f"{OPENSEARCH_APP_NAME}/{max(opensearch_unit_ids)}"
+    )
+
     # Deploy secondary application.
     await ops_test.model.deploy(
         application_charm,
+        num_units=1,
         application_name=SECONDARY_CLIENT_APP_NAME,
     )
 
@@ -263,7 +270,14 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        idle_period=65,
+        wait_for_exact_units={
+            OPENSEARCH_APP_NAME: len(opensearch_unit_ids) - 1,
+            CLIENT_APP_NAME: 1,
+            SECONDARY_CLIENT_APP_NAME: 1,
+            TLS_CERTIFICATES_APP_NAME: 1,
+        },
+        idle_period=70,
+        timeout=1600,
     )
 
     # Test that the permissions are respected between relations by running the same request as
@@ -297,7 +311,7 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
         apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        idle_period=65,
+        idle_period=70,
     )
 
     # Test that different applications can access the same index if they present it in their

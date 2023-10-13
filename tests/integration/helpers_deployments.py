@@ -69,6 +69,22 @@ def now() -> str:
     return datetime.now().strftime("%H:%M:%S")
 
 
+def progress_line(units: List[Unit]) -> str:
+    """Log progress line."""
+    log = ""
+    for u in units:
+        if not log:
+            log = f"\t{now()} -- app: {u.app_status.value}: {u.app_status.message}"
+
+        log = (
+            f"\n\t\t{log}{u.name} [{u.agent_status.value} "
+            f"(since: {u.agent_status.since.strftime('%d %b %Y %H:%M:%S')})] "
+            f"{u.workload_status.value}: {u.workload_status.message or ''}"
+        )
+
+    return log
+
+
 async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str) -> str:
     """Get the hostname of a specific unit."""
     _, hostname, _ = await ops_test.juju("ssh", f"{app}/{unit_id}", "hostname")
@@ -205,6 +221,7 @@ async def _is_every_condition_met(
             apps_statuses=apps_statuses,
             apps_full_statuses=apps_full_statuses,
         ):
+            logger.info(progress_line(units))
             return False
 
         if (
@@ -214,6 +231,7 @@ async def _is_every_condition_met(
                 app, units, units_statuses, units_full_statuses, idle_period
             )
         ):
+            logger.info(progress_line(units))
             return False
 
     return True
@@ -269,6 +287,8 @@ async def wait_until(  # noqa: C901
     try:
         for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
             with attempt:
+                logger.info(f"{now()} -- Waiting for model: starting.")
+
                 if await _is_every_condition_met(
                     ops_test=ops_test,
                     apps=apps,
@@ -279,8 +299,10 @@ async def wait_until(  # noqa: C901
                     units_full_statuses=units_full_statuses,
                     idle_period=idle_period,
                 ):
+                    logger.info(f"{now()} -- Waiting for model: complete.")
                     return
 
+                logger.info(f"{now()} -- Waiting for model: re-trigger.")
                 raise Exception
     except RetryError:
         raise Exception(f"{now()} -- wait_until -- Timed out!")
