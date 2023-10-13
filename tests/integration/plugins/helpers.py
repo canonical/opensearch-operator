@@ -176,16 +176,17 @@ async def create_index_and_bulk_insert(
     wait=wait_fixed(wait=10),
     stop=stop_after_attempt(7),
 )
-async def mlcommons_upload_model(
+async def mlcommons_register_model(
     ops_test: OpsTest,
     app: str,
     unit_ip: str,
     model_config: Dict[str, Any],
 ) -> Optional[List[Dict[str, Any]]]:
     """Uploads models."""
-    endpoint = f"https://{unit_ip}:9200/_plugins/_ml/models/_upload"
+    endpoint = f"https://{unit_ip}:9200/_plugins/_ml/models/_register"
 
     resp = await http_request(ops_test, "POST", endpoint, payload=model_config, app=app)
+    logger.info(resp)
     return resp["task_id"]
 
 
@@ -203,6 +204,7 @@ async def mlcommons_wait_task_model(
     endpoint = f"https://{unit_ip}:9200/_plugins/_ml/tasks/{task_id}"
 
     resp = await http_request(ops_test, "GET", endpoint, app=app)
+    logger.info(resp)
     return resp["model_id"]
 
 
@@ -221,6 +223,7 @@ async def mlcommons_load_model_to_node(
     endpoint = f"https://{unit_ip}:9200/_plugins/_ml/models/{model_id}/_load"
 
     resp = await http_request(ops_test, "POST", endpoint, payload=node_ids, app=app)
+    logger.info(resp)
     return resp
 
 
@@ -240,4 +243,5 @@ async def mlcommons_model_predict(
     endpoint = f"https://{unit_ip}:9200/_plugins/_ml/_predict/{prediction_type}/{model_id}"
 
     resp = await http_request(ops_test, "POST", endpoint, payload=text_docs, app=app)
+    logger.info(resp)
     return resp

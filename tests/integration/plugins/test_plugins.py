@@ -19,6 +19,7 @@ from tests.integration.helpers import (
     get_application_unit_ids_ips,
     get_application_unit_names,
     get_leader_unit_ip,
+    http_request,
 )
 from tests.integration.plugins.helpers import (
     create_index_and_bulk_insert,
@@ -28,7 +29,7 @@ from tests.integration.plugins.helpers import (
     is_knn_training_complete,
     mlcommons_load_model_to_node,
     mlcommons_model_predict,
-    mlcommons_upload_model,
+    mlcommons_register_model,
     mlcommons_wait_task_model,
     run_knn_training,
 )
@@ -246,13 +247,22 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_mlcommons_model_upload_and_prediction(ops_test: OpsTest) -> None:
+async def test_mlcommons_model_register_and_prediction(ops_test: OpsTest) -> None:
     """Uploads and runs the model."""
     app = (await app_name(ops_test)) or APP_NAME
 
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
-    task_id = await mlcommons_upload_model(
+    # Redefine sync-up job time
+    await http_request(
+        ops_test,
+        "PUT",
+        f"https://{leader_unit_ip}:9200/_cluster/settings",
+        app=app,
+        payload={"persistent": {"plugins.ml_commons.sync_up_job_interval_in_seconds": 600}},
+    )
+
+    task_id = await mlcommons_register_model(
         ops_test,
         app,
         leader_unit_ip,
