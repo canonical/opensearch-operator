@@ -115,12 +115,6 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
             wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
-        # await ops_test.model.wait_for_idle(
-        #     apps=[app],
-        #     status="active",
-        #     timeout=1000,
-        #     idle_period=IDLE_PERIOD,
-        # )
 
     # verify the node is well reachable
     assert await is_up(
@@ -174,14 +168,8 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
         units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
+        timeout=1600,
     )
-    # await ops_test.model.wait_for_idle(
-    #     apps=[app],
-    #     status="active",
-    #     timeout=1000,
-    #     wait_for_exact_units=len(unit_ids_ips),
-    #     idle_period=IDLE_PERIOD,
-    # )
 
     # check unit network restored
     assert await is_network_restored_after_ip_change(
@@ -234,12 +222,6 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
             wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
-        # await ops_test.model.wait_for_idle(
-        #     apps=[app],
-        #     status="active",
-        #     timeout=1000,
-        #     idle_period=IDLE_PERIOD,
-        # )
 
     # verify the node is well reachable
     assert await is_up(
@@ -299,14 +281,8 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
         units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
+        timeout=1600,
     )
-    # await ops_test.model.wait_for_idle(
-    #     apps=[app],
-    #     status="active",
-    #     timeout=1000,
-    #     wait_for_exact_units=len(unit_ids_ips),
-    #     idle_period=IDLE_PERIOD,
-    # )
 
     # check unit network restored
     assert await is_network_restored_after_ip_change(
@@ -365,12 +341,6 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
             wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
-        # await ops_test.model.wait_for_idle(
-        #     apps=[app],
-        #     status="active",
-        #     timeout=1000,
-        #     idle_period=IDLE_PERIOD,
-        # )
 
     # verify the node is well reachable
     assert await is_up(
@@ -419,14 +389,8 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
         units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
+        timeout=1600,
     )
-    # await ops_test.model.wait_for_idle(
-    #     apps=[app],
-    #     status="active",
-    #     timeout=1000,
-    #     wait_for_exact_units=len(unit_ids_ips),
-    #     idle_period=IDLE_PERIOD,
-    # )
 
     # check if node up and is included in the cluster formation
     assert await is_up(ops_test, first_elected_cm_unit_ip), "Unit still not up."
@@ -470,12 +434,6 @@ async def test_full_network_cut_without_ip_change_node_with_primary_shard(
             wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
-        # await ops_test.model.wait_for_idle(
-        #     apps=[app],
-        #     status="active",
-        #     timeout=1000,
-        #     idle_period=IDLE_PERIOD,
-        # )
 
     # verify the node is well reachable
     assert await is_up(
@@ -532,14 +490,8 @@ async def test_full_network_cut_without_ip_change_node_with_primary_shard(
         units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
+        timeout=1600,
     )
-    # await ops_test.model.wait_for_idle(
-    #     apps=[app],
-    #     status="active",
-    #     timeout=1000,
-    #     wait_for_exact_units=len(unit_ids_ips),
-    #     idle_period=IDLE_PERIOD,
-    # )
 
     # check if node up and is included in the cluster formation
     assert await is_up(ops_test, first_unit_with_primary_shard_ip), "Unit still not up."

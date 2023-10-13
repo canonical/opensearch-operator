@@ -30,7 +30,7 @@ APP_NAME = METADATA["name"]
 
 SERIES = "jammy"
 UNIT_IDS = [0, 1, 2]
-IDLE_PERIOD = 120
+IDLE_PERIOD = 75
 
 TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
 
@@ -157,7 +157,7 @@ def get_application_unit_status(ops_test: OpsTest, app: str = APP_NAME) -> Dict[
 
     result = {}
     for unit in units:
-        result[int(unit.name.split("/")[1])] = unit.workload_status
+        result[int(unit.name.split("/")[1])] = unit.workload_status.value
 
     return result
 
