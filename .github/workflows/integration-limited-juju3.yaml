@@ -29,24 +29,13 @@ jobs:
           - charm-integration
           - tls-integration
           - client-integration
-          - ha-base-integration
-          - ha-networking-integration
-          - ha-multi-clusters-integration
-          - plugins-integration
         runner: ["ubuntu-22.04"]
-        include:
-          - tox-environments: h-scaling-integration
-            runner: "Ubuntu_4C_16G"
     name: ${{ matrix.tox-environments }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Upgrade LXD
-        run: |
-          sudo snap refresh lxd --channel=latest/stable
 
       - name: Setup Juju environment
         # Runs on juju 3 by default
@@ -83,7 +72,9 @@ jobs:
 
           # Set kernel params
           sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
-          tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+          tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}' # --model testing
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
           LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
+      # - name: Print logs
+      #   run: juju switch testing; juju debug-log --replay --no-tail

@@ -36,6 +36,9 @@ from tests.integration.plugins.helpers import (
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 
+TRAINING_END_TO_END_DATA_INDEX = "test_end_to_end"
+
+
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -66,7 +69,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
-@pytest.mark.skip(reason="focus on mlcommons test only for now")
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
@@ -110,7 +112,6 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
     assert len(docs) == 2
 
 
-@pytest.mark.skip(reason="focus on mlcommons test only for now")
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
     """Uploads data and runs a query search against the NMSLIB KNNEngine."""
@@ -154,12 +155,11 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
     assert len(docs) == 2
 
 
-@pytest.mark.skip(reason="focus on mlcommons test only for now")
 @pytest.mark.abort_on_fail
 async def test_knn_training_search(ops_test: OpsTest) -> None:
     """Tests the entire cycle of KNN plugin.
 
-    1) Enters data and trains a model in "test_end_to_end_with_ivf_faiss_training"
+    1) Enters data and trains a model in "test_end_to_end"
     2) Trains model: "test_end_to_end_with_ivf_faiss_model"
     3) Once training is complete, creates a target index and connects with the model
     4) Disables KNN plugin: the search must fail
@@ -172,7 +172,7 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
     # Get since when each unit has been active
 
     # create index with r_shards = nodes - 1
-    index_name = "test_end_to_end_with_ivf_faiss_training"
+    index_name = TRAINING_END_TO_END_DATA_INDEX
     vector_name = "test_end_to_end_with_ivf_faiss_vector"
     model_name = "test_end_to_end_with_ivf_faiss_model"
     await create_index_and_bulk_insert(
@@ -246,8 +246,9 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
             assert not knn_enabled
 
 
+@pytest.mark.skip(reason="Given LLM size and current GH runners, jumping this test")
 @pytest.mark.abort_on_fail
-async def test_mlcommons_model_register_and_prediction(ops_test: OpsTest) -> None:
+async def test_mlcommons_llm_model_register_and_prediction(ops_test: OpsTest) -> None:
     """Uploads and runs the model."""
     app = (await app_name(ops_test)) or APP_NAME
 
@@ -274,7 +275,7 @@ async def test_mlcommons_model_register_and_prediction(ops_test: OpsTest) -> Non
     )
 
     model_id = await mlcommons_wait_task_model(ops_test, app, leader_unit_ip, task_id)
-    assert model_id is not None, "The model_id is None when uploading model"
+    assert model_id is not None, "The model_id is None when registering model"
 
     task_id = (await mlcommons_load_model_to_node(ops_test, app, leader_unit_ip, model_id)).get(
         "task_id", None
@@ -286,7 +287,7 @@ async def test_mlcommons_model_register_and_prediction(ops_test: OpsTest) -> Non
         app,
         leader_unit_ip,
         model_id,
-        text_docs={
+        prediction_configs={
             "text_docs": ["This test worked?"],
             "return_number": True,
             "target_response": ["sentence_embedding"],
@@ -295,3 +296,69 @@ async def test_mlcommons_model_register_and_prediction(ops_test: OpsTest) -> Non
     shape_count = result["inference_results"][0]["output"][0]["shape"][0]
     assert shape_count > 0
     assert shape_count == len(result["inference_results"][0]["output"][0]["data"])
+
+
+@pytest.mark.abort_on_fail
+async def test_mlcommons_kmeans_model(ops_test: OpsTest) -> None:
+    """Uploads and runs the model. This method reuses the data index used for FAISS IVF."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    # Redefine sync-up job time
+    await http_request(
+        ops_test,
+        "PUT",
+        f"https://{leader_unit_ip}:9200/_cluster/settings",
+        app=app,
+        payload={"persistent": {"plugins.ml_commons.sync_up_job_interval_in_seconds": 600}},
+    )
+
+    # train kmeans
+    output = await http_request(
+        ops_test,
+        "POST",
+        f"https://{leader_unit_ip}:9200/_plugins/_ml/_train/kmeans",
+        app=app,
+        payload={
+            "parameters": {
+                "centroids": 3,
+                "iterations": 10,
+                "distance_type": "COSINE"
+            },
+            "input_query": {
+                "_source": ["price"],
+                "size": 100
+            },
+            "input_index": [
+                TRAINING_END_TO_END_DATA_INDEX
+            ]
+        },
+    )
+    print(output)
+    assert output["status"] == "COMPLETED", "Failed during kmeans training"
+    model_id = output["model_id"]
+
+    task_id = (await mlcommons_load_model_to_node(ops_test, app, leader_unit_ip, model_id)).get(
+        "task_id", None
+    )
+    await mlcommons_wait_task_model(ops_test, app, leader_unit_ip, task_id)
+
+    result = await mlcommons_model_predict(
+        ops_test,
+        app,
+        leader_unit_ip,
+        model_id,
+        prediction_type="kmeans",
+        prediction_configs={
+            "input_query": {
+                "_source": ["price"],
+                "size": 1
+            },
+            "input_index": [
+                TRAINING_END_TO_END_DATA_INDEX
+            ]
+        },
+    )
+    assert result["status"] == "COMPLETED"
+    assert len(result["prediction_result"]["rows"]) > 0

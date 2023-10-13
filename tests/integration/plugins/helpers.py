@@ -82,9 +82,12 @@ def generate_bulk_training_data(
     result_list = []
     for i in range(docs_count):
         result += json.dumps({"index": {"_index": index_name, "_id": i}}) + "\n"
+        # Breaks the single-dimension (ndim*docs_count samples) data vector above into
+        # a matrix with (ndim, docs_count), where each vector has len() == ndim
         result_list.append([float(data[j]) for j in range(i * dimensions, (i + 1) * dimensions)])
         inter = {vector_name: result_list[i]}
         if has_result:
+            # Naming "result", 1xdocs_count dimension vector, as "price"
             inter["price"] = float(responses[i])
         result += json.dumps(inter) + "\n"
     return result, result_list
@@ -237,11 +240,11 @@ async def mlcommons_model_predict(
     unit_ip: str,
     model_id: str,
     prediction_type: str = "text_embedding",
-    text_docs: Dict[str, Any] = {},
+    prediction_configs: Dict[str, Any] = {},
 ) -> str:
     """Returns model prediction response."""
     endpoint = f"https://{unit_ip}:9200/_plugins/_ml/_predict/{prediction_type}/{model_id}"
 
-    resp = await http_request(ops_test, "POST", endpoint, payload=text_docs, app=app)
+    resp = await http_request(ops_test, "POST", endpoint, payload=prediction_configs, app=app)
     logger.info(resp)
     return resp
