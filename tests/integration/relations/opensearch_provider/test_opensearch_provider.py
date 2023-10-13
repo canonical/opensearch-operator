@@ -14,9 +14,9 @@ from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
 from tests.integration.helpers import (
     MODEL_CONFIG,
     SERIES,
+    get_application_unit_ids,
     get_leader_unit_ip,
     http_request,
-    scale_application,
 )
 from tests.integration.helpers_deployments import wait_until
 from tests.integration.relations.opensearch_provider.helpers import (
@@ -195,56 +195,51 @@ async def test_scaling(ops_test: OpsTest):
             ops_test, f"{app_name}/0", rel_name, "endpoints"
         )
 
-    async def get_num_of_endpoints(app_name: str, rel_name: str) -> int:
-        return len((await rel_endpoints(app_name, rel_name)).split(","))
-
-    def get_num_of_opensearch_units() -> int:
-        return len(ops_test.model.applications[OPENSEARCH_APP_NAME].units)
+    async def _is_number_of_endpoints_valid(client_app: str, rel: str) -> bool:
+        units = get_application_unit_ids(ops_test, OPENSEARCH_APP_NAME)
+        endpoints = await rel_endpoints(client_app, rel)
+        return len(units) == len(endpoints.split(","))
 
     # Test things are already working fine
-    assert (
-        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-        == get_num_of_opensearch_units()
+    assert await _is_number_of_endpoints_valid(
+        CLIENT_APP_NAME, FIRST_RELATION_NAME
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-    await ops_test.model.wait_for_idle(
-        status="active", apps=ALL_APPS, timeout=1600, idle_period=70
+    await wait_until(
+        ops_test,
+        apps=ALL_APPS,
+        apps_statuses=["active"],
+        idle_period=70,
     )
 
     # Test scale down
-    # [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
+    opensearch_unit_ids = get_application_unit_ids(ops_test, OPENSEARCH_APP_NAME)
+    await ops_test.model.applications[OPENSEARCH_APP_NAME].destroy_unit(
+        f"{OPENSEARCH_APP_NAME}/{max(opensearch_unit_ids)}"
+    )
     await wait_until(
         ops_test,
         apps=ALL_APPS,
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units=get_num_of_opensearch_units() - 1,
-        idle_period=120,
+        wait_for_exact_units={OPENSEARCH_APP_NAME: len(opensearch_unit_ids) - 1},
+        idle_period=70,
     )
-    # await scale_application(
-    #     ops_test,
-    #     OPENSEARCH_APP_NAME,
-    #     get_num_of_opensearch_units() - 1,
-    #     timeout=1600,
-    #     idle_period=120,
-    # )
-    # await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS)
-    assert (
-        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-        == get_num_of_opensearch_units()
+    assert await _is_number_of_endpoints_valid(
+        CLIENT_APP_NAME, FIRST_RELATION_NAME
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
 
     # test scale back up again
-    await scale_application(
+    await ops_test.model.applications[OPENSEARCH_APP_NAME].add_unit(count=1)
+    await wait_until(
         ops_test,
-        OPENSEARCH_APP_NAME,
-        get_num_of_opensearch_units() + 1,
-        timeout=1600,
+        apps=ALL_APPS,
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units={OPENSEARCH_APP_NAME: len(opensearch_unit_ids)},
         idle_period=70,
     )
-    await ops_test.model.wait_for_idle(status="active", apps=ALL_APPS, timeout=1600)
-    assert (
-        await get_num_of_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
-        == get_num_of_opensearch_units()
+    assert await _is_number_of_endpoints_valid(
+        CLIENT_APP_NAME, FIRST_RELATION_NAME
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
 
 
@@ -263,10 +258,11 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, SECONDARY_CLIENT_APP_NAME)
 
-    await ops_test.model.wait_for_idle(
-        status="active",
-        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-        timeout=(60 * 20),
+    await wait_until(
+        ops_test,
+        apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
         idle_period=65,
     )
 
@@ -296,10 +292,11 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     second_app_first_client_relation = await ops_test.model.add_relation(
         f"{SECONDARY_CLIENT_APP_NAME}:{FIRST_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
-    await ops_test.model.wait_for_idle(
-        status="active",
-        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-        timeout=(60 * 20),
+    await wait_until(
+        ops_test,
+        apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
         idle_period=65,
     )
 
@@ -333,10 +330,11 @@ async def test_admin_relation(ops_test: OpsTest):
         f"{CLIENT_APP_NAME}:{ADMIN_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
-    await ops_test.model.wait_for_idle(
-        status="active",
-        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-        timeout=(60 * 20),
+    await wait_until(
+        ops_test,
+        apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
         idle_period=70,
     )
 
@@ -485,11 +483,12 @@ async def test_relation_broken(ops_test: OpsTest):
     relation_user = await get_application_relation_data(
         ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
     )
-    await ops_test.model.wait_for_idle(
-        status="active",
-        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
+    await wait_until(
+        ops_test,
+        apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
         idle_period=70,
-        timeout=1600,
     )
 
     # Break the relation.
@@ -505,12 +504,13 @@ async def test_relation_broken(ops_test: OpsTest):
     )
 
     await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[CLIENT_APP_NAME], status="blocked", idle_period=70),
-        ops_test.model.wait_for_idle(
+        wait_until(ops_test, apps=[CLIENT_APP_NAME], apps_statuses=["blocked"], idle_period=70),
+        wait_until(
+            ops_test,
             apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
-            status="active",
+            apps_statuses=["active"],
+            units_statuses=["active"],
             idle_period=70,
-            timeout=1600,
         ),
     )
 
@@ -534,9 +534,13 @@ async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
 
-    await ops_test.model.wait_for_idle(
-        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS, timeout=1600, status="active", idle_period=70
-    )
+    await wait_until(
+        ops_test,
+        apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        idle_period=70,
+    ),
 
     read_index_endpoint = "/albums/_search?q=Jazz"
     run_bulk_read_index = await run_request(
