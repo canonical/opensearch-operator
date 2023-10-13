@@ -35,7 +35,6 @@ from tests.integration.plugins.helpers import (
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
-
 TRAINING_END_TO_END_DATA_INDEX = "test_end_to_end"
 
 
@@ -321,18 +320,9 @@ async def test_mlcommons_kmeans_model(ops_test: OpsTest) -> None:
         f"https://{leader_unit_ip}:9200/_plugins/_ml/_train/kmeans",
         app=app,
         payload={
-            "parameters": {
-                "centroids": 3,
-                "iterations": 10,
-                "distance_type": "COSINE"
-            },
-            "input_query": {
-                "_source": ["price"],
-                "size": 100
-            },
-            "input_index": [
-                TRAINING_END_TO_END_DATA_INDEX
-            ]
+            "parameters": {"centroids": 3, "iterations": 10, "distance_type": "COSINE"},
+            "input_query": {"_source": ["price"], "size": 100},
+            "input_index": [TRAINING_END_TO_END_DATA_INDEX],
         },
     )
     print(output)
@@ -351,13 +341,8 @@ async def test_mlcommons_kmeans_model(ops_test: OpsTest) -> None:
         model_id,
         prediction_type="kmeans",
         prediction_configs={
-            "input_query": {
-                "_source": ["price"],
-                "size": 1
-            },
-            "input_index": [
-                TRAINING_END_TO_END_DATA_INDEX
-            ]
+            "input_query": {"_source": ["price"], "size": 1},
+            "input_index": [TRAINING_END_TO_END_DATA_INDEX],
         },
     )
     assert result["status"] == "COMPLETED"
