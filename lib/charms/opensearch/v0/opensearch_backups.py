@@ -66,6 +66,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.backup.apply_post_restart_if_needed()
 """
 
+import json
 import logging
 import os
 from typing import Any, Dict, List
@@ -258,7 +259,7 @@ class OpenSearchBackup(Object):
         except OpenSearchListBackupError():
             event.fail("Failed: listing backups error, please check logs")
             return
-        event.set_results({"snapshots": backups})
+        event.set_results({"snapshots": (json.dumps(backups)).replace("_", "-")})
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         """Creates a backup from the current cluster."""
@@ -284,7 +285,7 @@ class OpenSearchBackup(Object):
             # gets the latest value
             # the very firs time this action is executed, _list_backups returns empty
             # hence, the "or [0]"
-            new_backup_id = max(self._list_backups().keys() or [0]) + 1
+            new_backup_id = int(max(self._list_backups().keys() or [0])) + 1
             output = self.get_service_status(
                 self._request(
                     "PUT",
@@ -315,7 +316,7 @@ class OpenSearchBackup(Object):
             else:
                 event.fail("Failed: backup system is busy, not creating backup now.")
             return
-        event.set_results({"new_backup_id": new_backup_id})
+        event.set_results({"backup-id": new_backup_id})
 
     def _check_action_can_run(self, event: ActionEvent) -> bool:
         """Checks if the actions run from this unit can be executed or not.
@@ -342,13 +343,13 @@ class OpenSearchBackup(Object):
     def _list_backups(self) -> List[Dict[int, Any]]:
         """Returns the list of backups and its relevant information."""
         result = {}
-        output = self._request("GET", "_snapshot/{OPENSEARCH_REPOSITORY_NAME}/_all")
+        output = self._request("GET", f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/_all")
         try:
             for elem in output.get("snapshots", []):
                 result[elem["snapshot"]] = {
                     field: elem[field] for field in ["version", "indices", "include_global_state"]
                 }
-                result[elem["snapshot"]]["state"] = self.get_snapshot_status(elem["state"])
+                result[elem["snapshot"]]["state"] = str(self.get_snapshot_status(elem["state"]))
         except KeyError as e:
             logger.exception(f"_list_backups failed for output: {output} with {e}")
             raise OpenSearchListBackupError()
@@ -380,26 +381,23 @@ class OpenSearchBackup(Object):
             return
 
         if self.s3_client.get_s3_connection_info().get("tls-ca-chain", None):
-            restart_is_needed = os.path.exists(self.charm.opensearch.paths.certs + "/cacerts")
-            ca_truststore = OpenSearchCATruststore()
-            if not restart_is_needed and os.path.exists(
-                self.charm.opensearch.paths.certs + "/cacerts"
-            ):
-                # File has been created for the first time, then we need to add configuration
-                # to jvm.options and request a restart
-                restart_is_needed = True
-                self.charm.opensearch_config.configure_jvm_ca_truststore(
-                    ca_truststore.get_jvm_config()
-                )
+            ca_truststore = OpenSearchCATruststore(self.charm)
             # Always execute this method, we may need to replace the CA
-            ca_truststore.add(
-                key="s3", capath=self.s3_client.get_s3_connection_info()["tls-ca-chain"]
-            )
+            try:
+                opensearch_backup_crt = "/tmp/opensearch_backup.crt"
+                with open(opensearch_backup_crt, "w") as f:
+                    f.write("\n".join(self.s3_client.get_s3_connection_info()["tls-ca-chain"]))
+                ca_truststore.add(entries={"s3": opensearch_backup_crt})
+                os.remove(opensearch_backup_crt)
+            except Exception as e:
+                # Retry cleaning the CA
+                os.remove(opensearch_backup_crt)
+                raise e
 
         # Let run() happens: it will check if the relation is present, and if yes, return
         # true if the install / configuration / disabling of backup has happened.
         try:
-            if self.charm.plugin_manager.run() or restart_is_needed:
+            if self.charm.plugin_manager.run():
                 self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
@@ -439,7 +437,7 @@ class OpenSearchBackup(Object):
         #     (1) set up as maintenance;
         self.charm.unit.status = MaintenanceStatus("Configuring backup service...")
         #     (2) run the request; and
-        state = self.get_service_status(self._register_snapshot_repo())
+        state = self._register_snapshot_repo()
         #     (3) based on the response, set the message status
         if state == BackupServiceState.SUCCESS:
             self.charm.unit.status = ActiveStatus("Backup is active")
@@ -474,8 +472,8 @@ class OpenSearchBackup(Object):
 
         # 3) and 4) Remove configuration and issue restart request
         try:
-            ca_truststore = OpenSearchCATruststore()
-            ca_truststore.delete(key="s3")
+            ca_truststore = OpenSearchCATruststore(self.charm)
+            ca_truststore.delete(["s3"])
         except OpenSearchKeystoreError:
             # Ignore the delete error, as it may mean there was a certificate at a point
             # and the user removed it from the configuration later on.

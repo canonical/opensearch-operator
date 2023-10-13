@@ -4,6 +4,7 @@
 
 import asyncio
 import base64
+import json
 import logging
 import os
 
@@ -154,8 +155,13 @@ async def test_backup_cluster(
     action = await run_action(ops_test, leader_id, "create-backup")
     logger.info(f"create-backup output: {action}")
 
+    assert action.status == "completed"
+
     list_backups = await run_action(ops_test, leader_id, "list-backups")
     logger.info(f"list-backups output: {list_backups}")
+
+    assert list_backups.status == "completed"
+    assert len(json.loads(list_backups.response["snapshots"])) == int(action.response["backup-id"])
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)

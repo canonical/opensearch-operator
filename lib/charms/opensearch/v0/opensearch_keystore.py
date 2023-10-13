@@ -40,7 +40,7 @@ class Keystore(ABC):
         """Creates the keystore manager class."""
         self._charm = charm
         self._opensearch = charm.opensearch
-        self._keytool = "/snap/opensearch/current/usr/share/opensearch/jdk/bin/keytool"
+        self._keytool = charm.opensearch.paths.jdk + "/bin/keytool"
 
     @abstractmethod
     def add(self, entries: Dict[str, str]) -> None:
@@ -123,19 +123,20 @@ class OpenSearchKeystore(Keystore):
             )
 
 
-class OpenSearchCATruststore(OpenSearchKeystore):
+class OpenSearchCATruststore(Keystore):
     """Manages the default CA truststore."""
 
     def __init__(self, charm):
         """Creates the keystore manager class."""
         super().__init__(charm)
-        self._keystore = charm.opensearch.set_truststore_file()
+        self._keystore = charm.opensearch.paths.ca_truststore
         self._password = "changeit"
 
     def list(self, alias: str = None) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
         try:
-            return self._opensearch.run_bin(self._keytool, "-v -list -keystore")
+            # Not using OPENSEARCH_BIN path
+            return self._opensearch._run_cmd(self._keytool, "-v -list -keystore")
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
@@ -158,15 +159,16 @@ class OpenSearchCATruststore(OpenSearchKeystore):
             raise OpenSearchKeystoreError("Missing keystore value")
         # First, try removing the key, as a new capath will be added:
         try:
-            self.delete(key)
+            self._delete(key)
         except OpenSearchKeystoreError:
             # Ignore, it means only the alias does not exist yet
             pass
 
         try:
-            self._opensearch.run_bin(
+            # Not using OPENSEARCH_BIN path
+            self._opensearch._run_cmd(
                 self._keytool,
-                f"keytool -import -alias {key} "
+                f"-import -alias {key} "
                 f"-file {capath} -storetype JKS "
                 f"-storepass {self._password} "
                 f"-keystore {self._keystore} -noprompt",
@@ -176,7 +178,8 @@ class OpenSearchCATruststore(OpenSearchKeystore):
 
     def _delete(self, key: str) -> None:
         try:
-            self._opensearch.run_bin(
+            # Not using OPENSEARCH_BIN path
+            self._opensearch._run_cmd(
                 self._keytool,
                 f"-delete -alias {key} "
                 f"-keystore {self._keystore} "

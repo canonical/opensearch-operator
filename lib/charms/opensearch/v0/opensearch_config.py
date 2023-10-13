@@ -217,7 +217,9 @@ class OpenSearchConfig:
     def configure_jvm_ca_truststore(self, jvm_options: Dict[str, str]) -> None:
         """Adds the ca truststore options to the jvm.options."""
         for key, val in jvm_options.items():
-            self._opensearch.config.put(self.JVM_OPTIONS, key, val)
+            self._opensearch.config.replace_or_append(
+                self.JVM_OPTIONS, r"^{}".format(key), f"{key}={val}", regex=True
+            )
 
     def update_host_if_needed(self) -> bool:
         """Update the opensearch config with the current network hosts, after having started.
