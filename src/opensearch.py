@@ -23,8 +23,8 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
-from charms.operator_libs_linux.v1 import snap
-from charms.operator_libs_linux.v1.snap import SnapError
+from charms.operator_libs_linux.v2 import snap
+from charms.operator_libs_linux.v2.snap import SnapError
 from charms.operator_libs_linux.v1.systemd import service_failed
 from overrides import override
 from tenacity import Retrying, retry, stop_after_attempt, wait_exponential, wait_fixed
@@ -49,7 +49,6 @@ class OpenSearchSnap(OpenSearchDistribution):
             with attempt:
                 cache = snap.SnapCache()
                 self._opensearch = cache["opensearch"]
-                self._snapd = cache["snapd"]
 
     @retry(
         stop=stop_after_attempt(3),
@@ -62,7 +61,6 @@ class OpenSearchSnap(OpenSearchDistribution):
         if self._opensearch.present:
             return
         try:
-            self._snapd.ensure(snap.SnapState.Latest, channel="latest/stable")
             self._opensearch.ensure(snap.SnapState.Latest, channel="edge")
             self._opensearch.connect("process-control")
         except SnapError as e:

@@ -305,6 +305,7 @@ async def wait_until(  # noqa: C901
                 wait_for_exact_units[app] = 1
 
     try:
+        logger.info(f"\n\n\n")
         logger.info(
             subprocess.check_output(
                 f"juju status --model {ops_test.model.info.name}", shell=True
@@ -314,10 +315,10 @@ async def wait_until(  # noqa: C901
         for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
             with attempt:
                 logger.info(f"\n\n\n{now()} -- Waiting for model: starting.")
-                logger.info(
-                    f"\n- apps: {wait_for_exact_units} -- apps_statuses: {apps_full_statuses or apps_statuses} "
-                    f"-- units_statuses: {units_full_statuses or units_statuses} -- idle_period: {idle_period}\n"
-                )
+                # logger.info(
+                #     f"\n- apps: {wait_for_exact_units} -- apps_statuses: {apps_full_statuses or apps_statuses} "
+                #     f"-- units_statuses: {units_full_statuses or units_statuses} -- idle_period: {idle_period}\n"
+                # )
 
                 if await _is_every_condition_met(
                     ops_test=ops_test,
@@ -329,10 +330,10 @@ async def wait_until(  # noqa: C901
                     units_full_statuses=units_full_statuses,
                     idle_period=idle_period,
                 ):
-                    logger.info(f"{now()} -- Waiting for model: complete.")
+                    logger.info(f"{now()} -- Waiting for model: complete.\n\n\n")
                     return
 
-                logger.info(f"{now()} -- Waiting for model: re-trigger.")
+                logger.info(f"{now()} -- Waiting for model: re-trigger.\n\n\n")
                 raise Exception
     except RetryError:
         logger.info(
@@ -347,4 +348,4 @@ async def wait_until(  # noqa: C901
         )
         logger.error(f"Running: {cmd}...")
         logger.error(subprocess.check_output(cmd, shell=True).decode("utf-8"))
-        raise Exception(f"{now()} -- wait_until -- Timed out!")
+        raise Exception(f"{now()} -- wait_until -- Timed out!\n\n\n\n\n")
