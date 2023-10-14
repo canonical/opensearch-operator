@@ -39,6 +39,9 @@ from charms.opensearch.v0.helper_networking import (
     unit_ip,
     units_ips,
 )
+from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchPluginRelationClusterNotReadyError
+)
 from charms.opensearch.v0.helper_security import (
     cert_expiration_remaining_hours,
     generate_hashed_password,
@@ -487,14 +490,18 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         try:
-            if self.opensearch.is_started() and self.plugin_manager.run():
+            if self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
         except OpenSearchPluginError as e:
             logger.exception(e)
-            self.status.set(BlockedStatus(PluginConfigChangeError))
+            if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
+                self.status.set(WaitingStatus("Plugin waiting: cluster not ready"))
+            else:
+                self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
+            return
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""

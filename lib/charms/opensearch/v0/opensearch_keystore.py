@@ -132,14 +132,12 @@ class OpenSearchCATruststore(Keystore):
         super().__init__(charm)
         self._keystore = charm.opensearch.paths.ca_truststore
         self._password = "changeit"
-        if not os.path.exists(self._keystore):
-            raise OpenSearchKeystoreError(f"{self._keystore} not found")
 
     def list(self, alias: str = None) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
         try:
             # Not using OPENSEARCH_BIN path
-            return self._opensearch._run_cmd(self._keytool, "-v -list -keystore")
+            return self._opensearch._run_cmd(self._keytool, f"-v -list -keystore {self._keystore}")
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
@@ -160,6 +158,8 @@ class OpenSearchCATruststore(Keystore):
     def _add(self, key: str, capath: str):
         if not capath:
             raise OpenSearchKeystoreError("Missing keystore value")
+        if not os.path.exists(self._keystore):
+            raise OpenSearchKeystoreError(f"{self._keystore} not found")
         # First, try removing the key, as a new capath will be added:
         try:
             self._delete(key)
@@ -180,6 +180,8 @@ class OpenSearchCATruststore(Keystore):
             raise OpenSearchKeystoreError(str(e))
 
     def _delete(self, key: str) -> None:
+        if not os.path.exists(self._keystore):
+            raise OpenSearchKeystoreError(f"{self._keystore} not found")
         try:
             # Not using OPENSEARCH_BIN path
             self._opensearch._run_cmd(
@@ -202,6 +204,8 @@ class OpenSearchCATruststore(Keystore):
 
         These configs should be added to jvm.options.
         """
+        if not os.path.exists(self._keystore):
+            raise OpenSearchKeystoreError(f"{self._keystore} not found")
         return {
             "-Djavax.net.ssl.trustStore": self._keystore,
             "-Djavax.net.ssl.trustStorePassword": self._password,
