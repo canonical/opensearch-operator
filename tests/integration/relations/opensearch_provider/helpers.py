@@ -55,7 +55,7 @@ async def get_application_relation_data(
 def wait_for_relation_joined_between(
     ops_test: OpsTest, endpoint_one: str, endpoint_two: str
 ) -> None:
-    """Wait for relation to be be created before checking if it's waiting or idle.
+    """Wait for relation to be created before checking if it's waiting or idle.
 
     Args:
         ops_test: running OpsTest instance

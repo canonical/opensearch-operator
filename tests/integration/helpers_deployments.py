@@ -77,7 +77,7 @@ def progress_line(units: List[Unit]) -> str:
             log = f"\n\t{now()} -- app: {u.name.split('-')[0]} {u.app_status.value} -- message: {u.app_status.message}\n"
 
         log = (
-            f"{log}\t\t{u.name}{'*' if u.is_leader else ''} [{u.agent_status.value} "
+            f"{log}\t\t{u.name}{'*' if u.is_leader else ''} -- ({u.ip}) -- [{u.agent_status.value} "
             f"(since: {u.agent_status.since.strftime('%H:%M:%S')})] "
             f"{u.workload_status.value}: {u.workload_status.message or ''}\n"
         )
@@ -220,6 +220,7 @@ async def _is_every_condition_met(
         expected_units = wait_for_exact_units[app]
         units = await get_application_units(ops_test, app)
         if -1 < expected_units != len(units):
+            logger.info(f"{app} -- expected units: {expected_units} -- current: {len(units)}")
             return False
 
         if (apps_statuses or apps_full_statuses) and not _is_every_condition_on_app_met(
@@ -298,6 +299,17 @@ async def wait_until(  # noqa: C901
         for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
             with attempt:
                 logger.info(f"{now()} -- Waiting for model: starting.")
+                logger.info(
+                    f"- apps: {apps}\n- wait_for_exact_units: {wait_for_exact_units}\n"
+                    f"- apps_statuses: {apps_statuses}\n- apps_full_statuses: {apps_full_statuses}\n"
+                    f"- units_statuses: {units_statuses}\n- units_full_statuses: {units_full_statuses}\n"
+                    f"- idle_period: {idle_period}\n"
+                )
+                logger.info(
+                    subprocess.check_output(
+                        f"juju status --model {ops_test.model.info.name}".split()
+                    )
+                )
 
                 if await _is_every_condition_met(
                     ops_test=ops_test,

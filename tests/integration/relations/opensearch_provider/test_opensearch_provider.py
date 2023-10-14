@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 
 import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
@@ -247,12 +248,17 @@ async def test_scaling(ops_test: OpsTest):
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
     # scale-down for CI
+    logger.info("Removing 1 unit for CI and sleep a minute..")
     opensearch_unit_ids = get_application_unit_ids(ops_test, app=OPENSEARCH_APP_NAME)
     await ops_test.model.applications[OPENSEARCH_APP_NAME].destroy_unit(
         f"{OPENSEARCH_APP_NAME}/{max(opensearch_unit_ids)}"
     )
 
+    # sleep a minute to ease the load on machine
+    time.sleep(60)
+
     # Deploy secondary application.
+    logger.info(f"Deploying 1 unit of {SECONDARY_CLIENT_APP_NAME}")
     await ops_test.model.deploy(
         application_charm,
         num_units=1,
@@ -260,6 +266,9 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     )
 
     # Relate the new application and wait for them to exchange connection data.
+    logger.info(
+        f"Adding relation {SECONDARY_CLIENT_APP_NAME}:{SECOND_RELATION_NAME} with {OPENSEARCH_APP_NAME}"
+    )
     second_client_relation = await ops_test.model.add_relation(
         f"{SECONDARY_CLIENT_APP_NAME}:{SECOND_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
