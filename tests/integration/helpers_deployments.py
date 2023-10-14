@@ -6,6 +6,7 @@ import logging
 import subprocess
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
+from uuid import uuid4
 
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
@@ -77,7 +78,7 @@ def progress_line(units: List[Unit]) -> str:
             log = f"\n\t{now()} -- app: {u.name.split('-')[0]} {u.app_status.value} -- message: {u.app_status.message}\n"
 
         log = (
-            f"{log}\t\t{u.name}{'*' if u.is_leader else ''} -- ({u.ip}) -- [{u.agent_status.value} "
+            f"{log}\t\t{u.name}{'*' if u.is_leader else ' '} -- ({u.ip}) -- [{u.agent_status.value} "
             f"(since: {u.agent_status.since.strftime('%H:%M:%S')})] "
             f"{u.workload_status.value}: {u.workload_status.message or ''}\n"
         )
@@ -167,6 +168,7 @@ def _is_every_condition_on_app_met(
 
 
 def _is_every_condition_on_units_met(
+    model: str,
     app: str,
     units: List[Unit],
     units_statuses: Optional[List[str]],
@@ -180,7 +182,12 @@ def _is_every_condition_on_units_met(
 
         if unit.workload_status.value == "error":
             logger.error(f"Error in: {unit.name}")
-            cmd = f"juju debug-log --include={unit.name.replace('-', '/')} -n 500 > del.txt; cat del.txt"
+            target_file = f"/tmp/{uuid4().hex}.txt"
+            cmd = (
+                f"juju debug-log --include={unit.name.replace('-', '/')} --model={model} -n 500 > "
+                f"{target_file}; cat {target_file}"
+            )
+            logger.error(f"Running: {cmd}...")
             logger.error(subprocess.check_output(cmd, shell=True).decode("utf-8"))
 
         if units_statuses:
@@ -235,7 +242,12 @@ async def _is_every_condition_met(
             expected_units > -1
             and (units_statuses or units_full_statuses)
             and not _is_every_condition_on_units_met(
-                app, units, units_statuses, units_full_statuses, idle_period
+                model=ops_test.model.info.name,
+                app=app,
+                units=units,
+                units_statuses=units_statuses,
+                units_full_statuses=units_full_statuses,
+                idle_period=idle_period,
             )
         ):
             logger.info(f"\tApp: {app} - Units - conditions unmet.")
@@ -303,10 +315,8 @@ async def wait_until(  # noqa: C901
             with attempt:
                 logger.info(f"\n\n\n{now()} -- Waiting for model: starting.")
                 logger.info(
-                    f"- apps: {apps}\n- wait_for_exact_units: {wait_for_exact_units}\n"
-                    f"- apps_statuses: {apps_statuses}\n- apps_full_statuses: {apps_full_statuses}\n"
-                    f"- units_statuses: {units_statuses}\n- units_full_statuses: {units_full_statuses}\n"
-                    f"- idle_period: {idle_period}\n"
+                    f"\n- apps: {wait_for_exact_units} -- apps_statuses: {apps_full_statuses or apps_statuses} "
+                    f"-- units_statuses: {units_full_statuses or units_statuses} -- idle_period: {idle_period}\n"
                 )
 
                 if await _is_every_condition_met(
@@ -330,4 +340,11 @@ async def wait_until(  # noqa: C901
                 f"juju status --model {ops_test.model.info.name}", shell=True
             ).decode("utf-8")
         )
+        target_file = f"/tmp/{uuid4().hex}.txt"
+        cmd = (
+            f"juju debug-log --model={ops_test.model.info.name} -n 3000 > "
+            f"{target_file}; cat {target_file}"
+        )
+        logger.error(f"Running: {cmd}...")
+        logger.error(subprocess.check_output(cmd, shell=True).decode("utf-8"))
         raise Exception(f"{now()} -- wait_until -- Timed out!")
