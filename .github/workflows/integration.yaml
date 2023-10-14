@@ -120,15 +120,23 @@ jobs:
         with:
           name: ${{ needs.build.outputs.artifact-name }}
 
+      - name: Free space in the runner
+        id: free-space-runner
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
       - name: Setup microceph
-        uses: phvalguima/microceph-action@v0.2
+        uses: phvalguima/microceph-action@v0.3
         with:
           channel: 'latest/edge'
           devname: '/dev/sdi'
           accesskey: 'accesskey'
           secretkey: 'secretkey'
           bucket: 'testbucket'
-          osdsize: '10G'
+          osdsize: '5G'
 
       - name: Select tests
         id: select-tests
@@ -144,11 +152,8 @@ jobs:
 
       - name: Run backup test
         run: |
-          # free space in the runner
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          # load microceph output
+          source microceph.source
 
           # Set kernel params
           sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
