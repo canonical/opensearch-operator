@@ -39,9 +39,6 @@ from charms.opensearch.v0.helper_networking import (
     unit_ip,
     units_ips,
 )
-from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchPluginRelationClusterNotReadyError
-)
 from charms.opensearch.v0.helper_security import (
     cert_expiration_remaining_hours,
     generate_hashed_password,
@@ -74,7 +71,10 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     StartMode,
 )
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
+from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchPluginError,
+    OpenSearchPluginRelationClusterNotReadyError,
+)
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
