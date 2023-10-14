@@ -305,7 +305,7 @@ async def wait_until(  # noqa: C901
                 wait_for_exact_units[app] = 1
 
     try:
-        logger.info(f"\n\n\n")
+        logger.info("\n\n\n")
         logger.info(
             subprocess.check_output(
                 f"juju status --model {ops_test.model.info.name}", shell=True
@@ -316,8 +316,10 @@ async def wait_until(  # noqa: C901
             with attempt:
                 logger.info(f"\n\n\n{now()} -- Waiting for model: starting.")
                 # logger.info(
-                #     f"\n- apps: {wait_for_exact_units} -- apps_statuses: {apps_full_statuses or apps_statuses} "
-                #     f"-- units_statuses: {units_full_statuses or units_statuses} -- idle_period: {idle_period}\n"
+                #     f"\n- apps: {wait_for_exact_units} -- apps_statuses:
+                #     {apps_full_statuses or apps_statuses} "
+                #     f"-- units_statuses: {units_full_statuses or units_statuses}
+                #     -- idle_period: {idle_period}\n"
                 # )
 
                 if await _is_every_condition_met(
