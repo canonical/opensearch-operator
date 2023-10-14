@@ -6,6 +6,7 @@
 This module manages OpenSearch keystore access and lifecycle.
 """
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import Dict, List
 
@@ -131,6 +132,8 @@ class OpenSearchCATruststore(Keystore):
         super().__init__(charm)
         self._keystore = charm.opensearch.paths.ca_truststore
         self._password = "changeit"
+        if not os.path.exists(self._keystore):
+            raise OpenSearchKeystoreError(f"{self._keystore} not found")
 
     def list(self, alias: str = None) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
