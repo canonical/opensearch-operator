@@ -180,11 +180,8 @@ def _is_every_condition_on_units_met(
 
         if unit.workload_status.value == "error":
             logger.error(f"Error in: {unit.name}")
-            logger.error(
-                subprocess.check_output(
-                    f"juju debug-log --include={unit.name.replace('-', '/')} -n 500".split()
-                )
-            )
+            cmd = f"juju debug-log --include={unit.name.replace('-', '/')} -n 500 > del.txt; cat del.txt"
+            logger.error(subprocess.check_output(cmd, shell=True).decode("utf-8"))
 
         if units_statuses:
             if unit.workload_status.value not in units_statuses:
@@ -296,19 +293,20 @@ async def wait_until(  # noqa: C901
                 wait_for_exact_units[app] = 1
 
     try:
+        logger.info(
+            subprocess.check_output(
+                f"juju status --model {ops_test.model.info.name}", shell=True
+            ).decode("utf-8")
+        )
+
         for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
             with attempt:
-                logger.info(f"{now()} -- Waiting for model: starting.")
+                logger.info(f"\n\n\n{now()} -- Waiting for model: starting.")
                 logger.info(
                     f"- apps: {apps}\n- wait_for_exact_units: {wait_for_exact_units}\n"
                     f"- apps_statuses: {apps_statuses}\n- apps_full_statuses: {apps_full_statuses}\n"
                     f"- units_statuses: {units_statuses}\n- units_full_statuses: {units_full_statuses}\n"
                     f"- idle_period: {idle_period}\n"
-                )
-                logger.info(
-                    subprocess.check_output(
-                        f"juju status --model {ops_test.model.info.name}".split()
-                    )
                 )
 
                 if await _is_every_condition_met(
@@ -327,4 +325,9 @@ async def wait_until(  # noqa: C901
                 logger.info(f"{now()} -- Waiting for model: re-trigger.")
                 raise Exception
     except RetryError:
+        logger.info(
+            subprocess.check_output(
+                f"juju status --model {ops_test.model.info.name}", shell=True
+            ).decode("utf-8")
+        )
         raise Exception(f"{now()} -- wait_until -- Timed out!")

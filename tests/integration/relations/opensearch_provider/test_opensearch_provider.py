@@ -5,7 +5,6 @@ import asyncio
 import json
 import logging
 import re
-import time
 
 import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
@@ -248,14 +247,14 @@ async def test_scaling(ops_test: OpsTest):
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
     # scale-down for CI
-    logger.info("Removing 1 unit for CI and sleep a minute..")
+    # logger.info("Removing 1 unit for CI and sleep a minute..")
     opensearch_unit_ids = get_application_unit_ids(ops_test, app=OPENSEARCH_APP_NAME)
-    await ops_test.model.applications[OPENSEARCH_APP_NAME].destroy_unit(
-        f"{OPENSEARCH_APP_NAME}/{max(opensearch_unit_ids)}"
-    )
-
-    # sleep a minute to ease the load on machine
-    time.sleep(60)
+    # await ops_test.model.applications[OPENSEARCH_APP_NAME].destroy_unit(
+    #     f"{OPENSEARCH_APP_NAME}/{max(opensearch_unit_ids)}"
+    # )
+    #
+    # # sleep a minute to ease the load on machine
+    # time.sleep(60)
 
     # Deploy secondary application.
     logger.info(f"Deploying 1 unit of {SECONDARY_CLIENT_APP_NAME}")
@@ -280,7 +279,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units={
-            OPENSEARCH_APP_NAME: len(opensearch_unit_ids) - 1,
+            OPENSEARCH_APP_NAME: len(opensearch_unit_ids),
             CLIENT_APP_NAME: 1,
             SECONDARY_CLIENT_APP_NAME: 1,
             TLS_CERTIFICATES_APP_NAME: 1,
