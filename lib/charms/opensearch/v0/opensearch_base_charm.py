@@ -62,6 +62,7 @@ from charms.opensearch.v0.opensearch_nodes_exclusions import (
     OpenSearchExclusions,
 )
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
+from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
@@ -265,6 +266,7 @@ class OpenSearchBaseCharm(CharmBase):
         ):
             # we defer because we want the temporary status to be updated
             event.defer()
+            self.on.update_status.emit()
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -397,7 +399,7 @@ class OpenSearchBaseCharm(CharmBase):
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
 
-    def _on_config_changed(self, _: ConfigChangedEvent):
+    def _on_config_changed(self, event: ConfigChangedEvent):
         """On config changed event. Useful for IP changes or for user provided config changes."""
         if self.opensearch_config.update_host_if_needed():
             self.unit.status = MaintenanceStatus(TLSNewCertsRequested)
@@ -410,10 +412,15 @@ class OpenSearchBaseCharm(CharmBase):
             self.on[PeerRelationName].relation_joined.emit(
                 self.model.get_relation(PeerRelationName)
             )
-        if self.opensearch.is_started() and self.plugin_manager.run():
-            self.on[self.service_manager.name].acquire_lock.emit(
-                callback_override="_restart_opensearch"
-            )
+
+        try:
+            if self.opensearch.is_started() and self.plugin_manager.run():
+                self.on[self.service_manager.name].acquire_lock.emit(
+                    callback_override="_restart_opensearch"
+                )
+        except OpenSearchPluginError as e:
+            logger.error(e)
+            event.defer()
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""

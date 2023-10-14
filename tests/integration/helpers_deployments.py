@@ -74,12 +74,12 @@ def progress_line(units: List[Unit]) -> str:
     log = ""
     for u in units:
         if not log:
-            log = f"\t{now()} -- app: {u.app_status.value}: {u.app_status.message}"
+            log = f"\n\t{now()} -- app: {u.name.split('-')[0]} {u.app_status.value} -- message: {u.app_status.message}\n"
 
         log = (
-            f"\n\t\t{log}{u.name} [{u.agent_status.value} "
-            f"(since: {u.agent_status.since.strftime('%d %b %Y %H:%M:%S')})] "
-            f"{u.workload_status.value}: {u.workload_status.message or ''}"
+            f"{log}\t\t{u.name}{'*' if u.is_leader else ''} [{u.agent_status.value} "
+            f"(since: {u.agent_status.since.strftime('%H:%M:%S')})] "
+            f"{u.workload_status.value}: {u.workload_status.message or ''}\n"
         )
 
     return log
@@ -178,6 +178,14 @@ def _is_every_condition_on_units_met(
         if unit.agent_status.value != "idle":
             return False
 
+        if unit.workload_status.value == "error":
+            logger.error(f"Error in: {unit.name}")
+            logger.error(
+                subprocess.check_output(
+                    f"juju debug-log --include={unit.name.replace('-', '/')} -n 500".split()
+                )
+            )
+
         if units_statuses:
             if unit.workload_status.value not in units_statuses:
                 return False
@@ -221,6 +229,7 @@ async def _is_every_condition_met(
             apps_statuses=apps_statuses,
             apps_full_statuses=apps_full_statuses,
         ):
+            logger.info(f"\tApp: {app} - conditions unmet.")
             logger.info(progress_line(units))
             return False
 
@@ -231,6 +240,7 @@ async def _is_every_condition_met(
                 app, units, units_statuses, units_full_statuses, idle_period
             )
         ):
+            logger.info(f"\tApp: {app} - Units - conditions unmet.")
             logger.info(progress_line(units))
             return False
 
