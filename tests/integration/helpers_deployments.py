@@ -76,10 +76,11 @@ def now() -> str:
 def _dump_juju_logs(model: str, unit: Optional[str] = None, lines: int = 500) -> None:
     """Dump juju logs on the console."""
     target_file = f"/tmp/{uuid4().hex}.txt"
-    cmd = (
-        f"juju debug-log --include={unit.replace('-', '/')} --model={model} -n {lines} > "
-        f"{target_file}; cat {target_file}"
-    )
+
+    cmd = "juju debug-log"
+    if unit:
+        cmd = f"{cmd} --include={unit.replace('-', '/')}"
+    cmd = f"{cmd} --model={model} -n {lines} > {target_file}; cat {target_file}"
     logger.error(f"Dumping juju logs for {unit if unit else 'all'}:")
     logger.error(subprocess.check_output(cmd, shell=True).decode("utf-8"))
     logger.error("\n\n")

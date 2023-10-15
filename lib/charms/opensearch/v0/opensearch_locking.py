@@ -10,6 +10,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchOpsLockAlreadyAcquiredError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "0924c6d81c604a15873ad43498cd6895"
@@ -34,6 +35,7 @@ class OpenSearchOpsLock:
         self._charm = charm
         self._opensearch = charm.opensearch
 
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(0.5), reraise=True)
     def acquire(self):
         """Method for Acquiring the "ops" lock."""
         # no lock acquisition needed if only 1 unit remaining
