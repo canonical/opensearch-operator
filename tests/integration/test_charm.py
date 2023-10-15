@@ -51,9 +51,6 @@ async def test_status(ops_test: OpsTest) -> None:
         wait_for_exact_units=DEFAULT_NUM_UNITS,
         apps_statuses=["blocked"],
     )
-    # await ops_test.model.wait_for_idle(
-    #     apps=[APP_NAME], status="blocked", timeout=1000, wait_for_exact_units=DEFAULT_NUM_UNITS
-    # )
     assert len(ops_test.model.applications[APP_NAME].units) == DEFAULT_NUM_UNITS
 
 

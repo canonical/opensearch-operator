@@ -15,6 +15,7 @@ from charms.opensearch.v0.constants_charm import (
     ClusterHealthRed,
     ClusterHealthUnknown,
     PeerRelationName,
+    PluginConfigChangeError,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -420,6 +421,7 @@ class OpenSearchBaseCharm(CharmBase):
                 )
         except OpenSearchPluginError as e:
             logger.error(e)
+            self.unit.status = BlockedStatus(PluginConfigChangeError)
             event.defer()
 
     def _on_set_password_action(self, event: ActionEvent):
