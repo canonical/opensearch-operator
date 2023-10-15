@@ -88,10 +88,13 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         "region": os.environ["S3_REGION"],
         "tls-ca-chain": s3_ca_chain,
     }
+
+    app_num_units = os.environ.get("TEST_NUM_APP_UNITS", None) or 3
+
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
         ops_test.model.deploy(S3_INTEGRATOR_NAME, channel="stable", config=s3_config),
-        ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
+        ops_test.model.deploy(my_charm, num_units=app_num_units, series=SERIES),
     )
     # Set the access/secret keys
     action = await run_action(
