@@ -89,7 +89,8 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         "tls-ca-chain": s3_ca_chain,
     }
 
-    app_num_units = os.environ.get("TEST_NUM_APP_UNITS", None) or 3
+    # Convert to integer as environ always returns string
+    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 3)
 
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
