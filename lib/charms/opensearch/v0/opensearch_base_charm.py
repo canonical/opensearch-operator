@@ -497,11 +497,13 @@ class OpenSearchBaseCharm(CharmBase):
         except OpenSearchPluginError as e:
             logger.exception(e)
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
-                self.status.set(WaitingStatus("Plugin waiting: cluster not ready"))
+                self.unit.status.set(WaitingStatus("Plugin management: cluster not ready yet"))
             else:
-                self.status.set(BlockedStatus(PluginConfigChangeError))
+                self.status.set(BlockedStatus(
+                    "Unexpected error during plugin configuration, check the logs"
+                ))
+                # There was an unexpected error, log it and block the unit
             event.defer()
-            return
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""

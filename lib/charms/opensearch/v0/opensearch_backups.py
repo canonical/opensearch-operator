@@ -50,20 +50,6 @@ class OpenSearchBaseCharm(CharmBase):
     def __init__(...):
         ...
         self.backup = OpenSearchBackup(self)
-
-    def _restart_opensearch(self, event: EventBase) -> None:
-        ...
-        # After a restart has been successfully executed,
-        if not self.peers_data.get(Scope.UNIT, "starting", False):
-            try:
-                self._stop_opensearch()
-            except OpenSearchStopError as e:
-                ...
-
-        self._start_opensearch(event)
-
-        # call the backup method to check if there are any remaining methods:
-        self.backup.apply_post_restart_if_needed()
 """
 
 import json
@@ -90,7 +76,7 @@ from charms.opensearch.v0.opensearch_plugins import (
 )
 from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
@@ -401,7 +387,15 @@ class OpenSearchBackup(Object):
                 self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
-        except OpenSearchPluginRelationClusterNotReadyError:
+        except OpenSearchError as e:
+            if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
+                self.unit.status = WaitingStatus("Plugin management: cluster not ready yet")
+            else:
+                self.unit.status = BlockedStatus(
+                    "Unexpected error during plugin configuration, check the logs"
+                )
+                # There was an unexpected error, log it and block the unit
+                logger.error(e)
             event.defer()
 
     def apply_post_restart_if_needed(self) -> None:
@@ -479,10 +473,22 @@ class OpenSearchBackup(Object):
             # and the user removed it from the configuration later on.
             pass
 
-        if self.charm.plugin_manager.run():
-            self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
-                callback_override="_restart_opensearch"
-            )
+        try:
+            if self.charm.plugin_manager.run():
+                self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
+                    callback_override="_restart_opensearch"
+                )
+        except OpenSearchError as e:
+            if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
+                self.unit.status = WaitingStatus("Plugin management: cluster not ready yet")
+            else:
+                self.unit.status = BlockedStatus(
+                    "Unexpected error during plugin configuration, check the logs"
+                )
+                # There was an unexpected error, log it and block the unit
+                logger.error(e)
+            event.defer()
+            return
         self.charm.unit.status = MaintenanceStatus("Disabling backup service: restarting service")
 
     def _execute_s3_depart_calls(self):
