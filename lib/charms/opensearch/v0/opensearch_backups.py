@@ -275,7 +275,7 @@ class OpenSearchBackup(Object):
             output = self.get_service_status(
                 self._request(
                     "PUT",
-                    f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/{new_backup_id}",
+                    f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}/{new_backup_id}?wait_for_completion=true",
                     payload={
                         "indices": "*",
                         "ignore_unavailable": False,
@@ -389,14 +389,15 @@ class OpenSearchBackup(Object):
                 )
         except OpenSearchError as e:
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
-                self.unit.status = WaitingStatus("Plugin management: cluster not ready yet")
+                self.charm.unit.status = WaitingStatus("s3-changed: cluster not ready yet")
             else:
-                self.unit.status = BlockedStatus(
+                self.charm.unit.status = BlockedStatus(
                     "Unexpected error during plugin configuration, check the logs"
                 )
                 # There was an unexpected error, log it and block the unit
                 logger.error(e)
             event.defer()
+        self.charm.unit.status = ActiveStatus()
 
     def apply_post_restart_if_needed(self) -> None:
         """Runs the post restart routine and API calls needed to setup/disable backup.
@@ -459,6 +460,7 @@ class OpenSearchBackup(Object):
                 f"Disabling backup not possible: {snapshot_status}"
             )
             event.defer()
+            return
 
         if self.charm.unit.is_leader():
             # 2) Run the API calls
@@ -480,16 +482,16 @@ class OpenSearchBackup(Object):
                 )
         except OpenSearchError as e:
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
-                self.unit.status = WaitingStatus("Plugin management: cluster not ready yet")
+                self.charm.unit.status = WaitingStatus("s3-depart event: cluster not ready yet")
             else:
-                self.unit.status = BlockedStatus(
+                self.charm.unit.status = BlockedStatus(
                     "Unexpected error during plugin configuration, check the logs"
                 )
                 # There was an unexpected error, log it and block the unit
                 logger.error(e)
             event.defer()
             return
-        self.charm.unit.status = MaintenanceStatus("Disabling backup service: restarting service")
+        self.charm.unit.status = ActiveStatus()
 
     def _execute_s3_depart_calls(self):
         """Executes the s3 departure API calls."""
@@ -530,7 +532,10 @@ class OpenSearchBackup(Object):
                 f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}",
                 payload={
                     "type": "s3",
-                    "settings": {"bucket": bucket_name, "base_path": S3_REPO_BASE_PATH},
+                    "settings": {
+                        "bucket": bucket_name,
+                        "base_path": info.get("path", S3_REPO_BASE_PATH),
+                    },
                 },
             )
         )
@@ -558,6 +563,10 @@ class OpenSearchBackup(Object):
 
         If int is returned, then throws an exception informing the HTTP request failed.
         """
+        if "retries" not in kwargs.keys():
+            kwargs["retries"] = 6
+        if "timeout" not in kwargs.keys():
+            kwargs["timeout"] = 10
         try:
             result = self.charm.opensearch.request(*args, **kwargs)
         except (ValueError, OpenSearchHttpError, requests.HTTPError):

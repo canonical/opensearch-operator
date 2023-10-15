@@ -98,7 +98,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import EventBase, EventSource
-from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -504,6 +504,7 @@ class OpenSearchBaseCharm(CharmBase):
                 ))
                 # There was an unexpected error, log it and block the unit
             event.defer()
+        self.unit.status = ActiveStatus()
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""

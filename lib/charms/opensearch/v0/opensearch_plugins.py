@@ -78,6 +78,8 @@ class MyPlugin(OpenSearchPlugin):
     def config(self) -> OpenSearchPluginConfig:
         # Use the self._extra_config to retrieve any extra configuration.
 
+        # If using the self._extra_config, or any other dict to build the class below
+        # let the KeyError happen and the plugin manager will capture it.
         return OpenSearchPluginConfig(
             config_entries_on_add={...}, # Key-value pairs to be added to opensearch.yaml
             secret_entries_on_add={...}  # Key-value pairs to be added to keystore
@@ -86,6 +88,8 @@ class MyPlugin(OpenSearchPlugin):
     def disable(self) -> Tuple[OpenSearchPluginConfig, OpenSearchPluginConfig]:
         # Use the self._extra_config to retrieve any extra configuration.
 
+        # If using the self._extra_config, or any other dict to build the class below
+        # let the KeyError happen and the plugin manager will capture it.
         return (
             OpenSearchPluginConfig(...), # Configuration to be removed from yaml/keystore
                                          # Configuration to be added, e.g. in the case we need
@@ -175,6 +179,15 @@ class MyPluginRelationManager(Object):
             if plugin.name == PLUGIN_NAME:
                 self._run_the_api_call_here(plugin.config())
 
+    def _apply_config(self, plugin: OpenSearchPlugin):
+        ...
+        try:
+            get_configs = plugin.config()
+        except KeyError as e:
+            # Some plugins may throw KeyError as they try to access an empty
+            # self._extra_config or it is still missing a config.
+            # That may happen after a plugin has been installed, but deactivated.
+            raise OpenSearchPluginMissingConfigError(e)
 ...
 
 
@@ -249,6 +262,13 @@ class OpenSearchPluginRemoveError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin removal fails."""
 
 
+class OpenSearchPluginMissingConfigError(OpenSearchPluginError):
+    """Exception thrown when config() or disable() fails to find a config key.
+
+    The plugin itself should raise a KeyError, to avoid burden in the plugin development.
+    """
+
+
 class PluginState(BaseStrEnum):
     """Enum for the states possible in plugins' lifecycle."""
 
@@ -317,10 +337,13 @@ class OpenSearchPlugin:
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = {...},
+            config_entries_to_del = [...],
             secret_entries_to_add = {...},
-            secret_entries_to_del = {...},
+            secret_entries_to_del = [...],
         )
+
+        May throw KeyError if accessing some source, such as self._extra_config, but the
+        dictionary does not contain all the configs. In this case, let the error happen.
         """
         pass
 
@@ -331,10 +354,13 @@ class OpenSearchPlugin:
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = {...},
+            config_entries_to_del = [...],
             secret_entries_to_add = {...},
-            secret_entries_to_del = {...},
+            secret_entries_to_del = [...],
         )
+
+        May throw KeyError if accessing some source, such as self._extra_config, but the
+        dictionary does not contain all the configs. In this case, let the error happen.
         """
         pass
 

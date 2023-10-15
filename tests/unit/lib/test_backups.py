@@ -10,7 +10,6 @@ from charms.opensearch.v0.opensearch_backups import (
     OPENSEARCH_REPOSITORY_NAME,
     S3_OPENSEARCH_EXTRA_VALUES,
     S3_RELATION,
-    S3_REPO_BASE_PATH,
     OpenSearchBackupPlugin,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
@@ -20,6 +19,7 @@ from ops.testing import Harness
 from charm import OpenSearchOperatorCharm
 
 TEST_BUCKET_NAME = "s3://bucket-test"
+TEST_BASE_PATH = "/test"
 
 
 class TestBackups(unittest.TestCase):
@@ -75,7 +75,7 @@ class TestBackups(unittest.TestCase):
                 "bucket": TEST_BUCKET_NAME,
                 "access-key": "aaaa",
                 "secret-key": "bbbb",
-                "path": "/test",
+                "path": TEST_BASE_PATH,
                 "endpoint": "localhost",
                 "region": "testing-region",
                 "storage-class": "storageclass",
@@ -120,7 +120,7 @@ class TestBackups(unittest.TestCase):
                 "type": "s3",
                 "settings": {
                     "bucket": TEST_BUCKET_NAME,
-                    "base_path": S3_REPO_BASE_PATH,
+                    "base_path": TEST_BASE_PATH,
                 },
             },
         )
