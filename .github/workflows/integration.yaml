@@ -26,12 +26,12 @@ jobs:
       fail-fast: false
       matrix:
         tox-environments:
-          # - charm-integration
-          # - tls-integration
+          - charm-integration
+          - tls-integration
           - client-integration
-          # - ha-base-integration
+          - ha-base-integration
           - ha-networking-integration
-          # - plugins-integration
+          - plugins-integration
         runner: ["ubuntu-22.04"]
         include:
           - tox-environments: h-scaling-integration
@@ -86,7 +86,3 @@ jobs:
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
           LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
-
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3

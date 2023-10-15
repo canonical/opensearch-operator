@@ -54,7 +54,10 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
     """Test basic functionality of relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
-    await ops_test.model.set_config(MODEL_CONFIG)
+    new_model_conf = MODEL_CONFIG.copy()
+    new_model_conf["update-status-hook-interval"] = "1m"
+
+    await ops_test.model.set_config(new_model_conf)
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
