@@ -79,7 +79,11 @@ def _dump_juju_logs(model: str, unit: Optional[str] = None, lines: int = 500) ->
 
     cmd = "juju debug-log"
     if unit:
-        cmd = f"{cmd} --include={unit.replace('-', '/')}"
+        pos = unit.rfind("-")
+        if pos != -1:
+            unit = f"{unit[:pos]}/{unit[pos+1:]}"  # noqa
+        cmd = f"{cmd} --include={unit}"
+
     cmd = f"{cmd} --model={model} -n {lines} > {target_file}; cat {target_file}"
     logger.error(f"Dumping juju logs for {unit if unit else 'all'}:")
     logger.error(subprocess.check_output(cmd, shell=True).decode("utf-8"))
