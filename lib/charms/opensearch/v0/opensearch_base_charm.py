@@ -384,8 +384,11 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
 
-            if self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
+            health = self.health.apply()
+            if health != HealthColors.GREEN:
                 event.defer()
+
+            if health == HealthColors.UNKNOWN:
                 return
 
         for relation in self.model.relations.get(ClientRelationName, []):
