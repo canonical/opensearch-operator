@@ -85,13 +85,13 @@ class OpenSearchHealth:
             self._charm.status.clear(WaitingForBusyShards, app=True)
         elif status == HealthColors.RED:
             # health RED: some primary shards are unassigned
-            self._charm.app.status = BlockedStatus(ClusterHealthRed)
+            self._charm.status.set(BlockedStatus(ClusterHealthRed), app=True)
         elif status == HealthColors.YELLOW_TEMP:
             # health is yellow but temporarily (shards are relocating or initializing)
-            self._charm.app.status = WaitingStatus(WaitingForBusyShards)
+            self._charm.status.set(WaitingStatus(WaitingForBusyShards), app=True)
         else:
             # health is yellow permanently (some replica shards are unassigned)
-            self._charm.app.status = BlockedStatus(ClusterHealthYellow)
+            self._charm.status.set(BlockedStatus(ClusterHealthYellow), app=True)
 
     def apply_for_unit(self, status: str, host: Optional[str] = None):
         """Apply the health status on the current unit."""
@@ -110,10 +110,9 @@ class OpenSearchHealth:
             )
             return
 
-        message = WaitingForSpecificBusyShards.format(
-            " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
-        )
-        self._charm.unit.status = WaitingStatus(message)
+        message = sorted([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
+        message = WaitingForSpecificBusyShards.format(" - ".join(message))
+        self._charm.status.set(WaitingStatus(message))
 
     def _fetch_status(self, host: Optional[str] = None, wait_for_green_first: bool = False):
         """Fetch the current cluster status."""
