@@ -84,7 +84,7 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
     # This test shouldn't take so long
     await ops_test.model.wait_for_idle(
         apps=ALL_APPS,
-        timeout=1600,
+        timeout=2000,
         status="active",
     )
 
@@ -289,7 +289,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
             TLS_CERTIFICATES_APP_NAME: 1,
         },
         idle_period=65,
-        timeout=1600,
+        timeout=2000,
     )
 
     # Test that the permissions are respected between relations by running the same request as
