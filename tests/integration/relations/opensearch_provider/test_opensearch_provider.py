@@ -84,7 +84,7 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
     # This test shouldn't take so long
     await ops_test.model.wait_for_idle(
         apps=ALL_APPS,
-        timeout=2000,
+        timeout=1600,
         status="active",
     )
 
@@ -212,7 +212,7 @@ async def test_scaling(ops_test: OpsTest):
         ops_test,
         apps=ALL_APPS,
         apps_statuses=["active"],
-        idle_period=65,
+        idle_period=70,
     )
 
     # Test scale down
@@ -226,7 +226,7 @@ async def test_scaling(ops_test: OpsTest):
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units={OPENSEARCH_APP_NAME: len(opensearch_unit_ids) - 1},
-        idle_period=65,
+        idle_period=70,
     )
     assert await _is_number_of_endpoints_valid(
         CLIENT_APP_NAME, FIRST_RELATION_NAME
@@ -240,7 +240,7 @@ async def test_scaling(ops_test: OpsTest):
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units={OPENSEARCH_APP_NAME: len(opensearch_unit_ids)},
-        idle_period=65,
+        idle_period=70,
     )
     assert await _is_number_of_endpoints_valid(
         CLIENT_APP_NAME, FIRST_RELATION_NAME
@@ -288,7 +288,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
             SECONDARY_CLIENT_APP_NAME: 1,
             TLS_CERTIFICATES_APP_NAME: 1,
         },
-        idle_period=65,
+        idle_period=70,
         timeout=2000,
     )
 
@@ -323,7 +323,7 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
         apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        idle_period=65,
+        idle_period=70,
     )
 
     # Test that different applications can access the same index if they present it in their
@@ -361,7 +361,7 @@ async def test_admin_relation(ops_test: OpsTest):
         apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        idle_period=65,
+        idle_period=70,
     )
 
     # Verify we can access whatever data we like as admin
@@ -514,7 +514,7 @@ async def test_relation_broken(ops_test: OpsTest):
         apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        idle_period=65,
+        idle_period=70,
     )
 
     # Break the relation.
@@ -536,7 +536,7 @@ async def test_relation_broken(ops_test: OpsTest):
             apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
             apps_statuses=["active"],
             units_statuses=["active"],
-            idle_period=65,
+            idle_period=70,
         ),
     )
 
@@ -565,7 +565,7 @@ async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
         apps=ALL_APPS + [SECONDARY_CLIENT_APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        idle_period=65,
+        idle_period=70,
     ),
 
     read_index_endpoint = "/albums/_search?q=Jazz"
