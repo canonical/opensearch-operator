@@ -390,14 +390,14 @@ class OpenSearchBackup(Object):
         # Backup relation has been recently made available with all the parameters needed.
         # Steps:
         #     (1) set up as maintenance;
-        self.charm.unit.status = MaintenanceStatus("Configuring backup service...")
+        self.charm.status.set(MaintenanceStatus("Configuring backup service..."))
         #     (2) run the request; and
         state = self.get_service_status(self._register_snapshot_repo())
         #     (3) based on the response, set the message status
         if state == BackupServiceState.SUCCESS:
-            self.charm.unit.status = ActiveStatus("Backup is active")
+            self.charm.status.set(ActiveStatus("Backup is active"))
         else:
-            self.charm.unit.status = BlockedStatus(f"Backup setup failed with {state}")
+            self.charm.status.set(BlockedStatus(f"Backup setup failed with {state}"))
 
     def on_s3_depart(self, event: EventBase) -> None:
         """Processes the departure of s3.
@@ -409,15 +409,15 @@ class OpenSearchBackup(Object):
         3) Update opensearch.yml and keystore
         4) Emit a restart event
         """
-        self.charm.unit.status = MaintenanceStatus("Disabling backup service...")
+        self.charm.status.set(MaintenanceStatus("Disabling backup service..."))
         snapshot_status = self._check_snapshot_status()
         if snapshot_status in [
             BackupServiceState.SNAPSHOT_IN_PROGRESS,
             BackupServiceState.SNAPSHOT_PARTIALLY_TAKEN,
         ]:
             # 1) snapshot is either in progress or partially taken: block and defer this event
-            self.charm.unit.status = BlockedStatus(
-                f"Disabling backup not possible: {snapshot_status}"
+            self.charm.status.set(
+                BlockedStatus(f"Disabling backup not possible: {snapshot_status}")
             )
             event.defer()
 
@@ -430,7 +430,7 @@ class OpenSearchBackup(Object):
             self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
-        self.charm.unit.status = MaintenanceStatus("Disabling backup service: restarting service")
+        self.charm.status.set(MaintenanceStatus("Disabling backup service: restarting service"))
 
     def _execute_s3_depart_calls(self):
         """Executes the s3 departure API calls."""

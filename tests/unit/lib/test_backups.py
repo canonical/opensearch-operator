@@ -10,7 +10,9 @@ from charms.opensearch.v0.opensearch_backups import (
     S3_OPENSEARCH_EXTRA_VALUES,
     S3_RELATION,
     S3_REPO_BASE_PATH,
+    OpenSearchBackupPlugin,
 )
+from charms.opensearch.v0.opensearch_plugin_manager import ConfigExposedPlugins
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginConfig, PluginState
 from ops.testing import Harness
 
@@ -67,7 +69,10 @@ class TestBackups(unittest.TestCase):
                 "storage-class": "storageclass",
             },
         )
-        mock_install.assert_called_once()
+        assert any(
+            [isinstance(c[0][0], OpenSearchBackupPlugin) for c in mock_install.call_args_list]
+        )
+        assert len(mock_install.call_args_list) == len(ConfigExposedPlugins.keys())
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
@@ -142,7 +147,10 @@ class TestBackups(unittest.TestCase):
         mock_request.called_once_with("GET", "/_snapshot/_status")
         mock_execute_s3_depart_calls.assert_called_once()
         # As plugin_manager's run() is called, then so install(), config() and disable():
-        mock_install.assert_called_once()
+        assert any(
+            [isinstance(c[0][0], OpenSearchBackupPlugin) for c in mock_install.call_args_list]
+        )
+        assert len(mock_install.call_args_list) == len(ConfigExposedPlugins.keys())
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
