@@ -23,6 +23,7 @@ from tests.integration.helpers import (
 from tests.integration.helpers_deployments import wait_until
 from tests.integration.relations.opensearch_provider.helpers import (
     get_application_relation_data,
+    ip_to_url,
     run_request,
     wait_for_relation_joined_between,
 )
@@ -741,7 +742,7 @@ async def test_relation_broken(ops_test: OpsTest):
     users = await http_request(
         ops_test,
         "GET",
-        f"https://{leader_ip}:9200/_plugins/_security/api/internalusers/",
+        f"https://{ip_to_url(leader_ip)}:9200/_plugins/_security/api/internalusers/",
         verify=False,
     )
     logger.info(relation_user)
@@ -796,7 +797,7 @@ async def test_relation_broken_secrets(ops_test: OpsTest):
     users = await http_request(
         ops_test,
         "GET",
-        f"https://{leader_ip}:9200/_plugins/_security/api/internalusers/",
+        f"https://{ip_to_url(leader_ip)}:9200/_plugins/_security/api/internalusers/",
         verify=False,
     )
     logger.info(relation_user)
