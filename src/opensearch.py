@@ -25,8 +25,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStopError,
 )
 from charms.opensearch.v0.opensearch_keystore import OpenSearchCATruststore
-from charms.operator_libs_linux.v1 import snap
-from charms.operator_libs_linux.v1.snap import SnapError
 from charms.operator_libs_linux.v1.systemd import service_failed
 from charms.operator_libs_linux.v2 import snap
 from charms.operator_libs_linux.v2.snap import SnapError

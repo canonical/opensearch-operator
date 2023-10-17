@@ -499,9 +499,7 @@ class OpenSearchBaseCharm(CharmBase):
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 self.unit.status.set(WaitingStatus("Plugin management: cluster not ready yet"))
             else:
-                self.status.set(BlockedStatus(
-                    "Unexpected error during plugin configuration, check the logs"
-                ))
+                self.status.set(BlockedStatus(PluginConfigChangeError))
                 # There was an unexpected error, log it and block the unit
             event.defer()
         self.unit.status = ActiveStatus()
