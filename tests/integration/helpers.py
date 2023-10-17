@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Union
 import requests
 import yaml
 from charms.opensearch.v0.helper_networking import is_reachable
+from integration.helpers_deployments import get_application_units, get_unit_hostname
 from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -29,13 +30,13 @@ APP_NAME = METADATA["name"]
 
 SERIES = "jammy"
 UNIT_IDS = [0, 1, 2]
-IDLE_PERIOD = 120
+IDLE_PERIOD = 75
 
 TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
 
 MODEL_CONFIG = {
     "logging-config": "<root>=INFO;unit=DEBUG",
-    "update-status-hook-interval": "1m",
+    "update-status-hook-interval": "5m",
     "cloudinit-userdata": """postruncmd:
         - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
         - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
@@ -46,28 +47,6 @@ MODEL_CONFIG = {
 
 
 logger = logging.getLogger(__name__)
-
-
-class Unit:
-    """Model class for a Unit, with properties widely used."""
-
-    def __init__(
-        self,
-        id: int,
-        name: str,
-        ip: str,
-        hostname: str,
-        is_leader: bool,
-        machine_id: int,
-        status: str,
-    ):
-        self.id = id
-        self.name = name
-        self.ip = ip
-        self.hostname = hostname
-        self.is_leader = is_leader
-        self.machine_id = machine_id
-        self.status = status
 
 
 async def app_name(ops_test: OpsTest) -> Optional[str]:
@@ -101,7 +80,7 @@ async def run_action(
     if unit_id is None:
         online_units = []
         for unit in await get_application_units(ops_test, app):
-            if unit.status != "active":
+            if unit.workload_status.value != "active":
                 continue
 
             ping = subprocess.call(
@@ -136,34 +115,6 @@ async def get_admin_secrets(
     """
     # can retrieve from any unit running unit, so we pick the first
     return (await run_action(ops_test, unit_id, "get-password", app=app)).response
-
-
-async def get_application_units(ops_test: OpsTest, app: str = APP_NAME) -> List[Unit]:
-    """Get fully detailed units of an application."""
-    # Juju incorrectly reports the IP addresses after the network is restored this is reported as a
-    # bug here: https://github.com/juju/python-libjuju/issues/738. Once this bug is resolved use of
-    # `get_unit_ip` should be replaced with `.public_address`
-    resp_units = json.loads(
-        subprocess.check_output(
-            f"juju status --model {ops_test.model.info.name} {app} --format=json".split()
-        )
-    )["applications"][app]["units"]
-
-    units = []
-    for u_name, unit in resp_units.items():
-        unit_id = int(u_name.split("/")[-1])
-        unit = Unit(
-            id=unit_id,
-            name=u_name.replace("/", "-"),
-            ip=unit["public-address"],
-            hostname=await get_unit_hostname(ops_test, unit_id, app),
-            is_leader=unit.get("leader", False),
-            machine_id=int(unit["machine"]),
-            status=unit["workload-status"]["current"],
-        )
-        units.append(unit)
-
-    return units
 
 
 def get_application_unit_names(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
@@ -206,7 +157,7 @@ def get_application_unit_status(ops_test: OpsTest, app: str = APP_NAME) -> Dict[
 
     result = {}
     for unit in units:
-        result[int(unit.name.split("/")[1])] = unit.workload_status
+        result[int(unit.name.split("/")[1])] = unit.workload_status.value
 
     return result
 
@@ -268,12 +219,6 @@ async def get_application_unit_ids_hostnames(
         result[unit_id] = await get_unit_hostname(ops_test, unit_id, app)
 
     return result
-
-
-async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str = APP_NAME) -> str:
-    """Get the hostname of a specific unit."""
-    _, hostname, _ = await ops_test.juju("ssh", f"{app}/{unit_id}", "hostname")
-    return hostname.strip()
 
 
 async def get_leader_unit_ip(ops_test: OpsTest, app: str = APP_NAME) -> str:

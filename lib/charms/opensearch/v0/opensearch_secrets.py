@@ -15,17 +15,16 @@ import logging
 from typing import Dict, Optional, Union
 
 from charms.opensearch.v0.constants_tls import CertType
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchSecretInsertionError
 from charms.opensearch.v0.opensearch_internal_data import (
     RelationDataStore,
     Scope,
     SecretCache,
 )
 from ops import JujuVersion, Secret, SecretNotFoundError
-from ops.charm import ActionEvent
+from ops.charm import SecretChangedEvent
 from ops.framework import Object
 from overrides import override
-
-from .opensearch_exceptions import OpenSearchSecretInsertionError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "d2bcf5b34e064adf9e27d8fbff36bc55"
@@ -54,7 +53,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         self.framework.observe(self._charm.on.secret_changed, self._on_secret_changed)
 
-    def _on_secret_changed(self, event: ActionEvent):
+    def _on_secret_changed(self, event: SecretChangedEvent):
         """Refresh secret and re-run corresponding actions if needed."""
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
@@ -69,13 +68,12 @@ class OpenSearchSecrets(Object, RelationDataStore):
             return
 
         logger.debug("Secret change for %s", str(label_parts["key"]))
-
         if not self._charm.unit.is_leader():
             self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
 
     @property
     def implements_secrets(self):
-        """Property to cache resutls from a Juju call."""
+        """Property to cache results from a Juju call."""
         return JujuVersion.from_environ().has_secrets
 
     def label(self, scope: Scope, key: str) -> str:
@@ -86,7 +84,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         components.append(key)
         return self.LABEL_SEPARATOR.join(components)
 
-    def breakdown_label(self, label) -> Dict[str, str]:
+    def breakdown_label(self, label: str) -> Dict[str, str]:
         """Return meaningful components resolved from a secret label."""
         components = label.split(self.LABEL_SEPARATOR)
         if len(components) < 3 or len(components) > 4:
@@ -154,7 +152,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         try:
             secret = scope_obj.add_secret(safe_value, label=label)
         except ValueError as e:
-            logging.error("Secert %s:%s couldn't be added", str(scope.val), str(key))
+            logging.error("Secret %s:%s couldn't be added", str(scope.val), str(key))
             raise OpenSearchSecretInsertionError(e)
 
         self.cached_secrets.put(scope, label, secret, safe_value)
@@ -185,7 +183,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         try:
             secret.set_content(safe_content)
         except ValueError as e:
-            logging.error("Secert %s:%s couldn't be updated", str(scope.val), str(key))
+            logging.error("Secret %s:%s couldn't be updated", str(scope.val), str(key))
             raise OpenSearchSecretInsertionError(e)
 
         self.cached_secrets.put(scope, self.label(scope, key), content=safe_content)

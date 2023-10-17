@@ -5,7 +5,8 @@
 import re
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from ops.model import ActiveStatus
+from ops import EventBase
+from ops.model import ActiveStatus, StatusBase
 
 # The unique Charmhub library identifier, never change it
 LIBID = "293db55a2d8949f8aa5906d04cd541ba"
@@ -16,6 +17,12 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
+
+
+class DeferTriggerEvent(EventBase):
+    """Dummy event to be triggered to trigger the deferral of another event."""
+
+    pass
 
 
 class Status:
@@ -55,3 +62,16 @@ class Status:
 
         if condition:
             context.status = ActiveStatus()
+
+    def set(self, status: StatusBase, app: bool = False):
+        """Set status on unit or app IF not already set.
+
+        This is seemingly useless, but it is unfortunately needed to avoid updating unnecessarily
+        the "last active since" field on the model, which prevents it from stabilizing on small
+        machines on integration tests (colliding with "idle period").
+        """
+        context = self.charm.app if app else self.charm.unit
+        if context.status == status:
+            return
+
+        context.status = status

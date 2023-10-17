@@ -205,7 +205,7 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
 
     # Set the config to false, then to true
     for knn_enabled in [False, True]:
-        # get current timestamp, to compare with rstarts later
+        # get current timestamp, to compare with restarts later
         ts = await get_application_unit_ids_start_time(ops_test, APP_NAME)
         await ops_test.model.applications[APP_NAME].set_config(
             {"plugin_opensearch_knn": str(knn_enabled)}

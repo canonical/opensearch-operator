@@ -17,6 +17,7 @@ from tests.integration.helpers import (
     get_application_unit_names,
     get_leader_unit_ip,
 )
+from tests.integration.helpers_deployments import wait_until
 from tests.integration.tls.helpers import (
     check_security_index_initialised,
     check_unit_tls_configured,
@@ -43,14 +44,16 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator.
     config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
-    await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=1200
-    )
+    await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1400, wait_for_exact_units=len(UNIT_IDS)
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=len(UNIT_IDS),
     )
     assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
 

@@ -7,6 +7,7 @@ import logging
 import time
 
 import pytest
+from charms.opensearch.v0.constants_charm import ClusterHealthYellow
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from pytest_operator.plugin import OpsTest
 
@@ -34,10 +35,10 @@ from tests.integration.helpers import (
     cluster_health,
     get_application_unit_ids,
     get_application_unit_names,
-    get_application_unit_status,
     get_leader_unit_id,
     get_leader_unit_ip,
 )
+from tests.integration.helpers_deployments import wait_until
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
@@ -96,10 +97,11 @@ async def test_horizontal_scale_up(
 
     # scale up
     await ops_test.model.applications[app].add_unit(count=2)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=init_units_count + 2,
         idle_period=IDLE_PERIOD,
     )
@@ -146,10 +148,11 @@ async def test_safe_scale_down_shards_realloc(
 
     # scale up
     await ops_test.model.applications[app].add_unit(count=1)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=init_units_count + 1,
         idle_period=IDLE_PERIOD,
     )
@@ -177,10 +180,11 @@ async def test_safe_scale_down_shards_realloc(
 
     # remove the service in the chosen unit
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
-
-    await ops_test.model.wait_for_idle(
-        apps=[app],  # TODO:  put back status="active",
-        timeout=1000,
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_full_statuses={app: {"blocked": [ClusterHealthYellow]}},
+        units_statuses=["active"],
         wait_for_exact_units=init_units_count,
         idle_period=IDLE_PERIOD,
     )
@@ -207,10 +211,11 @@ async def test_safe_scale_down_shards_realloc(
 
     # scale up by 1 unit
     await ops_test.model.applications[app].add_unit(count=1)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=init_units_count + 1,
         idle_period=IDLE_PERIOD,
     )
@@ -220,11 +225,6 @@ async def test_safe_scale_down_shards_realloc(
         for unit in ops_test.model.applications[app].units
         if int(unit.name.split("/")[1]) not in unit_ids
     ][0]
-
-    # wait for the new unit to be active
-    await ops_test.model.block_until(
-        lambda: get_application_unit_status(ops_test, app=app)[new_unit_id] == "active"
-    )
 
     # check if the previously unallocated shards have successfully moved to the newest unit
     new_shards_per_node = await get_number_of_shards_by_node(ops_test, leader_unit_ip)
@@ -259,10 +259,11 @@ async def test_safe_scale_down_roles_reassigning(
     if init_units_count % 2 == 1:
         # this will NOT trigger any role reassignment, but will ensure the next call will
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
             wait_for_exact_units=init_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
@@ -270,10 +271,11 @@ async def test_safe_scale_down_roles_reassigning(
 
     # going from an even to odd number of units, this should trigger a role reassignment
     await ops_test.model.applications[app].add_unit(count=1)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=init_units_count + 1,
         idle_period=IDLE_PERIOD,
     )
@@ -294,10 +296,11 @@ async def test_safe_scale_down_roles_reassigning(
 
     # scale-down: remove a cm unit
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=init_units_count,
         idle_period=IDLE_PERIOD,
     )
@@ -315,10 +318,11 @@ async def test_safe_scale_down_roles_reassigning(
         if node.ip != leader_unit_ip and node.is_cm_eligible()
     ][0]
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=num_units - 1,
         idle_period=IDLE_PERIOD,
     )
@@ -350,10 +354,11 @@ async def test_safe_scale_down_remove_leaders(
 
     # scale up by 2 units
     await ops_test.model.applications[app].add_unit(count=3)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=init_units_count + 3,
         idle_period=IDLE_PERIOD,
     )
@@ -362,10 +367,11 @@ async def test_safe_scale_down_remove_leaders(
     leader_unit_id = await get_leader_unit_id(ops_test, app=app)
 
     await ops_test.model.applications[app].destroy_unit(f"{app}/{leader_unit_id}")
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=init_units_count + 2,
         idle_period=IDLE_PERIOD,
     )
@@ -386,10 +392,11 @@ async def test_safe_scale_down_remove_leaders(
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
     assert first_elected_cm_unit_id != -1
     await ops_test.model.applications[app].destroy_unit(f"{app}/{first_elected_cm_unit_id}")
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=init_units_count + 1,
         idle_period=IDLE_PERIOD,
     )

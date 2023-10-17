@@ -35,6 +35,7 @@ from tests.integration.helpers import (
     get_leader_unit_ip,
     is_up,
 )
+from tests.integration.helpers_deployments import wait_until
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
@@ -104,11 +105,14 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
 
@@ -157,12 +161,14 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
     await restore_network_for_unit_with_ip_change(first_elected_cm_unit_hostname)
 
     # Wait until the cluster becomes idle (new TLS certs, node reconfigured / restarted).
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
+        timeout=2400,
     )
 
     # check unit network restored
@@ -206,11 +212,14 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
 
@@ -265,12 +274,14 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     await restore_network_for_unit_with_ip_change(first_unit_with_primary_shard_hostname)
 
     # Wait until the cluster becomes idle (new TLS certs, node reconfigured / restarted).
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
+        timeout=2400,
     )
 
     # check unit network restored
@@ -320,11 +331,14 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
 
@@ -368,12 +382,14 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
     await restore_network_for_unit_without_ip_change(first_elected_cm_unit_hostname)
 
     # Wait until the cluster becomes idle (new TLS certs, node reconfigured / restarted).
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
+        timeout=2000,
     )
 
     # check if node up and is included in the cluster formation
@@ -408,11 +424,14 @@ async def test_full_network_cut_without_ip_change_node_with_primary_shard(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
 
@@ -464,12 +483,14 @@ async def test_full_network_cut_without_ip_change_node_with_primary_shard(
     await restore_network_for_unit_without_ip_change(first_unit_with_primary_shard_hostname)
 
     # Wait until the cluster becomes idle (new TLS certs, node reconfigured / restarted).
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
-        timeout=1000,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=len(unit_ids_ips),
         idle_period=IDLE_PERIOD,
+        timeout=2000,
     )
 
     # check if node up and is included in the cluster formation
