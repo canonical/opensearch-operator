@@ -32,7 +32,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from tenacity import retry, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -318,7 +317,6 @@ class OpenSearchDistribution(ABC):
             f.write(data)
 
     @staticmethod
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(0.5), reraise=True)
     def _run_cmd(command: str, args: str = None, stdin: str = None) -> str:
         """Run command.
 
