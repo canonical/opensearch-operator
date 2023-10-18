@@ -51,8 +51,8 @@ class OpenSearchUserManager:
         """
         try:
             return self.opensearch.request("GET", f"{ROLE_ENDPOINT}/")
-        except OpenSearchHttpError:
-            raise OpenSearchUserMgmtError()
+        except OpenSearchHttpError as e:
+            raise OpenSearchUserMgmtError(e)
 
     def create_role(
         self,
@@ -76,13 +76,18 @@ class OpenSearchUserManager:
         Returns:
             HTTP response to opensearch API request.
         """
-        resp = self.opensearch.request(
-            "PUT",
-            f"{ROLE_ENDPOINT}/{role_name}",
-            payload={**(permissions or {}), **(action_groups or {})},
-        )
+        try:
+            resp = self.opensearch.request(
+                "PUT",
+                f"{ROLE_ENDPOINT}/{role_name}",
+                payload={**(permissions or {}), **(action_groups or {})},
+            )
+        except OpenSearchHttpError as e:
+            raise OpenSearchUserMgmtError(e)
+
         if resp.get("status") != "CREATED":
             raise OpenSearchUserMgmtError(f"creating role {role_name} failed")
+
         return resp
 
     def remove_role(self, role_name: str) -> Dict[str, any]:
@@ -105,17 +110,18 @@ class OpenSearchUserManager:
         try:
             resp = self.opensearch.request("DELETE", f"{ROLE_ENDPOINT}/{role_name}")
         except OpenSearchHttpError as e:
-            if e.status_code == 404:
+            if e.response_code == 404:
                 return {
                     "status": "OK",
                     "response": "role does not exist, and therefore has not been removed",
                 }
             else:
-                raise
+                raise OpenSearchUserMgmtError(e)
 
         logger.debug(resp)
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"removing role {role_name} failed")
+
         return resp
 
     def get_users(self) -> Dict[str, any]:
@@ -126,8 +132,8 @@ class OpenSearchUserManager:
         """
         try:
             return self.opensearch.request("GET", f"{USER_ENDPOINT}/")
-        except OpenSearchHttpError:
-            raise OpenSearchUserMgmtError()
+        except OpenSearchHttpError as e:
+            raise OpenSearchUserMgmtError(e)
 
     def create_user(
         self, user_name: str, roles: Optional[List[str]], hashed_pwd: str
@@ -149,13 +155,18 @@ class OpenSearchUserManager:
         if roles:
             payload["opendistro_security_roles"] = roles
 
-        resp = self.opensearch.request(
-            "PUT",
-            f"{USER_ENDPOINT}/{user_name}",
-            payload=payload,
-        )
+        try:
+            resp = self.opensearch.request(
+                "PUT",
+                f"{USER_ENDPOINT}/{user_name}",
+                payload=payload,
+            )
+        except OpenSearchHttpError as e:
+            raise OpenSearchUserMgmtError(e)
+
         if resp.get("status") != "CREATED":
             raise OpenSearchUserMgmtError(f"creating user {user_name} failed")
+
         return resp
 
     def remove_user(self, user_name: str) -> Dict[str, any]:
@@ -178,13 +189,13 @@ class OpenSearchUserManager:
         try:
             resp = self.opensearch.request("DELETE", f"{USER_ENDPOINT}/{user_name}")
         except OpenSearchHttpError as e:
-            if e.status_code == 404:
+            if e.response_code == 404:
                 return {
                     "status": "OK",
                     "response": "user does not exist, and therefore has not been removed",
                 }
             else:
-                raise
+                raise OpenSearchUserMgmtError(e)
 
         logger.debug(resp)
         if resp.get("status") != "OK":
@@ -204,13 +215,18 @@ class OpenSearchUserManager:
         Returns:
             HTTP response to opensearch API request.
         """
-        resp = self.opensearch.request(
-            "PATCH",
-            f"{USER_ENDPOINT}/{user_name}",
-            payload=patches,
-        )
+        try:
+            resp = self.opensearch.request(
+                "PATCH",
+                f"{USER_ENDPOINT}/{user_name}",
+                payload=patches,
+            )
+        except OpenSearchHttpError as e:
+            raise OpenSearchUserMgmtError(e)
+
         if resp.get("status") != "OK":
             raise OpenSearchUserMgmtError(f"patching user {user_name} failed")
+
         return resp
 
     def remove_users_and_roles(self, departed_relation_id: Optional[int] = None):
