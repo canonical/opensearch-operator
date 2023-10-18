@@ -341,7 +341,7 @@ class OpenSearchDistribution(ABC):
                 shell=True,
                 text=True,
                 encoding="utf-8",
-                timeout=25,
+                timeout=60,
                 env=os.environ,
             )
 
