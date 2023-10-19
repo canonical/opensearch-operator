@@ -13,6 +13,14 @@ on:
             https://packaging.python.org/en/latest/glossary/#term-Version-Specifier
         required: false
         type: string
+      no-proxy:
+        default: "10.0.0.0/8,192.168.0.0/16,172.16.0.0/12,194.169.254.133,.pc1.canonical.com,.openstack.partnercloud1.lan,127.0.0.1,localhost"
+        required: false
+        type: string
+      http-proxy:
+        default: "http://squid.internal:3128"
+        required: false
+        type: string
 
 jobs:
   build:
@@ -47,26 +55,26 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
     steps:
-      - name: Set up aproxy
-        run: |
-          sudo snap install aproxy --edge
-          sudo snap set aproxy proxy=squid.internal:3128
-          sudo nft -f - << EOF
-          define default-ip = $(ip route get $(ip route show 0.0.0.0/0 | grep -oP 'via \K\S+') | grep -oP 'src \K\S+')
-          define private-ips = { 10.0.0.0/8, 127.0.0.1/8, 172.16.0.0/12, 192.168.0.0/16 }
-          table ip aproxy
-          flush table ip aproxy
-          table ip aproxy {
-                chain prerouting {
-                        type nat hook prerouting priority dstnat; policy accept;
-                        ip daddr != \$private-ips tcp dport { 80, 443 } counter dnat to \$default-ip:8443
-                }
-                chain output {
-                        type nat hook output priority -100; policy accept;
-                        ip daddr != \$private-ips tcp dport { 80, 443 } counter dnat to \$default-ip:8443
-                }
-          }
-          EOF
+#      - name: Set up aproxy
+#        run: |
+#          sudo snap install aproxy --edge
+#          sudo snap set aproxy proxy=squid.internal:3128
+#          sudo nft -f - << EOF
+#          define default-ip = $(ip route get $(ip route show 0.0.0.0/0 | grep -oP 'via \K\S+') | grep -oP 'src \K\S+')
+#          define private-ips = { 10.0.0.0/8, 127.0.0.1/8, 172.16.0.0/12, 192.168.0.0/16 }
+#          table ip aproxy
+#          flush table ip aproxy
+#          table ip aproxy {
+#                chain prerouting {
+#                        type nat hook prerouting priority dstnat; policy accept;
+#                        ip daddr != \$private-ips tcp dport { 80, 443 } counter dnat to \$default-ip:8443
+#                }
+#                chain output {
+#                        type nat hook output priority -100; policy accept;
+#                        ip daddr != \$private-ips tcp dport { 80, 443 } counter dnat to \$default-ip:8443
+#                }
+#          }
+#          EOF
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -82,6 +90,7 @@ jobs:
         with:
           provider: lxd
           juju-channel: ${{ inputs.juju-snap-channel }}
+          bootstrap-options: "--model-default juju-http-proxy=${{ inputs.http-proxy }} --model-default juju-https-proxy=${{ inputs.http-proxy }} --model-default juju-no-proxy=${{ inputs.no-proxy }} apt-http-proxy=${{ inputs.http-proxy }} --model-default apt-https-proxy=${{ inputs.http-proxy }} snap-http-proxy=${{ inputs.http-proxy }} --model-default snap-https-proxy=${{ inputs.http-proxy }}"
 
       - name: Download packed charm(s)
         uses: actions/download-artifact@v3
