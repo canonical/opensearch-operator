@@ -47,12 +47,9 @@ jobs:
           - ha-multi-clusters-integration
           - large-deployments-integration
           - plugins-integration
-        runner: [self-hosted, linux, X64, xlarge, jammy]
-        include:
-          - tox-environments: h-scaling-integration
-            runner: [self-hosted, linux, X64, xlarge, jammy]
+          - h-scaling-integration
     name: ${{ matrix.tox-environments }}
-    runs-on: ${{ matrix.runner }}
+    runs-on: [self-hosted, linux, X64, jammy, xlarge]
     timeout-minutes: 360
     steps:
 #      - name: Set up aproxy
