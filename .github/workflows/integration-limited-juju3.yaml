@@ -13,6 +13,14 @@ on:
             https://packaging.python.org/en/latest/glossary/#term-Version-Specifier
         required: false
         type: string
+      no-proxy:
+        default: "10.0.0.0/8,192.168.0.0/16,172.16.0.0/12,194.169.254.133,.pc1.canonical.com,.openstack.partnercloud1.lan,127.0.0.1,localhost"
+        required: false
+        type: string
+      http-proxy:
+        default: "http://squid.internal:3128"
+        required: false
+        type: string
 
 jobs:
   build:
@@ -29,9 +37,8 @@ jobs:
           - charm-integration
           - tls-integration
           - client-integration
-        runner: [self-hosted, linux, X64, xlarge, jammy]
     name: ${{ matrix.tox-environments }}
-    runs-on: ${{ matrix.runner }}
+    runs-on: [self-hosted, linux, X64, xlarge, jammy]
     timeout-minutes: 120
     steps:
       - name: Set up aproxy
@@ -65,6 +72,7 @@ jobs:
         with:
           provider: lxd
           juju-channel: ${{ inputs.juju-snap-channel }}
+          bootstrap-options: "--model-default juju-http-proxy=${{ inputs.http-proxy }} --model-default juju-https-proxy=${{ inputs.http-proxy }} --model-default juju-no-proxy=${{ inputs.no-proxy }} --model-default apt-http-proxy=${{ inputs.http-proxy }} --model-default apt-https-proxy=${{ inputs.http-proxy }} --model-default snap-http-proxy=${{ inputs.http-proxy }} --model-default snap-https-proxy=${{ inputs.http-proxy }}"
 
       - name: Download packed charm(s)
         uses: actions/download-artifact@v3
