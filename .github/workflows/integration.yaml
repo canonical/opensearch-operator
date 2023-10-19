@@ -17,7 +17,12 @@ on:
 jobs:
   build:
     name: Build charms
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@add-aproxy-snap
+    with:
+      charmcraft-snap-revision: 1349  # version 2.3.0
+    permissions:
+      actions: write  # Needed to manage GitHub Actions cache
+
 
   integration-test:
     needs:
@@ -34,14 +39,35 @@ jobs:
           - ha-multi-clusters-integration
           - large-deployments-integration
           - plugins-integration
-        runner: ["ubuntu-22.04"]
+        runner: [self-hosted, linux, X64, xlarge, jammy]
         include:
           - tox-environments: h-scaling-integration
-            runner: "Ubuntu_4C_16G"
+            runner: [self-hosted, linux, X64, xlarge, jammy]
     name: ${{ matrix.tox-environments }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
     steps:
+      - name: Set up aproxy
+        run: |
+          sudo snap install aproxy --edge
+          sudo snap set aproxy proxy=squid.internal:3128
+          sudo nft -f - << EOF
+          define default-ip = $(ip route get $(ip route show 0.0.0.0/0 | grep -oP 'via \K\S+') | grep -oP 'src \K\S+')
+          define private-ips = { 10.0.0.0/8, 127.0.0.1/8, 172.16.0.0/12, 192.168.0.0/16 }
+          table ip aproxy
+          flush table ip aproxy
+          table ip aproxy {
+                chain prerouting {
+                        type nat hook prerouting priority dstnat; policy accept;
+                        ip daddr != \$private-ips tcp dport { 80, 443 } counter dnat to \$default-ip:8443
+                }
+                chain output {
+                        type nat hook output priority -100; policy accept;
+                        ip daddr != \$private-ips tcp dport { 80, 443 } counter dnat to \$default-ip:8443
+                }
+          }
+          EOF
+
       - name: Checkout
         uses: actions/checkout@v3
 
