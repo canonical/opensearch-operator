@@ -131,7 +131,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             conf=f"{self._SNAP_DATA}/etc/opensearch",
             data=f"{self._SNAP_COMMON}/var/lib/opensearch",
             logs=f"{self._SNAP_COMMON}/var/log/opensearch",
-            jdk=f"{self._SNAP}/usr/share/opensearch/jdk",
+            jdk=f"{self._SNAP}/usr/lib/jvm/java-17-openjdk-amd64",
             tmp=f"{self._SNAP_COMMON}/usr/share/tmp",
             bin=f"{self._SNAP}/usr/share/opensearch/bin",
         )
