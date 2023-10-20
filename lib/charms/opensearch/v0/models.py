@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 """Cluster-related data structures / model classes."""
-import json
 from abc import ABC
 from typing import Any, Dict, List, Optional
 
@@ -39,7 +38,7 @@ class Model(ABC, BaseModel):
     @classmethod
     def from_str(cls, input_str_dict: str):
         """Create a new instance of this class from a stringified json/dict repr."""
-        return cls.from_dict(json.loads(input_str_dict))
+        return cls.parse_raw(input_str_dict)
 
     def __eq__(self, other) -> bool:
         """Implement equality."""
@@ -168,7 +167,7 @@ class PeerClusterConfig(Model):
     @root_validator
     def set_node_temperature(cls, values):  # noqa: N805
         """Set and validate the node temperature."""
-        allowed_temps = ["hot", "warm", "cold", "frozen"]
+        allowed_temps = ["hot", "warm", "cold", "frozen", "content"]
 
         input_temps = set()
         for role in values["roles"]:
@@ -199,6 +198,6 @@ class DeploymentDescription(Model):
 
     config: PeerClusterConfig
     start: StartMode
-    directives: List[Directive]
+    pending_directives: List[Directive]
     typ: DeploymentType
     state: DeploymentState = DeploymentState(value=State.ACTIVE)

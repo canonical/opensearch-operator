@@ -88,7 +88,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     cluster_name="logs", init_hold=False, roles=["cluster_manager", "data"]
                 ),
                 start=StartMode.WITH_PROVIDED_ROLES,
-                directives=directives,
+                pending_directives=directives,
                 typ=DeploymentType.MAIN_CLUSTER_MANAGER,
                 state=DeploymentState(value=State.ACTIVE),
             )
@@ -104,7 +104,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
         deployment_desc.return_value = DeploymentDescription(
             config=self.user_configs["roles_ok"],
             start=StartMode.WITH_PROVIDED_ROLES,
-            directives=[],
+            pending_directives=[],
             typ=DeploymentType.MAIN_CLUSTER_MANAGER,
             state=DeploymentState(value=State.ACTIVE),
         )

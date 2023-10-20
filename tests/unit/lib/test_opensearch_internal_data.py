@@ -156,7 +156,7 @@ class TestOpenSearchInternalData(unittest.TestCase):
                 cluster_name="logs", init_hold=False, roles=["cluster_manager", "data"]
             ),
             start=StartMode.WITH_PROVIDED_ROLES,
-            directives=[],
+            pending_directives=[],
             typ=DeploymentType.MAIN_CLUSTER_MANAGER,
             state=DeploymentState(value=State.ACTIVE),
         )

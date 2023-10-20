@@ -41,14 +41,14 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         "ok": DeploymentDescription(
             config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
             start=StartMode.WITH_GENERATED_ROLES,
-            directives=[],
+            pending_directives=[],
             typ=DeploymentType.MAIN_CLUSTER_MANAGER,
             state=DeploymentState(value=State.ACTIVE),
         ),
         "ko": DeploymentDescription(
             config=PeerClusterConfig(cluster_name="logs", init_hold=True, roles=["ml"]),
             start=StartMode.WITH_PROVIDED_ROLES,
-            directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
+            pending_directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
             typ=DeploymentType.OTHER,
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
         ),

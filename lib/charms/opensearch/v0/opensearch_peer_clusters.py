@@ -133,7 +133,7 @@ class OpenSearchPeerClustersManager:
             return DeploymentDescription(
                 config=config,
                 start=start_mode,
-                directives=directives,
+                pending_directives=directives,
                 typ=self._deployment_type(config, start_mode),
                 state=deployment_state,
             )
@@ -163,7 +163,7 @@ class OpenSearchPeerClustersManager:
                 data_temperature=config.data_temperature,
             ),
             start=start_mode,
-            directives=directives,
+            pending_directives=directives,
             typ=self._deployment_type(config, start_mode),
             state=deployment_state,
         )
@@ -172,7 +172,7 @@ class OpenSearchPeerClustersManager:
         self, config: PeerClusterConfig, prev_deployment: DeploymentDescription
     ) -> DeploymentDescription:
         """Build deployment description of an existing (started or not) cluster."""
-        directives = prev_deployment.directives
+        directives = prev_deployment.pending_directives
         deployment_state = prev_deployment.state
         try:
             self._pre_validate_roles_change(
@@ -199,7 +199,7 @@ class OpenSearchPeerClustersManager:
             start=start_mode,
             state=deployment_state,
             typ=self._deployment_type(config, start_mode),
-            directives=list(set(directives)),
+            pending_directives=list(set(directives)),
         )
 
     def can_start(self, deployment_desc: Optional[DeploymentDescription] = None) -> bool:
@@ -214,7 +214,7 @@ class OpenSearchPeerClustersManager:
             Directive.VALIDATE_CLUSTER_NAME,
             Directive.INHERIT_CLUSTER_NAME,
         ]
-        for directive in deployment_desc.directives:
+        for directive in deployment_desc.pending_directives:
             if directive in blocking_directives:
                 return False
 
@@ -228,7 +228,7 @@ class OpenSearchPeerClustersManager:
         if not deployment_desc:
             return
 
-        if Directive.SHOW_STATUS not in deployment_desc.directives:
+        if Directive.SHOW_STATUS not in deployment_desc.pending_directives:
             return
 
         # remove show_status directive which is applied below
@@ -256,10 +256,10 @@ class OpenSearchPeerClustersManager:
         if not deployment_desc:
             return
 
-        if directive not in deployment_desc.directives:
+        if directive not in deployment_desc.pending_directives:
             return
 
-        deployment_desc.directives.remove(directive)
+        deployment_desc.pending_directives.remove(directive)
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
