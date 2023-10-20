@@ -85,13 +85,13 @@ class OpenSearchHealth:
             self._charm.status.clear(WaitingForBusyShards, app=True)
         elif status == HealthColors.RED:
             # health RED: some primary shards are unassigned
-            self._charm.app.status = BlockedStatus(ClusterHealthRed)
+            self._charm.status.set(BlockedStatus(ClusterHealthRed), app=True)
         elif status == HealthColors.YELLOW_TEMP:
             # health is yellow but temporarily (shards are relocating or initializing)
-            self._charm.app.status = WaitingStatus(WaitingForBusyShards)
+            self._charm.status.set(WaitingStatus(WaitingForBusyShards), app=True)
         else:
             # health is yellow permanently (some replica shards are unassigned)
-            self._charm.app.status = BlockedStatus(ClusterHealthYellow)
+            self._charm.status.set(BlockedStatus(ClusterHealthYellow), app=True)
 
     def apply_for_unit(self, status: str, host: Optional[str] = None):
         """Apply the health status on the current unit."""
@@ -110,10 +110,9 @@ class OpenSearchHealth:
             )
             return
 
-        message = WaitingForSpecificBusyShards.format(
-            " - ".join([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
-        )
-        self._charm.unit.status = WaitingStatus(message)
+        message = sorted([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
+        message = WaitingForSpecificBusyShards.format(" - ".join(message))
+        self._charm.status.set(WaitingStatus(message))
 
     def _fetch_status(self, host: Optional[str] = None, wait_for_green_first: bool = False):
         """Fetch the current cluster status."""
@@ -122,18 +121,19 @@ class OpenSearchHealth:
             try:
                 response = ClusterState.health(
                     self._opensearch,
-                    True,
+                    wait_for_green=True,
                     host=host,
                     alt_hosts=self._charm.alt_hosts,
                 )
             except OpenSearchHttpError:
-                # it timed out, settle with current status, fetched next without the 1min wait
+                # it timed out, settle with current status, fetched next without
+                # the 1min wait
                 pass
 
         if not response:
             response = ClusterState.health(
                 self._opensearch,
-                False,
+                wait_for_green=False,
                 host=host,
                 alt_hosts=self._charm.alt_hosts,
             )
@@ -141,12 +141,18 @@ class OpenSearchHealth:
         if not response:
             return None
 
-        logger.info(f"Health: {response['status']}")
-        status = response["status"].lower()
+        logger.info(f"Health: {response}")
+        try:
+            status = response["status"].lower()
+        except AttributeError as e:
+            logger.error(e)  # means the status was reported as an int (i.e: 503)
+            return None
+
         if status != HealthColors.YELLOW:
             return status
 
-        # we differentiate between a temp yellow (moving shards) and perm one (missing replicas)
+        # we differentiate between a temp yellow (moving shards) and a permanent
+        # one (such as: missing replicas)
         shards_by_state = ClusterState.shards_by_state(
             self._opensearch, host=host, alt_hosts=self._charm.alt_hosts
         )

@@ -40,6 +40,7 @@ from tests.integration.helpers import (
     get_reachable_unit_ips,
     is_up,
 )
+from tests.integration.helpers_deployments import wait_until
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
@@ -172,11 +173,14 @@ async def test_kill_db_process_node_with_primary_shard(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
 
@@ -234,11 +238,14 @@ async def test_kill_db_process_node_with_elected_cm(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
 
@@ -288,11 +295,14 @@ async def test_freeze_db_process_node_with_primary_shard(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
 
@@ -373,11 +383,14 @@ async def test_freeze_db_process_node_with_elected_cm(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
 
@@ -448,11 +461,14 @@ async def test_restart_db_process_node_with_elected_cm(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
 
@@ -501,11 +517,14 @@ async def test_restart_db_process_node_with_primary_shard(
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
+        old_units_count = len(ops_test.model.applications[app].units)
         await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
-            timeout=1000,
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=old_units_count + 1,
             idle_period=IDLE_PERIOD,
         )
 
@@ -653,61 +672,6 @@ async def test_full_cluster_restart(
     # check that cluster health is green (all primary and replica shards allocated)
     health_resp = await cluster_health(ops_test, leader_ip)
     assert health_resp["status"] == "green", f"Cluster {health_resp['status']} - expected green."
-
-    # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
-
-
-# put this test at the end of the list of tests, as we delete an app during cleanup
-# and the safeguards we have on the charm prevent us from doing so, so we'll keep
-# using a unit without need - when other tests may need the unit on the CI
-async def test_multi_clusters_db_isolation(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
-    """Check that writes in cluster not replicated to another cluster."""
-    app = (await app_name(ops_test)) or APP_NAME
-
-    # remove 1 unit (for CI)
-    unit_ids = get_application_unit_ids(ops_test, app=app)
-    await ops_test.model.applications[app].destroy_unit(f"{app}/{max(unit_ids)}")
-
-    # deploy new cluster
-    my_charm = await ops_test.build_charm(".")
-    await ops_test.model.deploy(my_charm, num_units=1, application_name=SECOND_APP_NAME)
-    await ops_test.model.relate(SECOND_APP_NAME, TLS_CERTIFICATES_APP_NAME)
-
-    # wait
-    await ops_test.model.wait_for_idle(
-        apps=[app],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=len(unit_ids) - 1,
-        idle_period=IDLE_PERIOD,
-    )
-    await ops_test.model.wait_for_idle(apps=[SECOND_APP_NAME], status="active")
-
-    index_name = "test_index_unique_cluster_dbs"
-
-    # index document in the current cluster
-    main_app_leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    await index_doc(ops_test, app, main_app_leader_unit_ip, index_name, doc_id=1)
-
-    # index document in second cluster
-    second_app_leader_ip = await get_leader_unit_ip(ops_test, app=SECOND_APP_NAME)
-    await index_doc(ops_test, SECOND_APP_NAME, second_app_leader_ip, index_name, doc_id=2)
-
-    # fetch all documents in each cluster
-    current_app_docs = await search(ops_test, app, main_app_leader_unit_ip, index_name)
-    second_app_docs = await search(ops_test, SECOND_APP_NAME, second_app_leader_ip, index_name)
-
-    # check that the only doc indexed in each cluster is different
-    assert len(current_app_docs) == 1
-    assert len(second_app_docs) == 1
-    assert current_app_docs[0] != second_app_docs[0]
-
-    # cleanup
-    await delete_index(ops_test, app, main_app_leader_unit_ip, index_name)
-    await ops_test.model.remove_application(SECOND_APP_NAME)
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)

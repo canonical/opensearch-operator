@@ -18,6 +18,7 @@ from tests.integration.helpers import (
     http_request,
     run_action,
 )
+from tests.integration.helpers_deployments import wait_until
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
@@ -44,8 +45,11 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_status(ops_test: OpsTest) -> None:
     """Verifies that the application and unit are active."""
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="blocked", timeout=1000, wait_for_exact_units=DEFAULT_NUM_UNITS
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        wait_for_exact_units=DEFAULT_NUM_UNITS,
+        apps_statuses=["blocked"],
     )
     assert len(ops_test.model.applications[APP_NAME].units) == DEFAULT_NUM_UNITS
 

@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import logging
 import subprocess
+import time
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
@@ -303,6 +304,8 @@ async def cut_network_from_unit_with_ip_change(ops_test: OpsTest, app: str, unit
     cut_network_command = f"lxc config device add {unit_hostname} eth0 none"
     subprocess.check_call(cut_network_command.split())
 
+    time.sleep(5)
+
 
 async def cut_network_from_unit_without_ip_change(
     ops_test: OpsTest, app: str, unit_id: int
@@ -325,12 +328,16 @@ async def cut_network_from_unit_without_ip_change(
     limit_set_command = f"lxc config set {unit_hostname} limits.network.priority=10"
     subprocess.check_call(limit_set_command.split())
 
+    time.sleep(10)
+
 
 async def restore_network_for_unit_with_ip_change(unit_hostname: str) -> None:
     """Restore network from a lxc container."""
     # remove mask from eth0
     restore_network_command = f"lxc config device remove {unit_hostname} eth0"
     subprocess.check_call(restore_network_command.split())
+
+    time.sleep(5)
 
 
 async def restore_network_for_unit_without_ip_change(unit_hostname: str) -> None:
@@ -341,6 +348,8 @@ async def restore_network_for_unit_without_ip_change(unit_hostname: str) -> None
     subprocess.check_call(limit_set_command.split())
     limit_set_command = f"lxc config set {unit_hostname} limits.network.priority="
     subprocess.check_call(limit_set_command.split())
+
+    time.sleep(10)
 
 
 def is_unit_reachable(from_host: str, to_host: str) -> bool:

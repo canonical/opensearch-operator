@@ -42,6 +42,7 @@ ClusterHealthYellow = (
 )
 IndexCreationFailed = "failed to create {index} index - deferring index-requested event..."
 UserCreationFailed = "failed to create users for {rel_name} relation {id}"
+PluginConfigChangeError = "Failed to apply config changes on the plugin."
 
 CmVoRolesProvidedInvalid = (
     "cluster_manager and voting_only roles cannot be both set on the same nodes."

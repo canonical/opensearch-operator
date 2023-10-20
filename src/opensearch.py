@@ -23,9 +23,9 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
-from charms.operator_libs_linux.v1 import snap
-from charms.operator_libs_linux.v1.snap import SnapError
 from charms.operator_libs_linux.v1.systemd import service_failed
+from charms.operator_libs_linux.v2 import snap
+from charms.operator_libs_linux.v2.snap import SnapError
 from overrides import override
 from tenacity import Retrying, retry, stop_after_attempt, wait_exponential, wait_fixed
 
@@ -131,7 +131,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             conf=f"{self._SNAP_DATA}/etc/opensearch",
             data=f"{self._SNAP_COMMON}/var/lib/opensearch",
             logs=f"{self._SNAP_COMMON}/var/log/opensearch",
-            jdk=f"{self._SNAP}/usr/share/opensearch/jdk",
+            jdk=f"{self._SNAP}/usr/lib/jvm/java-17-openjdk-amd64",
             tmp=f"{self._SNAP_COMMON}/usr/share/tmp",
             bin=f"{self._SNAP}/usr/share/opensearch/bin",
         )

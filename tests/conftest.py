@@ -15,7 +15,10 @@ def juju_has_secrets(mocker: MockerFixture):
     NOTE: This is needed, as normally JujuVersion is set to 0.0.0 in tests
     (i.e. not the real juju version)
     """
-    juju_version = os.environ["LIBJUJU_VERSION_SPECIFIER"][:2]  # Removing == symbol
+    juju_version = os.environ["LIBJUJU_VERSION_SPECIFIER"]
+    if juju_version.startswith("=="):
+        juju_version = juju_version[2:]  # Removing == symbol
+
     if juju_version < "3":
         mocker.patch.object(
             JujuVersion, "has_secrets", new_callable=PropertyMock

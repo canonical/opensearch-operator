@@ -186,8 +186,7 @@ class OpenSearchProvider(Object):
         if not self.validate_index_name(event.index):
             raise OpenSearchIndexError(f"invalid index name: {event.index}")
 
-        self.unit.status = MaintenanceStatus(NewIndexRequested.format(index=event.index))
-
+        self.charm.status.set(MaintenanceStatus(NewIndexRequested.format(index=event.index)))
         try:
             self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
@@ -197,7 +196,7 @@ class OpenSearchProvider(Object):
                 == "resource_already_exists_exception"
             ):
                 logger.error(IndexCreationFailed.format(index=event.index))
-                self.unit.status = BlockedStatus(IndexCreationFailed.format(index=event.index))
+                self.charm.status.set(BlockedStatus(IndexCreationFailed.format(index=event.index)))
                 event.defer()
                 return
 
@@ -208,8 +207,10 @@ class OpenSearchProvider(Object):
             self.create_opensearch_users(username, hashed_pwd, event.index, extra_user_roles)
         except OpenSearchUserMgmtError as err:
             logger.error(err)
-            self.unit.status = BlockedStatus(
-                UserCreationFailed.format(rel_name=ClientRelationName, id=event.relation.id)
+            self.charm.status.set(
+                BlockedStatus(
+                    UserCreationFailed.format(rel_name=ClientRelationName, id=event.relation.id)
+                )
             )
             return
 
@@ -245,7 +246,8 @@ class OpenSearchProvider(Object):
         forbidden_chars = [" ", ",", ":", '"', "*", "+", "\\", "/", "|", "?", "#", ">", "<"]
         if any([char in index_name for char in forbidden_chars]):
             logger.error(
-                f"invalid index name {index_name} - index name includes one or more of the following forbidden characters: {forbidden_chars}"
+                f"invalid index name {index_name} - index name includes one or more of "
+                f"the following forbidden characters: {forbidden_chars}"
             )
             return False
 

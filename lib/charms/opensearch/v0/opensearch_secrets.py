@@ -57,8 +57,14 @@ class OpenSearchSecrets(Object, RelationDataStore):
         """Refresh secret and re-run corresponding actions if needed."""
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
+            return
 
-        label_parts = self.breakdown_label(event.secret.label)
+        try:
+            label_parts = self.breakdown_label(event.secret.label)
+        except ValueError:
+            logging.info(f"Label {event.secret.label} was meaningless for us, returning")
+            return
+
         if (
             label_parts["application_name"] != self._charm.app.name
             or label_parts["scope"] != Scope.APP
@@ -68,7 +74,6 @@ class OpenSearchSecrets(Object, RelationDataStore):
             return
 
         logger.debug("Secret change for %s", str(label_parts["key"]))
-
         if not self._charm.unit.is_leader():
             self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
 
@@ -85,7 +90,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         components.append(key)
         return self.LABEL_SEPARATOR.join(components)
 
-    def breakdown_label(self, label) -> Dict[str, str]:
+    def breakdown_label(self, label: str) -> Dict[str, str]:
         """Return meaningful components resolved from a secret label."""
         components = label.split(self.LABEL_SEPARATOR)
         if len(components) < 3 or len(components) > 4:

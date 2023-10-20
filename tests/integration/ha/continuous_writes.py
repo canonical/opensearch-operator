@@ -4,6 +4,7 @@
 import asyncio
 import logging
 import os
+import time
 from multiprocessing import Event, Process, Queue
 from types import SimpleNamespace
 from typing import Optional
@@ -235,6 +236,9 @@ class ContinuousWrites:
                     ContinuousWrites._bulk(client, write_value)
                 else:
                     ContinuousWrites._index(client, write_value)
+
+                # todo: remove when we get bigger runners (to reduce data transfer time)
+                time.sleep(0.75)
             except BulkIndexError:
                 continue
             except (TransportError, ConnectionRefusedError):

@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import socket
 from typing import Optional
 
 import yaml
@@ -55,7 +56,7 @@ async def get_application_relation_data(
 def wait_for_relation_joined_between(
     ops_test: OpsTest, endpoint_one: str, endpoint_two: str
 ) -> None:
-    """Wait for relation to be be created before checking if it's waiting or idle.
+    """Wait for relation to be created before checking if it's waiting or idle.
 
     Args:
         ops_test: running OpsTest instance
@@ -112,3 +113,13 @@ async def run_request(
         endpoint=endpoint,
         **kwargs,
     )
+
+
+def ip_to_url(ip_str: str) -> str:
+    """Return a version of an IPV4 or IPV6 address that's fit for a URL."""
+    try:
+        # Check if it's an IPV4 address
+        socket.inet_aton(ip_str)
+        return ip_str
+    except socket.error:
+        return f"[{ip_str}]"
