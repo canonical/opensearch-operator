@@ -57,8 +57,14 @@ class OpenSearchSecrets(Object, RelationDataStore):
         """Refresh secret and re-run corresponding actions if needed."""
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
+            return
 
-        label_parts = self.breakdown_label(event.secret.label)
+        try:
+            label_parts = self.breakdown_label(event.secret.label)
+        except ValueError:
+            logging.info(f"Label {event.secret.label} was meaningless for us, returning")
+            return
+
         if (
             label_parts["application_name"] != self._charm.app.name
             or label_parts["scope"] != Scope.APP
