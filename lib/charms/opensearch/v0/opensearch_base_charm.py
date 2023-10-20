@@ -850,7 +850,9 @@ class OpenSearchBaseCharm(CharmBase):
             update_conf = Node.from_dict(update_conf)
 
         # set default generated roles, or the ones passed in the updated conf
-        if (deployment_desc := self.opensearch_peer_cm.deployment_desc()).start == StartMode.WITH_PROVIDED_ROLES:
+        if (
+            deployment_desc := self.opensearch_peer_cm.deployment_desc()
+        ).start == StartMode.WITH_PROVIDED_ROLES:
             computed_roles = deployment_desc.config.roles
         else:
             computed_roles = (
@@ -964,7 +966,9 @@ class OpenSearchBaseCharm(CharmBase):
             for name, node in (self.peers_data.get_object(Scope.APP, "nodes_config") or {}).items()
         }
 
-        if (deployment_desc := self.opensearch_peer_cm.deployment_desc()).start == StartMode.WITH_GENERATED_ROLES:
+        if (
+            deployment_desc := self.opensearch_peer_cm.deployment_desc()
+        ).start == StartMode.WITH_GENERATED_ROLES:
             updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
         else:
             updated_nodes = {
