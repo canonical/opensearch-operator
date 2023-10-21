@@ -482,7 +482,7 @@ class OpenSearchBaseCharm(CharmBase):
                     callback_override="_restart_opensearch"
                 )
         except OpenSearchPluginError as e:
-            logger.error(e)
+            logger.exception(e)
             self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
 
@@ -633,7 +633,7 @@ class OpenSearchBaseCharm(CharmBase):
             self._post_start_init()
             return
         except OpenSearchProvidedRolesException as e:
-            logger.error(e)
+            logger.exception(e)
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
             self.unit.status = BlockedStatus(str(e))
@@ -652,7 +652,7 @@ class OpenSearchBaseCharm(CharmBase):
             # emit defer_trigger event which won't do anything to force retry of current event
             self.defer_trigger_event.emit()
         except OpenSearchStartError as e:
-            logger.error(e)
+            logger.exception(e)
             self.peers_data.delete(Scope.UNIT, "starting")
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
@@ -713,7 +713,7 @@ class OpenSearchBaseCharm(CharmBase):
             try:
                 self._stop_opensearch()
             except OpenSearchStopError as e:
-                logger.error(e)
+                logger.exception(e)
                 event.defer()
                 self.status.set(WaitingStatus(ServiceIsStopping))
                 return
@@ -969,13 +969,16 @@ class OpenSearchBaseCharm(CharmBase):
         if (
             deployment_desc := self.opensearch_peer_cm.deployment_desc()
         ).start == StartMode.WITH_GENERATED_ROLES:
-            updated_nodes = ClusterTopology.recompute_nodes_conf(current_nodes)
+            updated_nodes = ClusterTopology.recompute_nodes_conf(
+                cluster_name=deployment_desc.config.cluster_name, nodes=current_nodes
+            )
         else:
             updated_nodes = {
                 node.name: Node(
                     name=node.name,
                     roles=deployment_desc.config.roles,
                     ip=node.ip,
+                    cluster_name=deployment_desc.config.cluster_name,
                     temperature=deployment_desc.config.data_temperature,
                 )
                 for node in current_nodes
@@ -983,7 +986,7 @@ class OpenSearchBaseCharm(CharmBase):
             try:
                 self.opensearch_peer_cm.validate_roles(current_nodes, on_new_unit=False)
             except OpenSearchProvidedRolesException as e:
-                logger.error(e)
+                logger.exception(e)
                 self.app.status = BlockedStatus(str(e))
 
         if current_reported_nodes == updated_nodes:

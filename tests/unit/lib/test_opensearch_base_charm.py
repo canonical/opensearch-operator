@@ -63,13 +63,16 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.opensearch = self.charm.opensearch
         self.opensearch.current = MagicMock()
         self.opensearch.current.return_value = Node(
-            name="cm1", roles=["cluster_manager", "data"], ip="1.1.1.1"
+            name="cm1",
+            roles=["cluster_manager", "data"],
+            ip="1.1.1.1",
+            cluster_name="opensearch-ff2z",
         )
         self.opensearch.is_failed = MagicMock()
         self.opensearch.is_failed.return_value = False
 
         self.peers_data = self.charm.peers_data
-        self.peer_cm = self.charm.opensearch_peer_clusters_manager
+        self.peer_cm = self.charm.opensearch_peer_cm
 
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)

@@ -116,6 +116,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     name=node.name.replace("/", "-"),
                     roles=["cluster_manager", "data"],
                     ip="1.1.1.1",
+                    cluster_name="logs",
                 )
                 for node in self.p_units[0:3]
             ]
@@ -129,9 +130,10 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     name=node.name.replace("/", "-"),
                     roles=["cluster_manager", "data"],
                     ip="1.1.1.1",
+                    cluster_name="logs",
                 )
                 for node in self.p_units[0:4]
-            ] + [Node(name="node", roles=["ml"], ip="0.0.0.0")]
+            ] + [Node(name="node", roles=["ml"], ip="0.0.0.0", cluster_name="logs")]
             self.peer_cm.validate_roles(nodes=nodes, on_new_unit=False)
 
     @patch("ops.model.Model.get_relation")
@@ -154,9 +156,14 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             # test on a multi clusters fleet - happy path
             is_peer_cluster_relation_set.return_value = True
             nodes.return_value = [
-                Node(name=node.name.replace("/", "-"), roles=["data"], ip="1.1.1.1")
+                Node(
+                    name=node.name.replace("/", "-"),
+                    roles=["data"],
+                    ip="1.1.1.1",
+                    cluster_name="logs",
+                )
                 for node in self.p_units
-            ] + [Node(name="node-5", roles=["data"], ip="2.2.2.2")]
+            ] + [Node(name="node-5", roles=["data"], ip="2.2.2.2", cluster_name="logs")]
             self.peer_cm._pre_validate_roles_change(new_roles=["ml"], prev_roles=["data", "ml"])
         except OpenSearchProvidedRolesException:
             self.fail("_pre_validate_roles_change() failed unexpectedly.")
@@ -176,7 +183,12 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             # no other data nodes in cluster fleet
             is_peer_cluster_relation_set.return_value = True
             nodes.return_value = [
-                Node(name=node.name.replace("/", "-"), roles=["data"], ip="1.1.1.1")
+                Node(
+                    name=node.name.replace("/", "-"),
+                    roles=["data"],
+                    ip="1.1.1.1",
+                    cluster_name="logs",
+                )
                 for node in self.p_units
             ]
             self.peer_cm._pre_validate_roles_change(new_roles=["ml"], prev_roles=["data", "ml"])
