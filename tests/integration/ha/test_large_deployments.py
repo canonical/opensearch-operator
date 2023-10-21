@@ -147,7 +147,7 @@ async def test_set_roles_manually(
         ops_test,
         apps=[app],
         apps_statuses=["active"],
-        units_statuses=["active"],
+        units_statuses=["active", "blocked"],
         wait_for_exact_units=len(nodes) + 1,
         idle_period=IDLE_PERIOD,
     )
