@@ -183,13 +183,12 @@ async def get_number_of_shards_by_node(ops_test: OpsTest, unit_ip: str) -> Dict[
 )
 async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
     """Fetch all cluster nodes."""
-    nodes = (
-        await http_request(
-            ops_test,
-            "GET",
-            f"https://{unit_ip}:9200/_nodes",
-        )
-    ).get("nodes", {})
+    response = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_nodes",
+    )
+    nodes = response.get("nodes", {})
 
     result = []
     for node_id, node in nodes.items():
@@ -198,6 +197,7 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
                 name=node["name"],
                 roles=node["roles"],
                 ip=node["ip"],
+                cluster_name=response["cluster_name"],
                 temperature=node.get("attributes", {}).get("temp"),
             )
         )
