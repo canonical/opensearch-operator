@@ -3,7 +3,7 @@
 
 """Class for Managing simple or large deployments and configuration related changes."""
 import logging
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import shortuuid
 from charms.opensearch.v0.constants_charm import (
@@ -45,6 +45,10 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
+if TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+
+
 class OpenSearchProvidedRolesException(OpenSearchError):
     """Exception class for events when the user provided node roles will violate quorum."""
 
@@ -52,7 +56,7 @@ class OpenSearchProvidedRolesException(OpenSearchError):
 class OpenSearchPeerClustersManager:
     """This class covers the configuration changes depending on certain actions."""
 
-    def __init__(self, charm):
+    def __init__(self, charm: "OpenSearchBaseCharm"):
         self._charm = charm
         self._opensearch = charm.opensearch
         self.peer_cluster_data = RelationDataStore(self._charm, PeerClusterRelationName)
