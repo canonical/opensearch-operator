@@ -6,6 +6,7 @@ import asyncio
 import logging
 
 import pytest
+from charms.opensearch.v0.constants_charm import PClusterWrongNodesCountForQuorum
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
@@ -154,6 +155,7 @@ async def test_set_roles_manually(
     new_unit_id = max(
         [int(unit.name.split("/")[1]) for unit in ops_test.model.applications[app].units]
     )
-    await ops_test.model.block_until(
-        lambda: get_application_unit_status(ops_test, app=app)[new_unit_id] == "blocked"
-    )
+
+    app_unit_status = await get_application_unit_status(ops_test, app=app)
+    assert app_unit_status[new_unit_id].value == "blocked"
+    assert app_unit_status[new_unit_id].message == PClusterWrongNodesCountForQuorum

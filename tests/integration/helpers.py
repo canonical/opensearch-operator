@@ -13,7 +13,11 @@ from typing import Dict, List, Optional, Union
 import requests
 import yaml
 from charms.opensearch.v0.helper_networking import is_reachable
-from integration.helpers_deployments import get_application_units, get_unit_hostname
+from integration.helpers_deployments import (
+    Status,
+    get_application_units,
+    get_unit_hostname,
+)
 from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -143,7 +147,7 @@ def get_application_unit_ids(ops_test: OpsTest, app: str = APP_NAME) -> List[int
     return [int(unit.name.split("/")[1]) for unit in ops_test.model.applications[app].units]
 
 
-def get_application_unit_status(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, str]:
+async def get_application_unit_status(ops_test: OpsTest, app: str = APP_NAME) -> Dict[int, Status]:
     """List the unit statuses of an application.
 
     Args:
@@ -153,13 +157,8 @@ def get_application_unit_status(ops_test: OpsTest, app: str = APP_NAME) -> Dict[
     Returns:
         list of current unit statuses of the application
     """
-    units = ops_test.model.applications[app].units
-
-    result = {}
-    for unit in units:
-        result[int(unit.name.split("/")[1])] = unit.workload_status.value
-
-    return result
+    units = await get_application_units(ops_test, app)
+    return {unit.id: unit.workload_status for unit in units}
 
 
 async def get_application_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
