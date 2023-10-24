@@ -62,7 +62,7 @@ class Node(Model):
     name: str
     roles: List[str]
     ip: str
-    cluster_name: str
+    app_name: str
     temperature: Optional[str] = None
 
     @classmethod

@@ -970,7 +970,7 @@ class OpenSearchBaseCharm(CharmBase):
             deployment_desc := self.opensearch_peer_cm.deployment_desc()
         ).start == StartMode.WITH_GENERATED_ROLES:
             updated_nodes = ClusterTopology.recompute_nodes_conf(
-                cluster_name=deployment_desc.config.cluster_name, nodes=current_nodes
+                app_name=self.app.name, nodes=current_nodes
             )
         else:
             updated_nodes = {
@@ -978,7 +978,7 @@ class OpenSearchBaseCharm(CharmBase):
                     name=node.name,
                     roles=deployment_desc.config.roles,
                     ip=node.ip,
-                    cluster_name=deployment_desc.config.cluster_name,
+                    app_name=self.app.name,
                     temperature=deployment_desc.config.data_temperature,
                 )
                 for node in current_nodes

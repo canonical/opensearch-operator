@@ -66,7 +66,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             name="cm1",
             roles=["cluster_manager", "data"],
             ip="1.1.1.1",
-            cluster_name="opensearch-ff2z",
+            app_name="opensearch-ff2z",
         )
         self.opensearch.is_failed = MagicMock()
         self.opensearch.is_failed.return_value = False
