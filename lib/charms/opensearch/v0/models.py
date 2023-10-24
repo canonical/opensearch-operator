@@ -62,7 +62,7 @@ class Node(Model):
     name: str
     roles: List[str]
     ip: str
-    cluster_name: str
+    app_name: str
     temperature: Optional[str] = None
 
     @classmethod
@@ -151,10 +151,19 @@ class PeerClusterRelDataCredentials(Model):
 class PeerClusterRelData(Model):
     """Model class for the PCluster relation data."""
 
-    cluster_name: Optional[str]
+    cluster_name: str
     cm_nodes: List[str]
     credentials: PeerClusterRelDataCredentials
     tls_ca: str
+
+
+class PeerClusterRelErrorData(Model):
+    """Model class for the PCluster relation data."""
+
+    cluster_name: Optional[str]
+    should_sever_relation: bool
+    should_wait: bool
+    blocked_message: str
 
 
 class PeerClusterConfig(Model):

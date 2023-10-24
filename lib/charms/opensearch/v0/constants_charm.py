@@ -75,7 +75,7 @@ NewIndexRequested = "new index {index} requested"
 # Relation Interfaces
 ClientRelationName = "opensearch-client"
 PeerRelationName = "opensearch-peers"
-PeerClusterRelationName = "peer-cluster"
+PeerClusterRelationName = "opensearch-peer-cluster"
 
 
 # Opensearch Users
