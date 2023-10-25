@@ -22,18 +22,18 @@ class TestHelperCluster(unittest.TestCase):
     def cluster1_5_nodes_conf(self) -> List[Node]:
         """Returns the expected config of a 5 "planned" nodes cluster."""
         return [
-            Node(name="cm1", roles=self.cm_roles, ip="0.0.0.1", cluster_name=self.cluster1),
-            Node(name="cm2", roles=self.cm_roles, ip="0.0.0.2", cluster_name=self.cluster1),
-            Node(name="cm3", roles=self.cm_roles, ip="0.0.0.3", cluster_name=self.cluster1),
-            Node(name="cm4", roles=self.cm_roles, ip="0.0.0.4", cluster_name=self.cluster1),
-            Node(name="cm5", roles=self.cm_roles, ip="0.0.0.5", cluster_name=self.cluster1),
+            Node(name="cm1", roles=self.cm_roles, ip="0.0.0.1", app_name=self.cluster1),
+            Node(name="cm2", roles=self.cm_roles, ip="0.0.0.2", app_name=self.cluster1),
+            Node(name="cm3", roles=self.cm_roles, ip="0.0.0.3", app_name=self.cluster1),
+            Node(name="cm4", roles=self.cm_roles, ip="0.0.0.4", app_name=self.cluster1),
+            Node(name="cm5", roles=self.cm_roles, ip="0.0.0.5", app_name=self.cluster1),
         ]
 
     def cluster1_6_nodes_conf(self):
         """Returns the expected config of a 6 "planned" nodes cluster."""
         nodes = self.cluster1_5_nodes_conf()
         nodes.append(
-            Node(name="data1", roles=self.base_roles, ip="0.0.0.6", cluster_name=self.cluster1)
+            Node(name="data1", roles=self.base_roles, ip="0.0.0.6", app_name=self.cluster1)
         )
         return nodes
 
@@ -41,11 +41,11 @@ class TestHelperCluster(unittest.TestCase):
         """Returns the expected config of the sub-cluster 2."""
         roles = ["cluster_manager", "data", "ml"]
         return [
-            Node(name="cm_data_ml1", roles=roles, ip="0.0.0.11", cluster_name=self.cluster2),
-            Node(name="cm_data_ml2", roles=roles, ip="0.0.0.12", cluster_name=self.cluster2),
-            Node(name="cm_data_ml3", roles=roles, ip="0.0.0.13", cluster_name=self.cluster2),
-            Node(name="cm_data_ml4", roles=roles, ip="0.0.0.14", cluster_name=self.cluster2),
-            Node(name="cm_data_ml5", roles=roles, ip="0.0.0.15", cluster_name=self.cluster2),
+            Node(name="cm_data_ml1", roles=roles, ip="0.0.0.11", app_name=self.cluster2),
+            Node(name="cm_data_ml2", roles=roles, ip="0.0.0.12", app_name=self.cluster2),
+            Node(name="cm_data_ml3", roles=roles, ip="0.0.0.13", app_name=self.cluster2),
+            Node(name="cm_data_ml4", roles=roles, ip="0.0.0.14", app_name=self.cluster2),
+            Node(name="cm_data_ml5", roles=roles, ip="0.0.0.15", app_name=self.cluster2),
         ]
 
     def setUp(self) -> None:
@@ -91,7 +91,7 @@ class TestHelperCluster(unittest.TestCase):
 
         # remove a cluster manager node
         computed_node_to_change = ClusterTopology.node_with_new_roles(
-            cluster_name=self.cluster1,
+            app_name=self.cluster1,
             remaining_nodes=[node for node in cluster_conf if node.name != "cm1"],
         )
         self.assertEqual(computed_node_to_change.name, "data1")
@@ -99,7 +99,7 @@ class TestHelperCluster(unittest.TestCase):
 
         # remove a data node
         computed_node_to_change = ClusterTopology.node_with_new_roles(
-            cluster_name=self.cluster1,
+            app_name=self.cluster1,
             remaining_nodes=[node for node in cluster_conf if node.name != "data1"],
         )
         self.assertIsNone(computed_node_to_change)
@@ -110,7 +110,7 @@ class TestHelperCluster(unittest.TestCase):
 
         # remove a cluster manager node
         computed_node_to_change = ClusterTopology.node_with_new_roles(
-            cluster_name=self.cluster1,
+            app_name=self.cluster1,
             remaining_nodes=[node for node in cluster_conf if node.name != "cm1"],
         )
         self.assertCountEqual(computed_node_to_change.roles, self.base_roles)
@@ -128,7 +128,7 @@ class TestHelperCluster(unittest.TestCase):
 
         # remove a cluster manager node
         computed_node_to_change = ClusterTopology.recompute_nodes_conf(
-            cluster_name=self.cluster2,
+            app_name=self.cluster2,
             nodes=cluster_conf + first_cluster_nodes,
         )
 
@@ -138,7 +138,7 @@ class TestHelperCluster(unittest.TestCase):
                 name=node.name,
                 roles=self.cm_roles,
                 ip=node.ip,
-                cluster_name=node.cluster_name,
+                app_name=node.app_name,
                 temperature=node.temperature,
             )
         self.assertCountEqual(computed_node_to_change, expected)
@@ -182,13 +182,13 @@ class TestHelperCluster(unittest.TestCase):
                     name=node.name,
                     roles=self.cm_roles,
                     ip=node.ip,
-                    cluster_name=node.cluster_name,
+                    app_name=node.app_name,
                     temperature=node.temperature,
                 )
             )
         expected.sort(key=lambda node: node.name)
         refilled = ClusterTopology.refill_node_with_default_roles(
-            cluster_name=self.cluster2,
+            app_name=self.cluster2,
             nodes=cluster2_nodes,
         )
         refilled.sort(key=lambda node: node.name)
@@ -199,7 +199,7 @@ class TestHelperCluster(unittest.TestCase):
         expected = self.cluster1_5_nodes_conf()
         expected.sort(key=lambda node: node.name)
         refilled = ClusterTopology.refill_node_with_default_roles(
-            cluster_name=self.cluster1,
+            app_name=self.cluster1,
             nodes=self.cluster1_5_nodes_conf(),
         )
         refilled.sort(key=lambda node: node.name)
@@ -227,14 +227,14 @@ class TestHelperCluster(unittest.TestCase):
     def test_node_obj_creation_from_json(self):
         """Test the creation of a Node object from a dict representation."""
         raw_node = Node(
-            name="cm1", roles=["cluster_manager"], ip="0.0.0.11", cluster_name=self.cluster1
+            name="cm1", roles=["cluster_manager"], ip="0.0.0.11", app_name=self.cluster1
         )
         from_json_node = Node.from_dict(
             {
                 "name": "cm1",
                 "roles": ["cluster_manager"],
                 "ip": "0.0.0.11",
-                "cluster_name": self.cluster1,
+                "app_name": self.cluster1,
             }
         )
 

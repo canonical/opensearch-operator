@@ -412,7 +412,7 @@ class OpenSearchDistribution(ABC):
                 name=current_node["name"],
                 roles=current_node["roles"],
                 ip=current_node["ip"],
-                cluster_name=nodes["cluster_name"],
+                app_name=self._charm.app.name,
                 temperature=current_node.get("attributes", {}).get("temp"),
             )
         except OpenSearchHttpError:
@@ -422,7 +422,7 @@ class OpenSearchDistribution(ABC):
                 name=self._charm.unit_name,
                 roles=conf_on_disk["node.roles"],
                 ip=self._charm.unit_ip,
-                cluster_name=conf_on_disk["cluster.name"],
+                app_name=self._charm.app.name,
                 temperature=conf_on_disk.get("node.attr.temp"),
             )
 
