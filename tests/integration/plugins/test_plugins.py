@@ -14,6 +14,7 @@ from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
+    OS_PORT,
     SERIES,
     check_cluster_formation_successful,
     get_application_unit_ids_ips,
@@ -257,7 +258,7 @@ async def test_mlcommons_llm_model_register_and_prediction(ops_test: OpsTest) ->
     await http_request(
         ops_test,
         "PUT",
-        f"https://{leader_unit_ip}:9200/_cluster/settings",
+        f"https://{leader_unit_ip}:{OS_PORT}/_cluster/settings",
         app=app,
         payload={"persistent": {"plugins.ml_commons.sync_up_job_interval_in_seconds": 600}},
     )
@@ -308,7 +309,7 @@ async def test_mlcommons_kmeans_model(ops_test: OpsTest) -> None:
     await http_request(
         ops_test,
         "PUT",
-        f"https://{leader_unit_ip}:9200/_cluster/settings",
+        f"https://{leader_unit_ip}:{OS_PORT}/_cluster/settings",
         app=app,
         payload={"persistent": {"plugins.ml_commons.sync_up_job_interval_in_seconds": 600}},
     )
@@ -317,7 +318,7 @@ async def test_mlcommons_kmeans_model(ops_test: OpsTest) -> None:
     output = await http_request(
         ops_test,
         "POST",
-        f"https://{leader_unit_ip}:9200/_plugins/_ml/_train/kmeans",
+        f"https://{leader_unit_ip}:{OS_PORT}/_plugins/_ml/_train/kmeans",
         app=app,
         payload={
             "parameters": {"centroids": 3, "iterations": 10, "distance_type": "COSINE"},

@@ -34,6 +34,8 @@ IDLE_PERIOD = 75
 
 TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
 
+OS_PORT = 9200
+
 MODEL_CONFIG = {
     "logging-config": "<root>=INFO;unit=DEBUG",
     "update-status-hook-interval": "5m",
@@ -255,7 +257,7 @@ async def get_reachable_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List
     """Helper function to retrieve the IP addresses of all online units."""
     result = []
     for ip in await get_application_unit_ips(ops_test, app):
-        if not is_reachable(ip, 9200):
+        if not is_reachable(ip, OS_PORT):
             continue
 
         if await is_up(ops_test, ip, retries=1):
@@ -268,7 +270,7 @@ async def get_reachable_units(ops_test: OpsTest, app: str = APP_NAME) -> Dict[in
     """Helper function to retrieve a dict of id/IP addresses of all online units."""
     result = {}
     for unit in await get_application_units(ops_test, app):
-        if not is_reachable(unit.ip, 9200):
+        if not is_reachable(unit.ip, OS_PORT):
             continue
 
         if not (await is_up(ops_test, unit.ip, retries=1)):
@@ -378,7 +380,7 @@ def opensearch_client(
 ) -> OpenSearch:
     """Build an opensearch client."""
     return OpenSearch(
-        hosts=[{"host": ip, "port": 9200} for ip in hosts],
+        hosts=[{"host": ip, "port": OS_PORT} for ip in hosts],
         http_auth=(user_name, password),
         http_compress=True,
         sniff_on_start=True,  # sniff before doing anything
@@ -405,7 +407,7 @@ async def cluster_health(
             return await http_request(
                 ops_test,
                 "GET",
-                f"https://{unit_ip}:9200/_cluster/health?wait_for_status=green&timeout=1m",
+                f"https://{unit_ip}:{OS_PORT}/_cluster/health?wait_for_status=green&timeout=1m",
             )
         except requests.HTTPError:
             # it timed out, settle with current status, fetched next without the 1min wait
@@ -414,7 +416,7 @@ async def cluster_health(
     return await http_request(
         ops_test,
         "GET",
-        f"https://{unit_ip}:9200/_cluster/health",
+        f"https://{unit_ip}:{OS_PORT}/_cluster/health",
     )
 
 
@@ -435,7 +437,7 @@ async def check_cluster_formation_successful(
     Returns:
         Whether The cluster formation is successful.
     """
-    response = await http_request(ops_test, "GET", f"https://{unit_ip}:9200/_nodes")
+    response = await http_request(ops_test, "GET", f"https://{unit_ip}:{OS_PORT}/_nodes")
     if "_nodes" not in response or "nodes" not in response:
         return False
 
@@ -452,7 +454,7 @@ async def is_up(ops_test: OpsTest, unit_ip: str, retries: int = 25) -> bool:
     try:
         for attempt in Retrying(stop=stop_after_attempt(retries), wait=wait_fixed(wait=15)):
             with attempt:
-                await http_request(ops_test, "GET", f"https://{unit_ip}:9200/")
+                await http_request(ops_test, "GET", f"https://{unit_ip}:{OS_PORT}/")
                 return True
     except RetryError:
         return False

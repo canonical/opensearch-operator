@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, retry, stop_after_attempt, wait_fixed, wait_random
 
-from tests.integration.helpers import http_request
+from tests.integration.helpers import OS_PORT, http_request
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ async def create_dummy_indexes(
         await http_request(
             ops_test,
             "PUT",
-            f"https://{unit_ip}:9200/index_{index_id}",
+            f"https://{unit_ip}:{OS_PORT}/index_{index_id}",
             {
                 "settings": {
                     "index": {"number_of_shards": p_shards, "number_of_replicas": r_shards}
@@ -60,7 +60,7 @@ async def update_dummy_indexes(
         await http_request(
             ops_test,
             "PUT",
-            f"https://{unit_ip}:9200/index_{index_id}/_settings",
+            f"https://{unit_ip}:{OS_PORT}/index_{index_id}/_settings",
             {"index": {"number_of_replicas": r_shards}},
             app=app,
         )
@@ -76,7 +76,7 @@ async def delete_dummy_indexes(ops_test: OpsTest, app: str, unit_ip: str, count:
         await http_request(
             ops_test,
             "DELETE",
-            f"https://{unit_ip}:9200/index_{index_id}",
+            f"https://{unit_ip}:{OS_PORT}/index_{index_id}",
             app=app,
         )
 
@@ -99,7 +99,9 @@ async def create_dummy_docs(ops_test: OpsTest, app: str, unit_ip: str, count: in
                 f'Store_Id": "{randint(1, 250)}"}}\n'
             )
 
-    await http_request(ops_test, "PUT", f"https://{unit_ip}:9200/_bulk", payload=all_docs, app=app)
+    await http_request(
+        ops_test, "PUT", f"https://{unit_ip}:{OS_PORT}/_bulk", payload=all_docs, app=app
+    )
 
 
 @retry(
@@ -130,7 +132,7 @@ async def create_index(
     await http_request(
         ops_test,
         "PUT",
-        f"https://{unit_ip}:9200/{index_name}",
+        f"https://{unit_ip}:{OS_PORT}/{index_name}",
         content,
         app=app,
     )
@@ -145,7 +147,7 @@ async def bulk_insert(ops_test: OpsTest, app: str, unit_ip: str, payload: str) -
     await http_request(
         ops_test,
         "PUT",
-        f"https://{unit_ip}:9200/_bulk",
+        f"https://{unit_ip}:{OS_PORT}/_bulk",
         payload=payload,
         app=app,
     )
@@ -169,14 +171,18 @@ async def index_doc(
         doc = default_doc(index_name, doc_id)
 
     await http_request(
-        ops_test, "PUT", f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}", payload=doc, app=app
+        ops_test,
+        "PUT",
+        f"https://{unit_ip}:{OS_PORT}/{index_name}/_doc/{doc_id}",
+        payload=doc,
+        app=app,
     )
 
     # a refresh makes the indexed data available for search, runs by default every 30 sec,
     # but we can manually trigger it like below
     if refresh:
         await http_request(
-            ops_test, "POST", f"https://{unit_ip}:9200/{index_name}/_refresh", app=app
+            ops_test, "POST", f"https://{unit_ip}:{OS_PORT}/{index_name}/_refresh", app=app
         )
 
 
@@ -189,7 +195,7 @@ async def get_doc(
 ) -> Dict[str, Any]:
     """Fetch a document by id."""
     return await http_request(
-        ops_test, "GET", f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}", app=app
+        ops_test, "GET", f"https://{unit_ip}:{OS_PORT}/{index_name}/_doc/{doc_id}", app=app
     )
 
 
@@ -204,7 +210,7 @@ async def delete_doc(
     await http_request(
         ops_test,
         "DELETE",
-        f"https://{unit_ip}:9200/{index_name}/_doc/{doc_id}",
+        f"https://{unit_ip}:{OS_PORT}/{index_name}/_doc/{doc_id}",
         app=app,
     )
 
@@ -218,7 +224,7 @@ async def delete_index(ops_test: OpsTest, app: str, unit_ip: str, index_name: st
     await http_request(
         ops_test,
         "DELETE",
-        f"https://{unit_ip}:9200/{index_name}/",
+        f"https://{unit_ip}:{OS_PORT}/{index_name}/",
         app=app,
     )
 
@@ -238,7 +244,7 @@ async def search(
     retries: int = 15,
 ) -> Optional[List[Dict[str, Any]]]:
     """Search documents."""
-    endpoint = f"https://{unit_ip}:9200/{index_name}/_search"
+    endpoint = f"https://{unit_ip}:{OS_PORT}/{index_name}/_search"
     if preference:
         endpoint = f"{endpoint}?preference={preference}"
     for attempt in Retrying(
