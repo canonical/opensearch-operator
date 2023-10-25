@@ -148,7 +148,14 @@ async def test_set_roles_manually(
         ops_test,
         apps=[app],
         apps_statuses=["active"],
-        units_statuses=["active", "blocked"],
+        units_full_statuses={
+            app: {
+                "units": {
+                    "blocked": [PClusterWrongNodesCountForQuorum],
+                    "active": [],
+                },
+            },
+        },
         wait_for_exact_units=len(nodes) + 1,
         idle_period=IDLE_PERIOD,
     )
