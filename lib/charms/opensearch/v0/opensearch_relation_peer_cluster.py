@@ -6,17 +6,18 @@ import logging
 from typing import TYPE_CHECKING, List, Optional, Union
 
 from charms.opensearch.v0.constants_charm import PeerClusterRelationName
+from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
     DeploymentType,
     PeerClusterRelData,
     PeerClusterRelDataCredentials,
-    PeerClusterRelErrorData,
+    PeerClusterRelErrorData, Node,
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError, OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from ops import Object, RelationChangedEvent, RelationDepartedEvent, RelationJoinedEvent
+from ops import Object, RelationChangedEvent, RelationDepartedEvent, RelationJoinedEvent, EventBase, BlockedStatus
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
@@ -73,6 +74,10 @@ class OpenSearchPeerClusterProvider(Object):
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
+        self.refresh_relation_data(event)
+
+    def refresh_relation_data(self, event: EventBase):
+        """Refresh the peer cluster rel data (new cm node, admin password change etc.)."""
         if not self._charm.unit.is_leader():
             return
 
@@ -83,6 +88,8 @@ class OpenSearchPeerClusterProvider(Object):
             peer_rel_data_key = "error_data"
             if rel_data.should_wait:
                 event.defer()
+        else:
+            self._peer_cm.peer_cluster_data.delete("error_data")
 
         self._peer_cm.peer_cluster_data.put_object(
             Scope.APP, peer_rel_data_key, rel_data.to_dict()
@@ -92,9 +99,11 @@ class OpenSearchPeerClusterProvider(Object):
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
         if not self._charm.unit.is_leader():
             return
-        pass
 
     def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent):
+        """Event received by all units in sub-cluster when a sub-cluster leaves the relation."""
+        logger.info(f"\n\n_on_peer_cluster_relation_departed:\n{event}\n\n\n")
+
         # this is where sub-clusters configured to auto-generated should probably recompute
         # should the one with "min(rel_id)" propose to change?
         pass
@@ -126,11 +135,13 @@ class OpenSearchPeerClusterProvider(Object):
             secrets = self._charm.secrets
             return PeerClusterRelData(
                 cluster_name=deployment_desc.config.cluster_name,
-                cm_nodes=self._fetch_local_cm_nodes_ips(),
+                cm_nodes=self._fetch_local_cm_nodes(),
                 credentials=PeerClusterRelDataCredentials(
-                    admin_username="admin", admin_password=secrets.get("admin-password")
+                    admin_username="admin",
+                    admin_password=secrets.get(ADMIN_PW),
+                    admin_password_hash=secrets.get(ADMIN_PW_HASH),
+                    admin_tls=secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
                 ),
-                tls_ca=secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)["chain"],
             )
         except OpenSearchHttpError as e:
             logger.exception(e)
@@ -157,15 +168,15 @@ class OpenSearchPeerClusterProvider(Object):
             should_sever_relation = True
             should_wait = False
             blocked_msg = "Related to non 'main/failover'-cluster-manager sub-cluster."
-        elif not self._charm.tls._is_tls_fully_configured():  # TODO: TLS fully configured in ALL cluster
+        elif not self._charm.is_admin_user_configured():
+            blocked_msg = f"Admin user not fully configured {message_suffix}"
+        elif not self._charm.is_tls_full_configured_in_cluster():
             blocked_msg = f"TLS not fully configured {message_suffix}"
-        elif not self._charm.peers_data.get(Scope.APP, "admin_user_initialized", False):
-            blocked_msg = f"Admin user not initialized {message_suffix}"
         elif not self._charm.peers_data.get(Scope.APP, "security_index_initialised", False):
             blocked_msg = f"Security index not initialized {message_suffix}"
         else:
             try:
-                local_cms = self._fetch_local_cm_nodes_ips()
+                local_cms = self._fetch_local_cm_nodes()
                 if not local_cms:
                     blocked_msg = f"No reported cluster_manager eligible nodes {message_suffix}"
             except OpenSearchHttpError as e:
@@ -182,7 +193,7 @@ class OpenSearchPeerClusterProvider(Object):
             blocked_message=blocked_msg,
         )
 
-    def _fetch_local_cm_nodes_ips(self) -> List[str]:
+    def _fetch_local_cm_nodes(self) -> List[Node]:
         """Fetch the cluster_manager eligible node IPs in the current cluster."""
         nodes = ClusterTopology.nodes(
             self._opensearch,
@@ -190,7 +201,7 @@ class OpenSearchPeerClusterProvider(Object):
             hosts=self._charm.alt_hosts,
         )
         return [
-            node.ip
+            node
             for node in nodes
             if node.is_cm_eligible() and node.app_name == self._charm.app.name
         ]
@@ -218,8 +229,59 @@ class OpenSearchPeerClusterRequirer(Object):
         pass
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
-        pass
+        if not self._charm.unit.is_leader():
+            return
+
+        data = event.relation.data.get(event.app)
+        if not data:
+            return
+
+        error_data = self._charm.peers_data.get_object("error_data")
+        if error_data:
+            error_data = PeerClusterRelErrorData.from_dict(error_data)
+            self._charm.status.set(BlockedStatus(error_data.blocked_message), app=True)
+            return
+
+        # todo: compare TLS CA ---- Store APP Admin CA from peer rel !!!!!
+
+        deployment_desc = self._charm.opensearch_peer_cm.deployment_desc()
+        if not deployment_desc:
+            event.defer()
+            return
+
+        data = PeerClusterRelData.from_dict(self._charm.peers_data.get_object("data"))
+
+        # set admin credentials
+        self._charm.secrets.put(Scope.APP, ADMIN_PW, data.credentials.admin_password)
+        self._charm.secrets.put(Scope.APP, ADMIN_PW_HASH, data.credentials.admin_password_hash)
+        self._charm.secrets.put(Scope.APP, CertType.APP_ADMIN.val, data.credentials.admin_tls)
+
+        # store the app admin TLS resources
+        self._charm.store_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+
+        # set user and security_index initialized flags
+        self._charm.peers_data.put("admin_user_initialized", True)
+        self._charm.peers_data.put("security_index_initialised", True)
+
+        # check if ready
+        if not self._charm.is_tls_fully_configured():
+            event.defer()
+            return
+
+        # compare CAs
+        unit_transport_ca_cert = self._charm.secrets.get_object(
+            Scope.UNIT, CertType.UNIT_TRANSPORT.val
+        )["ca-cert"]
+        if unit_transport_ca_cert != data.credentials.admin_tls["ca-cert"]:
+            self._charm.status.set(BlockedStatus("CA certificate mismatch between clusters."))
+            return
+
+        # recompute the deployment desc
+        self._charm.opensearch_peer_cm.run_with_relation_data(data)
 
     def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent):
         # this is where sub-clusters configured to auto-generated should probably recompute
         pass
+
+
+    # TODO: implement logic of failover cluster

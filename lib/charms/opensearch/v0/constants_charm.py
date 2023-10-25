@@ -27,6 +27,7 @@ ServiceStartError = "An error occurred during the start of the OpenSearch servic
 ServiceStopped = "The OpenSearch service stopped."
 ServiceStopFailed = "An error occurred while attempting to stop the OpenSearch service."
 ServiceIsStopping = "The OpenSearch service is stopping."
+AdminUserNotConfigured = "Waiting for the admin user to be fully configured..."
 TLSNotFullyConfigured = "Waiting for TLS to be fully configured..."
 TLSRelationBrokenError = (
     "Relation broken with the TLS Operator while TLS not fully configured. Stopping OpenSearch."

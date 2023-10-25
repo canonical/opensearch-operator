@@ -21,6 +21,7 @@ from typing import Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_networking import get_host_public_ip
+from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v1.tls_certificates import (
@@ -88,6 +89,8 @@ class OpenSearchTLS(Object):
 
     def request_new_unit_certificates(self) -> None:
         """Requests a new certificate with the given scope and type from the tls operator."""
+        self.charm.peers_data.delete(Scope.UNIT, "tls_configured")
+
         for cert_type in [CertType.UNIT_HTTP, CertType.UNIT_TRANSPORT]:
             csr = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)["csr"].encode("utf-8")
             self.certs.request_certificate_revocation(csr)
@@ -100,8 +103,14 @@ class OpenSearchTLS(Object):
 
     def _on_tls_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Request certificate when TLS relation joined."""
+        deployment_type = self.charm.opensearch_peer_cm.deployment_desc().typ
+
         admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if self.charm.unit.is_leader() and admin_cert is None:
+        if (
+            self.charm.unit.is_leader()
+            and admin_cert is None
+            and deployment_type == DeploymentType.MAIN_CLUSTER_MANAGER
+        ):
             self._request_certificate(Scope.APP, CertType.APP_ADMIN)
 
         self._request_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
@@ -154,6 +163,7 @@ class OpenSearchTLS(Object):
 
     def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
         """Request the new certificate when old certificate is expiring."""
+        self.charm.peers_data.delete(Scope.UNIT, "tls_configured")
         try:
             scope, cert_type, secrets = self._find_secret(event.certificate, "cert")
             logger.debug(f"{scope.val}.{cert_type.val} TLS certificate expiring.")
@@ -196,7 +206,7 @@ class OpenSearchTLS(Object):
                 "key": key.decode("utf-8"),
                 "key-password": password,
                 "csr": csr.decode("utf-8"),
-                "subject": f"/O={self.charm.app.name}/CN={subject}",
+                "subject": f"/O={self.charm.deployment_desc().config.cluster_name}/CN={subject}",
             },
             merge=True,
         )

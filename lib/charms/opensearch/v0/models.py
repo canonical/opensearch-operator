@@ -146,15 +146,16 @@ class PeerClusterRelDataCredentials(Model):
 
     admin_username: str
     admin_password: str
+    admin_password_hash: str
+    admin_tls: Dict[str, Optional[str]]
 
 
 class PeerClusterRelData(Model):
     """Model class for the PCluster relation data."""
 
     cluster_name: str
-    cm_nodes: List[str]
+    cm_nodes: List[Node]
     credentials: PeerClusterRelDataCredentials
-    tls_ca: str
 
 
 class PeerClusterRelErrorData(Model):

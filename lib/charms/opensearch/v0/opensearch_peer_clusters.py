@@ -26,7 +26,7 @@ from charms.opensearch.v0.models import (
     Node,
     PeerClusterConfig,
     StartMode,
-    State,
+    State, PeerClusterRelData, PeerClusterRelErrorData,
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
@@ -97,6 +97,39 @@ class OpenSearchPeerClustersManager:
 
         # TODO: once peer clusters relation implemented, we should apply all directives
         #  + removing them from queue. We currently only apply the status.
+
+    def run_with_relation_data(self, data: PeerClusterRelData, error_data: Optional[PeerClusterRelErrorData] = None):
+        """Update current peer cluster related config based on peer_cluster rel_data."""
+        current_deployment_desc = self.deployment_desc()
+
+        config = current_deployment_desc.config
+        deployment_state = current_deployment_desc.state
+        pending_directives = current_deployment_desc.pending_directives
+
+        pending_directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
+
+        if Directive.VALIDATE_CLUSTER_NAME in pending_directives:
+            if config.cluster_name != data.cluster_name:
+                deployment_state = DeploymentState(
+                    value=State.BLOCKED_WRONG_RELATED_CLUSTER, message=PClusterWrongRelation
+                )
+            elif deployment_state.value == State.BLOCKED_WRONG_RELATED_CLUSTER:
+                deployment_state = DeploymentState(value=State.ACTIVE)
+                pending_directives.remove(Directive.VALIDATE_CLUSTER_NAME)
+        elif Directive.INHERIT_CLUSTER_NAME in pending_directives:
+            config.cluster_name = data.cluster_name
+            pending_directives.remove(Directive.INHERIT_CLUSTER_NAME)
+
+        new_deployment_desc = DeploymentDescription(
+            config=config,
+            pending_directives=pending_directives,
+            typ=current_deployment_desc.typ,
+            state=deployment_state,
+            start=current_deployment_desc.start
+        )
+        self._charm.peers_data.put_object(
+            Scope.APP, "deployment-description", new_deployment_desc.to_dict()
+        )
 
     def _user_config(self):
         """Build a user provided config object."""
@@ -315,6 +348,24 @@ class OpenSearchPeerClustersManager:
     def is_peer_cluster_relation_set(self):
         """Return whether the peer cluster relation is established."""
         return PeerClusterRelationName in self._charm.model.relations
+
+    def rel_data(self) -> Optional[PeerClusterRelData]:
+        """Return the peer cluster rel data if any."""
+        if not self.is_peer_cluster_relation_set():
+            return None
+
+        return PeerClusterRelData.from_dict(
+            self.peer_cluster_data.get_object(Scope.APP, "data")
+        )
+
+    def err_rel_data(self) -> Optional[PeerClusterRelErrorData]:
+        """Return the peer cluster rel data if any."""
+        if not self.is_peer_cluster_relation_set():
+            return None
+
+        return PeerClusterRelErrorData.from_dict(
+            self.peer_cluster_data.get_object(Scope.APP, "error-data")
+        )
 
     def _pre_validate_roles_change(self, new_roles: List[str], prev_roles: List[str]):
         """Validate that the config changes of roles are allowed to happen."""

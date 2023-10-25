@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Type
 
 from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
+    AdminUserNotConfigured,
     CertsExpirationError,
     ClientRelationName,
     ClusterHealthRed,
@@ -42,6 +43,7 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
+from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -69,6 +71,8 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
 )
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
+from charms.opensearch.v0.opensearch_relation_peer_cluster import OpenSearchPeerClusterProvider, \
+    OpenSearchPeerClusterRequirer
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
@@ -128,6 +132,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.opensearch_exclusions = OpenSearchExclusions(self)
         self.opensearch_fixes = OpenSearchFixes(self)
+
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = OpenSearchSecrets(self, PeerRelationName)
         self.tls = OpenSearchTLS(self, TLS_RELATION)
@@ -142,6 +147,8 @@ class OpenSearchBaseCharm(CharmBase):
         )
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
+        self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
+        self.peer_cluster_requirer = OpenSearchPeerClusterRequirer(self)
 
         # helper to defer events without any additional logic
         self.framework.observe(self.defer_trigger_event, self._on_defer_trigger)
@@ -216,11 +223,19 @@ class OpenSearchBaseCharm(CharmBase):
 
             return
 
-        if not self._is_tls_fully_configured():
+        if not self.is_admin_user_configured():
+            self.status.set(BlockedStatus(AdminUserNotConfigured))
+            event.defer()
+            return
+
+        if not self.is_tls_fully_configured():
             self.status.set(BlockedStatus(TLSNotFullyConfigured))
             event.defer()
             return
 
+        self.peers_data.put(Scope.UNIT, "tls_configured", True)
+
+        self.status.clear(AdminUserNotConfigured)
         self.status.clear(TLSNotFullyConfigured)
 
         # apply the directives computed and emitted by the peer cluster manager
@@ -488,6 +503,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
+        if not self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_CLUSTER_MANAGER:
+            event.fail("The action can be run only on the leader unit of the main cluster.")
+            return
+
         if not self.unit.is_leader():
             event.fail("The action can be run only on leader unit.")
             return
@@ -512,8 +531,12 @@ class OpenSearchBaseCharm(CharmBase):
             event.fail("Only the 'admin' username is allowed for this action.")
             return
 
-        if not self._is_tls_fully_configured():
-            event.fail("admin user or TLS certificates not configured yet.")
+        if not self.is_admin_user_configured():
+            event.fail("admin user not configured yet.")
+            return
+
+        if not self.is_tls_fully_configured():
+            event.fail("TLS certificates not configured yet.")
             return
 
         password = self.secrets.get(Scope.APP, f"{user_name}-password")
@@ -552,25 +575,22 @@ class OpenSearchBaseCharm(CharmBase):
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-        if renewal and self._is_tls_fully_configured():
+        if renewal and self.is_admin_user_configured() and self.is_tls_fully_configured():
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
-        if self._is_tls_fully_configured():
+        if self.is_tls_fully_configured():
             return
 
         # Otherwise, we block.
         self.status.set(BlockedStatus(TLSRelationBrokenError))
 
-    def _is_tls_fully_configured(self) -> bool:
-        """Check if TLS fully configured meaning the admin user configured & 3 certs present."""
+    def is_tls_fully_configured(self) -> bool:
+        """Check if TLS fully configured meaning the 3 certificates are present."""
         # In case the initialisation of the admin user is not finished yet
-        if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
-            return False
-
         admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         if not admin_secrets or not admin_secrets.get("cert") or not admin_secrets.get("chain"):
             return False
@@ -583,7 +603,24 @@ class OpenSearchBaseCharm(CharmBase):
         if not unit_http_secrets or not unit_http_secrets.get("cert"):
             return False
 
-        return self._are_all_tls_resources_stored()
+        stored = self._are_all_tls_resources_stored()
+        if stored:
+            self.peers_data.put(Scope.UNIT, "tls_configured", True)
+
+        return stored
+
+    def is_tls_full_configured_in_cluster(self):
+        """Check if TLS is configured in all the units of the current cluster."""
+        rel = self.model.get_relation(PeerRelationName)
+        for unit in rel.units.union({self.unit}):
+            if rel.data[unit].get("tls_configured") != "True":
+                return False
+        return True
+
+    def is_admin_user_configured(self) -> bool:
+        """Check if admin user configured."""
+        # In case the initialisation of the admin user is not finished yet
+        return self.peers_data.get(Scope.APP, "admin_user_initialized", False)
 
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
@@ -864,6 +901,12 @@ class OpenSearchBaseCharm(CharmBase):
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
 
+        # add CM nodes reported in the peer cluster relation if any
+        peer_cm_rel_data = self.opensearch_peer_cm.rel_data()
+        if peer_cm_rel_data and deployment_desc.typ != DeploymentType.MAIN_CLUSTER_MANAGER:
+            cm_names.extend([node.name for node in peer_cm_rel_data.cm_nodes])
+            cm_ips.extend([node.ip for node in peer_cm_rel_data.cm_nodes])
+
         contribute_to_bootstrap = False
         if "cluster_manager" in computed_roles:
             cm_names.append(self.unit_name)
@@ -978,7 +1021,7 @@ class OpenSearchBaseCharm(CharmBase):
                     name=node.name,
                     roles=deployment_desc.config.roles,
                     ip=node.ip,
-                    cluster_name=deployment_desc.config.cluster_name,
+                    app_name=self.app.name,
                     temperature=deployment_desc.config.data_temperature,
                 )
                 for node in current_nodes
