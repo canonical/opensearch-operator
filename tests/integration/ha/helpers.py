@@ -19,7 +19,7 @@ from tenacity import (
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.helpers import (
-    OS_PORT,
+    OPENSEARCH_PORT,
     get_application_unit_ids,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
@@ -69,14 +69,14 @@ async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
     resp = await http_request(
         ops_test,
         "GET",
-        f"https://{unit_ip}:{OS_PORT}/_cluster/state/cluster_manager_node",
+        f"https://{unit_ip}:{OPENSEARCH_PORT}/_cluster/state/cluster_manager_node",
     )
     cm_node_id = resp.get("cluster_manager_node")
     if not cm_node_id:
         return -1
 
     # get all nodes
-    resp = await http_request(ops_test, "GET", f"https://{unit_ip}:{OS_PORT}/_nodes")
+    resp = await http_request(ops_test, "GET", f"https://{unit_ip}:{OPENSEARCH_PORT}/_nodes")
     return int(resp["nodes"][cm_node_id]["name"].split("-")[1])
 
 
@@ -97,7 +97,7 @@ async def get_shards_by_state(ops_test: OpsTest, unit_ip: str) -> Dict[str, List
     response = await http_request(
         ops_test,
         "GET",
-        f"https://{unit_ip}:{OS_PORT}/_cat/shards",
+        f"https://{unit_ip}:{OPENSEARCH_PORT}/_cat/shards",
     )
 
     logger.info(f"Shards:\n{response}")
@@ -129,7 +129,7 @@ async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) 
     response = await http_request(
         ops_test,
         "GET",
-        f"https://{unit_ip}:{OS_PORT}/{index_name}/_search_shards",
+        f"https://{unit_ip}:{OPENSEARCH_PORT}/{index_name}/_search_shards",
     )
 
     nodes = response["nodes"]
@@ -160,7 +160,7 @@ async def cluster_allocation(ops_test: OpsTest, unit_ip: str) -> List[Dict[str, 
     return await http_request(
         ops_test,
         "GET",
-        f"https://{unit_ip}:{OS_PORT}/_cat/allocation",
+        f"https://{unit_ip}:{OPENSEARCH_PORT}/_cat/allocation",
     )
 
 
@@ -187,7 +187,7 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
     nodes = await http_request(
         ops_test,
         "GET",
-        f"https://{unit_ip}:{OS_PORT}/_cat/nodes?format=json",
+        f"https://{unit_ip}:{OPENSEARCH_PORT}/_cat/nodes?format=json",
     )
     return [Node(node["name"], node["node.roles"].split(","), node["ip"]) for node in nodes]
 
