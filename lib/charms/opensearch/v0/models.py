@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Cluster-related data structures / model classes."""
+from datetime import datetime
 from abc import ABC
 from typing import Any, Dict, List, Optional
 
@@ -92,7 +93,7 @@ class DeploymentType(BaseStrEnum):
     """Nature of a sub cluster deployment."""
 
     MAIN_CLUSTER_MANAGER = "main-cluster-manager"
-    CLUSTER_MANAGER_FAILOVER = "cluster-manager-failover"
+    FAILOVER_CLUSTER_MANAGER = "failover-cluster-manager"
     OTHER = "other"
 
 
@@ -141,32 +142,6 @@ class DeploymentState(Model):
         return values
 
 
-class PeerClusterRelDataCredentials(Model):
-    """Model class for credentials passed on the PCluster relation."""
-
-    admin_username: str
-    admin_password: str
-    admin_password_hash: str
-    admin_tls: Dict[str, Optional[str]]
-
-
-class PeerClusterRelData(Model):
-    """Model class for the PCluster relation data."""
-
-    cluster_name: str
-    cm_nodes: List[Node]
-    credentials: PeerClusterRelDataCredentials
-
-
-class PeerClusterRelErrorData(Model):
-    """Model class for the PCluster relation data."""
-
-    cluster_name: Optional[str]
-    should_sever_relation: bool
-    should_wait: bool
-    blocked_message: str
-
-
 class PeerClusterConfig(Model):
     """Model class for the multi-clusters related config set by the user."""
 
@@ -211,4 +186,42 @@ class DeploymentDescription(Model):
     start: StartMode
     pending_directives: List[Directive]
     typ: DeploymentType
+    app: str
     state: DeploymentState = DeploymentState(value=State.ACTIVE)
+    promotion_time: Optional[float]
+
+    @root_validator
+    def set_promotion_time(cls, values):  # noqa: N805
+        """Set promotion time of a failover to a main CM."""
+        if values["typ"] == DeploymentType.MAIN_CLUSTER_MANAGER:
+            values["promotion_time"] = datetime.now().timestamp()
+
+        return values
+
+
+class PeerClusterRelDataCredentials(Model):
+    """Model class for credentials passed on the PCluster relation."""
+
+    admin_username: str
+    admin_password: str
+    admin_password_hash: str
+    admin_tls: Dict[str, Optional[str]]
+
+
+class PeerClusterRelData(Model):
+    """Model class for the PCluster relation data."""
+
+    cluster_name: str
+    cm_nodes: List[Node]
+    credentials: PeerClusterRelDataCredentials
+    deployment_desc: Optional[DeploymentDescription]
+
+
+class PeerClusterRelErrorData(Model):
+    """Model class for the PCluster relation data."""
+
+    cluster_name: Optional[str]
+    should_sever_relation: bool
+    should_wait: bool
+    blocked_message: str
+    deployment_desc: Optional[DeploymentDescription]

@@ -2,8 +2,10 @@
 # See LICENSE file for licensing details.
 
 """Class for Managing simple or large deployments and configuration related changes."""
+import json
+from datetime import datetime
 import logging
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Dict, Any
 
 import shortuuid
 from charms.opensearch.v0.constants_charm import (
@@ -14,7 +16,7 @@ from charms.opensearch.v0.constants_charm import (
     PClusterWrongNodesCountForQuorum,
     PClusterWrongRelation,
     PClusterWrongRolesProvided,
-    PeerClusterRelationName,
+    PeerClusterManagerRelationName,
     PeerRelationName,
 )
 from charms.opensearch.v0.helper_cluster import ClusterTopology
@@ -25,11 +27,13 @@ from charms.opensearch.v0.models import (
     Directive,
     Node,
     PeerClusterConfig,
+    PeerClusterRelData,
+    PeerClusterRelErrorData,
     StartMode,
-    State, PeerClusterRelData, PeerClusterRelErrorData,
+    State,
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
-from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import BlockedStatus
 
 # The unique Charmhub library identifier, never change it
@@ -59,7 +63,6 @@ class OpenSearchPeerClustersManager:
     def __init__(self, charm: "OpenSearchBaseCharm"):
         self._charm = charm
         self._opensearch = charm.opensearch
-        self.peer_cluster_data = RelationDataStore(self._charm, PeerClusterRelationName)
 
     def run(self) -> None:
         """Init, or updates / recomputes current peer cluster related config if applies."""
@@ -106,14 +109,17 @@ class OpenSearchPeerClustersManager:
         deployment_state = current_deployment_desc.state
         pending_directives = current_deployment_desc.pending_directives
 
-        pending_directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
+        if Directive.WAIT_FOR_PEER_CLUSTER_RELATION in pending_directives:
+            pending_directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
 
         if Directive.VALIDATE_CLUSTER_NAME in pending_directives:
             if config.cluster_name != data.cluster_name:
                 deployment_state = DeploymentState(
                     value=State.BLOCKED_WRONG_RELATED_CLUSTER, message=PClusterWrongRelation
                 )
-            elif deployment_state.value == State.BLOCKED_WRONG_RELATED_CLUSTER:
+            elif deployment_state.value in [
+                State.BLOCKED_WRONG_RELATED_CLUSTER, State.BLOCKED_WAITING_FOR_RELATION
+            ]:
                 deployment_state = DeploymentState(value=State.ACTIVE)
                 pending_directives.remove(Directive.VALIDATE_CLUSTER_NAME)
         elif Directive.INHERIT_CLUSTER_NAME in pending_directives:
@@ -125,11 +131,14 @@ class OpenSearchPeerClustersManager:
             pending_directives=pending_directives,
             typ=current_deployment_desc.typ,
             state=deployment_state,
+            app=self._charm.app.name,
             start=current_deployment_desc.start
         )
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", new_deployment_desc.to_dict()
         )
+
+        logger.debug(f"REQUIRER: run_with_relation_data: \ncurrent_deployment_desc: {current_deployment_desc.to_dict()}\nVS\n{new_deployment_desc.to_dict()}...\n\n")
 
     def _user_config(self):
         """Build a user provided config object."""
@@ -148,10 +157,7 @@ class OpenSearchPeerClustersManager:
         deployment_state = DeploymentState(value=State.ACTIVE)
         if config.init_hold:
             # checks if peer cluster relation is set
-            if not (
-                self.is_peer_cluster_relation_set()
-                and self.peer_cluster_data.get_object(Scope.APP, "data")
-            ):
+            if not self.is_peer_cluster_manager_relation_set():
                 deployment_state = DeploymentState(
                     value=State.BLOCKED_WAITING_FOR_RELATION, message=PClusterNoRelation
                 )
@@ -172,6 +178,7 @@ class OpenSearchPeerClustersManager:
                 start=start_mode,
                 pending_directives=directives,
                 typ=self._deployment_type(config, start_mode),
+                app=self._charm.app.name,
                 state=deployment_state,
             )
 
@@ -202,6 +209,7 @@ class OpenSearchPeerClustersManager:
             start=start_mode,
             pending_directives=directives,
             typ=self._deployment_type(config, start_mode),
+            app=self._charm.app.name,
             state=deployment_state,
         )
 
@@ -215,6 +223,9 @@ class OpenSearchPeerClustersManager:
             self._pre_validate_roles_change(
                 new_roles=config.roles, prev_roles=prev_deployment.config.roles
             )
+            if prev_deployment.state.value == State.BLOCKED_CANNOT_APPLY_NEW_ROLES:
+                deployment_state = DeploymentState(value=State.ACTIVE, message="")
+                directives.append(Directive.SHOW_STATUS)
             # todo: should we further handle states here?
         except OpenSearchProvidedRolesException as e:
             logger.error(e)
@@ -226,6 +237,18 @@ class OpenSearchPeerClustersManager:
         start_mode = (
             StartMode.WITH_PROVIDED_ROLES if config.roles else StartMode.WITH_GENERATED_ROLES
         )
+        if (
+            not config.init_hold
+            and prev_deployment.state.value == State.BLOCKED_CANNOT_START_WITH_ROLES
+            and (
+                start_mode == StartMode.WITH_GENERATED_ROLES
+                or "cluster_manager" in config.roles
+            )
+        ):
+            deployment_state = DeploymentState(value=State.ACTIVE, message="")
+            directives.append(Directive.SHOW_STATUS)
+            directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
+
         return DeploymentDescription(
             config=PeerClusterConfig(
                 cluster_name=prev_deployment.config.cluster_name,
@@ -236,6 +259,7 @@ class OpenSearchPeerClustersManager:
             start=start_mode,
             state=deployment_state,
             typ=self._deployment_type(config, start_mode),
+            app=self._charm.app.name,
             pending_directives=list(set(directives)),
         )
 
@@ -311,6 +335,29 @@ class OpenSearchPeerClustersManager:
 
         return DeploymentDescription.from_dict(current_deployment_desc)
 
+    def promote_to_main_cluster_manager(self) -> None:
+        """Update the deployment type of the current deployment desc."""
+        deployment_desc = self.deployment_desc()
+        if not deployment_desc:
+            return
+
+        deployment_desc.typ = DeploymentType.MAIN_CLUSTER_MANAGER
+        deployment_desc.promotion_time = datetime.now().timestamp()
+        self._charm.peers_data.put_object(
+            Scope.APP, "deployment-description", deployment_desc.to_dict()
+        )
+
+    def demote_to_failover_cluster_manager(self) -> None:
+        """Update the deployment type of the current deployment desc."""
+        deployment_desc = self.deployment_desc()
+        if not deployment_desc:
+            return
+
+        deployment_desc.typ = DeploymentType.FAILOVER_CLUSTER_MANAGER
+        self._charm.peers_data.put_object(
+            Scope.APP, "deployment-description", deployment_desc.to_dict()
+        )
+
     def validate_roles(self, nodes: List[Node], on_new_unit: bool = False) -> None:
         """Validate full-cluster wide the quorum for CM/voting_only nodes on services start."""
         deployment_desc = self.deployment_desc()
@@ -323,7 +370,17 @@ class OpenSearchPeerClustersManager:
             return
 
         # validate the full-cluster wide count of cm+voting_only nodes to keep the quorum
-        current_cluster_planned_units = self._charm.app.planned_units()
+        full_cluster_planned_units = self._charm.app.planned_units()
+        if self.is_peer_cluster_manager_relation_set():
+            cluster_fleet_planned_units = self._charm.peers_data.get_object(
+                Scope.APP, "cluster_fleet_planned_units"
+            )
+            if cluster_fleet_planned_units:
+                full_cluster_planned_units = sum(
+                    [int(count) for count in cluster_fleet_planned_units.values()]
+                )
+
+        # current_cluster_planned_units = self._charm.app.planned_units()
         current_cluster_units = [
             unit.name.replace("/", "-")
             for unit in self._charm.model.get_relation(PeerRelationName).units
@@ -332,7 +389,7 @@ class OpenSearchPeerClustersManager:
             node for node in nodes if node.name in current_cluster_units
         ]
 
-        if len(current_cluster_online_nodes) < current_cluster_planned_units - 1:
+        if len(current_cluster_online_nodes) < full_cluster_planned_units - 1:
             # this is not the latest unit to be brought online, we can continue
             return
 
@@ -345,27 +402,64 @@ class OpenSearchPeerClustersManager:
 
         raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
 
-    def is_peer_cluster_relation_set(self):
+    def is_peer_cluster_manager_relation_set(self) -> bool:
         """Return whether the peer cluster relation is established."""
-        return PeerClusterRelationName in self._charm.model.relations
+        logger.debug(f"\n\n\nRelations: {self._charm.model.relations.keys()}")
+        peer_main_cm_rel_id = int(
+            (self._charm.peers_data.get_object(Scope.APP, "peer-cluster-managers") or {}).get("main-cluster-manager-rel-id", -1)
+        )
+        if peer_main_cm_rel_id == -1:
+            return False
+
+        rel = self._charm.model.get_relation(PeerClusterManagerRelationName, peer_main_cm_rel_id)
+        return rel is not None
+
+    def fetch_data_from_peer_cluster_rel(self, key: str) -> Optional[str]:
+        """Fetch data from peer cluster relation."""
+        peer_cms = self._charm.peers_data.get_object(Scope.APP, "peer-cluster-managers") or {}
+        peer_main_cm_rel_id = int(peer_cms.get("main-cluster-manager-rel-id", -1))
+        if peer_main_cm_rel_id == -1:
+            return None
+
+        relation = self._charm.model.get_relation(
+            PeerClusterManagerRelationName, peer_main_cm_rel_id
+        )
+        return relation.data[self._charm.app].get(key)
+
+    def fetch_obj_from_peer_cluster_rel(self, key: str) -> Optional[Dict[str, Any]]:
+        """Fetch dict object from peer cluster relation data."""
+        data = self.fetch_data_from_peer_cluster_rel(key)
+        if not data:
+            return None
+
+        return json.loads(data)
 
     def rel_data(self) -> Optional[PeerClusterRelData]:
         """Return the peer cluster rel data if any."""
-        if not self.is_peer_cluster_relation_set():
+        if not self.is_peer_cluster_manager_relation_set():
             return None
 
-        return PeerClusterRelData.from_dict(
-            self.peer_cluster_data.get_object(Scope.APP, "data")
+        logger.debug(f"\n\n\nREL_DATA:")
+        peer_main_cm_rel_id = int(
+            self._charm.peers_data.get_object(Scope.APP, "peer-cluster-managers").get("main-cluster-manager-rel-id")
         )
+        logger.debug(f"Stored peer_main_cm_rel_id: {peer_main_cm_rel_id}")
+
+        rel = self._charm.model.get_relation(PeerClusterManagerRelationName, peer_main_cm_rel_id)
+        return PeerClusterRelData.from_str(rel.data[rel.app].get("data"))
 
     def err_rel_data(self) -> Optional[PeerClusterRelErrorData]:
         """Return the peer cluster rel data if any."""
-        if not self.is_peer_cluster_relation_set():
+        if not self.is_peer_cluster_manager_relation_set():
             return None
 
-        return PeerClusterRelErrorData.from_dict(
-            self.peer_cluster_data.get_object(Scope.APP, "error-data")
+        peer_main_cm_rel_id = int(
+            self._charm.peers_data.get_object(Scope.APP, "peer-cluster-managers").get("main-cluster-manager-rel-id")
         )
+        logger.debug(f"Stored peer_main_cm_rel_id: {peer_main_cm_rel_id}")
+
+        rel = self._charm.model.get_relation(PeerClusterManagerRelationName, peer_main_cm_rel_id)
+        return PeerClusterRelErrorData.from_str(rel.data[rel.app].get("error-data"))
 
     def _pre_validate_roles_change(self, new_roles: List[str], prev_roles: List[str]):
         """Validate that the config changes of roles are allowed to happen."""
@@ -394,7 +488,7 @@ class OpenSearchPeerClustersManager:
         if "data" in prev_roles and "data" not in new_roles:
             # this is dangerous as this might induce downtime + error on start when data on disk
             # we need to check if there are other sub-clusters with the data roles
-            if not self.is_peer_cluster_relation_set():
+            if not self.is_peer_cluster_manager_relation_set():
                 raise OpenSearchProvidedRolesException(DataRoleRemovalForbidden)
 
             # todo guarantee unicity of unit names on peer_relation_joined
@@ -424,6 +518,6 @@ class OpenSearchPeerClustersManager:
             return DeploymentType.MAIN_CLUSTER_MANAGER
 
         if has_cm_roles and config.init_hold:
-            return DeploymentType.CLUSTER_MANAGER_FAILOVER
+            return DeploymentType.FAILOVER_CLUSTER_MANAGER
 
         return DeploymentType.OTHER

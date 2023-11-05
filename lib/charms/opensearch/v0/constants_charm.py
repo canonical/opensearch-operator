@@ -29,6 +29,7 @@ ServiceStopFailed = "An error occurred while attempting to stop the OpenSearch s
 ServiceIsStopping = "The OpenSearch service is stopping."
 AdminUserNotConfigured = "Waiting for the admin user to be fully configured..."
 TLSNotFullyConfigured = "Waiting for TLS to be fully configured..."
+TLSRelationMissing = "Missing TLS relation with this cluster."
 TLSRelationBrokenError = (
     "Relation broken with the TLS Operator while TLS not fully configured. Stopping OpenSearch."
 )
@@ -76,7 +77,8 @@ NewIndexRequested = "new index {index} requested"
 # Relation Interfaces
 ClientRelationName = "opensearch-client"
 PeerRelationName = "opensearch-peers"
-PeerClusterRelationName = "opensearch-peer-cluster"
+PeerClusterManagerRelationName = "peer-cluster-manager"
+PeerClusterRelationName = "peer-cluster"
 
 
 # Opensearch Users

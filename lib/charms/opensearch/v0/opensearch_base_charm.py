@@ -2,11 +2,14 @@
 # See LICENSE file for licensing details.
 
 """Base class for the OpenSearch Operators."""
+import json
 import logging
 import random
 from abc import abstractmethod
 from datetime import datetime
 from typing import Dict, List, Optional, Type
+
+from tenacity import Retrying, stop_after_attempt, wait_fixed, RetryError
 
 from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
@@ -25,6 +28,7 @@ from charms.opensearch.v0.constants_charm import (
     TLSNewCertsRequested,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
+    TLSRelationMissing,
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
@@ -71,8 +75,10 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
 )
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
-from charms.opensearch.v0.opensearch_relation_peer_cluster import OpenSearchPeerClusterProvider, \
-    OpenSearchPeerClusterRequirer
+from charms.opensearch.v0.opensearch_relation_peer_cluster import (
+    OpenSearchPeerClusterProvider,
+    OpenSearchPeerClusterRequirer,
+)
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
@@ -197,12 +203,20 @@ class OpenSearchBaseCharm(CharmBase):
 
         # TODO: check if cluster can start independently
 
-        if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
-            self.status.set(MaintenanceStatus(AdminUserInitProgress))
-
         # User config is currently in a default state, which contains multiple insecure default
         # users. Purge the user list before initialising the users the charm requires.
         self._purge_users()
+
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        if not deployment_desc:
+            event.defer()
+            return
+
+        if deployment_desc.typ != DeploymentType.MAIN_CLUSTER_MANAGER:
+            return
+
+        if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
+            self.status.set(MaintenanceStatus(AdminUserInitProgress))
 
         # this is in case we're coming from 0 to N units, we don't want to use the rest api
         self._put_admin_user()
@@ -223,25 +237,27 @@ class OpenSearchBaseCharm(CharmBase):
 
             return
 
-        if not self.is_admin_user_configured():
-            self.status.set(BlockedStatus(AdminUserNotConfigured))
+        # apply the directives computed and emitted by the peer cluster manager
+        if not self._apply_peer_cm_directives_and_check_if_can_start():
             event.defer()
             return
 
-        if not self.is_tls_fully_configured():
-            self.status.set(BlockedStatus(TLSNotFullyConfigured))
+        if not self.is_admin_user_configured() or not self.is_tls_fully_configured():
+            if not self.model.get_relation("certificates"):
+                status = BlockedStatus(TLSRelationMissing)
+            else:
+                status = MaintenanceStatus(
+                    TLSNotFullyConfigured if self.is_admin_user_configured() else AdminUserNotConfigured
+                )
+            self.status.set(status)
             event.defer()
             return
-
-        self.peers_data.put(Scope.UNIT, "tls_configured", True)
 
         self.status.clear(AdminUserNotConfigured)
         self.status.clear(TLSNotFullyConfigured)
+        self.status.clear(TLSRelationMissing)
 
-        # apply the directives computed and emitted by the peer cluster manager
-        if not self._apply_peer_cm_directives_and_start():
-            event.defer()
-            return
+        self.peers_data.put(Scope.UNIT, "tls_configured", True)
 
         # configure clients auth
         self.opensearch_config.set_client_auth()
@@ -250,7 +266,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
         self.on[self.service_manager.name].acquire_lock.emit(callback_override="_start_opensearch")
 
-    def _apply_peer_cm_directives_and_start(self) -> bool:
+    def _apply_peer_cm_directives_and_check_if_can_start(self) -> bool:
         """Apply the directives computed by the opensearch peer cluster manager."""
         if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
             # the deployment description hasn't finished being computed by the leader
@@ -267,11 +283,6 @@ class OpenSearchBaseCharm(CharmBase):
                 self.unit.status = BlockedStatus(str(e))
                 return False
 
-            # request the start of OpenSearch
-            self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
-            self.on[self.service_manager.name].acquire_lock.emit(
-                callback_override="_start_opensearch"
-            )
             return True
 
         if self.unit.is_leader():
@@ -342,6 +353,10 @@ class OpenSearchBaseCharm(CharmBase):
 
         # register new cm addresses on every node
         self._add_cm_addresses_to_conf()
+
+        # TODO remove the data role of the first CM to start if applies needed
+        # if self._remove_data_role_from_dedicated_cm_if_needed(event):
+        #    return
 
         app_data = event.relation.data.get(event.app)
         if self.unit.is_leader():
@@ -484,8 +499,31 @@ class OpenSearchBaseCharm(CharmBase):
             )
 
         if self.unit.is_leader():
+            prev_deployment_desc = self.opensearch_peer_cm.deployment_desc()
+
             # run peer cluster manager processing
             self.opensearch_peer_cm.run()
+
+            # if the current cluster wasn't already a "main-CM" and we're now updating the roles
+            # for it to become one. We need to: create the admin user if missing, and generate
+            # the admin certificate if missing and the TLS relation is established.
+            cluster_changed_to_main_cm = (
+                prev_deployment_desc is not None
+                and prev_deployment_desc.typ != DeploymentType.MAIN_CLUSTER_MANAGER
+                and self.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_CLUSTER_MANAGER
+            )
+            if cluster_changed_to_main_cm:
+                # we check if we need to create the admin user
+                if not self.is_admin_user_configured():
+                    self._put_admin_user()
+
+                # we check if we need to generate the admin certificate if missing
+                if not self.is_tls_fully_configured():
+                    if not self.model.get_relation("certificates"):
+                        event.defer()
+                        return
+
+                    self.tls.request_new_admin_certificate()
         elif not self.opensearch_peer_cm.deployment_desc():
             # deployment desc not initialized yet by leader
             event.defer()
@@ -562,23 +600,29 @@ class OpenSearchBaseCharm(CharmBase):
         - Run the security admin script
         """
         # Get the list of stored secrets for this cert
+        logger.debug(f"on_tls_conf_set: {scope}:{cert_type}\n")
         current_secrets = self.secrets.get_object(scope, cert_type.val)
+        logger.debug(f"on_tls_conf_set: fetched curr secrets\n")
 
         # Store cert/key on disk - must happen after opensearch stop for transport certs renewal
         self.store_tls_resources(cert_type, current_secrets)
+        logger.debug(f"on_tls_conf_set: stored curr secrets\n")
 
         if scope == Scope.UNIT:
             # node http or transport cert
             self.opensearch_config.set_node_tls_conf(cert_type, current_secrets)
+            logger.debug(f"on_tls_conf_set: set node conf\n")
         else:
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
             self.opensearch_config.set_admin_tls_conf(current_secrets)
+            logger.debug(f"on_tls_conf_set: set admin tls conf\n")
 
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal and self.is_admin_user_configured() and self.is_tls_fully_configured():
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
+            logger.debug(f"on_tls_conf_set: restart\n")
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
@@ -609,7 +653,25 @@ class OpenSearchBaseCharm(CharmBase):
 
         return stored
 
-    def is_tls_full_configured_in_cluster(self):
+    def trigger_leader_peer_rel_changed(self) -> None:
+        """Force trigger a peer rel changed event by leader."""
+        if not self.unit.is_leader():
+            return
+
+        self.peers_data.put(Scope.APP, "triggered", datetime.now().timestamp())
+        self.on[PeerRelationName].relation_changed.emit(
+            self.model.get_relation(PeerRelationName)
+        )
+
+    def is_every_unit_marked_as_started(self) -> bool:
+        """Check if every unit in the cluster is marked as started."""
+        rel = self.model.get_relation(PeerRelationName)
+        for unit in rel.units.union({self.unit}):
+            if rel.data[unit].get("started") != "True":
+                return False
+        return True
+
+    def is_tls_full_configured_in_cluster(self) -> bool:
         """Check if TLS is configured in all the units of the current cluster."""
         rel = self.model.get_relation(PeerRelationName)
         for unit in rel.units.union({self.unit}):
@@ -624,9 +686,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
+        self.peers_data.delete(Scope.UNIT, "started")
         if self.opensearch.is_started():
             try:
-                self._post_start_init()
+                self._post_start_init(event)
             except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
                 event.defer()
                 self.defer_trigger_event.emit()
@@ -657,17 +720,21 @@ class OpenSearchBaseCharm(CharmBase):
 
         try:
             # Retrieve the nodes of the cluster, needed to configure this node
+            logger.debug(f"Calling get nodes...")
             nodes = self._get_nodes(False)
+            logger.debug(f"Called get nodes... Validating roles...")
 
             # validate the roles prior to starting
             self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
+            logger.debug(f"Validated roles... calling set node conf")
 
             # Set the configuration of the node
             self._set_node_conf(nodes)
+            logger.debug(f"Called set nodes conf...")
         except OpenSearchHttpError:
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
-            self._post_start_init()
+            self._post_start_init(event)
             return
         except OpenSearchProvidedRolesException as e:
             logger.exception(e)
@@ -683,7 +750,7 @@ class OpenSearchBaseCharm(CharmBase):
                     or self.peers_data.get(Scope.APP, "security_index_initialised", False)
                 )
             )
-            self._post_start_init()
+            self._post_start_init(event)
         except (OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
             # emit defer_trigger event which won't do anything to force retry of current event
@@ -695,7 +762,7 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             self.defer_trigger_event.emit()
 
-    def _post_start_init(self):
+    def _post_start_init(self, event: EventBase):
         """Initialization post OpenSearch start."""
         # initialize the security index if needed (and certs written on disk etc.)
         if self.unit.is_leader() and not self.peers_data.get(
@@ -720,6 +787,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         # Remove the 'starting' flag on the unit
         self.peers_data.delete(Scope.UNIT, "starting")
+        self.peers_data.put(Scope.UNIT, "started", True)
 
         # apply post_start fixes to resolve start related upstream bugs
         self.opensearch_fixes.apply_on_start()
@@ -730,12 +798,23 @@ class OpenSearchBaseCharm(CharmBase):
         # clear waiting to start status
         self.status.clear(WaitingToStart)
 
+        # update the peer cluster rel data with new IP in case of main cluster manager
+        if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
+            peer_cluster_managers = self.peers_data.get_object(Scope.APP, "peer-cluster-managers") or {}
+
+            if self.opensearch_peer_cm.is_peer_cluster_manager_relation_set():
+                self.peer_cluster_provider.refresh_relation_data(
+                    event, int(peer_cluster_managers.get("main-cluster-manager-rel-id"))
+                )
+
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
         # 1. Add current node to the voting + alloc exclusions
         self.opensearch_exclusions.add_current()
+
+        # TODO: should be block until all shards move ?
 
         # 2. stop the service
         self.opensearch.stop()
@@ -785,6 +864,59 @@ class OpenSearchBaseCharm(CharmBase):
             # meaning it's a new cluster, so we can safely start the OpenSearch service
             pass
 
+        return True
+
+    def _remove_data_role_from_dedicated_cm_if_needed(self, event: EventBase) -> bool:
+        """Remove the data role from the first started CM node."""
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        if not deployment_desc or deployment_desc.typ != DeploymentType.MAIN_CLUSTER_MANAGER:
+            return False
+
+        if not self.peers_data.get(Scope.UNIT, "remove-data-role", default=False):
+            return False
+
+        try:
+            nodes = self._get_nodes(self.opensearch.is_node_up())
+        except OpenSearchHttpError:
+            return False
+
+        logger.debug(f"\n\n\n\n--------------------------\n\nNodes:"
+                     f"\n{json.dumps([n.to_dict() for n in nodes])}"
+                     f"\n\n-------------------------\n\n\n")
+
+        if len([node for node in nodes if node.is_data() and node.name != self.unit_name]) == 0:
+            event.defer()
+            return False
+
+        if not self.is_every_unit_marked_as_started():
+            return False
+
+        self.peers_data.delete(Scope.UNIT, "remove-data-role")
+        self.opensearch_config.remove_temporary_data_role()
+
+        # wait until data moves out completely
+        self.opensearch_exclusions.add_current()
+
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(0.5)):
+                with attempt:
+                    resp = self.opensearch.request(
+                        "GET", endpoint=f"/_cat/allocation/{self.unit_name}?format=json"
+                    )
+                    logger.debug(f"\n\n\nALLOCATION: {resp}\n\n\n")
+                    for entry in resp:
+                        if entry.get("node") == self.unit_name and entry.get("shards") != 0:
+                            raise Exception
+                    return True
+        except RetryError:
+            self.opensearch_exclusions.delete_current()
+            event.defer()
+            return False
+
+        self.status.set(WaitingStatus(WaitingToStart))
+        self.on[self.service_manager.name].acquire_lock.emit(
+            callback_override="_restart_opensearch"
+        )
         return True
 
     def _purge_users(self):
@@ -850,7 +982,7 @@ class OpenSearchBaseCharm(CharmBase):
         """
         args = [
             f"-cd {self.opensearch.paths.conf}/opensearch-security/",
-            f"-cn {self.app.name}-{self.model.name}",
+            f"-cn {self.opensearch_peer_cm.deployment_desc().config.cluster_name}",
             f"-h {self.unit_ip}",
             f"-cacert {self.opensearch.paths.certs}/root-ca.cert",
             f"-cert {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.cert",
@@ -870,12 +1002,25 @@ class OpenSearchBaseCharm(CharmBase):
     def _get_nodes(self, use_localhost: bool) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
         # This means it's the first unit on the cluster.
+        logger.debug("\n\n\n\nFetching nodes: _get_nodes")
         if self.unit.is_leader() and not self.peers_data.get(
             Scope.APP, "security_index_initialised", False
         ):
+            logger.debug("Empty because sec_index not initialised")
             return []
 
-        return ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
+        # add CM nodes reported in the peer cluster relation if any
+        hosts = self.alt_hosts
+        logger.debug(f"\nHosts: {hosts}\nDeployment desc: {self.opensearch_peer_cm.deployment_desc().to_dict()}\rel_data: {self.opensearch_peer_cm.rel_data()}")
+        if (
+            self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_CLUSTER_MANAGER
+            and (peer_cm_rel_data := self.opensearch_peer_cm.rel_data()) is not None
+        ):
+            hosts.extend([node.ip for node in peer_cm_rel_data.cm_nodes])
+            logger.debug(f"HOSTS: {hosts}")
+            logger.debug(f"peer_cm_rel_data: {peer_cm_rel_data.to_dict()}")
+
+        return ClusterTopology.nodes(self.opensearch, use_localhost, hosts)
 
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
@@ -898,14 +1043,20 @@ class OpenSearchBaseCharm(CharmBase):
                 else ClusterTopology.suggest_roles(nodes, self.app.planned_units())
             )
 
+        # This is the case where the 1st and main cluster manager to be deployed
+        # with no "data" role in the provided roles, we need to add the role to be able to create
+        # and store the security index
+        if (
+            self.unit.is_leader()
+            and deployment_desc.typ == DeploymentType.MAIN_CLUSTER_MANAGER
+            and "data" not in computed_roles
+            and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
+        ):
+            computed_roles.append("data")
+            self.peers_data.put(Scope.UNIT, "remove-data-role", True)
+
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
-
-        # add CM nodes reported in the peer cluster relation if any
-        peer_cm_rel_data = self.opensearch_peer_cm.rel_data()
-        if peer_cm_rel_data and deployment_desc.typ != DeploymentType.MAIN_CLUSTER_MANAGER:
-            cm_names.extend([node.name for node in peer_cm_rel_data.cm_nodes])
-            cm_ips.extend([node.ip for node in peer_cm_rel_data.cm_nodes])
 
         contribute_to_bootstrap = False
         if "cluster_manager" in computed_roles:
@@ -924,13 +1075,14 @@ class OpenSearchBaseCharm(CharmBase):
                 # indicates that this unit is part of the "initial cm nodes"
                 self.peers_data.put(Scope.UNIT, "bootstrap_contributor", True)
 
+        logger.debug(f"Writing on file....")
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
         self.opensearch_config.set_node(
             cluster_name=deployment_desc.config.cluster_name,
             unit_name=self.unit_name,
             roles=computed_roles,
-            cm_names=cm_names,
-            cm_ips=cm_ips,
+            cm_names=list(set(cm_names)),
+            cm_ips=list(set(cm_ips)),
             contribute_to_bootstrap=contribute_to_bootstrap,
             node_temperature=deployment_desc.config.data_temperature,
         )
@@ -1016,16 +1168,31 @@ class OpenSearchBaseCharm(CharmBase):
                 app_name=self.app.name, nodes=current_nodes
             )
         else:
-            updated_nodes = {
-                node.name: Node(
+            first_dedicated_cm_node = None
+            rel = self.model.get_relation(PeerRelationName)
+            for unit in rel.units.union({self.unit}):
+                if rel.data[unit].get("remove-data-role") == "True":
+                    first_dedicated_cm_node = unit.name.replace("/", "-")
+                    break
+
+            updated_nodes = {}
+            for node in current_nodes:
+                roles = node.roles
+                temperature = node.temperature
+
+                # only change the roles of the nodes of the current cluster
+                if node.app_name == self.app.name and node.name != first_dedicated_cm_node:
+                    roles = deployment_desc.config.roles
+                    temperature = deployment_desc.config.data_temperature
+
+                updated_nodes[node.name] = Node(
                     name=node.name,
-                    roles=deployment_desc.config.roles,
+                    roles=roles,
                     ip=node.ip,
-                    app_name=self.app.name,
-                    temperature=deployment_desc.config.data_temperature,
+                    app_name=node.app_name,
+                    temperature=temperature,
                 )
-                for node in current_nodes
-            }
+
             try:
                 self.opensearch_peer_cm.validate_roles(current_nodes, on_new_unit=False)
             except OpenSearchProvidedRolesException as e:

@@ -176,6 +176,16 @@ class OpenSearchConfig:
             True,
         )
 
+    def remove_temporary_data_role(self):
+        """Remove the data role that was added temporarily to the first dedicated CM node."""
+        conf = self._opensearch.config.load(self.CONFIG_YML)
+        stored_roles = conf.get("node.roles", [])
+
+        if "data" in stored_roles:
+            stored_roles.remove("data")
+
+        self._opensearch.config.put(self.CONFIG_YML, "node.roles", stored_roles)
+
     def add_seed_hosts(self, cm_ips: List[str]):
         """Add CM nodes ips / host names to the seed host list of this unit."""
         cm_ips_hostnames = set(cm_ips)
