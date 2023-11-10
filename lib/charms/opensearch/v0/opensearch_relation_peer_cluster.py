@@ -141,7 +141,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         """Event received by all units in main/failover CM when new sub-cluster joins the relation."""
         logger.debug(f"\n\n\nPROVIDER: _on_peer_cluster_relation_joined: {self.charm.unit_name}"
                      f" ---> {event.unit.name} \n\n")
-        self.refresh_relation_data(event, event.relation.id)
+        self.refresh_relation_data(event)
         # self.charm.trigger_leader_peer_rel_changed()
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
@@ -174,7 +174,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # todo: store the rel id in the main cluster peer rel databag and upon re-election, clone all rel data
         candidate_failover_cm_app = data.get("candidate-failover-cluster-manager-app")
         if not candidate_failover_cm_app:
-            self.refresh_relation_data(event, event.relation.id)
+            self.refresh_relation_data(event)
             return
 
         registered_cluster_managers = (
@@ -182,7 +182,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         )
         if registered_cluster_managers.get("failover-cluster-manager-app"):
             logger.info("A failover cluster manager has already been registered.")
-            self.refresh_relation_data(event, event.relation.id)
+            self.refresh_relation_data(event)
             return
 
         for rel_id in target_relation_ids:
@@ -194,7 +194,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 data={"peer-cluster-managers": json.dumps(registered_cluster_managers)}, rel_id=rel_id
             )
 
-    def refresh_relation_data(self, event: EventBase, relation_id: int):
+    def refresh_relation_data(self, event: EventBase):
         """Refresh the peer cluster rel data (new cm node, admin password change etc.)."""
         if not self.charm.unit.is_leader():
             return
@@ -202,17 +202,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         peer_rel_data_key = "data"
 
         rel_data = self._rel_data()
-        # if isinstance(rel_data, PeerClusterRelErrorData):
-        #     peer_rel_data_key = "error_data"
-        #     # for rel_id in target_relation_ids:
-        #     self.delete_from_rel_data("data", rel_id=relation_id)
-        #
-        #     if rel_data.should_wait:
-        #         event.defer()
-        #         self.charm.defer_trigger_event.emit()
-        # else:
-        #     # for rel_id in target_relation_ids:
-        #     self.delete_from_rel_data("error_data", rel_id=relation_id)
 
         logger.debug(f"PROVIDER: refresh_relation_data: {self.charm.unit_name} ---> \n\n{rel_data.to_dict()} \n\n")
 
@@ -260,19 +249,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         if should_defer:
             event.defer()
-            self.charm.defer_trigger_event.emit()
-
-        # return
-        #
-        # # save the managers of this fleet
-        # for rel_id in all_relation_ids:
-        #     cluster_managers = self.get_obj_from_rel_data("peer-cluster-managers", rel_id=rel_id) or {}
-        #     cluster_managers.update({
-        #         "main-cluster-manager-app": self.charm.app.name,
-        #         "main-cluster-manager-rel-id": rel_id,
-        #     })
-        #     self.put_in_rel_data(data={"peer-cluster-managers": json.dumps(cluster_managers)}, rel_id=rel_id)
-        #     self.put_in_rel_data(data={peer_rel_data_key: json.dumps(rel_data.to_dict())}, rel_id=rel_id)
 
     def _put_planned_units(self, app: str, count: int, target_relation_ids: List[int]):
         """Save in the peer cluster rel data the planned units count per app."""

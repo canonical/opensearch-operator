@@ -346,7 +346,7 @@ class OpenSearchBaseCharm(CharmBase):
         ):
             # we defer because we want the temporary status to be updated
             event.defer()
-            self.defer_trigger_event.emit()
+            # self.defer_trigger_event.emit()
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -355,8 +355,8 @@ class OpenSearchBaseCharm(CharmBase):
         self._add_cm_addresses_to_conf()
 
         # TODO remove the data role of the first CM to start if applies needed
-        # if self._remove_data_role_from_dedicated_cm_if_needed(event):
-        #    return
+        if self._remove_data_role_from_dedicated_cm_if_needed(event):
+            return
 
         app_data = event.relation.data.get(event.app)
         if self.unit.is_leader():
@@ -692,15 +692,12 @@ class OpenSearchBaseCharm(CharmBase):
                 self._post_start_init(event)
             except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
                 event.defer()
-                self.defer_trigger_event.emit()
+                # self.defer_trigger_event.emit()
             return
 
         if not self._can_service_start():
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
-
-            # emit defer trigger event which won't do anything to force retry of current event
-            self.defer_trigger_event.emit()
             return
 
         if self.peers_data.get(Scope.UNIT, "starting", False) and self.opensearch.is_failed():
@@ -754,13 +751,13 @@ class OpenSearchBaseCharm(CharmBase):
         except (OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
             # emit defer_trigger event which won't do anything to force retry of current event
-            self.defer_trigger_event.emit()
+            # self.defer_trigger_event.emit()
         except OpenSearchStartError as e:
             logger.exception(e)
             self.peers_data.delete(Scope.UNIT, "starting")
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
-            self.defer_trigger_event.emit()
+            # self.defer_trigger_event.emit()
 
     def _post_start_init(self, event: EventBase):
         """Initialization post OpenSearch start."""
@@ -803,9 +800,7 @@ class OpenSearchBaseCharm(CharmBase):
             peer_cluster_managers = self.peers_data.get_object(Scope.APP, "peer-cluster-managers") or {}
 
             if self.opensearch_peer_cm.is_peer_cluster_manager_relation_set():
-                self.peer_cluster_provider.refresh_relation_data(
-                    event, int(peer_cluster_managers.get("main-cluster-manager-rel-id"))
-                )
+                self.peer_cluster_provider.refresh_relation_data(event)
 
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
