@@ -797,8 +797,6 @@ class OpenSearchBaseCharm(CharmBase):
 
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
-            peer_cluster_managers = self.peers_data.get_object(Scope.APP, "peer-cluster-managers") or {}
-
             if self.opensearch_peer_cm.is_peer_cluster_manager_relation_set():
                 self.peer_cluster_provider.refresh_relation_data(event)
 

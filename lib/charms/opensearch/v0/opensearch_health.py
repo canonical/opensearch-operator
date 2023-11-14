@@ -39,6 +39,7 @@ class HealthColors:
     YELLOW_TEMP = "yellow-temp"
     RED = "red"
     UNKNOWN = "unknown"
+    IGNORE = "ignore"
 
 
 class OpenSearchHealth:
@@ -60,6 +61,11 @@ class OpenSearchHealth:
             status = self._fetch_status(host, wait_for_green_first)
             if not status:
                 return HealthColors.UNKNOWN
+
+            # the health depends on data nodes, for large deployments an ML cluster
+            # may not be concerned about reporting the health of the data nodes
+            if "data" not in self._opensearch.roles: # todo this is wrong: currently only handles current nodes - should report on all cluster
+                return HealthColors.IGNORE
 
             if app:
                 self.apply_for_app(status)
