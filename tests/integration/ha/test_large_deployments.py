@@ -147,7 +147,12 @@ async def test_set_roles_manually(
     await wait_until(
         ops_test,
         apps=[app],
-        apps_statuses=["active"],
+        apps_full_statuses={
+            app: {
+                "blocked": [PClusterWrongNodesCountForQuorum],
+                "active": [],
+            },
+        },
         units_full_statuses={
             app: {
                 "units": {
