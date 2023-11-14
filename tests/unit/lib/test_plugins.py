@@ -92,6 +92,8 @@ class TestPluginAlreadyInstalled(TestPlugin):
 
 
 class TestOpenSearchPlugin(unittest.TestCase):
+    BASE_LIB_PATH = "charms.opensearch.v0"
+
     def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
@@ -198,11 +200,15 @@ class TestOpenSearchPlugin(unittest.TestCase):
         assert succeeded is True
 
     @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
+    @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
-    def test_check_plugin_called_on_config_changed(self, mock_version) -> None:
+    def test_check_plugin_called_on_config_changed(self, mock_version, deployment_desc) -> None:
         """Triggers a config change and should call plugin manager."""
+        deployment_desc.return_value = "something"
         self.plugin_manager.run = MagicMock(return_value=False)
         self.charm.opensearch_config.update_host_if_needed = MagicMock(return_value=False)
         self.charm.opensearch.is_started = MagicMock(return_value=True)

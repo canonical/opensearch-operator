@@ -44,6 +44,19 @@ IndexCreationFailed = "failed to create {index} index - deferring index-requeste
 UserCreationFailed = "failed to create users for {rel_name} relation {id}"
 PluginConfigChangeError = "Failed to apply config changes on the plugin."
 
+CmVoRolesProvidedInvalid = (
+    "cluster_manager and voting_only roles cannot be both set on the same nodes."
+)
+CMRoleRemovalForbidden = "Removal of cluster_manager role from deployment not allowed."
+DataRoleRemovalForbidden = (
+    "Removal of data role from current deployment not allowed - the data cannot be reallocated."
+)
+PClusterNoRelation = "Cannot start. Waiting for peer cluster relation..."
+PClusterWrongRelation = "Cluster name don't match with related cluster. Remove relation."
+PClusterWrongRolesProvided = "Cannot start cluster with current set of roles."
+PClusterWrongNodesCountForQuorum = (
+    "Even number of members in quorum if current unit started. Add or remove 1 unit."
+)
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
@@ -62,6 +75,7 @@ NewIndexRequested = "new index {index} requested"
 # Relation Interfaces
 ClientRelationName = "opensearch-client"
 PeerRelationName = "opensearch-peers"
+PeerClusterRelationName = "peer-cluster"
 
 
 # Opensearch Users

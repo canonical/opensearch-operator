@@ -15,7 +15,7 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-class BaseStrEnum(Enum):
+class BaseStrEnum(str, Enum):
     """Base Enum class with str representation."""
 
     def __str__(self):

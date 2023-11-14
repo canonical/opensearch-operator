@@ -32,6 +32,8 @@ opensearch-sql
 
 
 class TestOpenSearchKNN(unittest.TestCase):
+    BASE_LIB_PATH = "charms.opensearch.v0"
+
     def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
@@ -49,6 +51,9 @@ class TestOpenSearchKNN(unittest.TestCase):
             }
         }
 
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
     @patch.object(RollingOpsManager, "_on_acquire_lock")
     @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
@@ -68,6 +73,7 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_is_enabled,
         mock_version,
         mock_acquire_lock,
+        deployment_desc,
     ) -> None:
         """Tests entire config_changed event with KNN plugin.
 
@@ -86,6 +92,9 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_acquire_lock.assert_called_once()
         mock_put.assert_called_once_with("opensearch.yml", "knn.plugin.enabled", True)
 
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
     @patch.object(RollingOpsManager, "_on_acquire_lock")
     @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
@@ -105,6 +114,7 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_is_enabled,
         mock_version,
         mock_acquire_lock,
+        deployment_desc,
     ) -> None:
         """Tests entire config_changed event with KNN plugin."""
         mock_status.return_value = PluginState.ENABLED

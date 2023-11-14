@@ -405,7 +405,26 @@ class OpenSearchDistribution(ABC):
 
     def current(self) -> Node:
         """Returns current Node."""
-        return Node(self._charm.unit_name, self.roles, self.host)
+        try:
+            nodes = self.request("GET", f"/_nodes/{self.node_id}", alt_hosts=self._charm.alt_hosts)
+            current_node = nodes["nodes"][self.node_id]
+            return Node(
+                name=current_node["name"],
+                roles=current_node["roles"],
+                ip=current_node["ip"],
+                app_name=self._charm.app.name,
+                temperature=current_node.get("attributes", {}).get("temp"),
+            )
+        except OpenSearchHttpError:
+            # we try to get the most accurate description of the node
+            conf_on_disk = self.config.load("opensearch.yml")
+            return Node(
+                name=self._charm.unit_name,
+                roles=conf_on_disk["node.roles"],
+                ip=self._charm.unit_ip,
+                app_name=self._charm.app.name,
+                temperature=conf_on_disk.get("node.attr.temp"),
+            )
 
     @staticmethod
     def normalize_allocation_exclusions(exclusions: Union[List[str], Set[str], str]) -> Set[str]:
