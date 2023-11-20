@@ -359,6 +359,11 @@ class OpenSearchKnn(OpenSearchPlugin):
 class OpenSearchPrometheusExporter(OpenSearchPlugin):
     """Implements the opensearch-knn plugin."""
 
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return "prometheus-exporter"
+
     def config(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for enabling the current plugin."""
         return OpenSearchPluginConfig(
@@ -368,12 +373,4 @@ class OpenSearchPrometheusExporter(OpenSearchPlugin):
                 "prometheus.cluster.settings": "true",
                 "prometheus.nodes.filter": "_all"
             }
-        )
-
-    @property
-    def name(self) -> str:
-        """Returns the name of the plugin."""
-        return (
-            "https://github.com/aiven/prometheus-exporter-plugin-for-opensearch/"
-            "releases/download/2.10.0.0/prometheus-exporter-2.10.0.0.zip"
         )
