@@ -334,6 +334,15 @@ class OpenSearchPlugin:
         """Returns the name of the plugin."""
         pass
 
+    @property
+    def install_path(self) -> str:
+        """Returns the install path.
+
+        Normally, the plugin name is enough to do the installation. However, some plugins
+        need to be downloaded from a remote URL instead, or from Maven repo.
+        """
+        return self.name
+
 
 class OpenSearchKnn(OpenSearchPlugin):
     """Implements the opensearch-knn plugin."""
@@ -354,3 +363,19 @@ class OpenSearchKnn(OpenSearchPlugin):
     def name(self) -> str:
         """Returns the name of the plugin."""
         return "opensearch-knn"
+
+
+class OpenSearchPrometheusExporter(OpenSearchPlugin):
+    """Implements the opensearch-knn plugin."""
+
+    @property
+    def install_path(self) -> str:
+        """Returns the URL path."""
+        return self._extra_config["prometheus_exporter_plugin_url"].replace(
+            "OPENSEARCH_VERSION", self._extra_config["opensearch-version"]
+        )
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return "prometheus-exporter"
