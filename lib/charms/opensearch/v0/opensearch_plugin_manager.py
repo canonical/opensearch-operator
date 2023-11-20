@@ -23,6 +23,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingDepsError,
     OpenSearchPluginRemoveError,
+    OpenSearchPrometheusExporter,
     PluginState,
 )
 
@@ -45,7 +46,12 @@ ConfigExposedPlugins = {
         "class": OpenSearchKnn,
         "config": "plugin_opensearch_knn",
         "relation": None,
-    }
+    },
+    "prometheus-exporter": {
+        "class": OpenSearchPrometheusExporter,
+        "config": None,
+        "relation": "cos-agent",
+    },
 }
 
 
@@ -80,9 +86,13 @@ class OpenSearchPluginManager:
         """Returns the config from the relation data of the target plugin if applies."""
         relation_name = plugin_data.get("relation")
         relation = self._charm.model.get_relation(relation_name) if relation_name else None
-        if not relation:
-            return None
-        return relation.data[self._charm.app]
+        if relation:
+            return {
+                **relation.data[self._charm.app],
+                **self._charm_config,
+                "opensearch-version": self._opensearch.version,
+            }
+        return {**self._charm_config, "opensearch-version": self._opensearch.version}
 
     def run(self) -> bool:
         """Runs a check on each plugin: install, execute config changes or remove.
@@ -124,7 +134,7 @@ class OpenSearchPluginManager:
 
         # Add the plugin
         try:
-            self._opensearch.run_bin("opensearch-plugin", f"install --batch {plugin.name}")
+            self._opensearch.run_bin("opensearch-plugin", f"install --batch {plugin.install_path}")
         except OpenSearchCmdError as e:
             if "already exists" in str(e):
                 logger.info(f"Plugin {plugin.name} already installed, continuing...")
