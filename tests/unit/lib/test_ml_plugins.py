@@ -28,6 +28,7 @@ opensearch-performance-analyzer
 opensearch-reports-scheduler
 opensearch-security
 opensearch-sql
+prometheus-exporter
 """
 
 
