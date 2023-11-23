@@ -248,6 +248,7 @@ class PluginState(BaseStrEnum):
     MISSING = "missing"
     INSTALLED = "installed"
     ENABLED = "enabled"
+    DISABLED = "disabled"
     WAITING_FOR_UPGRADE = "waiting-for-upgrade"
 
 
@@ -271,6 +272,7 @@ class OpenSearchPlugin:
     """Abstract class describing an OpenSearch plugin."""
 
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
+    REMOVE_ON_DISABLE = False
 
     def __init__(self, plugins_path: str, extra_config: Dict[str, Any] = None):
         """Creates the OpenSearchPlugin object.
@@ -329,6 +331,20 @@ class OpenSearchPlugin:
         """
         pass
 
+    @abstractmethod
+    def cleanup(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used after plugin removal.
+
+        Format:
+        OpenSearchPluginConfig(
+            config_entries_to_add = {...},
+            config_entries_to_del = {...},
+            secret_entries_to_add = {...},
+            secret_entries_to_del = {...},
+        )
+        """
+        pass
+
     @abstractproperty
     def name(self) -> str:
         """Returns the name of the plugin."""
@@ -368,6 +384,8 @@ class OpenSearchKnn(OpenSearchPlugin):
 class OpenSearchPrometheusExporter(OpenSearchPlugin):
     """Implements the opensearch-knn plugin."""
 
+    REMOVE_ON_DISABLE = True
+
     @property
     def install_path(self) -> str:
         """Returns the URL path."""
@@ -379,3 +397,25 @@ class OpenSearchPrometheusExporter(OpenSearchPlugin):
     def name(self) -> str:
         """Returns the name of the plugin."""
         return "prometheus-exporter"
+
+    def config(self) -> OpenSearchPluginConfig:
+        """Returns a plugin config object to be applied for enabling the current plugin."""
+        return OpenSearchPluginConfig(
+            config_entries_to_add={
+                "prometheus.metric_name.prefix": "opensearch_",
+                "prometheus.indices": "false",
+                "prometheus.cluster.settings": False,
+                "prometheus.nodes.filter": "_all",
+            }
+        )
+
+    def cleanup(self) -> OpenSearchPluginConfig:
+        """Returns a plugin config object to be applied for disabling the current plugin."""
+        return OpenSearchPluginConfig(
+            config_entries_to_del={
+                "prometheus.metric_name.prefix": "opensearch_",
+                "prometheus.indices": "false",
+                "prometheus.cluster.settings": False,
+                "prometheus.nodes.filter": "_all",
+            }
+        )
