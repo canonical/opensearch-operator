@@ -106,6 +106,7 @@ class OpenSearchPluginManager:
                     self._install_if_needed(plugin),
                     self._configure_if_needed(plugin),
                     self._disable_if_needed(plugin),
+                    self._remove_plugin(plugin),
                     restart_needed,
                 ]
             )
@@ -126,11 +127,12 @@ class OpenSearchPluginManager:
             return False
 
         # Check for dependencies
-        missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
-        if missing_deps:
-            raise OpenSearchPluginMissingDepsError(
-                f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
-            )
+        if plugin.dependencies:
+            missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
+            if missing_deps:
+                raise OpenSearchPluginMissingDepsError(
+                    f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
+                )
 
         # Add the plugin
         try:
