@@ -14,6 +14,7 @@ from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
     ClusterHealthRed,
     ClusterHealthUnknown,
+    COSRelationName,
     PeerRelationName,
     PluginConfigChangeError,
     RequestUnitServiceOps,
@@ -67,6 +68,7 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchProvidedRolesException,
     StartMode,
 )
+from charms.opensearch.v0.opensearch_cos import OpenSearchCOSProvider
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
@@ -107,6 +109,7 @@ LIBPATCH = 2
 
 SERVICE_MANAGER = "service"
 STORAGE_NAME = "opensearch-data"
+COS_AGENT_PORT = 9200
 
 
 logger = logging.getLogger(__name__)
@@ -134,6 +137,12 @@ class OpenSearchBaseCharm(CharmBase):
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.ops_lock = OpenSearchOpsLock(self)
+        self.cos_integration = OpenSearchCOSProvider(
+            self,
+            metrics_endpoints=[
+                {"path": "/_prometheus/metrics", "port": COSRelationName},
+            ],
+        )
 
         self.plugin_manager = OpenSearchPluginManager(self)
 
@@ -165,6 +174,12 @@ class OpenSearchBaseCharm(CharmBase):
         )
         self.framework.observe(
             self.on[STORAGE_NAME].storage_detaching, self._on_opensearch_data_storage_detaching
+        )
+        self.framework.observe(
+            self.on[COSRelationName].relation_created, self.cos_integration._on_cos_agent_relation_created
+        )
+        self.framework.observe(
+            self.on[COSRelationName].relation_broken, self.cos_integration._on_cos_agent_relation_departed
         )
 
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
