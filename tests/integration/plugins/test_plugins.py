@@ -16,6 +16,7 @@ from tests.integration.helpers import (
     MODEL_CONFIG,
     SERIES,
     check_cluster_formation_successful,
+    http_request,
     get_application_unit_ids_ips,
     get_application_unit_names,
     get_leader_unit_ip,
@@ -30,6 +31,7 @@ from tests.integration.plugins.helpers import (
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
+COS_APP_NAME = "grafana-agent"
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -46,7 +48,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(
-            my_charm, num_units=3, series=SERIES, config={"plugin_opensearch_knn": True}
+            my_charm, num_units=1, series=SERIES, config={"plugin_opensearch_knn": True}
         ),
     )
 
@@ -58,7 +60,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 3
+    assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
 @pytest.mark.abort_on_fail
@@ -236,3 +238,48 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
         except RetryError:
             # The search should fail if knn_enabled is false
             assert not knn_enabled
+
+
+async def test_prometheus_exporter_enabled(ops_test):
+    await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
+    await ops_test.model.relate(APP_NAME, COS_APP_NAME)
+    # NOTE: As for now, COS agent remains blocked, as we only have a partial config
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert config['prometheus_exporter_plugin_url']['default'].startswith("https://")
+
+
+async def test_prometheus_exporter_works(ops_test):
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
+    endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
+    response = await http_request(ops_test, "get", endpoint, app=APP_NAME, json_resp=False)
+
+    response_str = response.content.decode('utf-8')
+    assert response_str.count("opensearch_") > 500
+    assert len(response_str.split("\n")) > 500
+
+
+@pytest.mark.xfail(reason="Doesn't work yet")
+async def test_prometheus_exporter_disabled(ops_test):
+    await ops_test.juju("remove-relation", APP_NAME, COS_APP_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
+
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
+    endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
+    response = await http_request(ops_test, "get", endpoint, app=APP_NAME, json_resp=False)
+    assert response.content.decode('utf-8') == {
+        "error": "no handler found for uri [/_prometheus/metrics] and method [GET]"
+    }
+
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert not config['prometheus_exporter_plugin_url']

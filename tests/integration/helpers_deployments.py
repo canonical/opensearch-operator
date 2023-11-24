@@ -5,6 +5,7 @@ import json
 import logging
 import subprocess
 from datetime import datetime, timedelta
+from dateutil.parser import parse
 from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
@@ -22,7 +23,7 @@ class Status:
 
     def __init__(self, value: str, since: str, message: Optional[str] = None):
         self.value = value
-        self.since = datetime.strptime(since, "%d %b %Y %H:%M:%SZ")
+        self.since = parse(since)
         self.message = message
 
 
