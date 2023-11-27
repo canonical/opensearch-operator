@@ -176,11 +176,22 @@ class OpenSearchBaseCharm(CharmBase):
             self.on[STORAGE_NAME].storage_detaching, self._on_opensearch_data_storage_detaching
         )
         self.framework.observe(
-            self.on[COSRelationName].relation_created, self.cos_integration._on_cos_agent_relation_created
+            self.on[COSRelationName].relation_joined, self.cos_integration._on_cos_agent_relation_joined
         )
         self.framework.observe(
             self.on[COSRelationName].relation_broken, self.cos_integration._on_cos_agent_relation_departed
         )
+        self.framework.observe(
+            getattr(self.cos_integration.my_events, "relation_disappeared"),
+            self.cos_integration._on_cos_agent_relation_disappeared
+        )
+        self.framework.observe(
+            self.cos_integration.my_events.relation_disappeared,
+            self.cos_integration._on_cos_agent_relation_disappeared
+        )
+        # self.framework.observe(
+        #     self.on[COSRelationName].relation_disappeared, self.cos_integration._on_cos_agent_relation_disappeared
+        # )
 
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)

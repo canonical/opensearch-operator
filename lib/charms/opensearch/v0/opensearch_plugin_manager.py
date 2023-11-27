@@ -253,8 +253,9 @@ class OpenSearchPluginManager:
         """Returns True if a relation is expected and it is set."""
         if not relation_name:
             return False
-        relation = self._charm.model.get_relation(relation_name)
-        return relation is not None
+        # relation = self._charm.model.get_relation(relation_name)
+        cos_relation = self._charm.meta.relations.get(relation_name)
+        return cos_relation is not None
 
     def _remove_plugin(self, plugin: OpenSearchPlugin) -> bool:
         """Remove a plugin without restarting the node."""
