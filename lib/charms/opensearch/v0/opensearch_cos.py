@@ -52,11 +52,11 @@ class OpenSearchCOSProvider(COSAgentProvider):
 
     def _on_cos_agent_relation_created(self, event: RelationCreatedEvent):
         """COS workflow initialization happens when the COS relation is created."""
-        self._run_plugin_manager(event)
+        # self._run_plugin_manager(event)
 
     def _on_cos_agent_relation_broken(self, event: RelationBrokenEvent):
         """Re-run plugin configuration is the cos relation is not present anymore."""
         # The only reliable way to pass the information to Plugin Manager
         # that the relation is not there anymore
-        self._charm.plugin_manager.set_event_scope(event)
-        self._run_plugin_manager(event)
+        # self._charm.plugin_manager.set_event_scope(event)
+        # self._run_plugin_manager(event)
