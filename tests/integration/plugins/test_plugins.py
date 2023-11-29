@@ -19,6 +19,7 @@ from tests.integration.helpers import (
     get_application_unit_ids_ips,
     get_application_unit_names,
     get_leader_unit_ip,
+    http_request,
 )
 from tests.integration.plugins.helpers import (
     create_index_and_bulk_insert,
@@ -29,6 +30,8 @@ from tests.integration.plugins.helpers import (
     run_knn_training,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+
+COS_APP_NAME = "grafana-agent"
 
 
 @pytest.mark.abort_on_fail
@@ -55,10 +58,77 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
-        timeout=1400,
+        timeout=3400,
         idle_period=IDLE_PERIOD,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
+
+
+async def test_prometheus_exporter_disabled_by_default(ops_test):
+    # Test that Prometheus Exporter is NOT running before the relation is there
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
+    endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
+    response = await http_request(ops_test, "get", endpoint, app=APP_NAME)
+    assert response == {
+        "error": "no handler found for uri [/_prometheus/metrics] and method [GET]"
+    }
+
+
+async def test_prometheus_exporter_enabled_by_cos_relation(ops_test):
+    await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
+    await ops_test.model.relate(APP_NAME, COS_APP_NAME)
+    # NOTE: As for now, COS agent remains blocked, as we only have a partial config
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert config["prometheus_exporter_plugin_url"]["default"].startswith("https://")
+
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
+    endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
+    response = await http_request(ops_test, "get", endpoint, app=APP_NAME, json_resp=False)
+
+    response_str = response.content.decode("utf-8")
+    assert response_str.count("opensearch_") > 500
+    assert len(response_str.split("\n")) > 500
+
+
+async def test_prometheus_exporter_disabled_by_cos_relation_gone(ops_test):
+    await ops_test.juju("remove-relation", APP_NAME, COS_APP_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
+
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
+    endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
+    response = await http_request(ops_test, "get", endpoint, app=APP_NAME)
+    assert response == {
+        "error": "no handler found for uri [/_prometheus/metrics] and method [GET]"
+    }
+
+
+async def test_knn_endabled_disabled(ops_test):
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert config["plugin_opensearch_knn"]["default"] is False
+    assert config["plugin_opensearch_knn"]["value"] is True
+
+    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "False"})
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
+
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert config["plugin_opensearch_knn"]["value"] is False
+
+    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "True"})
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
+
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert config["plugin_opensearch_knn"]["value"] is True
 
 
 @pytest.mark.abort_on_fail
