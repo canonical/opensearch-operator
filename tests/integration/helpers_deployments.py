@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
+from dateutil.parser import parse
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
@@ -22,7 +23,7 @@ class Status:
 
     def __init__(self, value: str, since: str, message: Optional[str] = None):
         self.value = value
-        self.since = datetime.strptime(since, "%d %b %Y %H:%M:%SZ")
+        self.since = parse(since, ignoretz=True)
         self.message = message
 
 
