@@ -285,6 +285,7 @@ async def http_request(
     payload: Optional[Union[str, Dict[str, any]]] = None,
     resp_status_code: bool = False,
     verify=True,
+    user: Optional[str] = "admin",
     user_password: Optional[str] = None,
     app: str = APP_NAME,
     json_resp: bool = True,
@@ -330,7 +331,7 @@ async def http_request(
         elif isinstance(payload, dict):
             request_kwargs["data"] = json.dumps(payload)
 
-        session.auth = ("admin", user_password or admin_secrets["password"])
+        session.auth = (user, user_password or admin_secrets["password"])
 
         request_kwargs["verify"] = chain.name if verify else False
         resp = session.request(**request_kwargs)
@@ -493,3 +494,19 @@ def juju_version_major() -> int:
     """Fetch the juju version."""
     version = subprocess.run(["juju", "--version"], check=True, stdout=subprocess.PIPE).stdout
     return int(version.strip().decode("utf-8").split(".")[0])
+
+
+async def get_secret_by_label(ops_test, label: str) -> Dict[str, str]:
+    secrets_raw = await ops_test.juju("list-secrets")
+    secret_ids = [
+        secret_line.split()[0] for secret_line in secrets_raw[1].split("\n")[1:] if secret_line
+    ]
+
+    for secret_id in secret_ids:
+        secret_data_raw = await ops_test.juju(
+            "show-secret", "--format", "json", "--reveal", secret_id
+        )
+        secret_data = json.loads(secret_data_raw[1])
+
+        if label == secret_data[secret_id].get("label"):
+            return secret_data[secret_id]["content"]["Data"]
