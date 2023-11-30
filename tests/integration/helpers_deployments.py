@@ -23,7 +23,7 @@ class Status:
 
     def __init__(self, value: str, since: str, message: Optional[str] = None):
         self.value = value
-        self.since = parse(since)
+        self.since = parse(since, ignoretz=True)
         self.message = message
 
 
