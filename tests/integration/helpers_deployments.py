@@ -5,12 +5,12 @@ import json
 import logging
 import subprocess
 from datetime import datetime, timedelta
-from time import sleep
 from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
 from dateutil.parser import parse
 from pytest_operator.plugin import OpsTest
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)s", datefmt="%H:%M:%S"
@@ -322,35 +322,37 @@ async def wait_until(  # noqa: C901
             if app not in wait_for_exact_units:
                 wait_for_exact_units[app] = 1
 
-    logger.info("\n\n\n")
-    logger.info(
-        subprocess.check_output(
-            f"juju status --model {ops_test.model.info.name}", shell=True
-        ).decode("utf-8")
-    )
-
-    start = datetime.now()
-    while start + timedelta(seconds=timeout) > datetime.now():
-        sleep(10)
-        logger.info(f"\n\n\n{now()} -- Waiting for model...")
-        result = await _is_every_condition_met(
-            ops_test=ops_test,
-            apps=apps,
-            wait_for_exact_units=wait_for_exact_units,
-            apps_statuses=apps_statuses,
-            apps_full_statuses=apps_full_statuses,
-            units_statuses=units_statuses,
-            units_full_statuses=units_full_statuses,
-            idle_period=idle_period,
+    try:
+        logger.info("\n\n\n")
+        logger.info(
+            subprocess.check_output(
+                f"juju status --model {ops_test.model.info.name}", shell=True
+            ).decode("utf-8")
         )
-        if result:
-            logger.info(f"{now()} -- Waiting for model: complete.\n\n\n")
-            return
 
-    logger.error("wait_until -- Timed out!\n\n\n")
-    logger.info(
-        subprocess.check_output(
-            f"juju status --model {ops_test.model.info.name}", shell=True
-        ).decode("utf-8")
-    )
-    _dump_juju_logs(model=ops_test.model.info.name, lines=3000)
+        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
+            with attempt:
+                logger.info(f"\n\n\n{now()} -- Waiting for model...")
+                if await _is_every_condition_met(
+                    ops_test=ops_test,
+                    apps=apps,
+                    wait_for_exact_units=wait_for_exact_units,
+                    apps_statuses=apps_statuses,
+                    apps_full_statuses=apps_full_statuses,
+                    units_statuses=units_statuses,
+                    units_full_statuses=units_full_statuses,
+                    idle_period=idle_period,
+                ):
+                    logger.info(f"{now()} -- Waiting for model: complete.\n\n\n")
+                    return
+
+                raise Exception
+    except RetryError:
+        logger.error("wait_until -- Timed out!\n\n\n")
+        logger.info(
+            subprocess.check_output(
+                f"juju status --model {ops_test.model.info.name}", shell=True
+            ).decode("utf-8")
+        )
+        _dump_juju_logs(model=ops_test.model.info.name, lines=3000)
+        raise
