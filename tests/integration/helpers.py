@@ -493,3 +493,22 @@ def juju_version_major() -> int:
     """Fetch the juju version."""
     version = subprocess.run(["juju", "--version"], check=True, stdout=subprocess.PIPE).stdout
     return int(version.strip().decode("utf-8").split(".")[0])
+
+
+async def get_secret_by_label(ops_test, label: str) -> Dict[str, str]:
+    secrets_raw = await ops_test.juju("list-secrets")
+    secret_ids = [
+        secret_line.split()[0] for secret_line in secrets_raw[1].split("\n")[1:] if secret_line
+    ]
+
+    result = {}
+    for secret_id in secret_ids:
+        secret_data = await ops_test.juju("show-secret", "--reveal", secret_id)
+        if label in secret_data[1]:
+            secret_content_raw = secret_data[1].split("\n")[7:]
+            for content in secret_content_raw:
+                if not content:
+                    continue
+                key, value = content.split(":")
+                result[key.strip()] = value.strip()
+            return result

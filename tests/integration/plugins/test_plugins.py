@@ -3,10 +3,11 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import json
 
 import pytest
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha.helpers import app_name
 from tests.integration.ha.helpers_data import bulk_insert, create_index, search
@@ -18,8 +19,11 @@ from tests.integration.helpers import (
     check_cluster_formation_successful,
     get_application_unit_ids_ips,
     get_application_unit_names,
+    get_leader_unit_id,
     get_leader_unit_ip,
+    get_secret_by_label,
     http_request,
+    run_action,
 )
 from tests.integration.plugins.helpers import (
     create_index_and_bulk_insert,
@@ -29,9 +33,13 @@ from tests.integration.plugins.helpers import (
     is_knn_training_complete,
     run_knn_training,
 )
+from tests.integration.relations.opensearch_provider.helpers import (
+    get_unit_relation_data,
+)
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 COS_APP_NAME = "grafana-agent"
+COS_RELATION_NAME = "cos-agent"
 
 
 @pytest.mark.abort_on_fail
@@ -84,16 +92,27 @@ async def test_prometheus_exporter_disabled_by_default(ops_test):
 async def test_prometheus_exporter_enabled_by_cos_relation(ops_test):
     await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
     await ops_test.model.relate(APP_NAME, COS_APP_NAME)
-    # NOTE: As for now, COS agent remains blocked, as we only have a partial config
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
-    config = await ops_test.model.applications[APP_NAME].get_config()
-    assert config["prometheus_exporter_plugin_url"]["default"].startswith("https://")
 
+    # Check that the correct settings were successfully communicated to grafana-agent
+    cos_leader_id = await get_leader_unit_id(ops_test, COS_APP_NAME)
+    cos_leader_name = f"{COS_APP_NAME}/{cos_leader_id}"
+    leader_id = await get_leader_unit_id(ops_test, APP_NAME)
+    leader_name = f"{APP_NAME}/{leader_id}"
+    relation_data_raw = await get_unit_relation_data(
+        ops_test, cos_leader_name, leader_name, COS_RELATION_NAME, "config"
+    )
+    relation_data = json.loads(relation_data_raw)["metrics_scrape_jobs"][0]["basic_auth"]
+    secret = await get_secret_by_label(ops_test, "opensearch:app:monitor-password")
+    assert relation_data["username"] == "monitor"
+    assert relation_data["password"] == secret["monitor-password"]
+
+    # Prometheus Exporter data propagated in as expected
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
     endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
     response = await http_request(ops_test, "get", endpoint, app=APP_NAME, json_resp=False)
@@ -108,7 +127,25 @@ async def test_prometheus_exporter_disabled_by_cos_relation_gone(ops_test):
 
     # Wait 90s as the update-status is supposed to happen every 1m
     # If model config is updated, update this routine as well.
-    await asyncio.sleep(150)
+    for attempt in Retrying(stop=stop_after_delay(150), wait=wait_fixed(10)):
+        with attempt:
+            await ops_test.model.wait_for_idle(
+                apps=[APP_NAME],
+                status="active",
+                timeout=1400,
+                idle_period=IDLE_PERIOD,
+            )
+
+            leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
+            endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
+            response = await http_request(ops_test, "get", endpoint, app=APP_NAME)
+            assert response == {
+                "error": "no handler found for uri [/_prometheus/metrics] and method [GET]"
+            }
+
+
+async def test_prometheus_exporter_reenabled(ops_test):
+    await ops_test.model.relate(APP_NAME, COS_APP_NAME)
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME],
         status="active",
@@ -118,10 +155,33 @@ async def test_prometheus_exporter_disabled_by_cos_relation_gone(ops_test):
 
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
     endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
-    response = await http_request(ops_test, "get", endpoint, app=APP_NAME)
-    assert response == {
-        "error": "no handler found for uri [/_prometheus/metrics] and method [GET]"
-    }
+    response = await http_request(ops_test, "get", endpoint, app=APP_NAME, json_resp=False)
+
+    response_str = response.content.decode("utf-8")
+    assert response_str.count("opensearch_") > 500
+    assert len(response_str.split("\n")) > 500
+
+
+async def test_prometheus_monitor_user_password_change(ops_test):
+    # Password change applied as expected
+    leader_id = await get_leader_unit_id(ops_test, APP_NAME)
+    result1 = await run_action(ops_test, leader_id, "set-password", {"username": "monitor"})
+    new_password = result1.response.get("monitor-password")
+    result2 = await run_action(ops_test, leader_id, "get-password", {"username": "monitor"})
+
+    assert result2.response.get("password") == new_password
+
+    # Relation data is updated
+    cos_leader_id = await get_leader_unit_id(ops_test, COS_APP_NAME)
+    cos_leader_name = f"{COS_APP_NAME}/{cos_leader_id}"
+    leader_id = await get_leader_unit_id(ops_test, APP_NAME)
+    leader_name = f"{APP_NAME}/{leader_id}"
+    relation_data_raw = await get_unit_relation_data(
+        ops_test, cos_leader_name, leader_name, COS_RELATION_NAME, "config"
+    )
+    relation_data = json.loads(relation_data_raw)["metrics_scrape_jobs"][0]["basic_auth"]
+    assert relation_data["username"] == "monitor"
+    assert relation_data["password"] == new_password
 
 
 async def test_knn_endabled_disabled(ops_test):
