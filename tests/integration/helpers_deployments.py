@@ -308,11 +308,9 @@ async def wait_until(  # noqa: C901
     """
     if not apps:
         raise ValueError("apps must be specified.")
-
     if not (apps_statuses or apps_full_statuses or units_statuses or units_full_statuses):
         apps_statuses = ["active"]
         units_statuses = ["active"]
-
     if isinstance(wait_for_exact_units, int):
         wait_for_exact_units = {app: wait_for_exact_units for app in apps}
     elif not wait_for_exact_units:
@@ -321,7 +319,6 @@ async def wait_until(  # noqa: C901
         for app in apps:
             if app not in wait_for_exact_units:
                 wait_for_exact_units[app] = 1
-
     try:
         logger.info("\n\n\n")
         logger.info(
@@ -329,7 +326,6 @@ async def wait_until(  # noqa: C901
                 f"juju status --model {ops_test.model.info.name}", shell=True
             ).decode("utf-8")
         )
-
         for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
             with attempt:
                 logger.info(f"\n\n\n{now()} -- Waiting for model...")
@@ -345,7 +341,6 @@ async def wait_until(  # noqa: C901
                 ):
                     logger.info(f"{now()} -- Waiting for model: complete.\n\n\n")
                     return
-
                 raise Exception
     except RetryError:
         logger.error("wait_until -- Timed out!\n\n\n")
