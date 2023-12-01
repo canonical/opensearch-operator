@@ -26,7 +26,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPrometheusExporter,
     PluginState,
 )
-from ops import RelationBrokenEvent
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -83,10 +82,6 @@ class OpenSearchPluginManager:
             )
             plugins_list.append(new_plugin)
         return plugins_list
-
-    def set_event_scope(self, event):
-        """Optional: define an event scope for the execution."""
-        self._event = event
 
     def _extra_conf(self, plugin_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Returns the config from the relation data of the target plugin if applies."""
@@ -255,11 +250,8 @@ class OpenSearchPluginManager:
         """Returns True if a relation is expected and it is set."""
         if not relation_name:
             return False
-        # relation = self._charm.model.get_relation(relation_name)
-        cos_relation = self._charm.meta.relations.get(relation_name)
-        return cos_relation is not None and (
-            not self._event or not isinstance(self._event, RelationBrokenEvent)
-        )
+        relation = self._charm.model.get_relation(relation_name)
+        return relation is not None
 
     def _remove_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""

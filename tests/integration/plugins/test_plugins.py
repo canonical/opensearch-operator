@@ -42,7 +42,14 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         return
 
     my_charm = await ops_test.build_charm(".")
-    await ops_test.model.set_config(MODEL_CONFIG)
+
+    model_conf = MODEL_CONFIG.copy()
+    # Make it more regular as COS relation-broken really happens on the
+    # next hook call in each opensearch unit.
+    # If this value is changed, then update the sleep accordingly at:
+    #  test_prometheus_exporter_disabled_by_cos_relation_gone
+    model_conf["update-status-hook-interval"] = "1m"
+    await ops_test.model.set_config(model_conf)
 
     # Deploy TLS Certificates operator.
     config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
@@ -98,6 +105,10 @@ async def test_prometheus_exporter_enabled_by_cos_relation(ops_test):
 
 async def test_prometheus_exporter_disabled_by_cos_relation_gone(ops_test):
     await ops_test.juju("remove-relation", APP_NAME, COS_APP_NAME)
+
+    # Wait 90s as the update-status is supposed to happen every 1m
+    # If model config is updated, update this routine as well.
+    await asyncio.sleep(150)
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME],
         status="active",
