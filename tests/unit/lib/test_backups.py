@@ -7,9 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import charms
 from charms.opensearch.v0.opensearch_backups import (
-    OPENSEARCH_REPOSITORY_NAME,
-    S3_OPENSEARCH_EXTRA_VALUES,
     S3_RELATION,
+    S3_REPOSITORY,
     OpenSearchBackupPlugin,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
@@ -86,7 +85,6 @@ class TestBackups(unittest.TestCase):
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
                 config_entries_to_add={
-                    **S3_OPENSEARCH_EXTRA_VALUES,
                     "s3.client.default.region": "testing-region",
                     "s3.client.default.endpoint": "localhost",
                 },
@@ -112,10 +110,10 @@ class TestBackups(unittest.TestCase):
         ]
         mock_status.return_value = PluginState.ENABLED
         self.charm.backup.apply_post_restart_if_needed()
-        mock_request.called_once_with("GET", f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}")
+        mock_request.called_once_with("GET", f"_snapshot/{S3_REPOSITORY}")
         mock_request.called_once_with(
             "PUT",
-            f"_snapshot/{OPENSEARCH_REPOSITORY_NAME}",
+            f"_snapshot/{S3_REPOSITORY}",
             payload={
                 "type": "s3",
                 "settings": {
@@ -132,36 +130,35 @@ class TestBackups(unittest.TestCase):
         "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._install_if_needed"
     )
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
-    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._execute_s3_depart_calls")
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._execute_s3_broken_calls")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_relation_departed(
+    def test_relation_broken(
         self,
         mock_status,
-        mock_execute_s3_depart_calls,
+        mock_execute_s3_broken_calls,
         mock_request,
         mock_install,
         mock_apply_config,
         mock_acquire_lock,
         _,
     ) -> None:
-        """Tests depart relation unit."""
-        mock_request.side_effects = [  # list of returns for each call
+        """Tests broken relation unit."""
+        mock_request.side_effects = [
+            # list of returns for each call
             # 1st request: _check_snapshot_status
             # Return a response with SUCCESS in:
             {"SUCCESS"},
         ]
         mock_status.return_value = PluginState.ENABLED
-        self.harness.remove_relation_unit(self.s3_rel_id, "s3-integrator/0")
-
+        self.harness.remove_relation(self.s3_rel_id)
         mock_request.called_once_with("GET", "/_snapshot/_status")
-        mock_execute_s3_depart_calls.assert_called_once()
+        mock_execute_s3_broken_calls.assert_called_once()
         # As plugin_manager's run() is called, then so install(), config() and disable():
         mock_install.assert_called_once()
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
                 config_entries_to_del=[
-                    *(S3_OPENSEARCH_EXTRA_VALUES.keys()),
                     "s3.client.default.region",
                     "s3.client.default.endpoint",
                 ],

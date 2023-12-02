@@ -128,6 +128,7 @@ class ConfigSetter(ABC):
         old_val: str,
         new_val: any,
         regex: bool = False,
+        add_line_if_missing: bool = False,
         output_type: OutputType = OutputType.file,
         output_file: str = None,
     ) -> None:
@@ -138,6 +139,7 @@ class ConfigSetter(ABC):
             old_val (str): The value we wish to replace
             new_val (any): The new value to replace old_val
             regex (bool): Whether to treat old_val as a regex.
+            add_line_if_missing (bool): whether to append the new_val if old_val is not found.
             output_type (OutputType): The type of output we're expecting from this operation,
                 i.e, set OutputType.all to have the output on both the console and target file
             output_file: Target file for the result config, by default same as config_file
@@ -245,7 +247,15 @@ class YamlConfigSetter(ConfigSetter):
     ) -> None:
         """Replace any substring in a text file.
 
-        add_line_if_missing (bool): whether to append the new_val if old_val is not found.
+        Args:
+            config_file (str): Path to the source config file
+            old_val (str): The value we wish to replace
+            new_val (any): The new value to replace old_val
+            regex (bool): Whether to treat old_val as a regex.
+            add_line_if_missing (bool): whether to append the new_val if old_val is not found.
+            output_type (OutputType): The type of output we're expecting from this operation,
+                i.e, set OutputType.all to have the output on both the console and target file
+            output_file: Target file for the result config, by default same as config_file
         """
         path = f"{self.base_path}{config_file}"
 

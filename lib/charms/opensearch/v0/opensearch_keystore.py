@@ -5,19 +5,19 @@
 
 This module manages OpenSearch keystore access and lifecycle.
 """
-import secrets
-import string
 import logging
 import os
+import secrets
+import string
 from abc import ABC, abstractmethod
 from typing import Dict, List
 
+from charms.data_platform_libs.v0.data_secrets import APP_SCOPE
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHttpError,
 )
-from charms.data_platform_libs.v0.data_secrets import Scope
 
 # The unique Charmhub library identifier, never change it
 LIBID = "de98efa151804b699d5d6128fa100807"
@@ -33,12 +33,10 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-def _generate_random_pwd(length: int=24) -> str:
+def _generate_random_pwd(length: int = 24) -> str:
     """Generates a random password."""
-
     choices = string.ascii_letters + string.digits
     return "".join([secrets.choice(choices) for i in range(length)])
-
 
 
 class OpenSearchKeystoreError(OpenSearchError):
@@ -153,12 +151,12 @@ class OpenSearchTruststore(Keystore):
         Given we use -storepass at opening, it updates the password automatically.
         """
         pwd = self._juju_secret.get(
-            Scope.APP, self.OS_CA_TRUSTSTORE_PWD, default=_generate_random_pwd()
+            APP_SCOPE, self.OS_CA_TRUSTSTORE_PWD, default=_generate_random_pwd()
         )
         # Check now if the pwd is actually new, if yes, then either there was no key before
         # OR the password has expired and changed. In both cases, we need to update the keystore
-        if pwd != self._juju_secret.get(Scope.APP, self.OS_CA_TRUSTSTORE_PWD):
-            self._juju_secret.set(Scope.APP, self.OS_CA_TRUSTSTORE_PWD, pwd)
+        if pwd != self._juju_secret.get(APP_SCOPE, self.OS_CA_TRUSTSTORE_PWD):
+            self._juju_secret.set(APP_SCOPE, self.OS_CA_TRUSTSTORE_PWD, pwd)
         return pwd
 
     def list(self, alias: str = None) -> List[str]:
