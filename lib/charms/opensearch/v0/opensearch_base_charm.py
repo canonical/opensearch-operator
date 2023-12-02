@@ -16,6 +16,7 @@ from charms.opensearch.v0.constants_charm import (
     ClusterHealthUnknown,
     COSPort,
     COSRelationName,
+    COSUser,
     PeerRelationName,
     PluginConfigChangeError,
     RequestUnitServiceOps,
@@ -139,9 +140,10 @@ class OpenSearchBaseCharm(CharmBase):
         self.ops_lock = OpenSearchOpsLock(self)
         self.cos_integration = OpenSearchCOSProvider(
             self,
-            metrics_endpoints=[
-                {"path": "/_prometheus/metrics", "port": COSPort},
-            ],
+            relation_name=COSRelationName,
+            metrics_endpoints=[],
+            scrape_configs=self._scrape_config,
+            refresh_events=[self.on.set_password_action],
         )
 
         self.plugin_manager = OpenSearchPluginManager(self)
@@ -510,30 +512,31 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         user_name = event.params.get("username")
-        if user_name != "admin":
-            event.fail("Only the 'admin' username is allowed for this action.")
+        if user_name not in ["admin", COSUser]:
+            event.fail(f"Only the 'admin' and {COSUser} username is allowed for this action.")
             return
 
         password = event.params.get("password") or generate_password()
         try:
+            label = self.secrets.password_key(user_name)
             self._put_admin_user(password)
-            password = self.secrets.get(Scope.APP, f"{user_name}-password")
-            event.set_results({f"{user_name}-password": password})
+            password = self.secrets.get(Scope.APP, label)
+            event.set_results({label: password})
         except OpenSearchError as e:
             event.fail(f"Failed changing the password: {e}")
 
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
         user_name = event.params.get("username")
-        if user_name != "admin":
-            event.fail("Only the 'admin' username is allowed for this action.")
+        if user_name not in ["admin", COSUser]:
+            event.fail(f"Only the 'admin' and {COSUser} username is allowed for this action.")
             return
 
         if not self._is_tls_fully_configured():
-            event.fail("admin user or TLS certificates not configured yet.")
+            event.fail(f"{user_name} user or TLS certificates not configured yet.")
             return
 
-        password = self.secrets.get(Scope.APP, f"{user_name}-password")
+        password = self.secrets.get(Scope.APP, self.secrets.password_key(user_name))
         cert = self.secrets.get_object(
             Scope.APP, CertType.APP_ADMIN.val
         )  # replace later with new user certs
@@ -1049,6 +1052,19 @@ class OpenSearchBaseCharm(CharmBase):
         self.peers_data.put(
             Scope.UNIT, "certs_exp_checked_at", datetime.now().strftime(date_format)
         )
+
+    def _scrape_config(self) -> List[Dict]:
+        """Generates the scrape config as needed."""
+        pwd = self.secrets.get(Scope.APP, self.secrets.password_key(COSUser))
+        return [
+            {
+                "metrics_path": "/_prometheus/metrics",
+                "static_configs": [{"targets": [f"{self.unit_ip}:{COSPort}"]}],
+                "tls_config": {"insecure_skip_verify": True},
+                "scheme": "https" if self._is_tls_fully_configured() else "http",
+                "basic_auth": {"username": f"{COSUser}", "password": f"{pwd}"},
+            }
+        ]
 
     @abstractmethod
     def store_tls_resources(
