@@ -14,5 +14,6 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-ADMIN_PW = "admin-password"
+PW_POSTFIX = "password"
+ADMIN_PW = f"admin-{PW_POSTFIX}"
 ADMIN_PW_HASH = f"{ADMIN_PW}-hash"
