@@ -77,6 +77,7 @@ ClientRelationName = "opensearch-client"
 PeerRelationName = "opensearch-peers"
 PeerClusterRelationName = "peer-cluster"
 COSRelationName = "cos-agent"
+COSUser = "monitor"
 COSPort = "9200"
 
 
