@@ -96,6 +96,13 @@ class OpenSearchPluginManager:
                 return plugin
         raise KeyError(f"Plugin manager did not find plugin: {plugin_class}")
 
+    def get_plugin_status(self, plugin_class: OpenSearchPlugin) -> OpenSearchPlugin:
+        """Returns a given plugin based on its class."""
+        for plugin in self.plugins:
+            if isinstance(plugin, plugin_class):
+                return self.status(plugin)
+        raise KeyError(f"Plugin manager did not find plugin: {plugin_class}")
+
     def _extra_conf(self, plugin_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Returns the config from the relation data of the target plugin if applies."""
         relation_name = plugin_data.get("relation")
@@ -115,7 +122,8 @@ class OpenSearchPluginManager:
         """
         if (
             not self._charm.opensearch.is_started()
-            or self._charm.health.apply() != HealthColors.GREEN
+            and (self._charm.health.apply() != HealthColors.GREEN
+                 or self._charm.health.apply() != HealthColors.YELLOW)
         ):
             # If the health is not green, then raise a cluster-not-ready error
             # The classes above should then defer their own events in waiting.
@@ -274,16 +282,10 @@ class OpenSearchPluginManager:
     def _is_enabled(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is enabled."""
         # If not requested to be disabled, check if options are configured or not
-        are_configs_enabled = plugin.config().config_entries_to_add
-        stored_plugin_conf = self._opensearch_config.get_plugin(are_configs_enabled)
-
-        if not stored_plugin_conf:
-            return False
-
-        for key, val in stored_plugin_conf.items():
-            if are_configs_enabled.get(key) != val:
-                return False
-            return True
+        try:
+            plugin_conf = plugin.config().config_entries_to_add
+            stored_plugin_conf = self._opensearch_config.get_plugin(plugin_conf)
+            return plugin_conf == stored_plugin_conf
         except (KeyError, OpenSearchPluginError) as e:
             logger.warning(f"_is_enabled: error with {e}")
             return False

@@ -389,3 +389,59 @@ class OpenSearchKnn(OpenSearchPlugin):
     def name(self) -> str:
         """Returns the name of the plugin."""
         return "opensearch-knn"
+
+
+class OpenSearchBackupPlugin(OpenSearchPlugin):
+    """Manage backup configurations.
+
+    This class must load the opensearch plugin: repository-s3 and configure it.
+    """
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return "repository-s3"
+
+    def config(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin addition.
+
+        Format:
+        OpenSearchPluginConfig(
+            config_entries_to_add = {...},
+            config_entries_to_del = [...],
+            secret_entries_to_add = {...},
+            secret_entries_to_del = [...],
+        )
+        """
+        return OpenSearchPluginConfig(
+            config_entries_to_add={
+                "s3.client.default.region": self._extra_config["region"],
+                "s3.client.default.endpoint": self._extra_config["endpoint"],
+            },
+            secret_entries_to_add={
+                "s3.client.default.access_key": self._extra_config["access-key"],
+                "s3.client.default.secret_key": self._extra_config["secret-key"],
+            },
+        )
+
+    def disable(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin removal.
+
+        Format:
+        OpenSearchPluginConfig(
+            config_entries_to_add = {...},
+            config_entries_to_del = [...],
+            secret_entries_to_add = {...},
+            secret_entries_to_del = [...],
+        )
+        """
+        return OpenSearchPluginConfig(
+            config_entries_to_del=[
+                "s3.client.default.region",
+                "s3.client.default.endpoint",
+            ],
+            secret_entries_to_del=[
+                "s3.client.default.access_key",
+                "s3.client.default.secret_key",
+            ],
+        )

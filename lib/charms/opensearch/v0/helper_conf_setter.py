@@ -232,19 +232,20 @@ class YamlConfigSetter(ConfigSetter):
 
         return data
 
-    def replace_or_append(
+    @override
+    def replace(
         self,
         config_file: str,
         old_val: str,
         new_val: any,
         regex: bool = False,
+        add_line_if_missing: bool = False,
         output_type: OutputType = OutputType.file,
         output_file: str = None,
     ) -> None:
-        """Replaces a given line.
+        """Replace any substring in a text file.
 
-        If old_val is not present in then file, then just append the content.
-        If new_val is None, then the content should be removed.
+        add_line_if_missing (bool): whether to append the new_val if old_val is not found.
         """
         path = f"{self.base_path}{config_file}"
 
@@ -254,48 +255,12 @@ class YamlConfigSetter(ConfigSetter):
         with open(path, "r+") as f:
             data = f.read()
 
-            # If regex is set to true, then check if we can match old_val's with data
             if regex and old_val and re.compile(old_val).match(data):
                 data = re.sub(r"{}".format(old_val), f"{new_val}", data)
             elif old_val and old_val in data:
                 data = data.replace(old_val, new_val)
-            else:
-                data += f"{new_val}\n"
-
-            if output_type in [OutputType.console, OutputType.all]:
-                logger.info(data)
-
-            if output_type in [OutputType.file, OutputType.all]:
-                if output_file is None or output_file == config_file:
-                    f.seek(0)
-                    f.write(data)
-                else:
-                    with open(output_file, "w") as g:
-                        g.write(data)
-
-    @override
-    def replace(
-        self,
-        config_file: str,
-        old_val: str,
-        new_val: any,
-        regex: bool = False,
-        output_type: OutputType = OutputType.file,
-        output_file: str = None,
-    ) -> None:
-        """Replace any substring in a text file."""
-        path = f"{self.base_path}{config_file}"
-
-        if not exists(path):
-            raise FileNotFoundError(f"{path} not found.")
-
-        with open(path, "r+") as f:
-            data = f.read()
-
-            if regex:
-                data = re.sub(r"{}".format(old_val), f"{new_val}", data)
-            else:
-                data = data.replace(old_val, new_val)
+            elif add_line_if_missing:
+                data += f"{data.rstrip()}\n{new_val}\n"
 
             if output_type in [OutputType.console, OutputType.all]:
                 logger.info(data)

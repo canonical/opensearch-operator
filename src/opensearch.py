@@ -24,7 +24,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
-from charms.opensearch.v0.opensearch_keystore import OpenSearchCATruststore
+from charms.opensearch.v0.opensearch_keystore import OpenSearchTruststore
 from charms.operator_libs_linux.v1.systemd import service_failed
 from charms.operator_libs_linux.v2 import snap
 from charms.operator_libs_linux.v2.snap import SnapError
@@ -74,7 +74,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         # default path. That happens because JDK sits in the /snap folder and is read-only.
         # Run this setup once, in the charm's lifecycle, as the truststore should land in
         # the SNAP_COMMON folder.
-        ca_truststore = OpenSearchCATruststore(self._charm)
+        ca_truststore = OpenSearchTruststore(self._charm)
         self.set_truststore_file()
         # Trusstore has been created, then we need to add configuration to jvm.options
         self._charm.opensearch_config.configure_jvm_ca_truststore(ca_truststore.get_jvm_config())

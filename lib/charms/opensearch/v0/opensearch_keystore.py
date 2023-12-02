@@ -5,6 +5,8 @@
 
 This module manages OpenSearch keystore access and lifecycle.
 """
+import secrets
+import string
 import logging
 import os
 from abc import ABC, abstractmethod
@@ -15,6 +17,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
 )
+from charms.data_platform_libs.v0.data_secrets import Scope
 
 # The unique Charmhub library identifier, never change it
 LIBID = "de98efa151804b699d5d6128fa100807"
@@ -28,6 +31,14 @@ LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
+
+
+def _generate_random_pwd(length: int=24) -> str:
+    """Generates a random password."""
+
+    choices = string.ascii_letters + string.digits
+    return "".join([secrets.choice(choices) for i in range(length)])
+
 
 
 class OpenSearchKeystoreError(OpenSearchError):
@@ -124,14 +135,31 @@ class OpenSearchKeystore(Keystore):
             )
 
 
-class OpenSearchCATruststore(Keystore):
+class OpenSearchTruststore(Keystore):
     """Manages the default CA truststore."""
+
+    OS_CA_TRUSTSTORE_PWD = "opensearch-ca-truststore-pwd"
 
     def __init__(self, charm):
         """Creates the keystore manager class."""
         super().__init__(charm)
         self._keystore = charm.opensearch.paths.ca_truststore
-        self._password = "changeit"
+        self._juju_secret = charm.secrets
+
+    @property
+    def password(self) -> str:
+        """Returns the password for the truststore.
+
+        Given we use -storepass at opening, it updates the password automatically.
+        """
+        pwd = self._juju_secret.get(
+            Scope.APP, self.OS_CA_TRUSTSTORE_PWD, default=_generate_random_pwd()
+        )
+        # Check now if the pwd is actually new, if yes, then either there was no key before
+        # OR the password has expired and changed. In both cases, we need to update the keystore
+        if pwd != self._juju_secret.get(Scope.APP, self.OS_CA_TRUSTSTORE_PWD):
+            self._juju_secret.set(Scope.APP, self.OS_CA_TRUSTSTORE_PWD, pwd)
+        return pwd
 
     def list(self, alias: str = None) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
@@ -147,6 +175,19 @@ class OpenSearchCATruststore(Keystore):
             raise OpenSearchKeystoreError("Missing entries for keystore")
         for key, value in entries.items():
             self._add(key, value)
+
+    def load_file(self, files: Dict[str, str]) -> None:
+        """Loads a key file to the keystore.
+
+        The input format is:
+        files = {
+            "value_in_keystore": "/path/to/file",
+        }
+        """
+        for key, file in files.items():
+            if not os.path.exists(file):
+                raise OpenSearchKeystoreError(f"{file} not found")
+            self._opensearch._add(key, file)
 
     def delete(self, entries: List[str]) -> None:
         """Removes a new set of entries to the keystore."""
@@ -173,7 +214,7 @@ class OpenSearchCATruststore(Keystore):
                 self._keytool,
                 f"-import -alias {key} "
                 f"-file {capath} -storetype JKS "
-                f"-storepass {self._password} "
+                f"-storepass {self.password} "
                 f"-keystore {self._keystore} -noprompt",
             )
         except OpenSearchCmdError as e:
@@ -188,7 +229,7 @@ class OpenSearchCATruststore(Keystore):
                 self._keytool,
                 f"-delete -alias {key} "
                 f"-keystore {self._keystore} "
-                f"-storepass {self._password} -noprompt",
+                f"-storepass {self.password} -noprompt",
             )
         except OpenSearchCmdError as e:
             if "does not exist in the keystore" in str(e):
@@ -208,5 +249,5 @@ class OpenSearchCATruststore(Keystore):
             raise OpenSearchKeystoreError(f"{self._keystore} not found")
         return {
             "-Djavax.net.ssl.trustStore": self._keystore,
-            "-Djavax.net.ssl.trustStorePassword": self._password,
+            "-Djavax.net.ssl.trustStorePassword": self.password,
         }
