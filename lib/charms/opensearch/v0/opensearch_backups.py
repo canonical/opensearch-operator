@@ -64,10 +64,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
 )
-from charms.opensearch.v0.opensearch_keystore import (
-    OpenSearchKeystoreError,
-    OpenSearchTruststore,
-)
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreError
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
     OpenSearchPluginRelationClusterNotReadyError,
@@ -263,11 +260,11 @@ class OpenSearchBackup(Object):
             return
 
         if self.s3_client.get_s3_connection_info().get("tls-ca-chain"):
-            ca_truststore = OpenSearchTruststore(self.charm)
+            ca_truststore = self.charm.jvm_truststore
             # Always execute this method, we may need to replace the CA
-            with TemporaryFile() as f:
+            with TemporaryFile(mode="w") as f:
                 f.write("\n".join(self.s3_client.get_s3_connection_info()["tls-ca-chain"]))
-                ca_truststore.load_file(entries={"s3": f.name})
+                ca_truststore.add(entries={"s3": f.name})
                 f.close()
 
         # Let run() happens: it will check if the relation is present, and if yes, return
@@ -370,7 +367,7 @@ class OpenSearchBackup(Object):
 
         # 3) and 4) Remove configuration and issue restart request
         try:
-            ca_truststore = OpenSearchTruststore(self.charm)
+            ca_truststore = self.charm.jvm_truststore
             ca_truststore.delete(["s3"])
         except OpenSearchKeystoreError:
             # Ignore the delete error, as it may mean there was a certificate at a point

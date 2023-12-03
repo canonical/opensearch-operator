@@ -9,15 +9,18 @@ import logging
 import os
 import secrets
 import string
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Dict, List
 
-from charms.data_platform_libs.v0.data_secrets import APP_SCOPE
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHttpError,
 )
+from charms.opensearch.v0.opensearch_internal_data import Scope
+from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
+from ops import SecretNotFoundError
+from ops.charm import SecretChangedEvent
 
 # The unique Charmhub library identifier, never change it
 LIBID = "de98efa151804b699d5d6128fa100807"
@@ -33,12 +36,6 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-def _generate_random_pwd(length: int = 24) -> str:
-    """Generates a random password."""
-    choices = string.ascii_letters + string.digits
-    return "".join([secrets.choice(choices) for i in range(length)])
-
-
 class OpenSearchKeystoreError(OpenSearchError):
     """Exception thrown when an opensearch keystore is invalid."""
 
@@ -51,21 +48,88 @@ class Keystore(ABC):
         self._charm = charm
         self._opensearch = charm.opensearch
         self._keytool = charm.opensearch.paths.jdk + "/bin/keytool"
+        self._keystore = ""
+        self._password = None
 
-    @abstractmethod
+    @property
+    def password(self) -> str:
+        """Returns the password for the store."""
+        return self._password
+
+    @password.setter
+    def password(self, value: str) -> None:
+        """Sets the password for the store."""
+        self._password = value
+
+    def update_password(self, old_pwd: str, pwd: str) -> None:
+        """Updates the password for the truststore."""
+        if not pwd or not old_pwd:
+            raise OpenSearchKeystoreError("Missing password for truststore")
+        if not os.path.exists(self._keystore):
+            raise OpenSearchKeystoreError(f"{self._keystore} not found")
+        try:
+            self._opensearch._run_cmd(
+                self._keytool,
+                f"-storepasswd -new {pwd} -keystore {self._keystore} " f"-storepass {old_pwd}",
+            )
+        except OpenSearchCmdError as e:
+            raise OpenSearchKeystoreError(str(e))
+
+    def list(self, alias: str = None) -> List[str]:
+        """Lists the keys available in opensearch's keystore."""
+        try:
+            # Not using OPENSEARCH_BIN path
+            return self._opensearch._run_cmd(self._keytool, f"-v -list -keystore {self._keystore}")
+        except OpenSearchCmdError as e:
+            raise OpenSearchKeystoreError(str(e))
+
     def add(self, entries: Dict[str, str]) -> None:
         """Adds a new set of entries to the keystore."""
-        pass
+        if not entries:
+            raise OpenSearchKeystoreError("Missing entries for keystore")
+        if not os.path.exists(self._keystore):
+            raise OpenSearchKeystoreError(f"{self._keystore} not found")
 
-    @abstractmethod
+        for key, filename in entries.items():
+            # First, try removing the key, as a new file will be added:
+            try:
+                self.delete(key)
+            except OpenSearchKeystoreError:
+                # Ignore, it means only the alias does not exist yet
+                pass
+            try:
+                # Not using OPENSEARCH_BIN path
+                self._opensearch._run_cmd(
+                    self._keytool,
+                    f"-import -alias {key} "
+                    f"-file {filename} -storetype JKS "
+                    f"-storepass {self.password} "
+                    f"-keystore {self._keystore} -noprompt",
+                )
+            except OpenSearchCmdError as e:
+                raise OpenSearchKeystoreError(str(e))
+
     def delete(self, entries: List[str]) -> None:
         """Removes a new set of entries to the keystore."""
-        pass
+        if not os.path.exists(self._keystore):
+            raise OpenSearchKeystoreError(f"{self._keystore} not found")
 
-    @abstractmethod
-    def list(self, alias: str = None) -> None:
-        """Lists all key/values in the keystore, or optionally, the specific alias."""
-        pass
+        for key in entries.keys():
+            try:
+                # Not using OPENSEARCH_BIN path
+                self._opensearch._run_cmd(
+                    self._keytool,
+                    f"-delete -alias {key} "
+                    f"-keystore {self._keystore} "
+                    f"-storepass {self.password} -noprompt",
+                )
+            except OpenSearchCmdError as e:
+                if "does not exist in the keystore" not in str(e):
+                    raise OpenSearchKeystoreError(str(e))
+                logger.info(
+                    "opensearch_keystore.delete:"
+                    f" Key {key} not found in keystore, continuing..."
+                )
 
 
 class OpenSearchKeystore(Keystore):
@@ -134,109 +198,15 @@ class OpenSearchKeystore(Keystore):
 
 
 class OpenSearchTruststore(Keystore):
-    """Manages the default CA truststore."""
+    """Manages the default CA truststore and its password."""
 
     OS_CA_TRUSTSTORE_PWD = "opensearch-ca-truststore-pwd"
+    INITIAL_PWD = "changeit"
 
     def __init__(self, charm):
         """Creates the keystore manager class."""
         super().__init__(charm)
         self._keystore = charm.opensearch.paths.ca_truststore
-        self._juju_secret = charm.secrets
-
-    @property
-    def password(self) -> str:
-        """Returns the password for the truststore.
-
-        Given we use -storepass at opening, it updates the password automatically.
-        """
-        pwd = self._juju_secret.get(
-            APP_SCOPE, self.OS_CA_TRUSTSTORE_PWD, default=_generate_random_pwd()
-        )
-        # Check now if the pwd is actually new, if yes, then either there was no key before
-        # OR the password has expired and changed. In both cases, we need to update the keystore
-        if pwd != self._juju_secret.get(APP_SCOPE, self.OS_CA_TRUSTSTORE_PWD):
-            self._juju_secret.set(APP_SCOPE, self.OS_CA_TRUSTSTORE_PWD, pwd)
-        return pwd
-
-    def list(self, alias: str = None) -> List[str]:
-        """Lists the keys available in opensearch's keystore."""
-        try:
-            # Not using OPENSEARCH_BIN path
-            return self._opensearch._run_cmd(self._keytool, f"-v -list -keystore {self._keystore}")
-        except OpenSearchCmdError as e:
-            raise OpenSearchKeystoreError(str(e))
-
-    def add(self, entries: Dict[str, str]) -> None:
-        """Adds a new set of entries to the keystore."""
-        if not entries:
-            raise OpenSearchKeystoreError("Missing entries for keystore")
-        for key, value in entries.items():
-            self._add(key, value)
-
-    def load_file(self, files: Dict[str, str]) -> None:
-        """Loads a key file to the keystore.
-
-        The input format is:
-        files = {
-            "value_in_keystore": "/path/to/file",
-        }
-        """
-        for key, file in files.items():
-            if not os.path.exists(file):
-                raise OpenSearchKeystoreError(f"{file} not found")
-            self._opensearch._add(key, file)
-
-    def delete(self, entries: List[str]) -> None:
-        """Removes a new set of entries to the keystore."""
-        if not entries:
-            raise OpenSearchKeystoreError("Missing entries for keystore")
-        for key in entries:
-            self._delete(key)
-
-    def _add(self, key: str, capath: str):
-        if not capath:
-            raise OpenSearchKeystoreError("Missing keystore value")
-        if not os.path.exists(self._keystore):
-            raise OpenSearchKeystoreError(f"{self._keystore} not found")
-        # First, try removing the key, as a new capath will be added:
-        try:
-            self._delete(key)
-        except OpenSearchKeystoreError:
-            # Ignore, it means only the alias does not exist yet
-            pass
-
-        try:
-            # Not using OPENSEARCH_BIN path
-            self._opensearch._run_cmd(
-                self._keytool,
-                f"-import -alias {key} "
-                f"-file {capath} -storetype JKS "
-                f"-storepass {self.password} "
-                f"-keystore {self._keystore} -noprompt",
-            )
-        except OpenSearchCmdError as e:
-            raise OpenSearchKeystoreError(str(e))
-
-    def _delete(self, key: str) -> None:
-        if not os.path.exists(self._keystore):
-            raise OpenSearchKeystoreError(f"{self._keystore} not found")
-        try:
-            # Not using OPENSEARCH_BIN path
-            self._opensearch._run_cmd(
-                self._keytool,
-                f"-delete -alias {key} "
-                f"-keystore {self._keystore} "
-                f"-storepass {self.password} -noprompt",
-            )
-        except OpenSearchCmdError as e:
-            if "does not exist in the keystore" in str(e):
-                logger.info(
-                    "opensearch_keystore._delete:"
-                    f" Key {key} not found in keystore, continuing..."
-                )
-                return
-            raise OpenSearchKeystoreError(str(e))
 
     def get_jvm_config(self) -> Dict[str, str]:
         """Returns a dict containing the jvm options to be added for this truststore.
@@ -249,3 +219,89 @@ class OpenSearchTruststore(Keystore):
             "-Djavax.net.ssl.trustStore": self._keystore,
             "-Djavax.net.ssl.trustStorePassword": self.password,
         }
+
+
+class OpenSearchTruststoreManager(OpenSearchSecrets):
+    """Encapsulates the Truststore management.
+
+    Manages the truststore file and Juju3 secrets for its password.
+    """
+
+    JUJU_SECRET_TRUSTSTORE_PWD_KEY = "opensearch-ca-truststore-pwd"
+
+    def __init__(self, charm, peer_relation: str):
+        super().__init__(charm, peer_relation)
+        self.truststore = OpenSearchTruststore(charm)
+        # This unit taken leadership, check if the secret is already set or not
+        self.framework.observe(self._charm.on.leader_elected, self._on_leader_elected)
+        self.framework.observe(self._charm.on.secret_changed, self._on_secret_changed)
+
+    def _generate_random_pwd(self, length: int = 24) -> str:
+        """Generates a random password."""
+        choices = string.ascii_letters + string.digits
+        return "".join([secrets.choice(choices) for i in range(length)])
+
+    def _on_leader_elected(self, _):
+        """Initialize the keystore password if needed."""
+        self._initialize_password_if_needed()
+
+    def _initialize_password_if_needed(
+        self,
+        key: str = JUJU_SECRET_TRUSTSTORE_PWD_KEY,
+        scope: Scope = Scope.APP,
+        initial_pwd: str = OpenSearchTruststore.INITIAL_PWD,
+    ):
+        """Initialize the keystore password.
+
+        This method will create the secret if it does not exist already.
+        """
+        if not self._charm.unit.is_leader():
+            # Nothing to do with non-leaders
+            return
+        if not self._get_juju_secret(scope, key):
+            # Create a new secret and store it with the initial_pwd
+            return self._add_juju_secret(scope, key, value={key: initial_pwd})
+        if self._get_juju_secret(scope, key) == initial_pwd:
+            # secret already exists and has been set the first time with the initial_pwd
+            # now update it with the correct value
+            return self._add_juju_secret(scope, key, value=self._generate_random_pwd())
+
+    def _on_secret_changed(self, event: SecretChangedEvent):
+        """Refresh secret and re-run corresponding actions if needed."""
+        super()._on_secret_changed(event)
+
+        try:
+            old_pwd = self._charm.model.get_secret()
+            new_pwd = self._charm.model.get_secret(peek=True)
+        except SecretNotFoundError:
+            return None
+        # Update the  keystore password as the secret changed
+        self.truststore.update_password(old_pwd, new_pwd)
+        # Commit the change
+        self._charm.model.get_secret(refresh=True)
+
+    @property
+    def password(self) -> str:
+        """Returns the password for the truststore.
+
+        Given we use -storepass at opening, it updates the password automatically.
+        """
+        return self._get_juju_secret(Scope.APP, self.JUJU_SECRET_TRUSTSTORE_PWD_KEY)
+
+    def add(self, entries: Dict[str, str]) -> None:
+        """Adds a new set of entries to the keystore.
+
+        First, recover the password from the juju secret and pass to the TS object.
+        Then, set the values.
+        """
+        self.truststore.password = self.password
+        self.truststore.add(entries)
+
+    def delete(self, entries: List[str]) -> None:
+        """Deletes a set of entries from the keystore.
+
+        First, recover the password from the juju secret and pass to the TS object.
+        Then, delete the key/value.
+        """
+        self.truststore.password = self.password
+        self.truststore.delete(entries)

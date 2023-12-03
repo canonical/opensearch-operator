@@ -76,7 +76,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         # the SNAP_COMMON folder.
         ca_truststore = OpenSearchTruststore(self._charm)
         self.set_truststore_file()
-        # Trusstore has been created, then we need to add configuration to jvm.options
+        # Truststore has been created, then we need to add configuration to jvm.options
         self._charm.opensearch_config.configure_jvm_ca_truststore(ca_truststore.get_jvm_config())
 
     @override

@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import charms
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.opensearch_backups import (
     S3_RELATION,
     S3_REPOSITORY,
@@ -44,7 +45,8 @@ class TestBackups(unittest.TestCase):
 
         # Replace some unused methods that will be called as part of set_leader with mock
         self.charm.service_manager._update_locks = MagicMock()
-        self.charm._on_leader_elected = MagicMock()
+        self.charm._put_admin_user = MagicMock()
+        self.peer_id = self.harness.add_relation(PeerRelationName, "opensearch")
         self.harness.set_leader(is_leader=True)
 
         # Relate and run first check
