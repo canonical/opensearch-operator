@@ -7,7 +7,7 @@ import logging
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
-from ops import EventBase, RelationBrokenEvent, RelationCreatedEvent
+from ops import EventBase, RelationCreatedEvent
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 logger = logging.getLogger(__name__)
@@ -31,8 +31,6 @@ class OpenSearchCOSProvider(COSAgentProvider):
 
     def _run_plugin_manager(self, event: EventBase):
         """Execute plugin manager and handle prossible errors."""
-        if not self._charm.unit.is_leader():
-            return
         try:
             if self._charm.plugin_manager.run():
                 self._charm.on[self._charm.service_manager.name].acquire_lock.emit(
@@ -52,11 +50,7 @@ class OpenSearchCOSProvider(COSAgentProvider):
 
     def _on_cos_agent_relation_created(self, event: RelationCreatedEvent):
         """COS workflow initialization happens when the COS relation is created."""
-        self._run_plugin_manager(event)
-
-    def _on_cos_agent_relation_broken(self, event: RelationBrokenEvent):
-        """Re-run plugin configuration is the cos relation is not present anymore."""
-        if self._charm.model.get_relation("cos-agent"):
-            event.defer()
+        if not self._charm.unit.is_leader():
             return
+
         self._run_plugin_manager(event)

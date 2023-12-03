@@ -361,8 +361,6 @@ class OpenSearchKnn(OpenSearchPlugin):
 class OpenSearchPrometheusExporter(OpenSearchPlugin):
     """Implements the opensearch-knn plugin."""
 
-    REMOVE_ON_DISABLE = True
-
     @property
     def name(self) -> str:
         """Returns the name of the plugin."""
@@ -372,17 +370,6 @@ class OpenSearchPrometheusExporter(OpenSearchPlugin):
         """Returns a plugin config object to be applied for enabling the current plugin."""
         return OpenSearchPluginConfig(
             config_entries_to_add={
-                "prometheus.metric_name.prefix": "opensearch_",
-                "prometheus.indices": False,
-                "prometheus.cluster.settings": False,
-                "prometheus.nodes.filter": "_all",
-            }
-        )
-
-    def disable(self) -> OpenSearchPluginConfig:
-        """No config changes apply on disable."""
-        return OpenSearchPluginConfig(
-            config_entries_to_del={
                 "prometheus.metric_name.prefix": "opensearch_",
                 "prometheus.indices": False,
                 "prometheus.cluster.settings": False,

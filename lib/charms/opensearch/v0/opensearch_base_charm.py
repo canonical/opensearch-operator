@@ -179,10 +179,6 @@ class OpenSearchBaseCharm(CharmBase):
             self.on[COSRelationName].relation_created,
             self.cos_integration._on_cos_agent_relation_created,
         )
-        self.framework.observe(
-            self.on[COSRelationName].relation_broken,
-            self.cos_integration._on_cos_agent_relation_broken,
-        )
 
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
