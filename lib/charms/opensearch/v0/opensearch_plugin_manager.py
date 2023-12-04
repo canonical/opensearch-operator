@@ -23,7 +23,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingDepsError,
     OpenSearchPluginRemoveError,
-    OpenSearchPrometheusExporter,
     PluginState,
 )
 
@@ -46,11 +45,6 @@ ConfigExposedPlugins = {
         "class": OpenSearchKnn,
         "config": "plugin_opensearch_knn",
         "relation": None,
-    },
-    "prometheus-exporter": {
-        "class": OpenSearchPrometheusExporter,
-        "config": None,
-        "relation": "cos-agent",
     },
 }
 
