@@ -54,7 +54,7 @@ class OpenSearchBaseCharm(CharmBase):
 
 import json
 import logging
-from tempfile import TemporaryFile
+from tempfile import NamedTemporaryFile
 from typing import Any, Dict
 
 import requests
@@ -261,9 +261,14 @@ class OpenSearchBackup(Object):
 
         if self.s3_client.get_s3_connection_info().get("tls-ca-chain"):
             ca_truststore = self.charm.jvm_truststore
-            # Always execute this method, we may need to replace the CA
-            with TemporaryFile(mode="w") as f:
+            with NamedTemporaryFile(mode="w") as f:
                 f.write("\n".join(self.s3_client.get_s3_connection_info()["tls-ca-chain"]))
+                # Get it stored
+                # python3.10 does not support NamedTemporaryFile(delete_on_close=False)
+                # That is relevant, as we receive the content of the certificate via relation and
+                # we need to pass it to the keystore as a file. Therefore, we need to use mkstemp
+                # we flush it instead.
+                f.flush()
                 ca_truststore.add(entries={"s3": f.name})
                 f.close()
 

@@ -501,10 +501,11 @@ class OpenSearchBaseCharm(CharmBase):
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 self.status.set(WaitingStatus("Plugin management: cluster not ready yet"))
             else:
-                self.status.set(BlockedStatus(PluginConfigChangeError))
                 # There was an unexpected error, log it and block the unit
+                self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
-        self.unit.status = ActiveStatus()
+            return
+        self.status.set(ActiveStatus())
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
