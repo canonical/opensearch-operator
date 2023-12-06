@@ -64,8 +64,9 @@ class TestBackups(unittest.TestCase):
     @patch(
         "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._install_if_needed"
     )
-    def test_update_relation_data(
-        self, mock_install, mock_apply_config, mock_acquire_lock, _, mock_status
+    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
+    def test_00_update_relation_data(
+        self, __, mock_install, mock_apply_config, mock_acquire_lock, _, mock_status
     ) -> None:
         """Tests if new relation without data returns."""
         mock_status.return_value = PluginState.INSTALLED
@@ -100,7 +101,7 @@ class TestBackups(unittest.TestCase):
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_apply_post_restart_if_needed(self, mock_status, mock_request) -> None:
+    def test_01_apply_post_restart_if_needed(self, mock_status, mock_request) -> None:
         """Tests the application of post-restart steps."""
         mock_request.side_effects = [  # list of returns for each call
             # 1st request: _service_already_registered
@@ -134,7 +135,7 @@ class TestBackups(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._execute_s3_broken_calls")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_relation_broken(
+    def test_99_relation_broken(
         self,
         mock_status,
         mock_execute_s3_broken_calls,

@@ -104,9 +104,12 @@ class OpenSearchPluginManager:
         """Returns the config from the relation data of the target plugin if applies."""
         relation_name = plugin_data.get("relation")
         relation = self._charm.model.get_relation(relation_name) if relation_name else None
-        if relation:
+        # If the plugin depends on the relation, it must have at least one unit to be considered
+        # for enabling. Otherwise, relation.units == 0 means that the plugin has no remote units
+        # and the relation may be going away.
+        if relation and relation.units:
             return {
-                **relation.data[self._charm.app],
+                **relation.data[relation.app],
                 **self._charm_config,
                 "opensearch-version": self._opensearch.version,
             }
@@ -288,15 +291,17 @@ class OpenSearchPluginManager:
 
     def _needs_upgrade(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin needs upgrade."""
-        current_version = plugin.version
-        return self._opensearch.version != ".".join(current_version.split(".")[0:3])
+        plugin_version = plugin.version.split(".")
+        version = self._opensearch.version.split(".")
+        num_points = min(len(plugin_version), len(version))
+        return version[:num_points] != plugin_version[:num_points]
 
     def _is_plugin_relation_set(self, relation_name: str) -> bool:
         """Returns True if a relation is expected and it is set."""
         if not relation_name:
             return False
         relation = self._charm.model.get_relation(relation_name)
-        return relation is not None
+        return relation is not None and relation.units
 
     def _remove_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""

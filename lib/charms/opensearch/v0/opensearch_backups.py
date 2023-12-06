@@ -54,7 +54,6 @@ class OpenSearchBaseCharm(CharmBase):
 
 import json
 import logging
-from tempfile import NamedTemporaryFile
 from typing import Any, Dict
 
 import requests
@@ -64,7 +63,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
 )
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreError
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
     OpenSearchPluginRelationClusterNotReadyError,
@@ -329,6 +327,10 @@ class OpenSearchBackup(Object):
            and defer this event.
         2) If leader, run API calls to signal disable is needed
         """
+        if self.charm.model.get_relation(S3_RELATION).units:
+            # There are still members in the relation, defer until it is finished
+            event.defer()
+            return
         self.charm.status.set(MaintenanceStatus("Disabling backup service..."))
         snapshot_status = self._check_snapshot_status()
         if snapshot_status in [

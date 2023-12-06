@@ -7,8 +7,6 @@ This module manages OpenSearch keystore access and lifecycle.
 """
 import logging
 import os
-import secrets
-import string
 from abc import ABC
 from typing import Dict, List
 
@@ -17,10 +15,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
 )
-from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
-from ops import SecretNotFoundError
-from ops.charm import SecretChangedEvent
 
 # The unique Charmhub library identifier, never change it
 LIBID = "de98efa151804b699d5d6128fa100807"
