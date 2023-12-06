@@ -6,7 +6,9 @@ import asyncio
 import json
 import logging
 import os
+from pathlib import Path
 
+import boto3
 import pytest
 from pytest_operator.plugin import OpsTest
 
@@ -34,6 +36,64 @@ logger = logging.getLogger(__name__)
 
 
 S3_INTEGRATOR_NAME = "s3-integrator"
+CLOUD_CONFIGS = {
+    "aws": {
+        "endpoint": "https://s3.amazonaws.com",
+        "bucket": "data-charms-testing",
+        "path": "opensearch",
+        "region": "us-east-1",
+    },
+    "gcp": {
+        "endpoint": "https://storage.googleapis.com",
+        "bucket": "data-charms-testing",
+        "path": "opensearch",
+        "region": "",
+    },
+}
+
+backups_by_cloud = {}
+value_before_backup, value_after_backup = None, None
+
+
+@pytest.fixture(scope="session")
+def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
+    """Read cloud credentials."""
+    return {
+        "aws": {
+            "access-key": github_secrets["AWS_ACCESS_KEY"],
+            "secret-key": github_secrets["AWS_SECRET_KEY"],
+        },
+        "gcp": {
+            "access-key": github_secrets["GCP_ACCESS_KEY"],
+            "secret-key": github_secrets["GCP_SECRET_KEY"],
+        },
+    }
+
+
+@pytest.fixture(scope="session", autouse=True)
+def clean_backups_from_buckets(cloud_credentials) -> None:
+    """Teardown to clean up created backups from clouds."""
+    yield
+
+    logger.info("Cleaning backups from cloud buckets")
+    for cloud_name, config in CLOUD_CONFIGS.items():
+        backup = backups_by_cloud.get(cloud_name)
+
+        if not backup:
+            continue
+
+        session = boto3.session.Session(
+            aws_access_key_id=cloud_credentials[cloud_name]["access-key"],
+            aws_secret_access_key=cloud_credentials[cloud_name]["secret-key"],
+            region_name=config["region"],
+        )
+        s3 = session.resource("s3", endpoint_url=config["endpoint"])
+        bucket = s3.Bucket(config["bucket"])
+
+        # GCS doesn't support batch delete operation, so delete the objects one by one
+        backup_path = str(Path(config["path"]) / backups_by_cloud[cloud_name])
+        for bucket_object in bucket.objects.filter(Prefix=backup_path):
+            bucket_object.delete()
 
 
 @pytest.fixture()
@@ -54,7 +114,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, cloud_credentials) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -62,13 +122,28 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     if await app_name(ops_test):
         return
 
+    s3_storage = None
     if (
-        "S3_BUCKET" not in os.environ
-        or "S3_SERVER_URL" not in os.environ
-        or "S3_REGION" not in os.environ
-        or "S3_ACCESS_KEY" not in os.environ
-        or "S3_SECRET_KEY" not in os.environ
+        "S3_BUCKET" in os.environ
+        and "S3_SERVER_URL" in os.environ
+        and "S3_REGION" in os.environ
+        and "S3_ACCESS_KEY" in os.environ
+        and "S3_SECRET_KEY" in os.environ
     ):
+        s3_config = {
+            "bucket": os.environ["S3_BUCKET"],
+            "path": "/",
+            "endpoint": os.environ["S3_SERVER_URL"],
+            "region": os.environ["S3_REGION"],
+        }
+        s3_storage = "ceph"
+    elif "AWS_ACCESS_KEY" in os.environ and "AWS_SECRET_KEY" in os.environ:
+        s3_config = CLOUD_CONFIGS["aws"].copy()
+        s3_storage = "aws"
+    elif "GCP_ACCESS_KEY" in os.environ and "GCP_SECRET_KEY" in os.environ:
+        s3_config = CLOUD_CONFIGS["gcp"].copy()
+        s3_storage = "gcp"
+    else:
         logger.exception("Missing S3 configs in os.environ.")
         raise Exception("Missing s3")
 
@@ -77,12 +152,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     # Deploy TLS Certificates operator.
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
-    s3_config = {
-        "bucket": os.environ["S3_BUCKET"],
-        "path": "/",
-        "endpoint": os.environ["S3_SERVER_URL"],
-        "region": os.environ["S3_REGION"],
-    }
 
     # Convert to integer as environ always returns string
     app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 3)
@@ -93,14 +162,18 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         ops_test.model.deploy(my_charm, num_units=app_num_units, series=SERIES),
     )
     # Set the access/secret keys
+    if s3_storage == "ceph":
+        s3_creds = {
+            "access-key": os.environ["S3_ACCESS_KEY"],
+            "secret-key": os.environ["S3_SECRET_KEY"],
+        }
+    else:
+        s3_creds = cloud_credentials[s3_storage].copy()
     action = await run_action(
         ops_test,
         0,
         "sync-s3-credentials",
-        params={
-            "access-key": os.environ["S3_ACCESS_KEY"],
-            "secret-key": os.environ["S3_SECRET_KEY"],
-        },
+        params=s3_creds,
         app=S3_INTEGRATOR_NAME,
     )
     logger.info(f"sync-s3-credentials output: {action}")

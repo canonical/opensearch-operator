@@ -155,6 +155,7 @@ jobs:
           # load microceph output
           # ATM: remove the https:// reference and stick with http only
           sed -i 's@https://@http://@g' microceph.source
+          export "$(cat microceph.source)"
           export TEST_NUM_APP_UNITS=2
 
           # Set kernel params
@@ -163,3 +164,24 @@ jobs:
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
           LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
+
+#      - name: Run backup test with AWS
+#        run: tox run -e ha-backup-integration -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+#        env:
+#          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+#          LIBJUJU_VERSION_SPECIFIER: ${{ matrix.libjuju-version }}
+#          SECRETS_FROM_GITHUB: |
+#            {
+#              "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+#              "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
+#            }
+#      - name: Run backup test with GCP
+#        run: tox run -e ha-backup-integration -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+#        env:
+#          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+#          LIBJUJU_VERSION_SPECIFIER: ${{ matrix.libjuju-version }}
+#          SECRETS_FROM_GITHUB: |
+#            {
+#              "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
+#              "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
+#            }
