@@ -53,7 +53,6 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
-@pytest.mark.asyncio(scope="function")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -68,7 +67,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         "S3_BUCKET" not in os.environ
         or "S3_SERVER_URL" not in os.environ
         or "S3_REGION" not in os.environ
-        or "S3_CA_BUNDLE_PATH" not in os.environ
         or "S3_ACCESS_KEY" not in os.environ
         or "S3_SECRET_KEY" not in os.environ
     ):
@@ -78,9 +76,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
-    with open(os.environ["S3_CA_BUNDLE_PATH"]) as f:
-        s3_ca_chain = base64.b64encode(f.read().encode("utf-8")).decode("utf-8")
-
     # Deploy TLS Certificates operator.
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     s3_config = {
@@ -88,7 +83,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         "path": "/",
         "endpoint": os.environ["S3_SERVER_URL"],
         "region": os.environ["S3_REGION"],
-        "tls-ca-chain": s3_ca_chain,
     }
 
     # Convert to integer as environ always returns string

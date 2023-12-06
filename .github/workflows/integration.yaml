@@ -153,7 +153,8 @@ jobs:
       - name: Run backup test
         run: |
           # load microceph output
-          source microceph.source
+          # ATM: remove the https:// reference and stick with http only
+          sed -i 's@https://@http://@g' microceph.source
           export TEST_NUM_APP_UNITS=2
 
           # Set kernel params

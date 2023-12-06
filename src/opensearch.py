@@ -24,7 +24,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
-from charms.opensearch.v0.opensearch_keystore import OpenSearchTruststore
 from charms.operator_libs_linux.v1.systemd import service_failed
 from charms.operator_libs_linux.v2 import snap
 from charms.operator_libs_linux.v2.snap import SnapError
@@ -46,7 +45,6 @@ class OpenSearchSnap(OpenSearchDistribution):
 
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
-        self.paths.ca_truststore = "/var/snap/opensearch/common/cacerts"
 
         for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=5)):
             with attempt:
@@ -69,15 +67,6 @@ class OpenSearchSnap(OpenSearchDistribution):
         except SnapError as e:
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()
-
-        # In opensearch snap, CA truststore should be placed in another folder than JDK's
-        # default path. That happens because JDK sits in the /snap folder and is read-only.
-        # Run this setup once, in the charm's lifecycle, as the truststore should land in
-        # the SNAP_COMMON folder.
-        ca_truststore = OpenSearchTruststore(self._charm)
-        self.set_truststore_file()
-        # Truststore has been created, then we need to add configuration to jvm.options
-        self._charm.opensearch_config.configure_jvm_ca_truststore(ca_truststore.get_jvm_config())
 
     @override
     def _start_service(self):
@@ -155,16 +144,6 @@ class OpenSearchSnap(OpenSearchDistribution):
         uid = pwd.getpwnam("snap_daemon").pw_uid
         gid = grp.getgrnam("root").gr_gid
         os.chown(path, uid, gid)
-
-    @override
-    def set_truststore_file(self) -> str:
-        """Sets the truststore to be used to hold trusted CAs."""
-        shutil.copy(self.paths.jdk + "/lib/security/cacerts", self.paths.ca_truststore)
-        os.chmod(self.paths.ca_truststore, 0o660)
-        uid = pwd.getpwnam("snap_daemon").pw_uid
-        gid = grp.getgrnam("root").gr_gid
-        os.chown(self.paths.ca_truststore, uid, gid)
-        return self.paths.ca_truststore
 
 
 class OpenSearchTarball(OpenSearchDistribution):
@@ -274,8 +253,3 @@ class OpenSearchTarball(OpenSearchDistribution):
         )
 
         self._run_cmd("systemctl daemon-reload")
-
-    @override
-    def set_truststore_file(self) -> str:
-        """Sets the truststore to be used to hold trusted CAs."""
-        return self.paths.ca_truststore

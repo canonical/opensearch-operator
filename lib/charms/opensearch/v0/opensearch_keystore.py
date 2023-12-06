@@ -62,9 +62,9 @@ class Keystore(ABC):
         self._password = value
 
     def update_password(self, old_pwd: str, pwd: str) -> None:
-        """Updates the password for the truststore."""
+        """Updates the password for the store."""
         if not pwd or not old_pwd:
-            raise OpenSearchKeystoreError("Missing password for truststore")
+            raise OpenSearchKeystoreError("Missing password for store")
         if not os.path.exists(self._keystore):
             raise OpenSearchKeystoreError(f"{self._keystore} not found")
         try:
@@ -195,127 +195,3 @@ class OpenSearchKeystore(Keystore):
             raise OpenSearchKeystoreError(
                 f"Failed to reload keystore: error code: {e.response_code}, error body: {e.response_body}"
             )
-
-
-class OpenSearchTruststore(Keystore):
-    """Manages the default CA truststore and its password."""
-
-    OS_CA_TRUSTSTORE_PWD = "opensearch-ca-truststore-pwd"
-    INITIAL_PWD = "changeit"
-
-    def __init__(self, charm):
-        """Creates the keystore manager class."""
-        super().__init__(charm)
-        self._keystore = charm.opensearch.paths.ca_truststore
-
-    def get_jvm_config(self) -> Dict[str, str]:
-        """Returns a dict containing the jvm options to be added for this truststore.
-
-        These configs should be added to jvm.options.
-        """
-        if not os.path.exists(self._keystore):
-            raise OpenSearchKeystoreError(f"{self._keystore} not found")
-        return {
-            "-Djavax.net.ssl.trustStore": self._keystore,
-            "-Djavax.net.ssl.trustStorePassword": self.password,
-        }
-
-
-class OpenSearchTruststoreManager(OpenSearchSecrets):
-    """Encapsulates the Truststore management.
-
-    Manages the truststore file and Juju3 secrets for its password.
-    """
-
-    JUJU_SECRET_TRUSTSTORE_PWD_KEY = "opensearch-ca-truststore-pwd"
-
-    def __init__(self, charm, peer_relation: str):
-        super().__init__(charm, peer_relation)
-        self.truststore = OpenSearchTruststore(charm)
-        # This unit taken leadership, check if the secret is already set or not
-        self.framework.observe(self._charm.on.leader_elected, self._on_leader_elected)
-        self.framework.observe(self._charm.on.secret_changed, self._on_secret_changed)
-
-    def _generate_random_pwd(self, length: int = 24) -> str:
-        """Generates a random password."""
-        choices = string.ascii_letters + string.digits
-        return "".join([secrets.choice(choices) for i in range(length)])
-
-    def _on_leader_elected(self, _):
-        """Initialize the keystore password if needed."""
-        self._initialize_password_if_needed()
-
-    def _initialize_password_if_needed(
-        self,
-        key: str = JUJU_SECRET_TRUSTSTORE_PWD_KEY,
-        scope: Scope = Scope.APP,
-        initial_pwd: str = OpenSearchTruststore.INITIAL_PWD,
-    ):
-        """Initialize the keystore password.
-
-        This method will create the secret if it does not exist already.
-        """
-        if not self._charm.unit.is_leader():
-            # Nothing to do with non-leaders
-            return
-        if not self._get_juju_secret(scope, key):
-            # Create a new secret and store it with the initial_pwd
-            return self._add_juju_secret(scope, key, value={key: initial_pwd})
-        if self._get_juju_secret(scope, key) == initial_pwd:
-            # secret already exists and has been set the first time with the initial_pwd
-            # now update it with the correct value
-            return self._add_or_update_juju_secret(
-                scope, key, value={key: self._generate_random_pwd()}
-            )
-
-    def _on_secret_changed(self, event: SecretChangedEvent):
-        """Refresh secret and re-run corresponding actions if needed."""
-        secret = event.secret
-        label = self.label(Scope.APP, self.JUJU_SECRET_TRUSTSTORE_PWD_KEY)
-        if secret.label != label:
-            return
-
-        try:
-            old_pwd = secret.get_content()
-            new_pwd = secret.peek_content()
-        except SecretNotFoundError:
-            return None
-        # Update the  keystore password as the secret changed
-        self.truststore.update_password(old_pwd, new_pwd)
-        # Commit the change
-        secret.get_content(refresh=True)
-
-        # Password has changed and the truststore has been updated, we need to reload it
-        # For that, update the jvm.options and restart the service
-        self._charm.opensearch_config.configure_jvm_ca_truststore(self.truststore.get_jvm_config())
-        self._charm.on[self.service_manager.name].acquire_lock.emit(
-            callback_override="_start_opensearch"
-        )
-
-    @property
-    def password(self) -> str:
-        """Returns the password for the truststore.
-
-        Given we use -storepass at opening, it updates the password automatically.
-        """
-        return self._get_juju_secret_content(Scope.APP, self.JUJU_SECRET_TRUSTSTORE_PWD_KEY).get(
-            self.JUJU_SECRET_TRUSTSTORE_PWD_KEY, OpenSearchTruststore.INITIAL_PWD
-        )
-
-    def add(self, entries: Dict[str, str]) -> None:
-        """Adds a new set of entries to the keystore.
-
-        First, recover the password from the juju secret and pass to the TS object.
-        Then, set the values.
-        """
-        self.truststore.password = self.password
-        self.truststore.add(entries)
-
-    def delete(self, entries: List[str]) -> None:
-        """Deletes a set of entries from the keystore.
-
-        First, recover the password from the juju secret and pass to the TS object.
-        Then, delete the key/value.
-        """
-        self.truststore.password = self.password
-        self.truststore.delete(entries)

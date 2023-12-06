@@ -59,7 +59,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
-from charms.opensearch.v0.opensearch_keystore import OpenSearchTruststoreManager
 from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
@@ -149,7 +148,6 @@ class OpenSearchBaseCharm(CharmBase):
         )
 
         self.plugin_manager = OpenSearchPluginManager(self)
-        self.jvm_truststore = OpenSearchTruststoreManager(self, PeerRelationName)
         self.backup = OpenSearchBackup(self)
 
         self.service_manager = RollingOpsManager(

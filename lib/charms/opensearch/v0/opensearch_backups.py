@@ -260,17 +260,7 @@ class OpenSearchBackup(Object):
             return
 
         if self.s3_client.get_s3_connection_info().get("tls-ca-chain"):
-            ca_truststore = self.charm.jvm_truststore
-            with NamedTemporaryFile(mode="w") as f:
-                f.write("\n".join(self.s3_client.get_s3_connection_info()["tls-ca-chain"]))
-                # Get it stored
-                # python3.10 does not support NamedTemporaryFile(delete_on_close=False)
-                # That is relevant, as we receive the content of the certificate via relation and
-                # we need to pass it to the keystore as a file. Therefore, we need to use mkstemp
-                # we flush it instead.
-                f.flush()
-                ca_truststore.add(entries={"s3": f.name})
-                f.close()
+            raise NotImplementedError
 
         # Let run() happens: it will check if the relation is present, and if yes, return
         # true if the install / configuration / disabling of backup has happened.
@@ -338,8 +328,6 @@ class OpenSearchBackup(Object):
         1) Check if the cluster is currently taking a snapshot, if yes, set status as blocked
            and defer this event.
         2) If leader, run API calls to signal disable is needed
-        3) Update opensearch.yml, CA truststore and keystore
-        4) Emit a restart event
         """
         self.charm.status.set(MaintenanceStatus("Disabling backup service..."))
         snapshot_status = self._check_snapshot_status()
@@ -369,15 +357,6 @@ class OpenSearchBackup(Object):
         if self.charm.unit.is_leader():
             # 2) Run the API calls
             self._execute_s3_broken_calls()
-
-        # 3) and 4) Remove configuration and issue restart request
-        try:
-            ca_truststore = self.charm.jvm_truststore
-            ca_truststore.delete(["s3"])
-        except OpenSearchKeystoreError:
-            # Ignore the delete error, as it may mean there was a certificate at a point
-            # and the user removed it from the configuration later on.
-            pass
 
         try:
             if self.charm.plugin_manager.run():

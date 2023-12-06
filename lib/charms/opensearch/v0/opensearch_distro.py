@@ -74,7 +74,6 @@ class Paths:
         self.certs = f"{conf}/certificates"  # must be under config
         self.certs_relative = "certificates"
         self.seed_hosts = f"{conf}/unicast_hosts.txt"
-        self.ca_truststore = f"{jdk}/lib/security/cacerts"
 
 
 class OpenSearchDistribution(ABC):
@@ -305,11 +304,6 @@ class OpenSearchDistribution(ABC):
             return resp.json()
         except requests.JSONDecodeError:
             raise OpenSearchHttpError(response_body=resp.text)
-
-    @abstractmethod
-    def set_truststore_file(self) -> str:
-        """Sets the truststore to be used to hold trusted CAs."""
-        raise NotImplementedError()
 
     def write_file(self, path: str, data: str, override: bool = True):
         """Persists data into file. Useful for files generated on the fly, such as certs etc."""
