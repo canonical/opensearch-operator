@@ -115,7 +115,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, cloud_credentials) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentials) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
