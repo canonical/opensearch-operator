@@ -195,11 +195,12 @@ class OpenSearchConfig:
         """Remove some conf entries when the cluster is bootstrapped."""
         self._opensearch.config.delete(self.CONFIG_YML, "cluster.initial_cluster_manager_nodes")
 
-    def get_plugin(self, plugin_config: Dict[str, str]) -> Dict[str, Any]:
+    def get_plugin(self, plugin_config: Dict[str, str] | List[str]) -> Dict[str, Any]:
         """Gets a list of configuration from opensearch.yml."""
         result = {}
         loaded_configs = self.load_node()
-        for key in plugin_config.keys():
+        key_list = plugin_config.keys() if isinstance(plugin_config, dict) else plugin_config
+        for key in key_list:
             if key in loaded_configs:
                 result[key] = loaded_configs[key]
         return result

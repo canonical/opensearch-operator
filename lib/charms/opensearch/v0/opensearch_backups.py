@@ -231,7 +231,9 @@ class OpenSearchBackup(Object):
     def _fetch_snapshots(self) -> Dict[int, str]:
         """Returns a mapping of snapshot ids / state."""
         response = self._request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
-        return {snapshot["snapshot_id"]: snapshot["state"] for snapshot in response}
+        return {
+            snapshot["snapshot"]: snapshot["state"] for snapshot in response.get("snapshots", [])
+        }
 
     def is_backup_in_progress(self, backup_id=None) -> bool:
         """Returns True if backup is in progress, False otherwise."""
