@@ -8,12 +8,14 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Dict, List, Optional, Type
 
+from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
     CertsExpirationError,
     ClientRelationName,
     ClusterHealthRed,
     ClusterHealthUnknown,
+    COSPort,
     PeerRelationName,
     PluginConfigChangeError,
     RequestUnitServiceOps,
@@ -134,6 +136,12 @@ class OpenSearchBaseCharm(CharmBase):
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.ops_lock = OpenSearchOpsLock(self)
+        self.cos_integration = COSAgentProvider(
+            self,
+            metrics_endpoints=[
+                {"path": "/_prometheus/metrics", "port": COSPort},
+            ],
+        )
 
         self.plugin_manager = OpenSearchPluginManager(self)
 

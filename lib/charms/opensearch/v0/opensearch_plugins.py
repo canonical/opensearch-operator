@@ -248,6 +248,7 @@ class PluginState(BaseStrEnum):
     MISSING = "missing"
     INSTALLED = "installed"
     ENABLED = "enabled"
+    DISABLED = "disabled"
     WAITING_FOR_UPGRADE = "waiting-for-upgrade"
 
 
@@ -271,6 +272,7 @@ class OpenSearchPlugin:
     """Abstract class describing an OpenSearch plugin."""
 
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
+    REMOVE_ON_DISABLE = False
 
     def __init__(self, plugins_path: str, extra_config: Dict[str, Any] = None):
         """Creates the OpenSearchPlugin object.

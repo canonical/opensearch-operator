@@ -19,6 +19,7 @@ from tests.integration.helpers import (
     get_application_unit_ids_ips,
     get_application_unit_names,
     get_leader_unit_ip,
+    http_request,
 )
 from tests.integration.plugins.helpers import (
     create_index_and_bulk_insert,
@@ -30,6 +31,8 @@ from tests.integration.plugins.helpers import (
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
+COS_APP_NAME = "grafana-agent"
+
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -39,7 +42,14 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         return
 
     my_charm = await ops_test.build_charm(".")
-    await ops_test.model.set_config(MODEL_CONFIG)
+
+    model_conf = MODEL_CONFIG.copy()
+    # Make it more regular as COS relation-broken really happens on the
+    # next hook call in each opensearch unit.
+    # If this value is changed, then update the sleep accordingly at:
+    #  test_prometheus_exporter_disabled_by_cos_relation_gone
+    model_conf["update-status-hook-interval"] = "1m"
+    await ops_test.model.set_config(model_conf)
 
     # Deploy TLS Certificates operator.
     config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
@@ -59,6 +69,35 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         idle_period=IDLE_PERIOD,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
+
+
+async def test_prometheus_exporter_enabled_by_default(ops_test):
+    """Test that Prometheus Exporter is running before the relation is there."""
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
+    endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
+    response = await http_request(ops_test, "get", endpoint, app=APP_NAME, json_resp=False)
+
+    response_str = response.content.decode("utf-8")
+    assert response_str.count("opensearch_") > 500
+    assert len(response_str.split("\n")) > 500
+
+
+async def test_knn_endabled_disabled(ops_test):
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert config["plugin_opensearch_knn"]["default"] is False
+    assert config["plugin_opensearch_knn"]["value"] is True
+
+    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "False"})
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
+
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert config["plugin_opensearch_knn"]["value"] is False
+
+    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "True"})
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
+
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert config["plugin_opensearch_knn"]["value"] is True
 
 
 @pytest.mark.abort_on_fail
