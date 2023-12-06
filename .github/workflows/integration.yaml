@@ -155,7 +155,7 @@ jobs:
           # load microceph output
           # ATM: remove the https:// reference and stick with http only
           sed -i 's@https://@http://@g' microceph.source
-          export "$(cat microceph.source)"
+          for i in $(cat microceph.source); do export $i; done
           export TEST_NUM_APP_UNITS=2
 
           # Set kernel params
