@@ -377,12 +377,14 @@ class OpenSearchKnn(OpenSearchPlugin):
         """Returns a plugin config object to be applied for enabling the current plugin."""
         return OpenSearchPluginConfig(
             config_entries_to_add={"knn.plugin.enabled": True},
+            config_entries_to_del={"knn.plugin.enabled": False},
         )
 
     def disable(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for disabling the current plugin."""
         return OpenSearchPluginConfig(
-            config_entries_to_del={"knn.plugin.enabled": False},
+            config_entries_to_add={"knn.plugin.enabled": False},
+            config_entries_to_del={"knn.plugin.enabled": True},
         )
 
     @property

@@ -285,6 +285,8 @@ class OpenSearchPluginManager:
         opensearch.yaml and/or add some other configuration instead.
         If yes, then we know that the service is enabled.
 
+        The disable() method is used, as a given entry will be removed from opensearch.yml.
+
         If disable() returns a list, then check if the keys in the stored_plugin_conf
         matches the list values; otherwise, if a dict, then check if the keys and values match.
         If they match in any of the cases above, then return True.
