@@ -430,11 +430,15 @@ class OpenSearchBackup(Object):
         ]
         if missing_s3_configs:
             logger.warn(f"Missing following configs {missing_s3_configs} in s3 relation")
-            self.charm.status.set(
-                WaitingStatus(
-                    f"Waiting for s3 relation to be fully configured: {missing_s3_configs}"
+            rel = self.charm.model.get_relation(S3_RELATION)
+            if rel and rel.units:
+                # Now, there is genuine interest in configuring S3 correctly,
+                # hence we generate the status
+                self.charm.status.set(
+                    WaitingStatus(
+                        f"Waiting for s3 relation to be fully configured: {missing_s3_configs}"
+                    )
                 )
-            )
             return False
         return True
 

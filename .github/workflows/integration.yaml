@@ -34,10 +34,19 @@ jobs:
           - ha-multi-clusters-integration
           - large-deployments-integration
           - plugins-integration
+          - ha-backup-integration
         runner: ["ubuntu-22.04"]
         include:
           - tox-environments: h-scaling-integration
             runner: "Ubuntu_4C_16G"
+          - tox-environments: ha-backup-integration
+            env:
+              SECRETS_FROM_GITHUB: |
+                {
+                  "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+                  "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
+                }
+
     name: ${{ matrix.tox-environments }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
@@ -96,7 +105,7 @@ jobs:
   backup-microceph-integration-test:
     needs:
       - build
-    name: backup-integration-test
+    name: backup-microceph-integration-test
     runs-on: "ubuntu-22.04"
     timeout-minutes: 360
     steps:
@@ -150,7 +159,7 @@ jobs:
             echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run backup test
+      - name: Run backup integration
         run: |
           # load microceph output
           # ATM: remove the https:// reference and stick with http only
