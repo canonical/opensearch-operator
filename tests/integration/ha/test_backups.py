@@ -6,9 +6,9 @@ import asyncio
 import json
 import logging
 import os
-from pathlib import Path
-
-import boto3
+# from pathlib import Path
+#
+# import boto3
 import pytest
 from pytest_operator.plugin import OpsTest
 
@@ -55,45 +55,45 @@ backups_by_cloud = {}
 value_before_backup, value_after_backup = None, None
 
 
-@pytest.fixture(scope="session")
-def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
-    """Read cloud credentials."""
-    return {
-        "aws": {
-            "access-key": github_secrets["AWS_ACCESS_KEY"],
-            "secret-key": github_secrets["AWS_SECRET_KEY"],
-        },
-        "gcp": {
-            "access-key": github_secrets["GCP_ACCESS_KEY"],
-            "secret-key": github_secrets["GCP_SECRET_KEY"],
-        },
-    }
+# @pytest.fixture(scope="session")
+# def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
+#     """Read cloud credentials."""
+#     return {
+#         "aws": {
+#             "access-key": github_secrets["AWS_ACCESS_KEY"],
+#             "secret-key": github_secrets["AWS_SECRET_KEY"],
+#         },
+#         "gcp": {
+#             "access-key": github_secrets["GCP_ACCESS_KEY"],
+#             "secret-key": github_secrets["GCP_SECRET_KEY"],
+#         },
+#     }
 
 
-@pytest.fixture(scope="session", autouse=True)
-def clean_backups_from_buckets(cloud_credentials) -> None:
-    """Teardown to clean up created backups from clouds."""
-    yield
-
-    logger.info("Cleaning backups from cloud buckets")
-    for cloud_name, config in CLOUD_CONFIGS.items():
-        backup = backups_by_cloud.get(cloud_name)
-
-        if not backup:
-            continue
-
-        session = boto3.session.Session(
-            aws_access_key_id=cloud_credentials[cloud_name]["access-key"],
-            aws_secret_access_key=cloud_credentials[cloud_name]["secret-key"],
-            region_name=config["region"],
-        )
-        s3 = session.resource("s3", endpoint_url=config["endpoint"])
-        bucket = s3.Bucket(config["bucket"])
-
-        # GCS doesn't support batch delete operation, so delete the objects one by one
-        backup_path = str(Path(config["path"]) / backups_by_cloud[cloud_name])
-        for bucket_object in bucket.objects.filter(Prefix=backup_path):
-            bucket_object.delete()
+# @pytest.fixture(scope="session", autouse=True)
+# def clean_backups_from_buckets(cloud_credentials) -> None:
+#     """Teardown to clean up created backups from clouds."""
+#     yield
+#
+#     logger.info("Cleaning backups from cloud buckets")
+#     for cloud_name, config in CLOUD_CONFIGS.items():
+#         backup = backups_by_cloud.get(cloud_name)
+#
+#         if not backup:
+#             continue
+#
+#         session = boto3.session.Session(
+#             aws_access_key_id=cloud_credentials[cloud_name]["access-key"],
+#             aws_secret_access_key=cloud_credentials[cloud_name]["secret-key"],
+#             region_name=config["region"],
+#         )
+#         s3 = session.resource("s3", endpoint_url=config["endpoint"])
+#         bucket = s3.Bucket(config["bucket"])
+#
+#         # GCS doesn't support batch delete operation, so delete the objects one by one
+#         backup_path = str(Path(config["path"]) / backups_by_cloud[cloud_name])
+#         for bucket_object in bucket.objects.filter(Prefix=backup_path):
+#             bucket_object.delete()
 
 
 @pytest.fixture()
@@ -114,7 +114,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, cloud_credentials) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentials) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
