@@ -233,8 +233,13 @@ async def test_backup_cluster(
     list_backups = await run_action(ops_test, leader_id, "list-backups")
     logger.info(f"list-backups output: {list_backups}")
 
+    # Expected format:
+    # namespace(status='completed', response={'return-code': 0, 'snapshots': '{"1": "SUCCESS"}'})
     assert list_backups.status == "completed"
     assert len(json.loads(list_backups.response["snapshots"])) == int(action.response["backup-id"])
+    assert (
+        json.loads(list_backups.response["snapshots"])[action.response["backup-id"]] == "SUCCESS"
+    )
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
