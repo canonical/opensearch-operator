@@ -83,7 +83,10 @@ jobs:
           name: ${{ needs.build.outputs.artifact-name }}
 
       - name: Install CLI
-        run: pipx install git+https://github.com/canonical/data-platform-workflows@'${{ needs.get-workflow-version.outputs.version }}'#subdirectory=python/cli
+        run: |
+          sudo apt update
+          sudo apt install -y pipx
+          pipx install git+https://github.com/canonical/data-platform-workflows#subdirectory=python/cli
       - name: Redact secrets from log
         run: redact-secrets
         env:
