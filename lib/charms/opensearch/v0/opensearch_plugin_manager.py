@@ -282,13 +282,21 @@ class OpenSearchPluginManager:
         """Returns true if plugin is enabled.
 
         The main question to answer is if we would remove the configuration from
-        opensearch.yaml or not. If yes, then we know that the service is enabled.
+        opensearch.yaml and/or add some other configuration instead.
+        If yes, then we know that the service is enabled.
+
+        If disable() returns a list, then check if the keys in the stored_plugin_conf
+        matches the list values; otherwise, if a dict, then check if the keys and values match.
+        If they match in any of the cases above, then return True.
         """
         try:
             plugin_conf = plugin.disable().config_entries_to_del
             stored_plugin_conf = self._opensearch_config.get_plugin(plugin_conf)
             # Using sets to guarantee matches; stored_plugin_conf will be a dict
-            return set(plugin_conf) == set(stored_plugin_conf)
+            if isinstance(plugin_conf, list):
+                return set(plugin_conf) == set(stored_plugin_conf)
+            else:  # plugin_conf is a dict
+                return plugin_conf == stored_plugin_conf
         except (KeyError, OpenSearchPluginError) as e:
             logger.warning(f"_is_enabled: error with {e}")
             return False

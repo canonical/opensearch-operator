@@ -84,7 +84,7 @@ async def test_prometheus_exporter_enabled_by_default(ops_test):
 
 async def test_knn_enabled_disabled(ops_test):
     config = await ops_test.model.applications[APP_NAME].get_config()
-    assert config["plugin_opensearch_knn"]["default"] is False
+    assert config["plugin_opensearch_knn"]["default"] is True
     assert config["plugin_opensearch_knn"]["value"] is True
 
     await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "False"})

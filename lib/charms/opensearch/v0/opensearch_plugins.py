@@ -337,9 +337,9 @@ class OpenSearchPlugin:
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = [...],
+            config_entries_to_del = [...]|{...},
             secret_entries_to_add = {...},
-            secret_entries_to_del = [...],
+            secret_entries_to_del = [...]|{...},
         )
 
         May throw KeyError if accessing some source, such as self._extra_config, but the
@@ -354,9 +354,9 @@ class OpenSearchPlugin:
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = [...],
+            config_entries_to_del = [...]|{...},
             secret_entries_to_add = {...},
-            secret_entries_to_del = [...],
+            secret_entries_to_del = [...]|{...},
         )
 
         May throw KeyError if accessing some source, such as self._extra_config, but the
@@ -382,7 +382,7 @@ class OpenSearchKnn(OpenSearchPlugin):
     def disable(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for disabling the current plugin."""
         return OpenSearchPluginConfig(
-            config_entries_to_add={"knn.plugin.enabled": False},
+            config_entries_to_del={"knn.plugin.enabled": False},
         )
 
     @property
@@ -408,9 +408,9 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = [...],
+            config_entries_to_del = [...]|{...},
             secret_entries_to_add = {...},
-            secret_entries_to_del = [...],
+            secret_entries_to_del = [...]|{...},
         )
         """
         return OpenSearchPluginConfig(
@@ -430,9 +430,9 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = [...],
+            config_entries_to_del = [...]|{...},
             secret_entries_to_add = {...},
-            secret_entries_to_del = [...],
+            secret_entries_to_del = [...]|{...},
         )
         """
         return OpenSearchPluginConfig(
