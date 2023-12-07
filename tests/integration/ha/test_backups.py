@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import os
+
 # from pathlib import Path
 #
 # import boto3
@@ -167,8 +168,8 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentia
             "access-key": os.environ["S3_ACCESS_KEY"],
             "secret-key": os.environ["S3_SECRET_KEY"],
         }
-    else:
-        s3_creds = cloud_credentials[s3_storage].copy()
+    #    else:
+    #        s3_creds = cloud_credentials[s3_storage].copy()
 
     await run_action(
         ops_test,
