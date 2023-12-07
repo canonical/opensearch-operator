@@ -45,16 +45,6 @@ jobs:
         include:
           - tox-environments: h-scaling-integration
             runner: "Ubuntu_4C_16G"
-#          - tox-environments: ha-backup-integration
-#            env:
-#              CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
-#              LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
-#              SECRETS_FROM_GITHUB: |
-#                {
-#                  "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
-#                  "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
-#                }
-
     name: ${{ matrix.tox-environments }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
