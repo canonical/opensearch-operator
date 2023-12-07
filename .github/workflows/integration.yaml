@@ -13,6 +13,26 @@ on:
             https://packaging.python.org/en/latest/glossary/#term-Version-Specifier
         required: false
         type: string
+  workflow_call:
+    secrets:
+      integration-test:
+        description: |
+          Secrets needed in integration tests
+
+          Passed to tests with `SECRETS_FROM_GITHUB` environment variable
+
+          Use a string representation of a Python dict[str, str] built from multiple GitHub secrets
+          Do NOT put the string into a single GitHub secret—build the string from multiple GitHub secrets so that GitHub is more likely to redact the secrets in GitHub Actions logs.
+
+          Python code to verify the string format:
+          ```
+          import ast
+          secrets = ast.literal_eval("")
+          assert isinstance(secrets, dict)
+          for key, value in secrets.items():
+              assert isinstance(key, str) and isinstance(value, str)
+          ```
+        required: false
 
 jobs:
   build:
@@ -22,12 +42,6 @@ jobs:
   integration-test:
     needs:
       - build
-    secrets:
-      integration-test: |
-        {
-          "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
-          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
-        }
     strategy:
       fail-fast: false
       matrix:
@@ -69,6 +83,13 @@ jobs:
         with:
           name: ${{ needs.build.outputs.artifact-name }}
 
+      - name: Install CLI
+        run: pipx install git+https://github.com/canonical/data-platform-workflows@'${{ needs.get-workflow-version.outputs.version }}'#subdirectory=python/cli
+      - name: Redact secrets from log
+        run: redact-secrets
+        env:
+          SECRETS: ${{ secrets.integration-test }}
+
       - name: Select tests
         id: select-tests
         run: |
@@ -97,6 +118,12 @@ jobs:
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
           LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
+    secrets:
+      integration-test: |
+        {
+          "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
+        }
 
 
 
