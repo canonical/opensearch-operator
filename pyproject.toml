@@ -1,7 +1,91 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-# Testing tools configuration
+[tool.poetry]
+# Charm is not packed as a standard Python package; this information is not used
+name = "charm"
+version = "0.1.0"
+description = ""
+authors = []
+
+[tool.poetry.dependencies]
+python = "^3.10"
+ops = "^2.5.0"
+lightkube = "^0.14.0"
+tenacity = "^8.2.2"
+boto3 = "^1.28.22"
+jinja2 = "^3.1.2"
+bcrypt = "4.0.1"
+cosl = "*"
+overrides = "7.4.0"
+requests = "2.31.0"
+# Official name: ruamel.yaml, but due to Poetry GH#109 - replace dots with dashs
+ruamel-yaml = "0.17.35"
+shortuuid = "1.0.11"
+jproperties = "2.1.1"
+pydantic = "^1.10, <2"
+cryptography = "*"
+jsonschema = "*"
+
+
+[tool.poetry.group.charm-libs.dependencies]
+# data_platform_libs/v0/data_interfaces.py
+ops = ">=2.0.0"
+# data_platform_libs/v0/upgrade.py
+# grafana_agent/v0/cos_agent.py requires pydantic <2
+poetry-core = "*"
+pydantic = "^1.10, <2"
+# tls_certificates_interface/v1/tls_certificates.py
+cryptography = "*"
+jsonschema = "*"
+
+[tool.poetry.group.format]
+optional = true
+
+[tool.poetry.group.format.dependencies]
+black = "^23.7.0"
+isort = "^5.12.0"
+
+[tool.poetry.group.lint]
+optional = true
+
+[tool.poetry.group.lint.dependencies]
+black = "^23.7.0"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+flake8-docstrings = "^1.7.0"
+flake8-copyright = "^0.2.4"
+flake8-builtins = "^2.1.0"
+pyproject-flake8 = "^6.0.0.post1"
+pep8-naming = "^0.13.3"
+codespell = "^2.2.5"
+shellcheck-py = "^0.9.0.5"
+
+[tool.poetry.group.unit.dependencies]
+juju = "^3.2.2"
+pytest = "*"
+pytest-asyncio = "<0.23"
+pytest-mock = "^3.11.1"
+coverage = {extras = ["toml"], version = "*"}
+parameterized = "^0.9.0"
+
+[tool.poetry.group.integration.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "<0.23"
+pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v5.0.0", subdirectory = "python/pytest_plugins/github_secrets"}
+pytest-operator = "^0.28.0"
+pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v5.0.0", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
+pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v5.0.0", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
+juju = "^3.2.2"
+ops = "^2.5.0"
+pytest-mock = "^3.11.1"
+tenacity = "^8.2.2"
+boto3 = "^1.28.22"
+pyyaml = "^6.0.1"
+urllib3 = "^1.26.16"
+protobuf = "3.20.0"
+opensearch-py = "*"
+
 [tool.coverage.run]
 branch = true
 
@@ -11,13 +95,12 @@ show_missing = true
 [tool.pytest.ini_options]
 minversion = "6.0"
 log_cli_level = "INFO"
-asyncio_mode = "auto"
 markers = ["unstable"]
 
 # Formatting tools configuration
 [tool.black]
 line-length = 99
-target-version = ["py310"]
+target-version = ["py38"]
 
 [tool.isort]
 profile = "black"
