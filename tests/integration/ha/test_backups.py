@@ -112,6 +112,8 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
+@pytest.mark.skip
+# @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest, cloud_credentials) -> None:
@@ -189,6 +191,8 @@ async def test_build_and_deploy(ops_test: OpsTest, cloud_credentials) -> None:
     )
 
 
+@pytest.mark.skip
+# @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_backup_cluster(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner

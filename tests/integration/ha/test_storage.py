@@ -84,6 +84,7 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -114,6 +115,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_after_scale_down(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
