@@ -140,7 +140,6 @@ class OpenSearchKeystore(Keystore):
             return  # no key/value to add, no need to request reload of keystore either
         for key, value in entries.items():
             self._add(key, value)
-        # self.reload_keystore()
 
     def delete(self, entries: List[str]) -> None:
         """Removes a given key from "opensearch" keystore."""
@@ -148,7 +147,6 @@ class OpenSearchKeystore(Keystore):
             return  # no key/value to remove, no need to request reload of keystore either
         for key in entries:
             self._delete(key)
-        # self.reload_keystore()
 
     def list(self, alias: str = None) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
