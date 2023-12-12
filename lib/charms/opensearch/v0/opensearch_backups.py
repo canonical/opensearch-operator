@@ -405,7 +405,6 @@ class OpenSearchBackup(Object):
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
         info = self.s3_client.get_s3_connection_info()
-        bucket_name = info["bucket"]
         return self.get_service_status(
             self._request(
                 "PUT",
@@ -416,7 +415,7 @@ class OpenSearchBackup(Object):
                         "region": info.get("region"),
                         "endpoint": info.get("endpoint"),
                         "protocol": "http",  # TODO: roll back to https once we have the cert
-                        "bucket": bucket_name,
+                        "bucket": info["bucket"],
                         "base_path": info.get("path", S3_REPO_BASE_PATH),
                     },
                 },
