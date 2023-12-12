@@ -148,7 +148,7 @@ class OpenSearchBaseCharm(CharmBase):
             relation_name=COSRelationName,
             metrics_endpoints=[],
             scrape_configs=self._scrape_config,
-            refresh_events=[self.on.set_password_action],
+            refresh_events=[self.on.set_password_action, self.on.secret_changed],
         )
 
         self.plugin_manager = OpenSearchPluginManager(self)
@@ -1078,12 +1078,14 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _scrape_config(self) -> List[Dict]:
         """Generates the scrape config as needed."""
+        app_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        ca = app_secrets.get("ca-cert")
         pwd = self.secrets.get(Scope.APP, self.secrets.password_key(COSUser))
         return [
             {
                 "metrics_path": "/_prometheus/metrics",
                 "static_configs": [{"targets": [f"{self.unit_ip}:{COSPort}"]}],
-                "tls_config": {"insecure_skip_verify": True},
+                "tls_config": {"ca": ca},
                 "scheme": "https" if self._is_tls_fully_configured() else "http",
                 "basic_auth": {"username": f"{COSUser}", "password": f"{pwd}"},
             }
