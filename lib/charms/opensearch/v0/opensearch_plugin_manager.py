@@ -22,6 +22,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPlugin,
     OpenSearchPluginConfig,
     OpenSearchPluginError,
+    OpenSearchPluginEventScope,
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingConfigError,
     OpenSearchPluginMissingDepsError,
@@ -73,7 +74,18 @@ class OpenSearchPluginManager:
         self._charm_config = self._charm.model.config
         self._plugins_path = self._opensearch.paths.plugins
         self._keystore = OpenSearchKeystore(self._charm)
-        self._event = None
+        self._event_scope = OpenSearchPluginEventScope.DEFAULT
+
+    def set_event_scope(self, event_scope: OpenSearchPluginEventScope) -> None:
+        """Sets the event scope of the plugin manager.
+
+        This method should be called at the start of each event handler.
+        """
+        self._event_scope = event_scope
+
+    def reset_event_scope(self) -> None:
+        """Resets the event scope of the plugin manager to the default value."""
+        self._event_scope = OpenSearchPluginEventScope.DEFAULT
 
     @property
     def plugins(self) -> List[OpenSearchPlugin]:
@@ -249,6 +261,9 @@ class OpenSearchPluginManager:
         if config.config_entries_to_add:
             self._opensearch_config.add_plugin(config.config_entries_to_add)
 
+        if config.secret_entries_to_del or config.secret_entries_to_add:
+            self._keystore.reload_keystore()
+
         # Return True if some configuration entries changed
         return True if config.config_entries_to_add or config.config_entries_to_del else False
 
@@ -293,7 +308,12 @@ class OpenSearchPluginManager:
         """
         try:
             plugin_conf = plugin.disable().config_entries_to_del
+            keystore_conf = plugin.disable().secret_entries_to_del
             stored_plugin_conf = self._opensearch_config.get_plugin(plugin_conf)
+
+            if any(k not in self._keystore.list() for k in keystore_conf):
+                return False
+
             # Using sets to guarantee matches; stored_plugin_conf will be a dict
             if isinstance(plugin_conf, list):
                 return set(plugin_conf) == set(stored_plugin_conf)
@@ -315,7 +335,9 @@ class OpenSearchPluginManager:
         if not relation_name:
             return False
         relation = self._charm.model.get_relation(relation_name)
-        return relation is not None and relation.units
+        if self._event_scope == OpenSearchPluginEventScope.RELATION_BROKEN_EVENT:
+            return relation is not None and relation.units
+        return relation is not None
 
     def _remove_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""

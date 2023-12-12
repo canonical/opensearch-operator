@@ -65,6 +65,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 )
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
+    OpenSearchPluginEventScope,
     OpenSearchPluginRelationClusterNotReadyError,
     PluginState,
 )
@@ -251,24 +252,27 @@ class OpenSearchBackup(Object):
     def _on_s3_credentials_changed(self, event: EventBase) -> None:
         """Calls the plugin manager config handler.
 
-        The S3 change will run over the plugin and verify if the relation is available if
-        the s3 config was completely provided. Otherwise, abandon the event and wait for
-        a next relation change.
+        This method will iterate over the s3 relation and check:
+        1) Is S3 fully configured? If not, we can abandon this event
+        2) Try to enable the plugin
+        3) If the plugin is not enabled, then defer the event
+        4) Send the API calls to setup the backup service
         """
         if not self._is_s3_fully_configured():
-            # Abandon this event, as it is still missing data
+            # Always check if a relation actually exists and if options are available
+            # in this case, seems one of the conditions above is not yet present
+            # abandon this restart event, as it will be called later once s3 configuration
+            # is correctly set
             return
 
         if self.s3_client.get_s3_connection_info().get("tls-ca-chain"):
             raise NotImplementedError
 
-        # Let run() happens: it will check if the relation is present, and if yes, return
-        # true if the install / configuration / disabling of backup has happened.
+        self.charm.status.set(WaitingStatus("Setting up backup service"))
+
         try:
-            if self.charm.plugin_manager.run():
-                self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
-                    callback_override="_restart_opensearch"
-                )
+            plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
+            self.charm.plugin_manager._configure_if_needed(plugin)
         except OpenSearchError as e:
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 self.charm.status.set(WaitingStatus("s3-changed: cluster not ready yet"))
@@ -279,36 +283,29 @@ class OpenSearchBackup(Object):
                 # There was an unexpected error, log it and block the unit
                 logger.error(e)
             event.defer()
-        self.charm.status.clear(ActiveStatus())
-
-    def apply_post_restart_if_needed(self) -> None:
-        """Runs the post restart routine and API calls needed to setup/disable backup.
-
-        This method should be called by the charm in its restart callback resolution.
-        """
-        if not self.charm.unit.is_leader():
-            return
-
-        if not self._is_s3_fully_configured():
-            # Always check if a relation actually exists and if options are available
-            # in this case, seems one of the conditions above is not yet present
-            # abandon this restart event, as it will be called later once s3 configuration
-            # is correctly set
             return
 
         if self._plugin_status not in [
             PluginState.ENABLED,
             PluginState.WAITING_FOR_UPGRADE,
         ]:
-            # Configuration is available, but this restart was not done to implement the
-            # new backup configs. Abandon the event.
+            self.charm.status.set(WaitingStatus(f"Plugin in state {self._plugin_status}"))
+            event.defer()
             return
 
-        if self._check_repo_status() == BackupServiceState.SUCCESS:
-            # Finally, check if all the options above are true AND the configuration has
-            # already been applied. If that is the case, then also leave the event.
+        if not self.charm.unit.is_leader():
+            # Plugin is configured locally for this unit. Now the leader proceed.
+            self.charm.status.clear(ActiveStatus())
             return
 
+        self.apply_api_config_if_needed()
+        self.charm.status.clear(ActiveStatus())
+
+    def apply_api_config_if_needed(self) -> None:
+        """Runs the post restart routine and API calls needed to setup/disable backup.
+
+        This method should be called by the charm in its restart callback resolution.
+        """
         # Backup relation has been recently made available with all the parameters needed.
         # Steps:
         #     (1) set up as maintenance;
@@ -320,6 +317,7 @@ class OpenSearchBackup(Object):
             self.charm.status.set(ActiveStatus("Backup service configured"))
         else:
             self.charm.status.set(BlockedStatus(f"Backup setup failed with {state}"))
+        self.charm.status.clear(ActiveStatus())
 
     def _on_s3_broken(self, event: EventBase) -> None:
         """Processes the broken s3 relation.
@@ -358,15 +356,17 @@ class OpenSearchBackup(Object):
         # 3) Only leader is checking for that and deferring the event
         # 4) The leader is lost or removed
         # 5) The snapshot is removed: self._execute_s3_broken_calls() never happens
+        # That is why we are running the leader check here and not at first
         if self.charm.unit.is_leader():
             # 2) Run the API calls
             self._execute_s3_broken_calls()
 
         try:
-            if self.charm.plugin_manager.run():
-                self.charm.on[self.charm.service_manager.name].acquire_lock.emit(
-                    callback_override="_restart_opensearch"
-                )
+            self.charm.plugin_manager.set_event_scope(
+                OpenSearchPluginEventScope.RELATION_BROKEN_EVENT
+            )
+            plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
+            self.charm.plugin_manager._disable_if_needed(plugin)
         except OpenSearchError as e:
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 self.charm.status.set(WaitingStatus("s3-broken event: cluster not ready yet"))
@@ -376,8 +376,14 @@ class OpenSearchBackup(Object):
                 )
                 # There was an unexpected error, log it and block the unit
                 logger.error(e)
+            self.charm.plugin_manager.reset_event_scope()
             event.defer()
             return
+        # we need to do this task, so we will ask for an exception from lint
+        except:  # noqa: E722
+            self.charm.plugin_manager.reset_event_scope()
+            return
+        self.charm.plugin_manager.reset_event_scope()
         self.charm.status.clear(ActiveStatus())
 
     def _execute_s3_broken_calls(self):
@@ -407,6 +413,9 @@ class OpenSearchBackup(Object):
                 payload={
                     "type": "s3",
                     "settings": {
+                        "region": info.get("region"),
+                        "endpoint": info.get("endpoint"),
+                        "protocol": "http",  # TODO: roll back to https once we have the cert
                         "bucket": bucket_name,
                         "base_path": info.get("path", S3_REPO_BASE_PATH),
                     },

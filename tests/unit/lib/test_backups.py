@@ -87,10 +87,6 @@ class TestBackups(unittest.TestCase):
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
-                config_entries_to_add={
-                    "s3.client.default.region": "testing-region",
-                    "s3.client.default.endpoint": "localhost",
-                },
                 secret_entries_to_add={
                     "s3.client.default.access_key": "aaaa",
                     "s3.client.default.secret_key": "bbbb",
@@ -161,10 +157,6 @@ class TestBackups(unittest.TestCase):
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
-                config_entries_to_del=[
-                    "s3.client.default.region",
-                    "s3.client.default.endpoint",
-                ],
                 secret_entries_to_del=[
                     "s3.client.default.access_key",
                     "s3.client.default.secret_key",

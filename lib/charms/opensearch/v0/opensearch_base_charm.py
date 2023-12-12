@@ -738,7 +738,6 @@ class OpenSearchBaseCharm(CharmBase):
                 return
 
         self._start_opensearch(event)
-        self.backup.apply_post_restart_if_needed()
 
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""
