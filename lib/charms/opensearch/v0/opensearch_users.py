@@ -162,6 +162,7 @@ class OpenSearchUserManager:
                 payload=payload,
             )
         except OpenSearchHttpError as e:
+            logger.error(f"Couldn't create user {str(e)}")
             raise OpenSearchUserMgmtError(e)
 
         if resp.get("status") != "CREATED":

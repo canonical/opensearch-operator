@@ -83,5 +83,5 @@ COSPort = "9200"
 
 
 # Opensearch Users
-OpenSearchUsers = {"admin"}
+OpenSearchUsers = {"admin", "monitor"}
 OpenSearchRoles = set()
