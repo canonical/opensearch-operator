@@ -128,7 +128,7 @@ class TestBackups(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._execute_s3_broken_calls")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_99_relation_broken(
+    def test_20_relation_broken(
         self,
         mock_status,
         mock_execute_s3_broken_calls,
@@ -144,6 +144,7 @@ class TestBackups(unittest.TestCase):
             {"SUCCESS"},
         ]
         mock_status.return_value = PluginState.ENABLED
+        self.harness.remove_relation_unit(self.s3_rel_id, "s3-integrator/0")
         self.harness.remove_relation(self.s3_rel_id)
         mock_request.called_once_with("GET", "/_snapshot/_status")
         mock_execute_s3_broken_calls.assert_called_once()
