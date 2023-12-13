@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
+from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn, PluginState
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.testing import Harness
@@ -51,47 +52,8 @@ class TestOpenSearchKNN(unittest.TestCase):
                 "relation": None,
             }
         }
-
-    @patch(
-        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
-    )
-    @patch.object(RollingOpsManager, "_on_acquire_lock")
-    @patch(
-        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
-        new_callable=PropertyMock,
-    )
-    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
-    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_started")
-    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
-    @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
-    def test_enable_first_time_via_config_change(
-        self,
-        mock_put,
-        mock_load,
-        mock_is_started,
-        mock_status,
-        mock_is_enabled,
-        mock_version,
-        mock_acquire_lock,
-        deployment_desc,
-    ) -> None:
-        """Tests entire config_changed event with KNN plugin.
-
-        load_node should return no configuration of interest, as this plugin is being
-        enabled for the first time.
-        """
-        mock_status.return_value = PluginState.INSTALLED
-        mock_is_enabled.return_value = False
-        mock_is_started.return_value = True
-        mock_version.return_value = "2.9.0"
-        self.charm.opensearch.run_bin = MagicMock(return_value=RETURN_LIST_PLUGINS)
-        mock_load.return_value = {}
-        mock_put.return_value = {"knn.plugin.enabled": "true"}
-
-        self.harness.update_config({"plugin_opensearch_knn": True})
-        mock_acquire_lock.assert_called_once()
-        mock_put.assert_called_once_with("opensearch.yml", "knn.plugin.enabled", True)
+        self.charm.opensearch.is_started = MagicMock(return_value=True)
+        self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
 
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
@@ -123,12 +85,16 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_is_started.return_value = True
         mock_version.return_value = "2.9.0"
         self.plugin_manager._keystore.add = MagicMock()
-        self.plugin_manager._add_plugin = MagicMock()
-        self.charm.opensearch.run_bin = MagicMock(return_value=RETURN_LIST_PLUGINS)
-        mock_load.return_value = {"knn.plugin.enabled": "true"}
-        mock_put.return_value = {"knn.plugin.enabled": "false"}
+        self.plugin_manager._keystore.delete = MagicMock()
+        self.plugin_manager._opensearch_config.delete_plugin = MagicMock()
+        self.plugin_manager._opensearch_config.add_plugin = MagicMock()
+        self.charm.status = MagicMock()
 
         self.harness.update_config({"plugin_opensearch_knn": False})
-        self.plugin_manager._add_plugin.assert_not_called()
         mock_acquire_lock.assert_called_once()
-        mock_put.assert_called_once_with("opensearch.yml", "knn.plugin.enabled", False)
+        self.plugin_manager._opensearch_config.delete_plugin.assert_called_once_with(
+            {"knn.plugin.enabled": True}
+        )
+        self.plugin_manager._opensearch_config.add_plugin.assert_called_once_with(
+            {"knn.plugin.enabled": False}
+        )

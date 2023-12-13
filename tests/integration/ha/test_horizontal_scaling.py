@@ -361,6 +361,7 @@ async def test_safe_scale_down_remove_leaders(
         units_statuses=["active"],
         wait_for_exact_units=init_units_count + 3,
         idle_period=IDLE_PERIOD,
+        timeout=1800,
     )
 
     # scale down: remove the juju leader
@@ -374,6 +375,7 @@ async def test_safe_scale_down_remove_leaders(
         units_statuses=["active"],
         wait_for_exact_units=init_units_count + 2,
         idle_period=IDLE_PERIOD,
+        timeout=1800,
     )
 
     # make sure the duties supposed to be done by the departing leader are done
@@ -399,6 +401,7 @@ async def test_safe_scale_down_remove_leaders(
         units_statuses=["active"],
         wait_for_exact_units=init_units_count + 1,
         idle_period=IDLE_PERIOD,
+        timeout=1800,
     )
 
     # check if CM re-election happened

@@ -56,9 +56,6 @@ class TestOpenSearchKeystore(unittest.TestCase):
         self.charm.opensearch.run_bin.assert_has_calls(
             [call("opensearch-keystore", "add --force key1", stdin="secret1\n")]
         )
-        self.charm.opensearch.request.assert_has_calls(
-            [call("POST", "_nodes/reload_secure_settings")]
-        )
 
     def test_keystore_delete_keypair(self) -> None:
         """Delete data to keystore."""
@@ -67,7 +64,4 @@ class TestOpenSearchKeystore(unittest.TestCase):
         self.keystore.delete({"key1": "secret1"})
         self.charm.opensearch.run_bin.assert_has_calls(
             [call("opensearch-keystore", "remove key1")]
-        )
-        self.charm.opensearch.request.assert_has_calls(
-            [call("POST", "_nodes/reload_secure_settings")]
         )

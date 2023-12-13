@@ -44,6 +44,7 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
+from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -70,7 +71,10 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     StartMode,
 )
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
+from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchPluginError,
+    OpenSearchPluginRelationClusterNotReadyError,
+)
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
@@ -94,7 +98,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import EventBase, EventSource
-from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -144,6 +148,7 @@ class OpenSearchBaseCharm(CharmBase):
         )
 
         self.plugin_manager = OpenSearchPluginManager(self)
+        self.backup = OpenSearchBackup(self)
 
         self.service_manager = RollingOpsManager(
             self, relation=SERVICE_MANAGER, callback=self._start_opensearch
@@ -485,14 +490,20 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         try:
-            if self.opensearch.is_started() and self.plugin_manager.run():
+            if self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
         except OpenSearchPluginError as e:
             logger.exception(e)
-            self.status.set(BlockedStatus(PluginConfigChangeError))
+            if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
+                logger.warn("Plugin management: cluster not ready yet at config changed")
+            else:
+                # There was an unexpected error, log it and block the unit
+                self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
+            return
+        self.status.set(ActiveStatus())
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""

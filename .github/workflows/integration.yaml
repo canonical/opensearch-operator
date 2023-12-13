@@ -13,6 +13,25 @@ on:
             https://packaging.python.org/en/latest/glossary/#term-Version-Specifier
         required: false
         type: string
+#    secrets:
+#      integration-test:
+#        description: |
+#          Secrets needed in integration tests
+#
+#          Passed to tests with `SECRETS_FROM_GITHUB` environment variable
+#
+#          Use a string representation of a Python dict[str, str] built from multiple GitHub secrets
+#          Do NOT put the string into a single GitHub secret—build the string from multiple GitHub secrets so that GitHub is more likely to redact the secrets in GitHub Actions logs.
+#
+#          Python code to verify the string format:
+#          ```
+#          import ast
+#          secrets = ast.literal_eval("")
+#          assert isinstance(secrets, dict)
+#          for key, value in secrets.items():
+#              assert isinstance(key, str) and isinstance(value, str)
+#          ```
+#        required: false
 
 jobs:
   build:
@@ -34,6 +53,7 @@ jobs:
           - ha-multi-clusters-integration
           - large-deployments-integration
           - plugins-integration
+#          - ha-backup-integration
         runner: ["ubuntu-22.04"]
         include:
           - tox-environments: h-scaling-integration
@@ -61,6 +81,16 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ needs.build.outputs.artifact-name }}
+
+#      - name: Install CLI
+#        run: |
+#          sudo apt update
+#          sudo apt install -y pipx
+#          pipx install git+https://github.com/canonical/data-platform-workflows#subdirectory=python/cli
+#      - name: Redact secrets from log
+#        run: redact-secrets
+#        env:
+#          SECRETS: ${{ secrets.integration-test }}
 
       - name: Select tests
         id: select-tests
@@ -90,3 +120,100 @@ jobs:
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
           LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
+          SECRETS_FROM_GITHUB: ""
+#          SECRETS_FROM_GITHUB: ${{ secrets.integration-test }}
+
+
+
+  backup-microceph-integration-test:
+    needs:
+      - build
+    name: backup-microceph-integration-test
+    runs-on: "ubuntu-22.04"
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Upgrade LXD
+        run: |
+          sudo snap refresh lxd --channel=latest/stable
+
+      - name: Setup Juju environment
+        # Runs on juju 3 by default
+        # TODO: Replace with custom image on self-hosted runner
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+          juju-channel: ${{ inputs.juju-snap-channel }}
+
+      - name: Download packed charm(s)
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.build.outputs.artifact-name }}
+
+      - name: Free space in the runner
+        id: free-space-runner
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+      - name: Setup microceph
+        uses: phvalguima/microceph-action@main
+        with:
+          channel: 'latest/edge'
+          devname: '/dev/sdi'
+          accesskey: 'accesskey'
+          secretkey: 'secretkey'
+          bucket: 'testbucket'
+          osdsize: '5G'
+
+      - name: Select tests
+        id: select-tests
+        run: |
+          if [ "${{ github.event_name }}" == "schedule" ]
+          then
+            echo Running unstable and stable tests
+            echo "mark_expression=" >> $GITHUB_OUTPUT
+          else
+            echo Skipping unstable tests
+            echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run backup integration
+        run: |
+          # load microceph output
+          # ATM: remove the https:// reference and stick with http only
+          sed -i 's@https://@http://@g' microceph.source
+          for i in $(cat microceph.source); do export $i; done
+          export TEST_NUM_APP_UNITS=2
+
+          # Set kernel params
+          sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
+          tox run -e ha-backup-integration -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+        env:
+          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+          LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
+
+#      - name: Run backup test with AWS
+#        run: tox run -e ha-backup-integration -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+#        env:
+#          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+#          LIBJUJU_VERSION_SPECIFIER: ${{ matrix.libjuju-version }}
+#          SECRETS_FROM_GITHUB: |
+#            {
+#              "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+#              "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
+#            }
+#      - name: Run backup test with GCP
+#        run: tox run -e ha-backup-integration -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+#        env:
+#          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+#          LIBJUJU_VERSION_SPECIFIER: ${{ matrix.libjuju-version }}
+#          SECRETS_FROM_GITHUB: |
+#            {
+#              "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
+#              "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
+#            }
