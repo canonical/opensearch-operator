@@ -10,21 +10,14 @@ The OpenSearchBackup class listens to both relation changes from S3_RELATION and
 and responses. The OpenSearchBackupPlugin holds the configuration info. The classes together
 manages the events related to backup/restore cycles.
 
-The setup of s3-repository happens in two phases: (1) at credentials-changed event, where
-the backup configuration is made in opensearch.yml and the opensearch-keystore; (2) when
-the first action is requested and the actual registration of the repo takes place.
-
-That needs to be separated in two phases as the configuration itself will demand a restart,
-before configuring the actual snapshot repo is possible in OpenSearch.
-
-The removal of backup only reverses step (1), to avoid accidentally deleting the existing
-snapshots in the S3 repo.
+The removal of backup only reverses step the API calls, to avoid accidentally deleting the
+existing snapshots in the S3 repo.
 
 The main class to interact with is the OpenSearchBackup. This class will observe the s3
 relation and backup-related actions.
 
-OpenSearchBackup finishes the config of the backup service once opensearch.yml has bee
-set/unset and a restart has been applied. That means, in the case s3 has been related,
+OpenSearchBackup finishes the config of the backup service once has been set/unset and a
+restart has been applied. That means, in the case s3 has been related,
 this class will apply the new configuration to opensearch.yml and keystore, then issue a
 restart event. After the restart has been successful and if unit is leader: execute the
 API calls to setup the backup.
@@ -162,7 +155,7 @@ class OpenSearchBackup(Object):
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Returns the list of available backups to the user."""
-        if not self._check_action_can_run(event):
+        if not self._can_unit_perform_backup(event):
             event.fail("Failed: backup service is not configured yet")
             return
         backups = {}
@@ -251,11 +244,7 @@ class OpenSearchBackup(Object):
 
     def _on_restore_backup_action(self, event: ActionEvent) -> None:  # noqa: C901
         """Restores a backup to the current cluster."""
-        if not self.charm.unit.is_leader():
-            event.fail("Failed: the action can be run only on leader unit")
-            return
-
-        if not self._check_action_can_run(event):
+        if not self._can_unit_perform_backup(event):
             event.fail("Failed: backup service is not configured yet")
             return
 
@@ -292,11 +281,7 @@ class OpenSearchBackup(Object):
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         """Creates a backup from the current cluster."""
-        if not self.charm.unit.is_leader():
-            event.fail("Failed: the action can be run only on leader unit")
-            return
-
-        if not self._check_action_can_run(event):
+        if not self._can_unit_perform_backup(event):
             event.fail("Failed: backup service is not configured yet")
             return
 
@@ -336,7 +321,7 @@ class OpenSearchBackup(Object):
             return
         event.set_results({"backup-id": new_backup_id, "status": "Backup is running."})
 
-    def _check_action_can_run(self, event: ActionEvent) -> bool:
+    def _can_unit_perform_backup(self, event: ActionEvent) -> bool:
         """Checks if the actions run from this unit can be executed or not.
 
         If not, then register the reason as a failure in the event and returns False.
@@ -390,7 +375,7 @@ class OpenSearchBackup(Object):
         3) If the plugin is not enabled, then defer the event
         4) Send the API calls to setup the backup service
         """
-        if not self._is_s3_fully_configured():
+        if not self.can_use_s3_repository():
             # Always check if a relation actually exists and if options are available
             # in this case, seems one of the conditions above is not yet present
             # abandon this restart event, as it will be called later once s3 configuration
@@ -482,7 +467,9 @@ class OpenSearchBackup(Object):
         ]:
             # 1) snapshot is either in progress or partially taken: block and defer this event
             self.charm.status.set(
-                BlockedStatus(f"Disabling backup not possible: {snapshot_status}")
+                MaintenanceStatus(
+                    f"Disabling backup postponed until backup in progress: {snapshot_status}"
+                )
             )
             event.defer()
             return
@@ -547,9 +534,23 @@ class OpenSearchBackup(Object):
         except (ValueError, OpenSearchHttpError, requests.HTTPError):
             return BackupServiceState.RESPONSE_FAILED_NETWORK
 
+    def _get_endpoint_protocol(self, endpoint: str) -> str:
+        """Returns the protocol based on the endpoint."""
+        if endpoint.startswith("http://"):
+            return "http"
+        if endpoint.startswith("https://"):
+            return "https"
+        return "https"
+
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
         info = self.s3_client.get_s3_connection_info()
+        extra_settings = {}
+        if info.get("region"):
+            extra_settings["region"] = info.get("region")
+        if info.get("storage-class"):
+            extra_settings["storage_class"] = info.get("storage-class")
+
         return self.get_service_status(
             self._request(
                 "PUT",
@@ -557,17 +558,17 @@ class OpenSearchBackup(Object):
                 payload={
                     "type": "s3",
                     "settings": {
-                        "region": info.get("region"),
                         "endpoint": info.get("endpoint"),
-                        "protocol": "http",  # TODO: roll back to https once we have the cert
+                        "protocol": self._get_endpoint_protocol(info.get("endpoint")),
                         "bucket": info["bucket"],
                         "base_path": info.get("path", S3_REPO_BASE_PATH),
+                        **extra_settings,
                     },
                 },
             )
         )
 
-    def _is_s3_fully_configured(self) -> bool:
+    def can_use_s3_repository(self) -> bool:
         """Checks if relation is set and all configs needed are present.
 
         The get_s3_connection_info() checks if the relation is present, and if yes,
@@ -578,7 +579,7 @@ class OpenSearchBackup(Object):
         """
         missing_s3_configs = [
             config
-            for config in ["region", "bucket", "access-key", "secret-key"]
+            for config in ["bucket", "endpoint", "access-key", "secret-key"]
             if config not in self.s3_client.get_s3_connection_info()
         ]
         if missing_s3_configs:
