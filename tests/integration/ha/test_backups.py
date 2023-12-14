@@ -237,8 +237,8 @@ async def test_backup_cluster(
     logger.info(f"list-backups output: {list_backups}")
 
     # Expected format:
-    # namespace(status='completed', response={'return-code': 0, 'snapshots': '{"1": ...}'})
-    backups = json.loads(list_backups.response["snapshots"])
+    # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
+    backups = json.loads(list_backups.response["backups"])
     assert list_backups.status == "completed"
     assert len(backups.keys()) == int(action.response["backup-id"])
     assert backups[action.response["backup-id"]]["state"] == "SUCCESS"
@@ -376,8 +376,8 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     logger.info(f"list-backups output: {list_backups}")
 
     # Expected format:
-    # namespace(status='completed', response={'return-code': 0, 'snapshots': '{"1": ...}'})
-    backups = json.loads(list_backups.response["snapshots"])
+    # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
+    backups = json.loads(list_backups.response["backups"])
     assert list_backups.status == "completed"
     assert len(backups.keys()) == int(action.response["backup-id"])
     assert backups[action.response["backup-id"]]["state"] == "SUCCESS"
