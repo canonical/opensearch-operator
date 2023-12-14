@@ -16,6 +16,9 @@ from charms.opensearch.v0.constants_charm import (
     ClusterHealthRed,
     ClusterHealthUnknown,
     COSPort,
+    COSRelationName,
+    COSRole,
+    COSUser,
     PeerRelationName,
     PluginConfigChangeError,
     RequestUnitServiceOps,
@@ -142,9 +145,10 @@ class OpenSearchBaseCharm(CharmBase):
         self.ops_lock = OpenSearchOpsLock(self)
         self.cos_integration = COSAgentProvider(
             self,
-            metrics_endpoints=[
-                {"path": "/_prometheus/metrics", "port": COSPort},
-            ],
+            relation_name=COSRelationName,
+            metrics_endpoints=[],
+            scrape_configs=self._scrape_config,
+            refresh_events=[self.on.set_password_action, self.on.secret_changed],
         )
 
         self.plugin_manager = OpenSearchPluginManager(self)
@@ -512,30 +516,31 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         user_name = event.params.get("username")
-        if user_name != "admin":
-            event.fail("Only the 'admin' username is allowed for this action.")
+        if user_name not in ["admin", COSUser]:
+            event.fail(f"Only the 'admin' and {COSUser} username is allowed for this action.")
             return
 
         password = event.params.get("password") or generate_password()
         try:
+            label = self.secrets.password_key(user_name)
             self._put_admin_user(password)
-            password = self.secrets.get(Scope.APP, f"{user_name}-password")
-            event.set_results({f"{user_name}-password": password})
+            password = self.secrets.get(Scope.APP, label)
+            event.set_results({label: password})
         except OpenSearchError as e:
             event.fail(f"Failed changing the password: {e}")
 
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
         user_name = event.params.get("username")
-        if user_name != "admin":
-            event.fail("Only the 'admin' username is allowed for this action.")
+        if user_name not in ["admin", COSUser]:
+            event.fail(f"Only the 'admin' and {COSUser} username is allowed for this action.")
             return
 
         if not self._is_tls_fully_configured():
-            event.fail("admin user or TLS certificates not configured yet.")
+            event.fail(f"{user_name} user or TLS certificates not configured yet.")
             return
 
-        password = self.secrets.get(Scope.APP, f"{user_name}-password")
+        password = self.secrets.get(Scope.APP, self.secrets.password_key(user_name))
         cert = self.secrets.get_object(
             Scope.APP, CertType.APP_ADMIN.val
         )  # replace later with new user certs
@@ -709,6 +714,9 @@ class OpenSearchBaseCharm(CharmBase):
         # apply cluster health
         self.health.apply()
 
+        # Creating the monitoring user
+        self._put_monitoring_user()
+
         # clear waiting to start status
         self.status.clear(WaitingToStart)
 
@@ -824,6 +832,22 @@ class OpenSearchBaseCharm(CharmBase):
         self.secrets.put(Scope.APP, ADMIN_PW, pwd)
         self.secrets.put(Scope.APP, ADMIN_PW_HASH, hashed_pwd)
         self.peers_data.put(Scope.APP, "admin_user_initialized", True)
+
+    def _put_monitoring_user(self):
+        """Create the monitoring user, with the right security role."""
+        users = self.user_manager.get_users()
+
+        if users and COSUser in users:
+            return
+
+        hashed_pwd, pwd = generate_hashed_password()
+        roles = [COSRole]
+        self.user_manager.create_user(COSUser, roles, hashed_pwd)
+        self.user_manager.patch_user(
+            COSUser,
+            [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
+        )
+        self.secrets.put(Scope.APP, self.secrets.password_key(COSUser), pwd)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.
@@ -1051,6 +1075,21 @@ class OpenSearchBaseCharm(CharmBase):
         self.peers_data.put(
             Scope.UNIT, "certs_exp_checked_at", datetime.now().strftime(date_format)
         )
+
+    def _scrape_config(self) -> List[Dict]:
+        """Generates the scrape config as needed."""
+        app_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        ca = app_secrets.get("ca-cert")
+        pwd = self.secrets.get(Scope.APP, self.secrets.password_key(COSUser))
+        return [
+            {
+                "metrics_path": "/_prometheus/metrics",
+                "static_configs": [{"targets": [f"{self.unit_ip}:{COSPort}"]}],
+                "tls_config": {"ca": ca},
+                "scheme": "https" if self._is_tls_fully_configured() else "http",
+                "basic_auth": {"username": f"{COSUser}", "password": f"{pwd}"},
+            }
+        ]
 
     @abstractmethod
     def store_tls_resources(

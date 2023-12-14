@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import json
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -18,8 +19,11 @@ from tests.integration.helpers import (
     check_cluster_formation_successful,
     get_application_unit_ids_ips,
     get_application_unit_names,
+    get_leader_unit_id,
     get_leader_unit_ip,
+    get_secret_by_label,
     http_request,
+    run_action,
 )
 from tests.integration.plugins.helpers import (
     create_index_and_bulk_insert,
@@ -29,9 +33,13 @@ from tests.integration.plugins.helpers import (
     is_knn_training_complete,
     run_knn_training,
 )
+from tests.integration.relations.opensearch_provider.helpers import (
+    get_unit_relation_data,
+)
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 COS_APP_NAME = "grafana-agent"
+COS_RELATION_NAME = "cos-agent"
 
 
 @pytest.mark.abort_on_fail
@@ -65,7 +73,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
-        timeout=1400,
+        timeout=3400,
         idle_period=IDLE_PERIOD,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
@@ -80,6 +88,77 @@ async def test_prometheus_exporter_enabled_by_default(ops_test):
     response_str = response.content.decode("utf-8")
     assert response_str.count("opensearch_") > 500
     assert len(response_str.split("\n")) > 500
+
+
+async def test_prometheus_exporter_cos_relation(ops_test):
+    await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
+    await ops_test.model.relate(APP_NAME, COS_APP_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
+
+    # Check that the correct settings were successfully communicated to grafana-agent
+    cos_leader_id = await get_leader_unit_id(ops_test, COS_APP_NAME)
+    cos_leader_name = f"{COS_APP_NAME}/{cos_leader_id}"
+    leader_id = await get_leader_unit_id(ops_test, APP_NAME)
+    leader_name = f"{APP_NAME}/{leader_id}"
+    relation_data_raw = await get_unit_relation_data(
+        ops_test, cos_leader_name, leader_name, COS_RELATION_NAME, "config"
+    )
+    relation_data = json.loads(relation_data_raw)["metrics_scrape_jobs"][0]
+    secret = await get_secret_by_label(ops_test, "opensearch:app:monitor-password")
+
+    assert relation_data["basic_auth"]["username"] == "monitor"
+    assert relation_data["basic_auth"]["password"] == secret["monitor-password"]
+
+    admin_secret = await get_secret_by_label(ops_test, "opensearch:app:app-admin")
+    assert relation_data["tls_config"]["ca"] == admin_secret["ca-cert"]
+    assert relation_data["scheme"] == "https"
+
+
+async def test_monitoring_user_fetch_prometheus_data(ops_test):
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
+    endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
+
+    secret = await get_secret_by_label(ops_test, "opensearch:app:monitor-password")
+    response = await http_request(
+        ops_test,
+        "get",
+        endpoint,
+        app=APP_NAME,
+        json_resp=False,
+        user="monitor",
+        user_password=secret["monitor-password"],
+    )
+    response_str = response.content.decode("utf-8")
+
+    assert response_str.count("opensearch_") > 500
+    assert len(response_str.split("\n")) > 500
+
+
+async def test_prometheus_monitor_user_password_change(ops_test):
+    # Password change applied as expected
+    leader_id = await get_leader_unit_id(ops_test, APP_NAME)
+    result1 = await run_action(ops_test, leader_id, "set-password", {"username": "monitor"})
+    new_password = result1.response.get("monitor-password")
+    result2 = await run_action(ops_test, leader_id, "get-password", {"username": "monitor"})
+
+    assert result2.response.get("password") == new_password
+
+    # Relation data is updated
+    cos_leader_id = await get_leader_unit_id(ops_test, COS_APP_NAME)
+    cos_leader_name = f"{COS_APP_NAME}/{cos_leader_id}"
+    leader_id = await get_leader_unit_id(ops_test, APP_NAME)
+    leader_name = f"{APP_NAME}/{leader_id}"
+    relation_data_raw = await get_unit_relation_data(
+        ops_test, cos_leader_name, leader_name, COS_RELATION_NAME, "config"
+    )
+    relation_data = json.loads(relation_data_raw)["metrics_scrape_jobs"][0]["basic_auth"]
+    assert relation_data["username"] == "monitor"
+    assert relation_data["password"] == new_password
 
 
 async def test_knn_enabled_disabled(ops_test):

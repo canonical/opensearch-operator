@@ -76,9 +76,12 @@ NewIndexRequested = "new index {index} requested"
 ClientRelationName = "opensearch-client"
 PeerRelationName = "opensearch-peers"
 PeerClusterRelationName = "peer-cluster"
+COSUser = "monitor"
+COSRelationName = "cos-agent"
+COSRole = "readall_and_monitor"
 COSPort = "9200"
 
 
 # Opensearch Users
-OpenSearchUsers = {"admin"}
+OpenSearchUsers = {"admin", "monitor"}
 OpenSearchRoles = set()
