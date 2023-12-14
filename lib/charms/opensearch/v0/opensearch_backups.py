@@ -10,31 +10,23 @@ The OpenSearchBackup class listens to both relation changes from S3_RELATION and
 and responses. The OpenSearchBackupPlugin holds the configuration info. The classes together
 manages the events related to backup/restore cycles.
 
-The setup of s3-repository happens in two phases: (1) at credentials-changed event, where
-the backup configuration is made in opensearch.yml and the opensearch-keystore; (2) when
-the first action is requested and the actual registration of the repo takes place.
-
-That needs to be separated in two phases as the configuration itself will demand a restart,
-before configuring the actual snapshot repo is possible in OpenSearch.
-
-The removal of backup only reverses step (1), to avoid accidentally deleting the existing
-snapshots in the S3 repo.
-
+The removal of backup only reverses step the API calls, to avoid accidentally deleting the
+existing snapshots in the S3 repo.
 
 The main class to interact with is the OpenSearchBackup. This class will observe the s3
 relation and backup-related actions.
 
-OpenSearchBackup finishes the config of the backup service once opensearch.yml has bee
-set/unset and a restart has been applied. That means, in the case s3 has been related,
+OpenSearchBackup finishes the config of the backup service once has been set/unset and a
+restart has been applied. That means, in the case s3 has been related,
 this class will apply the new configuration to opensearch.yml and keystore, then issue a
 restart event. After the restart has been successful and if unit is leader: execute the
 API calls to setup the backup.
-
 
 A charm implementing this class must setup the following:
 
 --> metadata.yaml
     ...
+
 s3-credentials:
     interface: s3
     limit: 1
@@ -42,11 +34,11 @@ s3-credentials:
 
 --> main charm file
     ...
+
 from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
 
 
 class OpenSearchBaseCharm(CharmBase):
-
     def __init__(...):
         ...
         self.backup = OpenSearchBackup(self)
@@ -54,15 +46,17 @@ class OpenSearchBaseCharm(CharmBase):
 
 import json
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List, Set, Tuple
 
 import requests
 from charms.data_platform_libs.v0.s3 import S3Requirer
+from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
 )
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
     OpenSearchPluginEventScope,
@@ -72,7 +66,7 @@ from charms.opensearch.v0.opensearch_plugins import (
 from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
-from tenacity import RetryError
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "d301deee4d2c4c1b8e30cd3df8034be2"
@@ -94,10 +88,17 @@ S3_REPOSITORY = "s3-repository"
 
 S3_REPO_BASE_PATH = "/"
 
+INDICES_TO_EXCLUDE_AT_RESTORE = {
+    ".opendistro_security",
+    ".opensearch-observability",
+    ".opensearch-sap-log-types-config",
+    ".opensearch-sap-pre-packaged-rules-config",
+}
 
 REPO_NOT_CREATED_ERR = "repository type [s3] does not exist"
 REPO_NOT_ACCESS_ERR = f"[{S3_REPOSITORY}] path [{S3_REPO_BASE_PATH}] is not accessible"
 REPO_CREATING_ERR = "Could not determine repository generation from root blobs"
+RESTORE_OPEN_INDEX_WITH_SAME_NAME = "because an open index with same name already exists"
 
 
 class OpenSearchBackupError(OpenSearchError):
@@ -121,6 +122,9 @@ class BackupServiceState(BaseStrEnum):
     REPO_S3_UNREACHABLE = "repository s3 is unreachable"
     ILLEGAL_ARGUMENT = "request contained wrong argument"
     SNAPSHOT_MISSING = "snapshot not found"
+    SNAPSHOT_RESTORE_ERROR_INDEX_NOT_CLOSED = (
+        "cannot restore, indices with same name are still open"
+    )
     SNAPSHOT_RESTORE_ERROR = "restore of snapshot failed"
     SNAPSHOT_IN_PROGRESS = "snapshot in progress"
     SNAPSHOT_PARTIALLY_TAKEN = "snapshot partial: at least one shard missing"
@@ -143,32 +147,176 @@ class OpenSearchBackup(Object):
         )
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
+        self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
 
     @property
     def _plugin_status(self):
         return self.charm.plugin_manager.get_plugin_status(OpenSearchBackupPlugin)
 
+    def _format_backup_list(self, backup_list: List[Tuple[Any]]) -> str:
+        """Formats provided list of backups as a table."""
+        backups = [
+            "{:<10s} | {:<12s} | {:s}".format(" backup-id ", "backup-type", "backup-status")
+        ]
+        backups.append("-" * len(backups[0]))
+
+        import math
+
+        for backup_id, backup_type, backup_status in backup_list:
+            tab = " " * math.floor((10 - len(str(backup_id))) / 2)
+            backups.append(
+                "{:<10s} | {:<12s} | {:s}".format(f"{tab}{backup_id}", backup_type, backup_status)
+            )
+        return "\n".join(backups)
+
+    def _generate_backup_list_output(self, backups: Dict[str, Any]) -> str:
+        """Generates a list of backups in a formatted table.
+
+        List contains successful and failed backups in order of ascending time.
+
+        Raises:
+            OpenSearchError: if the list of backups errors
+        """
+        backup_list = []
+        for id, backup in backups:
+            state = self.get_snapshot_status(backup["state"])
+            backup_list.append(
+                (
+                    id,
+                    "physical",
+                    str(state) if state != BackupServiceState.SUCCESS else "finished",
+                )
+            )
+        return self._format_backup_list(backup_list)
+
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Returns the list of available backups to the user."""
-        if not self._check_action_can_run(event):
-            event.fail("Failed: backup service is not configured yet")
-            return
         backups = {}
         try:
-            backups = self._fetch_snapshots()
-            event.set_results({"snapshots": (json.dumps(backups)).replace("_", "-")})
+            backups = self._list_backups()
         except OpenSearchError as e:
             event.fail(
                 f"List backups action failed - {str(e)} - check the application logs for the full stack trace."
             )
+        if event.params.get("output").lower() == "json":
+            event.set_results({"backups": (json.dumps(backups)).replace("_", "-")})
+        elif event.params.get("output").lower() == "table":
+            event.set_results({"backups": self._generate_backup_list_output(backups)})
+        else:
+            event.fail("Failed: invalid output format, must be either json or table")
+
+    def _restore_and_try_close_indices_if_needed(
+        self, backup_id: int
+    ) -> Tuple[Dict[str, Any], Set[str]]:
+        """Restores and processes any exception related to running indices.
+
+        Closing option is preferable, as the restore action as a whole may not succeed.
+        This method returns the final output and list of closed indices. The calling method
+        should also check the output for any other error messages, as a more generic error
+        (i.e. non-closing index error) will pass by as much as a successful restore.
+        """
+        closed_idx = set()
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=30)):
+                with attempt:
+                    # First, for overlapping indices
+                    backup_indices = self._list_backups()[backup_id]["indices"]
+                    to_close = [
+                        index
+                        for index, state in ClusterState.indices(self.charm.opensearch).items()
+                        if (
+                            index in backup_indices
+                            and state["status"] != "close"
+                            and index not in INDICES_TO_EXCLUDE_AT_RESTORE
+                        )
+                    ]
+                    # Try closing each index
+                    for index in to_close:
+                        # Try closing the index
+                        o = self._request("POST", f"{index}/_close")
+                        logger.debug(
+                            f"_restore_and_try_close_indices_if_needed: request closing {index} returned {o}"
+                        )
+                        closed_idx.add(index)
+
+                    output = self._request(
+                        "POST",
+                        f"_snapshot/{S3_REPOSITORY}/{backup_id}/_restore?wait_for_completion=false",
+                        payload={
+                            "indices": ",".join(
+                                [
+                                    f"-{idx}"
+                                    for idx in INDICES_TO_EXCLUDE_AT_RESTORE & set(backup_indices)
+                                ]
+                            ),
+                            "ignore_unavailable": False,
+                            "include_global_state": False,
+                            "include_aliases": True,
+                            "partial": False,
+                        },
+                    )
+                    logger.debug(
+                        f"_restore_and_try_close_indices_if_needed retrying, output is: {output}"
+                    )
+                    if (
+                        self.get_service_status(output)
+                        == BackupServiceState.SNAPSHOT_RESTORE_ERROR_INDEX_NOT_CLOSED
+                    ):
+                        # The .opensearch-sap-log-types-config, for example does not show
+                        # in the _cat/indices but does block a restore operation.
+                        to_close = output["error"]["reason"].split("[")[2].split("]")[0]
+                        o = self._request("POST", f"{index}/_close")
+                        logger.debug(
+                            f"_restore_and_try_close_indices_if_needed: request closing {index} returned {o}"
+                        )
+                        closed_idx.add(index)
+                        # We still have non closed indices, try again
+                        raise Exception()
+                    # If status returns success, ensure all indices have been updated
+                    # otherwise, raise an assert error and retry
+                    shard_status = output["snapshot"]["shards"]
+                    assert shard_status["total"] == shard_status["successful"]
+        except RetryError:
+            logger.error("_restore_and_try_close_indices_if_needed: fail all retries")
+        return output, closed_idx
+
+    def _on_restore_backup_action(self, event: ActionEvent) -> None:  # noqa: C901
+        """Restores a backup to the current cluster."""
+        if not self._can_unit_perform_backup(event):
+            event.fail("Failed: backup service is not configured yet")
+            return
+
+        backup_id = str(event.params.get("backup-id"))
+
+        # Restore will try to close indices if there is a matching name.
+        # The goal is to leave the cluster in a running state, even if the restore fails.
+        # In case of failure, then restore action must return a list of closed indices
+        closed_idx = set()
+        try:
+            backups = self._list_backups()
+            if backup_id not in backups.keys():
+                event.fail(f"Failed: no backup-id {backup_id}, options available: {backups}")
+                return
+            backup_id_state = self.get_snapshot_status(backups[backup_id]["state"])
+            if backup_id_state != BackupServiceState.SUCCESS:
+                event.fail(
+                    f"Failed: no backup-id {backup_id} not successful, state is: {backup_id_state}"
+                )
+                return
+            output, closed_idx = self._restore_and_try_close_indices_if_needed(backup_id)
+            logger.debug(f"Restore action: received response: {output}")
+            logger.info(f"Restore action succeeded for backup_id {backup_id}")
+        except OpenSearchListBackupError as e:
+            event.fail(f"Failed: {e}, closed indices: {closed_idx}")
+            return
+        if self.get_service_status(output) != BackupServiceState.SUCCESS:
+            status = str(self.get_service_status(output))
+            event.fail(f"Failed with: {status}, closed indices: {closed_idx}")
+        event.set_results({"state": "successful restore!", "closed-indices": str(closed_idx)})
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         """Creates a backup from the current cluster."""
-        if not self.charm.unit.is_leader():
-            event.fail("Failed: the action can be run only on leader unit")
-            return
-
-        if not self._check_action_can_run(event):
+        if not self._can_unit_perform_backup(event):
             event.fail("Failed: backup service is not configured yet")
             return
 
@@ -179,7 +327,7 @@ class OpenSearchBackup(Object):
                 event.fail("Backup still in progress: aborting this request...")
                 return
             # Increment by 1 the latest snapshot_id (set to 0 if no snapshot was previously made)
-            new_backup_id = int(max(self._fetch_snapshots().keys() or [0])) + 1
+            new_backup_id = int(max(self._list_backups().keys() or [0])) + 1
             logger.debug(
                 f"Create backup action request id {new_backup_id} response is:"
                 + self.get_service_status(
@@ -208,7 +356,7 @@ class OpenSearchBackup(Object):
             return
         event.set_results({"backup-id": new_backup_id, "status": "Backup is running."})
 
-    def _check_action_can_run(self, event: ActionEvent) -> bool:
+    def _can_unit_perform_backup(self, event: ActionEvent) -> bool:
         """Checks if the actions run from this unit can be executed or not.
 
         If not, then register the reason as a failure in the event and returns False.
@@ -229,11 +377,15 @@ class OpenSearchBackup(Object):
             return False
         return True
 
-    def _fetch_snapshots(self) -> Dict[int, str]:
+    def _list_backups(self) -> Dict[int, str]:
         """Returns a mapping of snapshot ids / state."""
         response = self._request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
         return {
-            snapshot["snapshot"]: snapshot["state"] for snapshot in response.get("snapshots", [])
+            snapshot["snapshot"]: {
+                "state": snapshot["state"],
+                "indices": snapshot.get("indices", []),
+            }
+            for snapshot in response.get("snapshots", [])
         }
 
     def is_backup_in_progress(self, backup_id=None) -> bool:
@@ -258,7 +410,7 @@ class OpenSearchBackup(Object):
         3) If the plugin is not enabled, then defer the event
         4) Send the API calls to setup the backup service
         """
-        if not self._is_s3_fully_configured():
+        if not self.can_use_s3_repository():
             # Always check if a relation actually exists and if options are available
             # in this case, seems one of the conditions above is not yet present
             # abandon this restart event, as it will be called later once s3 configuration
@@ -295,11 +447,9 @@ class OpenSearchBackup(Object):
 
         if not self.charm.unit.is_leader():
             # Plugin is configured locally for this unit. Now the leader proceed.
-            self.charm.status.clear(ActiveStatus())
+            self.charm.status.set(ActiveStatus())
             return
-
         self.apply_api_config_if_needed()
-        self.charm.status.clear(ActiveStatus())
 
     def apply_api_config_if_needed(self) -> None:
         """Runs the post restart routine and API calls needed to setup/disable backup.
@@ -313,13 +463,12 @@ class OpenSearchBackup(Object):
         #     (2) run the request; and
         state = self._register_snapshot_repo()
         #     (3) based on the response, set the message status
-        if state == BackupServiceState.SUCCESS:
-            self.charm.status.set(ActiveStatus("Backup service configured"))
-        else:
+        if state != BackupServiceState.SUCCESS:
             self.charm.status.set(BlockedStatus(f"Backup setup failed with {state}"))
-        self.charm.status.clear(ActiveStatus())
+        else:
+            self.charm.status.set(ActiveStatus())
 
-    def _on_s3_broken(self, event: EventBase) -> None:
+    def _on_s3_broken(self, event: EventBase) -> None:  # noqa: C901
         """Processes the broken s3 relation.
 
         It runs the reverse process of on_s3_change:
@@ -327,10 +476,25 @@ class OpenSearchBackup(Object):
            and defer this event.
         2) If leader, run API calls to signal disable is needed
         """
-        if self.charm.model.get_relation(S3_RELATION).units:
+        if (
+            self.charm.model.get_relation(S3_RELATION)
+            and self.charm.model.get_relation(S3_RELATION).units
+        ):
             # There are still members in the relation, defer until it is finished
+            # Make a relation-change in the peer relation, so it triggers this unit back
+            counter = self.charm.peers_data.get(Scope.UNIT, "s3_broken")
+            if counter:
+                self.charm.peers_data.put(Scope.UNIT, "s3_broken", counter + 1)
+            else:
+                self.charm.peers_data.put(Scope.UNIT, "s3_broken", 1)
             event.defer()
             return
+
+        # Second part of this work-around
+        if self.charm.peers_data.get(Scope.UNIT, "s3_broken"):
+            # Now, we can delete it
+            self.charm.peers_data.delete(Scope.UNIT, "s3_broken")
+
         self.charm.status.set(MaintenanceStatus("Disabling backup service..."))
         snapshot_status = self._check_snapshot_status()
         if snapshot_status in [
@@ -338,7 +502,9 @@ class OpenSearchBackup(Object):
         ]:
             # 1) snapshot is either in progress or partially taken: block and defer this event
             self.charm.status.set(
-                BlockedStatus(f"Disabling backup not possible: {snapshot_status}")
+                MaintenanceStatus(
+                    f"Disabling backup postponed until backup in progress: {snapshot_status}"
+                )
             )
             event.defer()
             return
@@ -349,7 +515,8 @@ class OpenSearchBackup(Object):
                 "Snapshot has been partially taken, but not completed. Continuing with relation removal..."
             )
 
-        # Run the check here, as we want all the units to keep deferring the event if needed.
+        # Run the check here, instead of the start of this hook, as we want all the
+        # units to keep deferring the event if needed.
         # That avoids a condition where we have:
         # 1) A long snapshot is taking place
         # 2) Relation is removed
@@ -384,7 +551,7 @@ class OpenSearchBackup(Object):
             self.charm.plugin_manager.reset_event_scope()
             return
         self.charm.plugin_manager.reset_event_scope()
-        self.charm.status.clear(ActiveStatus())
+        self.charm.status.set(ActiveStatus())
 
     def _execute_s3_broken_calls(self):
         """Executes the s3 broken API calls."""
@@ -402,9 +569,23 @@ class OpenSearchBackup(Object):
         except (ValueError, OpenSearchHttpError, requests.HTTPError):
             return BackupServiceState.RESPONSE_FAILED_NETWORK
 
+    def _get_endpoint_protocol(self, endpoint: str) -> str:
+        """Returns the protocol based on the endpoint."""
+        if endpoint.startswith("http://"):
+            return "http"
+        if endpoint.startswith("https://"):
+            return "https"
+        return "https"
+
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
         info = self.s3_client.get_s3_connection_info()
+        extra_settings = {}
+        if info.get("region"):
+            extra_settings["region"] = info.get("region")
+        if info.get("storage-class"):
+            extra_settings["storage_class"] = info.get("storage-class")
+
         return self.get_service_status(
             self._request(
                 "PUT",
@@ -412,17 +593,17 @@ class OpenSearchBackup(Object):
                 payload={
                     "type": "s3",
                     "settings": {
-                        "region": info.get("region"),
                         "endpoint": info.get("endpoint"),
-                        "protocol": "http",  # TODO: roll back to https once we have the cert
+                        "protocol": self._get_endpoint_protocol(info.get("endpoint")),
                         "bucket": info["bucket"],
                         "base_path": info.get("path", S3_REPO_BASE_PATH),
+                        **extra_settings,
                     },
                 },
             )
         )
 
-    def _is_s3_fully_configured(self) -> bool:
+    def can_use_s3_repository(self) -> bool:
         """Checks if relation is set and all configs needed are present.
 
         The get_s3_connection_info() checks if the relation is present, and if yes,
@@ -433,7 +614,7 @@ class OpenSearchBackup(Object):
         """
         missing_s3_configs = [
             config
-            for config in ["region", "bucket", "access-key", "secret-key"]
+            for config in ["bucket", "endpoint", "access-key", "secret-key"]
             if config not in self.s3_client.get_s3_connection_info()
         ]
         if missing_s3_configs:
@@ -510,6 +691,8 @@ class OpenSearchBackup(Object):
             return BackupServiceState.ILLEGAL_ARGUMENT
         if type == "snapshot_missing_exception":
             return BackupServiceState.SNAPSHOT_MISSING
+        if type == "snapshot_restore_exception" and RESTORE_OPEN_INDEX_WITH_SAME_NAME in reason:
+            return BackupServiceState.SNAPSHOT_RESTORE_ERROR_INDEX_NOT_CLOSED
         if type == "snapshot_restore_exception":
             return BackupServiceState.SNAPSHOT_RESTORE_ERROR
         if (

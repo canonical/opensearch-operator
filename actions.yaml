@@ -45,3 +45,21 @@ create-backup:
 
 list-backups:
   description: List available backup_ids in the S3 bucket and path provided by the S3 integrator charm.
+  params:
+    output:
+      type: string
+      default: "table"
+      description: |
+        Format which the data should be returned. Possible values: table, json.
+        The json format will bring more details, such as shard status, indices name, etc.
+
+restore:
+  description: Restore a database backup.
+    S3 credentials are retrieved from a relation with the S3 integrator charm.
+  params:
+    backup-id:
+      type: integer
+      description: |
+        A backup-id to identify the backup to restore. Format: <backup-id, int>
+  required:
+    - backup-id

@@ -29,6 +29,7 @@ from tests.integration.helpers import (
     get_application_unit_ids_ips,
     get_leader_unit_id,
     get_leader_unit_ip,
+    http_request,
     run_action,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -37,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 S3_INTEGRATOR_NAME = "s3-integrator"
+TEST_BACKUP_DOC_ID = 10
 CLOUD_CONFIGS = {
     "aws": {
         "endpoint": "https://s3.amazonaws.com",
@@ -95,6 +97,9 @@ value_before_backup, value_after_backup = None, None
 #         backup_path = str(Path(config["path"]) / backups_by_cloud[cloud_name])
 #         for bucket_object in bucket.objects.filter(Prefix=backup_path):
 #             bucket_object.delete()
+
+
+TEST_BACKUP_INDEX = "test_backup_index"
 
 
 @pytest.fixture()
@@ -200,13 +205,11 @@ async def test_backup_cluster(
     units = await get_application_unit_ids_ips(ops_test, app=app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
-    # create index with r_shards = nodes - 1
-    test_backup_index = "test_backup_index"
-    await create_index(ops_test, app, leader_unit_ip, test_backup_index, r_shards=len(units) - 1)
+    await create_index(ops_test, app, leader_unit_ip, TEST_BACKUP_INDEX, r_shards=len(units) - 1)
 
     # index document
-    doc_id = 10
-    await index_doc(ops_test, app, leader_unit_ip, test_backup_index, doc_id)
+    doc_id = TEST_BACKUP_DOC_ID
+    await index_doc(ops_test, app, leader_unit_ip, TEST_BACKUP_INDEX, doc_id)
 
     # check that the doc can be retrieved from any node
     logger.info("Test backup index: searching")
@@ -215,13 +218,13 @@ async def test_backup_cluster(
             ops_test,
             app,
             u_ip,
-            test_backup_index,
+            TEST_BACKUP_INDEX,
             query={"query": {"term": {"_id": doc_id}}},
             preference="_only_local",
         )
         # Validate the index and document are present
         assert len(docs) == 1
-        assert docs[0]["_source"] == default_doc(test_backup_index, doc_id)
+        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
 
     leader_id = await get_leader_unit_id(ops_test, app)
 
@@ -230,16 +233,181 @@ async def test_backup_cluster(
 
     assert action.status == "completed"
 
-    list_backups = await run_action(ops_test, leader_id, "list-backups")
+    list_backups = await run_action(ops_test, leader_id, "list-backups", params={"output": "json"})
     logger.info(f"list-backups output: {list_backups}")
 
     # Expected format:
-    # namespace(status='completed', response={'return-code': 0, 'snapshots': '{"1": "SUCCESS"}'})
+    # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
+    backups = json.loads(list_backups.response["backups"])
     assert list_backups.status == "completed"
-    assert len(json.loads(list_backups.response["snapshots"])) == int(action.response["backup-id"])
-    assert (
-        json.loads(list_backups.response["snapshots"])[action.response["backup-id"]] == "SUCCESS"
-    )
+    assert len(backups.keys()) == int(action.response["backup-id"])
+    assert backups[action.response["backup-id"]]["state"] == "SUCCESS"
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
+
+@pytest.mark.abort_on_fail
+async def test_restore_cluster(
+    ops_test: OpsTest,
+) -> None:
+    """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    units = await get_application_unit_ids_ips(ops_test, app=app)
+    leader_id = await get_leader_unit_id(ops_test, app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    await http_request(
+        ops_test,
+        "DELETE",
+        f"https://{leader_unit_ip}:9200/{TEST_BACKUP_INDEX}",
+        app=app,
+    )
+
+    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": 1})
+    logger.info(f"restore output: {action}")
+    assert action.status == "completed"
+
+    # index document
+    doc_id = TEST_BACKUP_DOC_ID
+    # check that the doc can be retrieved from any node
+    logger.info("Test backup index: searching")
+    for u_id, u_ip in units.items():
+        docs = await search(
+            ops_test,
+            app,
+            u_ip,
+            TEST_BACKUP_INDEX,
+            query={"query": {"term": {"_id": doc_id}}},
+            preference="_only_local",
+        )
+        # Validate the index and document are present
+        assert len(docs) == 1
+        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
+
+
+@pytest.mark.abort_on_fail
+async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
+    """Deletes the entire OpenSearch cluster and redeploys from scratch.
+
+    Restores the backup and then checks if the same TEST_BACKUP_INDEX is there.
+    """
+    app = (await app_name(ops_test)) or APP_NAME
+    await ops_test.model.remove_application(app, block_until_done=True)
+    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 3)
+    my_charm = await ops_test.build_charm(".")
+    # Redeploy
+    await asyncio.gather(
+        ops_test.model.deploy(my_charm, num_units=app_num_units, series=SERIES),
+    )
+    # Relate it to OpenSearch to set up TLS.
+    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
+
+    units = await get_application_unit_ids_ips(ops_test, app=app)
+    leader_id = await get_leader_unit_id(ops_test, app)
+
+    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": 1})
+    logger.info(f"restore output: {action}")
+    assert action.status == "completed"
+
+    # index document
+    doc_id = TEST_BACKUP_DOC_ID
+    # check that the doc can be retrieved from any node
+    logger.info("Test backup index: searching")
+    for u_id, u_ip in units.items():
+        docs = await search(
+            ops_test,
+            app,
+            u_ip,
+            TEST_BACKUP_INDEX,
+            query={"query": {"term": {"_id": doc_id}}},
+            preference="_only_local",
+        )
+        # Validate the index and document are present
+        assert len(docs) == 1
+        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
+
+
+@pytest.mark.abort_on_fail
+async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
+    """Removes and re-adds the s3-credentials relation to test backup and restore."""
+    app = (await app_name(ops_test)) or APP_NAME
+    units = await get_application_unit_ids_ips(ops_test, app=app)
+    leader_id = await get_leader_unit_id(ops_test, app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    logger.info("Remove s3-credentials relation")
+    # Remove relation
+    await ops_test.model.applications[APP_NAME].destroy_relation(
+        "s3-credentials", f"{S3_INTEGRATOR_NAME}:s3-credentials"
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
+
+    logger.info("Re-add s3-credentials relation")
+    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
+
+    leader_id = await get_leader_unit_id(ops_test, app)
+
+    action = await run_action(ops_test, leader_id, "create-backup")
+    logger.info(f"create-backup output: {action}")
+
+    assert action.status == "completed"
+
+    list_backups = await run_action(ops_test, leader_id, "list-backups", params={"output": "json"})
+    logger.info(f"list-backups output: {list_backups}")
+
+    # Expected format:
+    # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
+    backups = json.loads(list_backups.response["backups"])
+    assert list_backups.status == "completed"
+    assert len(backups.keys()) == int(action.response["backup-id"])
+    assert backups[action.response["backup-id"]]["state"] == "SUCCESS"
+
+    await http_request(
+        ops_test,
+        "DELETE",
+        f"https://{leader_unit_ip}:9200/{TEST_BACKUP_INDEX}",
+        app=app,
+    )
+
+    action = await run_action(
+        ops_test, leader_id, "restore", params={"backup-id": int(action.response["backup-id"])}
+    )
+    logger.info(f"restore-backup output: {action}")
+    assert action.status == "completed"
+
+    # index document
+    doc_id = TEST_BACKUP_DOC_ID
+    # check that the doc can be retrieved from any node
+    logger.info("Test backup index: searching")
+    for u_id, u_ip in units.items():
+        docs = await search(
+            ops_test,
+            app,
+            u_ip,
+            TEST_BACKUP_INDEX,
+            query={"query": {"term": {"_id": doc_id}}},
+            preference="_only_local",
+        )
+        # Validate the index and document are present
+        assert len(docs) == 1
+        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)

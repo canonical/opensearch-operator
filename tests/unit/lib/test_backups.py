@@ -57,6 +57,12 @@ class TestBackups(unittest.TestCase):
             self.harness.add_relation_unit(self.s3_rel_id, "s3-integrator/0")
             mock_pm_run.assert_not_called()
 
+    def test_get_endpoint_protocol(self) -> None:
+        """Tests the get_endpoint_protocol method."""
+        assert self.charm.backup._get_endpoint_protocol("http://10.0.0.1:8000") == "http"
+        assert self.charm.backup._get_endpoint_protocol("https://10.0.0.2:8000") == "https"
+        assert self.charm.backup._get_endpoint_protocol("test.not-valid-url") == "https"
+
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup.apply_api_config_if_needed")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._apply_config")
@@ -91,9 +97,10 @@ class TestBackups(unittest.TestCase):
             ).__dict__
         )
 
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_01_apply_api_config_if_needed(self, mock_status, mock_request) -> None:
+    def test_01_apply_api_config_if_needed(self, mock_status, _, mock_request) -> None:
         """Tests the application of post-restart steps."""
         self.harness.update_relation_data(
             self.s3_rel_id,
@@ -110,15 +117,18 @@ class TestBackups(unittest.TestCase):
         )
         mock_status.return_value = PluginState.ENABLED
         self.charm.backup.apply_api_config_if_needed()
-        mock_request.called_once_with("GET", f"_snapshot/{S3_REPOSITORY}")
-        mock_request.called_once_with(
+        mock_request.assert_called_with(
             "PUT",
             f"_snapshot/{S3_REPOSITORY}",
             payload={
                 "type": "s3",
                 "settings": {
+                    "endpoint": "localhost",
+                    "protocol": "https",
                     "bucket": TEST_BUCKET_NAME,
                     "base_path": TEST_BASE_PATH,
+                    "region": "testing-region",
+                    "storage_class": "storageclass",
                 },
             },
         )
@@ -128,7 +138,7 @@ class TestBackups(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._execute_s3_broken_calls")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_99_relation_broken(
+    def test_20_relation_broken(
         self,
         mock_status,
         mock_execute_s3_broken_calls,
@@ -144,6 +154,7 @@ class TestBackups(unittest.TestCase):
             {"SUCCESS"},
         ]
         mock_status.return_value = PluginState.ENABLED
+        self.harness.remove_relation_unit(self.s3_rel_id, "s3-integrator/0")
         self.harness.remove_relation(self.s3_rel_id)
         mock_request.called_once_with("GET", "/_snapshot/_status")
         mock_execute_s3_broken_calls.assert_called_once()
