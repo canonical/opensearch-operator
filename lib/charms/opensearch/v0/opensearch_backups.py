@@ -46,7 +46,7 @@ class OpenSearchBaseCharm(CharmBase):
 
 import json
 import logging
-from typing import Any, Dict, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 import requests
 from charms.data_platform_libs.v0.s3 import S3Requirer
@@ -147,25 +147,63 @@ class OpenSearchBackup(Object):
         )
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
-        self.framework.observe(self.charm.on.restore_backup_action, self._on_restore_backup_action)
+        self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
 
     @property
     def _plugin_status(self):
         return self.charm.plugin_manager.get_plugin_status(OpenSearchBackupPlugin)
 
+    def _format_backup_list(self, backup_list: List[Tuple[Any]]) -> str:
+        """Formats provided list of backups as a table."""
+        backups = [
+            "{:<10s} | {:<12s} | {:s}".format(" backup-id ", "backup-type", "backup-status")
+        ]
+        backups.append("-" * len(backups[0]))
+
+        import math
+
+        for backup_id, backup_type, backup_status in backup_list:
+            tab = " " * math.floor((10 - len(str(backup_id))) / 2)
+            backups.append(
+                "{:<10s} | {:<12s} | {:s}".format(f"{tab}{backup_id}", backup_type, backup_status)
+            )
+        return "\n".join(backups)
+
+    def _generate_backup_list_output(self, backups: Dict[str, Any]) -> str:
+        """Generates a list of backups in a formatted table.
+
+        List contains successful and failed backups in order of ascending time.
+
+        Raises:
+            OpenSearchError: if the list of backups errors
+        """
+        backup_list = []
+        for id, backup in backups:
+            state = self.get_snapshot_status(backup["state"])
+            backup_list.append(
+                (
+                    id,
+                    "physical",
+                    str(state) if state != BackupServiceState.SUCCESS else "finished",
+                )
+            )
+        return self._format_backup_list(backup_list)
+
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Returns the list of available backups to the user."""
-        if not self._can_unit_perform_backup(event):
-            event.fail("Failed: backup service is not configured yet")
-            return
         backups = {}
         try:
-            backups = self._fetch_snapshots()
-            event.set_results({"snapshots": (json.dumps(backups)).replace("_", "-")})
+            backups = self._list_backups()
         except OpenSearchError as e:
             event.fail(
                 f"List backups action failed - {str(e)} - check the application logs for the full stack trace."
             )
+        if event.params.get("output").lower() == "json":
+            event.set_results({"backups": (json.dumps(backups)).replace("_", "-")})
+        elif event.params.get("output").lower() == "table":
+            event.set_results({"backups": self._generate_backup_list_output(backups)})
+        else:
+            event.fail("Failed: invalid output format, must be either json or table")
 
     def _restore_and_try_close_indices_if_needed(
         self, backup_id: int
@@ -182,7 +220,7 @@ class OpenSearchBackup(Object):
             for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=30)):
                 with attempt:
                     # First, for overlapping indices
-                    backup_indices = self._fetch_snapshots()[backup_id]["indices"]
+                    backup_indices = self._list_backups()[backup_id]["indices"]
                     to_close = [
                         index
                         for index, state in ClusterState.indices(self.charm.opensearch).items()
@@ -248,17 +286,14 @@ class OpenSearchBackup(Object):
             event.fail("Failed: backup service is not configured yet")
             return
 
-        if isinstance(event.params.get("backup-id"), str):
-            backup_id = event.params.get("backup-id")
-        else:
-            backup_id = str(event.params.get("backup-id"))
+        backup_id = str(event.params.get("backup-id"))
 
         # Restore will try to close indices if there is a matching name.
         # The goal is to leave the cluster in a running state, even if the restore fails.
         # In case of failure, then restore action must return a list of closed indices
         closed_idx = set()
         try:
-            backups = self._fetch_snapshots()
+            backups = self._list_backups()
             if backup_id not in backups.keys():
                 event.fail(f"Failed: no backup-id {backup_id}, options available: {backups}")
                 return
@@ -292,7 +327,7 @@ class OpenSearchBackup(Object):
                 event.fail("Backup still in progress: aborting this request...")
                 return
             # Increment by 1 the latest snapshot_id (set to 0 if no snapshot was previously made)
-            new_backup_id = int(max(self._fetch_snapshots().keys() or [0])) + 1
+            new_backup_id = int(max(self._list_backups().keys() or [0])) + 1
             logger.debug(
                 f"Create backup action request id {new_backup_id} response is:"
                 + self.get_service_status(
@@ -342,7 +377,7 @@ class OpenSearchBackup(Object):
             return False
         return True
 
-    def _fetch_snapshots(self) -> Dict[int, str]:
+    def _list_backups(self) -> Dict[int, str]:
         """Returns a mapping of snapshot ids / state."""
         response = self._request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
         return {

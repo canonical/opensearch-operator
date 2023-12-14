@@ -233,7 +233,7 @@ async def test_backup_cluster(
 
     assert action.status == "completed"
 
-    list_backups = await run_action(ops_test, leader_id, "list-backups")
+    list_backups = await run_action(ops_test, leader_id, "list-backups", params={"output": "json"})
     logger.info(f"list-backups output: {list_backups}")
 
     # Expected format:
@@ -265,8 +265,8 @@ async def test_restore_cluster(
         app=app,
     )
 
-    action = await run_action(ops_test, leader_id, "restore-backup", params={"backup-id": 1})
-    logger.info(f"restore-backup output: {action}")
+    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": 1})
+    logger.info(f"restore output: {action}")
     assert action.status == "completed"
 
     # index document
@@ -314,8 +314,8 @@ async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
     units = await get_application_unit_ids_ips(ops_test, app=app)
     leader_id = await get_leader_unit_id(ops_test, app)
 
-    action = await run_action(ops_test, leader_id, "restore-backup", params={"backup-id": 1})
-    logger.info(f"restore-backup output: {action}")
+    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": 1})
+    logger.info(f"restore output: {action}")
     assert action.status == "completed"
 
     # index document
@@ -372,7 +372,7 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
 
     assert action.status == "completed"
 
-    list_backups = await run_action(ops_test, leader_id, "list-backups")
+    list_backups = await run_action(ops_test, leader_id, "list-backups", params={"output": "json"})
     logger.info(f"list-backups output: {list_backups}")
 
     # Expected format:
@@ -389,7 +389,9 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
         app=app,
     )
 
-    action = await run_action(ops_test, leader_id, "restore-backup", params={"backup-id": 1})
+    action = await run_action(
+        ops_test, leader_id, "restore", params={"backup-id": int(action.response["backup-id"])}
+    )
     logger.info(f"restore-backup output: {action}")
     assert action.status == "completed"
 
