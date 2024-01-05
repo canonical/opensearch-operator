@@ -11,8 +11,7 @@ from charms.opensearch.v0.constants_charm import ClusterHealthYellow
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (
+from ..ha.helpers import (
     all_nodes,
     assert_continuous_writes_consistency,
     get_elected_cm_unit_id,
@@ -20,12 +19,7 @@ from tests.integration.ha.helpers import (
     get_shards_by_index,
     get_shards_by_state,
 )
-from tests.integration.ha.helpers_data import (
-    create_dummy_docs,
-    create_dummy_indexes,
-    delete_dummy_indexes,
-)
-from tests.integration.helpers import (
+from ..helpers import (
     APP_NAME,
     IDLE_PERIOD,
     MODEL_CONFIG,
@@ -38,8 +32,10 @@ from tests.integration.helpers import (
     get_leader_unit_id,
     get_leader_unit_ip,
 )
-from tests.integration.helpers_deployments import wait_until
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..helpers_deployments import wait_until
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .continuous_writes import ContinuousWrites
+from .helpers_data import create_dummy_docs, create_dummy_indexes, delete_dummy_indexes
 
 logger = logging.getLogger(__name__)
 

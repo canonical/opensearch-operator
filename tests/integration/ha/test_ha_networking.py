@@ -9,9 +9,7 @@ import time
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (
-    app_name,
+from ..ha.helpers import (
     assert_continuous_writes_consistency,
     cut_network_from_unit_with_ip_change,
     cut_network_from_unit_without_ip_change,
@@ -22,11 +20,11 @@ from tests.integration.ha.helpers import (
     restore_network_for_unit_with_ip_change,
     restore_network_for_unit_without_ip_change,
 )
-from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (
+from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    app_name,
     check_cluster_formation_successful,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
@@ -35,8 +33,10 @@ from tests.integration.helpers import (
     get_leader_unit_ip,
     is_up,
 )
-from tests.integration.helpers_deployments import wait_until
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..helpers_deployments import wait_until
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .continuous_writes import ContinuousWrites
+from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
 

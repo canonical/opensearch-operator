@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, retry, stop_after_attempt, wait_fixed, wait_random
 
-from tests.integration.helpers import http_request
+from ..helpers import http_request
 
 logger = logging.getLogger(__name__)
 

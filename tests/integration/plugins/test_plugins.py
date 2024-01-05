@@ -9,10 +9,10 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError
 
-from tests.integration.ha.helpers import app_name
-from tests.integration.ha.helpers_data import bulk_insert, create_index, search
-from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (
+from ..ha.helpers import app_name
+from ..ha.helpers_data import bulk_insert, create_index, search
+from ..ha.test_horizontal_scaling import IDLE_PERIOD
+from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
@@ -25,7 +25,7 @@ from tests.integration.helpers import (
     http_request,
     run_action,
 )
-from tests.integration.plugins.helpers import (
+from ..plugins.helpers import (
     create_index_and_bulk_insert,
     generate_bulk_training_data,
     get_application_unit_ids_start_time,
@@ -33,10 +33,8 @@ from tests.integration.plugins.helpers import (
     is_knn_training_complete,
     run_knn_training,
 )
-from tests.integration.relations.opensearch_provider.helpers import (
-    get_unit_relation_data,
-)
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..relations.helpers import get_unit_relation_data
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 COS_APP_NAME = "grafana-agent"
 COS_RELATION_NAME = "cos-agent"

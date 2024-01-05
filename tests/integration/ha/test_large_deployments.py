@@ -9,10 +9,7 @@ import pytest
 from charms.opensearch.v0.constants_charm import PClusterWrongNodesCountForQuorum
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import all_nodes, app_name, update_restart_delay
-from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (
+from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
@@ -23,8 +20,11 @@ from tests.integration.helpers import (
     get_application_unit_status,
     get_leader_unit_ip,
 )
-from tests.integration.helpers_deployments import wait_until
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..helpers_deployments import wait_until
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .continuous_writes import ContinuousWrites
+from .helpers import all_nodes, app_name, update_restart_delay
+from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
 

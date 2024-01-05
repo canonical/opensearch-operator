@@ -17,14 +17,14 @@ from tenacity import (
     wait_random,
 )
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.helpers import (
+from ..helpers import (
     get_application_unit_ids,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
     http_request,
     juju_version_major,
 )
+from .continuous_writes import ContinuousWrites
 
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
 

@@ -13,26 +13,22 @@ import os
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import app_name, assert_continuous_writes_consistency
-from tests.integration.ha.helpers_data import (
-    create_index,
-    default_doc,
-    index_doc,
-    search,
-)
-from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (
+from ..ha.helpers import assert_continuous_writes_consistency
+from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    app_name,
     get_application_unit_ids_ips,
     get_leader_unit_id,
     get_leader_unit_ip,
     http_request,
     run_action,
 )
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .continuous_writes import ContinuousWrites
+from .helpers_data import create_index, default_doc, index_doc, search
+from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
 

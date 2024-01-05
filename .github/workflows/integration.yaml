@@ -36,93 +36,21 @@ on:
 jobs:
   build:
     name: Build charms
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v7.0.0
+    with:
+      charmcraft-snap-revision: 1349  # version 2.3.0
+    permissions:
+      actions: write
 
   integration-test:
     needs:
       - build
-    strategy:
-      fail-fast: false
-      matrix:
-        tox-environments:
-          - charm-integration
-          - tls-integration
-          - client-integration
-          - ha-base-integration
-          - ha-networking-integration
-          - ha-multi-clusters-integration
-          - large-deployments-integration
-          - plugins-integration
-#          - ha-backup-integration
-        runner: ["ubuntu-22.04"]
-        include:
-          - tox-environments: h-scaling-integration
-            runner: "Ubuntu_4C_16G"
-    name: ${{ matrix.tox-environments }}
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 360
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Upgrade LXD
-        run: |
-          sudo snap refresh lxd --channel=latest/stable
-
-      - name: Setup Juju environment
-        # Runs on juju 3 by default
-        # TODO: Replace with custom image on self-hosted runner
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: lxd
-          juju-channel: ${{ inputs.juju-snap-channel }}
-
-      - name: Download packed charm(s)
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ needs.build.outputs.artifact-name }}
-
-#      - name: Install CLI
-#        run: |
-#          sudo apt update
-#          sudo apt install -y pipx
-#          pipx install git+https://github.com/canonical/data-platform-workflows#subdirectory=python/cli
-#      - name: Redact secrets from log
-#        run: redact-secrets
-#        env:
-#          SECRETS: ${{ secrets.integration-test }}
-
-      - name: Select tests
-        id: select-tests
-        run: |
-          if [ "${{ github.event_name }}" == "schedule" ]
-          then
-            echo Running unstable and stable tests
-            echo "mark_expression=" >> $GITHUB_OUTPUT
-          else
-            echo Skipping unstable tests
-            echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run integration tests
-        run: |
-          # free space in the runner
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-
-          # Set kernel params for OpenSearch
-          sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
-          # Set kernel params for testing
-          sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.default.disable_ipv6=1 net.ipv6.conf.all.autoconf=0
-          tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
-        env:
-          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
-          LIBJUJU_VERSION_SPECIFIER: ${{ inputs.libjuju-version-specifier }}
-          SECRETS_FROM_GITHUB: ""
-#          SECRETS_FROM_GITHUB: ${{ secrets.integration-test }}
-
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm_self_hosted.yaml@v7.0.0
+    with:
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
+      cloud: lxd
+      juju-snap-channel: ${{ inputs.juju-snap-channel }}
+      libjuju-version-constraint: ${{ inputs.juju-snap-channel }}
 
 
   backup-microceph-integration-test:

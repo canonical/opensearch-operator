@@ -7,7 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import (
+from .helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
@@ -18,8 +18,8 @@ from tests.integration.helpers import (
     http_request,
     run_action,
 )
-from tests.integration.helpers_deployments import wait_until
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .helpers_deployments import wait_until
+from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
 

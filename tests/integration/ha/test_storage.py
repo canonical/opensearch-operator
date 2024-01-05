@@ -10,15 +10,9 @@ import time
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (
-    app_name,
-    storage_id,
-    storage_type,
-    update_restart_delay,
-)
-from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (
+from ..ha.helpers import app_name, storage_id, storage_type, update_restart_delay
+from ..ha.test_horizontal_scaling import IDLE_PERIOD
+from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
@@ -26,7 +20,8 @@ from tests.integration.helpers import (
     get_reachable_unit_ips,
     http_request,
 )
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .continuous_writes import ContinuousWrites
 
 logger = logging.getLogger(__name__)
 

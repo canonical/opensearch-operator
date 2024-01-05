@@ -7,7 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import (
+from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
@@ -17,11 +17,8 @@ from tests.integration.helpers import (
     get_application_unit_names,
     get_leader_unit_ip,
 )
-from tests.integration.helpers_deployments import wait_until
-from tests.integration.tls.helpers import (
-    check_security_index_initialised,
-    check_unit_tls_configured,
-)
+from ..helpers_deployments import wait_until
+from ..tls.helpers import check_security_index_initialised, check_unit_tls_configured
 
 logger = logging.getLogger(__name__)
 

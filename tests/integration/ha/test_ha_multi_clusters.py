@@ -8,23 +8,20 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (
-    app_name,
-    assert_continuous_writes_consistency,
-    update_restart_delay,
-)
-from tests.integration.ha.helpers_data import delete_index, index_doc, search
-from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (
+from ..ha.helpers import assert_continuous_writes_consistency, update_restart_delay
+from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    app_name,
     get_application_unit_ids,
     get_leader_unit_ip,
 )
-from tests.integration.helpers_deployments import wait_until
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..helpers_deployments import wait_until
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .continuous_writes import ContinuousWrites
+from .helpers_data import delete_index, index_doc, search
+from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
 
