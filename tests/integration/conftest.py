@@ -2,10 +2,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import json
-import os
-from pathlib import Path
-
 import pytest
 from pytest_operator.plugin import OpsTest
 
