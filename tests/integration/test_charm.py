@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_NUM_UNITS = 2
 
+
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
