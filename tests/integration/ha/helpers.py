@@ -208,7 +208,7 @@ async def assert_continuous_writes_consistency(
     ops_test: OpsTest, c_writes: ContinuousWrites, app: str
 ) -> None:
     """Continuous writes checks."""
-    result = await c_writes.stop()
+    result = (await c_writes).stop()
     assert result.max_stored_id == result.count - 1
     assert result.max_stored_id == result.last_expected_id
 

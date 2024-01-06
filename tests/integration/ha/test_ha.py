@@ -78,6 +78,17 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
+async def assert_continuous_writes_increasing(
+    c_writes: ContinuousWrites,
+) -> None:
+    """Asserts that the continuous writes are increasing."""
+    writes = await c_writes
+    writes_count = writes.count()
+    time.sleep(5)
+    more_writes = await c_writes
+    assert more_writes.count() > writes_count, "Writes not continuing to DB"
+
+
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -183,12 +194,7 @@ async def test_kill_db_process_node_with_primary_shard(
         ops_test, app, first_unit_with_primary_shard, signal="SIGKILL"
     )
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    # should also be plenty for the shard primary reelection to happen
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "Writes not continuing to DB"
+    await assert_continuous_writes_increasing(c_writes)
 
     # verify that the opensearch service is back running on the old primary unit
     assert await is_up(
@@ -247,12 +253,7 @@ async def test_kill_db_process_node_with_elected_cm(
     # Kill the opensearch process
     await send_kill_signal_to_process(ops_test, app, first_elected_cm_unit_id, signal="SIGKILL")
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    # should also be plenty for the cluster manager reelection to happen
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "Writes not continuing to DB"
+    await assert_continuous_writes_increasing(c_writes)
 
     # verify that the opensearch service is back running on the old elected cm unit
     assert await is_up(
@@ -314,12 +315,7 @@ async def test_freeze_db_process_node_with_primary_shard(
     is_node_up = await is_up(ops_test, units_ips[first_unit_with_primary_shard], retries=3)
     assert not is_node_up
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    # should also be plenty for the shard primary reelection to happen
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "writes not continuing to DB"
+    await assert_continuous_writes_increasing(c_writes)
 
     # get reachable unit to perform requests against, in case the previously stopped unit
     # is leader unit, so its address is not reachable
@@ -403,12 +399,7 @@ async def test_freeze_db_process_node_with_elected_cm(
     is_node_up = await is_up(ops_test, units_ips[first_elected_cm_unit_id], retries=3)
     assert not is_node_up
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    # should also be plenty for the cluster manager reelection to happen
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "writes not continuing to DB"
+    await assert_continuous_writes_increasing(c_writes)
 
     # get reachable unit to perform requests against, in case the previously stopped unit
     # is leader unit, so its address is not reachable
@@ -473,12 +464,7 @@ async def test_restart_db_process_node_with_elected_cm(
     # restart the opensearch process
     await send_kill_signal_to_process(ops_test, app, first_elected_cm_unit_id, signal="SIGTERM")
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    # should also be plenty for the cluster manager reelection to happen
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "writes not continuing to DB"
+    await assert_continuous_writes_increasing(c_writes)
 
     # verify that the opensearch service is back running on the unit previously elected CM unit
     assert await is_up(
@@ -532,12 +518,7 @@ async def test_restart_db_process_node_with_primary_shard(
         ops_test, app, first_unit_with_primary_shard, signal="SIGTERM"
     )
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    # should also be plenty for the cluster manager reelection to happen
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "writes not continuing to DB"
+    await assert_continuous_writes_increasing(c_writes)
 
     # verify that the opensearch service is back running on the previous primary shard unit
     assert await is_up(
@@ -607,11 +588,7 @@ async def test_full_cluster_crash(
         ops_test, leader_ip, get_application_unit_names(ops_test, app=app)
     )
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "Writes not continuing to DB"
+    await assert_continuous_writes_increasing(c_writes)
 
     # check that cluster health is green (all primary and replica shards allocated)
     health_resp = await cluster_health(ops_test, leader_ip)
@@ -664,11 +641,7 @@ async def test_full_cluster_restart(
         ops_test, leader_ip, get_application_unit_names(ops_test, app=app)
     )
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "Writes not continuing to DB"
+    await assert_continuous_writes_increasing(c_writes)
 
     # check that cluster health is green (all primary and replica shards allocated)
     health_resp = await cluster_health(ops_test, leader_ip)

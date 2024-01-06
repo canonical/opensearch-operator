@@ -12,10 +12,10 @@ from pytest_operator.plugin import OpsTest
 async def application_charm(ops_test: OpsTest):
     """Build the application charm."""
     shutil.copyfile(
-        "../../../lib/charms/data_platform_libs/v0/data_interfaces.py",
-        "./opensearch_provider/application-charm/lib/charms/data_platform_libs/v0/data_interfaces.py",
+        "./lib/charms/data_platform_libs/v0/data_interfaces.py",
+        "./tests/integration/relations/opensearch_provider/application-charm/lib/charms/data_platform_libs/v0/data_interfaces.py",
     )
-    test_charm_path = "./opensearch_provider/application-charm"
+    test_charm_path = "./tests/integration/relations/opensearch_provider/application-charm"
     return await ops_test.build_charm(test_charm_path)
 
 

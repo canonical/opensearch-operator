@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 async def c_writes(ops_test: OpsTest):
     """Creates instance of the ContinuousWrites."""
     app = (await app_name(ops_test)) or APP_NAME
-    return ContinuousWrites(ops_test, app)
+    yield ContinuousWrites(ops_test, app)
 
 
 @pytest.fixture()
@@ -147,8 +147,10 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
 
     # verify new writes are continuing by counting the number of writes before and after 5 seconds
     writes = await c_writes.count()
+    #    writes = writes.count()
     time.sleep(5)
-    more_writes = await c_writes.count()
+    more_writes = await c_writes
+    more_writes = more_writes.count()
     assert more_writes > writes, "Writes not continuing to DB"
 
     # check new CM got elected
