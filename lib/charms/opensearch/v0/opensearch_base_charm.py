@@ -1078,9 +1078,12 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _scrape_config(self) -> List[Dict]:
         """Generates the scrape config as needed."""
-        app_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        app_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
         ca = app_secrets.get("ca-cert")
         pwd = self.secrets.get(Scope.APP, self.secrets.password_key(COSUser))
+        if not app_secrets or not ca or not pwd:
+            # Not yet ready
+            return []
         return [
             {
                 "metrics_path": "/_prometheus/metrics",

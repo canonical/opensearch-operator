@@ -22,13 +22,11 @@ from ..tls.helpers import check_security_index_initialised, check_unit_tls_confi
 
 logger = logging.getLogger(__name__)
 
-TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
-
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
+async def test_build_and_deploy_active(ops_test: OpsTest, self_signed_operator) -> None:
     """Build and deploy one unit of OpenSearch."""
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
@@ -39,13 +37,9 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
         series=SERIES,
     )
 
-    # Deploy TLS Certificates operator.
-    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
-    await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
-
     # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    tls = await self_signed_operator
+    await ops_test.model.relate(APP_NAME, tls)
     await wait_until(
         ops_test,
         apps=[APP_NAME],

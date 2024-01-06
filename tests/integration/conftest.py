@@ -9,6 +9,9 @@ from pathlib import Path
 import pytest
 from pytest_operator.plugin import OpsTest
 
+from .helpers_deployments import wait_until
+from .tls.helpers import TLS_CERTIFICATES_APP_NAME
+
 
 @pytest.fixture(scope="module")
 def ops_test(ops_test: OpsTest) -> OpsTest:
@@ -26,3 +29,12 @@ def ops_test(ops_test: OpsTest) -> OpsTest:
 
         ops_test.build_charm = build_charm
     return ops_test
+
+
+@pytest.fixture()
+async def self_signed_operator(ops_test: OpsTest) -> str:
+    """Deploys and configures the self signed certificate."""
+    config = {"ca-common-name": "CN_CA"}
+    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="latest/edge", config=config)
+    await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
+    return TLS_CERTIFICATES_APP_NAME

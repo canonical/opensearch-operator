@@ -21,6 +21,7 @@ from ..helpers import (
     scale_application,
 )
 from ..helpers_deployments import wait_until
+from ..tls.helpers import TLS_CERTIFICATES_APP_NAME
 from .helpers import (
     get_application_relation_data,
     ip_to_url,
@@ -32,7 +33,6 @@ logger = logging.getLogger(__name__)
 
 CLIENT_APP_NAME = "application"
 SECONDARY_CLIENT_APP_NAME = "secondary-application"
-TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
 
 NUM_UNITS = 3
@@ -53,7 +53,9 @@ PROTECTED_INDICES = [
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_charm):
+async def test_create_relation(
+    ops_test: OpsTest, application_charm, opensearch_charm, self_signed_operator
+):
     """Test basic functionality of relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
@@ -61,7 +63,6 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
     new_model_conf["update-status-hook-interval"] = "1m"
 
     await ops_test.model.set_config(new_model_conf)
-    tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
             application_charm,
@@ -73,10 +74,10 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
             num_units=NUM_UNITS,
             series=SERIES,
         ),
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
     )
-    await ops_test.model.relate(OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    tls = await self_signed_operator
+    await ops_test.model.relate(OPENSEARCH_APP_NAME, tls)
+    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, tls)
 
     global client_relation
     client_relation = await ops_test.model.add_relation(

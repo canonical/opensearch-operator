@@ -34,7 +34,6 @@ from ..plugins.helpers import (
     run_knn_training,
 )
 from ..relations.helpers import get_unit_relation_data
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 COS_APP_NAME = "grafana-agent"
 COS_RELATION_NAME = "cos-agent"
@@ -43,7 +42,7 @@ COS_RELATION_NAME = "cos-agent"
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None:
     """Build and deploy an OpenSearch cluster."""
     if await app_name(ops_test):
         return
@@ -58,19 +57,17 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     model_conf["update-status-hook-interval"] = "1m"
     await ops_test.model.set_config(model_conf)
 
-    # Deploy TLS Certificates operator.
-    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(
             my_charm, num_units=3, series=SERIES, config={"plugin_opensearch_knn": True}
         ),
     )
 
     # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    tls = await self_signed_operator
+    await ops_test.model.relate(APP_NAME, tls)
     await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
+        apps=[tls, APP_NAME],
         status="active",
         timeout=3400,
         idle_period=IDLE_PERIOD,
