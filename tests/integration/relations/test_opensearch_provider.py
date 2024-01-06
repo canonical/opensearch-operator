@@ -51,6 +51,7 @@ PROTECTED_INDICES = [
 ]
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_charm):
     """Test basic functionality of relation interface."""
@@ -91,6 +92,7 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
     )
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_index_usage(ops_test: OpsTest):
     """Check we can update and delete things.
@@ -128,6 +130,7 @@ async def test_index_usage(ops_test: OpsTest):
     )
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_bulk_index_usage(ops_test: OpsTest):
     """Check we can update and delete things using bulk api."""
@@ -168,6 +171,7 @@ async def test_bulk_index_usage(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_version(ops_test: OpsTest):
     """Check version reported in the databag is consistent with the version on the charm."""
@@ -188,6 +192,7 @@ async def test_version(ops_test: OpsTest):
     assert version == results.get("version", {}).get("number"), results
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.usefixtures("only_without_juju_secrets")
 async def test_scaling(ops_test: OpsTest):
@@ -253,6 +258,7 @@ async def get_secret_data(ops_test, secret_uri):
     return json.loads(stdout)[secret_unique_id]["content"]["Data"]
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.usefixtures("only_with_juju_secrets")
 async def test_scaling_secrets(ops_test: OpsTest):
@@ -315,6 +321,7 @@ async def test_scaling_secrets(ops_test: OpsTest):
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
@@ -379,6 +386,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     """Test that two different applications can connect to the database."""
@@ -415,6 +423,7 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_admin_relation(ops_test: OpsTest):
     """Test we can create relations with admin permissions."""
@@ -450,6 +459,7 @@ async def test_admin_relation(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.usefixtures("only_without_juju_secrets")
 async def test_admin_permissions(ops_test: OpsTest):
@@ -514,6 +524,7 @@ async def test_admin_permissions(ops_test: OpsTest):
         assert "Error:" in results[0], results
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.usefixtures("only_with_juju_secrets")
 async def test_admin_permissions_secrets(ops_test: OpsTest):
@@ -582,6 +593,7 @@ async def test_admin_permissions_secrets(ops_test: OpsTest):
         assert "Error:" in results[0], results
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.usefixtures("only_without_juju_secrets")
 async def test_normal_user_permissions(ops_test: OpsTest):
@@ -640,6 +652,7 @@ async def test_normal_user_permissions(ops_test: OpsTest):
         assert "Error:" in results[0], results
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.usefixtures("only_with_juju_secrets")
 async def test_normal_user_permissions_secrets(ops_test: OpsTest):
@@ -701,6 +714,7 @@ async def test_normal_user_permissions_secrets(ops_test: OpsTest):
         assert "Error:" in results[0], results
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.usefixtures("only_without_juju_secrets")
 async def test_relation_broken(ops_test: OpsTest):
@@ -750,6 +764,7 @@ async def test_relation_broken(ops_test: OpsTest):
     assert relation_user not in users.keys()
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.usefixtures("only_with_juju_secrets")
 async def test_relation_broken_secrets(ops_test: OpsTest):
@@ -805,6 +820,7 @@ async def test_relation_broken_secrets(ops_test: OpsTest):
     assert relation_user not in users.keys()
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     """Verify that if we recreate a relation, we can access the same index."""

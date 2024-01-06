@@ -114,6 +114,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentials) -> None:
@@ -191,6 +192,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentia
     )
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_backup_cluster(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -243,6 +245,7 @@ async def test_backup_cluster(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restore_cluster(
     ops_test: OpsTest,
@@ -283,6 +286,7 @@ async def test_restore_cluster(
         assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
@@ -332,6 +336,7 @@ async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
         assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""

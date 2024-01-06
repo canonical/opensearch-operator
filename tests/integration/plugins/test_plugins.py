@@ -40,6 +40,7 @@ COS_APP_NAME = "grafana-agent"
 COS_RELATION_NAME = "cos-agent"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -77,6 +78,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.group(1)
 async def test_prometheus_exporter_enabled_by_default(ops_test):
     """Test that Prometheus Exporter is running before the relation is there."""
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
@@ -88,6 +90,7 @@ async def test_prometheus_exporter_enabled_by_default(ops_test):
     assert len(response_str.split("\n")) > 500
 
 
+@pytest.mark.group(1)
 async def test_prometheus_exporter_cos_relation(ops_test):
     await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
     await ops_test.model.relate(APP_NAME, COS_APP_NAME)
@@ -117,6 +120,7 @@ async def test_prometheus_exporter_cos_relation(ops_test):
     assert relation_data["scheme"] == "https"
 
 
+@pytest.mark.group(1)
 async def test_monitoring_user_fetch_prometheus_data(ops_test):
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
     endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
@@ -137,6 +141,7 @@ async def test_monitoring_user_fetch_prometheus_data(ops_test):
     assert len(response_str.split("\n")) > 500
 
 
+@pytest.mark.group(1)
 async def test_prometheus_monitor_user_password_change(ops_test):
     # Password change applied as expected
     leader_id = await get_leader_unit_id(ops_test, APP_NAME)
@@ -159,6 +164,7 @@ async def test_prometheus_monitor_user_password_change(ops_test):
     assert relation_data["password"] == new_password
 
 
+@pytest.mark.group(1)
 async def test_knn_enabled_disabled(ops_test):
     config = await ops_test.model.applications[APP_NAME].get_config()
     assert config["plugin_opensearch_knn"]["default"] is True
@@ -177,6 +183,7 @@ async def test_knn_enabled_disabled(ops_test):
     assert config["plugin_opensearch_knn"]["value"] is True
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
@@ -220,6 +227,7 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
     assert len(docs) == 2
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
     """Uploads data and runs a query search against the NMSLIB KNNEngine."""
@@ -263,6 +271,7 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
     assert len(docs) == 2
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_knn_training_search(ops_test: OpsTest) -> None:
     """Tests the entire cycle of KNN plugin.

@@ -79,6 +79,7 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -109,6 +110,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_replication_across_members(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -151,6 +153,7 @@ async def test_replication_across_members(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_kill_db_process_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -217,6 +220,7 @@ async def test_kill_db_process_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_kill_db_process_node_with_elected_cm(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -273,6 +277,7 @@ async def test_kill_db_process_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_freeze_db_process_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -362,6 +367,7 @@ async def test_freeze_db_process_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_freeze_db_process_node_with_elected_cm(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -440,6 +446,7 @@ async def test_freeze_db_process_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restart_db_process_node_with_elected_cm(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -495,6 +502,7 @@ async def test_restart_db_process_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restart_db_process_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -560,6 +568,7 @@ async def test_restart_db_process_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 async def test_full_cluster_crash(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, reset_restart_delay
 ) -> None:
@@ -615,6 +624,7 @@ async def test_full_cluster_crash(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_cluster_restart(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, reset_restart_delay
