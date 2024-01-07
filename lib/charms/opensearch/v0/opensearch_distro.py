@@ -127,6 +127,10 @@ class OpenSearchDistribution(ABC):
         while self.is_started() and (datetime.now() - start).seconds < 60:
             time.sleep(3)
 
+    def get_service_status(self):
+        """Get the status of the opensearch service."""
+        pass
+
     @abstractmethod
     def _start_service(self):
         """Start the opensearch service."""

@@ -39,7 +39,7 @@ from .helpers_data import create_dummy_docs, create_dummy_indexes, delete_dummy_
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None:
@@ -63,7 +63,7 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
 async def test_horizontal_scale_up(ops_test: OpsTest, c_writes) -> None:
     """Tests that new added units to the cluster are discoverable."""
@@ -109,7 +109,7 @@ async def test_horizontal_scale_up(ops_test: OpsTest, c_writes) -> None:
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_shards_realloc(ops_test: OpsTest, c_writes) -> None:
     """Tests the shutdown of a node, and re-allocation of shards to a newly joined unit.
@@ -217,7 +217,7 @@ async def test_safe_scale_down_shards_realloc(ops_test: OpsTest, c_writes) -> No
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest, c_writes) -> None:
     """Tests the shutdown of a node with a role requiring the re-balance of the cluster roles.
@@ -310,7 +310,7 @@ async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest, c_writes) ->
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 async def test_safe_scale_down_remove_leaders(ops_test: OpsTest, c_writes) -> None:
     """Tests the removal of specific units (elected cm, juju leader, node with prim shard).
 

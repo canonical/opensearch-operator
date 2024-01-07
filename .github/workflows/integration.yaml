@@ -52,12 +52,38 @@ jobs:
         juju:
           - agent: 3.1.7
             libjuju: 3.2.3.0
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm_self_hosted.yaml@v7.0.0
+        runner: ["ubuntu-22.04"]
+        include:
+          - groups: 2
+            runner: "Ubuntu_4C_16G"
+    # uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm_self_hosted.yaml@v7.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v7.0.0
     with:
       artifact-name: ${{ needs.build.outputs.artifact-name }}
       cloud: lxd
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
+
+  # horizontal-scaling-test:
+  #   name: Horizontal scaling test charm | ${{ matrix.juju.agent }}
+  #   needs:
+  #     - build
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       juju:
+  #         - agent: 3.1.7
+  #           libjuju: 3.2.3.0
+  #       runner: ["Ubuntu_4C_16G"]
+  #   # uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm_self_hosted.yaml@v7.0.0
+  #   uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v7.0.0
+  #   with:
+  #     artifact-name: ${{ needs.build.outputs.artifact-name }}
+  #     cloud: lxd
+  #     juju-agent-version: ${{ matrix.juju.agent }}
+  #     libjuju-version-constraint: ${{ matrix.juju.libjuju }}
+
+
 
 
   # backup-microceph-integration-test:
