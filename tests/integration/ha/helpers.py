@@ -29,6 +29,11 @@ from .continuous_writes import ContinuousWrites
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
 
 
+SECOND_APP_NAME = "second-opensearch"
+ORIGINAL_RESTART_DELAY = 20
+RESTART_DELAY = 360
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -204,11 +209,21 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
     return result
 
 
+async def assert_continuous_writes_increasing(
+    c_writes: ContinuousWrites,
+) -> None:
+    """Asserts that the continuous writes are increasing."""
+    writes_count = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes_count, "Writes not continuing to DB"
+
+
 async def assert_continuous_writes_consistency(
     ops_test: OpsTest, c_writes: ContinuousWrites, app: str
 ) -> None:
     """Continuous writes checks."""
-    result = (await c_writes).stop()
+    result = await c_writes.stop()
     assert result.max_stored_id == result.count - 1
     assert result.max_stored_id == result.last_expected_id
 

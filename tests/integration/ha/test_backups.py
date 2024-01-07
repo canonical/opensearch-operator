@@ -26,7 +26,6 @@ from ..helpers import (
     run_action,
 )
 from ..tls.helpers import TLS_CERTIFICATES_APP_NAME
-from .continuous_writes import ContinuousWrites
 from .helpers_data import create_index, default_doc, index_doc, search
 from .test_horizontal_scaling import IDLE_PERIOD
 
@@ -96,22 +95,6 @@ value_before_backup, value_after_backup = None, None
 
 
 TEST_BACKUP_INDEX = "test_backup_index"
-
-
-@pytest.fixture()
-async def c_writes(ops_test: OpsTest):
-    """Creates instance of the ContinuousWrites."""
-    app = (await app_name(ops_test)) or APP_NAME
-    return ContinuousWrites(ops_test, app)
-
-
-@pytest.fixture()
-async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Starts continuous write operations and clears writes at the end of the test."""
-    await c_writes.start()
-    yield
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
 @pytest.mark.group(1)
@@ -193,9 +176,7 @@ async def test_build_and_deploy(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_backup_cluster(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
+async def test_backup_cluster(ops_test: OpsTest, c_writes) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
     app = (await app_name(ops_test)) or APP_NAME
 

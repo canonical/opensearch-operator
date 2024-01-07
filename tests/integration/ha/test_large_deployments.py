@@ -15,54 +15,15 @@ from ..helpers import (
     SERIES,
     check_cluster_formation_successful,
     cluster_health,
-    get_application_unit_ids,
     get_application_unit_names,
     get_application_unit_status,
     get_leader_unit_ip,
 )
 from ..helpers_deployments import wait_until
-from .continuous_writes import ContinuousWrites
-from .helpers import all_nodes, app_name, update_restart_delay
+from .helpers import all_nodes, app_name, assert_continuous_writes_consistency
 from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
-
-
-ORIGINAL_RESTART_DELAY = 20
-
-
-@pytest.fixture()
-async def reset_restart_delay(ops_test: OpsTest):
-    """Resets service file delay on all units."""
-    yield
-    app = (await app_name(ops_test)) or APP_NAME
-    for unit_id in get_application_unit_ids(ops_test, app):
-        await update_restart_delay(ops_test, app, unit_id, ORIGINAL_RESTART_DELAY)
-
-
-@pytest.fixture()
-async def c_writes(ops_test: OpsTest):
-    """Creates instance of the ContinuousWrites."""
-    app = (await app_name(ops_test)) or APP_NAME
-    return ContinuousWrites(ops_test, app)
-
-
-@pytest.fixture()
-async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Starts continuous write operations and clears writes at the end of the test."""
-    await c_writes.start()
-    yield
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
-
-
-@pytest.fixture()
-async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Same as previous runner, but starts continuous writes on cluster wide replicated index."""
-    await c_writes.start(repl_on_all_nodes=True)
-    yield
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
 @pytest.mark.group(1)
@@ -98,9 +59,7 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_set_roles_manually(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
+async def test_set_roles_manually(ops_test: OpsTest, c_writes) -> None:
     """Check roles changes in all nodes."""
     app = (await app_name(ops_test)) or APP_NAME
 
@@ -170,3 +129,5 @@ async def test_set_roles_manually(
     app_unit_status = await get_application_unit_status(ops_test, app=app)
     assert app_unit_status[new_unit_id].value == "blocked"
     assert app_unit_status[new_unit_id].message == PClusterWrongNodesCountForQuorum
+
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)

@@ -39,22 +39,6 @@ from .helpers_data import create_dummy_docs, create_dummy_indexes, delete_dummy_
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture()
-async def c_writes(ops_test: OpsTest):
-    """Creates instance of the ContinuousWrites."""
-    app = (await app_name(ops_test)) or APP_NAME
-    return ContinuousWrites(ops_test, app)
-
-
-@pytest.fixture()
-async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Starts continuous write operations and clears writes at the end of the test."""
-    await c_writes.start()
-    yield
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
-
-
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -81,9 +65,7 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_horizontal_scale_up(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
+async def test_horizontal_scale_up(ops_test: OpsTest, c_writes) -> None:
     """Tests that new added units to the cluster are discoverable."""
     app = (await app_name(ops_test)) or APP_NAME
     init_units_count = len(ops_test.model.applications[app].units)
@@ -129,9 +111,7 @@ async def test_horizontal_scale_up(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_safe_scale_down_shards_realloc(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
+async def test_safe_scale_down_shards_realloc(ops_test: OpsTest, c_writes) -> None:
     """Tests the shutdown of a node, and re-allocation of shards to a newly joined unit.
 
     The goal of this test is to make sure that shards are automatically relocated after
@@ -239,9 +219,7 @@ async def test_safe_scale_down_shards_realloc(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_safe_scale_down_roles_reassigning(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
+async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest, c_writes) -> None:
     """Tests the shutdown of a node with a role requiring the re-balance of the cluster roles.
 
     The goal of this test is to make sure that roles are automatically recalculated after
@@ -333,9 +311,7 @@ async def test_safe_scale_down_roles_reassigning(
 
 
 @pytest.mark.group(1)
-async def test_safe_scale_down_remove_leaders(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
+async def test_safe_scale_down_remove_leaders(ops_test: OpsTest, c_writes) -> None:
     """Tests the removal of specific units (elected cm, juju leader, node with prim shard).
 
     The goal of this test is to make sure that:
@@ -347,6 +323,8 @@ async def test_safe_scale_down_remove_leaders(
     """
     app = (await app_name(ops_test)) or APP_NAME
     init_units_count = len(ops_test.model.applications[app].units)
+
+    c_writes_obj = c_writes
 
     # scale up by 2 units
     await ops_test.model.applications[app].add_unit(count=3)
@@ -418,7 +396,7 @@ async def test_safe_scale_down_remove_leaders(
     # sleep for a couple of minutes for the model to stabilise
     time.sleep(IDLE_PERIOD + 60)
 
-    writes = await c_writes.count()
+    writes = await c_writes_obj.count()
 
     # check that the primary shard reelection happened
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -433,8 +411,8 @@ async def test_safe_scale_down_remove_leaders(
 
     # check that writes are still going after the removal / p_shard reelection
     time.sleep(3)
-    new_writes = await c_writes.count()
+    new_writes = await c_writes_obj.count()
     assert new_writes > writes
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes_obj, app)

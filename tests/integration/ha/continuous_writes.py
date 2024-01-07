@@ -28,6 +28,11 @@ logging.getLogger("opensearch").setLevel(logging.ERROR)
 logging.getLogger("opensearchpy.helpers").setLevel(logging.ERROR)
 
 
+def _gather_coros(coros):
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(asyncio.gather(*coros))
+
+
 class ContinuousWrites:
     """Utility class for managing continuous writes."""
 
@@ -47,21 +52,19 @@ class ContinuousWrites:
         wait=wait_fixed(wait=5) + wait_random(0, 5),
         stop=stop_after_attempt(5),
     )
-    async def start(self, repl_on_all_nodes: bool = False) -> None:
+    def start(self, repl_on_all_nodes: bool = False) -> None:
         """Run continuous writes in the background."""
-        if not self._is_stopped:
-            await self.clear()
-
-        # create index if custom conf needed
-        if repl_on_all_nodes:
-            await self._create_fully_replicated_index()
-
-        # create process
-        self._create_process()
-
-        # put data (hosts, password) in the process queue
-        await self.update()
-
+        self._create_process(
+            pre_coros=[
+                self._clear_index_if_needed(self._is_stopped),
+                # create index if custom conf needed
+                self._create_fully_replicated_index_if_needed(repl_on_all_nodes),
+            ],
+            post_coros=[
+                # put data (hosts, password) in the process queue
+                self.update()
+            ],
+        )
         # start writes
         self._process.start()
 
@@ -126,6 +129,20 @@ class ContinuousWrites:
         finally:
             client.close()
 
+    def clear_all(self) -> None:
+        """Clear all data and stop writes."""
+        _gather_coros([self.clear()])
+
+    async def _clear_index_if_needed(self, is_stopped: bool):
+        """Clear data if not running."""
+        if not is_stopped:
+            await self.clear()
+
+    async def _create_fully_replicated_index_if_needed(self, repl_on_all_nodes: bool):
+        """Create index with 1 p_shard and an r_shard on each node."""
+        if repl_on_all_nodes:
+            await self._create_fully_replicated_index()
+
     async def _create_fully_replicated_index(self):
         """Create index with 1 p_shard and an r_shard on each node."""
         client = await self._client()
@@ -168,15 +185,20 @@ class ContinuousWrites:
 
         return result
 
-    def _create_process(self):
+    def _create_process(self, pre_coros=[], post_coros=[]):
         self._is_stopped = False
         self._event = Event()
         self._queue = Queue()
+
+        if pre_coros:
+            _gather_coros(pre_coros)
         self._process = Process(
             target=ContinuousWrites._run_async,
             name="continuous_writes",
             args=(self._event, self._queue, 0, True),
         )
+        if post_coros:
+            _gather_coros(post_coros)
 
     def _stop_process(self):
         self._event.set()

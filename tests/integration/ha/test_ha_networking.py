@@ -4,13 +4,13 @@
 
 import asyncio
 import logging
-import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
 
 from ..ha.helpers import (
     assert_continuous_writes_consistency,
+    assert_continuous_writes_increasing,
     cut_network_from_unit_with_ip_change,
     cut_network_from_unit_without_ip_change,
     get_elected_cm_unit_id,
@@ -38,22 +38,6 @@ from .continuous_writes import ContinuousWrites
 from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
-
-
-@pytest.fixture()
-async def c_writes(ops_test: OpsTest):
-    """Creates instance of the ContinuousWrites."""
-    app = (await app_name(ops_test)) or APP_NAME
-    yield ContinuousWrites(ops_test, app)
-
-
-@pytest.fixture()
-async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Same as previous runner, but starts continuous writes on cluster wide replicated index."""
-    await c_writes.start(repl_on_all_nodes=True)
-    yield
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
 @pytest.mark.group(1)
@@ -88,13 +72,15 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_elected_cm(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes_balanced
 ) -> None:
     """Check that cluster can self-heal and unit reconfigures itself with new IP."""
     app = (await app_name(ops_test)) or APP_NAME
 
     unit_ids_ips = await get_application_unit_ids_ips(ops_test, app)
     unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
+
+    c_writes = c_writes_balanced
 
     # find unit currently elected cluster_manager
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -145,13 +131,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
         ops_test, first_elected_cm_unit_ip, retries=3
     ), "Connection still possible to the first CM node where the network was cut."
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    writes = await c_writes.count()
-    #    writes = writes.count()
-    time.sleep(5)
-    more_writes = await c_writes
-    more_writes = more_writes.count()
-    assert more_writes > writes, "Writes not continuing to DB"
+    assert_continuous_writes_increasing(c_writes)
 
     # check new CM got elected
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -196,7 +176,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_primary_shard(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes_balanced
 ) -> None:
     """Check that cluster can self-heal and unit reconfigures itself with new IP."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -205,6 +185,8 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
 
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    c_writes = c_writes_balanced
 
     # find unit hosting the primary shard of the index "series-index"
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
@@ -254,11 +236,7 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
         ops_test, first_unit_with_primary_shard_ip, retries=3
     ), "Connection still possible to the first unit with primary shard where the network was cut."
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "Writes not continuing to DB"
+    assert_continuous_writes_increasing(c_writes)
 
     # check new primary shard got elected
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -318,13 +296,15 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_without_ip_change_node_with_elected_cm(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes_balanced
 ) -> None:
     """Check that cluster can self-heal and unit reconfigures itself with network cut.."""
     app = (await app_name(ops_test)) or APP_NAME
 
     unit_ids_ips = await get_application_unit_ids_ips(ops_test, app)
     unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
+
+    c_writes = c_writes_balanced
 
     # find unit currently elected cluster_manager
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -370,11 +350,7 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
         ops_test, first_elected_cm_unit_ip, retries=3
     ), "Connection still possible to the first CM node where the network was cut."
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "Writes not continuing to DB"
+    assert_continuous_writes_increasing(c_writes)
 
     # check new CM got elected
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -410,7 +386,7 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_without_ip_change_node_with_primary_shard(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes_balanced
 ) -> None:
     """Check that cluster can self-heal and unit reconfigures itself with network cut."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -419,6 +395,8 @@ async def test_full_network_cut_without_ip_change_node_with_primary_shard(
     unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
 
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    c_writes = c_writes_balanced
 
     # find unit hosting the primary shard of the index "series-index"
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
@@ -465,11 +443,7 @@ async def test_full_network_cut_without_ip_change_node_with_primary_shard(
         ops_test, first_unit_with_primary_shard_ip, retries=3
     ), "Connection still possible to the first unit with primary shard where the network was cut."
 
-    # verify new writes are continuing by counting the number of writes before and after 5 seconds
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "Writes not continuing to DB"
+    assert_continuous_writes_increasing(c_writes)
 
     # check new primary shard got elected
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
