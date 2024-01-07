@@ -63,15 +63,13 @@ async def test_create_relation(
     new_model_conf["update-status-hook-interval"] = "1m"
 
     await ops_test.model.set_config(new_model_conf)
-    app_charm = await application_charm
-    os_charm = await opensearch_charm
     await asyncio.gather(
         ops_test.model.deploy(
-            app_charm,
+            application_charm,
             application_name=CLIENT_APP_NAME,
         ),
         ops_test.model.deploy(
-            os_charm,
+            opensearch_charm,
             application_name=OPENSEARCH_APP_NAME,
             num_units=NUM_UNITS,
             series=SERIES,
@@ -340,9 +338,8 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 
     # Deploy secondary application.
     logger.info(f"Deploying 1 unit of {SECONDARY_CLIENT_APP_NAME}")
-    app_charm = await application_charm
     await ops_test.model.deploy(
-        app_charm,
+        application_charm,
         num_units=1,
         application_name=SECONDARY_CLIENT_APP_NAME,
     )
