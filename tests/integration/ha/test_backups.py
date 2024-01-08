@@ -61,11 +61,12 @@ def microceph():
         os.chmod(uceph, 0o755)
         subprocess.check_output(
             [
+                "sudo",
                 uceph,
                 "-c",
                 "latest/edge",
                 "-d",
-                "/dev/sdm",
+                "/dev/sdi",
                 "-a",
                 "accesskey",
                 "-s",
@@ -279,40 +280,30 @@ async def test_backup(ops_test: OpsTest, c_writes, cloud_configs, cloud_credenti
         logger.info(f"create-backup output: {action}")
         assert action.status == "completed"
 
-        backup_id = action.response["backup-id"]
+        backup_id = int(action.response["backup-id"])
 
         _wait_backup_finish(ops_test, leader_id)
-
-        # list_backups = await run_action(
-        #     ops_test, leader_id, "list-backups", params={"output": "json"}
-        # )
-        # logger.info(f"list-backups output: {list_backups}")
-        # # Expected format:
-        # # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
-        # backups = json.loads(list_backups.response["backups"])
-        # assert list_backups.status == "completed"  # The actual action status
-        # assert len(backups.keys()) == int(action.response["backup-id"])
-        # assert backups[action.response["backup-id"]]["state"] == "finished"  # The backup status
 
         if cloud_name not in backups_by_cloud:
             backups_by_cloud[cloud_name] = []
         backups_by_cloud[cloud_name].append(backup_id)
 
-    # Final validations
-    # check that the doc can be retrieved from any node
-    logger.info("Test backup index: searching")
-    for u_id, u_ip in units.items():
-        docs = await search(
-            ops_test,
-            app,
-            u_ip,
-            TEST_BACKUP_INDEX,
-            query={"query": {"term": {"_id": doc_id}}},
-            preference="_only_local",
-        )
-        # Validate the index and document are present
-        assert len(docs) == 1
-        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
+        # check that the doc can be retrieved from any node
+        logger.info("Test backup index: searching")
+        for u_id, u_ip in units.items():
+            docs = await search(
+                ops_test,
+                app,
+                u_ip,
+                TEST_BACKUP_INDEX,
+                query={"query": {"term": {"_id": doc_id}}},
+                preference="_only_local",
+            )
+            # Validate the index and document are present
+            assert len(docs) == 1
+            assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
+
+        await assert_continuous_writes_increasing(c_writes)
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
@@ -354,7 +345,6 @@ async def test_restore(ops_test: OpsTest, c_writes, cloud_configs, cloud_credent
             "Ensuring that the pre-backup inserted value exists in database,"
             " while post-backup inserted value does not"
         )
-
         # index document
         doc_id = TEST_BACKUP_DOC_ID
         # check that the doc can be retrieved from any node
@@ -372,10 +362,10 @@ async def test_restore(ops_test: OpsTest, c_writes, cloud_configs, cloud_credent
             assert len(docs) == 1
             assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
 
-    # As the cluster recovers from the restore, we are more interested in knowing if we can
-    # continue writing to the cluster post-restore. The consistency of writes will not apply
-    # as old data is being restored.
-    await assert_continuous_writes_increasing(c_writes)
+        # As the cluster recovers from the restore, we are more interested in knowing if we can
+        # continue writing to the cluster post-restore. The consistency of writes will not apply
+        # as old data is being restored.
+        await assert_continuous_writes_increasing(c_writes)
 
 
 @pytest.mark.group(1)
@@ -389,7 +379,7 @@ async def test_restore_cluster_after_app_destroyed(
     """
     app = (await app_name(ops_test)) or APP_NAME
     await ops_test.model.remove_application(app, block_until_done=True)
-    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 3)
+    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 2)
     my_charm = await ops_test.build_charm(".")
     # Redeploy
     await asyncio.gather(

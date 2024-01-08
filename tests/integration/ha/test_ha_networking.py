@@ -68,6 +68,11 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
+    import subprocess
+
+    logger.info(f"SNAP STATUS: {subprocess.check_output(['snap', 'list']).decode()}")
+    logger.info(f"LXD STATUS: {subprocess.check_output(['snap', 'info', 'lxd']).decode()}")
+
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
