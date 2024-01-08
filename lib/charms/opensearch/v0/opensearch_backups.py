@@ -155,18 +155,14 @@ class OpenSearchBackup(Object):
 
     def _format_backup_list(self, backup_list: List[Tuple[Any]]) -> str:
         """Formats provided list of backups as a table."""
-        backups = [
-            "{:<10s} | {:<12s} | {:s}".format(" backup-id ", "backup-type", "backup-status")
-        ]
+        backups = ["{:<10s} | {:s}".format(" backup-id ", "backup-status")]
         backups.append("-" * len(backups[0]))
 
         import math
 
-        for backup_id, backup_type, backup_status in backup_list:
+        for backup_id, backup_status in backup_list:
             tab = " " * math.floor((10 - len(str(backup_id))) / 2)
-            backups.append(
-                "{:<10s} | {:<12s} | {:s}".format(f"{tab}{backup_id}", backup_type, backup_status)
-            )
+            backups.append("{:<10s} | {:s}".format(f"{tab}{backup_id}", backup_status))
         return "\n".join(backups)
 
     def _generate_backup_list_output(self, backups: Dict[str, Any]) -> str:
@@ -183,7 +179,6 @@ class OpenSearchBackup(Object):
             backup_list.append(
                 (
                     id,
-                    "physical",
                     str(state) if state != BackupServiceState.SUCCESS else "finished",
                 )
             )

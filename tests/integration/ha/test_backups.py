@@ -6,14 +6,17 @@ import asyncio
 import json
 import logging
 import os
+import uuid
+from pathlib import Path
 
-# from pathlib import Path
-#
-# import boto3
+import boto3
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..ha.helpers import assert_continuous_writes_consistency
+from ..ha.helpers import (
+    assert_continuous_writes_consistency,
+    assert_continuous_writes_increasing,
+)
 from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
@@ -32,69 +35,142 @@ from .test_horizontal_scaling import IDLE_PERIOD
 logger = logging.getLogger(__name__)
 
 
-S3_INTEGRATOR_NAME = "s3-integrator"
-TEST_BACKUP_DOC_ID = 10
-CLOUD_CONFIGS = {
-    "aws": {
-        "endpoint": "https://s3.amazonaws.com",
-        "bucket": "data-charms-testing",
-        "path": "opensearch",
-        "region": "us-east-1",
-    },
-    "gcp": {
-        "endpoint": "https://storage.googleapis.com",
-        "bucket": "data-charms-testing",
-        "path": "opensearch",
-        "region": "",
-    },
-}
-
 backups_by_cloud = {}
 value_before_backup, value_after_backup = None, None
 
 
-# @pytest.fixture(scope="session")
-# def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
-#     """Read cloud credentials."""
-#     return {
-#         "aws": {
-#             "access-key": github_secrets["AWS_ACCESS_KEY"],
-#             "secret-key": github_secrets["AWS_SECRET_KEY"],
-#         },
-#         "gcp": {
-#             "access-key": github_secrets["GCP_ACCESS_KEY"],
-#             "secret-key": github_secrets["GCP_SECRET_KEY"],
-#         },
-#     }
+@pytest.fixture(scope="session")
+def microceph():
+    """Starts microceph radosgw."""
+    import os
+    import subprocess
+
+    import requests
+
+    uceph = "/tmp/microceph.sh"
+
+    with open(uceph, "w") as f:
+        resp = requests.get(
+            "https://raw.githubusercontent.com/canonical/microceph-action/main/microceph.sh"
+        )
+        f.write(resp.content.decode())
+
+    os.chmod(uceph, 0o755)
+    subprocess.check_output(
+        [
+            uceph,
+            "-c",
+            "latest/edge",
+            "-d",
+            "/dev/sdi",
+            "-a",
+            "accesskey",
+            "-s",
+            "secretkey",
+            "-b",
+            "testbucket",
+            "-z",
+            "5G",
+        ]
+    )
+    ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
+    return {"url": f"http://{ip}", "access-key": "accesskey", "secret-key": "secretkey"}
 
 
-# @pytest.fixture(scope="session", autouse=True)
-# def clean_backups_from_buckets(cloud_credentials) -> None:
-#     """Teardown to clean up created backups from clouds."""
-#     yield
-#
-#     logger.info("Cleaning backups from cloud buckets")
-#     for cloud_name, config in CLOUD_CONFIGS.items():
-#         backup = backups_by_cloud.get(cloud_name)
-#
-#         if not backup:
-#             continue
-#
-#         session = boto3.session.Session(
-#             aws_access_key_id=cloud_credentials[cloud_name]["access-key"],
-#             aws_secret_access_key=cloud_credentials[cloud_name]["secret-key"],
-#             region_name=config["region"],
-#         )
-#         s3 = session.resource("s3", endpoint_url=config["endpoint"])
-#         bucket = s3.Bucket(config["bucket"])
-#
-#         # GCS doesn't support batch delete operation, so delete the objects one by one
-#         backup_path = str(Path(config["path"]) / backups_by_cloud[cloud_name])
-#         for bucket_object in bucket.objects.filter(Prefix=backup_path):
-#             bucket_object.delete()
+@pytest.fixture(scope="session")
+def cloud_configs(microceph):
+    # Add UUID to path to avoid conflict with tests running in parallel (e.g. multiple Juju
+    # versions on a PR, multiple PRs)
+    path = f"opensearch/{uuid.uuid4()}"
+
+    return {
+        "aws": {
+            "endpoint": "https://s3.amazonaws.com",
+            "bucket": "data-charms-testing",
+            "path": path,
+            "region": "us-east-1",
+        },
+        "gcp": {
+            "endpoint": "https://storage.googleapis.com",
+            "bucket": "data-charms-testing",
+            "path": path,
+            "region": "",
+        },
+        "microceph": {
+            "endpoint": microceph["url"],
+            "bucket": "datah-charms-testing",
+            "path": path,
+            "region": "default",
+        },
+    }
+
+
+@pytest.fixture(scope="session")
+def cloud_credentials(github_secrets, microceph) -> dict[str, dict[str, str]]:
+    """Read cloud credentials."""
+    return {
+        "aws": {
+            "access-key": github_secrets["AWS_ACCESS_KEY"],
+            "secret-key": github_secrets["AWS_SECRET_KEY"],
+        },
+        "gcp": {
+            "access-key": github_secrets["GCP_ACCESS_KEY"],
+            "secret-key": github_secrets["GCP_SECRET_KEY"],
+        },
+        "microceph": {
+            "access-key": microceph["access-key"],
+            "secret-key": microceph["secret-key"],
+        },
+    }
+
+
+@pytest.fixture(scope="session", autouse=True)
+def clean_backups_from_buckets(cloud_configs, cloud_credentials) -> None:
+    """Teardown to clean up created backups from clouds."""
+    yield
+
+    logger.info("Cleaning backups from cloud buckets")
+    for cloud_name, config in cloud_configs.items():
+        backup = backups_by_cloud.get(cloud_name)
+
+        if not backup:
+            continue
+
+        session = boto3.session.Session(
+            aws_access_key_id=cloud_credentials[cloud_name]["access-key"],
+            aws_secret_access_key=cloud_credentials[cloud_name]["secret-key"],
+            region_name=config["region"],
+        )
+        s3 = session.resource("s3", endpoint_url=config["endpoint"])
+        bucket = s3.Bucket(config["bucket"])
+
+        # GCS doesn't support batch delete operation, so delete the objects one by one
+        for f in backups_by_cloud[cloud_name]:
+            backup_path = str(Path(config["path"]) / f)
+            for bucket_object in bucket.objects.filter(Prefix=backup_path):
+                bucket_object.delete()
+
+
+async def _configure_s3(ops_test, config, credentials, cloud_name, app_name):
+    await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
+    await run_action(
+        ops_test,
+        0,
+        "sync-s3-credentials",
+        params=credentials[cloud_name],
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[app_name, S3_INTEGRATOR],
+        status="active",
+        timeout=TIMEOUT,
+    )
 
 
 TEST_BACKUP_INDEX = "test_backup_index"
+S3_INTEGRATOR = "s3-integrator"
+S3_INTEGRATOR_CHANNEL = "latest/edge"
+TIMEOUT = 10 * 60
+TEST_BACKUP_DOC_ID = 10
 
 
 @pytest.mark.group(1)
@@ -104,68 +180,23 @@ async def test_build_and_deploy(
     ops_test: OpsTest, self_signed_operator
 ) -> None:  # , cloud_credentials) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
-    # it is possible for users to provide their own cluster for HA testing.
-    # Hence, check if there is a pre-existing cluster.
-
     if await app_name(ops_test):
         return
-
-    s3_storage = None
-    if (
-        "S3_BUCKET" in os.environ
-        and "S3_SERVER_URL" in os.environ
-        and "S3_REGION" in os.environ
-        and "S3_ACCESS_KEY" in os.environ
-        and "S3_SECRET_KEY" in os.environ
-    ):
-        s3_config = {
-            "bucket": os.environ["S3_BUCKET"],
-            "path": "/",
-            "endpoint": os.environ["S3_SERVER_URL"],
-            "region": os.environ["S3_REGION"],
-        }
-        s3_storage = "ceph"
-    elif "AWS_ACCESS_KEY" in os.environ and "AWS_SECRET_KEY" in os.environ:
-        s3_config = CLOUD_CONFIGS["aws"].copy()
-        s3_storage = "aws"
-    elif "GCP_ACCESS_KEY" in os.environ and "GCP_SECRET_KEY" in os.environ:
-        s3_config = CLOUD_CONFIGS["gcp"].copy()
-        s3_storage = "gcp"
-    else:
-        logger.exception("Missing S3 configs in os.environ.")
-        raise Exception("Missing s3")
 
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Convert to integer as environ always returns string
-    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 3)
-
+    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 2)
     await asyncio.gather(
-        ops_test.model.deploy(S3_INTEGRATOR_NAME, channel="stable", config=s3_config),
+        ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
         ops_test.model.deploy(my_charm, num_units=app_num_units, series=SERIES),
-    )
-    # Set the access/secret keys
-    if s3_storage == "ceph":
-        s3_creds = {
-            "access-key": os.environ["S3_ACCESS_KEY"],
-            "secret-key": os.environ["S3_SECRET_KEY"],
-        }
-    #    else:
-    #        s3_creds = cloud_credentials[s3_storage].copy()
-
-    await run_action(
-        ops_test,
-        0,
-        "sync-s3-credentials",
-        params=s3_creds,
-        app=S3_INTEGRATOR_NAME,
     )
 
     # Relate it to OpenSearch to set up TLS.
     tls = await self_signed_operator
     await ops_test.model.relate(APP_NAME, tls)
-    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR_NAME)
+    await ops_test.model.relate(my_charm, S3_INTEGRATOR)
     await ops_test.model.wait_for_idle(
         apps=[tls, APP_NAME],
         status="active",
@@ -176,7 +207,7 @@ async def test_build_and_deploy(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_backup_cluster(ops_test: OpsTest, c_writes) -> None:
+async def test_backup(ops_test: OpsTest, c_writes, cloud_configs, cloud_credentials) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
     app = (await app_name(ops_test)) or APP_NAME
 
@@ -206,50 +237,39 @@ async def test_backup_cluster(ops_test: OpsTest, c_writes) -> None:
 
     leader_id = await get_leader_unit_id(ops_test, app)
 
-    action = await run_action(ops_test, leader_id, "create-backup")
-    logger.info(f"create-backup output: {action}")
+    for cloud_name, config in cloud_configs.items():
+        # set the s3 config and credentials
+        logger.info(f"Syncing credentials for {cloud_name}")
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], cloud_name, app)
 
-    assert action.status == "completed"
+        # list backups
+        logger.info("Listing existing backup ids")
 
-    list_backups = await run_action(ops_test, leader_id, "list-backups", params={"output": "json"})
-    logger.info(f"list-backups output: {list_backups}")
+        # create backup
+        logger.info("Creating backup")
 
-    # Expected format:
-    # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
-    backups = json.loads(list_backups.response["backups"])
-    assert list_backups.status == "completed"
-    assert len(backups.keys()) == int(action.response["backup-id"])
-    assert backups[action.response["backup-id"]]["state"] == "SUCCESS"
+        action = await run_action(ops_test, leader_id, "create-backup")
+        logger.info(f"create-backup output: {action}")
+        assert action.status == "completed"
 
-    # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+        backup_id = action["backup-id"]
 
+        list_backups = await run_action(
+            ops_test, leader_id, "list-backups", params={"output": "json"}
+        )
+        logger.info(f"list-backups output: {list_backups}")
+        # Expected format:
+        # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
+        backups = json.loads(list_backups.response["backups"])
+        assert list_backups.status == "completed"  # The actual action status
+        assert len(backups.keys()) == int(action.response["backup-id"])
+        assert backups[action.response["backup-id"]]["state"] == "SUCCESS"  # The backup status
 
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_restore_cluster(
-    ops_test: OpsTest,
-) -> None:
-    """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
-    app = (await app_name(ops_test)) or APP_NAME
+        if cloud_name not in backups_by_cloud:
+            backups_by_cloud[cloud_name] = []
+        backups_by_cloud[cloud_name].append(backup_id)
 
-    units = await get_application_unit_ids_ips(ops_test, app=app)
-    leader_id = await get_leader_unit_id(ops_test, app)
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    await http_request(
-        ops_test,
-        "DELETE",
-        f"https://{leader_unit_ip}:9200/{TEST_BACKUP_INDEX}",
-        app=app,
-    )
-
-    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": 1})
-    logger.info(f"restore output: {action}")
-    assert action.status == "completed"
-
-    # index document
-    doc_id = TEST_BACKUP_DOC_ID
+    # Final validations
     # check that the doc can be retrieved from any node
     logger.info("Test backup index: searching")
     for u_id, u_ip in units.items():
@@ -265,10 +285,75 @@ async def test_restore_cluster(
         assert len(docs) == 1
         assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
 
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
+async def test_restore(ops_test: OpsTest, c_writes, cloud_configs, cloud_credentials) -> None:
+    """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    units = await get_application_unit_ids_ips(ops_test, app=app)
+    leader_id = await get_leader_unit_id(ops_test, app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    for cloud_name, config in cloud_configs.items():
+        assert len(backups_by_cloud[cloud_name]) > 0
+
+        await http_request(
+            ops_test,
+            "DELETE",
+            f"https://{leader_unit_ip}:9200/{TEST_BACKUP_INDEX}",
+            app=app,
+        )
+
+        # set the s3 config and credentials
+        logger.info(f"Syncing credentials for {cloud_name}")
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], cloud_name, app)
+
+        # restore the latest backup
+        id = backups_by_cloud[cloud_name][-1]
+        logger.info(f"Restoring backup with id {id}")
+        action = await run_action(ops_test, leader_id, "restore", params={"backup-id": id})
+        logger.info(f"restore output: {action}")
+        assert action.status == "completed"
+
+        # ensure the correct inserted values exist
+        logger.info(
+            "Ensuring that the pre-backup inserted value exists in database,"
+            " while post-backup inserted value does not"
+        )
+
+        # index document
+        doc_id = TEST_BACKUP_DOC_ID
+        # check that the doc can be retrieved from any node
+        logger.info("Test backup index: searching")
+        for u_id, u_ip in units.items():
+            docs = await search(
+                ops_test,
+                app,
+                u_ip,
+                TEST_BACKUP_INDEX,
+                query={"query": {"term": {"_id": doc_id}}},
+                preference="_only_local",
+            )
+            # Validate the index and document are present
+            assert len(docs) == 1
+            assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
+
+    # As the cluster recovers from the restore, we are more interested in knowing if we can
+    # continue writing to the cluster post-restore. The consistency of writes will not apply
+    # as old data is being restored.
+    await assert_continuous_writes_increasing(c_writes)
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_restore_cluster_after_app_destroyed(
+    ops_test: OpsTest, c_writes, cloud_configs, cloud_credentials
+) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
 
     Restores the backup and then checks if the same TEST_BACKUP_INDEX is there.
@@ -283,52 +368,28 @@ async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
     )
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR_NAME)
+    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR)
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
-
-    units = await get_application_unit_ids_ips(ops_test, app=app)
-    leader_id = await get_leader_unit_id(ops_test, app)
-
-    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": 1})
-    logger.info(f"restore output: {action}")
-    assert action.status == "completed"
-
-    # index document
-    doc_id = TEST_BACKUP_DOC_ID
-    # check that the doc can be retrieved from any node
-    logger.info("Test backup index: searching")
-    for u_id, u_ip in units.items():
-        docs = await search(
-            ops_test,
-            app,
-            u_ip,
-            TEST_BACKUP_INDEX,
-            query={"query": {"term": {"_id": doc_id}}},
-            preference="_only_local",
-        )
-        # Validate the index and document are present
-        assert len(docs) == 1
-        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
+    # This is the same check as the previous restore action.
+    # Call the method again
+    await test_restore(ops_test, c_writes, cloud_configs, cloud_credentials)
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
+async def test_remove_and_readd_s3_relation(
+    ops_test: OpsTest, c_writes, cloud_configs, cloud_credentials
+) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
-    app = (await app_name(ops_test)) or APP_NAME
-    units = await get_application_unit_ids_ips(ops_test, app=app)
-    leader_id = await get_leader_unit_id(ops_test, app)
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
     logger.info("Remove s3-credentials relation")
     # Remove relation
     await ops_test.model.applications[APP_NAME].destroy_relation(
-        "s3-credentials", f"{S3_INTEGRATOR_NAME}:s3-credentials"
+        "s3-credentials", f"{S3_INTEGRATOR}:s3-credentials"
     )
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME],
@@ -338,57 +399,20 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     )
 
     logger.info("Re-add s3-credentials relation")
-    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR_NAME)
+    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR)
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
-
-    leader_id = await get_leader_unit_id(ops_test, app)
-
-    action = await run_action(ops_test, leader_id, "create-backup")
-    logger.info(f"create-backup output: {action}")
-
-    assert action.status == "completed"
-
-    list_backups = await run_action(ops_test, leader_id, "list-backups", params={"output": "json"})
-    logger.info(f"list-backups output: {list_backups}")
-
-    # Expected format:
-    # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
-    backups = json.loads(list_backups.response["backups"])
-    assert list_backups.status == "completed"
-    assert len(backups.keys()) == int(action.response["backup-id"])
-    assert backups[action.response["backup-id"]]["state"] == "SUCCESS"
-
-    await http_request(
-        ops_test,
-        "DELETE",
-        f"https://{leader_unit_ip}:9200/{TEST_BACKUP_INDEX}",
-        app=app,
-    )
-
-    action = await run_action(
-        ops_test, leader_id, "restore", params={"backup-id": int(action.response["backup-id"])}
-    )
-    logger.info(f"restore-backup output: {action}")
-    assert action.status == "completed"
-
-    # index document
-    doc_id = TEST_BACKUP_DOC_ID
-    # check that the doc can be retrieved from any node
-    logger.info("Test backup index: searching")
-    for u_id, u_ip in units.items():
-        docs = await search(
-            ops_test,
-            app,
-            u_ip,
-            TEST_BACKUP_INDEX,
-            query={"query": {"term": {"_id": doc_id}}},
-            preference="_only_local",
-        )
-        # Validate the index and document are present
-        assert len(docs) == 1
-        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
+    # Backup should generate a new backup id
+    await test_backup(ops_test, c_writes, cloud_configs, cloud_credentials)
+    # There were only 2x backups per cloud
+    # Ensure the counts of backup ids are correct and the values are different
+    for cloud_name, config in cloud_configs.items():
+        assert len(backups_by_cloud[cloud_name]) == 2
+        assert backups_by_cloud[cloud_name][0] != backups_by_cloud[cloud_name][1]
+    # This is the same check as the previous restore action.
+    # Call the method again
+    await test_restore(ops_test, c_writes, cloud_configs, cloud_credentials)
