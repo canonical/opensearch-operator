@@ -282,7 +282,7 @@ async def test_backup(ops_test: OpsTest, c_writes, cloud_configs, cloud_credenti
 
         backup_id = int(action.response["backup-id"])
 
-        _wait_backup_finish(ops_test, leader_id)
+        await _wait_backup_finish(ops_test, leader_id)
 
         if cloud_name not in backups_by_cloud:
             backups_by_cloud[cloud_name] = []
@@ -334,11 +334,17 @@ async def test_restore(ops_test: OpsTest, c_writes, cloud_configs, cloud_credent
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
         # restore the latest backup
-        id = backups_by_cloud[cloud_name][-1]
-        logger.info(f"Restoring backup with id {id}")
-        action = await run_action(ops_test, leader_id, "restore", params={"backup-id": id})
-        logger.info(f"restore output: {action}")
-        assert action.status == "completed"
+        for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
+            with attempt:
+                id = backups_by_cloud[cloud_name][-1]
+                logger.info(f"Restoring backup with id {id}")
+                action = await run_action(ops_test, leader_id, "restore", params={"backup-id": id})
+                assert action.status == "completed"
+                logger.info(f"restore output: {action}")
+                await asyncio.sleep(20)
+                action = await run_action(ops_test, leader_id, "check-restore-status")
+                logger.info(f"check-restore-status output: {action}")
+                assert action.status == "completed"
 
         # ensure the correct inserted values exist
         logger.info(
@@ -377,6 +383,8 @@ async def test_restore_cluster_after_app_destroyed(
 
     Restores the backup and then checks if the same TEST_BACKUP_INDEX is there.
     """
+    await c_writes.stop()
+
     app = (await app_name(ops_test)) or APP_NAME
     await ops_test.model.remove_application(app, block_until_done=True)
     app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 2)
@@ -394,6 +402,8 @@ async def test_restore_cluster_after_app_destroyed(
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
+    # Restarting the writes now the cluster has been redeployed
+    c_writes.start()
     # This is the same check as the previous restore action.
     # Call the method again
     await test_restore(ops_test, c_writes, cloud_configs, cloud_credentials)
