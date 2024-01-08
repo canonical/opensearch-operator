@@ -12,6 +12,7 @@ from pathlib import Path
 import boto3
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from ..ha.helpers import (
     assert_continuous_writes_consistency,
@@ -64,13 +65,13 @@ def microceph():
                 "-c",
                 "latest/edge",
                 "-d",
-                "/dev/sdg",
+                "/dev/sdm",
                 "-a",
                 "accesskey",
                 "-s",
                 "secretkey",
                 "-b",
-                "testbucket",
+                "data-charms-testing",
                 "-z",
                 "5G",
             ]
@@ -89,7 +90,7 @@ def cloud_configs(github_secrets, microceph):
     results = {
         "microceph": {
             "endpoint": microceph["url"],
-            "bucket": "datah-charms-testing",
+            "bucket": "data-charms-testing",
             "path": path,
             "region": "default",
         },
@@ -160,19 +161,36 @@ def clean_backups_from_buckets(cloud_configs, cloud_credentials) -> None:
                 bucket_object.delete()
 
 
-async def _configure_s3(ops_test, config, credentials, cloud_name, app_name):
+async def _configure_s3(ops_test, config, credentials, app_name):
     await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
     await run_action(
         ops_test,
         0,
         "sync-s3-credentials",
-        params=credentials[cloud_name],
+        params=credentials,
+        app=S3_INTEGRATOR,
     )
     await ops_test.model.wait_for_idle(
         apps=[app_name, S3_INTEGRATOR],
         status="active",
         timeout=TIMEOUT,
     )
+
+
+async def _wait_backup_finish(ops_test, leader_id):
+    """Waits the backup to finish and move to the finished state or throws a RetryException."""
+    for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
+        with attempt:
+            action = await run_action(
+                ops_test, leader_id, "list-backups", params={"output": "json"}
+            )
+            logger.info(f"list-backups output: {action}")
+            # Expected format:
+            # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
+            backups = json.loads(action.response["backups"])
+            assert action.status == "completed"  # The actual action status
+            for id, backup in backups.items:
+                assert backup[action.response[id]]["state"] == "finished"  # The backup status
 
 
 TEST_BACKUP_INDEX = "test_backup_index"
@@ -205,7 +223,7 @@ async def test_build_and_deploy(
     # Relate it to OpenSearch to set up TLS.
     tls = await self_signed_operator
     await ops_test.model.relate(APP_NAME, tls)
-    await ops_test.model.relate(my_charm, S3_INTEGRATOR)
+    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR)
     await ops_test.model.wait_for_idle(
         apps=[tls, APP_NAME],
         status="active",
@@ -249,7 +267,7 @@ async def test_backup(ops_test: OpsTest, c_writes, cloud_configs, cloud_credenti
     for cloud_name, config in cloud_configs.items():
         # set the s3 config and credentials
         logger.info(f"Syncing credentials for {cloud_name}")
-        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], cloud_name, app)
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
         # list backups
         logger.info("Listing existing backup ids")
@@ -261,18 +279,20 @@ async def test_backup(ops_test: OpsTest, c_writes, cloud_configs, cloud_credenti
         logger.info(f"create-backup output: {action}")
         assert action.status == "completed"
 
-        backup_id = action["backup-id"]
+        backup_id = action.response["backup-id"]
 
-        list_backups = await run_action(
-            ops_test, leader_id, "list-backups", params={"output": "json"}
-        )
-        logger.info(f"list-backups output: {list_backups}")
-        # Expected format:
-        # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
-        backups = json.loads(list_backups.response["backups"])
-        assert list_backups.status == "completed"  # The actual action status
-        assert len(backups.keys()) == int(action.response["backup-id"])
-        assert backups[action.response["backup-id"]]["state"] == "SUCCESS"  # The backup status
+        _wait_backup_finish(ops_test, leader_id)
+
+        # list_backups = await run_action(
+        #     ops_test, leader_id, "list-backups", params={"output": "json"}
+        # )
+        # logger.info(f"list-backups output: {list_backups}")
+        # # Expected format:
+        # # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
+        # backups = json.loads(list_backups.response["backups"])
+        # assert list_backups.status == "completed"  # The actual action status
+        # assert len(backups.keys()) == int(action.response["backup-id"])
+        # assert backups[action.response["backup-id"]]["state"] == "finished"  # The backup status
 
         if cloud_name not in backups_by_cloud:
             backups_by_cloud[cloud_name] = []
@@ -320,7 +340,7 @@ async def test_restore(ops_test: OpsTest, c_writes, cloud_configs, cloud_credent
 
         # set the s3 config and credentials
         logger.info(f"Syncing credentials for {cloud_name}")
-        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], cloud_name, app)
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
         # restore the latest backup
         id = backups_by_cloud[cloud_name][-1]

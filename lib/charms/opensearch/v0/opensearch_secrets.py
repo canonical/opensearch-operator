@@ -74,7 +74,8 @@ class OpenSearchSecrets(Object, RelationDataStore):
         """
         secret = event.secret
         cb = self.secrets_to_cb.get(secret.label or secret.id)
-        if not cb:
+        scope = Scope.APP if Scope.APP in (secret.label or "") else Scope.UNIT
+        if not cb or (scope == Scope.APP and not self._charm.unit.is_leader()):
             secret.get_content(refresh=True)
             return
         # There is a callback function to update the secret
