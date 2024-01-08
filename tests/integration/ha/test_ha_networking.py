@@ -53,7 +53,7 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
     # Work-around while waiting for: gh#118 to merge
     import subprocess
 
-    subprocess.check_output(["sudo", "snap", "refresh", "lxd", "--channel=stable/stable"])
+    subprocess.check_output(["sudo", "snap", "refresh", "lxd", "--channel=latest/stable"])
     subprocess.check_output(["sudo", "snap", "list"])
 
     my_charm = await ops_test.build_charm(".")
