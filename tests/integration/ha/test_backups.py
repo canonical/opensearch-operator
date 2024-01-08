@@ -42,60 +42,51 @@ value_before_backup, value_after_backup = None, None
 @pytest.fixture(scope="session")
 def microceph():
     """Starts microceph radosgw."""
-    import os
     import subprocess
 
-    import requests
+    if "microceph" not in subprocess.check_output(["sudo", "snap", "list"]).decode():
+        import os
 
-    uceph = "/tmp/microceph.sh"
+        import requests
 
-    with open(uceph, "w") as f:
-        resp = requests.get(
-            "https://raw.githubusercontent.com/canonical/microceph-action/main/microceph.sh"
+        uceph = "/tmp/microceph.sh"
+
+        with open(uceph, "w") as f:
+            resp = requests.get(
+                "https://raw.githubusercontent.com/canonical/microceph-action/main/microceph.sh"
+            )
+            f.write(resp.content.decode())
+
+        os.chmod(uceph, 0o755)
+        subprocess.check_output(
+            [
+                uceph,
+                "-c",
+                "latest/edge",
+                "-d",
+                "/dev/sdg",
+                "-a",
+                "accesskey",
+                "-s",
+                "secretkey",
+                "-b",
+                "testbucket",
+                "-z",
+                "5G",
+            ]
         )
-        f.write(resp.content.decode())
-
-    os.chmod(uceph, 0o755)
-    subprocess.check_output(
-        [
-            uceph,
-            "-c",
-            "latest/edge",
-            "-d",
-            "/dev/sdi",
-            "-a",
-            "accesskey",
-            "-s",
-            "secretkey",
-            "-b",
-            "testbucket",
-            "-z",
-            "5G",
-        ]
-    )
+    # Now, return the configuration
     ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
     return {"url": f"http://{ip}", "access-key": "accesskey", "secret-key": "secretkey"}
 
 
 @pytest.fixture(scope="session")
-def cloud_configs(microceph):
+def cloud_configs(github_secrets, microceph):
     # Add UUID to path to avoid conflict with tests running in parallel (e.g. multiple Juju
     # versions on a PR, multiple PRs)
     path = f"opensearch/{uuid.uuid4()}"
 
-    return {
-        "aws": {
-            "endpoint": "https://s3.amazonaws.com",
-            "bucket": "data-charms-testing",
-            "path": path,
-            "region": "us-east-1",
-        },
-        "gcp": {
-            "endpoint": "https://storage.googleapis.com",
-            "bucket": "data-charms-testing",
-            "path": path,
-            "region": "",
-        },
+    results = {
         "microceph": {
             "endpoint": microceph["url"],
             "bucket": "datah-charms-testing",
@@ -103,25 +94,43 @@ def cloud_configs(microceph):
             "region": "default",
         },
     }
+    if "AWS_ACCESS_KEY" in github_secrets:
+        results["aws"] = {
+            "endpoint": "https://s3.amazonaws.com",
+            "bucket": "data-charms-testing",
+            "path": path,
+            "region": "us-east-1",
+        }
+    if "GCP_ACCESS_KEY" in github_secrets:
+        results["gcp"] = {
+            "endpoint": "https://storage.googleapis.com",
+            "bucket": "data-charms-testing",
+            "path": path,
+            "region": "",
+        }
+    return results
 
 
 @pytest.fixture(scope="session")
 def cloud_credentials(github_secrets, microceph) -> dict[str, dict[str, str]]:
     """Read cloud credentials."""
-    return {
-        "aws": {
-            "access-key": github_secrets["AWS_ACCESS_KEY"],
-            "secret-key": github_secrets["AWS_SECRET_KEY"],
-        },
-        "gcp": {
-            "access-key": github_secrets["GCP_ACCESS_KEY"],
-            "secret-key": github_secrets["GCP_SECRET_KEY"],
-        },
+    results = {
         "microceph": {
             "access-key": microceph["access-key"],
             "secret-key": microceph["secret-key"],
         },
     }
+    if "AWS_ACCESS_KEY" in github_secrets:
+        results["aws"] = {
+            "access-key": github_secrets["AWS_ACCESS_KEY"],
+            "secret-key": github_secrets["AWS_SECRET_KEY"],
+        }
+    if "GCP_ACCESS_KEY" in github_secrets:
+        results["gcp"] = {
+            "access-key": github_secrets["GCP_ACCESS_KEY"],
+            "secret-key": github_secrets["GCP_SECRET_KEY"],
+        }
+    return results
 
 
 @pytest.fixture(scope="session", autouse=True)
