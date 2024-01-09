@@ -151,7 +151,7 @@ def clean_backups_from_buckets(cloud_configs, cloud_credentials) -> None:
         s3 = session.resource("s3", endpoint_url=config["endpoint"])
         bucket = s3.Bucket(config["bucket"])
 
-        # GCS doesn't support batch delete operation, so delete the objects one by one
+        # GCS doesn't support batch delete operation, so delete the objects 1 by 1
         for f in backups_by_cloud[cloud_name]:
             backup_path = str(Path(config["path"]) / Path(str(f)))
             for bucket_object in bucket.objects.filter(Prefix=backup_path):
