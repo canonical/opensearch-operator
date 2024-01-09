@@ -149,6 +149,8 @@ class OpenSearchBaseCharm(CharmBase):
             metrics_endpoints=[],
             scrape_configs=self._scrape_config,
             refresh_events=[self.on.set_password_action, self.on.secret_changed],
+            metrics_rules_dir="./src/alert_rules/prometheus",
+            log_slots=["opensearch:logs"],
         )
 
         self.plugin_manager = OpenSearchPluginManager(self)
