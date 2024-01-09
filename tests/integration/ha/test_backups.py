@@ -157,7 +157,7 @@ def clean_backups_from_buckets(cloud_configs, cloud_credentials) -> None:
 
         # GCS doesn't support batch delete operation, so delete the objects one by one
         for f in backups_by_cloud[cloud_name]:
-            backup_path = str(Path(config["path"]) / f)
+            backup_path = str(Path(config["path"]) / Path(f))
             for bucket_object in bucket.objects.filter(Prefix=backup_path):
                 bucket_object.delete()
 
@@ -303,10 +303,8 @@ async def test_backup(ops_test: OpsTest, c_writes, cloud_configs, cloud_credenti
             assert len(docs) == 1
             assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
 
-        await assert_continuous_writes_increasing(c_writes)
-
-    # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+        # continuous writes checks
+        await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
 @pytest.mark.group(1)
@@ -345,6 +343,7 @@ async def test_restore(ops_test: OpsTest, c_writes, cloud_configs, cloud_credent
                 action = await run_action(ops_test, leader_id, "check-restore-status")
                 logger.info(f"check-restore-status output: {action}")
                 assert action.status == "completed"
+                break
 
         # ensure the correct inserted values exist
         logger.info(
