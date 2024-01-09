@@ -338,11 +338,6 @@ async def test_restore(ops_test: OpsTest, cloud_configs, cloud_credentials) -> N
                 assert action.response["state"] == "successful restore!"
                 break
 
-        # ensure the correct inserted values exist
-        logger.info(
-            "Ensuring that the pre-backup inserted value exists in database,"
-            " while post-backup inserted value does not"
-        )
         # index document
         doc_id = TEST_BACKUP_DOC_ID
         # check that the doc can be retrieved from any node
