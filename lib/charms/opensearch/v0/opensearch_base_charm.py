@@ -102,6 +102,7 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -149,8 +150,6 @@ class OpenSearchBaseCharm(CharmBase):
             metrics_endpoints=[],
             scrape_configs=self._scrape_config,
             refresh_events=[self.on.set_password_action, self.on.secret_changed],
-            metrics_rules_dir="./src/alert_rules/prometheus",
-            log_slots=["opensearch:logs"],
         )
 
         self.plugin_manager = OpenSearchPluginManager(self)
@@ -387,6 +386,17 @@ class OpenSearchBaseCharm(CharmBase):
         # acquire lock to ensure only 1 unit removed at a time
         self.ops_lock.acquire()
 
+        def _get_cluster_color():
+            # check cluster status
+            if not self.alt_hosts:
+                return
+            health_color = self.health.apply(wait_for_green_first=True, use_localhost=False)
+            if health_color == HealthColors.RED:
+                raise OpenSearchHAError(ClusterHealthRed)
+            elif health_color == HealthColors.UNKNOWN:
+                raise OpenSearchHAError(ClusterHealthUnknown)
+            return health_color
+
         # if the leader is departing, and this hook fails "leader elected" won"t trigger,
         # so we want to re-balance the node roles from here
         if self.unit.is_leader():
@@ -404,27 +414,26 @@ class OpenSearchBaseCharm(CharmBase):
                 # todo: remove this if snap storage reuse is solved.
                 self.peers_data.delete(Scope.APP, "security_index_initialised")
 
-        # we attempt to flush the translog to disk
-        if self.opensearch.is_node_up():
-            try:
-                self.opensearch.request("POST", "/_flush?wait_for_ongoing")
-            except OpenSearchHttpError:
-                # if it's a failed attempt we move on
-                pass
         try:
-            self._stop_opensearch()
+            for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
+                with attempt:
+                    _get_cluster_color()
+                    # we attempt to flush the translog to disk
+                    if (
+                        not self.opensearch.is_node_up()
+                        and not self.opensearch.get_service_status()
+                    ):
+                        # Nothing to do here
+                        break
+                    try:
+                        self.opensearch.request("POST", "/_flush?wait_for_ongoing")
+                    except OpenSearchHttpError:
+                        pass
+                    self._stop_opensearch()
 
-            # safeguards in case planned_units > 0
-            if self.app.planned_units() > 0:
-                # check cluster status
-                if self.alt_hosts:
-                    health_color = self.health.apply(
-                        wait_for_green_first=True, use_localhost=False
-                    )
-                    if health_color == HealthColors.RED:
-                        raise OpenSearchHAError(ClusterHealthRed)
-                else:
-                    raise OpenSearchHAError(ClusterHealthUnknown)
+                    # safeguards in case planned_units > 0
+                    if self.app.planned_units() > 0:
+                        _get_cluster_color()
         finally:
             # release lock
             self.ops_lock.release()
@@ -1080,9 +1089,12 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _scrape_config(self) -> List[Dict]:
         """Generates the scrape config as needed."""
-        app_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        app_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
         ca = app_secrets.get("ca-cert")
         pwd = self.secrets.get(Scope.APP, self.secrets.password_key(COSUser))
+        if not app_secrets or not ca or not pwd:
+            # Not yet ready
+            return []
         return [
             {
                 "metrics_path": "/_prometheus/metrics",

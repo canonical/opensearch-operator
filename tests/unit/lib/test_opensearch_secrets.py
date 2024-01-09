@@ -27,6 +27,8 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
     def setUp(self):
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
+        # self.charm._on_leader_elected = Mock()
+        self.harness.set_leader(is_leader=True)
         self.harness.begin()
 
         self.charm = self.harness.charm

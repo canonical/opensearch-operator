@@ -68,6 +68,13 @@ class OpenSearchSnap(OpenSearchDistribution):
             raise OpenSearchInstallError()
 
     @override
+    def get_service_status(self):
+        """Get the status of the opensearch service."""
+        return self._opensearch.present and self._opensearch.services.get(self.SERVICE_NAME).get(
+            "active"
+        )
+
+    @override
     def _start_service(self):
         """Start the snap exposed "daemon" service."""
         if not self._opensearch.present:

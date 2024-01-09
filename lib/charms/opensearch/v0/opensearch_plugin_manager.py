@@ -209,6 +209,20 @@ class OpenSearchPluginManager:
 
         return self._install_plugin(plugin)
 
+    def configure(self, plugin: OpenSearchPlugin) -> bool:
+        """Configures a given plugin without checks."""
+        try:
+            return self._apply_config(plugin.config())
+        except KeyError as e:
+            raise OpenSearchPluginMissingConfigError(e)
+
+    def disable(self, plugin: OpenSearchPlugin) -> bool:
+        """Disables a given plugin without checks."""
+        try:
+            return self._apply_config(plugin.disable())
+        except KeyError as e:
+            raise OpenSearchPluginMissingConfigError(e)
+
     def _configure_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """Gathers all the configuration changes needed and applies them."""
         try:
