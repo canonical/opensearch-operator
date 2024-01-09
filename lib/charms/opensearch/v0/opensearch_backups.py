@@ -551,7 +551,9 @@ class OpenSearchBackup(Object):
 
         try:
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
-            self.charm.plugin_manager._configure_if_needed(plugin)
+            if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
+                self.charm.plugin_manager.disable(plugin)
+            self.charm.plugin_manager.configure(plugin)
         except OpenSearchError as e:
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 self.charm.status.set(WaitingStatus("s3-changed: cluster not ready yet"))
