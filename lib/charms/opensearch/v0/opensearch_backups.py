@@ -63,8 +63,8 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginRelationClusterNotReadyError,
     PluginState,
 )
-from ops.charm import ActionEvent
-from ops.framework import EventBase, Object
+from ops.charm import ActionEvent, CharmEvents
+from ops.framework import EventBase, EventSource, Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
@@ -105,8 +105,16 @@ class OpenSearchBackupError(OpenSearchError):
     """Exception thrown when an opensearch backup-related action fails."""
 
 
+class OpenSearchRestoreError(OpenSearchError):
+    """Exception thrown when an opensearch restore-related action fails."""
+
+
 class OpenSearchListBackupError(OpenSearchBackupError):
     """Exception thrown when internal list backups call fails."""
+
+
+class OpenSearchRestoreCheckError(OpenSearchRestoreError):
+    """Exception thrown when restore status check errors."""
 
 
 class BackupServiceState(BaseStrEnum):
@@ -132,8 +140,38 @@ class BackupServiceState(BaseStrEnum):
     SNAPSHOT_FAILED_UNKNOWN = "snapshot failed for unknown reason"
 
 
+class RestoreClosedIndices(EventBase):
+    """Event raised after an async restore is successful. Contains the list of indices closed."""
+
+    def __init__(self, handle, closed_indices: Set[str]):
+        super().__init__(handle)
+        self.closed_indices = closed_indices
+
+    def snapshot(self) -> Dict[str, Any]:
+        """Used to serialize the closed indices list."""
+        snapshot = super().snapshot()
+        snapshot["closed_indices"] = ",".join(self.closed_indices)
+        return snapshot
+
+    def restore(self, snapshot: Dict[str, Any]):
+        """Used by the framework to deserialize the event from disk.
+
+        Not meant to be called by charm code.
+        """
+        super().restore(snapshot)
+        self.closed_indices = set(snapshot.get("closed_indices", "").split(","))
+
+
+class BackupRestoreEvents(CharmEvents):
+    """Event descriptor for events raised by Backup class."""
+
+    restore_closed_idx = EventSource(RestoreClosedIndices)
+
+
 class OpenSearchBackup(Object):
     """Implements backup relation and API management."""
+
+    on = BackupRestoreEvents()  # pyright: ignore [reportGeneralTypeIssues]
 
     def __init__(self, charm: Object):
         """Manager of OpenSearch backup relations."""
@@ -148,6 +186,47 @@ class OpenSearchBackup(Object):
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
+        self.framework.observe(
+            self.charm.on.check_restore_status_action, self._on_check_restore_status_action
+        )
+        # listen to restore closed indices event
+        self.framework.observe(self.on.restore_closed_idx, self._on_restore_closed_idx)
+
+    def _on_restore_closed_idx(self, event):
+        """Handles the restore closed indices event."""
+        if not self._check_if_restore_finished():
+            event.defer()
+            return
+
+        # Restore is finished, load the closed indices and open them up
+        to_open_idx = event.closed_indices
+        # Now, check which, if any, indices are still closed overall
+        currently_closed_idx = [
+            index
+            for index, state in ClusterState.indices(self.charm.opensearch).items()
+            if (state["status"] == "close")
+        ]
+        if len(currently_closed_idx) == 0:
+            # All indices are open, we can return
+            return
+        for idx in to_open_idx:
+            if idx in currently_closed_idx:
+                try:
+                    output = self._request("POST", f"{idx}/_open")
+                    assert output.get("acknowledged", False)
+                    assert output.get("shards_acknowledged", False)
+                    to_open_idx.remove(idx)
+                except Exception as e:
+                    logger.error(f"Failed to open index {idx} with {e}")
+                    raise OpenSearchRestoreError(e)
+            else:
+                # This is already opened, maybe by another unit
+                to_open_idx.remove(idx)
+        if len(to_open_idx) > 0:
+            logger.info("Some indices could not be opened: {to_open_idx}")
+            event.closed_indices = to_open_idx
+            event.defer()
+            return
 
     @property
     def _plugin_status(self):
@@ -277,22 +356,21 @@ class OpenSearchBackup(Object):
                         assert shards.get("successful", -1) == shards.get("total", 0)
                         break
                     if output.get("accepted", False) and not wait_for_completion:
+                        self.on.restore_closed_idx.emit(closed_indices=closed_idx)
                         break
                     raise Exception()
         except RetryError:
             logger.error("_restore_and_try_close_indices_if_needed: fail all retries")
         return output, closed_idx
 
-    def _on_check_restore_status_action(self, event: ActionEvent) -> None:
-        """Checks the status of indices that have been recovered from snapshot."""
+    def _check_if_restore_finished(self) -> bool:
         try:
             output = self._request(
                 "GET",
                 "_cat/recovery?format=json",
             )
         except Exception as e:
-            event.fail(f"Failed: {e}")
-            return
+            raise OpenSearchRestoreCheckError(f"Failed GET to /_cat/recovery with : {e}")
         indices_status = {}
         if isinstance(output, str):
             indices_status = json.loads(output)
@@ -301,17 +379,28 @@ class OpenSearchBackup(Object):
         elif isinstance(output, dict):
             indices_status = [output]
         else:
-            event.fail(f"Failed: unexpected output type: {type(output)}")
-            return
+            raise OpenSearchRestoreCheckError(
+                f"_cat/recovery returned {type(output)} instead of str, list or dict"
+            )
         if len([index["stage"] for index in indices_status if index["type"] == "snapshot"]) == 0:
-            event.fail("Failed: no indices have been recovered yet")
-            return
+            return True
         if all(
             [index["stage"] == "done" for index in indices_status if index["type"] == "snapshot"]
         ):
-            event.set_results({"state": "successful restore!"})
+            return True
+        return False
+
+    def _on_check_restore_status_action(self, event: ActionEvent) -> None:
+        """Checks the status of indices that have been recovered from snapshot."""
+        try:
+            if self._check_if_restore_finished():
+                event.set_results({"state": "successful restore!"})
+                return
+            event.set_results({"state": "restore in progress..."})
             return
-        event.set_results({"state": "restore in progress..."})
+        except Exception as e:
+            event.fail(f"Failed: {e}")
+            return
 
     def _on_restore_backup_action(self, event: ActionEvent) -> None:  # noqa: C901
         """Restores a backup to the current cluster."""
@@ -319,6 +408,9 @@ class OpenSearchBackup(Object):
             event.fail("Failed: backup service is not configured yet")
             return
 
+        if not self._check_if_restore_finished():
+            event.fail("Failed: previous restore is still in progress")
+            return
         backup_id = str(event.params.get("backup-id"))
 
         # Restore will try to close indices if there is a matching name.

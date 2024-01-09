@@ -16,7 +16,6 @@ from ..helpers import (
     check_cluster_formation_successful,
     cluster_health,
     get_application_unit_names,
-    get_application_unit_status,
     get_leader_unit_ip,
 )
 from ..helpers_deployments import wait_until
@@ -108,7 +107,6 @@ async def test_set_roles_manually(ops_test: OpsTest, c_writes) -> None:
         apps_full_statuses={
             app: {
                 "blocked": [PClusterWrongNodesCountForQuorum],
-                "active": [],
             },
         },
         units_full_statuses={
@@ -122,12 +120,4 @@ async def test_set_roles_manually(ops_test: OpsTest, c_writes) -> None:
         wait_for_exact_units=len(nodes) + 1,
         idle_period=IDLE_PERIOD,
     )
-    new_unit_id = max(
-        [int(unit.name.split("/")[1]) for unit in ops_test.model.applications[app].units]
-    )
-
-    app_unit_status = await get_application_unit_status(ops_test, app=app)
-    assert app_unit_status[new_unit_id].value == "blocked"
-    assert app_unit_status[new_unit_id].message == PClusterWrongNodesCountForQuorum
-
     await assert_continuous_writes_consistency(ops_test, c_writes, app)

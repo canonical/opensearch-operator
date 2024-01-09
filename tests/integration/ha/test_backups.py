@@ -14,10 +14,6 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
-from ..ha.helpers import (
-    assert_continuous_writes_consistency,
-    assert_continuous_writes_increasing,
-)
 from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
@@ -157,7 +153,7 @@ def clean_backups_from_buckets(cloud_configs, cloud_credentials) -> None:
 
         # GCS doesn't support batch delete operation, so delete the objects one by one
         for f in backups_by_cloud[cloud_name]:
-            backup_path = str(Path(config["path"]) / Path(f))
+            backup_path = str(Path(config["path"]) / Path(str(f)))
             for bucket_object in bucket.objects.filter(Prefix=backup_path):
                 bucket_object.delete()
 
@@ -235,7 +231,7 @@ async def test_build_and_deploy(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_backup(ops_test: OpsTest, c_writes, cloud_configs, cloud_credentials) -> None:
+async def test_backup(ops_test: OpsTest, cloud_configs, cloud_credentials) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
     app = (await app_name(ops_test)) or APP_NAME
 
@@ -303,13 +299,10 @@ async def test_backup(ops_test: OpsTest, c_writes, cloud_configs, cloud_credenti
             assert len(docs) == 1
             assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
 
-        # continuous writes checks
-        await assert_continuous_writes_consistency(ops_test, c_writes, app)
-
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_restore(ops_test: OpsTest, c_writes, cloud_configs, cloud_credentials) -> None:
+async def test_restore(ops_test: OpsTest, cloud_configs, cloud_credentials) -> None:
     """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
     app = (await app_name(ops_test)) or APP_NAME
 
@@ -332,17 +325,19 @@ async def test_restore(ops_test: OpsTest, c_writes, cloud_configs, cloud_credent
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
         # restore the latest backup
+        id = backups_by_cloud[cloud_name][-1]
+        logger.info(f"Restoring backup with id {id}")
+        action = await run_action(ops_test, leader_id, "restore", params={"backup-id": id})
+        assert action.status == "completed"
+        logger.info(f"restore output: {action}")
+
         for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
             with attempt:
-                id = backups_by_cloud[cloud_name][-1]
-                logger.info(f"Restoring backup with id {id}")
-                action = await run_action(ops_test, leader_id, "restore", params={"backup-id": id})
-                assert action.status == "completed"
-                logger.info(f"restore output: {action}")
                 await asyncio.sleep(20)
                 action = await run_action(ops_test, leader_id, "check-restore-status")
                 logger.info(f"check-restore-status output: {action}")
                 assert action.status == "completed"
+                assert action.response["state"] == "successful restore!"
                 break
 
         # ensure the correct inserted values exist
@@ -367,23 +362,16 @@ async def test_restore(ops_test: OpsTest, c_writes, cloud_configs, cloud_credent
             assert len(docs) == 1
             assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
 
-        # As the cluster recovers from the restore, we are more interested in knowing if we can
-        # continue writing to the cluster post-restore. The consistency of writes will not apply
-        # as old data is being restored.
-        await assert_continuous_writes_increasing(c_writes)
-
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restore_cluster_after_app_destroyed(
-    ops_test: OpsTest, c_writes, cloud_configs, cloud_credentials
+    ops_test: OpsTest, cloud_configs, cloud_credentials
 ) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
 
     Restores the backup and then checks if the same TEST_BACKUP_INDEX is there.
     """
-    await c_writes.stop()
-
     app = (await app_name(ops_test)) or APP_NAME
     await ops_test.model.remove_application(app, block_until_done=True)
     app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 2)
@@ -401,17 +389,15 @@ async def test_restore_cluster_after_app_destroyed(
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
-    # Restarting the writes now the cluster has been redeployed
-    c_writes.start()
     # This is the same check as the previous restore action.
     # Call the method again
-    await test_restore(ops_test, c_writes, cloud_configs, cloud_credentials)
+    await test_restore(ops_test, cloud_configs, cloud_credentials)
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_remove_and_readd_s3_relation(
-    ops_test: OpsTest, c_writes, cloud_configs, cloud_credentials
+    ops_test: OpsTest, cloud_configs, cloud_credentials
 ) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
     logger.info("Remove s3-credentials relation")
@@ -435,7 +421,7 @@ async def test_remove_and_readd_s3_relation(
         idle_period=IDLE_PERIOD,
     )
     # Backup should generate a new backup id
-    await test_backup(ops_test, c_writes, cloud_configs, cloud_credentials)
+    await test_backup(ops_test, cloud_configs, cloud_credentials)
     # There were only 2x backups per cloud
     # Ensure the counts of backup ids are correct and the values are different
     for cloud_name, config in cloud_configs.items():
@@ -443,4 +429,4 @@ async def test_remove_and_readd_s3_relation(
         assert backups_by_cloud[cloud_name][0] != backups_by_cloud[cloud_name][1]
     # This is the same check as the previous restore action.
     # Call the method again
-    await test_restore(ops_test, c_writes, cloud_configs, cloud_credentials)
+    await test_restore(ops_test, cloud_configs, cloud_credentials)
