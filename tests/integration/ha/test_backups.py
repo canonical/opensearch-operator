@@ -176,18 +176,21 @@ async def _configure_s3(ops_test, config, credentials, app_name):
 
 async def _wait_backup_finish(ops_test, leader_id):
     """Waits the backup to finish and move to the finished state or throws a RetryException."""
-    # for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
-    #     with attempt:
-    action = await run_action(ops_test, leader_id, "list-backups", params={"output": "json"})
-    logger.info(f"list-backups output: {action}")
-    # Expected format:
-    # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
-    backups = json.loads(action.response["backups"])
-    logger.info(backups)
-    assert action.status == "completed"  # The actual action status
-    for _, backup in backups.items():
-        logger.info(f"Backup is: {backup}")
-        assert backup["state"] == "SUCCESS"  # The backup status
+    for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
+        with attempt:
+            action = await run_action(
+                ops_test, leader_id, "list-backups", params={"output": "json"}
+            )
+            logger.info(f"list-backups output: {action}")
+            # Expected format:
+            # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
+            backups = json.loads(action.response["backups"])
+            logger.info(backups)
+            assert action.status == "completed"  # The actual action status
+            assert len(backups) > 0  # The number of backups
+            for _, backup in backups.items():
+                logger.info(f"Backup is: {backup}")
+                assert backup["state"] == "SUCCESS"  # The backup status
 
 
 TEST_BACKUP_INDEX = "test_backup_index"
@@ -266,16 +269,11 @@ async def test_backup(ops_test: OpsTest, cloud_configs, cloud_credentials) -> No
         logger.info(f"Syncing credentials for {cloud_name}")
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-        # list backups
-        logger.info("Listing existing backup ids")
-
         # create backup
         logger.info("Creating backup")
-
         action = await run_action(ops_test, leader_id, "create-backup")
         logger.info(f"create-backup output: {action}")
         assert action.status == "completed"
-
         backup_id = int(action.response["backup-id"])
 
         await _wait_backup_finish(ops_test, leader_id)
