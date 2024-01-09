@@ -318,7 +318,7 @@ async def test_restore(ops_test: OpsTest, cloud_configs, cloud_credentials) -> N
             app=app,
         )
 
-        # set the s3 config and credentials
+        # set the s3 credentials and config
         logger.info(f"Syncing credentials for {cloud_name}")
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
