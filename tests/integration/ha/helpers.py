@@ -17,16 +17,21 @@ from tenacity import (
     wait_random,
 )
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.helpers import (
+from ..helpers import (
     get_application_unit_ids,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
     http_request,
     juju_version_major,
 )
+from .continuous_writes import ContinuousWrites
 
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
+
+
+SECOND_APP_NAME = "second-opensearch"
+ORIGINAL_RESTART_DELAY = 20
+RESTART_DELAY = 360
 
 
 logger = logging.getLogger(__name__)
@@ -202,6 +207,16 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
             )
         )
     return result
+
+
+async def assert_continuous_writes_increasing(
+    c_writes: ContinuousWrites,
+) -> None:
+    """Asserts that the continuous writes are increasing."""
+    writes_count = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes_count, "Writes not continuing to DB"
 
 
 async def assert_continuous_writes_consistency(
