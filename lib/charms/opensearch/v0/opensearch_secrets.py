@@ -22,7 +22,7 @@ from charms.opensearch.v0.opensearch_internal_data import (
     Scope,
     SecretCache,
 )
-from ops import JujuVersion, Secret, SecretNotFoundError
+from ops import JujuVersion, Secret, SecretNotFoundError, model
 from ops.charm import SecretChangedEvent
 from ops.framework import Object
 from overrides import override
@@ -81,18 +81,32 @@ class OpenSearchSecrets(Object, RelationDataStore):
         # There is a callback function to update the secret
         old_val = secret.get_content()
         new_val = secret.peek_content()
-        if new_val == old_val:
-            # Nothing to do, these dictionaries have the same content
-            return
-        if cb(old_val, new_val):
-            # Remove the old value
-            secret.get_content(refresh=True)
-        else:
-            # The secret failed to be applied.
-            # Break this hook so it can be retried later on
-            raise SecretUpdateFailedError(
-                f"Failed to update {secret.label or secret.id} using callback function {cb}"
-            )
+        try:
+            if new_val == old_val:
+                # Nothing to do, these dictionaries have the same content
+                return
+            if cb(old_val, new_val):
+                # Remove the old value
+                secret.get_content(refresh=True)
+            else:
+                # The secret failed to be applied.
+                # Break this hook so it can be retried later on
+                raise SecretUpdateFailedError(
+                    f"Failed to update {secret.label or secret.id} using callback function {cb}"
+                )
+        except (ValueError, model.ModelError) as err:
+            # https://bugs.launchpad.net/juju/+bug/2042596
+            # Only triggered when 'refresh' is set
+            known_model_errors = [
+                "ERROR either URI or label should be used for getting an owned secret but not both",
+                "ERROR secret owner cannot use --refresh",
+            ]
+            if isinstance(err, model.ModelError) and not any(
+                msg in str(err) for msg in known_model_errors
+            ):
+                raise
+            # Due to: ValueError: Secret owner cannot use refresh=True
+            self._secret_content = self.meta.get_content()
 
     def _on_secret_changed(self, event: SecretChangedEvent):
         """Refresh secret and re-run corresponding actions if needed."""
