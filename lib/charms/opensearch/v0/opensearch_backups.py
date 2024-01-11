@@ -63,8 +63,8 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginRelationClusterNotReadyError,
     PluginState,
 )
-from ops.charm import ActionEvent, CharmEvents
-from ops.framework import EventBase, EventSource, Object
+from ops.charm import ActionEvent
+from ops.framework import EventBase, Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
@@ -140,38 +140,8 @@ class BackupServiceState(BaseStrEnum):
     SNAPSHOT_FAILED_UNKNOWN = "snapshot failed for unknown reason"
 
 
-class RestoreClosedIndices(EventBase):
-    """Event raised after an async restore is successful. Contains the list of indices closed."""
-
-    def __init__(self, handle, closed_indices: Set[str]):
-        super().__init__(handle)
-        self.closed_indices = closed_indices
-
-    def snapshot(self) -> Dict[str, Any]:
-        """Used to serialize the closed indices list."""
-        snapshot = super().snapshot()
-        snapshot["closed_indices"] = ",".join(self.closed_indices)
-        return snapshot
-
-    def restore(self, snapshot: Dict[str, Any]):
-        """Used by the framework to deserialize the event from disk.
-
-        Not meant to be called by charm code.
-        """
-        super().restore(snapshot)
-        self.closed_indices = set(snapshot.get("closed_indices", "").split(","))
-
-
-class BackupRestoreEvents(CharmEvents):
-    """Event descriptor for events raised by Backup class."""
-
-    restore_closed_idx = EventSource(RestoreClosedIndices)
-
-
 class OpenSearchBackup(Object):
     """Implements backup relation and API management."""
-
-    on = BackupRestoreEvents()  # pyright: ignore [reportGeneralTypeIssues]
 
     def __init__(self, charm: Object):
         """Manager of OpenSearch backup relations."""
@@ -189,44 +159,6 @@ class OpenSearchBackup(Object):
         self.framework.observe(
             self.charm.on.check_restore_status_action, self._on_check_restore_status_action
         )
-        # listen to restore closed indices event
-        self.framework.observe(self.on.restore_closed_idx, self._on_restore_closed_idx)
-
-    def _on_restore_closed_idx(self, event):
-        """Handles the restore closed indices event."""
-        if not self._check_if_restore_finished():
-            event.defer()
-            return
-
-        # Restore is finished, load the closed indices and open them up
-        to_open_idx = event.closed_indices
-        # Now, check which, if any, indices are still closed overall
-        currently_closed_idx = [
-            index
-            for index, state in ClusterState.indices(self.charm.opensearch).items()
-            if (state["status"] == "close")
-        ]
-        if len(currently_closed_idx) == 0:
-            # All indices are open, we can return
-            return
-        for idx in to_open_idx:
-            if idx in currently_closed_idx:
-                try:
-                    output = self._request("POST", f"{idx}/_open")
-                    assert output.get("acknowledged", False)
-                    assert output.get("shards_acknowledged", False)
-                    to_open_idx.remove(idx)
-                except Exception as e:
-                    logger.error(f"Failed to open index {idx} with {e}")
-                    raise OpenSearchRestoreError(e)
-            else:
-                # This is already opened, maybe by another unit
-                to_open_idx.remove(idx)
-        if len(to_open_idx) > 0:
-            logger.info("Some indices could not be opened: {to_open_idx}")
-            event.closed_indices = to_open_idx
-            event.defer()
-            return
 
     @property
     def _plugin_status(self):
