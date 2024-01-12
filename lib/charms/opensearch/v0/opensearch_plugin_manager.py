@@ -13,11 +13,11 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import Any, Dict, List, Optional
 
-from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchGCSBackupPlugin,
     OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
@@ -28,6 +28,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginMissingDepsError,
     OpenSearchPluginRelationClusterNotReadyError,
     OpenSearchPluginRemoveError,
+    OpenSearchS3BackupPlugin,
     PluginState,
 )
 
@@ -52,7 +53,12 @@ ConfigExposedPlugins = {
         "relation": None,
     },
     "repository-s3": {
-        "class": OpenSearchBackupPlugin,
+        "class": OpenSearchS3BackupPlugin,
+        "config": None,
+        "relation": "s3-credentials",
+    },
+    "repository-gcs": {
+        "class": OpenSearchGCSBackupPlugin,
         "config": None,
         "relation": "s3-credentials",
     },

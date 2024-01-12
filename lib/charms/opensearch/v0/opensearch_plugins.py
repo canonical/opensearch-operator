@@ -436,10 +436,12 @@ class OpenSearchKnn(OpenSearchPlugin):
         return "opensearch-knn"
 
 
-class OpenSearchBackupPlugin(OpenSearchPlugin):
+class OpenSearchS3BackupPlugin(OpenSearchPlugin):
     """Manage backup configurations.
 
-    This class must load the opensearch plugin: repository-s3 and configure it.
+    This class must load the opensearch plugin:
+    * If AWS or Ceph RadosGW: loads repository-s3
+    * If GCP: loads repository-gcs
     """
 
     @property
@@ -490,5 +492,70 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
             secret_entries_to_del=[
                 "s3.client.default.access_key",
                 "s3.client.default.secret_key",
+            ],
+        )
+
+
+class OpenSearchGCSBackupPlugin(OpenSearchPlugin):
+    """Manage backup configurations for GCS.
+
+    This class must load the opensearch plugin: repository-gcs and configure it.
+    """
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return "repository-gcs"
+
+    def config(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin addition.
+
+        Format:
+        OpenSearchPluginConfig(
+            config_entries_to_add = {...},
+            config_entries_to_del = [...]|{...},
+            secret_entries_to_add = {...},
+            secret_entries_to_del = [...]|{...},
+        )
+        """
+        import base64
+
+        account = " ".join(
+            base64.b64decode(
+                self._extra_config.get("service-account") or self._extra_config.get("secret-key")
+            )
+            .decode()
+            .rstrip()
+            .splitlines()
+        )
+        return OpenSearchPluginConfig(
+            # Try to remove the previous values
+            secret_entries_to_del=[
+                "gcs.client.default.credential_file",
+            ],
+            secret_entries_to_add={
+                # Remove any entries with None value
+                k: v
+                for k, v in {
+                    "gcs.client.default.credential_file": account,
+                }.items()
+                if v
+            },
+        )
+
+    def disable(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin removal.
+
+        Format:
+        OpenSearchPluginConfig(
+            config_entries_to_add = {...},
+            config_entries_to_del = [...]|{...},
+            secret_entries_to_add = {...},
+            secret_entries_to_del = [...]|{...},
+        )
+        """
+        return OpenSearchPluginConfig(
+            secret_entries_to_del=[
+                "gcs.client.default.credential_file",
             ],
         )

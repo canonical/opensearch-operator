@@ -10,7 +10,8 @@ from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.opensearch_backups import (
     S3_RELATION,
     S3_REPOSITORY,
-    OpenSearchBackupPlugin,
+    OpenSearchGCSBackupPlugin,
+    OpenSearchS3BackupPlugin,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginConfig, PluginState
@@ -35,7 +36,12 @@ class TestBackups(unittest.TestCase):
         # Override the ConfigExposedPlugins
         charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
             "repository-s3": {
-                "class": OpenSearchBackupPlugin,
+                "class": OpenSearchS3BackupPlugin,
+                "config": None,
+                "relation": "s3-credentials",
+            },
+            "repository-gcs": {
+                "class": OpenSearchGCSBackupPlugin,
                 "config": None,
                 "relation": "s3-credentials",
             },
@@ -67,7 +73,40 @@ class TestBackups(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup.apply_api_config_if_needed")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._apply_config")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
-    def test_00_update_relation_data(self, __, mock_apply_config, _, mock_status) -> None:
+    def test_01_gcs_update_relation_data(self, __, mock_apply_config, _, mock_status) -> None:
+        """Tests if new relation without data returns."""
+        mock_status.return_value = PluginState.INSTALLED
+        self.harness.update_relation_data(
+            self.s3_rel_id,
+            "s3-integrator",
+            {
+                "bucket": TEST_BUCKET_NAME,
+                "access-key": "ignore",
+                "secret-key": "ewogICJhIjogImIiLAp9Cg==",
+                "service-account": "ewogICJhIjogImIiLAp9Cg==",
+                "path": TEST_BASE_PATH,
+                "endpoint": "test.googleapis.com",
+                "region": "testing-region",
+                "storage-class": "storageclass",
+            },
+        )
+        assert (
+            mock_apply_config.call_args[0][0].__dict__
+            == OpenSearchPluginConfig(
+                secret_entries_to_del=[
+                    "gcs.client.default.credential_file",
+                ],
+                secret_entries_to_add={
+                    "gcs.client.default.credential_file": '{   "a": "b", }',
+                },
+            ).__dict__
+        )
+
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup.apply_api_config_if_needed")
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._apply_config")
+    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
+    def test_02_s3_update_relation_data(self, __, mock_apply_config, _, mock_status) -> None:
         """Tests if new relation without data returns."""
         mock_status.return_value = PluginState.INSTALLED
         self.harness.update_relation_data(
@@ -100,7 +139,42 @@ class TestBackups(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_01_apply_api_config_if_needed(self, mock_status, _, mock_request) -> None:
+    def test_10_gcs_apply_api_config_if_needed(self, mock_status, _, mock_request) -> None:
+        """Tests the application of post-restart steps."""
+        self.harness.update_relation_data(
+            self.s3_rel_id,
+            "s3-integrator",
+            {
+                "bucket": TEST_BUCKET_NAME,
+                "service-account": "ewogICJhIjogImIiLAp9Cg==",
+                "path": TEST_BASE_PATH,
+                "endpoint": "test.googleapis.com",
+                "region": "testing-region",
+                "storage-class": "storageclass",
+            },
+        )
+        mock_status.return_value = PluginState.ENABLED
+        self.charm.backup.apply_api_config_if_needed()
+        mock_request.assert_called_with(
+            "PUT",
+            f"_snapshot/{S3_REPOSITORY}",
+            payload={
+                "type": "gcs",
+                "settings": {
+                    "endpoint": "test.googleapis.com",
+                    "protocol": "https",
+                    "bucket": TEST_BUCKET_NAME,
+                    "base_path": TEST_BASE_PATH,
+                    "region": "testing-region",
+                    "storage_class": "storageclass",
+                },
+            },
+        )
+
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
+    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
+    def test_11_s3_apply_api_config_if_needed(self, mock_status, _, mock_request) -> None:
         """Tests the application of post-restart steps."""
         self.harness.update_relation_data(
             self.s3_rel_id,
@@ -133,7 +207,6 @@ class TestBackups(unittest.TestCase):
             },
         )
 
-    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup.apply_api_config_if_needed")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._apply_config")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._execute_s3_broken_calls")
@@ -143,7 +216,6 @@ class TestBackups(unittest.TestCase):
         mock_status,
         mock_execute_s3_broken_calls,
         mock_request,
-        mock_apply_config,
         _,
     ) -> None:
         """Tests broken relation unit."""
@@ -158,12 +230,3 @@ class TestBackups(unittest.TestCase):
         self.harness.remove_relation(self.s3_rel_id)
         mock_request.called_once_with("GET", "/_snapshot/_status")
         mock_execute_s3_broken_calls.assert_called_once()
-        assert (
-            mock_apply_config.call_args[0][0].__dict__
-            == OpenSearchPluginConfig(
-                secret_entries_to_del=[
-                    "s3.client.default.access_key",
-                    "s3.client.default.secret_key",
-                ],
-            ).__dict__
-        )
