@@ -518,6 +518,12 @@ class OpenSearchGCSBackupPlugin(OpenSearchPlugin):
             secret_entries_to_del = [...]|{...},
         )
         """
+        if not self._extra_config.get("service-account") and not self._extra_config.get(
+            "secret-key"
+        ):
+            raise OpenSearchPluginMissingConfigError(
+                "Missing GCS service-account or secret-key configuration"
+            )
         import base64
 
         account = " ".join(

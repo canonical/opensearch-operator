@@ -148,17 +148,32 @@ class OpenSearchPluginManager:
             # calls to the APIs of the cluster.
             raise OpenSearchPluginRelationClusterNotReadyError()
 
+        err_msgs = []
+
         restart_needed = False
         for plugin in self.plugins:
-            restart_needed = any(
-                [
-                    self._install_if_needed(plugin),
-                    self._configure_if_needed(plugin),
-                    self._disable_if_needed(plugin),
-                    self._remove_if_needed(plugin),
-                    restart_needed,
-                ]
-            )
+            # These are independent plugins.
+            # Any plugin that errors, if that is an OpenSearchPluginError, then
+            # it is an "expected" error, such as missing additional config; should
+            # not influence the execution of other plugins.
+            # Capture them and raise all of them at the end.
+            try:
+                restart_needed = any(
+                    [
+                        self._install_if_needed(plugin),
+                        self._configure_if_needed(plugin),
+                        self._disable_if_needed(plugin),
+                        self._remove_if_needed(plugin),
+                        restart_needed,
+                    ]
+                )
+            except OpenSearchPluginError as e:
+                # "Expected" error. Generate a warning and we will raise them at the end.
+                logger.warning(f"Failed to manage plugin {plugin.name}: {e}")
+                err_msgs.append(str(e))
+
+        if err_msgs:
+            raise OpenSearchPluginError("\n".join(err_msgs))
         return restart_needed
 
     def _install_plugin(self, plugin: OpenSearchPlugin) -> bool:
