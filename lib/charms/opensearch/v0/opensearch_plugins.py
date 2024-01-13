@@ -147,7 +147,7 @@ class MyPluginConfig(OpenSearchPluginConfig):
         ... key to remove from keystore as plugin gets disabled ...
     }
 
-    
+
 Also, define errors that may be thrown by the plugin, e.g.:
 class MyPluginError(OpenSearchPluginError):
     pass
@@ -327,6 +327,7 @@ class OpenSearchPluginError(OpenSearchError):
 
 class OpenSearchPluginConfigError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin configuration fails."""
+
     def __init__(self, msg, affected_configs, only_log=False):
         super().__init__(msg, only_log)
         self._affected_configs = affected_configs
@@ -335,7 +336,10 @@ class OpenSearchPluginConfigError(OpenSearchPluginError):
     def affected_configs(self) -> List[str]:
         """Returns the missing_configs property."""
         return self._affected_configs
+
+
 ###########################################################################################
+
 
 class OpenSearchPluginRelationClusterNotReadyError(OpenSearchPluginError):
     """Exception thrown when making API calls and cluster is not yet ready.
@@ -589,13 +593,13 @@ class OpenSearchGCSBackupPlugin(OpenSearchPlugin):
             )
         import base64
 
+        data, conf = (
+            (self._extra_config["service-account"], "service-account")
+            if self._extra_config.get("service-account")
+            else (self._extra_config.get("secret-key"), "secret-key")
+        )
         try:
-            data, conf = self._extra_config["service-account"], "service-account" \
-                if self._extra_config.get("service-account") \
-                else self._extra_config.get("secret-key"), "secret-key"
-            account = " ".join(
-                base64.b64decode(data).decode().rstrip().splitlines()
-            )
+            account = " ".join(base64.b64decode(data).decode().rstrip().splitlines())
         except Exception as e:
             # This error means that GCS is wrongly configured.
             # We should not fail the entire charm because of this error, but rather return
@@ -603,9 +607,7 @@ class OpenSearchGCSBackupPlugin(OpenSearchPlugin):
             # We may also be dealing with a non-base64 encoded secret-key coming from the relation
             # for another plugin, e.g. repository-s3.
             raise OpenSearchPluginWrongConfigFormatError(
-                str(e),
-                affected_configs=[conf],
-                only_log=True
+                str(e), affected_configs=[conf], only_log=True
             )
         return OpenSearchPluginConfig(
             # Try to remove the previous values
