@@ -173,7 +173,7 @@ class OpenSearchPluginManager:
                 if not e.only_log:
                     err_msgs.append(str(e))
 
-        if err_msgs:
+        if len(err_msgs) > 0:
             raise OpenSearchPluginError("\n".join(err_msgs))
         return restart_needed
 

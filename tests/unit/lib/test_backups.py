@@ -94,10 +94,10 @@ class TestBackups(unittest.TestCase):
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
                 secret_entries_to_del=[
-                    "gcs.client.default.credential_file",
+                    "gcs.client.default.credentials_file",
                 ],
                 secret_entries_to_add={
-                    "gcs.client.default.credential_file": '{   "a": "b", }',
+                    "gcs.client.default.credentials_file": '{   "a": "b", }',
                 },
             ).__dict__
         )

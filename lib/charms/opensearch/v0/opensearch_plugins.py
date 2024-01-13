@@ -528,6 +528,12 @@ class OpenSearchS3BackupPlugin(OpenSearchPlugin):
             secret_entries_to_del = [...]|{...},
         )
         """
+        if not self._extra_config.get("access-key") and not self._extra_config.get("secret-key"):
+            raise OpenSearchPluginMissingConfigError(
+                "Missing AWS access-key and secret-key configuration",
+                affected_configs=["access-key", "secret-key"],
+                only_log=True,
+            )
         return OpenSearchPluginConfig(
             # Try to remove the previous values
             secret_entries_to_del=[
@@ -592,6 +598,7 @@ class OpenSearchGCSBackupPlugin(OpenSearchPlugin):
             raise OpenSearchPluginMissingConfigError(
                 "Missing GCS service-account or secret-key configuration",
                 affected_configs=["service-account", "secret-key"],
+                only_log=True,
             )
         import base64
 
@@ -614,13 +621,13 @@ class OpenSearchGCSBackupPlugin(OpenSearchPlugin):
         return OpenSearchPluginConfig(
             # Try to remove the previous values
             secret_entries_to_del=[
-                "gcs.client.default.credential_file",
+                "gcs.client.default.credentials_file",
             ],
             secret_entries_to_add={
                 # Remove any entries with None value
                 k: v
                 for k, v in {
-                    "gcs.client.default.credential_file": account,
+                    "gcs.client.default.credentials_file": account,
                 }.items()
                 if v
             },
@@ -639,6 +646,6 @@ class OpenSearchGCSBackupPlugin(OpenSearchPlugin):
         """
         return OpenSearchPluginConfig(
             secret_entries_to_del=[
-                "gcs.client.default.credential_file",
+                "gcs.client.default.credentials_file",
             ],
         )
