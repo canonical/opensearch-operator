@@ -37,48 +37,6 @@ value_before_backup, value_after_backup = None, None
 
 
 @pytest.fixture(scope="session")
-def microceph():
-    """Starts microceph radosgw."""
-    import subprocess
-
-    if "microceph" not in subprocess.check_output(["sudo", "snap", "list"]).decode():
-        import os
-
-        import requests
-
-        uceph = "/tmp/microceph.sh"
-
-        with open(uceph, "w") as f:
-            resp = requests.get(
-                "https://raw.githubusercontent.com/canonical/microceph-action/main/microceph.sh"
-            )
-            f.write(resp.content.decode())
-
-        os.chmod(uceph, 0o755)
-        subprocess.check_output(
-            [
-                "sudo",
-                uceph,
-                "-c",
-                "latest/edge",
-                "-d",
-                "/dev/sdi",
-                "-a",
-                "accesskey",
-                "-s",
-                "secretkey",
-                "-b",
-                "data-charms-testing",
-                "-z",
-                "5G",
-            ]
-        )
-    # Now, return the configuration
-    ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
-    return {"url": f"http://{ip}", "access-key": "accesskey", "secret-key": "secretkey"}
-
-
-@pytest.fixture(scope="session")
 def cloud_configs(github_secrets, microceph):
     # Add UUID to path to avoid conflict with tests running in parallel (e.g. multiple Juju
     # versions on a PR, multiple PRs)
@@ -86,10 +44,10 @@ def cloud_configs(github_secrets, microceph):
 
     results = {
         "microceph": {
-            "endpoint": microceph["url"],
-            "bucket": "data-charms-testing",
+            "endpoint": microceph.endpoint,
+            "bucket": microceph.bucket,
             "path": path,
-            "region": "default",
+            "region": microceph.region,
         },
     }
     if "AWS_ACCESS_KEY" in github_secrets:
@@ -104,7 +62,7 @@ def cloud_configs(github_secrets, microceph):
             "endpoint": "https://storage.googleapis.com",
             "bucket": "data-charms-testing",
             "path": path,
-            "region": "",
+            "region": "us-west2",
         }
     return results
 
@@ -114,8 +72,8 @@ def cloud_credentials(github_secrets, microceph) -> dict[str, dict[str, str]]:
     """Read cloud credentials."""
     results = {
         "microceph": {
-            "access-key": microceph["access-key"],
-            "secret-key": microceph["secret-key"],
+            "access-key": microceph.access_key_id,
+            "secret-key": microceph.secret_access_key,
         },
     }
     if "AWS_ACCESS_KEY" in github_secrets:
@@ -123,10 +81,9 @@ def cloud_credentials(github_secrets, microceph) -> dict[str, dict[str, str]]:
             "access-key": github_secrets["AWS_ACCESS_KEY"],
             "secret-key": github_secrets["AWS_SECRET_KEY"],
         }
-    if "GCP_ACCESS_KEY" in github_secrets:
+    if "GCP_SERVICE_ACCOUNT" in github_secrets:
         results["gcp"] = {
-            "access-key": github_secrets["GCP_ACCESS_KEY"],
-            "secret-key": github_secrets["GCP_SECRET_KEY"],
+            "secret-key": github_secrets["GCP_SERVICE_ACCOUNT"],
         }
     return results
 
