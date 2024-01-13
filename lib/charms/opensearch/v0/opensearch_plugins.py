@@ -52,7 +52,6 @@ Relation management depends on each class. It is advised to also consider the on
 flag as well in this case.
 
 
-
 ========================================================================================
 
                              STEPS TO ADD A NEW PLUGIN
@@ -346,6 +345,9 @@ class OpenSearchPluginRelationClusterNotReadyError(OpenSearchPluginError):
 
     This exception in specific should be handled by classes managing the relations of plugins.
     """
+
+    def __init__(self, only_log=True):
+        super().__init__("The cluster is not ready yet.", only_log)
 
 
 class OpenSearchPluginMissingDepsError(OpenSearchPluginError):
