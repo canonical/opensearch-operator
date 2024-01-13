@@ -510,7 +510,6 @@ class OpenSearchBaseCharm(CharmBase):
                     callback_override="_restart_opensearch"
                 )
         except OpenSearchPluginError as e:
-            logger.exception(e)
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 logger.warn("Plugin management: cluster not ready yet at config changed")
             else:

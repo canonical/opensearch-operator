@@ -170,7 +170,8 @@ class OpenSearchPluginManager:
             except OpenSearchPluginError as e:
                 # "Expected" error. Generate a warning and we will raise them at the end.
                 logger.warning(f"Failed to manage plugin {plugin.name}: {e}")
-                err_msgs.append(str(e))
+                if not e.only_log:
+                    err_msgs.append(str(e))
 
         if err_msgs:
             raise OpenSearchPluginError("\n".join(err_msgs))
