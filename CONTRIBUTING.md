@@ -21,6 +21,16 @@ this operator.
 - Please help us out in ensuring easy to review branches by rebasing your pull request branch onto
   the `main` branch. This also avoids merge commits and creates a linear Git commit history.
 
+
+## Build charm
+
+Build the charm in this git repository using:
+
+```shell
+tox -e build
+```
+
+
 ## Developing
 
 You can create an environment for development with `tox`:
@@ -32,7 +42,7 @@ source venv/bin/activate
 
 ### Testing
 
-To run tests, run the following
+To run tests, first build the charm as described above, then run the following
 
 ```shell
 tox -e format       # update your code according to linting rules
@@ -85,15 +95,7 @@ For GCP only, some additional information is needed. The pytest script runs with
 Combine both if AWS and GCP are to be used.
 
 
-## Build charm
-
-Build the charm in this git repository using:
-
-```shell
-tox -e build
-```
-
-### Deploy
+## Deploy
 
 OpenSearch has a set of system requirements to correctly function, you can find the list [here](https://opensearch.org/docs/2.6/opensearch/install/important-settings/).
 To set those settings using cloudinit-userdata:
