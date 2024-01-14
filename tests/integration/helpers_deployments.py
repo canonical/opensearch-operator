@@ -166,6 +166,9 @@ def _is_every_condition_on_app_met(
     apps_full_statuses: Optional[Dict[str, Dict[str, List[str]]]],
 ) -> bool:
     """Evaluate if all the conditions of an application are met."""
+    global StatusCache
+    global StatusCacheTicksForValidUpdate
+
     if units:
         app_status = units[0].app_status
     else:
@@ -191,7 +194,7 @@ def _is_every_condition_on_app_met(
     return True
 
 
-def _is_every_condition_on_units_met(
+def _is_every_condition_on_units_met(  # noqa: C901
     model: str,
     app: str,
     units: List[Unit],
@@ -200,16 +203,22 @@ def _is_every_condition_on_units_met(
     idle_period: int,
 ) -> bool:
     """Evaluate if all the conditions of a unit are met."""
-    for unit in units:
-        if unit.agent_status.value != "idle":
-            return False
+    global StatusCache
+    global StatusCacheTicksForValidUpdate
 
+    for unit in units:
         if unit.workload_status.value == "error":
             logger.error(f"Error in: {unit.name}")
             _dump_juju_logs(model, unit.name)
 
         if units_statuses:
             if unit.workload_status.value not in units_statuses:
+                logger.info(
+                    f"Expected for {unit.name} -- statuses: {units_statuses}, got instead: {unit.workload_status}"
+                )
+                if unit.name in StatusCache:
+                    # logical error, clean current status
+                    del StatusCache[unit.name]
                 return False
         else:
             any_match = False
@@ -219,9 +228,36 @@ def _is_every_condition_on_units_met(
                     and unit.workload_status.message in (messages or ["", None])
                 )
             if not any_match:
+                logger.info(
+                    f"Expected for {unit.name} -- {units_full_statuses}, got instead: {unit.workload_status}"
+                )
+                if unit.name in StatusCache:
+                    # logical error, clean current status
+                    del StatusCache[unit.name]
                 return False
 
-        if unit.agent_status.since + timedelta(seconds=idle_period) > datetime.now():
+        if unit.name not in StatusCache:
+            # The StatusCache is empty for this unit, set it
+            StatusCache[unit.name] = {"count": 1, "data": unit}
+        elif StatusCache[unit.name]["data"].workload_status.since == unit.workload_status.since:
+            # StatusCache is not empty, but we are still in the same update-status-hook-interval
+            StatusCache[unit.name]["count"] += 1
+        elif (
+            StatusCache[unit.name]["count"] < StatusCacheTicksForValidUpdate
+            and StatusCacheTicksForValidUpdate > 0
+        ):
+            # StatusCache is not empty and we are in different update-status-hook-interval
+            # In this case, we've checked for how many ticks have we waited.
+            # If we haven't waited enough, we clean the StatusCache and set it again.
+            # Now, we expect we will have count > StatusCacheTicksForValidUpdate as we are starting
+            # with a fresh value.
+            StatusCache[unit.name] = {"count": 1, "data": unit}
+        # Do the actual comparison
+        if (
+            StatusCache[unit.name]["data"].workload_status.since + timedelta(seconds=idle_period)
+            > datetime.now() and
+            StatusCache[unit.name]["data"].agent_status.value == "idle"
+        ):
             return False
 
     return True
@@ -275,6 +311,30 @@ async def _is_every_condition_met(
     return True
 
 
+def _convert_update_stat_interval(v: str) -> int:
+    """Convert update-status-hook-interval to int."""
+    import re
+
+    res = 0
+
+    for value in re.findall(r"[0-9]+[smhdMY]*", v):
+        if value.isdigit() or value.endswith("s"):
+            res += int(value[:-1])
+        if value.endswith("m"):
+            res += int(value[:-1]) * 60
+        if value.endswith("h"):
+            res += int(value[:-1]) * 60 * 60
+        if value.endswith("d"):
+            res += int(value[:-1]) * 60 * 60 * 24
+        if value.endswith("M"):
+            res += int(value[:-1]) * 60 * 60 * 24 * 30
+        if value.endswith("Y"):
+            res += int(value[:-1]) * 60 * 60 * 24 * 365
+    if not re.findall(r"[0-9]+[smhd]*", v):
+        raise ValueError(f"Invalid value for update-status-hook-interval: {v}")
+    return res
+
+
 async def wait_until(  # noqa: C901
     ops_test: OpsTest,
     apps: List[str],
@@ -319,6 +379,35 @@ async def wait_until(  # noqa: C901
         for app in apps:
             if app not in wait_for_exact_units:
                 wait_for_exact_units[app] = 1
+
+    # If the update-status-hook-interval is not set, then we represent it as a value greater
+    # than the timeout.
+    update_status_time = (await ops_test.model.get_config()).get(
+        "update-status-hook-interval", timeout + 10
+    )
+    if not isinstance(update_status_time, int):
+        logger.info(f"Update status time: {update_status_time}")
+        update_status_time = _convert_update_stat_interval(update_status_time.value)
+    # We want to know how many ticks should we wait before we consider the current status is
+    # persistent. That will be given by the update-status-hook-interval divided divided by the
+    # wait time.
+    wait_time = 10
+    # Status cache to avoid the "since" value getting updated at each update-status
+    global StatusCache
+    # Represents how many ticks we need to have so we consider the current status is persistent.
+    global StatusCacheTicksForValidUpdate
+    StatusCache = {}
+
+    StatusCacheTicksForValidUpdate = update_status_time // wait_time
+    if StatusCacheTicksForValidUpdate < 3:
+        # There is just too often update statuses. In this case, always assume the status is
+        # persistent in the cache.
+        StatusCacheTicksForValidUpdate = 0
+    elif StatusCacheTicksForValidUpdate <= 6:
+        StatusCacheTicksForValidUpdate = 2
+    else:
+        StatusCacheTicksForValidUpdate //= 2
+
     try:
         logger.info("\n\n\n")
         logger.info(
@@ -326,21 +415,35 @@ async def wait_until(  # noqa: C901
                 f"juju status --model {ops_test.model.info.name}", shell=True
             ).decode("utf-8")
         )
-        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
+        logger.info(f"Calculated {StatusCacheTicksForValidUpdate} ticks to be considered")
+        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(wait_time)):
             with attempt:
                 logger.info(f"\n\n\n{now()} -- Waiting for model...")
-                if await _is_every_condition_met(
-                    ops_test=ops_test,
-                    apps=apps,
-                    wait_for_exact_units=wait_for_exact_units,
-                    apps_statuses=apps_statuses,
-                    apps_full_statuses=apps_full_statuses,
-                    units_statuses=units_statuses,
-                    units_full_statuses=units_full_statuses,
-                    idle_period=idle_period,
-                ):
-                    logger.info(f"{now()} -- Waiting for model: complete.\n\n\n")
-                    return
+                try:
+                    if await _is_every_condition_met(
+                        ops_test=ops_test,
+                        apps=apps,
+                        wait_for_exact_units=wait_for_exact_units,
+                        apps_statuses=apps_statuses,
+                        apps_full_statuses=apps_full_statuses,
+                        units_statuses=units_statuses,
+                        units_full_statuses=units_full_statuses,
+                        idle_period=idle_period,
+                    ):
+                        logger.info(f"{now()} -- Waiting for model: complete.\n\n\n")
+                        return
+                except Exception as e:
+                    logger.warn(f"Exception: {e} during _is_every_condition_met")
+                logger.info(
+                    "StatusCache:"
+                    + "\n".join(
+                        [
+                            f"{k}: count:{v['count']} , {v['data'].__dict__}"
+                            for k, v in StatusCache.items()
+                        ]
+                        or [" EMPTY"]
+                    )
+                )
                 raise Exception
     except RetryError:
         logger.error("wait_until -- Timed out!\n\n\n")
@@ -351,3 +454,6 @@ async def wait_until(  # noqa: C901
         )
         _dump_juju_logs(model=ops_test.model.info.name, lines=3000)
         raise
+    finally:
+        # Clean the StatusCache data, as we do not need it anymore.
+        StatusCache = {}
