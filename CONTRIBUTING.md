@@ -38,32 +38,59 @@ To run tests, run the following
 tox -e format       # update your code according to linting rules
 tox -e lint         # code style
 tox -e unit         # unit tests
-tox -m integration  # integration tests, running on juju 2.
+tox -m integration  # integration tests, running on juju 3.
 tox                 # runs 'format', 'lint', and 'unit' environments
 ```
 
-Integration tests can be run for separate areas of functionality:
+Integration tests can be run for separate files:
 
 ```shell
-tox -e charm-integration      # basic charm integration tests
-tox -e tls-integration        # TLS-specific integration tests
-tox -e client-integration     # Validates the `opensearch-client` integration
-tox -e ha-integration         # HA tests
-tox -e h-scaling-integration  # HA tests specific to horizontal scaling
+tox -e integration -- tests/integration/ha/test_storage.py
 ```
 
-If you're running tests on juju 3, run the following command to change libjuju to the correct version:
+To run the test against Juju 2:
+```shell
+LIBJUJU_VERSION_SPECIFIER=2.9.35 tox -e integration -- tests/integration/ha/test_storage.py
+```
+
+
+#### Testing Backups
+
+Backup testing installs microceph and, optionally, can run on AWS and GCP object stores.
+For that, pass the access / secret / service account information as env. variables.
+
+To run the test only against microceph:
 
 ```shell
-export LIBJUJU_VERSION_SPECIFIER="==3.2.0.1"
+tox -e integration -- tests/integration/ha/test_backups.py  # test backup service
 ```
+
+And against public clouds + microceph:
+
+```shell
+SECRETS_FROM_GITHUB=$(cat <path-to>/credentials.json) tox -e integration -- tests/integration/ha/test_backups.py
+```
+
+Where, for AWS only, `credentials.json` should look like (the `IGNORE` is necessary to remove GCP):
+```json
+{ "AWS_ACCESS_KEY": ..., "AWS_SECRET_KEY": ..., "GCP_SECRET_KEY": "IGNORE" }
+```
+
+For GCP only, some additional information is needed. The pytest script runs with `boto3` and needs `GCP_{ACCESS,SECRET}_KEY` to clean up the object store; whereas OpenSearch uses the `service account` json file.
+
+```json
+{ "AWS_SECRET_KEY": "IGNORE", "GCP_ACCESS_KEY": ..., "GCP_SECRET_KEY": ..., "GCP_SERVICE_ACCOUNT": ... }
+```
+
+Combine both if AWS and GCP are to be used.
+
 
 ## Build charm
 
 Build the charm in this git repository using:
 
 ```shell
-charmcraft pack
+tox -e build
 ```
 
 ### Deploy

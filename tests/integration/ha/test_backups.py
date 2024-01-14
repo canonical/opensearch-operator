@@ -83,15 +83,22 @@ def cloud_credentials(github_secrets, microceph) -> dict[str, dict[str, str]]:
         }
     if "GCP_SERVICE_ACCOUNT" in github_secrets:
         results["gcp"] = {
+            "access-key": "IGNORE_IT",
             "secret-key": github_secrets["GCP_SERVICE_ACCOUNT"],
         }
     return results
 
 
 @pytest.fixture(scope="session", autouse=True)
-def clean_backups_from_buckets(cloud_configs, cloud_credentials) -> None:
+def clean_backups_from_buckets(github_secrets, cloud_configs, cloud_credentials) -> None:
     """Teardown to clean up created backups from clouds."""
     yield
+
+    # TODO: remove this once s3-integrator adds support for SERVICE_ACCOUNT
+    creds = cloud_credentials.copy()
+    if "gcp" in creds:
+        creds["gcp"]["access-key"] = github_secrets["GCP_ACCESS_KEY"]
+        creds["gcp"]["secret-key"] = github_secrets["GCP_SECRET_KEY"]
 
     logger.info("Cleaning backups from cloud buckets")
     for cloud_name, config in cloud_configs.items():
@@ -101,8 +108,8 @@ def clean_backups_from_buckets(cloud_configs, cloud_credentials) -> None:
             continue
 
         session = boto3.session.Session(
-            aws_access_key_id=cloud_credentials[cloud_name]["access-key"],
-            aws_secret_access_key=cloud_credentials[cloud_name]["secret-key"],
+            aws_access_key_id=creds[cloud_name]["access-key"],
+            aws_secret_access_key=creds[cloud_name]["secret-key"],
             region_name=config["region"],
         )
         s3 = session.resource("s3", endpoint_url=config["endpoint"])
@@ -160,9 +167,7 @@ TEST_BACKUP_DOC_ID = 10
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(
-    ops_test: OpsTest, self_signed_operator
-) -> None:  # , cloud_credentials) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
     if await app_name(ops_test):
         return
