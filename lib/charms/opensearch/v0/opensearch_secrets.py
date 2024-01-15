@@ -41,12 +41,6 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-class SecretUpdateFailedError(Exception):
-    """The exception to be thrown when secret-changed fails to update its secret."""
-
-    pass
-
-
 class OpenSearchSecrets(Object, RelationDataStore):
     """Encapsulating Juju3 secrets handling."""
 
