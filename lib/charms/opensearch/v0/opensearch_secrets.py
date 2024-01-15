@@ -52,23 +52,18 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
     LABEL_SEPARATOR = ":"
 
-    def __init__(self, charm, peer_relation: str, secrets_to_cb: Dict[str, any] = {}):
+    def __init__(self, charm, peer_relation: str):
         Object.__init__(self, charm, peer_relation)
         RelationDataStore.__init__(self, charm, peer_relation)
 
         self.cached_secrets = SecretCache()
-        self.secrets_to_cb = secrets_to_cb
 
         self.framework.observe(self._charm.on.secret_changed, self._on_secret_changed)
 
-    def _update_secret_value(self, event: SecretChangedEvent):
-        """Updates the secret value following newer 3.1.7 behavior."""
-        secret = event.secret
-        secret.get_content(refresh=True)
-
     def _on_secret_changed(self, event: SecretChangedEvent):
         """Refresh secret and re-run corresponding actions if needed."""
-        self._update_secret_value(event)
+        secret = event.secret
+        secret.get_content(refresh=True)
 
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
