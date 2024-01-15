@@ -22,7 +22,7 @@ from charms.opensearch.v0.opensearch_internal_data import (
     Scope,
     SecretCache,
 )
-from ops import JujuVersion, Secret, SecretNotFoundError
+from ops import JujuVersion, Secret, SecretNotFoundError, model
 from ops.charm import SecretChangedEvent
 from ops.framework import Object
 from overrides import override
@@ -41,21 +41,77 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
+class SecretUpdateFailedError(Exception):
+    """The exception to be thrown when secret-changed fails to update its secret."""
+
+    pass
+
+
 class OpenSearchSecrets(Object, RelationDataStore):
     """Encapsulating Juju3 secrets handling."""
 
     LABEL_SEPARATOR = ":"
 
-    def __init__(self, charm, peer_relation: str):
+    def __init__(self, charm, peer_relation: str, secrets_to_cb: Dict[str, any] = {}):
         Object.__init__(self, charm, peer_relation)
         RelationDataStore.__init__(self, charm, peer_relation)
 
         self.cached_secrets = SecretCache()
+        self.secrets_to_cb = secrets_to_cb
 
         self.framework.observe(self._charm.on.secret_changed, self._on_secret_changed)
 
+    def _update_secret_value(self, event: SecretChangedEvent):
+        """Updates the secret value.
+
+        This method manages the secret update: compare the old value and
+        the new one (via peek=True). If they are different, then use the callback if
+        available and refreshes the secret. If the callback fails, then it raises an
+        exception to break the hook.
+
+        If the secret has a callback function, it will be called before the secret
+        is finally refreshed.
+        """
+        secret = event.secret
+        cb = self.secrets_to_cb.get(secret.label or secret.id)
+        scope = Scope.APP if Scope.APP in (secret.label or "") else Scope.UNIT
+        if not cb or (scope == Scope.APP and not self._charm.unit.is_leader()):
+            secret.get_content(refresh=True)
+            return
+        # There is a callback function to update the secret
+        old_val = secret.get_content()
+        new_val = secret.peek_content()
+        try:
+            if new_val == old_val:
+                # Nothing to do, these dictionaries have the same content
+                return
+            if cb(old_val, new_val):
+                # Remove the old value
+                secret.get_content(refresh=True)
+            else:
+                # The secret failed to be applied.
+                # Break this hook so it can be retried later on
+                raise SecretUpdateFailedError(
+                    f"Failed to update {secret.label or secret.id} using callback function {cb}"
+                )
+        except (ValueError, model.ModelError) as err:
+            # https://bugs.launchpad.net/juju/+bug/2042596
+            # Only triggered when 'refresh' is set
+            known_model_errors = [
+                "ERROR either URI or label should be used for getting an owned secret but not both",
+                "ERROR secret owner cannot use --refresh",
+            ]
+            if isinstance(err, model.ModelError) and not any(
+                msg in str(err) for msg in known_model_errors
+            ):
+                raise
+            # Due to: ValueError: Secret owner cannot use refresh=True
+            self._secret_content = self.meta.get_content()
+
     def _on_secret_changed(self, event: SecretChangedEvent):
         """Refresh secret and re-run corresponding actions if needed."""
+        self._update_secret_value(event)
+
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
             return
