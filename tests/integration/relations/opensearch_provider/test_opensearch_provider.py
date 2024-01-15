@@ -89,8 +89,6 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
         timeout=1600,
         status="active",
     )
-    # Resetting to 5m, as idle_period in the tests are 70-75s, which fits within this interval
-    await ops_test.model.set_config({"update-status-hook-interval": "5m"})
 
 
 @pytest.mark.abort_on_fail
