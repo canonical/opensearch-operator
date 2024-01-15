@@ -56,6 +56,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
     def _on_secret_changed(self, event: SecretChangedEvent):
         """Refresh secret and re-run corresponding actions if needed."""
+        secret = event.secret
+        secret.get_content(refresh=True)
+
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
             return
