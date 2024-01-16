@@ -42,6 +42,14 @@ get-password:
 create-backup:
   description: Create a database backup.
     S3 credentials are retrieved from a relation with the S3 integrator charm.
+  params:
+    wait-for-completion:
+      type: boolean
+      default: false
+      description: |
+        Wait for the backup to complete before returning.
+        If not waiting for completion, the  status can be retrieved with list-backups action.
+
 
 list-backups:
   description: List available backup_ids in the S3 bucket and path provided by the S3 integrator charm.
@@ -60,6 +68,15 @@ restore:
     backup-id:
       type: integer
       description: |
-        A backup-id to identify the backup to restore. Format: <backup-id, int>
+        A backup-id to identify the backup to restore. Format: backup-id=<integer>.
+    wait-for-completion:
+      type: boolean
+      default: false
+      description: |
+        Wait for the restore to complete before returning.
+        If not waiting for completion, the restore status can be retrieved with check-restore-status action.
   required:
     - backup-id
+
+check-restore-status:
+  description: Check the progress of current restore.
