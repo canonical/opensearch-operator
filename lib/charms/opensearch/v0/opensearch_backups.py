@@ -293,7 +293,7 @@ class OpenSearchBackup(Object):
                         break
                     elif output.get("accepted", False):
                         rel = self.model.get_relation(PeerRelationName)
-                        if rel:
+                        if rel and closed_idx:
                             rel.data[self.charm.app]["restore_in_progress"] = ",".join(closed_idx)
                             break
                         else:
@@ -325,17 +325,16 @@ class OpenSearchBackup(Object):
             return True
         # Check if all indices are open again
         try:
-            output = self._request(
+            indices_status = self._request(
                 "GET",
-                "/recovery?human",
+                "/_recovery?human",
             )
         except (ValueError, OpenSearchHttpError, requests.HTTPError) as e:
-            raise OpenSearchRestoreCheckError(f"Failed GET to /recovery with : {e}")
-        indices_status = {}
-        if isinstance(output, str):
-            indices_status = json.loads(output)
-        elif isinstance(output, list) or isinstance(output, set):
-            raise ValueError("Unexpected output from /recovery: type list received")
+            raise OpenSearchRestoreCheckError(f"Failed GET to /_recovery with : {e}")
+        if isinstance(indices_status, str):
+            indices_status = json.loads(indices_status)
+        elif isinstance(indices_status, list) or isinstance(indices_status, set):
+            raise ValueError("Unexpected output from /_recovery: type list received")
 
         indices_not_found = closed_idx.copy()
         for idx, info in indices_status.items():
@@ -346,7 +345,9 @@ class OpenSearchBackup(Object):
             # Now, check the status of each shard
             done = True
             for shard in info["shards"]:
-                if not (shard["stage"] == "DONE" and shard["type"] == "SNAPSHOT"):
+                if shard["type"] != "SNAPSHOT":
+                    continue
+                if shard["stage"] != "DONE":
                     done = False
                     break
             if done:
@@ -356,8 +357,12 @@ class OpenSearchBackup(Object):
             raise OpenSearchRestoreError(
                 f"Failed to find indices {indices_not_found} in /recovery"
             )
-        if not closed_idx and self.charm.unit.is_leader():
-            rel.data[self.charm.app]["restore_in_progress"] = ""
+        if (
+            not closed_idx
+            and self.charm.unit.is_leader()
+            and "restore_in_progress" in rel.data[self.charm.app]
+        ):
+            del rel.data[self.charm.app]["restore_in_progress"]
             return True
         return False
 
@@ -538,8 +543,11 @@ class OpenSearchBackup(Object):
                 return True
             else:
                 # Clean up status
-                if self.charm.unit.is_leader():
-                    rel.data[self.charm.app]["backup_in_progress"] = ""
+                if (
+                    self.charm.unit.is_leader()
+                    and "backup_in_progress" in rel.data[self.charm.app]
+                ):
+                    del rel.data[self.charm.app]["backup_in_progress"]
         backup_id_in_progress = self._query_backup_status(backup_id) in [
             BackupServiceState.SNAPSHOT_IN_PROGRESS,
         ]
