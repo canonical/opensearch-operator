@@ -307,8 +307,12 @@ class OpenSearchBackup(Object):
 
     def _on_update_status(self, _):
         """Checks if the backup and/or restores are finished."""
-        logger.info(f"Checking if backup in progress: {self.is_backup_in_progress()}")
-        logger.info(f"Checking if restore in progress: {self._check_if_restore_finished()}")
+        status = self._check_repo_status()
+        if status == BackupServiceState.SUCCESS:
+            # There is a repo setup, check if we have any backup/restore registered in the
+            # peer relation's app databag
+            logger.info(f"Checking if backup in progress: {self.is_backup_in_progress()}")
+            logger.info(f"Checking if restore in progress: {self._check_if_restore_finished()}")
 
     def _check_if_restore_finished(self) -> bool:  # noqa: C901
         rel = self.model.get_relation(PeerRelationName)
@@ -316,8 +320,8 @@ class OpenSearchBackup(Object):
             # Running on a single unit, wait_for_completion=false not supported
             return True
         closed_idx = set(rel.data[self.charm.app].get("restore_in_progress", "").split(",")).copy()
-        # quick win:
-        if not closed_idx:
+        if not closed_idx or closed_idx == {""}:
+            # Dealing with an empty set
             return True
         # Check if all indices are open again
         try:
@@ -441,7 +445,7 @@ class OpenSearchBackup(Object):
                 + self.get_service_status(
                     self._request(
                         "PUT",
-                        f"_snapshot/{S3_REPOSITORY}/{new_backup_id}?wait_for_completion={wait_for_completion}",
+                        f"_snapshot/{S3_REPOSITORY}/{new_backup_id}?wait_for_completion={str(wait_for_completion).lower()}",
                         payload={
                             "indices": "*",
                             "ignore_unavailable": False,
