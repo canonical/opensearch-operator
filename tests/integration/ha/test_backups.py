@@ -129,8 +129,9 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
-async def _restart_writes_and_assert(c_writes: ContinuousWrites) -> None:
-    await c_writes.start()
+async def _restart_writes_and_assert(ops_test, app) -> None:
+    c_writes = ContinuousWrites(ops_test, app)
+    await c_writes.start(repl_on_all_nodes=True)
     writes = await c_writes.count()
     time.sleep(20)
     more_writes = await c_writes.count()
@@ -379,7 +380,7 @@ async def test_restore_cluster_after_app_destroyed(
     # This is the same check as the previous restore action.
     # Call the method again
     await _restore_cluster(ops_test)
-    await _restart_writes_and_assert(c_writes)
+    await _restart_writes_and_assert(ops_test, app)
 
 
 @pytest.mark.abort_on_fail
@@ -387,6 +388,7 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest, c_writes) -> None
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
     logger.info("Remove s3-credentials relation")
     # Remove relation
+    app = (await app_name(ops_test)) or APP_NAME
     await ops_test.model.applications[APP_NAME].destroy_relation(
         "s3-credentials", f"{S3_INTEGRATOR_NAME}:s3-credentials"
     )
@@ -409,4 +411,4 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest, c_writes) -> None
     # Backup should generate a new backup id
     await _backup_cluster(ops_test)
     await _restore_cluster(ops_test)
-    await _restart_writes_and_assert(c_writes)
+    await _restart_writes_and_assert(ops_test, app)
