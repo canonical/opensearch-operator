@@ -129,6 +129,15 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
+async def _restart_writes_and_assert(c_writes: ContinuousWrites) -> None:
+    await c_writes.start()
+    writes = await c_writes.count()
+    time.sleep(20)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "Writes not continuing to DB"
+    await c_writes.clear()
+
+
 @pytest.fixture(scope="session")
 def microceph():
     """Starts microceph radosgw."""
@@ -332,9 +341,7 @@ async def test_backup_cluster(
 
 
 @pytest.mark.abort_on_fail
-async def test_restore_cluster(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
+async def test_restore_cluster(ops_test: OpsTest, c_writes: ContinuousWrites) -> None:
     """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
     await _restore_cluster(ops_test)
 
@@ -372,15 +379,11 @@ async def test_restore_cluster_after_app_destroyed(
     # This is the same check as the previous restore action.
     # Call the method again
     await _restore_cluster(ops_test)
-
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "Writes not continuing to DB"
+    await _restart_writes_and_assert(c_writes)
 
 
 @pytest.mark.abort_on_fail
-async def test_remove_and_readd_s3_relation(ops_test: OpsTest, c_writes, c_writes_runner) -> None:
+async def test_remove_and_readd_s3_relation(ops_test: OpsTest, c_writes) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
     logger.info("Remove s3-credentials relation")
     # Remove relation
@@ -406,8 +409,4 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest, c_writes, c_write
     # Backup should generate a new backup id
     await _backup_cluster(ops_test)
     await _restore_cluster(ops_test)
-
-    writes = await c_writes.count()
-    time.sleep(5)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "Writes not continuing to DB"
+    await _restart_writes_and_assert(c_writes)
