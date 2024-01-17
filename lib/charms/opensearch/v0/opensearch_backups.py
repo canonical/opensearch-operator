@@ -303,7 +303,7 @@ class OpenSearchBackup(Object):
             # Running on a single unit, wait_for_completion=false not supported
             return True
         closed_idx = set(rel.data[self.charm.app].get("restore_in_progress", "").split(",")).copy()
-        if not closed_idx or closed_idx == {""}:
+        if not closed_idx:
             # Dealing with an empty set
             return True
         # Check if all indices are open again
@@ -356,10 +356,8 @@ class OpenSearchBackup(Object):
                 event.set_results({"state": "successful restore!"})
                 return
             event.set_results({"state": "restore in progress..."})
-            return
         except Exception as e:
             event.fail(f"Failed: {e}")
-            return
 
     def _backup_is_available_for_restore(self, backup_id: int) -> bool:
         """Checks if the backup_id exists and is ready for a restore."""
@@ -732,13 +730,13 @@ class OpenSearchBackup(Object):
     def _check_repo_status(self) -> BackupServiceState:
         try:
             return self.get_service_status(self._request("GET", f"_snapshot/{S3_REPOSITORY}"))
-        except (ValueError, OpenSearchHttpError, requests.HTTPError):
+        except OpenSearchHttpError:
             return BackupServiceState.RESPONSE_FAILED_NETWORK
 
     def _check_snapshot_status(self) -> BackupServiceState:
         try:
             return self.get_snapshot_status(self._request("GET", "/_snapshot/_status"))
-        except (ValueError, OpenSearchHttpError, requests.HTTPError):
+        except OpenSearchHttpError:
             return BackupServiceState.RESPONSE_FAILED_NETWORK
 
     def _get_endpoint_protocol(self, endpoint: str) -> str:
