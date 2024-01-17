@@ -354,7 +354,7 @@ async def test_restore_cluster(ops_test: OpsTest, c_writes: ContinuousWrites) ->
 
 @pytest.mark.abort_on_fail
 async def test_restore_cluster_after_app_destroyed(
-    ops_test: OpsTest, c_writes, c_writes_runner
+    ops_test: OpsTest,
 ) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
 
@@ -379,12 +379,13 @@ async def test_restore_cluster_after_app_destroyed(
     )
     # This is the same check as the previous restore action.
     # Call the method again
+    app = (await app_name(ops_test)) or APP_NAME
     await _restore_cluster(ops_test)
     await _restart_writes_and_assert(ops_test, app)
 
 
 @pytest.mark.abort_on_fail
-async def test_remove_and_readd_s3_relation(ops_test: OpsTest, c_writes) -> None:
+async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
     logger.info("Remove s3-credentials relation")
     # Remove relation
@@ -411,4 +412,5 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest, c_writes) -> None
     # Backup should generate a new backup id
     await _backup_cluster(ops_test)
     await _restore_cluster(ops_test)
+    app = (await app_name(ops_test)) or APP_NAME
     await _restart_writes_and_assert(ops_test, app)
