@@ -56,9 +56,6 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
     def _on_secret_changed(self, event: SecretChangedEvent):
         """Refresh secret and re-run corresponding actions if needed."""
-        secret = event.secret
-        secret.get_content(refresh=True)
-
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
             return
@@ -76,7 +73,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         ):
             logger.info("Secret %s was not relevant for us.", event.secret.label)
             return
-
+        self._get_juju_secret(label_parts["scope"], label=event.secret.label, refresh=True)
         logger.debug("Secret change for %s", str(label_parts["key"]))
         if not self._charm.unit.is_leader():
             self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
@@ -126,7 +123,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
             key: str(val) for key, val in indict.items() if val is not None and str(val).strip()
         }
 
-    def _get_juju_secret(self, scope: Scope, key: str) -> Optional[Secret]:
+    def _get_juju_secret(self, scope: Scope, key: str = None, label: str = None, refresh: bool = False) -> Optional[Secret]:
+        if not key and not label:
+            raise ValueError("_get_juju_secret: missing both key and label!")
         label = self.label(scope, key)
 
         cached_secret_meta = self.cached_secrets.get_meta(scope, label)
@@ -137,6 +136,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
             secret = self._charm.model.get_secret(label=label)
         except SecretNotFoundError:
             return None
+        secret.get_content(refresh=refresh)
 
         self.cached_secrets.set_meta(scope, label, secret)
         return secret
