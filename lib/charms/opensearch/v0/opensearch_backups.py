@@ -302,10 +302,10 @@ class OpenSearchBackup(Object):
         if not rel:
             # Running on a single unit, wait_for_completion=false not supported
             return True
-        closed_idx = set(rel.data[self.charm.app].get("restore_in_progress", "").split(",")).copy()
-        if not closed_idx:
+        if not rel.data[self.charm.app].get("restore_in_progress"):
             # Dealing with an empty set
             return True
+        closed_idx = set(rel.data[self.charm.app].get("restore_in_progress", "").split(",")).copy()
         # Check if all indices are open again
         try:
             indices_status = self._request(

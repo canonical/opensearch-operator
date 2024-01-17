@@ -267,11 +267,16 @@ class TestBackups(unittest.TestCase):
         result = self.charm.backup._check_if_restore_finished()
         self.assertTrue(result)
 
-    def test_restore_finished_empty_restore_in_progress(self):
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
+    def test_restore_finished_empty_restore_in_progress(self, mock_request):
         class RelationData:
             def __init__(self, app):
-                self.data = {app: {"restore_in_progress": ""}}
+                self.data = {app: {}}
 
+        mock_request.return_value = {
+            "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+            "index2": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+        }
         self.charm.backup.model.get_relation = MagicMock(return_value=RelationData(self.charm.app))
         result = self.charm.backup._check_if_restore_finished()
         self.assertTrue(result)
