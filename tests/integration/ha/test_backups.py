@@ -15,7 +15,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import app_name
+from tests.integration.ha.helpers import app_name, assert_continuous_writes_consistency
 from tests.integration.ha.helpers_data import (
     create_index,
     default_doc,
@@ -103,6 +103,48 @@ value_before_backup, value_after_backup = None, None
 TEST_BACKUP_INDEX = "test_backup_index"
 
 
+@pytest.fixture(scope="session")
+def microceph():
+    """Starts microceph radosgw."""
+    import subprocess
+
+    if "microceph" not in subprocess.check_output(["sudo", "snap", "list"]).decode():
+        import os
+
+        import requests
+
+        uceph = "/tmp/microceph.sh"
+
+        with open(uceph, "w") as f:
+            resp = requests.get(
+                "https://raw.githubusercontent.com/canonical/microceph-action/main/microceph.sh"
+            )
+            f.write(resp.content.decode())
+
+        os.chmod(uceph, 0o755)
+        subprocess.check_output(
+            [
+                "sudo",
+                uceph,
+                "-c",
+                "latest/edge",
+                "-d",
+                "/dev/sdh",
+                "-a",
+                "accesskey",
+                "-s",
+                "secretkey",
+                "-b",
+                "data-charms-testing",
+                "-z",
+                "5G",
+            ]
+        )
+    # Now, return the configuration
+    ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
+    return {"url": f"http://{ip}", "access-key": "accesskey", "secret-key": "secretkey"}
+
+
 @pytest.fixture()
 async def c_writes(ops_test: OpsTest):
     """Creates instance of the ContinuousWrites."""
@@ -130,17 +172,19 @@ async def _wait_backup_finish(ops_test, leader_id):
             # Expected format:
             # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
             backups = json.loads(action.response["backups"])
-            logger.info(backups)
+            logger.info(f"Backups recovered: {backups}")
             assert action.status == "completed"  # The actual action status
             assert len(backups) > 0  # The number of backups
-            for _, backup in backups.items():
+            for backup in backups.values():
                 logger.info(f"Backup is: {backup}")
                 assert backup["state"] == "SUCCESS"  # The backup status
 
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentials) -> None:
+async def test_build_and_deploy(
+    ops_test: OpsTest, microceph
+) -> None:  # , cloud_credentials) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -148,30 +192,12 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentia
     if await app_name(ops_test):
         return
 
-    s3_storage = None
-    if (
-        "S3_BUCKET" in os.environ
-        and "S3_SERVER_URL" in os.environ
-        and "S3_REGION" in os.environ
-        and "S3_ACCESS_KEY" in os.environ
-        and "S3_SECRET_KEY" in os.environ
-    ):
-        s3_config = {
-            "bucket": os.environ["S3_BUCKET"],
-            "path": "/",
-            "endpoint": os.environ["S3_SERVER_URL"],
-            "region": os.environ["S3_REGION"],
-        }
-        s3_storage = "ceph"
-    elif "AWS_ACCESS_KEY" in os.environ and "AWS_SECRET_KEY" in os.environ:
-        s3_config = CLOUD_CONFIGS["aws"].copy()
-        s3_storage = "aws"
-    elif "GCP_ACCESS_KEY" in os.environ and "GCP_SECRET_KEY" in os.environ:
-        s3_config = CLOUD_CONFIGS["gcp"].copy()
-        s3_storage = "gcp"
-    else:
-        logger.exception("Missing S3 configs in os.environ.")
-        raise Exception("Missing s3")
+    s3_config = {
+        "bucket": "data-charms-testing",
+        "path": "/",
+        "endpoint": microceph["url"],
+        "region": "default",
+    }
 
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
@@ -187,14 +213,10 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentia
         ops_test.model.deploy(S3_INTEGRATOR_NAME, channel="stable", config=s3_config),
         ops_test.model.deploy(my_charm, num_units=app_num_units, series=SERIES),
     )
-    # Set the access/secret keys
-    if s3_storage == "ceph":
-        s3_creds = {
-            "access-key": os.environ["S3_ACCESS_KEY"],
-            "secret-key": os.environ["S3_SECRET_KEY"],
-        }
-    #    else:
-    #        s3_creds = cloud_credentials[s3_storage].copy()
+    s3_creds = {
+        "access-key": microceph["access-key"],
+        "secret-key": microceph["secret-key"],
+    }
 
     await run_action(
         ops_test,
@@ -215,9 +237,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentia
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_backup_cluster(ops_test: OpsTest) -> None:
-    """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
+async def _backup_cluster(ops_test: OpsTest) -> None:
     app = (await app_name(ops_test)) or APP_NAME
 
     units = await get_application_unit_ids_ips(ops_test, app=app)
@@ -253,11 +273,7 @@ async def test_backup_cluster(ops_test: OpsTest) -> None:
     await _wait_backup_finish(ops_test, leader_id)
 
 
-@pytest.mark.abort_on_fail
-async def test_restore_cluster(
-    ops_test: OpsTest,
-) -> None:
-    """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
+async def _restore_cluster(ops_test: OpsTest) -> None:
     app = (await app_name(ops_test)) or APP_NAME
 
     units = await get_application_unit_ids_ips(ops_test, app=app)
@@ -294,6 +310,26 @@ async def test_restore_cluster(
 
 
 @pytest.mark.abort_on_fail
+async def test_backup_cluster(ops_test: OpsTest, c_writes: ContinuousWrites) -> None:
+    """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
+    await _backup_cluster(ops_test)
+
+    app = (await app_name(ops_test)) or APP_NAME
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
+
+@pytest.mark.abort_on_fail
+async def test_restore_cluster(ops_test: OpsTest, c_writes: ContinuousWrites) -> None:
+    """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
+    await _restore_cluster(ops_test)
+
+    app = (await app_name(ops_test)) or APP_NAME
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+
+
+@pytest.mark.abort_on_fail
 async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
 
@@ -318,7 +354,7 @@ async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
     )
     # This is the same check as the previous restore action.
     # Call the method again
-    await test_restore_cluster(ops_test)
+    await _restore_cluster(ops_test)
 
 
 @pytest.mark.abort_on_fail
@@ -346,5 +382,5 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     )
 
     # Backup should generate a new backup id
-    await test_backup_cluster(ops_test)
-    await test_restore_cluster(ops_test)
+    await _backup_cluster(ops_test)
+    await _restore_cluster(ops_test)
