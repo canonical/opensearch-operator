@@ -342,7 +342,9 @@ async def test_backup_cluster(
 
 
 @pytest.mark.abort_on_fail
-async def test_restore_cluster(ops_test: OpsTest, c_writes: ContinuousWrites) -> None:
+async def test_restore_cluster(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
     await _restore_cluster(ops_test)
 
