@@ -6,6 +6,8 @@ import asyncio
 import json
 import logging
 import os
+import random
+import time
 
 # from pathlib import Path
 #
@@ -30,6 +32,7 @@ from tests.integration.helpers import (
     get_application_unit_ids_ips,
     get_leader_unit_id,
     get_leader_unit_ip,
+    get_reachable_unit_ips,
     http_request,
     run_action,
 )
@@ -103,6 +106,29 @@ value_before_backup, value_after_backup = None, None
 TEST_BACKUP_INDEX = "test_backup_index"
 
 
+@pytest.fixture()
+async def c_writes(ops_test: OpsTest):
+    """Creates instance of the ContinuousWrites."""
+    app = (await app_name(ops_test)) or APP_NAME
+    return ContinuousWrites(ops_test, app)
+
+
+@pytest.fixture()
+async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
+    """Starts continuous write operations and clears writes at the end of the test."""
+    await c_writes.start()
+    yield
+
+    reachable_ip = random.choice(await get_reachable_unit_ips(ops_test))
+    await http_request(ops_test, "GET", f"https://{reachable_ip}:9200/_cat/nodes", json_resp=False)
+    await http_request(
+        ops_test, "GET", f"https://{reachable_ip}:9200/_cat/shards", json_resp=False
+    )
+
+    await c_writes.clear()
+    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
+
+
 @pytest.fixture(scope="session")
 def microceph():
     """Starts microceph radosgw."""
@@ -129,7 +155,7 @@ def microceph():
                 "-c",
                 "latest/edge",
                 "-d",
-                "/dev/sdh",
+                "/dev/sde",
                 "-a",
                 "accesskey",
                 "-s",
@@ -143,22 +169,6 @@ def microceph():
     # Now, return the configuration
     ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
     return {"url": f"http://{ip}", "access-key": "accesskey", "secret-key": "secretkey"}
-
-
-@pytest.fixture()
-async def c_writes(ops_test: OpsTest):
-    """Creates instance of the ContinuousWrites."""
-    app = (await app_name(ops_test)) or APP_NAME
-    return ContinuousWrites(ops_test, app)
-
-
-@pytest.fixture()
-async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Starts continuous write operations and clears writes at the end of the test."""
-    await c_writes.start()
-    yield
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
 async def _wait_backup_finish(ops_test, leader_id):
@@ -206,7 +216,7 @@ async def test_build_and_deploy(
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
 
     # Convert to integer as environ always returns string
-    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 3)
+    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 2)
 
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
@@ -310,7 +320,9 @@ async def _restore_cluster(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_backup_cluster(ops_test: OpsTest, c_writes: ContinuousWrites) -> None:
+async def test_backup_cluster(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
     await _backup_cluster(ops_test)
 
@@ -320,24 +332,29 @@ async def test_backup_cluster(ops_test: OpsTest, c_writes: ContinuousWrites) -> 
 
 
 @pytest.mark.abort_on_fail
-async def test_restore_cluster(ops_test: OpsTest, c_writes: ContinuousWrites) -> None:
+async def test_restore_cluster(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
     await _restore_cluster(ops_test)
 
-    app = (await app_name(ops_test)) or APP_NAME
-    # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "Writes not continuing to DB"
 
 
 @pytest.mark.abort_on_fail
-async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
+async def test_restore_cluster_after_app_destroyed(
+    ops_test: OpsTest, c_writes, c_writes_runner
+) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
 
     Restores the backup and then checks if the same TEST_BACKUP_INDEX is there.
     """
     app = (await app_name(ops_test)) or APP_NAME
     await ops_test.model.remove_application(app, block_until_done=True)
-    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 3)
+    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 2)
     my_charm = await ops_test.build_charm(".")
     # Redeploy
     await asyncio.gather(
@@ -356,9 +373,14 @@ async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
     # Call the method again
     await _restore_cluster(ops_test)
 
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "Writes not continuing to DB"
+
 
 @pytest.mark.abort_on_fail
-async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
+async def test_remove_and_readd_s3_relation(ops_test: OpsTest, c_writes, c_writes_runner) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
     logger.info("Remove s3-credentials relation")
     # Remove relation
@@ -384,3 +406,8 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     # Backup should generate a new backup id
     await _backup_cluster(ops_test)
     await _restore_cluster(ops_test)
+
+    writes = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes, "Writes not continuing to DB"

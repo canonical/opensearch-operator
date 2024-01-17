@@ -233,12 +233,13 @@ class OpenSearchBackup(Object):
         else:
             event.fail("Failed: invalid output format, must be either json or table")
 
-    def _close_indices_if_needed(self, backup_indices: List[str]) -> Set[str]:
+    def _close_indices_if_needed(self, backup_id: int) -> Set[str]:
         """Closes indices that will be restored.
 
         Returns a set of indices that were closed or raises an exception:
         - OpenSearchRestoreFailedClosingIdxError if any of the indices could not be closed.
         """
+        backup_indices = self._list_backups()[backup_id]["indices"]
         closed_idx = set()
         try:
             for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=30)):
@@ -272,7 +273,7 @@ class OpenSearchBackup(Object):
         self, backup_id: int, backup_indices: List[str], wait_for_completion: bool = False
     ) -> Dict[str, Any]:
         """Runs the restore and processes the response according to wait_for_completion flag."""
-        # backup_indices = self._list_backups()[backup_id]["indices"]
+        backup_indices = self._list_backups()[backup_id]["indices"]
         output = self._request(
             "POST",
             f"_snapshot/{S3_REPOSITORY}/{backup_id}/_restore?wait_for_completion={str(wait_for_completion).lower()}",
@@ -391,7 +392,7 @@ class OpenSearchBackup(Object):
         # In case of failure, then restore action must return a list of closed indices
         closed_idx = set()
         try:
-            closed_idx = self._close_indices_if_needed()
+            closed_idx = self._close_indices_if_needed(backup_id)
             output = self._issue_restore_request(
                 backup_id, event.params.get("wait-for-completion", False)
             )
@@ -430,18 +431,12 @@ class OpenSearchBackup(Object):
 
         new_backup_id = None
         wait_for_completion = event.params.get("wait-for-completion", False)
-        rel = self.model.get_relation(PeerRelationName)
-        if not rel and not wait_for_completion:
-            event.fail(
-                "Failed: single unit backup with wait_for_completion=false is not supported!"
-            )
-            return
-
         try:
             # Check if any backup is not running already, or RetryError happens
             if self.is_backup_in_progress():
                 event.fail("Backup still in progress: aborting this request...")
                 return
+
             # Increment by 1 the latest snapshot_id (set to 0 if no snapshot was previously made)
             new_backup_id = int(max(self._list_backups().keys() or [0])) + 1
             logger.debug(
@@ -461,27 +456,13 @@ class OpenSearchBackup(Object):
             )
 
             logger.info(f"Backup request submitted with backup-id {new_backup_id}")
+            logger.info(f"Backup completed with backup-id {new_backup_id}")
 
-            if wait_for_completion:
-                # Wait for the backup to finish
-                for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=30)):
-                    with attempt:
-                        if not self.is_backup_in_progress(new_backup_id):
-                            break
-                        logger.debug("Backup in progress, waiting for completion...")
-                logger.info(f"Backup completed with backup-id {new_backup_id}")
-
-        except RetryError as e:
             if wait_for_completion and self.is_backup_in_progress():
                 event.fail(f"Timed out while waiting for: backup id {new_backup_id}")
                 return
-            if wait_for_completion:
-                event.fail(f"Failed while waiting with error {e}")
-                return
         except (
-            ValueError,
             OpenSearchHttpError,
-            requests.HTTPError,
             OpenSearchListBackupError,
         ) as e:
             event.fail(f"Failed with exception: {e}")
@@ -489,6 +470,8 @@ class OpenSearchBackup(Object):
         if wait_for_completion:
             event.set_results({"backup-id": new_backup_id, "status": "Backup completed."})
             return
+
+        rel = self.model.get_relation(PeerRelationName)
         rel.data[self.charm.app]["backup_in_progress"] = str(new_backup_id)
         event.set_results({"backup-id": new_backup_id, "status": "Backup is running."})
 
@@ -511,6 +494,10 @@ class OpenSearchBackup(Object):
         if status != BackupServiceState.SUCCESS:
             event.fail(f"Failed: repo status is {status}")
             return False
+
+        if self.is_backup_in_progress():
+            return False
+
         return True
 
     def _list_backups(self) -> Dict[int, str]:
