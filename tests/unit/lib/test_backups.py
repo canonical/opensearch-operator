@@ -2,16 +2,22 @@
 # See LICENSE file for licensing details.
 
 """Unit test for the opensearch_plugins library."""
+import logging
 import unittest
 from unittest.mock import MagicMock, patch
 
 import charms
+import tenacity
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.opensearch_backups import (
     S3_RELATION,
     S3_REPOSITORY,
+    BackupServiceState,
     OpenSearchBackupPlugin,
+    OpenSearchRestoreFailedClosingIdxError,
+    OpenSearchRestoreMismatchBetweenIdxAndSnapshotError,
 )
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginConfig, PluginState
 from ops.testing import Harness
@@ -22,7 +28,16 @@ TEST_BUCKET_NAME = "s3://bucket-test"
 TEST_BASE_PATH = "/test"
 
 
+LIST_BACKUPS_TRIAL = """ backup-id  | backup-status
+---------------------------
+ backup1   | finished
+ backup2   | snapshot failed for unknown reason
+ backup3   | snapshot in progress"""
+
+
 class TestBackups(unittest.TestCase):
+    maxDiff = None
+
     def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
@@ -42,6 +57,10 @@ class TestBackups(unittest.TestCase):
         }
         self.charm.opensearch.is_started = MagicMock(return_value=True)
         self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
+        # Mock retrials to speed up tests
+        charms.opensearch.v0.opensearch_backups.wait_fixed = MagicMock(
+            return_value=tenacity.wait.wait_fixed(0.1)
+        )
 
         # Replace some unused methods that will be called as part of set_leader with mock
         self.charm._put_admin_user = MagicMock()
@@ -132,6 +151,46 @@ class TestBackups(unittest.TestCase):
             },
         )
 
+    def test_02_on_list_backups_action(self):
+        event = MagicMock()
+        event.params = {"output": "table"}
+        self.charm.backup._list_backups = MagicMock(return_value={"backup1": {"state": "SUCCESS"}})
+        self.charm.backup._generate_backup_list_output = MagicMock(
+            return_value="backup1 | finished"
+        )
+        self.charm.backup._on_list_backups_action(event)
+        event.set_results.assert_called_with({"backups": "backup1 | finished"})
+
+    def test_03_on_list_backups_action_in_json_format(self):
+        event = MagicMock()
+        event.params = {"output": "json"}
+        self.charm.backup._list_backups = MagicMock(return_value={"backup1": {"state": "SUCCESS"}})
+        self.charm.backup._generate_backup_list_output = MagicMock(
+            return_value="backup1 | finished"
+        )
+        self.charm.backup._on_list_backups_action(event)
+        event.set_results.assert_called_with({"backups": '{"backup1": {"state": "SUCCESS"}}'})
+
+    def test_04_check_if_restore_finished(self):
+        rel = MagicMock()
+        rel.data = {self.charm.app: {"restore_in_progress": "index1,index2"}}
+        self.charm.model.get_relation = MagicMock(return_value=rel)
+        self.charm.backup._request = MagicMock(
+            return_value={
+                "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+                "index2": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+                "index3": {"shards": [{"type": "PRIMARY", "stage": "DONE"}]},
+            }
+        )
+        result = self.charm.backup._check_if_restore_finished()
+        self.assertTrue(result)
+
+    def test_05_on_check_restore_status_action(self):
+        event = MagicMock()
+        self.charm.backup._check_if_restore_finished = MagicMock(return_value=True)
+        self.charm.backup._on_check_restore_status_action(event)
+        self.assertTrue(event.set_results.called)
+
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup.apply_api_config_if_needed")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._apply_config")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
@@ -166,3 +225,154 @@ class TestBackups(unittest.TestCase):
                 ],
             ).__dict__
         )
+
+    @patch("charms.opensearch.v0.opensearch_backups.ClusterState.indices")
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
+    def test_close_indices_if_needed(self, mock_request, mock_indices):
+        # Mock the ClusterState.indices method to return a sample index state
+        mock_indices.return_value = {
+            "index1": {"status": "open"},
+            "index2": {"status": "close"},
+            "index3": {"status": "open"},
+        }
+        mock_request.return_value = {
+            "acknowledged": True,
+            "indices": {"index1": {}, "index3": {}},
+        }
+        backup_indices = ["index1", "index2", "index3"]
+
+        # Call the _close_indices_if_needed method
+        closed_indices = self.charm.backup._close_indices_if_needed(backup_indices)
+        mock_request.assert_any_call("POST", "index1/_close")
+        mock_request.assert_any_call("POST", "index3/_close")
+        self.assertEqual(closed_indices, {"index1", "index3"})
+
+    @patch("charms.opensearch.v0.opensearch_backups.ClusterState.indices")
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
+    def test_close_indices_if_needed_retry_error(self, mock_request, mock_indices):
+        mock_indices.return_value = {
+            "index1": {"status": "open"},
+            "index2": {"status": "close"},
+            "index3": {"status": "open"},
+        }
+        mock_request.side_effect = OpenSearchHttpError
+        backup_indices = ["index1", "index2", "index3"]
+
+        # Call the _close_indices_if_needed method and assert that it raises an exception
+        with self.assertRaises(OpenSearchRestoreFailedClosingIdxError):
+            self.charm.backup._close_indices_if_needed(backup_indices)
+
+    def test_restore_finished_single_unit(self):
+        self.charm.backup.model.get_relation = MagicMock(return_value=None)
+        result = self.charm.backup._check_if_restore_finished()
+        self.assertTrue(result)
+
+    def test_restore_finished_empty_restore_in_progress(self):
+        class RelationData:
+            def __init__(self, app):
+                self.data = {app: {"restore_in_progress": ""}}
+
+        self.charm.backup.model.get_relation = MagicMock(return_value=RelationData(self.charm.app))
+        result = self.charm.backup._check_if_restore_finished()
+        self.assertTrue(result)
+
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
+    def test_restore_finished_all_indices_open(self, mock_request):
+        class RelationData:
+            def __init__(self, app):
+                self.data = {app: {"restore_in_progress": "index1,index2"}}
+
+        self.charm.backup.model.get_relation = MagicMock(return_value=RelationData(self.charm.app))
+        mock_request.return_value = {
+            "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+            "index2": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+        }
+        result = self.charm.backup._check_if_restore_finished()
+        self.assertTrue(result)
+
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
+    def test_restore_finished_not_all_indices_open(self, mock_request):
+        class RelationData:
+            def __init__(self, app):
+                self.data = {app: {"restore_in_progress": "index1,index2"}}
+
+        self.charm.backup.model.get_relation = MagicMock(return_value=RelationData(self.charm.app))
+        mock_request.return_value = {
+            "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+            "index2": {"shards": [{"type": "SNAPSHOT", "stage": "IN_PROGRESS"}]},
+        }
+        result = self.charm.backup._check_if_restore_finished()
+        self.assertFalse(result)
+
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
+    def test_restore_finished_indices_not_found(self, mock_request):
+        class RelationData:
+            def __init__(self, app):
+                self.data = {app: {"restore_in_progress": "index1,index2"}}
+
+        self.charm.backup.model.get_relation = MagicMock(return_value=RelationData(self.charm.app))
+        mock_request.return_value = {
+            "index3": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+            "index4": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+        }
+        with self.assertRaises(OpenSearchRestoreMismatchBetweenIdxAndSnapshotError):
+            self.charm.backup._check_if_restore_finished()
+
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
+    def test_restore_finished_leader(self, mock_request):
+        class RelationData:
+            def __init__(self, app):
+                self.data = {app: {"restore_in_progress": "index1,index2"}}
+
+        self.charm.backup.model.get_relation = MagicMock(return_value=RelationData(self.charm.app))
+        mock_request.return_value = {
+            "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+            "index2": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+        }
+        result = self.charm.backup._check_if_restore_finished()
+        self.assertTrue(result)
+        assert self.charm.backup.model.get_relation.return_value.data == {self.charm.app: {}}
+
+    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
+    def test_restore_finished_not_leader(self, mock_request):
+        self.charm.backup.charm.unit.is_leader = MagicMock(return_value=False)
+
+        class RelationData:
+            def __init__(self, app):
+                self.data = {app: {"restore_in_progress": "index1,index2"}}
+
+        self.charm.backup.model.get_relation = MagicMock(return_value=RelationData(self.charm.app))
+        mock_request.return_value = {
+            "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+            "index2": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
+        }
+        result = self.charm.backup._check_if_restore_finished()
+        self.assertFalse(result)
+        assert self.charm.backup.model.get_relation.return_value.data == {
+            self.charm.app: {"restore_in_progress": "index1,index2"}
+        }
+
+    def test_98_format_backup_list(self):
+        """Tests the format of the backup list."""
+        backup_list = {
+            "backup1": {"state": "SUCCESS"},
+            "backup2": {"state": "FAILED"},
+            "backup3": {"state": "IN_PROGRESS"},
+        }
+        self.assertEqual(
+            self.charm.backup._generate_backup_list_output(backup_list), LIST_BACKUPS_TRIAL
+        )
+
+    def test_99_on_update_status(self):
+        """Tests a simple update status call."""
+        self.charm.backup._check_repo_status = MagicMock(return_value=BackupServiceState.SUCCESS)
+        self.charm.backup.is_backup_in_progress = MagicMock(return_value=False)
+        self.charm.backup._check_if_restore_finished = MagicMock(return_value=True)
+        logger = logging.getLogger("charms.opensearch.v0.opensearch_backups")
+        with patch.object(logger, "info") as logger_info_mock:
+            self.charm.backup._on_update_status(None)
+            logger_info_mock.assert_any_call("Checking if backup in progress: False")
+            logger_info_mock.assert_any_call("Checking if restore in progress: True")
+        self.charm.backup._check_repo_status.assert_called_once()
+        self.charm.backup.is_backup_in_progress.assert_called_once()
+        self.charm.backup._check_if_restore_finished.assert_called_once()
