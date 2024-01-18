@@ -129,16 +129,6 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
-async def _restart_writes_and_assert(ops_test, app) -> None:
-    c_writes = ContinuousWrites(ops_test, app)
-    await c_writes.start(repl_on_all_nodes=True)
-    writes = await c_writes.count()
-    time.sleep(20)
-    more_writes = await c_writes.count()
-    assert more_writes > writes, "Writes not continuing to DB"
-    await c_writes.clear()
-
-
 @pytest.fixture(scope="session")
 def microceph():
     """Starts microceph radosgw."""
@@ -330,7 +320,7 @@ async def _restore_cluster(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_backup_cluster(
+async def test_01_backup_cluster(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
@@ -342,7 +332,7 @@ async def test_backup_cluster(
 
 
 @pytest.mark.abort_on_fail
-async def test_restore_cluster(
+async def test_02_restore_cluster(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
@@ -355,7 +345,7 @@ async def test_restore_cluster(
 
 
 @pytest.mark.abort_on_fail
-async def test_restore_cluster_after_app_destroyed(
+async def test_03_restore_cluster_after_app_destroyed(
     ops_test: OpsTest,
 ) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
@@ -381,13 +371,33 @@ async def test_restore_cluster_after_app_destroyed(
     )
     # This is the same check as the previous restore action.
     # Call the method again
-    app = (await app_name(ops_test)) or APP_NAME
     await _restore_cluster(ops_test)
-    await _restart_writes_and_assert(ops_test, app)
+
+    units = await get_application_unit_ids_ips(ops_test, app=app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    app = (await app_name(ops_test)) or APP_NAME
+    doc_id = TEST_BACKUP_DOC_ID + 1
+    await index_doc(ops_test, app, leader_unit_ip, TEST_BACKUP_INDEX, doc_id)
+
+    # check that the doc can be retrieved from any node
+    logger.info("Test backup index: searching")
+    for u_ip in units.values():
+        for doc_id in range(TEST_BACKUP_DOC_ID, TEST_BACKUP_DOC_ID + 2):
+            docs = await search(
+                ops_test,
+                app,
+                u_ip,
+                doc_id,
+                query={"query": {"term": {"_id": doc_id}}},
+                preference="_only_local",
+            )
+            # Validate the index and document are present
+            assert len(docs) == 1
+            assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
 
 
 @pytest.mark.abort_on_fail
-async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
+async def test_04_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
     logger.info("Remove s3-credentials relation")
     # Remove relation
@@ -414,5 +424,25 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     # Backup should generate a new backup id
     await _backup_cluster(ops_test)
     await _restore_cluster(ops_test)
+
+    units = await get_application_unit_ids_ips(ops_test, app=app)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     app = (await app_name(ops_test)) or APP_NAME
-    await _restart_writes_and_assert(ops_test, app)
+    doc_id = TEST_BACKUP_DOC_ID + 2  # This is the next doc id, after the previous test
+    await index_doc(ops_test, app, leader_unit_ip, TEST_BACKUP_INDEX, doc_id)
+
+    # check that the doc can be retrieved from any node
+    logger.info("Test backup index: searching")
+    for u_ip in units.values():
+        for doc_id in range(TEST_BACKUP_DOC_ID, TEST_BACKUP_DOC_ID + 3):
+            docs = await search(
+                ops_test,
+                app,
+                u_ip,
+                doc_id,
+                query={"query": {"term": {"_id": doc_id}}},
+                preference="_only_local",
+            )
+            # Validate the index and document are present
+            assert len(docs) == 1
+            assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
