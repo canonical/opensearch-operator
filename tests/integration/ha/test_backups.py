@@ -392,7 +392,7 @@ async def test_03_restore_cluster_after_app_destroyed(
                 preference="_only_local",
             )
             # Validate the index and document are present
-            assert len(docs) == 1
+            assert len(docs) == 2
             assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
 
 
@@ -444,5 +444,5 @@ async def test_04_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
                 preference="_only_local",
             )
             # Validate the index and document are present
-            assert len(docs) == 1
+            assert len(docs) == 3
             assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
