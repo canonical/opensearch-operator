@@ -39,13 +39,14 @@ class ContinuousWrites:
     LAST_WRITTEN_VAL_PATH = "last_written_value"
     CERT_PATH = "/tmp/ca_chain.cert"
 
-    def __init__(self, ops_test: OpsTest, app: str):
+    def __init__(self, ops_test: OpsTest, app: str, initial_count: int = 0):
         self._ops_test = ops_test
         self._app = app
         self._is_stopped = True
         self._event = None
         self._queue = None
         self._process = None
+        self._initial_count = initial_count
 
     @retry(
         wait=wait_fixed(wait=5) + wait_random(0, 5),
@@ -186,7 +187,7 @@ class ContinuousWrites:
         self._process = Process(
             target=ContinuousWrites._run_async,
             name="continuous_writes",
-            args=(self._event, self._queue, 0, True),
+            args=(self._event, self._queue, self._initial_count, True),
         )
 
     def _stop_process(self):
