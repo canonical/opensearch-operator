@@ -202,7 +202,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
 
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackup.is_backup_in_progress")
-    @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackup._check_if_restore_finished")
+    @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackup._is_restore_complete")
     @patch(f"{BASE_CHARM_CLASS}._stop_opensearch")
     @patch(f"{BASE_LIB_PATH}.opensearch_base_charm.cert_expiration_remaining_hours")
     @patch(f"{BASE_LIB_PATH}.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
