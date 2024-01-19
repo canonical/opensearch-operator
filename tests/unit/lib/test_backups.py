@@ -2,14 +2,14 @@
 # See LICENSE file for licensing details.
 
 """Unit test for the opensearch_plugins library."""
-import pytest
-import logging
 import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
+import pytest
 import tenacity
 from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.helper_cluster import IndexStateEnum
 from charms.opensearch.v0.opensearch_backups import (
     S3_RELATION,
     S3_REPOSITORY,
@@ -18,7 +18,6 @@ from charms.opensearch.v0.opensearch_backups import (
     OpenSearchListBackupError,
     OpenSearchRestoreFailedClosingIdxError,
 )
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginConfig, PluginState
 from ops.testing import Harness
@@ -80,62 +79,222 @@ def mock_request():
 
 
 @pytest.mark.parametrize(
-        "leader,request_value,result_value",
-        [
-            # Test leader + request_value that should return True
-            (False, {
+    "leader,request_value,result_value",
+    [
+        # Test leader + request_value that should return True
+        (
+            False,
+            {
                 "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
                 "index2": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
             },
-            True),
-            (True, {
+            True,
+        ),
+        (
+            True,
+            {
                 "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
                 "index2": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
             },
-            True),
-            # Test leader + request_value that should return False
-            (False, {
+            True,
+        ),
+        # Test leader + request_value that should return False
+        (
+            False,
+            {
                 "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
                 "index2": {"shards": [{"type": "SNAPSHOT", "stage": "IN_PROGRESS"}]},
             },
-            False),
-            (True, {
+            False,
+        ),
+        (
+            True,
+            {
                 "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
                 "index2": {"shards": [{"type": "SNAPSHOT", "stage": "IN_PROGRESS"}]},
             },
-            False),
-            # Test leader + request_value that should return True
-            (False, {
+            False,
+        ),
+        # Test leader + request_value that should return True
+        (
+            False,
+            {
                 "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
                 "index2": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
                 "index3": {"shards": [{"type": "NOT_SNAP", "stage": "DONE"}]},
             },
-            True),
-            (True, {
+            True,
+        ),
+        (
+            True,
+            {
                 "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
                 "index2": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
                 "index3": {"shards": [{"type": "NOT_SNAP", "stage": "DONE"}]},
             },
-            True),
-            # Test leader + request_value that should return False
-            (False, {
+            True,
+        ),
+        # Test leader + request_value that should return False
+        (
+            False,
+            {
                 "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
                 "index2": {"shards": [{"type": "SNAPSHOT", "stage": "IN_PROGRESS"}]},
                 "index3": {"shards": [{"type": "NOT_SNAP", "stage": "DONE"}]},
             },
-            False),
-            (True, {
+            False,
+        ),
+        (
+            True,
+            {
                 "index1": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
                 "index2": {"shards": [{"type": "SNAPSHOT", "stage": "IN_PROGRESS"}]},
                 "index3": {"shards": [{"type": "NOT_SNAP", "stage": "DONE"}]},
             },
-            False),
-        ]
+            False,
+        ),
+    ],
 )
 def test_restore_finished_true(harness, mock_request, leader, request_value, result_value):
     harness.charm.backup.charm.unit.is_leader = MagicMock(return_value=leader)
     mock_request.return_value = request_value
-    assert harness.charm.backup._check_if_restore_finished() == result_value
+    assert harness.charm.backup._is_restore_complete() == result_value
+
+
+@pytest.mark.parametrize(
+    "list_backup_response,cluster_state,req_response,results,exc_msg",
+    [
+        # Check if only indices in backup-id=1 are closed
+        (
+            {1: {"indices": ["index1", "index2"]}},
+            {
+                "index1": {"status": IndexStateEnum.OPEN},
+                "index2": {"status": IndexStateEnum.OPEN},
+                "index3": {"status": IndexStateEnum.OPEN},
+            },
+            {
+                "acknowledged": True,
+                "indices": {
+                    "index1": {
+                        "closed": "true",
+                    },
+                    "index2": {
+                        "closed": "true",
+                    },
+                },  # represents the closed indices
+            },
+            {"index1", "index2"},
+            None,
+        ),
+        # Check if only indices in backup-id=1 are closed
+        (
+            {
+                1: {"indices": ["index1", "index2"]},
+                2: {"indices": ["index3"]},
+            },
+            {
+                "index1": {"status": IndexStateEnum.OPEN},
+                "index2": {"status": IndexStateEnum.OPEN},
+                "index3": {"status": IndexStateEnum.OPEN},
+            },
+            {
+                "acknowledged": True,
+                "indices": {
+                    "index1": {
+                        "closed": "true",
+                    },
+                    "index2": {
+                        "closed": "true",
+                    },
+                },  # represents the closed indices
+            },
+            {"index1", "index2"},
+            None,
+        ),
+        # Check if already closed indices are skipped
+        (
+            {
+                1: {"indices": ["index1", "index2"]},
+                2: {"indices": ["index3"]},
+            },
+            {
+                "index1": {"status": IndexStateEnum.OPEN},
+                "index2": {"status": IndexStateEnum.CLOSED},
+                "index3": {"status": IndexStateEnum.OPEN},
+            },
+            {
+                "acknowledged": True,
+                "indices": {
+                    "index1": {
+                        "closed": "true",
+                    },
+                },  # represents the closed indices
+            },
+            {"index1"},
+            None,
+        ),
+        # Represents an error where index2 is not closed
+        (
+            {1: {"indices": ["index1", "index2"]}},
+            {
+                "index1": {"status": IndexStateEnum.OPEN},
+                "index2": {"status": IndexStateEnum.OPEN},
+                "index3": {"status": IndexStateEnum.OPEN},
+            },
+            {
+                "acknowledged": True,
+                "indices": {
+                    "index1": {
+                        "closed": "true",
+                    },
+                    "index2": {
+                        "closed": "false",
+                    },
+                },  # represents the closed indices
+            },
+            None,
+            "_close_indices_if_needed: failed closing {'index2'}",
+        ),
+        # Represents an error where request failed
+        (
+            {1: {"indices": ["index1", "index2"]}},
+            {
+                "index1": {"status": IndexStateEnum.OPEN},
+                "index2": {"status": IndexStateEnum.OPEN},
+                "index3": {"status": IndexStateEnum.OPEN},
+            },
+            {
+                "acknowledged": False,
+            },
+            None,
+            "_close_indices_if_needed: failed closing {'index2', 'index1'}",
+        ),
+    ],
+)
+def test_close_indices_if_needed(
+    harness, mock_request, list_backup_response, cluster_state, req_response, results, exc_msg
+):
+    harness.charm.backup._list_backups = MagicMock(return_value=list_backup_response)
+    charms.opensearch.v0.opensearch_backups.ClusterState.indices = MagicMock(
+        return_value=cluster_state
+    )
+    mock_request.return_value = req_response
+    try:
+        assert harness.charm.backup._close_indices_if_needed(1) == results
+    except OpenSearchRestoreFailedClosingIdxError as e:
+        if req_response["acknowledged"]:
+            assert e.__str__() == exc_msg
+        else:
+            # The order of the indices is not guaranteed
+            assert all([idx in e.__str__() for idx in list_backup_response[1]["indices"]])
+    else:
+        mock_request.assert_called_with(
+            "POST",
+            f"{','.join(results)}/_close",
+            payload={
+                "ignore_unavailable": "true",
+            },
+        )
 
 
 class TestBackups(unittest.TestCase):
@@ -274,7 +433,7 @@ class TestBackups(unittest.TestCase):
         self.charm.backup._on_list_backups_action(event)
         event.set_results.assert_called_with({"backups": '{"backup1": {"state": "SUCCESS"}}'})
 
-    def test_04_check_if_restore_finished(self):
+    def test_04_is_restore_complete(self):
         rel = MagicMock()
         rel.data = {self.charm.app: {"restore_in_progress": "index1,index2"}}
         self.charm.model.get_relation = MagicMock(return_value=rel)
@@ -285,12 +444,12 @@ class TestBackups(unittest.TestCase):
                 "index3": {"shards": [{"type": "PRIMARY", "stage": "DONE"}]},
             }
         )
-        result = self.charm.backup._check_if_restore_finished()
+        result = self.charm.backup._is_restore_complete()
         self.assertTrue(result)
 
     def test_05_on_check_restore_status_action(self):
         event = MagicMock()
-        self.charm.backup._check_if_restore_finished = MagicMock(return_value=True)
+        self.charm.backup._is_restore_complete = MagicMock(return_value=True)
         self.charm.backup._on_check_restore_status_action(event)
         self.assertTrue(event.set_results.called)
 
@@ -329,79 +488,7 @@ class TestBackups(unittest.TestCase):
             ).__dict__
         )
 
-    @patch("charms.opensearch.v0.opensearch_backups.ClusterState.indices")
-    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
-    def test_close_indices_if_needed(self, mock_request, mock_indices):
-        # Mock the ClusterState.indices method to return a sample index state
-        mock_indices.return_value = {
-            "index1": {"status": "open"},
-            "index2": {"status": "close"},
-            "index3": {"status": "open"},
-        }
-        mock_request.side_effect = [
-            # Response from GET _snapshot/{S3_REPOSITORY}/_all
-            {
-                "snapshots": [
-                    {
-                        "snapshot": "1",
-                        "indices": ["index1", "index2", "index3"],
-                        "state": "SUCCESS",
-                    },
-                    {
-                        "snapshot": "2",
-                        "indices": ["index4"],
-                        "state": "SUCCESS",
-                    },
-                ]
-            },
-            # Response from POST /_close
-            {
-                "acknowledged": True,
-                "indices": {"index1": {}},
-            },
-            # Response from POST /_close
-            {
-                "acknowledged": True,
-                "indices": {"index3": {}},
-            },
-        ]
-        # Call the _close_indices_if_needed method
-        closed_indices = self.charm.backup._close_indices_if_needed("1")
-        mock_request.assert_any_call("POST", "index1/_close")
-        mock_request.assert_any_call("POST", "index3/_close")
-        self.assertEqual(closed_indices, {"index1", "index3"})
-
-    @patch("charms.opensearch.v0.opensearch_backups.ClusterState.indices")
-    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
-    def test_close_indices_if_needed_retry_error(self, mock_request, mock_indices):
-        mock_indices.return_value = {
-            "index1": {"status": "open"},
-            "index2": {"status": "close"},
-            "index3": {"status": "open"},
-        }
-        mock_request.side_effect = [
-            # Response from GET _snapshot/{S3_REPOSITORY}/_all
-            {
-                "snapshots": [
-                    {
-                        "snapshot": "1",
-                        "indices": ["index1", "index2", "index3"],
-                        "state": "SUCCESS",
-                    },
-                    {
-                        "snapshot": "2",
-                        "indices": ["index4"],
-                        "state": "SUCCESS",
-                    },
-                ]
-            },
-            OpenSearchHttpError,
-        ]
-        # Call the _close_indices_if_needed method and assert that it raises an exception
-        with self.assertRaises(OpenSearchRestoreFailedClosingIdxError):
-            self.charm.backup._close_indices_if_needed("1")
-
-    def test_98_format_backup_list(self):
+    def test_99_format_backup_list(self):
         """Tests the format of the backup list."""
         backup_list = {
             "backup1": {"state": "SUCCESS"},

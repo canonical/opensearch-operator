@@ -49,9 +49,8 @@ import logging
 import math
 from typing import Any, Dict, List, Set, Tuple
 
-import requests
 from charms.data_platform_libs.v0.s3 import S3Requirer
-from charms.opensearch.v0.helper_cluster import ClusterState
+from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
@@ -89,12 +88,7 @@ S3_REPOSITORY = "s3-repository"
 
 S3_REPO_BASE_PATH = "/"
 
-INDICES_TO_EXCLUDE_AT_RESTORE = {
-    ".opendistro_security",
-    ".opensearch-observability",
-    ".opensearch-sap-log-types-config",
-    ".opensearch-sap-pre-packaged-rules-config",
-}
+INDICES_TO_EXCLUDE_AT_RESTORE = {".opendistro_security", ".opensearch-observability"}
 
 REPO_NOT_CREATED_ERR = "repository type [s3] does not exist"
 REPO_NOT_ACCESS_ERR = f"[{S3_REPOSITORY}] path [{S3_REPO_BASE_PATH}] is not accessible"
@@ -218,6 +212,25 @@ class OpenSearchBackup(Object):
         else:
             event.fail("Failed: invalid output format, must be either json or table")
 
+    def _request_indices_to_close(self, indices: Set[str]) -> Dict[str, Any]:
+        """Requests indices to be closed and return their status."""
+        resp = self._request(
+            "POST",
+            f"{','.join(indices)}/_close",
+            payload={
+                "ignore_unavailable": "true",
+            },
+        )
+        if not resp or not resp.get("acknowledged", False):
+            return {"acknowledged": False}
+        closed_indices_state = {
+            index: IndexStateEnum.CLOSED
+            if state and state.get("closed") == "true"
+            else IndexStateEnum.OPEN
+            for index, state in resp.get("indices", {}).items()
+        }
+        return {"acknowledged": True, "indices": closed_indices_state}
+
     def _close_indices_if_needed(self, backup_id: int) -> Set[str]:
         """Closes indices that will be restored.
 
@@ -225,42 +238,43 @@ class OpenSearchBackup(Object):
         - OpenSearchRestoreFailedClosingIdxError if any of the indices could not be closed.
         """
         backup_indices = self._list_backups()[backup_id]["indices"]
-        closed_idx = set()
+        close_resp, to_close, not_closed = {}, set(), set()
         try:
             for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=30)):
                 with attempt:
-                    to_close = [
+                    to_close = {
                         index
                         for index, state in ClusterState.indices(self.charm.opensearch).items()
                         if (
                             index in backup_indices
-                            and state["status"] != "close"
+                            and state["status"] != IndexStateEnum.CLOSED
                             and index not in INDICES_TO_EXCLUDE_AT_RESTORE
                         )
-                    ]
-                    # Try closing each index
-                    for index in to_close:
-                        # Try closing the index
-                        o = self._request("POST", f"{index}/_close")
-                        logger.debug(
-                            f"_close_indices_if_needed: request closing {index} returned {o}"
-                        )
-                        if not o.get("acknowledged", False):
-                            raise OpenSearchRestoreFailedClosingIdxError(
-                                f"_close_indices_if_needed: failed closing {index}"
-                            )
-                        if index not in o.get("indices", {}):
-                            raise OpenSearchRestoreFailedClosingIdxError(
-                                f"_close_indices_if_needed: failed closing {index}"
-                            )
-                        closed_idx.add(index)
-        except RetryError:
-            raise OpenSearchRestoreFailedClosingIdxError(
-                "_close_indices_if_needed: fail all retries"
-            )
-        return closed_idx
+                    }
+                    close_resp = self._request_indices_to_close(to_close) or {}
+                    logger.debug(
+                        f"_close_indices_if_needed: request closing {to_close} returned {close_resp}"
+                    )
+                    not_closed = {
+                        idx
+                        for idx, state in close_resp.get("indices", {}).items()
+                        if state == IndexStateEnum.OPEN
+                    }
+                    if not close_resp.get("acknowledged", False) or not_closed:
+                        raise Exception()
+        except RetryError as e:
+            if not close_resp.get("acknowledged", False):
+                raise OpenSearchRestoreFailedClosingIdxError(
+                    f"_close_indices_if_needed: failed closing {to_close}"
+                )
+            elif not_closed:
+                raise OpenSearchRestoreFailedClosingIdxError(
+                    f"_close_indices_if_needed: failed closing {not_closed}"
+                )
+            raise OpenSearchRestoreError(e)
+        return to_close
 
-    def _issue_restore_request(
+    def _restore(
         self, backup_id: int, backup_indices: List[str], wait_for_completion: bool = False
     ) -> Dict[str, Any]:
         """Runs the restore and processes the response according to wait_for_completion flag."""
@@ -278,18 +292,16 @@ class OpenSearchBackup(Object):
                 "partial": False,
             },
         )
-        logger.debug(f"_issue_restore_request: restore call returned {output}")
+        logger.debug(f"_restore: restore call returned {output}")
         if (
             self.get_service_status(output)
             == BackupServiceState.SNAPSHOT_RESTORE_ERROR_INDEX_NOT_CLOSED
         ):
             to_close = output["error"]["reason"].split("[")[2].split("]")[0]
-            raise OpenSearchRestoreFailedClosingIdxError(
-                f"_issue_restore_request: fails to close {to_close}"
-            )
+            raise OpenSearchRestoreFailedClosingIdxError(f"_restore: fails to close {to_close}")
         return output
 
-    def _check_if_restore_finished(self) -> bool:  # noqa: C901
+    def _is_restore_complete(self) -> bool:
         """Checks if the restore is finished.
 
         Essentially, check for each index shard: for all type=SNAPSHOT and stage=DONE, return True.
@@ -299,12 +311,10 @@ class OpenSearchBackup(Object):
                 "GET",
                 "/_recovery?human",
             )
-        except (ValueError, OpenSearchHttpError, requests.HTTPError) as e:
+        except OpenSearchHttpError as e:
             raise OpenSearchRestoreCheckError(f"Failed GET to /_recovery with : {e}")
-        if isinstance(indices_status, str):
+        if not isinstance(indices_status, dict):
             indices_status = json.loads(indices_status)
-        elif isinstance(indices_status, list) or isinstance(indices_status, set):
-            raise ValueError("Unexpected output from /_recovery: type list received")
 
         restore_running = False
         for idx, info in indices_status.items():
@@ -324,14 +334,14 @@ class OpenSearchBackup(Object):
     def _on_check_restore_status_action(self, event: ActionEvent) -> None:
         """Checks the status of indices that have been recovered from snapshot."""
         try:
-            if self._check_if_restore_finished():
+            if self._is_restore_complete():
                 event.set_results({"state": "successful restore!"})
                 return
             event.set_results({"state": "restore in progress..."})
         except Exception as e:
             event.fail(f"Failed: {e}")
 
-    def _backup_is_available_for_restore(self, backup_id: int) -> bool:
+    def _is_backup_available_for_restore(self, backup_id: int) -> bool:
         """Checks if the backup_id exists and is ready for a restore."""
         backups = self._list_backups()
         try:
@@ -349,12 +359,12 @@ class OpenSearchBackup(Object):
             event.fail("Failed: backup service is not configured yet")
             return
 
-        if not self._check_if_restore_finished():
+        if not self._is_restore_complete():
             event.fail("Failed: previous restore is still in progress")
             return
         # Now, validate the backup is working
         backup_id = str(event.params.get("backup-id"))
-        if self._backup_is_available_for_restore(backup_id):
+        if self._is_backup_available_for_restore(backup_id):
             event.fail(f"Failed: no backup-id {backup_id}")
             return
 
@@ -364,13 +374,14 @@ class OpenSearchBackup(Object):
         closed_idx = set()
         try:
             closed_idx = self._close_indices_if_needed(backup_id)
-            output = self._issue_restore_request(
-                backup_id, event.params.get("wait-for-completion", False)
-            )
+            output = self._restore(backup_id, event.params.get("wait-for-completion", False))
             logger.debug(f"Restore action: received response: {output}")
             logger.info(f"Restore action succeeded for backup_id {backup_id}")
         except OpenSearchRestoreFailedClosingIdxError as e:
             event.fail(f"Failed: {e}")
+            return
+        except OpenSearchHttpError as e:
+            event.fail(f"Failed to connect with the cluster: {e}")
             return
 
         # Post execution checks
@@ -384,7 +395,8 @@ class OpenSearchBackup(Object):
         if event.params.get("wait-for-completion", False):
             # We are waiting for restore to complete, then we need to check the status
             shards = output.get("snapshot", {}).get("shards", {})
-            assert shards.get("successful", -1) == shards.get("total", 0)
+            if shards.get("successful", -1) != shards.get("total", 0):
+                event.fail("Failed: restore failed to complete")
         elif output.get("accepted", False):
             if not closed_idx:
                 event.fail("Failed: no indices available to restore")
@@ -427,7 +439,9 @@ class OpenSearchBackup(Object):
             logger.info(f"Backup completed with backup-id {new_backup_id}")
 
             if wait_for_completion and self.is_backup_in_progress():
-                event.fail(f"Timed out while waiting for: backup id {new_backup_id}")
+                event.fail(
+                    f"Timed out while waiting for: backup id {new_backup_id} - Please check the status again in the future."
+                )
                 return
         except (
             OpenSearchHttpError,
@@ -737,7 +751,6 @@ class OpenSearchBackup(Object):
         Raises:
           - ValueError
           - OpenSearchHttpError
-          - requests.HTTPError
         """
         if "retries" not in kwargs.keys():
             kwargs["retries"] = 6

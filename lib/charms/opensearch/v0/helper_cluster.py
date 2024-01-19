@@ -6,6 +6,7 @@ import logging
 from random import choice
 from typing import Dict, List, Optional
 
+from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -22,6 +23,21 @@ LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
+
+
+class IndexStateEnum(BaseStrEnum):
+    """Enum for index states."""
+
+    OPEN = "open"
+    CLOSED = "closed"
+
+
+class IndexHealthEnum(BaseStrEnum):
+    """Enum for index health."""
+
+    GREEN = "green"
+    YELLOW = "yellow"
+    RED = "red"
 
 
 class ClusterTopology:
