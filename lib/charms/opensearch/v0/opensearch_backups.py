@@ -56,10 +56,8 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
 )
-from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
-    OpenSearchPluginEventScope,
     OpenSearchPluginRelationClusterNotReadyError,
     PluginState,
 )
@@ -593,20 +591,8 @@ class OpenSearchBackup(Object):
             self.charm.model.get_relation(S3_RELATION)
             and self.charm.model.get_relation(S3_RELATION).units
         ):
-            # There are still members in the relation, defer until it is finished
-            # Make a relation-change in the peer relation, so it triggers this unit back
-            counter = self.charm.peers_data.get(Scope.UNIT, "s3_broken")
-            if counter:
-                self.charm.peers_data.put(Scope.UNIT, "s3_broken", counter + 1)
-            else:
-                self.charm.peers_data.put(Scope.UNIT, "s3_broken", 1)
             event.defer()
             return
-
-        # Second part of this work-around
-        if self.charm.peers_data.get(Scope.UNIT, "s3_broken"):
-            # Now, we can delete it
-            self.charm.peers_data.delete(Scope.UNIT, "s3_broken")
 
         self.charm.status.set(MaintenanceStatus("Disabling backup service..."))
         snapshot_status = self._check_snapshot_status()
@@ -642,11 +628,9 @@ class OpenSearchBackup(Object):
             self._execute_s3_broken_calls()
 
         try:
-            self.charm.plugin_manager.set_event_scope(
-                OpenSearchPluginEventScope.RELATION_BROKEN_EVENT
-            )
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
-            self.charm.plugin_manager._disable_if_needed(plugin)
+            if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
+                self.charm.plugin_manager.apply_config(plugin.disable())
         except OpenSearchError as e:
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 self.charm.status.set(WaitingStatus("s3-broken event: cluster not ready yet"))
@@ -656,14 +640,8 @@ class OpenSearchBackup(Object):
                 )
                 # There was an unexpected error, log it and block the unit
                 logger.error(e)
-            self.charm.plugin_manager.reset_event_scope()
             event.defer()
             return
-        # we need to do this task, so we will ask for an exception from lint
-        except:  # noqa: E722
-            self.charm.plugin_manager.reset_event_scope()
-            return
-        self.charm.plugin_manager.reset_event_scope()
         self.charm.status.set(ActiveStatus())
 
     def _execute_s3_broken_calls(self):
