@@ -244,7 +244,11 @@ class OpenSearchBackup(Object):
                 with attempt:
                     to_close = {
                         index
-                        for index, state in ClusterState.indices(self.charm.opensearch).items()
+                        for index, state in ClusterState.indices(
+                            self.charm.opensearch,
+                            # We need to know about all indices, including those that are hidden
+                            expand_wildcards="all",
+                        ).items()
                         if (
                             index in backup_indices
                             and state["status"] != IndexStateEnum.CLOSED
