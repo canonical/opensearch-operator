@@ -51,7 +51,6 @@ from typing import Any, Dict, List, Set, Tuple
 
 import requests
 from charms.data_platform_libs.v0.s3 import S3Requirer
-from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -127,10 +126,6 @@ class OpenSearchRestoreFailedClosingIdxError(OpenSearchRestoreError):
     """Exception thrown when restore fails to close indices."""
 
 
-class OpenSearchRestoreMismatchBetweenIdxAndSnapshotError(OpenSearchRestoreError):
-    """Exception thrown when restore fails to close indices."""
-
-
 class BackupServiceState(BaseStrEnum):
     """Enum for the states possible once plugin is enabled."""
 
@@ -167,7 +162,6 @@ class OpenSearchBackup(Object):
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credentials_changed
         )
-        self.framework.observe(self.charm.on.update_status, self._on_update_status)
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
@@ -175,28 +169,19 @@ class OpenSearchBackup(Object):
             self.charm.on.check_restore_status_action, self._on_check_restore_status_action
         )
 
-    def _on_update_status(self, _):
-        """Checks if the backup and/or restores are finished."""
-        status = self._check_repo_status()
-        if status == BackupServiceState.SUCCESS:
-            # There is a repo setup, check if we have any backup/restore registered in the
-            # peer relation's app databag
-            logger.info(f"Checking if backup in progress: {self.is_backup_in_progress()}")
-            logger.info(f"Checking if restore in progress: {self._check_if_restore_finished()}")
-
     @property
     def _plugin_status(self):
         return self.charm.plugin_manager.get_plugin_status(OpenSearchBackupPlugin)
 
-    def _format_backup_list(self, backup_list: List[Tuple[Any]]) -> str:
+    def _format_backup_list(self, backups: List[Tuple[Any]]) -> str:
         """Formats provided list of backups as a table."""
-        backups = ["{:<10s} | {:s}".format(" backup-id ", "backup-status")]
-        backups.append("-" * len(backups[0]))
+        output = ["{:<10s} | {:s}".format(" backup-id ", "backup-status")]
+        output.append("-" * len(output[0]))
 
-        for backup_id, backup_status in backup_list:
+        for backup_id, backup_status in backups:
             tab = " " * math.floor((10 - len(str(backup_id))) / 2)
-            backups.append("{:<10s} | {:s}".format(f"{tab}{backup_id}", backup_status))
-        return "\n".join(backups)
+            output.append("{:<10s} | {:s}".format(f"{tab}{backup_id}", backup_status))
+        return "\n".join(output)
 
     def _generate_backup_list_output(self, backups: Dict[str, Any]) -> str:
         """Generates a list of backups in a formatted table.
@@ -212,7 +197,7 @@ class OpenSearchBackup(Object):
             backup_list.append(
                 (
                     id,
-                    str(state) if state != BackupServiceState.SUCCESS else "finished",
+                    state.value if state != BackupServiceState.SUCCESS else "finished",
                 )
             )
         return self._format_backup_list(backup_list)
@@ -260,8 +245,14 @@ class OpenSearchBackup(Object):
                         logger.debug(
                             f"_close_indices_if_needed: request closing {index} returned {o}"
                         )
-                        assert o.get("acknowledged", False)
-                        assert index in o.get("indices", {})
+                        if not o.get("acknowledged", False):
+                            raise OpenSearchRestoreFailedClosingIdxError(
+                                f"_close_indices_if_needed: failed closing {index}"
+                            )
+                        if index not in o.get("indices", {}):
+                            raise OpenSearchRestoreFailedClosingIdxError(
+                                f"_close_indices_if_needed: failed closing {index}"
+                            )
                         closed_idx.add(index)
         except RetryError:
             raise OpenSearchRestoreFailedClosingIdxError(
@@ -299,15 +290,10 @@ class OpenSearchBackup(Object):
         return output
 
     def _check_if_restore_finished(self) -> bool:  # noqa: C901
-        rel = self.model.get_relation(PeerRelationName)
-        if not rel:
-            # Running on a single unit, wait_for_completion=false not supported
-            return True
-        if not rel.data[self.charm.app].get("restore_in_progress"):
-            # Dealing with an empty set
-            return True
-        closed_idx = set(rel.data[self.charm.app].get("restore_in_progress", "").split(",")).copy()
-        # Check if all indices are open again
+        """Checks if the restore is finished.
+
+        Essentially, check for each index shard: for all type=SNAPSHOT and stage=DONE, return True.
+        """
         try:
             indices_status = self._request(
                 "GET",
@@ -320,12 +306,8 @@ class OpenSearchBackup(Object):
         elif isinstance(indices_status, list) or isinstance(indices_status, set):
             raise ValueError("Unexpected output from /_recovery: type list received")
 
-        indices_not_found = closed_idx.copy()
+        restore_running = False
         for idx, info in indices_status.items():
-            if idx in closed_idx:
-                indices_not_found.discard(idx)
-            else:
-                continue
             # Now, check the status of each shard
             done = True
             for shard in info["shards"]:
@@ -334,21 +316,10 @@ class OpenSearchBackup(Object):
                 if shard["stage"] != "DONE":
                     done = False
                     break
-            if done:
-                closed_idx.discard(idx)
-
-        if indices_not_found:
-            raise OpenSearchRestoreMismatchBetweenIdxAndSnapshotError(
-                f"Failed to find indices {indices_not_found} in /_recovery"
-            )
-        if (
-            not closed_idx
-            and self.charm.unit.is_leader()
-            and "restore_in_progress" in rel.data[self.charm.app]
-        ):
-            del rel.data[self.charm.app]["restore_in_progress"]
-            return True
-        return False
+            if not done:
+                restore_running = True
+                break
+        return not restore_running
 
     def _on_check_restore_status_action(self, event: ActionEvent) -> None:
         """Checks the status of indices that have been recovered from snapshot."""
@@ -415,11 +386,8 @@ class OpenSearchBackup(Object):
             shards = output.get("snapshot", {}).get("shards", {})
             assert shards.get("successful", -1) == shards.get("total", 0)
         elif output.get("accepted", False):
-            rel = self.model.get_relation(PeerRelationName)
-            if rel and closed_idx:
-                rel.data[self.charm.app]["restore_in_progress"] = ",".join(closed_idx)
-            else:
-                event.fail("Failed: no relation available to store the restore status")
+            if not closed_idx:
+                event.fail("Failed: no indices available to restore")
                 return
         event.set_results({"state": "successful restore!", "closed-indices": str(closed_idx)})
 
@@ -470,9 +438,6 @@ class OpenSearchBackup(Object):
         if wait_for_completion:
             event.set_results({"backup-id": new_backup_id, "status": "Backup completed."})
             return
-
-        rel = self.model.get_relation(PeerRelationName)
-        rel.data[self.charm.app]["backup_in_progress"] = str(new_backup_id)
         event.set_results({"backup-id": new_backup_id, "status": "Backup is running."})
 
     def _can_unit_perform_backup(self, event: ActionEvent) -> bool:
@@ -514,38 +479,11 @@ class OpenSearchBackup(Object):
     def is_backup_in_progress(self, backup_id=None) -> bool:
         """Returns True if backup is in progress, False otherwise.
 
-        First, check if we have a marker of a running backup. If yes, then we check for both the
-        saved backup_id in peer relation AND backup_id, if provided. If neither are in progress,
-        return False and clean up the marker from the relation.
+        We filter the _query_backup_status() and seek for the following states:
+        - SNAPSHOT_IN_PROGRESS
         """
-        rel = self.model.get_relation(PeerRelationName)
-        if rel:
-            # If relation is present, then check the peer relation data
-            peer_relation_backup_id = rel.data[self.charm.app].get("backup_in_progress", None)
-            if peer_relation_backup_id and self._query_backup_status(backup_id) in [
-                BackupServiceState.SNAPSHOT_IN_PROGRESS
-            ]:
-                # We have a backup in progress
-                return True
-            else:
-                # Clean up status
-                if (
-                    self.charm.unit.is_leader()
-                    and "backup_in_progress" in rel.data[self.charm.app]
-                ):
-                    del rel.data[self.charm.app]["backup_in_progress"]
-        backup_id_in_progress = self._query_backup_status(backup_id) in [
-            BackupServiceState.SNAPSHOT_IN_PROGRESS,
-        ]
-        if backup_id_in_progress:
+        if self._query_backup_status() in [BackupServiceState.SNAPSHOT_IN_PROGRESS]:
             # We have a backup in progress
-            if (
-                peer_relation_backup_id
-                and peer_relation_backup_id != backup_id_in_progress
-                and self.charm.unit.is_leader()
-            ):
-                # We need to update our peer relation as the IDs were different
-                rel.data[self.charm.app]["backup_in_progress"] = str(backup_id_in_progress)
             return True
         return False
 
@@ -580,8 +518,8 @@ class OpenSearchBackup(Object):
         try:
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
-                self.charm.plugin_manager.disable(plugin)
-            self.charm.plugin_manager.configure(plugin)
+                self.charm.plugin_manager.apply_config(plugin.disable())
+            self.charm.plugin_manager.apply_config(plugin.config())
         except OpenSearchError as e:
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 self.charm.status.set(WaitingStatus("s3-changed: cluster not ready yet"))
