@@ -370,9 +370,6 @@ async def test_02_restore_cluster(ops_test: OpsTest) -> None:
     """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
     app = (await app_name(ops_test)) or APP_NAME
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    import pdb
-
-    pdb.set_trace()
     await _restore_cluster(ops_test)
     # Count the number of docs in the index
     count = await index_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
