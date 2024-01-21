@@ -79,8 +79,12 @@ ClientRelationName = "opensearch-client"
 PeerRelationName = "opensearch-peers"
 PeerClusterManagerRelationName = "peer-cluster-manager"
 PeerClusterRelationName = "peer-cluster"
+COSUser = "monitor"
+COSRelationName = "cos-agent"
+COSRole = "readall_and_monitor"
+COSPort = "9200"
 
 
 # Opensearch Users
-OpenSearchUsers = {"admin"}
+OpenSearchUsers = {"admin", "monitor"}
 OpenSearchRoles = set()

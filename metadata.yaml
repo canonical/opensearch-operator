@@ -22,6 +22,13 @@ provides:
     optional: true
   opensearch-client:
     interface: opensearch_client
+  cos-agent:
+    description: |
+      `cos-agent` is a dedicated relation for the grafana agent machine
+      charm. It will allow you to set up custom scrape jobs, fetch files
+      from arbitrary locations, send alert rules, dashboards, etc.
+    interface: cos_agent
+    scope: container
 
 requires:
   certificates:
@@ -31,6 +38,9 @@ requires:
     interface: peer_cluster
     limit: 2  # main cluster_manager + failover_cluster_manager
     optional: true
+  s3-credentials:
+    interface: s3
+    limit: 1
 
 storage:
   opensearch-data:

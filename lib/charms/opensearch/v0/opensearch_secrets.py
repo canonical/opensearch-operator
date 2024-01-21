@@ -14,6 +14,7 @@ information for the Opensearch charm.
 import logging
 from typing import Dict, Optional, Union
 
+from charms.opensearch.v0.constants_secrets import PW_POSTFIX
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchSecretInsertionError
 from charms.opensearch.v0.opensearch_internal_data import (
@@ -55,6 +56,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
     def _on_secret_changed(self, event: SecretChangedEvent):
         """Refresh secret and re-run corresponding actions if needed."""
+        secret = event.secret
+        secret.get_content(refresh=True)
+
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
             return
@@ -81,6 +85,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
     def implements_secrets(self):
         """Property to cache results from a Juju call."""
         return JujuVersion.from_environ().has_secrets
+
+    def password_key(self, username: str) -> str:
+        """Unified key to store password secrets specific to a user."""
+        return f"{username}-{PW_POSTFIX}"
 
     def label(self, scope: Scope, key: str) -> str:
         """Generated keys to be used within relation data to refer to secret IDs."""

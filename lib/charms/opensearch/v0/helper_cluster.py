@@ -256,6 +256,24 @@ class ClusterState:
         return opensearch.request("GET", "/_cat/shards", host=host, alt_hosts=alt_hosts)
 
     @staticmethod
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        reraise=True,
+    )
+    def indices(
+        opensearch: OpenSearchDistribution,
+        host: Optional[str] = None,
+        alt_hosts: Optional[List[str]] = None,
+    ) -> List[Dict[str, str]]:
+        """Get all shards of all indexes in the cluster."""
+        idx = opensearch.request("GET", "/_cat/indices", host=host, alt_hosts=alt_hosts)
+        idx = {}
+        for index in opensearch.request("GET", "/_cat/indices", host=host, alt_hosts=alt_hosts):
+            idx[index["index"]] = {"health": index["health"], "status": index["status"]}
+        return idx
+
+    @staticmethod
     def shards_by_state(
         opensearch: OpenSearchDistribution,
         host: Optional[str] = None,

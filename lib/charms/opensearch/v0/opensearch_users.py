@@ -85,7 +85,10 @@ class OpenSearchUserManager:
         except OpenSearchHttpError as e:
             raise OpenSearchUserMgmtError(e)
 
-        if resp.get("status") != "CREATED":
+        if resp.get("status") != "CREATED" and not (
+            resp.get("status") == "OK" and "updated" in resp.get("message")
+        ):
+            logging.error(f"Couldn't create role: {resp}")
             raise OpenSearchUserMgmtError(f"creating role {role_name} failed")
 
         return resp
@@ -162,6 +165,7 @@ class OpenSearchUserManager:
                 payload=payload,
             )
         except OpenSearchHttpError as e:
+            logger.error(f"Couldn't create user {str(e)}")
             raise OpenSearchUserMgmtError(e)
 
         if resp.get("status") != "CREATED":

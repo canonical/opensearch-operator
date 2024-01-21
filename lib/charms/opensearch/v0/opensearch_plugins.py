@@ -1,7 +1,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""OpenSearch Plugin model.
+"""OpenSearch Plugin Model.
 
 In OpenSearch, plugins are also called interchangeably as extensions and modules.
 
@@ -78,6 +78,8 @@ class MyPlugin(OpenSearchPlugin):
     def config(self) -> OpenSearchPluginConfig:
         # Use the self._extra_config to retrieve any extra configuration.
 
+        # If using the self._extra_config, or any other dict to build the class below
+        # let the KeyError happen and the plugin manager will capture it.
         return OpenSearchPluginConfig(
             config_entries_on_add={...}, # Key-value pairs to be added to opensearch.yaml
             secret_entries_on_add={...}  # Key-value pairs to be added to keystore
@@ -86,6 +88,8 @@ class MyPlugin(OpenSearchPlugin):
     def disable(self) -> Tuple[OpenSearchPluginConfig, OpenSearchPluginConfig]:
         # Use the self._extra_config to retrieve any extra configuration.
 
+        # If using the self._extra_config, or any other dict to build the class below
+        # let the KeyError happen and the plugin manager will capture it.
         return (
             OpenSearchPluginConfig(...), # Configuration to be removed from yaml/keystore
                                          # Configuration to be added, e.g. in the case we need
@@ -149,31 +153,75 @@ In case the plugin depends on API calls to finish configuration or a relation to
 configured, create an extra class at the charm level to manage plugin events:
 
 
-class MyPluginRelationManager(Object):
+class MyPluginRelationHandler(Object):
 
     PLUGIN_NAME = "MyPlugin"
 
     def __init__(self, charm: OpenSearchBaseCharm, relation_name: str):
-        super().__init__(charm, relation_name)
+        super().__init__(charm, relation_name, peer_relation_name)
         self._charm = charm
         self._relation_name = relation_name
+        self._peer_relation_name = peer_relation_name
 
         self.my_client = MyPluginRelationRequirer(self.charm, relation_name)
         self.framework.observe(
-            self.charm.on[relation_name].relation_departed, self.on_change
+            self.charm.on[relation_name].relation_created, self._event_handler
+        )
+        self.framework.observe(
+            self.charm.on[relation_name].relation_changed, self._event_handler
+        )
+        self.framework.observe(
+            self.charm.on[relation_name].relation_departed, self._event_handler
+        )
+        self.framework.observe(
+            self.charm.on[relation_name].relation_broken, self._event_handler
         )
 
-    def on_change(self, event):
-        ...
-        # Call the plugin manager to process the new relation data
-        self._charm.plugin_manager.run()
+    @property
+    def relation(self):
+        return self._charm.model.get_relation(self._relation_name)
 
-        # Or search for the specific plugin
-        # That may be relevant if we need to recover configuration data, for example
-        # to submit in an API call
-        for plugin in self._charm.plugin_manager.plugins():
-            if plugin.name == PLUGIN_NAME:
-                self._run_the_api_call_here(plugin.config())
+    @property
+    def peer_relation(self):
+        return self._charm.model.get_relation(self._peer_relation_name)
+
+    def _event_handler(self, event):
+
+        # Due to LP#2024583, we need to be sure there are units in the relation before
+        # calling plugin_manager.run() and processing the units.
+        # Therefore, check these scenarios
+        relation = self._charm.model.get_relation(self._relation_name)
+        if (isinstance(event, RelationJoinedEvent)
+            and (not relation or not relation.units)):
+            # We must wait to execute these relations until there are units adding data
+            # First, make sure the status is stored
+            self.peer_relation.data[self._charm.unit]["MyPlugin_waiting_for_rel_units"] = True
+            # Now, defer the event and wait
+            event.defer()
+            return
+        elif (isinstance(event, RelationBrokenEvent)
+              and (relation or relation.units)):
+            # Same case here
+            self.peer_relation.data[self._charm.unit]["MyPlugin_waiting_for_rel_units"] = True
+            # Now, defer the event and wait
+            event.defer()
+            return
+
+        # Due to LP#2024583, if we are waiting for a previous event, then defer
+        if self.peer_relation.data[self._charm.unit].get("MyPlugin_waiting_for_rel_units"):
+            event.defer()
+            return
+        self.peer_relation.data[self._charm.unit]["MyPlugin_waiting_for_rel_units"] = False
+
+        ...
+
+        # Execute any other tasks, e.g. running API calls to OpenSearch
+        # Optionally, use other methods to execute specifics, e.g. _event_departed
+        ...
+
+        # Call the plugin manager to process the new relation data
+        if self._charm.plugin_manager.run():
+            # Call the restart logic
 
 ...
 
@@ -203,7 +251,8 @@ class OpenSearchBaseCharm(CharmBase):
             return
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
-"""
+
+"""  # noqa: D405, D410, D411, D214, D412, D416
 
 import logging
 from abc import abstractmethod, abstractproperty
@@ -230,6 +279,13 @@ class OpenSearchPluginError(OpenSearchError):
     """Exception thrown when an opensearch plugin is invalid."""
 
 
+class OpenSearchPluginRelationClusterNotReadyError(OpenSearchPluginError):
+    """Exception thrown when making API calls and cluster is not yet ready.
+
+    This exception in specific should be handled by classes managing the relations of plugins.
+    """
+
+
 class OpenSearchPluginMissingDepsError(OpenSearchPluginError):
     """Exception thrown when an opensearch plugin misses installed dependencies."""
 
@@ -242,12 +298,27 @@ class OpenSearchPluginRemoveError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin removal fails."""
 
 
+class OpenSearchPluginMissingConfigError(OpenSearchPluginError):
+    """Exception thrown when config() or disable() fails to find a config key.
+
+    The plugin itself should raise a KeyError, to avoid burden in the plugin development.
+    """
+
+
+class OpenSearchPluginEventScope(BaseStrEnum):
+    """Defines the scope of the plugin manager."""
+
+    DEFAULT = "default"
+    RELATION_BROKEN_EVENT = "relation-broken-event"
+
+
 class PluginState(BaseStrEnum):
     """Enum for the states possible in plugins' lifecycle."""
 
     MISSING = "missing"
     INSTALLED = "installed"
     ENABLED = "enabled"
+    DISABLED = "disabled"
     WAITING_FOR_UPGRADE = "waiting-for-upgrade"
 
 
@@ -271,6 +342,7 @@ class OpenSearchPlugin:
     """Abstract class describing an OpenSearch plugin."""
 
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
+    REMOVE_ON_DISABLE = False
 
     def __init__(self, plugins_path: str, extra_config: Dict[str, Any] = None):
         """Creates the OpenSearchPlugin object.
@@ -299,7 +371,7 @@ class OpenSearchPlugin:
     @property
     def dependencies(self) -> Optional[List[str]]:
         """Returns a list of plugin name dependencies."""
-        return None
+        return []
 
     @abstractmethod
     def config(self) -> OpenSearchPluginConfig:
@@ -308,10 +380,13 @@ class OpenSearchPlugin:
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = {...},
+            config_entries_to_del = [...]|{...},
             secret_entries_to_add = {...},
-            secret_entries_to_del = {...},
+            secret_entries_to_del = [...]|{...},
         )
+
+        May throw KeyError if accessing some source, such as self._extra_config, but the
+        dictionary does not contain all the configs. In this case, let the error happen.
         """
         pass
 
@@ -322,10 +397,13 @@ class OpenSearchPlugin:
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = {...},
+            config_entries_to_del = [...]|{...},
             secret_entries_to_add = {...},
-            secret_entries_to_del = {...},
+            secret_entries_to_del = [...]|{...},
         )
+
+        May throw KeyError if accessing some source, such as self._extra_config, but the
+        dictionary does not contain all the configs. In this case, let the error happen.
         """
         pass
 
@@ -342,15 +420,75 @@ class OpenSearchKnn(OpenSearchPlugin):
         """Returns a plugin config object to be applied for enabling the current plugin."""
         return OpenSearchPluginConfig(
             config_entries_to_add={"knn.plugin.enabled": True},
+            config_entries_to_del={"knn.plugin.enabled": False},
         )
 
     def disable(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for disabling the current plugin."""
         return OpenSearchPluginConfig(
             config_entries_to_add={"knn.plugin.enabled": False},
+            config_entries_to_del={"knn.plugin.enabled": True},
         )
 
     @property
     def name(self) -> str:
         """Returns the name of the plugin."""
         return "opensearch-knn"
+
+
+class OpenSearchBackupPlugin(OpenSearchPlugin):
+    """Manage backup configurations.
+
+    This class must load the opensearch plugin: repository-s3 and configure it.
+    """
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return "repository-s3"
+
+    def config(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin addition.
+
+        Format:
+        OpenSearchPluginConfig(
+            config_entries_to_add = {...},
+            config_entries_to_del = [...]|{...},
+            secret_entries_to_add = {...},
+            secret_entries_to_del = [...]|{...},
+        )
+        """
+        return OpenSearchPluginConfig(
+            # Try to remove the previous values
+            secret_entries_to_del=[
+                "s3.client.default.access_key",
+                "s3.client.default.secret_key",
+            ],
+            secret_entries_to_add={
+                # Remove any entries with None value
+                k: v
+                for k, v in {
+                    "s3.client.default.access_key": self._extra_config.get("access-key"),
+                    "s3.client.default.secret_key": self._extra_config.get("secret-key"),
+                }.items()
+                if v
+            },
+        )
+
+    def disable(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin removal.
+
+        Format:
+        OpenSearchPluginConfig(
+            config_entries_to_add = {...},
+            config_entries_to_del = [...]|{...},
+            secret_entries_to_add = {...},
+            secret_entries_to_del = [...]|{...},
+        )
+        """
+        return OpenSearchPluginConfig(
+            secret_entries_to_del=[
+                "s3.client.default.access_key",
+                "s3.client.default.secret_key",
+            ],
+        )

@@ -308,8 +308,10 @@ async def test_scaling_secrets(ops_test: OpsTest):
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units={OPENSEARCH_APP_NAME: len(opensearch_unit_ids)},
-        idle_period=70,
+        idle_period=50,  # slightly less than update-status-interval period
     )
+    # Now, we want to sleep until an update-status happens
+    time.sleep(30)
     assert await _is_number_of_endpoints_valid(
         CLIENT_APP_NAME, FIRST_RELATION_NAME
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
