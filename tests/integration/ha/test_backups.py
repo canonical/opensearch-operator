@@ -3,12 +3,10 @@
 # See LICENSE file for licensing details.
 
 import asyncio
-import json
 import logging
 import os
 import random
 import subprocess
-import time
 
 # from pathlib import Path
 #
@@ -16,27 +14,21 @@ import time
 import pytest
 import requests
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
 from tests.integration.ha.helpers import app_name, assert_continuous_writes_consistency
-from tests.integration.ha.helpers_data import (
-    create_index,
-    default_doc,
-    index_count,
-    index_doc,
-    search,
-)
+from tests.integration.ha.helpers_data import index_docs_count
 from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
-    get_application_unit_ids_ips,
-    get_leader_unit_id,
+    assert_test_cont_writes_works,
+    backup_cluster,
     get_leader_unit_ip,
     get_reachable_unit_ips,
     http_request,
+    restore_cluster,
     run_action,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -106,9 +98,6 @@ value_before_backup, value_after_backup = None, None
 #             bucket_object.delete()
 
 
-TEST_BACKUP_INDEX = "test_backup_index"
-
-
 @pytest.fixture()
 async def c_writes(ops_test: OpsTest):
     """Creates instance of the ContinuousWrites."""
@@ -166,130 +155,6 @@ def microceph():
     # Now, return the configuration
     ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
     return {"url": f"http://{ip}", "access-key": "accesskey", "secret-key": "secretkey"}
-
-
-async def _wait_backup_finish(ops_test, leader_id):
-    """Waits the backup to finish and move to the finished state or throws a RetryException."""
-    for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
-        with attempt:
-            action = await run_action(
-                ops_test, leader_id, "list-backups", params={"output": "json"}
-            )
-            logger.debug(f"list-backups output: {action}")
-            # Expected format:
-            # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
-            backups = json.loads(action.response["backups"])
-            logger.debug(f"Backups recovered: {backups}")
-            assert action.status == "completed"  # The actual action status
-            assert len(backups) > 0  # The number of backups
-            for backup in backups.values():
-                logger.debug(f"Backup is: {backup}")
-                assert backup["state"] == "SUCCESS"  # The backup status
-
-
-async def _assert_test_cont_writes_works(ops_test: OpsTest) -> ContinuousWrites:
-    """Asserts that TEST_BACKUP_INDEX is writable while under continuous writes.
-
-    Given we are restoring an index, we need to make sure ContinuousWrites restart at
-    the tip of that index instead of doc_id = 0.
-
-    Closes the writer at the end.
-    """
-    app = (await app_name(ops_test)) or APP_NAME
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    initial_count = await index_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
-    logger.info(
-        f"Index {ContinuousWrites.INDEX_NAME} has {initial_count} documents, starting there"
-    )
-    writer = ContinuousWrites(ops_test, app, initial_count=initial_count)
-    await writer.start()
-
-    try:
-        total_writes = await writer.count()
-
-        units = await get_application_unit_ids_ips(ops_test, app=app)
-        app = (await app_name(ops_test)) or APP_NAME
-        doc_id = TEST_BACKUP_DOC_ID  # This is the next doc id, after the previous test
-
-        # check that the doc can be retrieved from any node
-        logger.info("Test backup index: searching")
-        for u_ip in units.values():
-            docs = await search(
-                ops_test,
-                app,
-                u_ip,
-                TEST_BACKUP_INDEX,
-                query={"query": {"term": {"_id": doc_id}}},
-                preference="_only_local",
-            )
-            # Validate the index and document are present
-            assert len(docs) == 1
-            assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
-
-        assert await writer.count() > total_writes
-    except Exception as e:
-        await writer.stop()
-        raise e
-
-    time.sleep(5)
-    result = await writer.stop()
-    assert result.count > initial_count
-
-
-async def _backup_cluster(ops_test: OpsTest) -> None:
-    app = (await app_name(ops_test)) or APP_NAME
-
-    units = await get_application_unit_ids_ips(ops_test, app=app)
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    await create_index(ops_test, app, leader_unit_ip, TEST_BACKUP_INDEX, r_shards=len(units) - 1)
-
-    # index document
-    doc_id = TEST_BACKUP_DOC_ID
-    await index_doc(ops_test, app, leader_unit_ip, TEST_BACKUP_INDEX, doc_id)
-
-    # check that the doc can be retrieved from any node
-    logger.info("Test backup index: searching")
-    for u_ip in units.values():
-        docs = await search(
-            ops_test,
-            app,
-            u_ip,
-            TEST_BACKUP_INDEX,
-            query={"query": {"term": {"_id": doc_id}}},
-            preference="_only_local",
-        )
-        # Validate the index and document are present
-        assert len(docs) == 1
-        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
-
-    leader_id = await get_leader_unit_id(ops_test, app)
-
-    action = await run_action(ops_test, leader_id, "create-backup")
-    logger.debug(f"create-backup output: {action}")
-
-    assert action.status == "completed"
-    await _wait_backup_finish(ops_test, leader_id)
-
-
-async def _restore_cluster(ops_test: OpsTest) -> None:
-    app = (await app_name(ops_test)) or APP_NAME
-    leader_id = await get_leader_unit_id(ops_test, app)
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    # For testing:
-    # delete the TEST_BACKUP_INDEX
-    await http_request(
-        ops_test,
-        "DELETE",
-        f"https://{leader_unit_ip}:9200/{TEST_BACKUP_INDEX}",
-        app=app,
-    )
-
-    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": 1})
-    logger.debug(f"restore output: {action}")
-    assert action.status == "completed"
 
 
 @pytest.mark.abort_on_fail
@@ -354,7 +219,7 @@ async def test_01_backup_cluster(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
-    await _backup_cluster(ops_test)
+    await backup_cluster(ops_test)
 
     app = (await app_name(ops_test)) or APP_NAME
     # continuous writes checks
@@ -366,11 +231,11 @@ async def test_02_restore_cluster(ops_test: OpsTest) -> None:
     """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
     app = (await app_name(ops_test)) or APP_NAME
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    await _restore_cluster(ops_test)
+    await restore_cluster(ops_test)
     # Count the number of docs in the index
-    count = await index_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    count = await index_docs_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     assert count > 0
-    await _assert_test_cont_writes_works(ops_test)
+    await assert_test_cont_writes_works(ops_test)
 
 
 @pytest.mark.abort_on_fail
@@ -401,20 +266,12 @@ async def test_03_restore_cluster_after_app_destroyed(
 
     app = (await app_name(ops_test)) or APP_NAME
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    # # We delete the series index from c_writes
-    # # The idea is to ensure we will have data after restore
-    # await http_request(
-    #     ops_test,
-    #     "DELETE",
-    #     f"https://{leader_unit_ip}:9200/{ContinuousWrites.INDEX_NAME}",
-    #     app=app,
-    # )
-    await _restore_cluster(ops_test)
+    await restore_cluster(ops_test)
     # Count the number of docs in the index
-    count = await index_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    count = await index_docs_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     assert count > 0
 
-    await _assert_test_cont_writes_works(ops_test)
+    await assert_test_cont_writes_works(ops_test)
 
 
 @pytest.mark.abort_on_fail
@@ -442,19 +299,11 @@ async def test_04_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     )
 
     # Backup should generate a new backup id
-    await _backup_cluster(ops_test)
+    await backup_cluster(ops_test)
     app = (await app_name(ops_test)) or APP_NAME
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    # # We delete the series index from c_writes
-    # # The idea is to ensure we will have data after restore
-    # await http_request(
-    #     ops_test,
-    #     "DELETE",
-    #     f"https://{leader_unit_ip}:9200/{ContinuousWrites.INDEX_NAME}",
-    #     app=app,
-    # )
-    await _restore_cluster(ops_test)
+    await restore_cluster(ops_test)
     # Count the number of docs in the index
-    count = await index_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    count = await index_docs_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     assert count > 0
-    await _assert_test_cont_writes_works(ops_test)
+    await assert_test_cont_writes_works(ops_test)

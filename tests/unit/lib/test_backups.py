@@ -16,8 +16,9 @@ from charms.opensearch.v0.opensearch_backups import (
     BackupServiceState,
     OpenSearchBackupPlugin,
     OpenSearchListBackupError,
-    OpenSearchRestoreFailedClosingIdxError,
+    OpenSearchRestoreIndexClosingError,
 )
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginConfig,
@@ -35,7 +36,7 @@ TEST_BASE_PATH = "/test"
 
 LIST_BACKUPS_TRIAL = """ backup-id  | backup-status
 ---------------------------
- backup1   | finished
+ backup1   | success
  backup2   | snapshot failed for unknown reason
  backup3   | snapshot in progress"""
 
@@ -167,7 +168,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
 
 
 @pytest.mark.parametrize(
-    "list_backup_response,cluster_state,req_response,results,exc_msg",
+    "list_backup_response,cluster_state,req_response,exception_raised",
     [
         # Check if only indices in backup-id=1 are closed
         (
@@ -188,8 +189,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
                     },
                 },  # represents the closed indices
             },
-            {"index1", "index2"},
-            None,
+            False,
         ),
         # Check if only indices in backup-id=1 are closed
         (
@@ -213,8 +213,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
                     },
                 },  # represents the closed indices
             },
-            {"index1", "index2"},
-            None,
+            False,
         ),
         # Check if already closed indices are skipped
         (
@@ -235,8 +234,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
                     },
                 },  # represents the closed indices
             },
-            {"index1"},
-            None,
+            False,
         ),
         # Represents an error where index2 is not closed
         (
@@ -257,8 +255,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
                     },
                 },  # represents the closed indices
             },
-            None,
-            "_close_indices_if_needed: failed closing {'index2'}",
+            True,
         ),
         # Represents an error where request failed
         (
@@ -271,13 +268,12 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
             {
                 "acknowledged": False,
             },
-            None,
-            "_close_indices_if_needed: failed closing {'index2', 'index1'}",
+            True,
         ),
     ],
 )
 def test_close_indices_if_needed(
-    harness, mock_request, list_backup_response, cluster_state, req_response, results, exc_msg
+    harness, mock_request, list_backup_response, cluster_state, req_response, exception_raised
 ):
     harness.charm.backup._list_backups = MagicMock(return_value=list_backup_response)
     charms.opensearch.v0.opensearch_backups.ClusterState.indices = MagicMock(
@@ -285,17 +281,18 @@ def test_close_indices_if_needed(
     )
     mock_request.return_value = req_response
     try:
-        assert harness.charm.backup._close_indices_if_needed(1) == results
-    except OpenSearchRestoreFailedClosingIdxError as e:
-        if req_response["acknowledged"]:
-            assert e.__str__() == exc_msg
-        else:
-            # The order of the indices is not guaranteed
-            assert all([idx in e.__str__() for idx in list_backup_response[1]["indices"]])
+        harness.charm.backup._close_indices_if_needed(1)
+    except OpenSearchError as e:
+        assert isinstance(e, OpenSearchRestoreIndexClosingError) and exception_raised
     else:
+        idx = [
+            i
+            for i in list_backup_response[1]["indices"]
+            if i in list(req_response["indices"].keys())
+        ]
         mock_request.assert_called_with(
             "POST",
-            f"{','.join(results)}/_close",
+            f"{','.join(idx)}/_close",
             payload={
                 "ignore_unavailable": "true",
             },
@@ -544,10 +541,10 @@ class TestBackups(unittest.TestCase):
         result = self.charm.backup._is_restore_complete()
         self.assertTrue(result)
 
-    def test_05_on_check_restore_status_action(self):
+    def test_05_on_check_restore_current_action(self):
         event = MagicMock()
         self.charm.backup._is_restore_complete = MagicMock(return_value=True)
-        self.charm.backup._on_check_restore_status_action(event)
+        self.charm.backup._on_check_restore_current_action(event)
         self.assertTrue(event.set_results.called)
 
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup.apply_api_config_if_needed")

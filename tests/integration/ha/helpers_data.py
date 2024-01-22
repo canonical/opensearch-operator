@@ -249,7 +249,7 @@ async def search(
             return resp["hits"]["hits"]
 
 
-async def index_count(
+async def index_docs_count(
     ops_test: OpsTest,
     app: str,
     unit_ip: str,

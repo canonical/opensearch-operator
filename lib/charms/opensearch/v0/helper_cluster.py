@@ -32,12 +32,7 @@ class IndexStateEnum(BaseStrEnum):
     CLOSED = "closed"
 
 
-class IndexHealthEnum(BaseStrEnum):
-    """Enum for index health."""
-
-    GREEN = "green"
-    YELLOW = "yellow"
-    RED = "red"
+INDEX_WILDCARD = "all"
 
 
 class ClusterTopology:
@@ -284,9 +279,7 @@ class ClusterState:
         expand_wildcards: str = None,
     ) -> List[Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
-        endpoint = "/_cat/indices"
-        if expand_wildcards:
-            endpoint = f"{endpoint}?expand_wildcards={expand_wildcards}"
+        endpoint = f"/_cat/indices?expand_wildcards={INDEX_WILDCARD}"
         idx = {}
         for index in opensearch.request("GET", endpoint, host=host, alt_hosts=alt_hosts):
             idx[index["index"]] = {"health": index["health"], "status": index["status"]}
