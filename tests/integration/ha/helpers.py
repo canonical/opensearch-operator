@@ -19,20 +19,11 @@ from tenacity import (
 )
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers_data import (
-    create_index,
-    default_doc,
-    index_doc,
-    index_docs_count,
-    search,
-)
+from tests.integration.ha.helpers_data import index_docs_count
 from tests.integration.helpers import (
-    APP_NAME,
     get_application_unit_ids,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
-    get_leader_unit_id,
-    get_leader_unit_ip,
     http_request,
     juju_version_major,
     run_action,
@@ -451,10 +442,6 @@ async def print_logs(ops_test: OpsTest, app: str, unit_id: int, msg: str) -> str
     return msg
 
 
-TEST_BACKUP_INDEX = "test_backup_index"
-TEST_BACKUP_DOC_ID = 10
-
-
 async def wait_backup_finish(ops_test, leader_id):
     """Waits the backup to finish and move to the finished state or throws a RetryException."""
     for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
@@ -462,19 +449,30 @@ async def wait_backup_finish(ops_test, leader_id):
             action = await run_action(
                 ops_test, leader_id, "list-backups", params={"output": "json"}
             )
-            logger.debug(f"list-backups output: {action}")
             # Expected format:
             # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
             backups = json.loads(action.response["backups"])
             logger.debug(f"Backups recovered: {backups}")
-            assert action.status == "completed"  # The actual action status
-            assert len(backups) > 0  # The number of backups
-            for backup in backups.values():
-                logger.debug(f"Backup is: {backup}")
-                assert backup["state"] == "SUCCESS"  # The backup status
+            if action.status == "completed" and len(backups) > 0:
+                logger.debug(f"list-backups output: {action}")
+                return
+            else:
+                raise Exception("Backup not finished yet")
 
 
-async def assert_test_cont_writes_works(ops_test: OpsTest) -> ContinuousWrites:
+async def wait_restore_finish(ops_test, leader_id):
+    """Waits the backup to finish and move to the finished state or throws a RetryException."""
+    for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
+        with attempt:
+            action = await run_action(ops_test, leader_id, "check-restore-current")
+            logger.info(f"check-restore-current output: {action}")
+            if action.status == "completed":
+                return
+            else:
+                raise Exception("Backup not finished yet")
+
+
+async def continuous_writes_increases(ops_test: OpsTest, unit_ip: str, app: str) -> bool:
     """Asserts that TEST_BACKUP_INDEX is writable while under continuous writes.
 
     Given we are restoring an index, we need to make sure ContinuousWrites restart at
@@ -482,100 +480,29 @@ async def assert_test_cont_writes_works(ops_test: OpsTest) -> ContinuousWrites:
 
     Closes the writer at the end.
     """
-    app = (await app_name(ops_test)) or APP_NAME
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    initial_count = await index_docs_count(
-        ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME
-    )
+    initial_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
     logger.info(
         f"Index {ContinuousWrites.INDEX_NAME} has {initial_count} documents, starting there"
     )
     writer = ContinuousWrites(ops_test, app, initial_count=initial_count)
     await writer.start()
-
-    try:
-        total_writes = await writer.count()
-
-        units = await get_application_unit_ids_ips(ops_test, app=app)
-        app = (await app_name(ops_test)) or APP_NAME
-        doc_id = TEST_BACKUP_DOC_ID  # This is the next doc id, after the previous test
-
-        # check that the doc can be retrieved from any node
-        logger.info("Test backup index: searching")
-        for u_ip in units.values():
-            docs = await search(
-                ops_test,
-                app,
-                u_ip,
-                TEST_BACKUP_INDEX,
-                query={"query": {"term": {"_id": doc_id}}},
-                preference="_only_local",
-            )
-            # Validate the index and document are present
-            assert len(docs) == 1
-            assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
-
-        assert await writer.count() > total_writes
-    except Exception as e:
-        await writer.stop()
-        raise e
-
     time.sleep(5)
     result = await writer.stop()
-    assert result.count > initial_count
+    return result.count > initial_count
 
 
-async def backup_cluster(ops_test: OpsTest) -> None:
-    app = (await app_name(ops_test)) or APP_NAME
-
-    units = await get_application_unit_ids_ips(ops_test, app=app)
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    await create_index(ops_test, app, leader_unit_ip, TEST_BACKUP_INDEX, r_shards=len(units) - 1)
-
-    # index document
-    doc_id = TEST_BACKUP_DOC_ID
-    await index_doc(ops_test, app, leader_unit_ip, TEST_BACKUP_INDEX, doc_id)
-
-    # check that the doc can be retrieved from any node
-    logger.info("Test backup index: searching")
-    for u_ip in units.values():
-        docs = await search(
-            ops_test,
-            app,
-            u_ip,
-            TEST_BACKUP_INDEX,
-            query={"query": {"term": {"_id": doc_id}}},
-            preference="_only_local",
-        )
-        # Validate the index and document are present
-        assert len(docs) == 1
-        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
-
-    leader_id = await get_leader_unit_id(ops_test, app)
-
+async def backup_cluster(ops_test: OpsTest, leader_id: int) -> bool:
+    """Runs the backup of the cluster."""
     action = await run_action(ops_test, leader_id, "create-backup")
     logger.debug(f"create-backup output: {action}")
 
-    assert action.status == "completed"
     await wait_backup_finish(ops_test, leader_id)
+    return action.status == "completed"
 
 
-async def restore_cluster(ops_test: OpsTest) -> None:
-    app = (await app_name(ops_test)) or APP_NAME
-    leader_id = await get_leader_unit_id(ops_test, app)
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    # For testing:
-    # delete the TEST_BACKUP_INDEX
-    await http_request(
-        ops_test,
-        "DELETE",
-        f"https://{leader_unit_ip}:9200/{TEST_BACKUP_INDEX}",
-        app=app,
-    )
-
-    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": 1})
+async def restore_cluster(ops_test: OpsTest, backup_id: int, leader_id: int) -> bool:
+    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": backup_id})
     logger.debug(f"restore output: {action}")
-    assert action.status == "completed"
+
+    await wait_restore_finish(ops_test, leader_id)
+    return action.status == "completed"

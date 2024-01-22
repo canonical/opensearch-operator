@@ -180,6 +180,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
             },
             {
                 "acknowledged": True,
+                "shards_acknowledged": True,
                 "indices": {
                     "index1": {
                         "closed": "true",
@@ -204,6 +205,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
             },
             {
                 "acknowledged": True,
+                "shards_acknowledged": True,
                 "indices": {
                     "index1": {
                         "closed": "true",
@@ -228,6 +230,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
             },
             {
                 "acknowledged": True,
+                "shards_acknowledged": True,
                 "indices": {
                     "index1": {
                         "closed": "true",
@@ -246,6 +249,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
             },
             {
                 "acknowledged": True,
+                "shards_acknowledged": True,
                 "indices": {
                     "index1": {
                         "closed": "true",
@@ -254,6 +258,21 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
                         "closed": "false",
                     },
                 },  # represents the closed indices
+            },
+            True,
+        ),
+        # Represents an error where request failed
+        (
+            {1: {"indices": ["index1", "index2"]}},
+            {
+                "index1": {"status": IndexStateEnum.OPEN},
+                "index2": {"status": IndexStateEnum.OPEN},
+                "index3": {"status": IndexStateEnum.OPEN},
+            },
+            {
+                "acknowledged": True,
+                "shards_acknowledged": True,
+                "indices": {}
             },
             True,
         ),
@@ -281,15 +300,18 @@ def test_close_indices_if_needed(
     )
     mock_request.return_value = req_response
     try:
-        harness.charm.backup._close_indices_if_needed(1)
+        idx = harness.charm.backup._close_indices_if_needed(1)
     except OpenSearchError as e:
         assert isinstance(e, OpenSearchRestoreIndexClosingError) and exception_raised
     else:
-        idx = [
+        idx = {
             i
             for i in list_backup_response[1]["indices"]
-            if i in list(req_response["indices"].keys())
-        ]
+            if (
+                i in cluster_state.keys()
+                and cluster_state[i]["status"] != IndexStateEnum.CLOSED
+            )
+        }
         mock_request.assert_called_with(
             "POST",
             f"{','.join(idx)}/_close",

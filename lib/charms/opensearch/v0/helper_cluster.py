@@ -276,10 +276,9 @@ class ClusterState:
         opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
-        expand_wildcards: str = None,
     ) -> List[Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
-        endpoint = f"/_cat/indices?expand_wildcards={INDEX_WILDCARD}"
+        endpoint = "/_cat/indices?expand_wildcards=all"
         idx = {}
         for index in opensearch.request("GET", endpoint, host=host, alt_hosts=alt_hosts):
             idx[index["index"]] = {"health": index["health"], "status": index["status"]}

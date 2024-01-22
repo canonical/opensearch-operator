@@ -23,8 +23,9 @@ from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
-    assert_test_cont_writes_works,
     backup_cluster,
+    continuous_writes_increases,
+    get_leader_unit_id,
     get_leader_unit_ip,
     get_reachable_unit_ips,
     http_request,
@@ -121,6 +122,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
+# TODO: Remove this method as soon as poetry gets merged.
 @pytest.fixture(scope="session")
 def microceph():
     """Starts microceph radosgw."""
@@ -128,6 +130,8 @@ def microceph():
         uceph = "/tmp/microceph.sh"
 
         with open(uceph, "w") as f:
+            # TODO: if this code stays, then the script below should be added as a file
+            # in the charm.
             resp = requests.get(
                 "https://raw.githubusercontent.com/canonical/microceph-action/main/microceph.sh"
             )
@@ -152,8 +156,8 @@ def microceph():
                 "5G",
             ]
         )
-    # Now, return the configuration
     ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
+    # TODO: if this code stays, then we should generate random keys for the test.
     return {"url": f"http://{ip}", "access-key": "accesskey", "secret-key": "secretkey"}
 
 
@@ -215,31 +219,41 @@ async def test_build_and_deploy(
 
 
 @pytest.mark.abort_on_fail
-async def test_01_backup_cluster(
+async def test_backup_cluster(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
-    await backup_cluster(ops_test)
-
+    unit_ip = await get_leader_unit_ip(ops_test)
     app = (await app_name(ops_test)) or APP_NAME
+
+    assert await backup_cluster(
+        ops_test,
+        unit_ip,
+        app,
+    )
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
 @pytest.mark.abort_on_fail
-async def test_02_restore_cluster(ops_test: OpsTest) -> None:
+async def test_restore_cluster(ops_test: OpsTest) -> None:
     """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
+    unit_ip = await get_leader_unit_ip(ops_test)
     app = (await app_name(ops_test)) or APP_NAME
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    await restore_cluster(ops_test)
-    # Count the number of docs in the index
-    count = await index_docs_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    leader_id = await get_leader_unit_id(ops_test)
+
+    assert await restore_cluster(
+        ops_test,
+        1,  # backup_id
+        leader_id,
+    )
+    count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
     assert count > 0
-    await assert_test_cont_writes_works(ops_test)
+    await continuous_writes_increases(ops_test, unit_ip, app)
 
 
 @pytest.mark.abort_on_fail
-async def test_03_restore_cluster_after_app_destroyed(
+async def test_restore_cluster_after_app_destroyed(
     ops_test: OpsTest,
 ) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
@@ -247,6 +261,11 @@ async def test_03_restore_cluster_after_app_destroyed(
     Restores the backup and then checks if the same TEST_BACKUP_INDEX is there.
     """
     app = (await app_name(ops_test)) or APP_NAME
+    leader_id = await get_leader_unit_id(ops_test)
+    unit_ip = await get_leader_unit_ip(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    logging.info("Destroying the application")
     await ops_test.model.remove_application(app, block_until_done=True)
     app_num_units = 3
     my_charm = await ops_test.build_charm(".")
@@ -264,46 +283,55 @@ async def test_03_restore_cluster_after_app_destroyed(
         idle_period=IDLE_PERIOD,
     )
 
-    app = (await app_name(ops_test)) or APP_NAME
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    await restore_cluster(ops_test)
+    assert await restore_cluster(
+        ops_test,
+        1,  # backup_id
+        leader_id,
+    )
     # Count the number of docs in the index
     count = await index_docs_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     assert count > 0
-
-    await assert_test_cont_writes_works(ops_test)
+    await continuous_writes_increases(ops_test, unit_ip, app)
 
 
 @pytest.mark.abort_on_fail
-async def test_04_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
+async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
+    app = (await app_name(ops_test)) or APP_NAME
+    leader_id = await get_leader_unit_id(ops_test)
+    unit_ip = await get_leader_unit_ip(ops_test)
+
     logger.info("Remove s3-credentials relation")
     # Remove relation
-    await ops_test.model.applications[APP_NAME].destroy_relation(
+    await ops_test.model.applications[app].destroy_relation(
         "s3-credentials", f"{S3_INTEGRATOR_NAME}:s3-credentials"
     )
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
+        apps=[app],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
 
     logger.info("Re-add s3-credentials relation")
-    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR_NAME)
+    await ops_test.model.relate(app, S3_INTEGRATOR_NAME)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
+        apps=[app],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
 
-    # Backup should generate a new backup id
-    await backup_cluster(ops_test)
-    app = (await app_name(ops_test)) or APP_NAME
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    await restore_cluster(ops_test)
-    # Count the number of docs in the index
-    count = await index_docs_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    assert await backup_cluster(
+        ops_test,
+        unit_ip,
+        app,
+    )
+    assert await restore_cluster(
+        ops_test,
+        1,  # backup_id
+        leader_id,
+    )
+    count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
     assert count > 0
-    await assert_test_cont_writes_works(ops_test)
+    await continuous_writes_increases(ops_test, unit_ip, app)
