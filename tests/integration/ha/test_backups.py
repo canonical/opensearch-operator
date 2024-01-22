@@ -322,7 +322,7 @@ async def test_build_and_deploy(
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
 
     # Convert to integer as environ always returns string
-    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 2)
+    app_num_units = 3
 
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
@@ -387,7 +387,7 @@ async def test_03_restore_cluster_after_app_destroyed(
     """
     app = (await app_name(ops_test)) or APP_NAME
     await ops_test.model.remove_application(app, block_until_done=True)
-    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 2)
+    app_num_units = 3
     my_charm = await ops_test.build_charm(".")
     # Redeploy
     await asyncio.gather(
