@@ -16,20 +16,23 @@ import requests
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import app_name, assert_continuous_writes_consistency
+from tests.integration.ha.helpers import (
+    app_name,
+    assert_continuous_writes_consistency,
+    backup_cluster,
+    continuous_writes_increases,
+    restore_cluster,
+)
 from tests.integration.ha.helpers_data import index_docs_count
 from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
-    backup_cluster,
-    continuous_writes_increases,
     get_leader_unit_id,
     get_leader_unit_ip,
     get_reachable_unit_ips,
     http_request,
-    restore_cluster,
     run_action,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
