@@ -7,12 +7,14 @@ import json
 import logging
 import os
 import random
+import subprocess
 import time
 
 # from pathlib import Path
 #
 # import boto3
 import pytest
+import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
@@ -133,13 +135,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
 @pytest.fixture(scope="session")
 def microceph():
     """Starts microceph radosgw."""
-    import subprocess
-
     if "microceph" not in subprocess.check_output(["sudo", "snap", "list"]).decode():
-        import os
-
-        import requests
-
         uceph = "/tmp/microceph.sh"
 
         with open(uceph, "w") as f:
