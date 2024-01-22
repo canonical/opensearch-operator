@@ -134,19 +134,12 @@ class ContinuousWrites:
     async def _create_fully_replicated_index(self):
         """Create index with 1 p_shard and an r_shard on each node."""
         client = await self._client()
-        units = await get_application_unit_ips(self._ops_test, app=self._app)
-
         try:
             # create index with a replica shard on every node
             client.indices.create(
                 index=ContinuousWrites.INDEX_NAME,
                 body={
-                    "settings": {
-                        "index": {
-                            "number_of_shards": len(units) - 1,
-                            "auto_expand_replicas": "1-all",
-                        }
-                    }
+                    "settings": {"index": {"number_of_shards": 2, "auto_expand_replicas": "1-all"}}
                 },
             )
         finally:
