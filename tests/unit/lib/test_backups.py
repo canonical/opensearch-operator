@@ -269,11 +269,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
                 "index2": {"status": IndexStateEnum.OPEN},
                 "index3": {"status": IndexStateEnum.OPEN},
             },
-            {
-                "acknowledged": True,
-                "shards_acknowledged": True,
-                "indices": {}
-            },
+            {"acknowledged": True, "shards_acknowledged": True, "indices": {}},
             True,
         ),
         # Represents an error where request failed
@@ -307,10 +303,7 @@ def test_close_indices_if_needed(
         idx = {
             i
             for i in list_backup_response[1]["indices"]
-            if (
-                i in cluster_state.keys()
-                and cluster_state[i]["status"] != IndexStateEnum.CLOSED
-            )
+            if (i in cluster_state.keys() and cluster_state[i]["status"] != IndexStateEnum.CLOSED)
         }
         mock_request.assert_called_with(
             "POST",
