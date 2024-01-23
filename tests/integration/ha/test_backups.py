@@ -255,16 +255,12 @@ async def test_restore_cluster(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_restore_cluster_after_app_destroyed(
-    ops_test: OpsTest,
-) -> None:
+async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
 
     Restores the backup and then checks if the same TEST_BACKUP_INDEX is there.
     """
     app = (await app_name(ops_test)) or APP_NAME
-    leader_id = await get_leader_unit_id(ops_test)
-    unit_ip = await get_leader_unit_ip(ops_test)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     logging.info("Destroying the application")
@@ -285,6 +281,7 @@ async def test_restore_cluster_after_app_destroyed(
         idle_period=IDLE_PERIOD,
     )
 
+    leader_id = await get_leader_unit_id(ops_test)
     assert await restore_cluster(
         ops_test,
         1,  # backup_id
@@ -293,7 +290,7 @@ async def test_restore_cluster_after_app_destroyed(
     # Count the number of docs in the index
     count = await index_docs_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     assert count > 0
-    await continuous_writes_increases(ops_test, unit_ip, app)
+    await continuous_writes_increases(ops_test, leader_unit_ip, app)
 
 
 @pytest.mark.abort_on_fail
