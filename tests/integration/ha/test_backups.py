@@ -148,7 +148,7 @@ def microceph():
                 "-c",
                 "latest/edge",
                 "-d",
-                "/dev/sdd",
+                "/dev/sdc",
                 "-a",
                 "accesskey",
                 "-s",
@@ -261,7 +261,6 @@ async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
     Restores the backup and then checks if the same TEST_BACKUP_INDEX is there.
     """
     app = (await app_name(ops_test)) or APP_NAME
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     logging.info("Destroying the application")
     await ops_test.model.remove_application(app, block_until_done=True)
@@ -282,6 +281,7 @@ async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
     )
 
     leader_id = await get_leader_unit_id(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     assert await restore_cluster(
         ops_test,
         1,  # backup_id
