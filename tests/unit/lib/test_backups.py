@@ -183,10 +183,10 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
                 "shards_acknowledged": True,
                 "indices": {
                     "index1": {
-                        "closed": "true",
+                        "closed": True,
                     },
                     "index2": {
-                        "closed": "true",
+                        "closed": True,
                     },
                 },  # represents the closed indices
             },
@@ -208,10 +208,10 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
                 "shards_acknowledged": True,
                 "indices": {
                     "index1": {
-                        "closed": "true",
+                        "closed": True,
                     },
                     "index2": {
-                        "closed": "true",
+                        "closed": True,
                     },
                 },  # represents the closed indices
             },
@@ -233,7 +233,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
                 "shards_acknowledged": True,
                 "indices": {
                     "index1": {
-                        "closed": "true",
+                        "closed": True,
                     },
                 },  # represents the closed indices
             },
@@ -252,10 +252,10 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
                 "shards_acknowledged": True,
                 "indices": {
                     "index1": {
-                        "closed": "true",
+                        "closed": True,
                     },
                     "index2": {
-                        "closed": "false",
+                        "closed": False,
                     },
                 },  # represents the closed indices
             },

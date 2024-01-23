@@ -222,7 +222,9 @@ class OpenSearchBackup(Object):
                 resp.get("shards_acknowledged", False)
                 and all(
                     [
-                        state and state.get("closed") == "true"
+                        # The statement of explicit "is True" below assures we have a boolean
+                        # as the response has the form of "true" or "false" originally
+                        state and state.get("closed") is True
                         for state in resp.get("indices", {}).values()
                     ]
                 )
