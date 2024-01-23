@@ -212,15 +212,22 @@ class OpenSearchBackup(Object):
                 "ignore_unavailable": "true",
             },
         )
-        return (
-            resp.get("acknowledged", False)
-            and resp.get("shards_acknowledged", False)
-            and all(
-                [
-                    state and state.get("closed") == "true"
-                    for state in resp.get("indices", {}).values()
-                ]
+        # There are two options here we return True:
+        # 1) ack=True and shards_ack=False with empty indices
+        #    This means the indices are already closed
+        # 2) ack=True and shards_ack=True with each index in resp["indices"]
+        #    marked as closed=True
+        return resp.get("acknowledged", False) and (
+            (
+                resp.get("shards_acknowledged", False)
+                and all(
+                    [
+                        state and state.get("closed") == "true"
+                        for state in resp.get("indices", {}).values()
+                    ]
+                )
             )
+            or (not resp.get("shards_acknowledged", False) and not resp.get("indices", {}))
         )
 
     def _close_indices_if_needed(self, backup_id: int) -> Set[str]:
@@ -349,7 +356,7 @@ class OpenSearchBackup(Object):
 
         msg = "Restore is complete" if self._is_restore_complete() else "Restore in progress..."
         event.set_results(
-            {"backup_id": backup_id, "status": msg, "closed-indices": str(closed_idx)}
+            {"backup-id": backup_id, "status": msg, "closed-indices": str(closed_idx)}
         )
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:  # noqa: C901

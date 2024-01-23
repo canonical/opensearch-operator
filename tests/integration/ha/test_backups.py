@@ -226,13 +226,12 @@ async def test_backup_cluster(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
-    unit_ip = await get_leader_unit_ip(ops_test)
     app = (await app_name(ops_test)) or APP_NAME
+    leader_id = await get_leader_unit_id(ops_test)
 
     assert await backup_cluster(
         ops_test,
-        unit_ip,
-        app,
+        leader_id,
     )
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
@@ -327,8 +326,7 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
 
     assert await backup_cluster(
         ops_test,
-        unit_ip,
-        app,
+        leader_id,
     )
     assert await restore_cluster(
         ops_test,
