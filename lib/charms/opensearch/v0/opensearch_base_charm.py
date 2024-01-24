@@ -81,7 +81,10 @@ from charms.opensearch.v0.opensearch_plugins import (
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
-from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
+from charms.opensearch.v0.opensearch_users import (
+    OpenSearchUserManager,
+    OpenSearchUserMgmtError,
+)
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
@@ -616,7 +619,11 @@ class OpenSearchBaseCharm(CharmBase):
         if self.opensearch.is_started():
             try:
                 self._post_start_init()
-            except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
+            except (
+                OpenSearchHttpError,
+                OpenSearchNotFullyReadyError,
+                OpenSearchUserMgmtError,
+            ):
                 event.defer()
                 self.defer_trigger_event.emit()
             return
