@@ -31,6 +31,25 @@ MISSING (not installed yet) > INSTALLED (plugin installed, but not configured ye
 ENABLED (configuration has been applied) > WAITING_FOR_UPGRADE (if an upgrade is needed)
 > ENABLED (back to enabled state once upgrade has been applied)
 
+WHERE PLUGINS ARE USED:
+Plugins are managed in the OpenSearchPluginManager class, which is called by the charm;
+and also in the code that manages the relations, e.g. OpenSearchBackups. The latter may
+access one or more plugins directly to retrieve information for their own relations.
+
+ERROR HANDLING:
+Plugins can raise errors that subclass OpenSearchPluginError. In the case of the charm,
+these errors are handled by the plugin manager and the charm at config-changed. In this
+case, plugin manager receives the error and prepares a status message to be returned to the
+charm. The charm will then set the status message at the end of config-changed.
+
+If a given error is relevant for logging but not enough to set the status message, then
+error can be raised with a flag only_log=True. In this case, the plugin manager will log
+the error as WARN and the charm will not set the status message for that particular error.
+
+Relation management depends on each class. It is advised to also consider the only_log
+flag as well in this case.
+
+
 ========================================================================================
 
                              STEPS TO ADD A NEW PLUGIN
@@ -80,10 +99,15 @@ class MyPlugin(OpenSearchPlugin):
 
         # If using the self._extra_config, or any other dict to build the class below
         # let the KeyError happen and the plugin manager will capture it.
-        return OpenSearchPluginConfig(
-            config_entries_on_add={...}, # Key-value pairs to be added to opensearch.yaml
-            secret_entries_on_add={...}  # Key-value pairs to be added to keystore
-        )
+        try:
+            return OpenSearchPluginConfig(
+                config_entries_on_add={...}, # Key-value pairs to be added to opensearch.yaml
+                secret_entries_on_add={...}  # Key-value pairs to be added to keystore
+            )
+        except MyPluginError as e:
+            # If we do not want to set the status message with str(e), then raise it
+            # with only_log=True.
+            raise OpenSearchPluginError(str(e), only_log=True)
 
     def disable(self) -> Tuple[OpenSearchPluginConfig, OpenSearchPluginConfig]:
         # Use the self._extra_config to retrieve any extra configuration.
@@ -104,6 +128,7 @@ class MyPlugin(OpenSearchPlugin):
 -------------------
 
 Optionally:
+
 class MyPluginConfig(OpenSearchPluginConfig):
 
     config_entries_to_add: Dict[str, str] = {
@@ -118,6 +143,11 @@ class MyPluginConfig(OpenSearchPluginConfig):
     secret_entries_to_del: List[str] = {
         ... key to remove from keystore as plugin gets disabled ...
     }
+
+Also, define errors that may be thrown by the plugin, e.g.:
+
+class MyPluginError(OpenSearchPluginError):
+    pass
 
 -------------------
 
@@ -254,6 +284,7 @@ class OpenSearchBaseCharm(CharmBase):
 
 """  # noqa: D405, D410, D411, D214, D412, D416
 
+import base64
 import logging
 from abc import abstractmethod, abstractproperty
 from typing import Any, Dict, List, Optional
@@ -275,8 +306,19 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
+# These are the basic types of errors:
+# * OpenSearchPluginError: base class for all plugin errors in the plugins code
 class OpenSearchPluginError(OpenSearchError):
     """Exception thrown when an opensearch plugin is invalid."""
+
+    def __init__(self, msg, only_log=False):
+        super().__init__(msg)
+        self._only_log = only_log
+
+    @property
+    def only_log(self) -> bool:
+        """Returns the only_log property."""
+        return self._only_log
 
 
 class OpenSearchPluginRelationClusterNotReadyError(OpenSearchPluginError):
@@ -284,6 +326,9 @@ class OpenSearchPluginRelationClusterNotReadyError(OpenSearchPluginError):
 
     This exception in specific should be handled by classes managing the relations of plugins.
     """
+
+    def __init__(self, only_log=True):
+        super().__init__("The cluster is not ready yet.", only_log)
 
 
 class OpenSearchPluginMissingDepsError(OpenSearchPluginError):
@@ -296,13 +341,6 @@ class OpenSearchPluginInstallError(OpenSearchPluginError):
 
 class OpenSearchPluginRemoveError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin removal fails."""
-
-
-class OpenSearchPluginMissingConfigError(OpenSearchPluginError):
-    """Exception thrown when config() or disable() fails to find a config key.
-
-    The plugin itself should raise a KeyError, to avoid burden in the plugin development.
-    """
 
 
 class OpenSearchPluginEventScope(BaseStrEnum):
@@ -436,7 +474,7 @@ class OpenSearchKnn(OpenSearchPlugin):
         return "opensearch-knn"
 
 
-class OpenSearchBackupPlugin(OpenSearchPlugin):
+class OpenSearchS3BackupPlugin(OpenSearchPlugin):
     """Manage backup configurations.
 
     This class must load the opensearch plugin: repository-s3 and configure it.
@@ -458,6 +496,11 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
             secret_entries_to_del = [...]|{...},
         )
         """
+        if not self._extra_config.get("access-key") or not self._extra_config.get("secret-key"):
+            raise OpenSearchPluginError(
+                "Missing AWS access-key and secret-key configuration",
+                only_log=True,
+            )
         return OpenSearchPluginConfig(
             # Try to remove the previous values
             secret_entries_to_del=[
@@ -490,5 +533,84 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
             secret_entries_to_del=[
                 "s3.client.default.access_key",
                 "s3.client.default.secret_key",
+            ],
+        )
+
+
+class OpenSearchGCSBackupPlugin(OpenSearchPlugin):
+    """Manage backup configurations for GCS.
+
+    This class must load the opensearch plugin: repository-gcs and configure it.
+    """
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return "repository-gcs"
+
+    def config(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin addition.
+
+        Format:
+        OpenSearchPluginConfig(
+            config_entries_to_add = {...},
+            config_entries_to_del = [...]|{...},
+            secret_entries_to_add = {...},
+            secret_entries_to_del = [...]|{...},
+        )
+        """
+        # TODO: move entirely to service-account once s3-integrator changes have been merged
+        # using "and" here as only one of the options may be set in this case.
+        if not self._extra_config.get("service-account") and not self._extra_config.get(
+            "secret-key"
+        ):
+            raise OpenSearchPluginError(
+                "Missing GCS service-account or secret-key configuration",
+                only_log=True,
+            )
+
+        data, conf = (
+            (self._extra_config["service-account"], "service-account")
+            if self._extra_config.get("service-account")
+            else (self._extra_config.get("secret-key"), "secret-key")
+        )
+        try:
+            account = " ".join(base64.b64decode(data).decode().rstrip().splitlines())
+        except Exception as e:
+            # This error means that GCS is wrongly configured.
+            # We should not fail the entire charm because of this error, but rather return
+            # to the user that GCS cannot be configured.
+            # We may also be dealing with a non-base64 encoded secret-key coming from the relation
+            # for another plugin, e.g. repository-s3.
+            raise OpenSearchPluginError(f"Config error: {conf} - {str(e)}", only_log=True)
+        return OpenSearchPluginConfig(
+            # Try to remove the previous values
+            secret_entries_to_del=[
+                "gcs.client.default.credentials_file",
+            ],
+            secret_entries_to_add={
+                # Remove any entries with None value
+                key: val
+                for key, val in {
+                    "gcs.client.default.credentials_file": account,
+                }.items()
+                if val
+            },
+        )
+
+    def disable(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin removal.
+
+        Format:
+        OpenSearchPluginConfig(
+            config_entries_to_add = {...},
+            config_entries_to_del = [...]|{...},
+            secret_entries_to_add = {...},
+            secret_entries_to_del = [...]|{...},
+        )
+        """
+        return OpenSearchPluginConfig(
+            secret_entries_to_del=[
+                "gcs.client.default.credentials_file",
             ],
         )
