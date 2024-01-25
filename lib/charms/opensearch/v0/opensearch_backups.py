@@ -322,7 +322,7 @@ class OpenSearchBackup(Object):
         closed_idx = set()
         try:
             closed_idx = self._close_indices_if_needed(backup_id)
-            output = self._restore(backup_id)
+            output = self._restore(backup_id, closed_idx)
             logger.debug(f"Restore action: received response: {output}")
             logger.info(f"Restore action succeeded for backup_id {backup_id}")
         except (OpenSearchHttpError, OpenSearchRestoreIndexClosingError) as e:
