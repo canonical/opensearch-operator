@@ -50,6 +50,7 @@ import math
 from typing import Any, Dict, List, Set, Tuple
 
 from charms.data_platform_libs.v0.s3 import S3Requirer
+from charms.opensearch.v0.constants_charm import RestoreActionFailed, RestoreStarting
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -316,7 +317,7 @@ class OpenSearchBackup(Object):
             event.fail(f"Failed: no backup-id {backup_id}")
             return
 
-        self.charm.status.set(MaintenanceStatus(f"Restoring backup {backup_id}..."))
+        self.charm.status.set(MaintenanceStatus(RestoreStarting))
 
         # Restore will try to close indices if there is a matching name.
         # The goal is to leave the cluster in a running state, even if the restore fails.
@@ -333,25 +334,24 @@ class OpenSearchBackup(Object):
             OpenSearchRestoreCheckError,
         ) as e:
             event.fail(f"Failed: {e}")
-            self.charm.status.set(BlockedStatus("Restore action failed"))
+            self.charm.status.set(BlockedStatus(RestoreActionFailed))
             return
 
         # Post execution checks
         # Was the call successful?
         state = self.get_service_status(output)
         if state != BackupServiceState.SUCCESS:
-            event.fail(f"Failed with: {state.value}, closed indices: {closed_idx}")
-            self.charm.status.set(BlockedStatus(f"Restore action failed: {state.value}"))
+            self.charm.status.set(BlockedStatus(RestoreActionFailed))
             return
 
         shards = output.get("shards", {})
         if not shards or shards.get("successful", -1) != shards.get("total", 0):
+            self.charm.status.set(BlockedStatus(RestoreActionFailed))
             event.fail("Failed to restore all the shards")
-            self.charm.status.set(BlockedStatus("Restore action failed to restore all the shards"))
             return
 
         msg = "Restore is complete" if self._is_restore_complete() else "Restore in progress..."
-        self.charm.status.clear(ActiveStatus())
+        self.charm.status.clear(RestoreStarting, start_with=True)
         event.set_results(
             {"backup-id": backup_id, "status": msg, "closed-indices": str(closed_idx)}
         )
