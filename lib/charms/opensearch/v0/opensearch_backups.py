@@ -351,7 +351,7 @@ class OpenSearchBackup(Object):
             return
 
         msg = "Restore is complete" if self._is_restore_complete() else "Restore in progress..."
-        self.charm.status.clear(RestoreStarting, start_with=True)
+        self.charm.status.clear(RestoreStarting)
         event.set_results(
             {"backup-id": backup_id, "status": msg, "closed-indices": str(closed_idx)}
         )
