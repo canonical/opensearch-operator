@@ -253,7 +253,7 @@ class OpenSearchBackup(Object):
             raise OpenSearchRestoreIndexClosingError()
         return indices_to_close
 
-    def _restore(self, backup_id: int, backup_indices: List[str]) -> Dict[str, Any]:
+    def _restore(self, backup_id: int) -> Dict[str, Any]:
         """Runs the restore and processes the response."""
         backup_indices = self._list_backups()[backup_id]["indices"]
         output = self._request(
@@ -273,7 +273,9 @@ class OpenSearchBackup(Object):
         ):
             to_close = output["error"]["reason"].split("[")[2].split("]")[0]
             raise OpenSearchRestoreIndexClosingError(f"_restore: fails to close {to_close}")
-        return output
+        if "snapshot" not in output or "shards" not in output.get("snapshot"):
+            raise OpenSearchRestoreCheckError(f"_restore: unexpected response {output}")
+        return output["snapshot"]
 
     def _is_restore_complete(self) -> bool:
         """Checks if the restore is finished.
@@ -322,11 +324,16 @@ class OpenSearchBackup(Object):
         closed_idx = set()
         try:
             closed_idx = self._close_indices_if_needed(backup_id)
-            output = self._restore(backup_id, closed_idx)
+            output = self._restore(backup_id)
             logger.debug(f"Restore action: received response: {output}")
             logger.info(f"Restore action succeeded for backup_id {backup_id}")
-        except (OpenSearchHttpError, OpenSearchRestoreIndexClosingError) as e:
+        except (
+            OpenSearchHttpError,
+            OpenSearchRestoreIndexClosingError,
+            OpenSearchRestoreCheckError,
+        ) as e:
             event.fail(f"Failed: {e}")
+            self.charm.status.set(BlockedStatus("Restore action failed"))
             return
 
         # Post execution checks
@@ -334,15 +341,17 @@ class OpenSearchBackup(Object):
         state = self.get_service_status(output)
         if state != BackupServiceState.SUCCESS:
             event.fail(f"Failed with: {state.value}, closed indices: {closed_idx}")
+            self.charm.status.set(BlockedStatus(f"Restore action failed: {state.value}"))
             return
 
         shards = output.get("shards", {})
         if not shards or shards.get("successful", -1) != shards.get("total", 0):
             event.fail("Failed to restore all the shards")
+            self.charm.status.set(BlockedStatus("Restore action failed to restore all the shards"))
             return
 
         msg = "Restore is complete" if self._is_restore_complete() else "Restore in progress..."
-        self.charm.status.clear()
+        self.charm.status.clear(ActiveStatus())
         event.set_results(
             {"backup-id": backup_id, "status": msg, "closed-indices": str(closed_idx)}
         )

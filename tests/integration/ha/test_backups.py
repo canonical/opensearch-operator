@@ -148,7 +148,7 @@ def microceph():
                 "-c",
                 "latest/edge",
                 "-d",
-                "/dev/sdi",
+                "/dev/sdc",
                 "-a",
                 "accesskey",
                 "-s",
