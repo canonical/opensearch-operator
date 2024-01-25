@@ -62,6 +62,13 @@ def cloud_configs(github_secrets, microceph):
             "path": path,
             "region": "us-east-1",
         }
+    if "GCP_ACCESS_KEY" in github_secrets:
+        results["gcp"] = {
+            "endpoint": "https://storage.googleapis.com",
+            "bucket": "data-charms-testing",
+            "path": path,
+            "region": "us-west2",
+        }
     return results
 
 
@@ -79,6 +86,11 @@ def cloud_credentials(github_secrets, microceph) -> dict[str, dict[str, str]]:
             "access-key": github_secrets["AWS_ACCESS_KEY"],
             "secret-key": github_secrets["AWS_SECRET_KEY"],
         }
+    if "GCP_SERVICE_ACCOUNT" in github_secrets:
+        results["gcp"] = {
+            "access-key": "IGNORE_IT",
+            "secret-key": github_secrets["GCP_SERVICE_ACCOUNT"],
+        }
     return results
 
 
@@ -88,6 +100,10 @@ def clean_backups_from_buckets(github_secrets, cloud_configs, cloud_credentials)
     yield
 
     creds = cloud_credentials.copy()
+    if "gcp" in creds:
+        creds["gcp"]["access-key"] = github_secrets["GCP_ACCESS_KEY"]
+        creds["gcp"]["secret-key"] = github_secrets["GCP_SECRET_KEY"]
+
     logger.info("Cleaning backups from cloud buckets")
     for cloud_name, config in cloud_configs.items():
         backup = backups_by_cloud.get(cloud_name)
@@ -103,6 +119,7 @@ def clean_backups_from_buckets(github_secrets, cloud_configs, cloud_credentials)
         s3 = session.resource("s3", endpoint_url=config["endpoint"])
         bucket = s3.Bucket(config["bucket"])
 
+        # GCS doesn't support batch delete operation, so delete the objects 1 by 1
         for f in backups_by_cloud[cloud_name]:
             backup_path = str(Path(config["path"]) / Path(str(f)))
             for bucket_object in bucket.objects.filter(Prefix=backup_path):
@@ -135,6 +152,7 @@ TIMEOUT = 10 * 60
     [
         (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
         (pytest.param("aws", marks=pytest.mark.group("aws"))),
+        (pytest.param("gcp", marks=pytest.mark.group("gcp"))),
     ],
 )
 @pytest.mark.abort_on_fail
@@ -174,6 +192,7 @@ async def test_build_and_deploy(ops_test: OpsTest, cloud_name) -> None:
     [
         (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
         (pytest.param("aws", marks=pytest.mark.group("aws"))),
+        (pytest.param("gcp", marks=pytest.mark.group("gcp"))),
     ],
 )
 @pytest.mark.abort_on_fail
@@ -219,6 +238,7 @@ async def test_backup_cluster(
     [
         (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
         (pytest.param("aws", marks=pytest.mark.group("aws"))),
+        (pytest.param("gcp", marks=pytest.mark.group("gcp"))),
     ],
 )
 @pytest.mark.abort_on_fail
@@ -249,6 +269,7 @@ async def test_restore_cluster(
     [
         (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
         (pytest.param("aws", marks=pytest.mark.group("aws"))),
+        (pytest.param("gcp", marks=pytest.mark.group("gcp"))),
     ],
 )
 @pytest.mark.abort_on_fail
@@ -312,6 +333,7 @@ async def test_restore_cluster_after_app_destroyed(
     [
         (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
         (pytest.param("aws", marks=pytest.mark.group("aws"))),
+        (pytest.param("gcp", marks=pytest.mark.group("gcp"))),
     ],
 )
 @pytest.mark.abort_on_fail

@@ -9,12 +9,17 @@ import charms
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchGCSBackupPlugin,
+    OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
+    OpenSearchPluginError,
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingDepsError,
+    OpenSearchS3BackupPlugin,
     PluginState,
 )
+from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -36,6 +41,8 @@ opensearch-reports-scheduler
 opensearch-security
 opensearch-sql
 prometheus-exporter
+repository-gcs
+repository-s3
 """
 
 
@@ -145,7 +152,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         new_callable=PropertyMock,
     )
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
-    def test_failed_install_plugin(self, _, mock_version) -> None:
+    def test_failed_install_plugin(self, _, __) -> None:
         """Tests a failed command."""
         succeeded = False
         self.charm.opensearch._run_cmd = MagicMock(
@@ -412,3 +419,207 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.plugin_manager._keystore._add.assert_not_called()
         self.plugin_manager._keystore._delete.assert_called()
         self.plugin_manager._opensearch_config.delete_plugin.assert_has_calls([call(["param"])])
+
+
+class TestOpenSearchKNN(unittest.TestCase):
+    BASE_LIB_PATH = "charms.opensearch.v0"
+
+    def setUp(self) -> None:
+        self.harness = Harness(OpenSearchOperatorCharm)
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+        self.charm = self.harness.charm
+        self.charm.opensearch.paths.plugins = "tests/unit/resources"
+        self.plugin_manager = self.charm.plugin_manager
+        self.plugin_manager._plugins_path = self.charm.opensearch.paths.plugins
+        # Override the ConfigExposedPlugins and ensure one single plugin exists
+        charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
+            "opensearch-knn": {
+                "class": OpenSearchKnn,
+                "config": "plugin_opensearch_knn",
+                "relation": None,
+            }
+        }
+        self.charm.opensearch.is_started = MagicMock(return_value=True)
+        self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
+        charms.opensearch.v0.helper_cluster.ClusterTopology.get_cluster_settings = MagicMock(
+            return_value={}
+        )
+
+    @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.is_node_up")
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
+    @patch.object(RollingOpsManager, "_on_acquire_lock")
+    @patch(
+        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
+        new_callable=PropertyMock,
+    )
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
+    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_started")
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
+    @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
+    def test_disable_via_config_change(
+        self,
+        _,
+        __,
+        mock_is_started,
+        mock_status,
+        mock_is_enabled,
+        mock_version,
+        mock_acquire_lock,
+        ___,
+        mock_is_node_up,
+    ) -> None:
+        """Tests entire config_changed event with KNN plugin."""
+        mock_status.return_value = PluginState.ENABLED
+        mock_is_enabled.return_value = False
+        mock_is_started.return_value = True
+        mock_version.return_value = "2.9.0"
+        self.plugin_manager._keystore.add = MagicMock()
+        self.plugin_manager._keystore.delete = MagicMock()
+        self.plugin_manager._opensearch_config.delete_plugin = MagicMock()
+        self.plugin_manager._opensearch_config.add_plugin = MagicMock()
+        self.charm.status = MagicMock()
+        mock_is_node_up.return_value = True
+        self.charm._get_nodes = MagicMock(return_value=[1])
+        self.charm.planned_units = MagicMock(return_value=1)
+
+        self.harness.update_config({"plugin_opensearch_knn": False})
+        mock_acquire_lock.assert_called_once()
+        self.plugin_manager._opensearch_config.delete_plugin.assert_called_once_with(
+            {"knn.plugin.enabled": True}
+        )
+        self.plugin_manager._opensearch_config.add_plugin.assert_called_once_with(
+            {"knn.plugin.enabled": False}
+        )
+
+
+class TestOpenSearchGCSBackupPlugin(unittest.TestCase):
+    def setUp(self) -> None:
+        self.harness = Harness(OpenSearchOperatorCharm)
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+        self.charm = self.harness.charm
+        self.charm.opensearch.paths.plugins = "tests/unit/resources"
+        self.plugin_manager = self.charm.plugin_manager
+        self.plugin_manager._plugins_path = self.charm.opensearch.paths.plugins
+
+    def test_name(self):
+        plugin = OpenSearchGCSBackupPlugin(plugins_path=self.plugin_manager._plugins_path)
+        assert plugin.name == "repository-gcs"
+
+    def test_config_missing_all_configs(self):
+        plugin = OpenSearchGCSBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        try:
+            plugin.config()
+        except OpenSearchPluginError as e:
+            assert str(e) == "Missing GCS service-account or secret-key configuration"
+        else:
+            raise AssertionError("Expected OpenSearchPluginError to be raised")
+
+    def test_config_with_service_account(self):
+        plugin = OpenSearchGCSBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        plugin._extra_config = {"service-account": "c2VjcmV0LWFjY291bnQ="}  # base64 encoded value
+        config = plugin.config()
+        assert isinstance(config, OpenSearchPluginConfig)
+        assert config.secret_entries_to_del == ["gcs.client.default.credentials_file"]
+        assert config.secret_entries_to_add == {
+            "gcs.client.default.credentials_file": "secret-account"
+        }
+
+    def test_config_with_invalid_base64(self):
+        plugin = OpenSearchGCSBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        plugin._extra_config = {"service-account": "invalid-base64-value"}
+        try:
+            plugin.config()
+        except OpenSearchPluginError:
+            pass  # expected
+        else:
+            raise AssertionError("Expected OpenSearchPluginError to be raised")
+
+    def test_disable(self):
+        plugin = OpenSearchGCSBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        expected_config = OpenSearchPluginConfig(
+            secret_entries_to_del=[
+                "gcs.client.default.credentials_file",
+            ],
+        )
+        self.assertEqual(plugin.disable().__dict__, expected_config.__dict__)
+
+
+class TestOpenSearchS3BackupPlugin(unittest.TestCase):
+    def setUp(self) -> None:
+        self.harness = Harness(OpenSearchOperatorCharm)
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+        self.charm = self.harness.charm
+        self.charm.opensearch.paths.plugins = "tests/unit/resources"
+        self.plugin_manager = self.charm.plugin_manager
+        self.plugin_manager._plugins_path = self.charm.opensearch.paths.plugins
+
+    def test_name(self):
+        plugin = OpenSearchS3BackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        assert plugin.name == "repository-s3"
+
+    def test_config_missing_all_configs(self):
+        plugin = OpenSearchS3BackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        try:
+            plugin.config()
+        except OpenSearchPluginError as e:
+            assert str(e) == "Missing AWS access-key and secret-key configuration"
+        else:
+            raise AssertionError("Expected OpenSearchPluginError to be raised")
+
+    def test_config_with_valid_keys(self):
+        plugin = OpenSearchS3BackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        plugin._extra_config = {
+            "access-key": "ACCESS_KEY",
+            "secret-key": "SECRET_KEY",
+        }
+        expected_config = OpenSearchPluginConfig(
+            secret_entries_to_del=[
+                "s3.client.default.access_key",
+                "s3.client.default.secret_key",
+            ],
+            secret_entries_to_add={
+                "s3.client.default.access_key": "ACCESS_KEY",
+                "s3.client.default.secret_key": "SECRET_KEY",
+            },
+        )
+        self.assertEqual(plugin.config().__dict__, expected_config.__dict__)
+
+    def test_disable(self):
+        plugin = OpenSearchS3BackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        expected_config = OpenSearchPluginConfig(
+            secret_entries_to_del=[
+                "s3.client.default.access_key",
+                "s3.client.default.secret_key",
+            ],
+        )
+        self.assertEqual(plugin.disable().__dict__, expected_config.__dict__)
