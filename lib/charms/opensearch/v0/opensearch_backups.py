@@ -152,9 +152,6 @@ class OpenSearchBackup(Object):
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
-        self.framework.observe(
-            self.charm.on.check_restore_current_action, self._on_check_restore_current_action
-        )
 
     @property
     def _plugin_status(self):
@@ -256,14 +253,12 @@ class OpenSearchBackup(Object):
             raise OpenSearchRestoreIndexClosingError()
         return indices_to_close
 
-    def _restore(
-        self, backup_id: int, backup_indices: List[str], wait_for_completion: bool = False
-    ) -> Dict[str, Any]:
-        """Runs the restore and processes the response according to wait_for_completion flag."""
+    def _restore(self, backup_id: int, backup_indices: List[str]) -> Dict[str, Any]:
+        """Runs the restore and processes the response."""
         backup_indices = self._list_backups()[backup_id]["indices"]
         output = self._request(
             "POST",
-            f"_snapshot/{S3_REPOSITORY}/{backup_id}/_restore?wait_for_completion={str(wait_for_completion).lower()}",
+            f"_snapshot/{S3_REPOSITORY}/{backup_id}/_restore?wait_for_completion=true",
             payload={
                 "indices": ",".join(
                     [f"-{idx}" for idx in INDICES_TO_EXCLUDE_AT_RESTORE & set(backup_indices)]
@@ -293,16 +288,6 @@ class OpenSearchBackup(Object):
                     return False
         return True
 
-    def _on_check_restore_current_action(self, event: ActionEvent) -> None:
-        """Checks the status of indices that have been recovered from snapshot."""
-        try:
-            if self._is_restore_complete():
-                event.set_results({"state": "successful restore!"})
-                return
-            event.set_results({"state": "restore in progress..."})
-        except Exception as e:
-            event.fail(f"Failed: {e}")
-
     def _is_backup_available_for_restore(self, backup_id: int) -> bool:
         """Checks if the backup_id exists and is ready for a restore."""
         backups = self._list_backups()
@@ -320,8 +305,6 @@ class OpenSearchBackup(Object):
         if not self._can_unit_perform_backup(event):
             event.fail("Failed: backup service is not configured yet")
             return
-
-        wait_completion = event.params.get("wait-for-completion", False)
         if not self._is_restore_complete():
             event.fail("Failed: previous restore is still in progress")
             return
@@ -331,13 +314,15 @@ class OpenSearchBackup(Object):
             event.fail(f"Failed: no backup-id {backup_id}")
             return
 
+        self.charm.status.set(MaintenanceStatus(f"Restoring backup {backup_id}..."))
+
         # Restore will try to close indices if there is a matching name.
         # The goal is to leave the cluster in a running state, even if the restore fails.
         # In case of failure, then restore action must return a list of closed indices
         closed_idx = set()
         try:
             closed_idx = self._close_indices_if_needed(backup_id)
-            output = self._restore(backup_id, wait_completion)
+            output = self._restore(backup_id)
             logger.debug(f"Restore action: received response: {output}")
             logger.info(f"Restore action succeeded for backup_id {backup_id}")
         except (OpenSearchHttpError, OpenSearchRestoreIndexClosingError) as e:
@@ -352,11 +337,12 @@ class OpenSearchBackup(Object):
             return
 
         shards = output.get("shards", {})
-        if wait_completion and shards.get("successful", -1) != shards.get("total", 0):
+        if not shards or shards.get("successful", -1) != shards.get("total", 0):
             event.fail("Failed to restore all the shards")
             return
 
         msg = "Restore is complete" if self._is_restore_complete() else "Restore in progress..."
+        self.charm.status.clear()
         event.set_results(
             {"backup-id": backup_id, "status": msg, "closed-indices": str(closed_idx)}
         )
@@ -368,7 +354,6 @@ class OpenSearchBackup(Object):
             return
 
         new_backup_id = None
-        wait_for_completion = event.params.get("wait-for-completion", False)
         try:
             # Check if any backup is not running already, or RetryError happens
             if self.is_backup_in_progress():
@@ -382,7 +367,7 @@ class OpenSearchBackup(Object):
                 + self.get_service_status(
                     self._request(
                         "PUT",
-                        f"_snapshot/{S3_REPOSITORY}/{new_backup_id}?wait_for_completion={str(wait_for_completion).lower()}",
+                        f"_snapshot/{S3_REPOSITORY}/{new_backup_id}?wait_for_completion=false",
                         payload={
                             "indices": "*",  # Take all indices
                             "partial": False,  # It is the default value, but we want to avoid partial backups
@@ -393,20 +378,11 @@ class OpenSearchBackup(Object):
 
             logger.info(f"Backup request submitted with backup-id {new_backup_id}")
             logger.info(f"Backup completed with backup-id {new_backup_id}")
-
-            if wait_for_completion and self.is_backup_in_progress():
-                event.fail(
-                    f"Timed out while waiting for: backup id {new_backup_id} - Please check the status again in the future."
-                )
-                return
         except (
             OpenSearchHttpError,
             OpenSearchListBackupError,
         ) as e:
             event.fail(f"Failed with exception: {e}")
-            return
-        if wait_for_completion:
-            event.set_results({"backup-id": new_backup_id, "status": "Backup completed."})
             return
         event.set_results({"backup-id": new_backup_id, "status": "Backup is running."})
 

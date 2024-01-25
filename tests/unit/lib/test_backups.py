@@ -489,7 +489,7 @@ class TestBackups(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_01_apply_api_config_if_needed(self, mock_status, _, mock_request) -> None:
+    def test_apply_api_config_if_needed(self, mock_status, _, mock_request) -> None:
         """Tests the application of post-restart steps."""
         self.harness.update_relation_data(
             self.s3_rel_id,
@@ -522,7 +522,7 @@ class TestBackups(unittest.TestCase):
             },
         )
 
-    def test_02_on_list_backups_action(self):
+    def test_on_list_backups_action(self):
         event = MagicMock()
         event.params = {"output": "table"}
         self.charm.backup._list_backups = MagicMock(return_value={"backup1": {"state": "SUCCESS"}})
@@ -532,7 +532,7 @@ class TestBackups(unittest.TestCase):
         self.charm.backup._on_list_backups_action(event)
         event.set_results.assert_called_with({"backups": "backup1 | finished"})
 
-    def test_03_on_list_backups_action_in_json_format(self):
+    def test_on_list_backups_action_in_json_format(self):
         event = MagicMock()
         event.params = {"output": "json"}
         self.charm.backup._list_backups = MagicMock(return_value={"backup1": {"state": "SUCCESS"}})
@@ -542,7 +542,7 @@ class TestBackups(unittest.TestCase):
         self.charm.backup._on_list_backups_action(event)
         event.set_results.assert_called_with({"backups": '{"backup1": {"state": "SUCCESS"}}'})
 
-    def test_04_is_restore_complete(self):
+    def test_is_restore_complete(self):
         rel = MagicMock()
         rel.data = {self.charm.app: {"restore_in_progress": "index1,index2"}}
         self.charm.model.get_relation = MagicMock(return_value=rel)
@@ -556,18 +556,12 @@ class TestBackups(unittest.TestCase):
         result = self.charm.backup._is_restore_complete()
         self.assertTrue(result)
 
-    def test_05_on_check_restore_current_action(self):
-        event = MagicMock()
-        self.charm.backup._is_restore_complete = MagicMock(return_value=True)
-        self.charm.backup._on_check_restore_current_action(event)
-        self.assertTrue(event.set_results.called)
-
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup.apply_api_config_if_needed")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.apply_config")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._execute_s3_broken_calls")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_20_relation_broken(
+    def test_relation_broken(
         self,
         mock_status,
         mock_execute_s3_broken_calls,
@@ -597,7 +591,7 @@ class TestBackups(unittest.TestCase):
             ).__dict__
         )
 
-    def test_99_format_backup_list(self):
+    def test_format_backup_list(self):
         """Tests the format of the backup list."""
         backup_list = {
             "backup1": {"state": "SUCCESS"},
@@ -658,13 +652,12 @@ class TestBackups(unittest.TestCase):
         self.assertTrue(result)
 
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
-    def test_on_create_backup_action_success_async(self, mock_request):
+    def test_on_create_backup_action_success(self, mock_request):
         event = MagicMock()
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
         self.charm.backup.is_backup_in_progress = MagicMock(return_value=False)
         self.charm.backup._list_backups = MagicMock(return_value={})
         self.charm.backup.get_service_status = MagicMock(return_value="Backup completed.")
-        event.params = {"wait-for-completion": False}
         self.charm.backup._on_create_backup_action(event)
         event.set_results.assert_called_with({"backup-id": 1, "status": "Backup is running."})
         assert mock_request.call_args[0][0] == "PUT"
@@ -679,11 +672,10 @@ class TestBackups(unittest.TestCase):
         self.charm.backup._on_create_backup_action(event)
         event.fail.assert_called_with("Failed: backup service is not configured yet")
 
-    def test_on_create_backup_action_backup_in_progress_async(self):
+    def test_on_create_backup_action_backup_in_progress(self):
         event = MagicMock()
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
         self.charm.backup.is_backup_in_progress = MagicMock(return_value=True)
-        event.params = {"wait-for-completion": False}
         self.charm.backup._on_create_backup_action(event)
         event.fail.assert_called_with("Backup still in progress: aborting this request...")
 
@@ -694,21 +686,5 @@ class TestBackups(unittest.TestCase):
         self.charm.backup._list_backups = MagicMock(
             side_effect=OpenSearchListBackupError("Backup error")
         )
-        event.params = {"wait-for-completion": True}
         self.charm.backup._on_create_backup_action(event)
         event.fail.assert_called_with("Failed with exception: Backup error")
-
-    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
-    def test_on_create_backup_action_success(self, mock_request):
-        event = MagicMock()
-        self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
-        self.charm.backup.is_backup_in_progress = MagicMock(return_value=False)
-        self.charm.backup._list_backups = MagicMock(return_value={})
-        self.charm.backup.get_service_status = MagicMock(return_value="Backup completed.")
-        event.params = {"wait-for-completion": True}
-        self.charm.backup._on_create_backup_action(event)
-        event.set_results.assert_called_with({"backup-id": 1, "status": "Backup completed."})
-        assert mock_request.call_args[0][0] == "PUT"
-        assert (
-            mock_request.call_args[0][1] == f"_snapshot/{S3_REPOSITORY}/1?wait_for_completion=true"
-        )

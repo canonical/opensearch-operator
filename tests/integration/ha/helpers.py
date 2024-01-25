@@ -460,16 +460,21 @@ async def wait_backup_finish(ops_test, leader_id):
                 raise Exception("Backup not finished yet")
 
 
-async def wait_restore_finish(ops_test, leader_id):
+async def wait_restore_finish(ops_test, unit_ip):
     """Waits the backup to finish and move to the finished state or throws a RetryException."""
     for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
         with attempt:
-            action = await run_action(ops_test, leader_id, "check-restore-current")
-            logger.info(f"check-restore-current output: {action}")
-            if action.status == "completed":
-                return
-            else:
-                raise Exception("Backup not finished yet")
+            indices_status = await http_request(
+                ops_test,
+                "GET",
+                f"https://{unit_ip}:9200/_recovery?human",
+            )
+            for info in indices_status.values():
+                # Now, check the status of each shard
+                for shard in info["shards"]:
+                    if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
+                        raise Exception()
+            return
 
 
 async def continuous_writes_increases(ops_test: OpsTest, unit_ip: str, app: str) -> bool:
@@ -500,9 +505,9 @@ async def backup_cluster(ops_test: OpsTest, leader_id: int) -> bool:
     return action.status == "completed"
 
 
-async def restore_cluster(ops_test: OpsTest, backup_id: int, leader_id: int) -> bool:
+async def restore_cluster(ops_test: OpsTest, backup_id: int, unit_ip: str, leader_id: int) -> bool:
     action = await run_action(ops_test, leader_id, "restore", params={"backup-id": backup_id})
     logger.debug(f"restore output: {action}")
 
-    await wait_restore_finish(ops_test, leader_id)
+    await wait_restore_finish(ops_test, unit_ip)
     return action.status == "completed"

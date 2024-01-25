@@ -148,7 +148,7 @@ def microceph():
                 "-c",
                 "latest/edge",
                 "-d",
-                "/dev/sdc",
+                "/dev/sdi",
                 "-a",
                 "accesskey",
                 "-s",
@@ -247,6 +247,7 @@ async def test_restore_cluster(ops_test: OpsTest) -> None:
     assert await restore_cluster(
         ops_test,
         1,  # backup_id
+        unit_ip,
         leader_id,
     )
     count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
@@ -285,6 +286,7 @@ async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
     assert await restore_cluster(
         ops_test,
         1,  # backup_id
+        leader_unit_ip,
         leader_id,
     )
     # Count the number of docs in the index
@@ -328,6 +330,7 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     assert await restore_cluster(
         ops_test,
         1,  # backup_id
+        unit_ip,
         leader_id,
     )
     count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
