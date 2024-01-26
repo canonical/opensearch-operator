@@ -44,7 +44,6 @@ class TestBackups(unittest.TestCase):
         self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
 
         # Replace some unused methods that will be called as part of set_leader with mock
-        self.charm.service_manager._update_locks = MagicMock()
         self.charm._put_admin_user = MagicMock()
         self.peer_id = self.harness.add_relation(PeerRelationName, "opensearch")
         self.harness.set_leader(is_leader=True)
