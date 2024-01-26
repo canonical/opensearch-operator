@@ -19,7 +19,8 @@ juju add-model opensearch
 ```
 
 Configure the system settings required by [OpenSearch](https://opensearch.org/docs/2.6/opensearch/install/important-settings/),
-we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model.
+we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model. 
+As well as setting some kernel settings on the host machine.
 ```
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
@@ -73,13 +74,12 @@ juju deploy self-signed-certificates --channel=latest/stable
 # Add the necessary configurations for TLS.
 juju config \
     self-signed-certificates \
-    generate-self-signed-certificates="true" \
     ca-common-name="Test CA" \
     certificate-validity=365 \
     root-ca-validity=365
     
 # Enable TLS via relation.
-juju relate self-signed-certificates opensearch
+juju integrate self-signed-certificates opensearch
 
 # Disable TLS by removing relation.
 juju remove-relation opensearch self-signed-certificates

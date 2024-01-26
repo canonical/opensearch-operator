@@ -157,7 +157,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentia
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
-    tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
+    tls_config = {"ca-common-name": "CN_CA"}
 
     # Convert to integer as environ always returns string
     app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 3)

@@ -25,7 +25,7 @@ from tests.integration.tls.helpers import (
 
 logger = logging.getLogger(__name__)
 
-TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
+TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 
 
 @pytest.mark.abort_on_fail
@@ -42,7 +42,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
     )
 
     # Deploy TLS Certificates operator.
-    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
+    config = {"ca-common-name": "CN_CA"}
     await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
     await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
 
