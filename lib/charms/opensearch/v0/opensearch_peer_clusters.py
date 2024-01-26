@@ -404,7 +404,7 @@ class OpenSearchPeerClustersManager:
 
     def is_peer_cluster_manager_relation_set(self) -> bool:
         """Return whether the peer cluster relation is established."""
-        logger.debug(f"\n\n\nRelations: {self._charm.model.relations.keys()}")
+        # logger.debug(f"\n\n\nRelations: {self._charm.model.relations.keys()}")
         peer_main_cm_rel_id = int(
             (self._charm.peers_data.get_object(Scope.APP, "peer-cluster-managers") or {}).get("main-cluster-manager-rel-id", -1)
         )
@@ -439,11 +439,11 @@ class OpenSearchPeerClustersManager:
         if not self.is_peer_cluster_manager_relation_set():
             return None
 
-        logger.debug(f"\n\n\nREL_DATA:")
+        # logger.debug(f"\n\n\nREL_DATA:")
         peer_main_cm_rel_id = int(
             self._charm.peers_data.get_object(Scope.APP, "peer-cluster-managers").get("main-cluster-manager-rel-id")
         )
-        logger.debug(f"Stored peer_main_cm_rel_id: {peer_main_cm_rel_id}")
+        # logger.debug(f"Stored peer_main_cm_rel_id: {peer_main_cm_rel_id}")
 
         rel = self._charm.model.get_relation(PeerClusterManagerRelationName, peer_main_cm_rel_id)
         return PeerClusterRelData.from_str(rel.data[rel.app].get("data"))
@@ -456,7 +456,7 @@ class OpenSearchPeerClustersManager:
         peer_main_cm_rel_id = int(
             self._charm.peers_data.get_object(Scope.APP, "peer-cluster-managers").get("main-cluster-manager-rel-id")
         )
-        logger.debug(f"Stored peer_main_cm_rel_id: {peer_main_cm_rel_id}")
+        # logger.debug(f"Stored peer_main_cm_rel_id: {peer_main_cm_rel_id}")
 
         rel = self._charm.model.get_relation(PeerClusterManagerRelationName, peer_main_cm_rel_id)
         return PeerClusterRelErrorData.from_str(rel.data[rel.app].get("error-data"))

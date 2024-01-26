@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING, List, Optional, Union, Any, Dict, Tuple, Mutab
 
 from tenacity import Retrying, stop_after_attempt, wait_fixed, RetryError
 
-from charms.opensearch.v0.constants_charm import PeerClusterRelationName, PeerClusterManagerRelationName
+from charms.opensearch.v0.constants_charm import PeerClusterRelationName, PeerClusterManagerRelationName, \
+    TLSRelationMissing, TLSNotFullyConfigured
 from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
-from charms.opensearch.v0.constants_tls import CertType
+from charms.opensearch.v0.constants_tls import CertType, TLS_RELATION
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
     DeploymentType,
@@ -422,36 +423,39 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             logger.error(f"\n\nREQUIRER: error: {error.to_dict()}\n\n\n\n")
             return True
 
-        logger.debug(f"\n\n\nREQUIRER: _on_peer_cluster_relation_changed: {self.charm.unit_name} "
-                     f"---> rel id: {event.relation.id} "
-                     f"---> app: event/{event.app.name} -- charm/{self.charm.app.name} "
-                     f"\n---> {event.relation.data.get(event.app)} ---")
+        # logger.debug(f"\n\n\nREQUIRER: _on_peer_cluster_relation_changed: {self.charm.unit_name} "
+        #              f"---> rel id: {event.relation.id} "
+        #              f"---> app: event/{event.app.name} -- charm/{self.charm.app.name} "
+        #              f"\n---> {event.relation.data.get(event.app)} ---")
         # self.charm.trigger_leader_peer_rel_changed()
 
         if not self.charm.unit.is_leader():
             logger.debug(f"REQUIRER _on_peer_cluster_relation_changed: not leader leaving...\n\n")
             return
 
+        logger.debug("\n\n\n\n\n\n -------------------------------------------\n\t--- REQUIRER")
+
         # register in the 'main/failover'-CMs / save the number of planned units of the current app
         self._put_planned_units(event)
 
         data = event.relation.data.get(event.app)   # TODO: this one empty
         if not data:
-            logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: not data leaving...\n\n")
+            logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: not data leaving...")
+            logger.debug(f"\n------------------------------------------------\n\n\n")
             return
 
         cm_relations = dict([(rel.id, rel.app.name) for rel in self.model.relations[self.relation_name]])
-        logger.debug(f"\n\n\nREQUIRER -- YOOOO --- \nRELATIONS: {cm_relations}")
+        # logger.debug(f"\n\n\nREQUIRER -- YOOOO --- \nRELATIONS: {cm_relations}")
 
         # fetch main and failover clusters relations ids if any
         main_cm_rel_id, main_cm_app, failover_cm_rel_id, failover_cm_app = self._get_related_cluster_manager_ids(
             event, data, cm_relations
         )
 
-        logger.debug(f"\n\n\nREQUIRER -- YOOOO --- \nRELATIONS: "
-                     f"Event: {event.relation.id}\n"
-                     f"main_cm: {main_cm_rel_id}: {main_cm_app}\n"
-                     f"failover_cm: {failover_cm_rel_id}: {failover_cm_app}")
+        # logger.debug(f"\n\n\nREQUIRER -- YOOOO --- \nRELATIONS: "
+        #              f"Event: {event.relation.id}\n"
+        #              f"main_cm: {main_cm_rel_id}: {main_cm_app}\n"
+        #              f"failover_cm: {failover_cm_rel_id}: {failover_cm_app}")
 
         # check for errors in alternate relation (in case related to main and failover)
         # so we don't keep overriding the statuses
@@ -459,7 +463,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             error_data = self.get_obj_from_rel_data("error_data", rel_id=main_cm_rel_id, rel_app=True)
             logger.debug(f"REQUIRER -- MAIN CM Error: {error_data}")
             if set_err_status(error_data):
-                logger.debug(f"\n\n\nREQUIRER --- ERROR: Previously Existing MAIN CM error data: {error_data}\n\n\n")
+                logger.debug(f"REQUIRER --- ERROR: Previously Existing MAIN CM error data: {error_data}")
+                logger.debug(f"\n------------------------------------------------\n\n\n")
                 return
 
         if "error_data" in data:
@@ -475,7 +480,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             error_data = self.get_obj_from_rel_data("error_data", rel_id=failover_cm_rel_id, rel_app=True)  # TODO: pass
             logger.debug(f"REQUIRER -- FAILOVER CM Error: {error_data}")
             if set_err_status(error_data):
-                logger.debug(f"\n\n\nREQUIRER --- ERROR: Previously Existing FAILOVER CM error data: {error_data}\n\n\n")
+                logger.debug(f"REQUIRER --- ERROR: Previously Existing FAILOVER CM error data: {error_data}")
+                logger.debug(f"\n------------------------------------------------\n\n\n")
                 return
 
         if "data" not in data:
@@ -486,10 +492,15 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: not deployment_desc "
                          f"leaving + deferring...\n\n")
             event.defer()
+            logger.debug(f"\n------------------------------------------------\n\n\n")
             return
 
         data = PeerClusterRelData.from_str(data["data"])
-        logger.debug(f"\n\n\n_on_peer_cluster_relation_changed --- DATA: {data.to_dict()}")
+        tmp_d = data.to_dict().copy()
+        if "credentials" in tmp_d:
+            if tmp_d["credentials"].get("admin_tls"):
+                tmp_d["credentials"]["admin_tls"] = {}
+        logger.debug(f"_on_peer_cluster_relation_changed --- DATA... ")#{tmp_d}")
 
         # handle error states that can only be figured out from the requirer side
         error_data = self._rel_err_data(data, event.relation.id)
@@ -498,11 +509,13 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             #  cleanup after they're solved??
             # todo: handle the cleanup of these in peer cluster relation broken / (departed
             #  with planned units 0 ??)
+            logger.debug(f"\n------------------------------------------------\n\n\n")
+            event.defer()
             return
 
         # this means it's a previous "main cluster manager" that was unrelated then re-related
         if deployment_desc.typ == DeploymentType.MAIN_CLUSTER_MANAGER:
-            logger.debug(f"\n\n\n\nREQUIRER: DEMOTING\n\n")
+            logger.debug(f"REQUIRER: DEMOTING")
             self.charm.opensearch_peer_cm.demote_to_failover_cluster_manager()
 
         # broadcast that this cluster is a failover candidate, and let the main CM elect it or not
@@ -512,38 +525,53 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             )
 
         # set admin credentials
-        self.charm.secrets.put(Scope.APP, ADMIN_PW, data.credentials.admin_password)
-        self.charm.secrets.put(Scope.APP, ADMIN_PW_HASH, data.credentials.admin_password_hash)
-        self.charm.secrets.put_object(Scope.APP, CertType.APP_ADMIN.val, data.credentials.admin_tls)
+        if self.charm.secrets.get(Scope.APP, ADMIN_PW) != data.credentials.admin_password:  # todo remove condition
+            self.charm.secrets.put(Scope.APP, ADMIN_PW, data.credentials.admin_password)
+            self.charm.secrets.put(Scope.APP, ADMIN_PW_HASH, data.credentials.admin_password_hash)
 
-        # store the app admin TLS resources if not stored
-        self.charm.store_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+            # set user and security_index initialized flags  -- TODO: put back after secrets.store
+            self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
+            self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
 
-        # set user and security_index initialized flags
-        self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
-        self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
+        if self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) != data.credentials.admin_tls:  # todo remove condition
+            self.charm.secrets.put_object(Scope.APP, CertType.APP_ADMIN.val, data.credentials.admin_tls)
 
-        # register main and failover cm app names if any, another benefit of the following is
-        # to trigger a peer_rel_changed event on each units to populate their unicast_hosts.txt
-        # with new CMs / delete old ones
-        self.charm.peers_data.put_object(
-            scope=Scope.APP,
-            key="peer-cluster-managers",
-            value={
-                "main-cluster-manager-rel-id": main_cm_rel_id,
-                "main-cluster-manager-app": main_cm_app,
-                "failover-cluster-manager-rel-id": failover_cm_rel_id,
-                "failover-cluster-manager-app": failover_cm_app,
-            },
-        )
+            # store the app admin TLS resources if not stored
+            self.charm.store_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
 
-        logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: STORED EVERYTHING NEEDED...\n\n")
+        store = {
+            "main-cluster-manager-rel-id": main_cm_rel_id,
+            "main-cluster-manager-app": main_cm_app,
+            "failover-cluster-manager-rel-id": failover_cm_rel_id,
+            "failover-cluster-manager-app": failover_cm_app,
+        }
+        if self.charm.peers_data.get(Scope.APP, "peer-cluster-managers") != store:
+            # register main and failover cm app names if any, another benefit of the following is
+            # to trigger a peer_rel_changed event on each units to populate their unicast_hosts.txt
+            # with new CMs / delete old ones
+            self.charm.peers_data.put_object(
+                scope=Scope.APP,
+                key="peer-cluster-managers",
+                value={
+                    "main-cluster-manager-rel-id": main_cm_rel_id,
+                    "main-cluster-manager-app": main_cm_app,
+                    "failover-cluster-manager-rel-id": failover_cm_rel_id,
+                    "failover-cluster-manager-app": failover_cm_app,
+                },
+            )
+
+        logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: STORED EVERYTHING NEEDED...")
 
         # check if ready
         if not self.charm.is_tls_fully_configured():
-            logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: TLS not configured "
-                         f"-- deferring...\n\n")
+            if not self.charm.model.get_relation(TLS_RELATION):
+                self.charm.status.set(BlockedStatus(TLSRelationMissing), app=True)
+                logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: TLS not related -- deferring...\n\n")
+            else:
+                self.charm.status.set(BlockedStatus(TLSNotFullyConfigured), app=True)
+                logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: TLS not STORED fully -- deferring...\n\n")
             event.defer()
+            logger.debug(f"\n------------------------------------------------\n\n\n")
             return
 
         # compare CAs
@@ -552,6 +580,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         )["ca-cert"]
         if unit_transport_ca_cert != data.credentials.admin_tls["ca-cert"]:
             self.charm.status.set(BlockedStatus("CA certificate mismatch between clusters."))
+            logger.debug(f"\n------------------------------------------------\n\n\n")
             return
 
         # aggregate all CMs (main + failover if any)
@@ -570,6 +599,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
+        logger.debug(f"\n------------------------------------------------\n\n\n")
 
     def _get_related_cluster_manager_ids(
         self, event: RelationChangedEvent, data: MutableMapping[str, str], cm_relations: Dict[int, str]
@@ -758,12 +788,17 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         """Build error peer relation data object."""
         deployment_desc = self.peer_cm.deployment_desc()
 
+        logger.debug(f"_rel_err_data - event_rel_id: {event_rel_id}")
+
         peer_cm_conf = self.charm.peers_data.get_object(Scope.APP, "peer-cluster-managers")
         if not peer_cm_conf:
             return None
 
-        main_cm_rel_id = peer_cm_conf.get("main-cluster-manager-rel-id")
-        failover_cm_rel_id = peer_cm_conf.get("failover-cluster-manager-rel-id")
+        main_cm_rel_id = peer_cm_conf.get("main-cluster-manager-rel-id", -1)
+        failover_cm_rel_id = peer_cm_conf.get("failover-cluster-manager-rel-id", -1)
+
+        logger.debug(f"_rel_err_data - event_rel_id: {event_rel_id} -- "
+                     f"[main_cm_rel_id: {main_cm_rel_id}, failover_cm_rel_id: {failover_cm_rel_id}]")
 
         should_sever_relation = False
         should_wait = True

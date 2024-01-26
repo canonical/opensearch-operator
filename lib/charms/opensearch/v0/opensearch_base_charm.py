@@ -80,7 +80,6 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     StartMode,
 )
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
 from charms.opensearch.v0.opensearch_relation_peer_cluster import (
     OpenSearchPeerClusterProvider,
     OpenSearchPeerClusterRequirer,
@@ -112,7 +111,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import EventBase, EventSource
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -335,8 +334,8 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         if (
-            not self.peers_data.get(Scope.APP, "security_index_initialised")
-            or not self.opensearch.is_node_up()
+                not self.peers_data.get(Scope.APP, "security_index_initialised")
+                or not self.opensearch.is_node_up()
         ):
             return
 
@@ -375,8 +374,8 @@ class OpenSearchBaseCharm(CharmBase):
         self._add_cm_addresses_to_conf()
 
         # TODO remove the data role of the first CM to start if applies needed
-        if self._remove_data_role_from_dedicated_cm_if_needed(event):
-            return
+        # if self._remove_data_role_from_dedicated_cm_if_needed(event):
+        #    return
 
         app_data = event.relation.data.get(event.app)
         if self.unit.is_leader():
@@ -486,7 +485,7 @@ class OpenSearchBaseCharm(CharmBase):
             self.opensearch_exclusions.cleanup()
 
             health = self.health.apply()
-            if health != HealthColors.GREEN:
+            if health not in [HealthColors.GREEN, HealthColors.IGNORE]:
                 event.defer()
 
             if health == HealthColors.UNKNOWN:
@@ -518,9 +517,8 @@ class OpenSearchBaseCharm(CharmBase):
                 self.model.get_relation(PeerRelationName)
             )
 
+        previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.unit.is_leader():
-            prev_deployment_desc = self.opensearch_peer_cm.deployment_desc()
-
             # run peer cluster manager processing
             self.opensearch_peer_cm.run()
 
@@ -528,8 +526,8 @@ class OpenSearchBaseCharm(CharmBase):
             # for it to become one. We need to: create the admin user if missing, and generate
             # the admin certificate if missing and the TLS relation is established.
             cluster_changed_to_main_cm = (
-                prev_deployment_desc is not None
-                and prev_deployment_desc.typ != DeploymentType.MAIN_CLUSTER_MANAGER
+                previous_deployment_desc is not None
+                and previous_deployment_desc.typ != DeploymentType.MAIN_CLUSTER_MANAGER
                 and self.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_CLUSTER_MANAGER
             )
             if cluster_changed_to_main_cm:
@@ -544,7 +542,7 @@ class OpenSearchBaseCharm(CharmBase):
                         return
 
                     self.tls.request_new_admin_certificate()
-        elif not self.opensearch_peer_cm.deployment_desc():
+        elif not previous_deployment_desc:
             # deployment desc not initialized yet by leader
             event.defer()
             return
@@ -557,13 +555,11 @@ class OpenSearchBaseCharm(CharmBase):
         except OpenSearchPluginError as e:
             logger.exception(e)
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
-                logger.warn("Plugin management: cluster not ready yet at config changed")
+                logger.warning("Plugin management: cluster not ready yet at config changed")
             else:
                 # There was an unexpected error, log it and block the unit
                 self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
-            return
-        self.status.set(ActiveStatus())
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -834,8 +830,9 @@ class OpenSearchBaseCharm(CharmBase):
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
-        # 1. Add current node to the voting + alloc exclusions
-        self.opensearch_exclusions.add_current()
+        if self.opensearch.is_node_up():
+            # 1. Add current node to the voting + alloc exclusions
+            self.opensearch_exclusions.add_current()
 
         # TODO: should be block until all shards move ?
 
@@ -1075,24 +1072,24 @@ class OpenSearchBaseCharm(CharmBase):
             deployment_desc := self.opensearch_peer_cm.deployment_desc()
         ).start == StartMode.WITH_PROVIDED_ROLES:
             computed_roles = deployment_desc.config.roles
+
+            # This is the case where the 1st and main cluster manager to be deployed
+            # with no "data" role in the provided roles, we need to add the role to be able to create
+            # and store the security index
+            if (
+                self.unit.is_leader()
+                and deployment_desc.typ == DeploymentType.MAIN_CLUSTER_MANAGER
+                and "data" not in computed_roles
+                and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
+            ):
+                computed_roles.append("data")
+                self.peers_data.put(Scope.UNIT, "remove-data-role", True)
         else:
             computed_roles = (
                 update_conf.roles
                 if update_conf
                 else ClusterTopology.suggest_roles(nodes, self.app.planned_units())
             )
-
-        # This is the case where the 1st and main cluster manager to be deployed
-        # with no "data" role in the provided roles, we need to add the role to be able to create
-        # and store the security index
-        if (
-            self.unit.is_leader()
-            and deployment_desc.typ == DeploymentType.MAIN_CLUSTER_MANAGER
-            and "data" not in computed_roles
-            and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
-        ):
-            computed_roles.append("data")
-            self.peers_data.put(Scope.UNIT, "remove-data-role", True)
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
@@ -1292,7 +1289,7 @@ class OpenSearchBaseCharm(CharmBase):
                 "metrics_path": "/_prometheus/metrics",
                 "static_configs": [{"targets": [f"{self.unit_ip}:{COSPort}"]}],
                 "tls_config": {"ca": ca},
-                "scheme": "https" if self._is_tls_fully_configured() else "http",
+                "scheme": "https" if self.is_tls_fully_configured() else "http",
                 "basic_auth": {"username": f"{COSUser}", "password": f"{pwd}"},
             }
         ]
