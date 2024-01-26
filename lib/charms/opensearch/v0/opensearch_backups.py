@@ -210,25 +210,31 @@ class OpenSearchBackup(Object):
                 "ignore_unavailable": "true",
             },
         )
+
+        # Trivial case, something went wrong
+        if not resp or not resp.get("acknowledged", False):
+            return False
+
         # There are two options here we return True:
         # 1) ack=True and shards_ack=False with empty indices
         #    This means the indices are already closed
+        if not resp.get("shards_acknowledged", False):
+            if not resp.get("indices", {}):
+                return True
+            return False
+
         # 2) ack=True and shards_ack=True with each index in resp["indices"]
         #    marked as closed=True
-        return resp.get("acknowledged", False) and (
-            (
-                resp.get("shards_acknowledged", False)
-                and all(
-                    [
-                        # The statement of explicit "is True" below assures we have a boolean
-                        # as the response has the form of "true" or "false" originally
-                        state and state.get("closed") is True
-                        for state in resp.get("indices", {}).values()
-                    ]
-                )
-            )
-            or (not resp.get("shards_acknowledged", False) and not resp.get("indices", {}))
+        # The statement of explicit "is True" below assures we have a boolean
+        # as the response has the form of "true" or "false" originally
+        all_closed = all(
+            [state and state.get("closed") for state in resp.get("indices", {}).values()]
         )
+        if not all_closed:
+            return False
+
+        # Finally, we can state it is all good
+        return True
 
     def _close_indices_if_needed(self, backup_id: int) -> Set[str]:
         """Closes indices that will be restored.
