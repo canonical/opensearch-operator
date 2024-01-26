@@ -72,6 +72,7 @@ HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 NewIndexRequested = "new index {index} requested"
 RestoreStarting = "Restore action started."
+PluginConfigStart = "Plugin configuration started."
 
 
 # Relation Interfaces
