@@ -9,66 +9,27 @@ import pytest
 from charms.opensearch.v0.constants_charm import PClusterWrongNodesCountForQuorum
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import all_nodes, app_name, update_restart_delay
-from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (
+from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
     check_cluster_formation_successful,
     cluster_health,
-    get_application_unit_ids,
     get_application_unit_names,
     get_application_unit_status,
     get_leader_unit_ip,
 )
-from tests.integration.helpers_deployments import wait_until
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..helpers_deployments import wait_until
+from .helpers import all_nodes, app_name
+from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
 
 
-ORIGINAL_RESTART_DELAY = 20
-
-
-@pytest.fixture()
-async def reset_restart_delay(ops_test: OpsTest):
-    """Resets service file delay on all units."""
-    yield
-    app = (await app_name(ops_test)) or APP_NAME
-    for unit_id in get_application_unit_ids(ops_test, app):
-        await update_restart_delay(ops_test, app, unit_id, ORIGINAL_RESTART_DELAY)
-
-
-@pytest.fixture()
-async def c_writes(ops_test: OpsTest):
-    """Creates instance of the ContinuousWrites."""
-    app = (await app_name(ops_test)) or APP_NAME
-    return ContinuousWrites(ops_test, app)
-
-
-@pytest.fixture()
-async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Starts continuous write operations and clears writes at the end of the test."""
-    await c_writes.start()
-    yield
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
-
-
-@pytest.fixture()
-async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Same as previous runner, but starts continuous writes on cluster wide replicated index."""
-    await c_writes.start(repl_on_all_nodes=True)
-    yield
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
-
-
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -78,30 +39,27 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
-    # Deploy TLS Certificates operator.
-    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
     )
 
     # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    tls = await self_signed_operator
+    await ops_test.model.relate(APP_NAME, tls)
     await wait_until(
         ops_test,
-        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
+        apps=[tls, APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units={TLS_CERTIFICATES_APP_NAME: 1, APP_NAME: 3},
+        wait_for_exact_units={tls: 1, APP_NAME: 3},
         idle_period=IDLE_PERIOD,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_set_roles_manually(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
+async def test_set_roles_manually(ops_test: OpsTest, c_writes) -> None:
     """Check roles changes in all nodes."""
     app = (await app_name(ops_test)) or APP_NAME
 

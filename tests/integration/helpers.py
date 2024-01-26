@@ -13,11 +13,6 @@ from typing import Dict, List, Optional, Union
 import requests
 import yaml
 from charms.opensearch.v0.helper_networking import is_reachable
-from integration.helpers_deployments import (
-    Status,
-    get_application_units,
-    get_unit_hostname,
-)
 from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -28,6 +23,8 @@ from tenacity import (
     wait_fixed,
     wait_random,
 )
+
+from .helpers_deployments import Status, get_application_units, get_unit_hostname
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
