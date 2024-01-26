@@ -21,6 +21,7 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     PeerRelationName,
     PluginConfigChangeError,
+    PluginConfigStart,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -101,7 +102,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import EventBase, EventSource
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -495,6 +496,7 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
+        self.status.set(MaintenanceStatus(PluginConfigStart))
         try:
             if self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
@@ -508,7 +510,8 @@ class OpenSearchBaseCharm(CharmBase):
             self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
             return
-        self.status.set(ActiveStatus())
+        self.status.clear(PluginConfigChangeError)
+        self.status.clear(PluginConfigStart)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
