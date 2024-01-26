@@ -554,7 +554,7 @@ class CachedSecret:
             self.meta.remove_all_revisions()
 
     def get_info(self) -> Optional[SecretInfo]:
-        """Wrapper function to apply the corresponding call on the Secret object within CachedSecret if any."""
+        """Wrapper to apply the corresponding call on the Secret obj within CachedSecret if any."""
         if self.meta:
             return self.meta.get_info()
 
@@ -658,17 +658,17 @@ class DataRelation(Object, ABC):
     def _fetch_my_specific_relation_data(
         self, relation: Relation, fields: Optional[List[str]]
     ) -> Dict[str, str]:
-        """Fetch data available (directily or indirectly -- i.e. secrets) from the relation for owner/this_app."""
+        """Fetch data available from the relation for owner/this_app."""
         raise NotImplementedError
 
     @abstractmethod
     def _update_relation_data(self, relation: Relation, data: Dict[str, str]) -> None:
-        """Update data available (directily or indirectly -- i.e. secrets) from the relation for owner/this_app."""
+        """Update data available from the relation for owner/this_app."""
         raise NotImplementedError
 
     @abstractmethod
     def _delete_relation_data(self, relation: Relation, fields: List[str]) -> None:
-        """Delete data available (directily or indirectly -- i.e. secrets) from the relation for owner/this_app."""
+        """Delete data available from the relation for owner/this_app."""
         raise NotImplementedError
 
     # Internal helper methods
@@ -756,7 +756,7 @@ class DataRelation(Object, ABC):
     def _content_for_secret_group(
         cls, content: Dict[str, str], secret_fields: Set[str], group_mapping: SecretGroup
     ) -> Dict[str, str]:
-        """Select <field>: <value> pairs from input, that belong to this particular Secret group."""
+        """Select <field>:<value> pairs from input, that belong to this particular Secret group."""
         if group_mapping == SecretGroup.EXTRA:
             return {
                 k: v
@@ -779,8 +779,11 @@ class DataRelation(Object, ABC):
         if secret:
             return secret.get_content()
 
-    # Core operations on Relation Fields manipulations (regardless whether the field is in the databag or in a secret)
-    # Internal functions to be called directly from transparent public interface functions (+closely related helpers)
+    # Core operations on Relation Fields manipulations (regardless whether the
+    # field is in the databag or in a secret)
+
+    # Internal functions to be called directly from transparent public interface
+    # functions (+closely related helpers)
 
     def _process_secret_fields(
         self,
@@ -791,12 +794,14 @@ class DataRelation(Object, ABC):
         *args,
         **kwargs,
     ) -> Tuple[Dict[str, str], Set[str]]:
-        """Isolate target secret fields of manipulation, and execute requested operation by Secret Group."""
+        """Isolate target secret fields, and execute requested operation by Secret Group."""
         result = {}
 
         # If the relation started on a databag, we just stay on the databag
-        # (Rolling upgrades may result in a relation starting on databag, getting secrets enabled on-the-fly)
-        # self.local_app is sufficient to check (ignored if Requires, never has secrets -- works if Provides)
+        # (Rolling upgrades may result in a relation starting on databag, getting
+        # secrets enabled on-the-fly)
+        # self.local_app is sufficient to check (ignored if Requires, never has
+        # secrets -- works if Provides)
         fallback_to_databag = (
             req_secret_fields
             and self.local_unit.is_leader()
@@ -813,7 +818,8 @@ class DataRelation(Object, ABC):
             for group in secret_fieldnames_grouped:
                 # operation() should return nothing when all goes well
                 if group_result := operation(relation, group, secret_fields, *args, **kwargs):
-                    # If "meaningful" data was returned, we take it. (Some 'operation'-s only return success/failure.)
+                    # If "meaningful" data was returned, we take it. (Some 'operation'-s
+                    # only return success/failure.)
                     if isinstance(group_result, dict):
                         result.update(group_result)
                 else:
@@ -876,7 +882,8 @@ class DataRelation(Object, ABC):
                 relation, req_secret_fields, fields, self._get_group_secret_contents
             )
 
-        # Processing "normal" fields. May include leftover from what we couldn't retrieve as a secret.
+        # Processing "normal" fields. May include leftover from what we couldn't
+        # retrieve as a secret.
         # (Typically when Juju3 Requires meets Juju2 Provides)
         if normal_fields:
             result.update(
@@ -1176,7 +1183,8 @@ class DataProvides(DataRelation):
     ) -> Dict[str, str]:
         """Fetching relation data for Provides.
 
-        NOTE: Since all secret fields are in the Provides side of the databag, we don't need to worry about that
+        NOTE: Since all secret fields are in the Provides side of the databag,
+        we don't need to worry about that
         """
         if not relation.app:
             return {}
@@ -1588,13 +1596,13 @@ class DataPeer(DataRequires, DataProvides):
     def _fetch_my_specific_relation_data(
         self, relation: Relation, fields: Optional[List[str]]
     ) -> Dict[str, str]:
-        """Fetch data available (directily or indirectly -- i.e. secrets) from the relation for owner/this_app."""
+        """Fetch data available from the relation for owner/this_app."""
         return self._fetch_relation_data_with_secrets(
             self.component, self.secret_fields, relation, fields
         )
 
     def _update_relation_data(self, relation: Relation, data: Dict[str, str]) -> None:
-        """Update data available (directily or indirectly -- i.e. secrets) from the relation for owner/this_app."""
+        """Update data available from the relation for owner/this_app."""
         self._remove_secret_from_databag(relation, list(data.keys()))
         _, normal_fields = self._process_secret_fields(
             relation,
@@ -1609,12 +1617,13 @@ class DataPeer(DataRequires, DataProvides):
         self._update_relation_data_without_secrets(self.component, relation, normal_content)
 
     def _delete_relation_data(self, relation: Relation, fields: List[str]) -> None:
-        """Delete data available (directily or indirectly -- i.e. secrets) from the relation for owner/this_app."""
+        """Delete data available from the relation for owner/this_app."""
         if self.secret_fields and self.deleted_label:
             current_data = self.fetch_my_relation_data([relation.id], fields)
             if current_data is not None:
-                # Check if the secret we wanna delete actually exists
-                # Given the "deleted label", here we can't rely on the default mechanism (i.e. 'key not found')
+                # Check if the secret we want to delete actually exists
+                # Given the "deleted label", here we can't rely on the default mechanism
+                # (i.e. 'key not found')
                 if non_existent := (set(fields) & set(self.secret_fields)) - set(
                     current_data.get(relation.id, [])
                 ):
