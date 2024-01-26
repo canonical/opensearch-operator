@@ -91,7 +91,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_relation_joined_admin(self, _, __, _put_admin_user, _request_certificate):
+    def test_on_relation_joined_admin(self, _, _put_admin_user, _request_certificate):
         """Test on certificate relation joined event."""
         event_mock = MagicMock()
 
@@ -134,7 +134,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_set_tls_private_key(self, _, __, _put_admin_user, _request_certificate):
+    def test_on_set_tls_private_key(self, _, _put_admin_user, _request_certificate):
         """Test _on_set_tls private key event."""
         event_mock = MagicMock(params={"category": "app-admin"})
 
