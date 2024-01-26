@@ -83,7 +83,7 @@ from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
-from charms.tls_certificates_interface.v1.tls_certificates import (
+from charms.tls_certificates_interface.v2.tls_certificates import (
     CertificateAvailableEvent,
 )
 from ops.charm import (
@@ -503,7 +503,7 @@ class OpenSearchBaseCharm(CharmBase):
         except OpenSearchPluginError as e:
             logger.exception(e)
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
-                logger.warn("Plugin management: cluster not ready yet at config changed")
+                logger.warning("Plugin management: cluster not ready yet at config changed")
             else:
                 # There was an unexpected error, log it and block the unit
                 self.status.set(BlockedStatus(PluginConfigChangeError))

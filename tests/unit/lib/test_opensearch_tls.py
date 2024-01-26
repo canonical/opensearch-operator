@@ -179,7 +179,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         on_tls_conf_set.assert_called()
 
     @patch(
-        "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation"
+        "charms.tls_certificates_interface.v2.tls_certificates.TLSCertificatesRequiresV2.request_certificate_creation"
     )
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     def test_on_certificate_expiring(self, _put_admin_user, request_certificate_creation):
