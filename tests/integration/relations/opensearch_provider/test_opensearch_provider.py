@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 CLIENT_APP_NAME = "application"
 SECONDARY_CLIENT_APP_NAME = "secondary-application"
-TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
+TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
 
 NUM_UNITS = 3
