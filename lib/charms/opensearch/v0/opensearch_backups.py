@@ -50,7 +50,7 @@ import math
 from typing import Any, Dict, List, Set, Tuple
 
 from charms.data_platform_libs.v0.s3 import S3Requirer
-from charms.opensearch.v0.constants_charm import RestoreActionFailed, RestoreStarting
+from charms.opensearch.v0.constants_charm import RestoreInProgress
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -65,6 +65,7 @@ from charms.opensearch.v0.opensearch_plugins import (
 from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "d301deee4d2c4c1b8e30cd3df8034be2"
@@ -256,8 +257,11 @@ class OpenSearchBackup(Object):
             ):
                 indices_to_close.add(index)
 
-        if not self._close_indices(indices_to_close):
-            raise OpenSearchRestoreIndexClosingError()
+        try:
+            if not self._close_indices(indices_to_close):
+                raise OpenSearchRestoreIndexClosingError()
+        except OpenSearchError as e:
+            raise OpenSearchRestoreIndexClosingError(e)
         return indices_to_close
 
     def _restore(self, backup_id: int) -> Dict[str, Any]:
@@ -280,8 +284,10 @@ class OpenSearchBackup(Object):
         ):
             to_close = output["error"]["reason"].split("[")[2].split("]")[0]
             raise OpenSearchRestoreIndexClosingError(f"_restore: fails to close {to_close}")
+
         if "snapshot" not in output or "shards" not in output.get("snapshot"):
             raise OpenSearchRestoreCheckError(f"_restore: unexpected response {output}")
+
         return output["snapshot"]
 
     def _is_restore_complete(self) -> bool:
@@ -304,7 +310,7 @@ class OpenSearchBackup(Object):
             return (
                 backup_id in backups.keys()
                 and self.get_snapshot_status(backups[backup_id]["state"])
-                != BackupServiceState.SUCCESS
+                == BackupServiceState.SUCCESS
             )
         except OpenSearchListBackupError:
             return False
@@ -319,11 +325,11 @@ class OpenSearchBackup(Object):
             return
         # Now, validate the backup is working
         backup_id = str(event.params.get("backup-id"))
-        if self._is_backup_available_for_restore(backup_id):
+        if not self._is_backup_available_for_restore(backup_id):
             event.fail(f"Failed: no backup-id {backup_id}")
             return
 
-        self.charm.status.set(MaintenanceStatus(RestoreStarting))
+        self.charm.status.set(MaintenanceStatus(RestoreInProgress))
 
         # Restore will try to close indices if there is a matching name.
         # The goal is to leave the cluster in a running state, even if the restore fails.
@@ -340,24 +346,22 @@ class OpenSearchBackup(Object):
             OpenSearchRestoreCheckError,
         ) as e:
             event.fail(f"Failed: {e}")
-            self.charm.status.set(BlockedStatus(RestoreActionFailed))
             return
 
         # Post execution checks
         # Was the call successful?
         state = self.get_service_status(output)
         if state != BackupServiceState.SUCCESS:
-            self.charm.status.set(BlockedStatus(RestoreActionFailed))
+            event.fail(f"Restore failed with {state}")
             return
 
         shards = output.get("shards", {})
-        if not shards or shards.get("successful", -1) != shards.get("total", 0):
-            self.charm.status.set(BlockedStatus(RestoreActionFailed))
+        if shards.get("successful", -1) != shards.get("total", 0):
             event.fail("Failed to restore all the shards")
             return
 
         msg = "Restore is complete" if self._is_restore_complete() else "Restore in progress..."
-        self.charm.status.clear(RestoreStarting)
+        self.charm.status.clear(RestoreInProgress)
         event.set_results(
             {"backup-id": backup_id, "status": msg, "closed-indices": str(closed_idx)}
         )
@@ -365,16 +369,11 @@ class OpenSearchBackup(Object):
     def _on_create_backup_action(self, event: ActionEvent) -> None:  # noqa: C901
         """Creates a backup from the current cluster."""
         if not self._can_unit_perform_backup(event):
-            event.fail("Failed: backup service is not configured yet")
+            event.fail("Failed: backup service is not configured or busy")
             return
 
         new_backup_id = None
         try:
-            # Check if any backup is not running already, or RetryError happens
-            if self.is_backup_in_progress():
-                event.fail("Backup still in progress: aborting this request...")
-                return
-
             # Increment by 1 the latest snapshot_id (set to 0 if no snapshot was previously made)
             new_backup_id = int(max(self._list_backups().keys() or [0])) + 1
             logger.debug(
@@ -412,13 +411,15 @@ class OpenSearchBackup(Object):
         """
         # First, validate the plugin is present and correctly configured.
         if self._plugin_status != PluginState.ENABLED:
-            event.fail(f"Failed: plugin is not ready yet, current status is {self._plugin_status}")
+            logger.warning(
+                f"Failed: plugin is not ready yet, current status is {self._plugin_status}"
+            )
             return False
 
         # Then, check the repo status
         status = self._check_repo_status()
         if status != BackupServiceState.SUCCESS:
-            event.fail(f"Failed: repo status is {status}")
+            logger.warning(f"Failed: repo status is {status}")
             return False
         return not self.is_backup_in_progress()
 
@@ -439,16 +440,26 @@ class OpenSearchBackup(Object):
         We filter the _query_backup_status() and seek for the following states:
         - SNAPSHOT_IN_PROGRESS
         """
-        if self._query_backup_status() in [BackupServiceState.SNAPSHOT_IN_PROGRESS]:
-            # We have a backup in progress
+        if self._query_backup_status() in [
+            BackupServiceState.SNAPSHOT_IN_PROGRESS,
+            BackupServiceState.RESPONSE_FAILED_NETWORK,
+        ]:
+            # We have a backup in progress or we cannot reach the API
+            # taking the "safe path" of informing a backup is in progress
             return True
         return False
 
     def _query_backup_status(self, backup_id=None) -> BackupServiceState:
-        target = f"_snapshot/{S3_REPOSITORY}/"
-        target += f"{backup_id}" if backup_id else "_all"
-        output = self._request("GET", target)
-        logger.debug(f"Backup status: {output}")
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(5)):
+                with attempt:
+                    target = f"_snapshot/{S3_REPOSITORY}/"
+                    target += f"{backup_id}" if backup_id else "_all"
+                    output = self._request("GET", target)
+                    logger.debug(f"Backup status: {output}")
+        except RetryError as e:
+            logger.error(f"_request failed with: {e}")
+            return BackupServiceState.RESPONSE_FAILED_NETWORK
         return self.get_service_status(output)
 
     def _on_s3_credentials_changed(self, event: EventBase) -> None:

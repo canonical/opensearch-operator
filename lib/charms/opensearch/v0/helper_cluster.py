@@ -32,9 +32,6 @@ class IndexStateEnum(BaseStrEnum):
     CLOSED = "closed"
 
 
-INDEX_WILDCARD = "all"
-
-
 class ClusterTopology:
     """Class for creating the best possible configuration for a Node."""
 

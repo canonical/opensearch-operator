@@ -84,6 +84,52 @@ def mock_request():
         yield mock
 
 
+def test_can_unit_perform_backup_plugin_not_ready(harness, caplog):
+    plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchBackup._plugin_status"
+    event = MagicMock()
+    with patch(plugin_method, new_callable=PropertyMock) as mock_plugin_status:
+        mock_plugin_status.return_value = PluginState.DISABLED
+        result = harness.charm.backup._can_unit_perform_backup(event)
+
+    assert (
+        caplog.records[-1].message
+        == f"Failed: plugin is not ready yet, current status is {PluginState.DISABLED}"
+    )
+    assert caplog.records[-1].levelname == "WARNING"
+    assert not result
+
+
+def test_can_unit_perform_backup_repo_status_failed(harness, caplog):
+    plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchBackup._plugin_status"
+    event = MagicMock()
+    with patch(plugin_method, new_callable=PropertyMock) as mock_plugin_status:
+        mock_plugin_status.return_value = PluginState.ENABLED
+        harness.charm.backup._check_repo_status = MagicMock(
+            return_value=BackupServiceState.REPO_NOT_CREATED
+        )
+        result = harness.charm.backup._can_unit_perform_backup(event)
+    assert (
+        caplog.records[-1].message
+        == f"Failed: repo status is {BackupServiceState.REPO_NOT_CREATED}"
+    )
+    assert caplog.records[-1].levelname == "WARNING"
+    assert not result
+
+
+def test_can_unit_perform_backup_backup_in_progress(harness, caplog):
+    plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchBackup._plugin_status"
+    event = MagicMock()
+    with patch(plugin_method, new_callable=PropertyMock) as mock_plugin_status:
+        mock_plugin_status.return_value = PluginState.ENABLED
+        harness.charm.backup._check_repo_status = MagicMock(
+            return_value=BackupServiceState.SUCCESS
+        )
+        harness.charm.backup.is_backup_in_progress = MagicMock(return_value=True)
+        result = harness.charm.backup._can_unit_perform_backup(event)
+    assert not caplog.records
+    assert not result
+
+
 @pytest.mark.parametrize(
     "leader,request_value,result_value",
     [
@@ -602,42 +648,6 @@ class TestBackups(unittest.TestCase):
             self.charm.backup._generate_backup_list_output(backup_list), LIST_BACKUPS_TRIAL
         )
 
-    def test_can_unit_perform_backup_plugin_not_ready(self):
-        plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchBackup._plugin_status"
-        event = MagicMock()
-        with patch(plugin_method, new_callable=PropertyMock) as mock_plugin_status:
-            mock_plugin_status.return_value = PluginState.DISABLED
-            result = self.charm.backup._can_unit_perform_backup(event)
-        event.fail.assert_called_with(
-            "Failed: plugin is not ready yet, current status is disabled"
-        )
-        self.assertFalse(result)
-
-    def test_can_unit_perform_backup_repo_status_failed(self):
-        plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchBackup._plugin_status"
-        event = MagicMock()
-        with patch(plugin_method, new_callable=PropertyMock) as mock_plugin_status:
-            mock_plugin_status.return_value = PluginState.ENABLED
-            self.charm.backup._check_repo_status = MagicMock(
-                return_value=BackupServiceState.REPO_NOT_CREATED
-            )
-            result = self.charm.backup._can_unit_perform_backup(event)
-        event.fail.assert_called_with("Failed: repo status is repository not created")
-        self.assertFalse(result)
-
-    def test_can_unit_perform_backup_backup_in_progress(self):
-        plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchBackup._plugin_status"
-        event = MagicMock()
-        with patch(plugin_method, new_callable=PropertyMock) as mock_plugin_status:
-            mock_plugin_status.return_value = PluginState.ENABLED
-            self.charm.backup._check_repo_status = MagicMock(
-                return_value=BackupServiceState.SUCCESS
-            )
-            self.charm.backup.is_backup_in_progress = MagicMock(return_value=True)
-            result = self.charm.backup._can_unit_perform_backup(event)
-        self.assertFalse(event.fail.called)
-        self.assertFalse(result)
-
     def test_can_unit_perform_backup_success(self):
         plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchBackup._plugin_status"
         event = MagicMock()
@@ -670,14 +680,18 @@ class TestBackups(unittest.TestCase):
         event = MagicMock()
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=False)
         self.charm.backup._on_create_backup_action(event)
-        event.fail.assert_called_with("Failed: backup service is not configured yet")
+        event.fail.assert_called_with("Failed: backup service is not configured or busy")
 
     def test_on_create_backup_action_backup_in_progress(self):
         event = MagicMock()
-        self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
+        self.charm.backup._check_repo_status = MagicMock(return_value=BackupServiceState.SUCCESS)
         self.charm.backup.is_backup_in_progress = MagicMock(return_value=True)
-        self.charm.backup._on_create_backup_action(event)
-        event.fail.assert_called_with("Backup still in progress: aborting this request...")
+        plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchBackup._plugin_status"
+        with patch(plugin_method, new_callable=PropertyMock) as mock_plugin_status:
+            mock_plugin_status.return_value = PluginState.ENABLED
+            self.charm.backup._on_create_backup_action(event)
+            mock_plugin_status.assert_called_once()
+        event.fail.assert_called_with("Failed: backup service is not configured or busy")
 
     def test_on_create_backup_action_exception(self):
         event = MagicMock()

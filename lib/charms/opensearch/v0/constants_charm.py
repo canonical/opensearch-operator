@@ -57,7 +57,6 @@ PClusterWrongRolesProvided = "Cannot start cluster with current set of roles."
 PClusterWrongNodesCountForQuorum = (
     "Even number of members in quorum if current unit started. Add or remove 1 unit."
 )
-RestoreActionFailed = "Restore action failed, please check the logs."
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
@@ -71,7 +70,7 @@ TLSNewCertsRequested = "Requesting new TLS certificates..."
 HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 NewIndexRequested = "new index {index} requested"
-RestoreStarting = "Restore action started."
+RestoreInProgress = "Restore in progress..."
 PluginConfigStart = "Plugin configuration started."
 
 

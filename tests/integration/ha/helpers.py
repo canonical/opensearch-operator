@@ -456,8 +456,8 @@ async def wait_backup_finish(ops_test, leader_id):
             if action.status == "completed" and len(backups) > 0:
                 logger.debug(f"list-backups output: {action}")
                 return
-            else:
-                raise Exception("Backup not finished yet")
+
+            raise Exception("Backup not finished yet")
 
 
 async def wait_restore_finish(ops_test, unit_ip):
@@ -474,7 +474,6 @@ async def wait_restore_finish(ops_test, unit_ip):
                 for shard in info["shards"]:
                     if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
                         raise Exception()
-            return
 
 
 async def continuous_writes_increases(ops_test: OpsTest, unit_ip: str, app: str) -> bool:
