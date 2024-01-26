@@ -89,7 +89,6 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.secret_store.put_object(Scope.APP, CertType.APP_ADMIN.val, {"csr": event_data_csr})
 
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
-    @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._update_locks")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
     def test_on_relation_joined_admin(self, _, __, _put_admin_user, _request_certificate):
@@ -133,7 +132,6 @@ class TestOpenSearchTLS(unittest.TestCase):
         on_tls_relation_broken.assert_called_once()
 
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
-    @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._update_locks")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
     def test_on_set_tls_private_key(self, _, __, _put_admin_user, _request_certificate):
