@@ -500,13 +500,12 @@ class OpenSearchBaseCharm(CharmBase):
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
-        except OpenSearchPluginError as e:
-            logger.exception(e)
-            if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
-                logger.warn("Plugin management: cluster not ready yet at config changed")
-            else:
-                # There was an unexpected error, log it and block the unit
-                self.status.set(BlockedStatus(PluginConfigChangeError))
+        except OpenSearchPluginRelationClusterNotReadyError:
+            logger.warning("Plugin management: cluster not ready yet at config changed")
+            event.defer()
+            return
+        except OpenSearchPluginError:
+            self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
             return
         self.status.set(ActiveStatus())
