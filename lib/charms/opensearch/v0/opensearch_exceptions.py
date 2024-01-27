@@ -100,3 +100,7 @@ class OpenSearchSecretError(OpenSearchError):
 
 class OpenSearchSecretInsertionError(OpenSearchSecretError):
     """Exception thrown when a secret (group) was not found."""
+
+
+class OpenSearchSoftStopNotAllowedError(OpenSearchStopError):
+    """Exception thrown when a soft-stop is not allowed."""

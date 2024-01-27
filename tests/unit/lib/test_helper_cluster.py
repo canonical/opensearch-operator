@@ -4,7 +4,7 @@
 """Unit test for the helper_cluster library."""
 import unittest
 from typing import List
-from unittest.mock import patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology, Node
 from ops.testing import Harness
@@ -241,3 +241,207 @@ class TestHelperCluster(unittest.TestCase):
         self.assertEqual(raw_node.name, from_json_node.name)
         self.assertEqual(raw_node.roles, from_json_node.roles)
         self.assertEqual(raw_node.ip, from_json_node.ip)
+
+    @patch(
+        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.node_id",
+        callable=PropertyMock,
+    )
+    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
+    @patch("charms.opensearch.v0.helper_cluster.ClusterState.indices")
+    def test_unit_can_safe_stop_indices_are_green(self, mock_indices, mock_request, mock_node_id):
+        """Test if the unit can safely stop/restart."""
+        mock_node_id.return_value = "UqCnqQSSR8KYPqBH2VmqqA"
+
+        # Test case 1: All indices are green, should return True
+        mock_indices.return_value = {
+            "index1": {"health": "green"},
+            "index2": {"health": "green"},
+            "index3": {"health": "green"},
+        }
+        mock_request.return_value = None
+        result = ClusterState.unit_can_safe_stop(MagicMock())
+        self.assertTrue(result)
+        mock_request.assert_not_called()
+        mock_node_id.assert_not_called()
+
+    @patch("charms.opensearch.v0.helper_cluster.ClusterState.indices")
+    def test_unit_can_safe_stop_idx_one_is_yellow(
+        self,
+        mock_indices,
+    ):
+        """Tests if one index is not green, should continue checking shards."""
+
+        class TestingDistro:
+            def __init__(self, node_id, request):
+                self.node_id = node_id
+                self.request = request
+
+            def request(self):
+                return self.request
+
+        response = {
+            "indices": {
+                "index2": {
+                    "shards": {
+                        "0": [
+                            {"routing": {"state": "STARTED", "node": "UqCnqQSSR8KYPqBH2VmqqA"}},
+                            {"routing": {"state": "STARTED", "node": "ztGzzrFUTly1IPkPYa5D6Q"}},
+                            {"routing": {"state": "STARTED", "node": "Em-obvrrQVefixjpDw0-DA"}},
+                        ]
+                    }
+                }
+            }
+        }
+        opensearch = TestingDistro(
+            node_id="UqCnqQSSR8KYPqBH2VmqqA", request=MagicMock(return_value=response)
+        )
+        mock_indices.return_value = {
+            "index1": {"health": "green"},
+            "index2": {"health": "yellow"},
+            "index3": {"health": "green"},
+        }
+        result = ClusterState.unit_can_safe_stop(opensearch)
+        self.assertTrue(result)
+
+    @patch("charms.opensearch.v0.helper_cluster.ClusterState.indices")
+    def test_unit_can_safe_stop_idx_some_not_reassigned(
+        self,
+        mock_indices,
+    ):
+        """Tests if one index is not green, should continue checking shards."""
+
+        class TestingDistro:
+            def __init__(self, node_id, request):
+                self.node_id = node_id
+                self.request = request
+
+            def request(self):
+                return self.request
+
+        response = {
+            "indices": {
+                "index1": {
+                    "shards": {
+                        "0": [
+                            {"routing": {"state": "UNASSIGNED", "node": "UqCnqQSSR8KYPqBH2VmqqA"}},
+                            {"routing": {"state": "STARTED", "node": "ztGzzrFUTly1IPkPYa5D6Q"}},
+                            {"routing": {"state": "UNASSIGNED", "node": "Em-obvrrQVefixjpDw0-DA"}},
+                        ]
+                    }
+                },
+                "index2": {
+                    "shards": {
+                        "0": [
+                            {"routing": {"state": "STARTED", "node": "UqCnqQSSR8KYPqBH2VmqqA"}},
+                            {"routing": {"state": "STARTED", "node": "ztGzzrFUTly1IPkPYa5D6Q"}},
+                            {"routing": {"state": "UNASSIGNED", "node": "Em-obvrrQVefixjpDw0-DA"}},
+                        ]
+                    }
+                },
+            },
+        }
+        opensearch = TestingDistro(
+            node_id="UqCnqQSSR8KYPqBH2VmqqA", request=MagicMock(return_value=response)
+        )
+        mock_indices.return_value = {
+            "index1": {"health": "red"},
+            "index2": {"health": "yellow"},
+        }
+        result = ClusterState.unit_can_safe_stop(opensearch)
+        self.assertTrue(result)
+
+    @patch("charms.opensearch.v0.helper_cluster.ClusterState.indices")
+    def test_unit_can_safe_stop_idx_only_target_node_assigned(
+        self,
+        mock_indices,
+    ):
+        """Tests if one index is not green, should continue checking shards."""
+
+        class TestingDistro:
+            def __init__(self, node_id, request):
+                self.node_id = node_id
+                self.request = request
+
+            def request(self):
+                return self.request
+
+        response = {
+            "indices": {
+                "index2": {
+                    "shards": {
+                        "0": [
+                            {"routing": {"state": "STARTED", "node": "UqCnqQSSR8KYPqBH2VmqqA"}},
+                            {"routing": {"state": "UNASSIGNED", "node": "ztGzzrFUTly1IPkPYa5D6Q"}},
+                            {"routing": {"state": "UNASSIGNED", "node": "Em-obvrrQVefixjpDw0-DA"}},
+                        ]
+                    }
+                },
+            },
+        }
+        opensearch = TestingDistro(
+            node_id="UqCnqQSSR8KYPqBH2VmqqA", request=MagicMock(return_value=response)
+        )
+        mock_indices.return_value = {
+            "index2": {"health": "yellow"},
+        }
+        result = ClusterState.unit_can_safe_stop(opensearch)
+        # Should fail, as 0 shards assigned in other nodes
+        self.assertFalse(result)
+
+    @patch("charms.opensearch.v0.helper_cluster.ClusterState.indices")
+    def test_unit_can_safe_stop_idx_all_not_assigned(
+        self,
+        mock_indices,
+    ):
+        """Tests if one index is not green, should continue checking shards."""
+
+        class TestingDistro:
+            def __init__(self, node_id, request):
+                self.node_id = node_id
+                self.request = request
+
+            def request(self):
+                return self.request
+
+        response = {
+            "indices": {
+                "index1": {
+                    "shards": {
+                        "0": [
+                            {"routing": {"state": "UNASSIGNED", "node": "UqCnqQSSR8KYPqBH2VmqqA"}},
+                            {"routing": {"state": "UNASSIGNED", "node": "ztGzzrFUTly1IPkPYa5D6Q"}},
+                            {"routing": {"state": "UNASSIGNED", "node": "Em-obvrrQVefixjpDw0-DA"}},
+                        ]
+                    }
+                },
+                "index2": {
+                    "shards": {
+                        "0": [
+                            {"routing": {"state": "STARTED", "node": "UqCnqQSSR8KYPqBH2VmqqA"}},
+                            {"routing": {"state": "STARTED", "node": "ztGzzrFUTly1IPkPYa5D6Q"}},
+                            {"routing": {"state": "STARTED", "node": "Em-obvrrQVefixjpDw0-DA"}},
+                        ]
+                    }
+                },
+                "index3": {
+                    "shards": {
+                        "0": [
+                            {"routing": {"state": "STARTED", "node": "UqCnqQSSR8KYPqBH2VmqqA"}},
+                            {"routing": {"state": "STARTED", "node": "ztGzzrFUTly1IPkPYa5D6Q"}},
+                            {"routing": {"state": "STARTED", "node": "Em-obvrrQVefixjpDw0-DA"}},
+                        ]
+                    }
+                },
+            },
+        }
+        opensearch = TestingDistro(
+            node_id="UqCnqQSSR8KYPqBH2VmqqA", request=MagicMock(return_value=response)
+        )
+        mock_indices.return_value = {
+            "index1": {"health": "red"},
+            "index2": {"health": "yellow"},
+            "index3": {"health": "yellow"},
+        }
+        result = ClusterState.unit_can_safe_stop(opensearch)
+        # Should fail, as 0 shards assigned in other nodes
+        self.assertFalse(result)

@@ -118,7 +118,7 @@ class OpenSearchDistribution(ABC):
 
         self.start()
 
-    def stop(self):
+    def stop(self, soft=True):
         """Stop OpenSearch."""
         # stop the opensearch service
         self._stop_service()

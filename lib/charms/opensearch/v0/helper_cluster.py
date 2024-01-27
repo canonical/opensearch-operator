@@ -25,11 +25,24 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
+MIN_SHARD_REPLICAS_STARTED = 1
+
+
 class IndexStateEnum(BaseStrEnum):
     """Enum for index states."""
 
     OPEN = "open"
     CLOSED = "closed"
+
+
+class ShardReplicaStateEnum(BaseStrEnum):
+    """Enum for shard replica states."""
+
+    STARTED = "STARTED"
+    INITIALIZING = "INITIALIZING"
+    RELOCATING = "RELOCATING"
+    UNKNOWN = "UNKNOWN"
+    UNASSIGNED = "UNASSIGNED"
 
 
 class ClusterTopology:
@@ -233,7 +246,7 @@ class ClusterTopology:
                 "GET", "/_nodes", host=host, alt_hosts=alt_hosts, retries=3
             )
             if "nodes" in response:
-                for obj in response["nodes"].values():
+                for id, obj in response["nodes"].items():
                     node = Node(
                         name=obj["name"],
                         roles=obj["roles"],
@@ -299,6 +312,93 @@ class ClusterState:
         return shards_state_map
 
     @staticmethod
+    def unit_can_safe_stop(
+        opensearch: OpenSearchDistribution,
+        host: Optional[str] = None,
+        alt_hosts: Optional[List[str]] = None,
+    ) -> bool:
+        """Check if this unit should be allowed to stop/restart or not.
+
+        Check if this unit holds any last unassigned shard replica in the cluster.
+        """
+        indices = ClusterState.indices(opensearch, host=host, alt_hosts=alt_hosts)
+
+        # Now, for each shard, check:
+        # * index health: if green, continue
+        # * get index stats and check if any of its shards are allocated on this unit
+        #   if not, continue
+        # * check if num_replicas_started >= min(MIN_SHARD_REPLICAS_STARTED
+        #   if not, return False
+        for idx, content in indices.items():
+            if content["health"] == "green":
+                continue
+            for idx_info in opensearch.request(
+                "GET",
+                f"/{idx}/_stats?level=shards"
+                "&human&filter_path=indices.*.shards.*.routing.node,"
+                "indices.*.shards.*.routing.state",
+                host=host,
+                alt_hosts=alt_hosts,
+            ).values():
+                # Output in the format of:
+                # {
+                # "indices": {
+                #     ".opendistro_security": {
+                #     "shards": {
+                #         "0": [
+                #         {
+                #             "routing": {
+                #             "state": "STARTED",
+                #             "node": "UqCnqQSSR8KYPqBH2VmqqA"
+                #             }
+                #         },
+                #         {
+                #             "routing": {
+                #             "state": "STARTED",
+                #             "node": "ztGzzrFUTly1IPkPYa5D6Q"
+                #             }
+                #         },
+                #         {
+                #             "routing": {
+                #             "state": "STARTED",
+                #             "node": "Em-obvrrQVefixjpDw0-DA"
+                #             }
+                #         }
+                #         ]
+                #     }
+                #     }
+                # }
+                # }
+                for shard_replicas in idx_info[idx]["shards"].values():
+                    if all(
+                        [
+                            replica["routing"]["node"] != opensearch.node_id
+                            for replica in shard_replicas
+                        ]
+                    ):
+                        # In the 2nd condition: no replicas of this shard are allocated
+                        # in this node, go to the next
+                        continue
+
+                    # Sum every started replica, except the one allocated on this node
+                    num_replicas_started = sum(
+                        [
+                            1
+                            if (
+                                replica["routing"]["state"] == ShardReplicaStateEnum.STARTED
+                                and replica["routing"]["node"] != opensearch.node_id
+                            )
+                            else 0
+                            for replica in shard_replicas
+                        ]
+                    )
+                    if num_replicas_started < min(
+                        MIN_SHARD_REPLICAS_STARTED, len(idx_info[idx]["shards"].values())
+                    ):
+                        return False
+        return True
+
+    @staticmethod
     def busy_shards_by_unit(
         opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
@@ -310,7 +410,7 @@ class ClusterState:
         busy_shards = {}
         for shard in shards:
             state = shard.get("state")
-            if state not in ["INITIALIZING", "RELOCATING"]:
+            if state not in [ShardReplicaStateEnum.INITIALIZING, ShardReplicaStateEnum.RELOCATING]:
                 continue
 
             unit_name = shard["node"]

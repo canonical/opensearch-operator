@@ -35,7 +35,7 @@ from charms.opensearch.v0.constants_charm import (
 from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import DeferTriggerEvent, Status
-from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
+from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
     is_reachable,
@@ -56,6 +56,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHAError,
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
+    OpenSearchSoftStopNotAllowedError,
     OpenSearchStartError,
     OpenSearchStartTimeoutError,
     OpenSearchStopError,
@@ -103,6 +104,7 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -405,16 +407,17 @@ class OpenSearchBaseCharm(CharmBase):
                 # todo: remove this if snap storage reuse is solved.
                 self.peers_data.delete(Scope.APP, "security_index_initialised")
 
-        # we attempt to flush the translog to disk
-        if self.opensearch.is_node_up():
-            try:
-                self.opensearch.request("POST", "/_flush?wait_for_ongoing")
-            except OpenSearchHttpError:
-                # if it's a failed attempt we move on
-                pass
         try:
-            self._stop_opensearch()
+            # Retry applied here
+            # _stop_opensearch may throw OpenSearchSoftStopNotAllowedError or any other
+            # "OpenSearchStopError" exception.
+            for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
+                with attempt:
+                    self._stop_opensearch()
 
+        # Stop is not possible, retry this event
+        # the only way to do so is by causing an ERROR and then letting juju retry
+        except RetryError:
             # safeguards in case planned_units > 0
             if self.app.planned_units() > 0:
                 # check cluster status
@@ -423,9 +426,15 @@ class OpenSearchBaseCharm(CharmBase):
                         wait_for_green_first=True, use_localhost=False
                     )
                     if health_color == HealthColors.RED:
+                        logger.error("Cluster health is RED, cannot remove unit.")
+                        logger.error(
+                            "_on_opensearch_data_storage_detaching"
+                            f" - Cluster state:\n{ClusterState.shards(self.opensearch)}"
+                        )
                         raise OpenSearchHAError(ClusterHealthRed)
                 else:
                     raise OpenSearchHAError(ClusterHealthUnknown)
+        # Finally, remove the unit lock
         finally:
             # release lock
             self.ops_lock.release()
@@ -716,7 +725,10 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch_fixes.apply_on_start()
 
         # apply cluster health
-        self.health.apply()
+        if self.health.apply() == HealthColors.RED:
+            # self.framework.breakpoint('clusterisred')
+            logger.info(f"Current indices state is: {ClusterState.indices(self.opensearch)}")
+            # import pdb; pdb.set_trace()
 
         # Creating the monitoring user
         self._put_monitoring_user()
@@ -724,18 +736,42 @@ class OpenSearchBaseCharm(CharmBase):
         # clear waiting to start status
         self.status.clear(WaitingToStart)
 
-    def _stop_opensearch(self) -> None:
+    def _stop_opensearch(self, soft=True) -> None:
         """Stop OpenSearch if possible."""
+        if not self.opensearch.is_started():
+            return
         self.status.set(WaitingStatus(ServiceIsStopping))
 
         # 1. Add current node to the voting + alloc exclusions
         self.opensearch_exclusions.add_current()
 
-        # 2. stop the service
+        # 2. we attempt to flush the translog to disk
+        #    try ensure we do not have anything in memory
+        if self.opensearch.is_node_up():
+            try:
+                self.opensearch.request("POST", "/_flush?wait_for_ongoing")
+            except OpenSearchHttpError:
+                # if it's a failed attempt we move on
+                pass
+
+        # 3. Check if we can stop the service or if the cluster is counting
+        #    on this unit for any given shard.
+        #    If soft=True and we have at least 2x units, then a given unit
+        #    is only allowed to stop if it does not hold the last unassigned
+        #    shard replica in the cluster
+        #    If a single unit is present, then ignore this check.
+        if (
+            soft
+            and len(ClusterTopology.nodes(self.opensearch, use_localhost=False)) > 1
+            and not ClusterState.unit_can_safe_stop(self.opensearch)
+        ):
+            raise OpenSearchSoftStopNotAllowedError()
+
+        # 4. stop the service
         self.opensearch.stop()
         self.status.set(WaitingStatus(ServiceStopped))
 
-        # 3. Remove the exclusions
+        # 5. Remove the exclusions
         self.opensearch_exclusions.delete_current()
 
     def _restart_opensearch(self, event: EventBase) -> None:
