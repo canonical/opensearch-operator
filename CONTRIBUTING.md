@@ -5,7 +5,7 @@
 This document explains the processes and practices recommended for contributing enhancements to
 this operator.
 
-<!-- TEMPLATE-TODO: Update the URL for issue creation --> 
+<!-- TEMPLATE-TODO: Update the URL for issue creation -->
 
 - Generally, before developing enhancements to this charm, you should consider [opening an issue
   ](https://github.com/canonical/operator-opensearch/issues) explaining your use case.
