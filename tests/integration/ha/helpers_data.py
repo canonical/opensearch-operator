@@ -247,3 +247,22 @@ async def search(
         with attempt:  # Raises RetryError if failed after "retries"
             resp = await http_request(ops_test, "GET", endpoint, payload=query, app=app)
             return resp["hits"]["hits"]
+
+
+async def index_docs_count(
+    ops_test: OpsTest,
+    app: str,
+    unit_ip: str,
+    index_name: str,
+    retries: int = 15,
+) -> int:
+    """Returns the number of documents in an index."""
+    endpoint = f"https://{unit_ip}:9200/{index_name}/_count"
+    for attempt in Retrying(
+        stop=stop_after_attempt(retries), wait=wait_fixed(wait=5) + wait_random(0, 5)
+    ):
+        with attempt:  # Raises RetryError if failed after "retries"
+            resp = await http_request(ops_test, "GET", endpoint, app=app)
+            if isinstance(resp["count"], int):
+                return resp["count"]
+            return int(resp["count"])

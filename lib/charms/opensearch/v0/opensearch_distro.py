@@ -208,7 +208,6 @@ class OpenSearchDistribution(ABC):
         Raises:
             ValueError if method or endpoint are missing
             OpenSearchHttpError if hosts are unreachable
-            requests.HTTPError if connection to opensearch fails
         """
 
         def full_urls() -> List[str]:
