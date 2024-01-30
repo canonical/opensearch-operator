@@ -5,7 +5,9 @@
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
-from tests.integration.helpers import http_request
+from ..helpers import http_request
+
+TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 
 
 @retry(

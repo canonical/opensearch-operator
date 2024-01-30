@@ -528,7 +528,7 @@ class CachedSecret:
             self._secret_content = content
 
     def get_info(self) -> Optional[SecretInfo]:
-        """Wrapper function to apply the corresponding call on the Secret object within CachedSecret if any."""  # noqa W505
+        """Wrapper function to apply the corresponding call on the Secret object within CachedSecret if any."""
         if self.meta:
             return self.meta.get_info()
 
@@ -619,7 +619,7 @@ class DataRelation(Object, ABC):
     def _fetch_my_specific_relation_data(
         self, relation: Relation, fields: Optional[List[str]]
     ) -> Dict[str, str]:
-        """Fetch data available (directily or indirectly -- i.e. secrets) from the relation for owner/this_app."""  # noqa: W505
+        """Fetch data available (directily or indirectly -- i.e. secrets) from the relation for owner/this_app."""
         raise NotImplementedError
 
     # Internal helper methods
@@ -762,7 +762,7 @@ class DataRelation(Object, ABC):
                     ):
                         result.update(contents)
                     else:
-                        # If it wasn't found as a secret, let's give it a 2nd chance as "normal" field  # noqa: W505
+                        # If it wasn't found as a secret, let's give it a 2nd chance as "normal" field
                         normal_fields |= set(secret_fieldnames_grouped[group])
             else:
                 # Processing from what is given, i.e. retrieving all
@@ -775,7 +775,7 @@ class DataRelation(Object, ABC):
                         self._retrieve_group_secret_contents(relation.id, group, req_secret_fields)
                     )
 
-        # Processing "normal" fields. May include leftover from what we couldn't retrieve as a secret.  # noqa: W505
+        # Processing "normal" fields. May include leftover from what we couldn't retrieve as a secret.
         result.update({k: relation.data[app][k] for k in normal_fields if k in relation.data[app]})
         return result
 
@@ -992,7 +992,7 @@ class DataProvides(DataRelation):
         """Fetching relation data for Provides.
 
         NOTE: Since all secret fields are in the Provides side of the databag, we don't need to worry about that
-        """  # noqa: W505
+        """
         if not relation.app:
             return {}
 
