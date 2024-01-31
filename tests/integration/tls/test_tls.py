@@ -24,7 +24,7 @@ from ..tls.helpers import check_security_index_initialised, check_unit_tls_confi
 logger = logging.getLogger(__name__)
 
 
-TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
+TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 
 
 @pytest.mark.group(1)
