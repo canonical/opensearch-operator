@@ -21,7 +21,7 @@ from ..helpers import (
     scale_application,
 )
 from ..helpers_deployments import wait_until
-from ..tls.helpers import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .helpers import (
     get_application_relation_data,
     ip_to_url,
@@ -194,7 +194,6 @@ async def test_version(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.usefixtures("only_without_juju_secrets")
 async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag.
 
@@ -463,7 +462,6 @@ async def test_admin_relation(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.usefixtures("only_without_juju_secrets")
 async def test_admin_permissions(ops_test: OpsTest):
     """Test admin permissions behave the way we want.
 
@@ -597,7 +595,6 @@ async def test_admin_permissions_secrets(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.usefixtures("only_without_juju_secrets")
 async def test_normal_user_permissions(ops_test: OpsTest):
     """Test normal user permissions behave the way we want.
 
@@ -718,7 +715,6 @@ async def test_normal_user_permissions_secrets(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.usefixtures("only_without_juju_secrets")
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.

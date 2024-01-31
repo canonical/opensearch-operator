@@ -23,7 +23,7 @@ from ..helpers import (
     get_leader_unit_ip,
     run_action,
 )
-from ..tls.helpers import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .helpers import (
     app_name,
     assert_continuous_writes_consistency,

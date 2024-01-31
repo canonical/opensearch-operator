@@ -18,7 +18,7 @@ from ..helpers import (
     get_leader_unit_ip,
 )
 from ..helpers_deployments import wait_until
-from ..tls.helpers import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .helpers_data import delete_index, index_doc, search
 from .test_horizontal_scaling import IDLE_PERIOD
 
