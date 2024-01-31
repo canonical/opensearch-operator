@@ -27,8 +27,8 @@ from ..tls.helpers import TLS_CERTIFICATES_APP_NAME
 from .helpers import (
     app_name,
     assert_continuous_writes_consistency,
+    assert_continuous_writes_increasing,
     backup_cluster,
-    continuous_writes_increases,
     restore_cluster,
 )
 from .helpers_data import index_docs_count
@@ -157,13 +157,16 @@ TIMEOUT = 10 * 60
 )
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator, cloud_name) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, cloud_name) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
     if await app_name(ops_test):
         return
 
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
+    # Deploy TLS Certificates operator.
+    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
+    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
 
     s3_charm = S3_INTEGRATOR
     # Convert to integer as environ always returns string
@@ -174,11 +177,10 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator, cloud_n
     )
 
     # Relate it to OpenSearch to set up TLS.
-    tls = await self_signed_operator
-    await ops_test.model.relate(APP_NAME, tls)
+    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.relate(APP_NAME, S3_INTEGRATOR)
     await ops_test.model.wait_for_idle(
-        apps=[tls, APP_NAME],
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
@@ -190,7 +192,7 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator, cloud_n
     [
         (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
         (pytest.param("aws", marks=pytest.mark.group("aws"))),
-        (pytest.param("gcp", marks=pytest.mark.group("gcs"))),
+        (pytest.param("gcp", marks=pytest.mark.group("gcp"))),
     ],
 )
 @pytest.mark.abort_on_fail
@@ -236,7 +238,7 @@ async def test_backup_cluster(
     [
         (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
         (pytest.param("aws", marks=pytest.mark.group("aws"))),
-        (pytest.param("gcp", marks=pytest.mark.group("gcs"))),
+        (pytest.param("gcp", marks=pytest.mark.group("gcp"))),
     ],
 )
 @pytest.mark.abort_on_fail
@@ -259,7 +261,7 @@ async def test_restore_cluster(
         unit_ip,
         leader_id,
     )
-    assert await continuous_writes_increases(ops_test, unit_ip, app)
+    assert await assert_continuous_writes_increasing(ops_test, unit_ip, app)
 
 
 @pytest.mark.parametrize(
@@ -267,7 +269,7 @@ async def test_restore_cluster(
     [
         (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
         (pytest.param("aws", marks=pytest.mark.group("aws"))),
-        (pytest.param("gcp", marks=pytest.mark.group("gcs"))),
+        (pytest.param("gcp", marks=pytest.mark.group("gcp"))),
     ],
 )
 @pytest.mark.abort_on_fail
@@ -323,7 +325,7 @@ async def test_restore_cluster_after_app_destroyed(
     if cloud_name not in backups_by_cloud:
         backups_by_cloud[cloud_name] = []
     backups_by_cloud[cloud_name].append(backup_id)
-    assert await continuous_writes_increases(ops_test, leader_unit_ip, app)
+    assert await assert_continuous_writes_increasing(ops_test, leader_unit_ip, app)
 
 
 @pytest.mark.parametrize(
@@ -331,7 +333,7 @@ async def test_restore_cluster_after_app_destroyed(
     [
         (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
         (pytest.param("aws", marks=pytest.mark.group("aws"))),
-        (pytest.param("gcp", marks=pytest.mark.group("gcs"))),
+        (pytest.param("gcp", marks=pytest.mark.group("gcp"))),
     ],
 )
 @pytest.mark.abort_on_fail
@@ -385,4 +387,4 @@ async def test_remove_and_readd_s3_relation(
         unit_ip,
         leader_id,
     )
-    assert await continuous_writes_increases(ops_test, unit_ip, app)
+    assert await assert_continuous_writes_increasing(ops_test, unit_ip, app)

@@ -23,6 +23,7 @@ from ..helpers import (
     is_up,
 )
 from ..helpers_deployments import wait_until
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
 from .helpers import (
     ORIGINAL_RESTART_DELAY,
@@ -45,7 +46,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -54,16 +55,17 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
 
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
-
+    # Deploy TLS Certificates operator.
+    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
     )
 
     # Relate it to OpenSearch to set up TLS.
-    tls = await self_signed_operator
-    await ops_test.model.relate(APP_NAME, tls)
+    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
-        apps=[tls, APP_NAME],
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
@@ -73,7 +75,9 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_replication_across_members(ops_test: OpsTest, c_writes) -> None:
+async def test_replication_across_members(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Check consistency, ie write to node, read data from remaining nodes.
 
     1. Create index with replica shards equal to number of nodes - 1.
@@ -94,7 +98,7 @@ async def test_replication_across_members(ops_test: OpsTest, c_writes) -> None:
     await index_doc(ops_test, app, leader_unit_ip, index_name, doc_id)
 
     # check that the doc can be retrieved from any node
-    for u_id, u_ip in units.items():
+    for u_ip in units.values():
         docs = await search(
             ops_test,
             app,
@@ -115,15 +119,13 @@ async def test_replication_across_members(ops_test: OpsTest, c_writes) -> None:
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_kill_db_process_node_with_primary_shard(
-    ops_test: OpsTest, c_writes_balanced
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check cluster can self-heal + data indexed/read when process dies on node with P_shard."""
     app = (await app_name(ops_test)) or APP_NAME
 
     units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    c_writes = c_writes_balanced
 
     # find unit hosting the primary shard of the index "series-index"
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
@@ -178,14 +180,14 @@ async def test_kill_db_process_node_with_primary_shard(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_kill_db_process_node_with_elected_cm(ops_test: OpsTest, c_writes_balanced) -> None:
+async def test_kill_db_process_node_with_elected_cm(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+) -> None:
     """Check cluster can self-heal, data indexed/read when process dies on node with elected CM."""
     app = (await app_name(ops_test)) or APP_NAME
 
     units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    c_writes = c_writes_balanced
 
     # find unit currently elected cluster_manager
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
@@ -231,15 +233,13 @@ async def test_kill_db_process_node_with_elected_cm(ops_test: OpsTest, c_writes_
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_freeze_db_process_node_with_primary_shard(
-    ops_test: OpsTest, c_writes_balanced
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check cluster can self-heal + data indexed/read on process freeze on node with P_shard."""
     app = (await app_name(ops_test)) or APP_NAME
 
     units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    c_writes = c_writes_balanced
 
     # find unit hosting the primary shard of the index "series-index"
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
@@ -318,15 +318,13 @@ async def test_freeze_db_process_node_with_primary_shard(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_freeze_db_process_node_with_elected_cm(
-    ops_test: OpsTest, c_writes_balanced
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check cluster can self-heal, data indexed/read on process freeze on node with elected CM."""
     app = (await app_name(ops_test)) or APP_NAME
 
     units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    c_writes = c_writes_balanced
 
     # find unit currently elected cluster_manager
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
@@ -394,15 +392,13 @@ async def test_freeze_db_process_node_with_elected_cm(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restart_db_process_node_with_elected_cm(
-    ops_test: OpsTest, c_writes_balanced
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check cluster self-healing & data indexed/read on process restart on CM node."""
     app = (await app_name(ops_test)) or APP_NAME
 
     units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    c_writes = c_writes_balanced
 
     # find unit currently elected cluster manager
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
@@ -447,15 +443,13 @@ async def test_restart_db_process_node_with_elected_cm(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restart_db_process_node_with_primary_shard(
-    ops_test: OpsTest, c_writes_balanced
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check cluster can self-heal, data indexed/read on process restart on primary shard node."""
     app = (await app_name(ops_test)) or APP_NAME
 
     units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    c_writes = c_writes_balanced
 
     # find unit hosting the primary shard of the index "series-index"
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
@@ -509,14 +503,12 @@ async def test_restart_db_process_node_with_primary_shard(
 
 @pytest.mark.group(1)
 async def test_full_cluster_crash(
-    ops_test: OpsTest, c_writes_balanced, reset_restart_delay
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, reset_restart_delay
 ) -> None:
     """Check cluster can operate normally after all nodes SIGKILL at same time and come back up."""
     app = (await app_name(ops_test)) or APP_NAME
 
     leader_ip = await get_leader_unit_ip(ops_test, app)
-
-    c_writes = c_writes_balanced
 
     # update all units to have a new RESTART_DELAY. Modifying the Restart delay to 3 minutes
     # should ensure enough time for all replicas to be down at the same time.
@@ -564,14 +556,12 @@ async def test_full_cluster_crash(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_cluster_restart(
-    ops_test: OpsTest, c_writes_balanced, reset_restart_delay
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, reset_restart_delay
 ) -> None:
     """Check cluster can operate normally after all nodes SIGTERM at same time and come back up."""
     app = (await app_name(ops_test)) or APP_NAME
 
     leader_ip = await get_leader_unit_ip(ops_test, app)
-
-    c_writes = c_writes_balanced
 
     # update all units to have a new RESTART_DELAY. Modifying the Restart delay to 3 minutes
     # should ensure enough time for all replicas to be down at the same time.

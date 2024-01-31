@@ -7,8 +7,6 @@ from tenacity import retry, stop_after_attempt, wait_fixed, wait_random
 
 from ..helpers import http_request
 
-TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
-
 
 @retry(
     wait=wait_fixed(wait=5) + wait_random(0, 5),

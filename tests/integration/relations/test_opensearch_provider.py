@@ -53,9 +53,7 @@ PROTECTED_INDICES = [
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_create_relation(
-    ops_test: OpsTest, application_charm, opensearch_charm, self_signed_operator
-):
+async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_charm):
     """Test basic functionality of relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
@@ -75,9 +73,8 @@ async def test_create_relation(
             series=SERIES,
         ),
     )
-    tls = await self_signed_operator
-    await ops_test.model.relate(OPENSEARCH_APP_NAME, tls)
-    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, tls)
+    await ops_test.model.relate(OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
     global client_relation
     client_relation = await ops_test.model.add_relation(

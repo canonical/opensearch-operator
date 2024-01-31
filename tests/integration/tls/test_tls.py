@@ -2,6 +2,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import asyncio
 import logging
 
 import pytest
@@ -23,23 +24,24 @@ from ..tls.helpers import check_security_index_initialised, check_unit_tls_confi
 logger = logging.getLogger(__name__)
 
 
+TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
+
+
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_active(ops_test: OpsTest, self_signed_operator) -> None:
+async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
-    await ops_test.model.deploy(
-        my_charm,
-        num_units=len(UNIT_IDS),
-        series=SERIES,
+    # Deploy TLS Certificates operator.
+    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
+    await asyncio.gather(
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(my_charm, num_units=len(UNIT_IDS), series=SERIES),
     )
-
-    # Relate it to OpenSearch to set up TLS.
-    tls = await self_signed_operator
-    await ops_test.model.relate(APP_NAME, tls)
+    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await wait_until(
         ops_test,
         apps=[APP_NAME],

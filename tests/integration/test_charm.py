@@ -19,6 +19,7 @@ from .helpers import (
     run_action,
 )
 from .helpers_deployments import wait_until
+from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -57,15 +58,14 @@ async def test_status(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_actions_get_admin_password(ops_test: OpsTest, self_signed_operator) -> None:
+async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     """Test the retrieval of admin secrets."""
     # 1. run the action prior to finishing the config of TLS
     result = await run_action(ops_test, 0, "get-password")
     assert result.status == "failed"
 
     # Relate it to OpenSearch to set up TLS.
-    tls = await self_signed_operator
-    await ops_test.model.relate(APP_NAME, tls)
+    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME],
         status="active",

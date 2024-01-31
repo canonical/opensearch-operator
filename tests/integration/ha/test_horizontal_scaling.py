@@ -33,6 +33,7 @@ from ..helpers import (
     get_leader_unit_ip,
 )
 from ..helpers_deployments import wait_until
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
 from .helpers_data import create_dummy_docs, create_dummy_indexes, delete_dummy_indexes
 
@@ -42,7 +43,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -51,21 +52,26 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
 
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
-
+    # Deploy TLS Certificates operator.
+    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(my_charm, num_units=1, series=SERIES),
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
     )
 
     # Relate it to OpenSearch to set up TLS.
-    tls = await self_signed_operator
-    await ops_test.model.relate(APP_NAME, tls)
-    await ops_test.model.wait_for_idle(apps=[tls, APP_NAME], status="active", timeout=1600)
+    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME], status="active", timeout=1600
+    )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_horizontal_scale_up(ops_test: OpsTest, c_writes) -> None:
+async def test_horizontal_scale_up(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Tests that new added units to the cluster are discoverable."""
     app = (await app_name(ops_test)) or APP_NAME
     init_units_count = len(ops_test.model.applications[app].units)
@@ -111,7 +117,9 @@ async def test_horizontal_scale_up(ops_test: OpsTest, c_writes) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_safe_scale_down_shards_realloc(ops_test: OpsTest, c_writes) -> None:
+async def test_safe_scale_down_shards_realloc(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Tests the shutdown of a node, and re-allocation of shards to a newly joined unit.
 
     The goal of this test is to make sure that shards are automatically relocated after
@@ -219,7 +227,9 @@ async def test_safe_scale_down_shards_realloc(ops_test: OpsTest, c_writes) -> No
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest, c_writes) -> None:
+async def test_safe_scale_down_roles_reassigning(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Tests the shutdown of a node with a role requiring the re-balance of the cluster roles.
 
     The goal of this test is to make sure that roles are automatically recalculated after
@@ -311,7 +321,9 @@ async def test_safe_scale_down_roles_reassigning(ops_test: OpsTest, c_writes) ->
 
 
 @pytest.mark.group(1)
-async def test_safe_scale_down_remove_leaders(ops_test: OpsTest, c_writes) -> None:
+async def test_safe_scale_down_remove_leaders(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Tests the removal of specific units (elected cm, juju leader, node with prim shard).
 
     The goal of this test is to make sure that:

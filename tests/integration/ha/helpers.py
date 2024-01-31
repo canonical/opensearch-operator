@@ -2,7 +2,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import inspect
 import json
 import logging
 import subprocess
@@ -228,8 +227,7 @@ async def assert_continuous_writes_consistency(
     ops_test: OpsTest, c_writes: ContinuousWrites, app: str
 ) -> None:
     """Continuous writes checks."""
-    writer = (await c_writes) if inspect.iscoroutine(c_writes) else c_writes
-    result = await writer.stop()
+    result = await c_writes.stop()
     assert result.max_stored_id == result.count - 1
     assert result.max_stored_id == result.last_expected_id
 
@@ -249,7 +247,7 @@ async def assert_continuous_writes_consistency(
     count_from_shards = 0
     for shard_num, shards_list in shards_by_id.items():
         count_by_shard = [
-            await writer.count(
+            await c_writes.count(
                 units_ips[shard.unit_id], preference=f"_shards:{shard_num}|_only_local"
             )
             for shard in shards_list

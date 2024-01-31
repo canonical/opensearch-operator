@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -37,16 +37,17 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
 
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
-
+    # Deploy TLS Certificates operator.
+    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(my_charm, num_units=2, series=SERIES),
     )
 
     # Relate it to OpenSearch to set up TLS.
-    tls = await self_signed_operator
-    await ops_test.model.relate(APP_NAME, tls)
+    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
-        apps=[tls, APP_NAME],
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,

@@ -9,6 +9,8 @@ import pytest
 from charms.opensearch.v0.constants_charm import PClusterWrongNodesCountForQuorum
 from pytest_operator.plugin import OpsTest
 
+from tests.integration.ha.continuous_writes import ContinuousWrites
+
 from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
@@ -20,6 +22,7 @@ from ..helpers import (
     get_leader_unit_ip,
 )
 from ..helpers_deployments import wait_until
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .helpers import all_nodes, app_name
 from .test_horizontal_scaling import IDLE_PERIOD
 
@@ -29,7 +32,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -38,20 +41,21 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
 
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
-
+    # Deploy TLS Certificates operator.
+    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
     )
 
     # Relate it to OpenSearch to set up TLS.
-    tls = await self_signed_operator
-    await ops_test.model.relate(APP_NAME, tls)
+    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await wait_until(
         ops_test,
-        apps=[tls, APP_NAME],
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units={tls: 1, APP_NAME: 3},
+        wait_for_exact_units={TLS_CERTIFICATES_APP_NAME: 1, APP_NAME: 3},
         idle_period=IDLE_PERIOD,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
@@ -59,7 +63,9 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_set_roles_manually(ops_test: OpsTest, c_writes) -> None:
+async def test_set_roles_manually(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
     """Check roles changes in all nodes."""
     app = (await app_name(ops_test)) or APP_NAME
 

@@ -13,6 +13,7 @@ from ..ha.helpers import app_name, storage_id, storage_type
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
 from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, get_application_unit_ids
 from ..tls.helpers import TLS_CERTIFICATES_APP_NAME
+from .continuous_writes import ContinuousWrites
 
 logger = logging.getLogger(__name__)
 
@@ -20,26 +21,21 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
-    # it is possible for users to provide their own cluster for HA testing.
-    # Hence, check if there is a pre-existing cluster.
-    if await app_name(ops_test):
-        return
-
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
-
     # Deploy TLS Certificates operator.
+    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(my_charm, num_units=1, series=SERIES),
     )
 
     # Relate it to OpenSearch to set up TLS.
-    tls = await self_signed_operator
-    await ops_test.model.relate(APP_NAME, tls)
+    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
-        apps=[tls, APP_NAME],
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
         timeout=1000,
         idle_period=IDLE_PERIOD,
@@ -49,11 +45,11 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_storage_reuse_after_scale_down(ops_test: OpsTest, c_writes_runner):
+async def test_storage_reuse_after_scale_down(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+):
     """Check storage is reused and data accessible after scaling down and up."""
     app = (await app_name(ops_test)) or APP_NAME
-
-    c_writes = c_writes_runner
 
     if storage_type(ops_test, app) == "rootfs":
         pytest.skip(
@@ -113,12 +109,10 @@ async def test_storage_reuse_after_scale_down(ops_test: OpsTest, c_writes_runner
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_in_new_cluster_after_app_removal(
-    ops_test: OpsTest, c_writes_balanced
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ):
     """Check storage is reused and data accessible after removing app and deploying new cluster."""
     app = (await app_name(ops_test)) or APP_NAME
-
-    c_writes = c_writes_balanced
 
     if storage_type(ops_test, app) == "rootfs":
         pytest.skip(

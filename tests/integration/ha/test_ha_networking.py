@@ -34,6 +34,7 @@ from ..helpers import (
     is_up,
 )
 from ..helpers_deployments import wait_until
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
 from .test_horizontal_scaling import IDLE_PERIOD
 
@@ -43,31 +44,21 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
-    # it is possible for users to provide their own cluster for HA testing.
-    # Hence, check if there is a pre-existing cluster.
-    if await app_name(ops_test):
-        return
-
-    # Work-around while waiting for: gh#118 to merge
-    import subprocess
-
-    subprocess.check_output(["sudo", "snap", "refresh", "lxd", "--channel=latest/stable"])
-    subprocess.check_output(["sudo", "snap", "list"])
-
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
-
+    # Deploy TLS Certificates operator.
+    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     await asyncio.gather(
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
     )
 
     # Relate it to OpenSearch to set up TLS.
-    tls = await self_signed_operator
-    await ops_test.model.relate(APP_NAME, tls)
+    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
-        apps=[tls, APP_NAME],
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
@@ -78,15 +69,13 @@ async def test_build_and_deploy(ops_test: OpsTest, self_signed_operator) -> None
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_elected_cm(
-    ops_test: OpsTest, c_writes_balanced
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check that cluster can self-heal and unit reconfigures itself with new IP."""
     app = (await app_name(ops_test)) or APP_NAME
 
     unit_ids_ips = await get_application_unit_ids_ips(ops_test, app)
     unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
-
-    c_writes = c_writes_balanced
 
     # find unit currently elected cluster_manager
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -182,7 +171,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_primary_shard(
-    ops_test: OpsTest, c_writes_balanced
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check that cluster can self-heal and unit reconfigures itself with new IP."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -191,8 +180,6 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
 
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    c_writes = c_writes_balanced
 
     # find unit hosting the primary shard of the index "series-index"
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
@@ -302,15 +289,13 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_without_ip_change_node_with_elected_cm(
-    ops_test: OpsTest, c_writes_balanced
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check that cluster can self-heal and unit reconfigures itself with network cut.."""
     app = (await app_name(ops_test)) or APP_NAME
 
     unit_ids_ips = await get_application_unit_ids_ips(ops_test, app)
     unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
-
-    c_writes = c_writes_balanced
 
     # find unit currently elected cluster_manager
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -392,7 +377,7 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_without_ip_change_node_with_primary_shard(
-    ops_test: OpsTest, c_writes_balanced
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Check that cluster can self-heal and unit reconfigures itself with network cut."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -401,8 +386,6 @@ async def test_full_network_cut_without_ip_change_node_with_primary_shard(
     unit_ids_hostnames = await get_application_unit_ids_hostnames(ops_test, app)
 
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    c_writes = c_writes_balanced
 
     # find unit hosting the primary shard of the index "series-index"
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
