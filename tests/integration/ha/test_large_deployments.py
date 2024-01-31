@@ -9,7 +9,7 @@ import pytest
 from charms.opensearch.v0.constants_charm import PClusterWrongNodesCountForQuorum
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
+from .continuous_writes import ContinuousWrites
 
 from ..helpers import (
     APP_NAME,
