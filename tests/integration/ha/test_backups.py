@@ -150,9 +150,9 @@ TIMEOUT = 10 * 60
 @pytest.mark.parametrize(
     "cloud_name",
     [
-        (pytest.param("microceph", marks=pytest.mark.group(1))),
-        (pytest.param("aws", marks=pytest.mark.group(2))),
-        (pytest.param("gcp", marks=pytest.mark.group(3))),
+        (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
+        (pytest.param("aws", marks=pytest.mark.group("aws"))),
+        (pytest.param("gcp", marks=pytest.mark.group("gcp"))),
     ],
 )
 @pytest.mark.abort_on_fail
