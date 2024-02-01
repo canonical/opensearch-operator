@@ -8,9 +8,6 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-
-from ..ha.helpers import SECOND_APP_NAME, assert_continuous_writes_consistency
 from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
@@ -21,6 +18,8 @@ from ..helpers import (
 )
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .continuous_writes import ContinuousWrites
+from .helpers import SECOND_APP_NAME, assert_continuous_writes_consistency
 from .helpers_data import delete_index, index_doc, search
 from .test_horizontal_scaling import IDLE_PERIOD
 
