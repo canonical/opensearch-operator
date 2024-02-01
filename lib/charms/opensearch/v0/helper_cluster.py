@@ -58,6 +58,47 @@ class ClusterTopology:
         return base_roles + ["cluster_manager"]
 
     @staticmethod
+    def get_cluster_settings(
+        opensearch: OpenSearchDistribution,
+        host: Optional[str] = None,
+        alt_hosts: Optional[List[str]] = None,
+        include_defaults: bool = False,
+    ) -> Dict[str, any]:
+        """Get the cluster settings."""
+
+        def _convert_settings(settings):
+            """Converts the settings dictionary.
+
+            Original format: {"knn": {"plugin": {"enabled": True} } }
+            to:              {'knn.plugin.enabled': True}
+
+            Which is the format found in the opensearch.yaml.
+            """
+            for key, value in settings.items():
+                if isinstance(value, dict):
+                    for k, v in value.items():
+                        yield from _convert_settings({f"{key}.{k}": v})
+                else:
+                    yield {key: value}
+
+        settings = opensearch.request(
+            "GET",
+            f"/_cluster/settings?include_defaults={'true' if include_defaults else 'false'}",
+            host=host,
+            alt_hosts=alt_hosts,
+        )
+
+        result = {}
+        for el in ["persistent", "transient", "defaults"]:
+            if el in settings:
+                for item in _convert_settings(settings[el]):
+                    result = {
+                        **result,
+                        **item,
+                    }
+        return result
+
+    @staticmethod
     def recompute_nodes_conf(app_name: str, nodes: List[Node]) -> Dict[str, Node]:
         """Recompute the configuration of all the nodes (cluster set to auto-generate roles)."""
         # in case the cluster nodes' roles were previously "manually generated" - we need

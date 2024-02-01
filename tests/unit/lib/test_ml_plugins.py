@@ -66,12 +66,14 @@ class TestOpenSearchKNN(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_started")
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.ClusterTopology.get_cluster_settings")
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
     def test_disable_via_config_change(
         self,
         mock_put,
         mock_load,
+        mock_cluster_settings,
         mock_is_started,
         mock_status,
         mock_is_enabled,
@@ -89,6 +91,8 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.plugin_manager._opensearch_config.delete_plugin = MagicMock()
         self.plugin_manager._opensearch_config.add_plugin = MagicMock()
         self.charm.status = MagicMock()
+
+        mock_cluster_settings.return_value = {"knn.plugin.enabled": True}
 
         self.harness.update_config({"plugin_opensearch_knn": False})
         mock_acquire_lock.assert_called_once()
