@@ -47,6 +47,11 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
+from charms.opensearch.v0.opensearch_allocations import (
+    ALLOCS_TO_DELETE,
+    VOTING_TO_DELETE,
+    OpenSearchAllocation,
+)
 from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -63,11 +68,6 @@ from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
-from charms.opensearch.v0.opensearch_nodes_exclusions import (
-    ALLOCS_TO_DELETE,
-    VOTING_TO_DELETE,
-    OpenSearchExclusions,
-)
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
     OpenSearchProvidedRolesException,
@@ -135,7 +135,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch = distro(self, PeerRelationName)
         self.opensearch_peer_cm = OpenSearchPeerClustersManager(self)
         self.opensearch_config = OpenSearchConfig(self.opensearch)
-        self.opensearch_exclusions = OpenSearchExclusions(self)
+        self.opensearch_alloc = OpenSearchAllocation(self)
         self.opensearch_fixes = OpenSearchFixes(self)
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = OpenSearchSecrets(self, PeerRelationName)
@@ -360,7 +360,7 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         if unit_data.get(VOTING_TO_DELETE) or unit_data.get(ALLOCS_TO_DELETE):
-            self.opensearch_exclusions.cleanup()
+            self.opensearch_alloc.exclusions.cleanup()
 
         if self.unit.is_leader() and unit_data.get("bootstrap_contributor"):
             contributor_count = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
@@ -407,24 +407,12 @@ class OpenSearchBaseCharm(CharmBase):
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
             try:
-                self.opensearch.request("POST", "/_flush?wait_for_ongoing")
+                self.opensearch.request("POST", "/_flush?wait_for_ongoing", retries=3)
             except OpenSearchHttpError:
                 # if it's a failed attempt we move on
                 pass
         try:
             self._stop_opensearch()
-
-            # safeguards in case planned_units > 0
-            if self.app.planned_units() > 0:
-                # check cluster status
-                if self.alt_hosts:
-                    health_color = self.health.apply(
-                        wait_for_green_first=True, use_localhost=False
-                    )
-                    if health_color == HealthColors.RED:
-                        raise OpenSearchHAError(ClusterHealthRed)
-                else:
-                    raise OpenSearchHAError(ClusterHealthUnknown)
         finally:
             # release lock
             self.ops_lock.release()
@@ -452,7 +440,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         # if there are exclusions to be removed
         if self.unit.is_leader():
-            self.opensearch_exclusions.cleanup()
+            self.opensearch_alloc.exclusions.cleanup()
 
             health = self.health.apply()
             if health != HealthColors.GREEN:
@@ -705,7 +693,10 @@ class OpenSearchBaseCharm(CharmBase):
             self._cleanup_bootstrap_conf_if_applies()
 
         # Remove the exclusions that could not be removed when no units were online
-        self.opensearch_exclusions.delete_current()
+        self.opensearch_alloc.exclusions.delete_current()
+
+        # Re-enable shard replicas allocation if previously disabled
+        self.opensearch_alloc.enable_all()
 
         # Remove the 'starting' flag on the unit
         self.peers_data.delete(Scope.UNIT, "starting")
@@ -722,25 +713,59 @@ class OpenSearchBaseCharm(CharmBase):
         # clear waiting to start status
         self.status.clear(WaitingToStart)
 
-    def _stop_opensearch(self) -> None:
+    def _stop_opensearch(self, is_temporary_stop: bool = False) -> None:
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
-        # 1. Add current node to the voting + alloc exclusions
-        self.opensearch_exclusions.add_current()
+        # we only exclude the current node from allocations if it's up and running
+        if self.opensearch.is_node_up():
+            self.health.wait_for_shards_relocation()
+
+            if is_temporary_stop:
+                # 1. disable allocation of repls. to reduce IO since node is coming back
+                self.opensearch_alloc.disable_replicas()
+            else:
+                # 1. Add current node to the voting + alloc exclusions
+                self.opensearch_alloc.exclusions.add_current()
+                self.health.wait_for_shards_relocation()
+
+                # we check if risk of data loss
+                if (
+                    self.health.get() in [HealthColors.RED, HealthColors.UNKNOWN]
+                    and self.app.planned_units() > 1
+                ):
+                    self.opensearch_alloc.exclusions.delete_current()
+                    raise OpenSearchHAError(ClusterHealthRed)
 
         # 2. stop the service
         self.opensearch.stop()
         self.status.set(WaitingStatus(ServiceStopped))
 
         # 3. Remove the exclusions
-        self.opensearch_exclusions.delete_current()
+        self.opensearch_alloc.exclusions.delete_current()
+
+        # in case of temporary stop (restart) or planned units = 0, leave
+        if is_temporary_stop or self.app.planned_units() == 0:
+            return
+
+        # the following is for a unit removal & planned_units > 0, we add safeguards
+        if self.alt_hosts:
+            health = self.health.get(wait_for_green_first=True, use_localhost=False)
+            if health in [HealthColors.RED, HealthColors.UNKNOWN]:
+                raise OpenSearchHAError(
+                    ClusterHealthRed if health == HealthColors.RED else ClusterHealthUnknown
+                )
+        else:
+            raise OpenSearchHAError(ClusterHealthUnknown)
+
+        # 4. Re-enable shard replicas allocation if previously disabled
+        self.opensearch_alloc.enable_all()
 
     def _restart_opensearch(self, event: EventBase) -> None:
         """Restart OpenSearch if possible."""
         if not self.peers_data.get(Scope.UNIT, "starting", False):
             try:
-                self._stop_opensearch()
+                self._stop_opensearch(is_temporary_stop=True)
             except OpenSearchStopError as e:
                 logger.exception(e)
                 event.defer()
