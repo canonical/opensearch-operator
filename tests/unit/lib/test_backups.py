@@ -8,7 +8,11 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import charms
 import pytest
 import tenacity
-from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.constants_charm import (
+    BackupDisablingInProgress,
+    PeerRelationName,
+)
+from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import IndexStateEnum
 from charms.opensearch.v0.opensearch_backups import (
     S3_RELATION,
@@ -25,7 +29,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginError,
     PluginState,
 )
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import MaintenanceStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -418,6 +422,7 @@ def test_on_s3_broken_steps(
     harness.charm.plugin_manager.get_plugin = MagicMock()
     harness.charm.plugin_manager.status = MagicMock(return_value=PluginState.ENABLED)
     harness.charm.status.set = MagicMock()
+    harness.charm.status.clear = MagicMock()
 
     # Call the method
     harness.charm.backup._on_s3_broken(event)
@@ -427,28 +432,30 @@ def test_on_s3_broken_steps(
         harness.charm.backup._execute_s3_broken_calls.assert_not_called()
     elif test_type == "snapshot-in-progress":
         event.defer.assert_called()
-        harness.charm.status.set.assert_any_call(MaintenanceStatus("Disabling backup service..."))
         harness.charm.status.set.assert_any_call(
-            MaintenanceStatus(
-                "Disabling backup postponed until backup in progress: snapshot in progress"
-            )
+            MaintenanceStatus(BackupDisablingInProgress.format("in progress"))
+        )
+        harness.charm.status.set.assert_any_call(
+            MaintenanceStatus(BackupDisablingInProgress.format("waiting snapshot to finish"))
         )
         harness.charm.backup._execute_s3_broken_calls.assert_not_called()
     elif test_type == "apply-config-error" or test_type == "apply-config-error-not-leader":
         event.defer.assert_called()
-        # harness.charm.status.set.call_args_list == [
-        #     call(MaintenanceStatus("Disabling backup service...")),
-        #     call(BlockedStatus("Unexpected error during plugin configuration, check the logs")),
-        # ]
-        harness.charm.status.set.assert_any_call(MaintenanceStatus("Disabling backup service..."))
         harness.charm.status.set.assert_any_call(
-            BlockedStatus("Unexpected error during plugin configuration, check the logs")
+            MaintenanceStatus(BackupDisablingInProgress.format("in progress"))
+        )
+        harness.charm.status.set.assert_any_call(
+            MaintenanceStatus(BackupDisablingInProgress.format("error while disabling the plugin"))
         )
         harness.charm.backup._execute_s3_broken_calls.assert_called_once()
     elif test_type == "success":
         event.defer.assert_not_called()
-        harness.charm.status.set.assert_any_call(MaintenanceStatus("Disabling backup service..."))
-        harness.charm.status.set.assert_any_call(ActiveStatus())
+        harness.charm.status.set.assert_any_call(
+            MaintenanceStatus(BackupDisablingInProgress.format("in progress"))
+        )
+        harness.charm.status.clear.assert_called_with(
+            BackupDisablingInProgress, Status.CheckPattern.Interpolated
+        )
         harness.charm.backup._execute_s3_broken_calls.assert_called_once()
 
 

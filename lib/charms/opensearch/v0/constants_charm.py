@@ -72,6 +72,8 @@ WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on 
 NewIndexRequested = "new index {index} requested"
 RestoreInProgress = "Restore in progress..."
 PluginConfigStart = "Plugin configuration started."
+BackupServiceSettingUp = "Setting up backup service: {}"
+BackupDisablingInProgress = "Disabling backup service: {}"
 
 
 # Relation Interfaces
