@@ -21,6 +21,7 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     PeerRelationName,
     PluginConfigChangeError,
+    PluginConfigStart,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -101,7 +102,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import EventBase, EventSource
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -495,21 +496,22 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
+        self.status.set(MaintenanceStatus(PluginConfigStart))
         try:
             if self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
-        except OpenSearchPluginError as e:
-            logger.exception(e)
-            if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
-                logger.warning("Plugin management: cluster not ready yet at config changed")
-            else:
-                # There was an unexpected error, log it and block the unit
-                self.status.set(BlockedStatus(PluginConfigChangeError))
+        except OpenSearchPluginRelationClusterNotReadyError:
+            logger.warning("Plugin management: cluster not ready yet at config changed")
             event.defer()
             return
-        self.status.set(ActiveStatus())
+        except OpenSearchPluginError:
+            self.status.set(BlockedStatus(PluginConfigChangeError))
+            event.defer()
+            return
+        self.status.clear(PluginConfigChangeError)
+        self.status.clear(PluginConfigStart)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""

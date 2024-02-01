@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import json
 import logging
 import subprocess
 import time
@@ -18,12 +19,14 @@ from tenacity import (
 )
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
+from tests.integration.ha.helpers_data import index_docs_count
 from tests.integration.helpers import (
     get_application_unit_ids,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
     http_request,
     juju_version_major,
+    run_action,
 )
 
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
@@ -437,3 +440,73 @@ async def print_logs(ops_test: OpsTest, app: str, unit_id: int, msg: str) -> str
     logger.info(f"\n\n\nServer Logs:\n{stdout}")
 
     return msg
+
+
+async def wait_backup_finish(ops_test, leader_id):
+    """Waits the backup to finish and move to the finished state or throws a RetryException."""
+    for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
+        with attempt:
+            action = await run_action(
+                ops_test, leader_id, "list-backups", params={"output": "json"}
+            )
+            # Expected format:
+            # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
+            backups = json.loads(action.response["backups"])
+            logger.debug(f"Backups recovered: {backups}")
+            if action.status == "completed" and len(backups) > 0:
+                logger.debug(f"list-backups output: {action}")
+                return
+
+            raise Exception("Backup not finished yet")
+
+
+async def wait_restore_finish(ops_test, unit_ip):
+    """Waits the backup to finish and move to the finished state or throws a RetryException."""
+    for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
+        with attempt:
+            indices_status = await http_request(
+                ops_test,
+                "GET",
+                f"https://{unit_ip}:9200/_recovery?human",
+            )
+            for info in indices_status.values():
+                # Now, check the status of each shard
+                for shard in info["shards"]:
+                    if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
+                        raise Exception()
+
+
+async def continuous_writes_increases(ops_test: OpsTest, unit_ip: str, app: str) -> bool:
+    """Asserts that TEST_BACKUP_INDEX is writable while under continuous writes.
+
+    Given we are restoring an index, we need to make sure ContinuousWrites restart at
+    the tip of that index instead of doc_id = 0.
+
+    Closes the writer at the end.
+    """
+    initial_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
+    logger.info(
+        f"Index {ContinuousWrites.INDEX_NAME} has {initial_count} documents, starting there"
+    )
+    writer = ContinuousWrites(ops_test, app, initial_count=initial_count)
+    await writer.start()
+    time.sleep(5)
+    result = await writer.stop()
+    return result.count > initial_count
+
+
+async def backup_cluster(ops_test: OpsTest, leader_id: int) -> bool:
+    """Runs the backup of the cluster."""
+    action = await run_action(ops_test, leader_id, "create-backup")
+    logger.debug(f"create-backup output: {action}")
+
+    await wait_backup_finish(ops_test, leader_id)
+    return action.status == "completed"
+
+
+async def restore_cluster(ops_test: OpsTest, backup_id: int, unit_ip: str, leader_id: int) -> bool:
+    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": backup_id})
+    logger.debug(f"restore output: {action}")
+
+    await wait_restore_finish(ops_test, unit_ip)
+    return action.status == "completed"
