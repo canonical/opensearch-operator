@@ -61,7 +61,7 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
     new_model_conf["update-status-hook-interval"] = "1m"
 
     config = {"ca-common-name": "CN_CA"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
 
     await ops_test.model.set_config(new_model_conf)
     await asyncio.gather(
