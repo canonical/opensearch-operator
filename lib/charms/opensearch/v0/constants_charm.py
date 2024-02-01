@@ -70,6 +70,8 @@ TLSNewCertsRequested = "Requesting new TLS certificates..."
 HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 NewIndexRequested = "new index {index} requested"
+RestoreInProgress = "Restore in progress..."
+PluginConfigStart = "Plugin configuration started."
 
 
 # Relation Interfaces

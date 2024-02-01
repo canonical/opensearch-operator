@@ -3,32 +3,35 @@
 # See LICENSE file for licensing details.
 
 import asyncio
-import json
 import logging
 import os
+import random
+import subprocess
 
 # from pathlib import Path
 #
 # import boto3
 import pytest
+import requests
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import app_name, assert_continuous_writes_consistency
-from tests.integration.ha.helpers_data import (
-    create_index,
-    default_doc,
-    index_doc,
-    search,
+from tests.integration.ha.helpers import (
+    app_name,
+    assert_continuous_writes_consistency,
+    backup_cluster,
+    continuous_writes_increases,
+    restore_cluster,
 )
+from tests.integration.ha.helpers_data import index_docs_count
 from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
 from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
-    get_application_unit_ids_ips,
     get_leader_unit_id,
     get_leader_unit_ip,
+    get_reachable_unit_ips,
     http_request,
     run_action,
 )
@@ -99,9 +102,6 @@ value_before_backup, value_after_backup = None, None
 #             bucket_object.delete()
 
 
-TEST_BACKUP_INDEX = "test_backup_index"
-
-
 @pytest.fixture()
 async def c_writes(ops_test: OpsTest):
     """Creates instance of the ContinuousWrites."""
@@ -114,13 +114,61 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     """Starts continuous write operations and clears writes at the end of the test."""
     await c_writes.start()
     yield
+
+    reachable_ip = random.choice(await get_reachable_unit_ips(ops_test))
+    await http_request(ops_test, "GET", f"https://{reachable_ip}:9200/_cat/nodes", json_resp=False)
+    await http_request(
+        ops_test, "GET", f"https://{reachable_ip}:9200/_cat/shards", json_resp=False
+    )
+
     await c_writes.clear()
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
+# TODO: Remove this method as soon as poetry gets merged.
+@pytest.fixture(scope="session")
+def microceph():
+    """Starts microceph radosgw."""
+    if "microceph" not in subprocess.check_output(["sudo", "snap", "list"]).decode():
+        uceph = "/tmp/microceph.sh"
+
+        with open(uceph, "w") as f:
+            # TODO: if this code stays, then the script below should be added as a file
+            # in the charm.
+            resp = requests.get(
+                "https://raw.githubusercontent.com/canonical/microceph-action/main/microceph.sh"
+            )
+            f.write(resp.content.decode())
+
+        os.chmod(uceph, 0o755)
+        subprocess.check_output(
+            [
+                "sudo",
+                uceph,
+                "-c",
+                "latest/edge",
+                "-d",
+                "/dev/sdc",
+                "-a",
+                "accesskey",
+                "-s",
+                "secretkey",
+                "-b",
+                "data-charms-testing",
+                "-z",
+                "5G",
+            ]
+        )
+    ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
+    # TODO: if this code stays, then we should generate random keys for the test.
+    return {"url": f"http://{ip}", "access-key": "accesskey", "secret-key": "secretkey"}
+
+
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentials) -> None:
+async def test_build_and_deploy(
+    ops_test: OpsTest, microceph
+) -> None:  # , cloud_credentials) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -128,30 +176,12 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentia
     if await app_name(ops_test):
         return
 
-    s3_storage = None
-    if (
-        "S3_BUCKET" in os.environ
-        and "S3_SERVER_URL" in os.environ
-        and "S3_REGION" in os.environ
-        and "S3_ACCESS_KEY" in os.environ
-        and "S3_SECRET_KEY" in os.environ
-    ):
-        s3_config = {
-            "bucket": os.environ["S3_BUCKET"],
-            "path": "/",
-            "endpoint": os.environ["S3_SERVER_URL"],
-            "region": os.environ["S3_REGION"],
-        }
-        s3_storage = "ceph"
-    elif "AWS_ACCESS_KEY" in os.environ and "AWS_SECRET_KEY" in os.environ:
-        s3_config = CLOUD_CONFIGS["aws"].copy()
-        s3_storage = "aws"
-    elif "GCP_ACCESS_KEY" in os.environ and "GCP_SECRET_KEY" in os.environ:
-        s3_config = CLOUD_CONFIGS["gcp"].copy()
-        s3_storage = "gcp"
-    else:
-        logger.exception("Missing S3 configs in os.environ.")
-        raise Exception("Missing s3")
+    s3_config = {
+        "bucket": "data-charms-testing",
+        "path": "/",
+        "endpoint": microceph["url"],
+        "region": "default",
+    }
 
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
@@ -160,21 +190,17 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:  # , cloud_credentia
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
 
     # Convert to integer as environ always returns string
-    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 3)
+    app_num_units = 3
 
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
         ops_test.model.deploy(S3_INTEGRATOR_NAME, channel="stable", config=s3_config),
         ops_test.model.deploy(my_charm, num_units=app_num_units, series=SERIES),
     )
-    # Set the access/secret keys
-    if s3_storage == "ceph":
-        s3_creds = {
-            "access-key": os.environ["S3_ACCESS_KEY"],
-            "secret-key": os.environ["S3_SECRET_KEY"],
-        }
-    #    else:
-    #        s3_creds = cloud_credentials[s3_storage].copy()
+    s3_creds = {
+        "access-key": microceph["access-key"],
+        "secret-key": microceph["secret-key"],
+    }
 
     await run_action(
         ops_test,
@@ -201,90 +227,32 @@ async def test_backup_cluster(
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
     app = (await app_name(ops_test)) or APP_NAME
+    leader_id = await get_leader_unit_id(ops_test)
 
-    units = await get_application_unit_ids_ips(ops_test, app=app)
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    await create_index(ops_test, app, leader_unit_ip, TEST_BACKUP_INDEX, r_shards=len(units) - 1)
-
-    # index document
-    doc_id = TEST_BACKUP_DOC_ID
-    await index_doc(ops_test, app, leader_unit_ip, TEST_BACKUP_INDEX, doc_id)
-
-    # check that the doc can be retrieved from any node
-    logger.info("Test backup index: searching")
-    for u_id, u_ip in units.items():
-        docs = await search(
-            ops_test,
-            app,
-            u_ip,
-            TEST_BACKUP_INDEX,
-            query={"query": {"term": {"_id": doc_id}}},
-            preference="_only_local",
-        )
-        # Validate the index and document are present
-        assert len(docs) == 1
-        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
-
-    leader_id = await get_leader_unit_id(ops_test, app)
-
-    action = await run_action(ops_test, leader_id, "create-backup")
-    logger.info(f"create-backup output: {action}")
-
-    assert action.status == "completed"
-
-    list_backups = await run_action(ops_test, leader_id, "list-backups", params={"output": "json"})
-    logger.info(f"list-backups output: {list_backups}")
-
-    # Expected format:
-    # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
-    backups = json.loads(list_backups.response["backups"])
-    assert list_backups.status == "completed"
-    assert len(backups.keys()) == int(action.response["backup-id"])
-    assert backups[action.response["backup-id"]]["state"] == "SUCCESS"
-
+    assert await backup_cluster(
+        ops_test,
+        leader_id,
+    )
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
 @pytest.mark.abort_on_fail
-async def test_restore_cluster(
-    ops_test: OpsTest,
-) -> None:
+async def test_restore_cluster(ops_test: OpsTest) -> None:
     """Deletes the TEST_BACKUP_INDEX, restores the cluster and tries to search for index."""
+    unit_ip = await get_leader_unit_ip(ops_test)
     app = (await app_name(ops_test)) or APP_NAME
+    leader_id = await get_leader_unit_id(ops_test)
 
-    units = await get_application_unit_ids_ips(ops_test, app=app)
-    leader_id = await get_leader_unit_id(ops_test, app)
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    await http_request(
+    assert await restore_cluster(
         ops_test,
-        "DELETE",
-        f"https://{leader_unit_ip}:9200/{TEST_BACKUP_INDEX}",
-        app=app,
+        1,  # backup_id
+        unit_ip,
+        leader_id,
     )
-
-    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": 1})
-    logger.info(f"restore output: {action}")
-    assert action.status == "completed"
-
-    # index document
-    doc_id = TEST_BACKUP_DOC_ID
-    # check that the doc can be retrieved from any node
-    logger.info("Test backup index: searching")
-    for u_id, u_ip in units.items():
-        docs = await search(
-            ops_test,
-            app,
-            u_ip,
-            TEST_BACKUP_INDEX,
-            query={"query": {"term": {"_id": doc_id}}},
-            preference="_only_local",
-        )
-        # Validate the index and document are present
-        assert len(docs) == 1
-        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
+    count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
+    assert count > 0
+    await continuous_writes_increases(ops_test, unit_ip, app)
 
 
 @pytest.mark.abort_on_fail
@@ -294,8 +262,10 @@ async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
     Restores the backup and then checks if the same TEST_BACKUP_INDEX is there.
     """
     app = (await app_name(ops_test)) or APP_NAME
+
+    logging.info("Destroying the application")
     await ops_test.model.remove_application(app, block_until_done=True)
-    app_num_units = int(os.environ.get("TEST_NUM_APP_UNITS", None) or 3)
+    app_num_units = 3
     my_charm = await ops_test.build_charm(".")
     # Redeploy
     await asyncio.gather(
@@ -311,103 +281,58 @@ async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
         idle_period=IDLE_PERIOD,
     )
 
-    units = await get_application_unit_ids_ips(ops_test, app=app)
-    leader_id = await get_leader_unit_id(ops_test, app)
-
-    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": 1})
-    logger.info(f"restore output: {action}")
-    assert action.status == "completed"
-
-    # index document
-    doc_id = TEST_BACKUP_DOC_ID
-    # check that the doc can be retrieved from any node
-    logger.info("Test backup index: searching")
-    for u_id, u_ip in units.items():
-        docs = await search(
-            ops_test,
-            app,
-            u_ip,
-            TEST_BACKUP_INDEX,
-            query={"query": {"term": {"_id": doc_id}}},
-            preference="_only_local",
-        )
-        # Validate the index and document are present
-        assert len(docs) == 1
-        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
+    leader_id = await get_leader_unit_id(ops_test)
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    assert await restore_cluster(
+        ops_test,
+        1,  # backup_id
+        leader_unit_ip,
+        leader_id,
+    )
+    # Count the number of docs in the index
+    count = await index_docs_count(ops_test, app, leader_unit_ip, ContinuousWrites.INDEX_NAME)
+    assert count > 0
+    await continuous_writes_increases(ops_test, leader_unit_ip, app)
 
 
 @pytest.mark.abort_on_fail
 async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
     app = (await app_name(ops_test)) or APP_NAME
-    units = await get_application_unit_ids_ips(ops_test, app=app)
-    leader_id = await get_leader_unit_id(ops_test, app)
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    leader_id = await get_leader_unit_id(ops_test)
+    unit_ip = await get_leader_unit_ip(ops_test)
 
     logger.info("Remove s3-credentials relation")
     # Remove relation
-    await ops_test.model.applications[APP_NAME].destroy_relation(
+    await ops_test.model.applications[app].destroy_relation(
         "s3-credentials", f"{S3_INTEGRATOR_NAME}:s3-credentials"
     )
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
+        apps=[app],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
 
     logger.info("Re-add s3-credentials relation")
-    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR_NAME)
+    await ops_test.model.relate(app, S3_INTEGRATOR_NAME)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
+        apps=[app],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
 
-    leader_id = await get_leader_unit_id(ops_test, app)
-
-    action = await run_action(ops_test, leader_id, "create-backup")
-    logger.info(f"create-backup output: {action}")
-
-    assert action.status == "completed"
-
-    list_backups = await run_action(ops_test, leader_id, "list-backups", params={"output": "json"})
-    logger.info(f"list-backups output: {list_backups}")
-
-    # Expected format:
-    # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
-    backups = json.loads(list_backups.response["backups"])
-    assert list_backups.status == "completed"
-    assert len(backups.keys()) == int(action.response["backup-id"])
-    assert backups[action.response["backup-id"]]["state"] == "SUCCESS"
-
-    await http_request(
+    assert await backup_cluster(
         ops_test,
-        "DELETE",
-        f"https://{leader_unit_ip}:9200/{TEST_BACKUP_INDEX}",
-        app=app,
+        leader_id,
     )
-
-    action = await run_action(
-        ops_test, leader_id, "restore", params={"backup-id": int(action.response["backup-id"])}
+    assert await restore_cluster(
+        ops_test,
+        1,  # backup_id
+        unit_ip,
+        leader_id,
     )
-    logger.info(f"restore-backup output: {action}")
-    assert action.status == "completed"
-
-    # index document
-    doc_id = TEST_BACKUP_DOC_ID
-    # check that the doc can be retrieved from any node
-    logger.info("Test backup index: searching")
-    for u_id, u_ip in units.items():
-        docs = await search(
-            ops_test,
-            app,
-            u_ip,
-            TEST_BACKUP_INDEX,
-            query={"query": {"term": {"_id": doc_id}}},
-            preference="_only_local",
-        )
-        # Validate the index and document are present
-        assert len(docs) == 1
-        assert docs[0]["_source"] == default_doc(TEST_BACKUP_INDEX, doc_id)
+    count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
+    assert count > 0
+    await continuous_writes_increases(ops_test, unit_ip, app)

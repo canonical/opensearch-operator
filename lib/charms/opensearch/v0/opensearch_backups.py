@@ -46,20 +46,19 @@ class OpenSearchBaseCharm(CharmBase):
 
 import json
 import logging
+import math
 from typing import Any, Dict, List, Set, Tuple
 
-import requests
 from charms.data_platform_libs.v0.s3 import S3Requirer
-from charms.opensearch.v0.helper_cluster import ClusterState
+from charms.opensearch.v0.constants_charm import RestoreInProgress
+from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
 )
-from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
-    OpenSearchPluginEventScope,
     OpenSearchPluginRelationClusterNotReadyError,
     PluginState,
 )
@@ -88,12 +87,7 @@ S3_REPOSITORY = "s3-repository"
 
 S3_REPO_BASE_PATH = "/"
 
-INDICES_TO_EXCLUDE_AT_RESTORE = {
-    ".opendistro_security",
-    ".opensearch-observability",
-    ".opensearch-sap-log-types-config",
-    ".opensearch-sap-pre-packaged-rules-config",
-}
+INDICES_TO_EXCLUDE_AT_RESTORE = {".opendistro_security", ".opensearch-observability"}
 
 REPO_NOT_CREATED_ERR = "repository type [s3] does not exist"
 REPO_NOT_ACCESS_ERR = f"[{S3_REPOSITORY}] path [{S3_REPO_BASE_PATH}] is not accessible"
@@ -105,8 +99,20 @@ class OpenSearchBackupError(OpenSearchError):
     """Exception thrown when an opensearch backup-related action fails."""
 
 
+class OpenSearchRestoreError(OpenSearchError):
+    """Exception thrown when an opensearch restore-related action fails."""
+
+
 class OpenSearchListBackupError(OpenSearchBackupError):
     """Exception thrown when internal list backups call fails."""
+
+
+class OpenSearchRestoreCheckError(OpenSearchRestoreError):
+    """Exception thrown when restore status check errors."""
+
+
+class OpenSearchRestoreIndexClosingError(OpenSearchRestoreError):
+    """Exception thrown when restore fails to close indices."""
 
 
 class BackupServiceState(BaseStrEnum):
@@ -153,21 +159,15 @@ class OpenSearchBackup(Object):
     def _plugin_status(self):
         return self.charm.plugin_manager.get_plugin_status(OpenSearchBackupPlugin)
 
-    def _format_backup_list(self, backup_list: List[Tuple[Any]]) -> str:
+    def _format_backup_list(self, backups: List[Tuple[Any]]) -> str:
         """Formats provided list of backups as a table."""
-        backups = [
-            "{:<10s} | {:<12s} | {:s}".format(" backup-id ", "backup-type", "backup-status")
-        ]
-        backups.append("-" * len(backups[0]))
+        output = ["{:<10s} | {:s}".format(" backup-id ", "backup-status")]
+        output.append("-" * len(output[0]))
 
-        import math
-
-        for backup_id, backup_type, backup_status in backup_list:
+        for backup_id, backup_status in backups:
             tab = " " * math.floor((10 - len(str(backup_id))) / 2)
-            backups.append(
-                "{:<10s} | {:<12s} | {:s}".format(f"{tab}{backup_id}", backup_type, backup_status)
-            )
-        return "\n".join(backups)
+            output.append("{:<10s} | {:s}".format(f"{tab}{backup_id}", backup_status))
+        return "\n".join(output)
 
     def _generate_backup_list_output(self, backups: Dict[str, Any]) -> str:
         """Generates a list of backups in a formatted table.
@@ -178,15 +178,9 @@ class OpenSearchBackup(Object):
             OpenSearchError: if the list of backups errors
         """
         backup_list = []
-        for id, backup in backups:
+        for id, backup in backups.items():
             state = self.get_snapshot_status(backup["state"])
-            backup_list.append(
-                (
-                    id,
-                    "physical",
-                    str(state) if state != BackupServiceState.SUCCESS else "finished",
-                )
-            )
+            backup_list.append((id, state.value))
         return self._format_backup_list(backup_list)
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
@@ -205,127 +199,181 @@ class OpenSearchBackup(Object):
         else:
             event.fail("Failed: invalid output format, must be either json or table")
 
-    def _restore_and_try_close_indices_if_needed(
-        self, backup_id: int
-    ) -> Tuple[Dict[str, Any], Set[str]]:
-        """Restores and processes any exception related to running indices.
+    def _close_indices(self, indices: Set[str]) -> bool:
+        """Close a list of indices and return their status."""
+        if not indices:
+            # The indices is empty, we do not need to check
+            return True
+        resp = self._request(
+            "POST",
+            f"{','.join(indices)}/_close",
+            payload={
+                "ignore_unavailable": "true",
+            },
+        )
 
-        Closing option is preferable, as the restore action as a whole may not succeed.
-        This method returns the final output and list of closed indices. The calling method
-        should also check the output for any other error messages, as a more generic error
-        (i.e. non-closing index error) will pass by as much as a successful restore.
+        # Trivial case, something went wrong
+        if not resp or not resp.get("acknowledged", False):
+            return False
+
+        # There are two options here we return True:
+        # 1) ack=True and shards_ack=False with empty indices
+        #    This means the indices are already closed
+        if not resp.get("shards_acknowledged", False):
+            if not resp.get("indices", {}):
+                return True
+            return False
+
+        # 2) ack=True and shards_ack=True with each index in resp["indices"]
+        #    marked as closed=True
+        # The statement of explicit "is True" below assures we have a boolean
+        # as the response has the form of "true" or "false" originally
+        all_closed = all(
+            [state and state.get("closed") for state in resp.get("indices", {}).values()]
+        )
+        if not all_closed:
+            return False
+
+        # Finally, we can state it is all good
+        return True
+
+    def _close_indices_if_needed(self, backup_id: int) -> Set[str]:
+        """Closes indices that will be restored.
+
+        Returns a set of indices that were closed or raises an exception:
+        - OpenSearchRestoreIndexClosingError if any of the indices could not be closed.
+
+        Raises:
+            OpenSearchHttpError
+            OpenSearchRestoreIndexClosingError
         """
-        closed_idx = set()
+        backup_indices = self._list_backups()[backup_id]["indices"]
+        indices_to_close = set()
+        for index, state in ClusterState.indices(self.charm.opensearch).items():
+            if (
+                index in backup_indices
+                and state["status"] != IndexStateEnum.CLOSED
+                and index not in INDICES_TO_EXCLUDE_AT_RESTORE
+            ):
+                indices_to_close.add(index)
+
         try:
-            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=30)):
-                with attempt:
-                    # First, for overlapping indices
-                    backup_indices = self._list_backups()[backup_id]["indices"]
-                    to_close = [
-                        index
-                        for index, state in ClusterState.indices(self.charm.opensearch).items()
-                        if (
-                            index in backup_indices
-                            and state["status"] != "close"
-                            and index not in INDICES_TO_EXCLUDE_AT_RESTORE
-                        )
-                    ]
-                    # Try closing each index
-                    for index in to_close:
-                        # Try closing the index
-                        o = self._request("POST", f"{index}/_close")
-                        logger.debug(
-                            f"_restore_and_try_close_indices_if_needed: request closing {index} returned {o}"
-                        )
-                        closed_idx.add(index)
+            if not self._close_indices(indices_to_close):
+                raise OpenSearchRestoreIndexClosingError()
+        except OpenSearchError as e:
+            raise OpenSearchRestoreIndexClosingError(e)
+        return indices_to_close
 
-                    output = self._request(
-                        "POST",
-                        f"_snapshot/{S3_REPOSITORY}/{backup_id}/_restore?wait_for_completion=false",
-                        payload={
-                            "indices": ",".join(
-                                [
-                                    f"-{idx}"
-                                    for idx in INDICES_TO_EXCLUDE_AT_RESTORE & set(backup_indices)
-                                ]
-                            ),
-                            "ignore_unavailable": False,
-                            "include_global_state": False,
-                            "include_aliases": True,
-                            "partial": False,
-                        },
-                    )
-                    logger.debug(
-                        f"_restore_and_try_close_indices_if_needed retrying, output is: {output}"
-                    )
-                    if (
-                        self.get_service_status(output)
-                        == BackupServiceState.SNAPSHOT_RESTORE_ERROR_INDEX_NOT_CLOSED
-                    ):
-                        # The .opensearch-sap-log-types-config, for example does not show
-                        # in the _cat/indices but does block a restore operation.
-                        to_close = output["error"]["reason"].split("[")[2].split("]")[0]
-                        o = self._request("POST", f"{index}/_close")
-                        logger.debug(
-                            f"_restore_and_try_close_indices_if_needed: request closing {index} returned {o}"
-                        )
-                        closed_idx.add(index)
-                        # We still have non closed indices, try again
-                        raise Exception()
-                    # If status returns success, ensure all indices have been updated
-                    # otherwise, raise an assert error and retry
-                    shard_status = output["snapshot"]["shards"]
-                    assert shard_status["total"] == shard_status["successful"]
-        except RetryError:
-            logger.error("_restore_and_try_close_indices_if_needed: fail all retries")
-        return output, closed_idx
+    def _restore(self, backup_id: int) -> Dict[str, Any]:
+        """Runs the restore and processes the response."""
+        backup_indices = self._list_backups()[backup_id]["indices"]
+        output = self._request(
+            "POST",
+            f"_snapshot/{S3_REPOSITORY}/{backup_id}/_restore?wait_for_completion=true",
+            payload={
+                "indices": ",".join(
+                    [f"-{idx}" for idx in INDICES_TO_EXCLUDE_AT_RESTORE & set(backup_indices)]
+                ),
+                "partial": False,  # It is the default value, but we want to avoid partial restores
+            },
+        )
+        logger.debug(f"_restore: restore call returned {output}")
+        if (
+            self.get_service_status(output)
+            == BackupServiceState.SNAPSHOT_RESTORE_ERROR_INDEX_NOT_CLOSED
+        ):
+            to_close = output["error"]["reason"].split("[")[2].split("]")[0]
+            raise OpenSearchRestoreIndexClosingError(f"_restore: fails to close {to_close}")
 
-    def _on_restore_backup_action(self, event: ActionEvent) -> None:  # noqa: C901
+        if "snapshot" not in output or "shards" not in output.get("snapshot"):
+            raise OpenSearchRestoreCheckError(f"_restore: unexpected response {output}")
+
+        return output["snapshot"]
+
+    def _is_restore_complete(self) -> bool:
+        """Checks if the restore is finished.
+
+        Essentially, check for each index shard: for all type=SNAPSHOT and stage=DONE, return True.
+        """
+        indices_status = self._request("GET", "/_recovery?human")
+        for info in indices_status.values():
+            # Now, check the status of each shard
+            for shard in info["shards"]:
+                if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
+                    return False
+        return True
+
+    def _is_backup_available_for_restore(self, backup_id: int) -> bool:
+        """Checks if the backup_id exists and is ready for a restore."""
+        backups = self._list_backups()
+        try:
+            return (
+                backup_id in backups.keys()
+                and self.get_snapshot_status(backups[backup_id]["state"])
+                == BackupServiceState.SUCCESS
+            )
+        except OpenSearchListBackupError:
+            return False
+
+    def _on_restore_backup_action(self, event: ActionEvent) -> None:
         """Restores a backup to the current cluster."""
         if not self._can_unit_perform_backup(event):
             event.fail("Failed: backup service is not configured yet")
             return
-
+        if not self._is_restore_complete():
+            event.fail("Failed: previous restore is still in progress")
+            return
+        # Now, validate the backup is working
         backup_id = str(event.params.get("backup-id"))
+        if not self._is_backup_available_for_restore(backup_id):
+            event.fail(f"Failed: no backup-id {backup_id}")
+            return
+
+        self.charm.status.set(MaintenanceStatus(RestoreInProgress))
 
         # Restore will try to close indices if there is a matching name.
         # The goal is to leave the cluster in a running state, even if the restore fails.
         # In case of failure, then restore action must return a list of closed indices
         closed_idx = set()
         try:
-            backups = self._list_backups()
-            if backup_id not in backups.keys():
-                event.fail(f"Failed: no backup-id {backup_id}, options available: {backups}")
-                return
-            backup_id_state = self.get_snapshot_status(backups[backup_id]["state"])
-            if backup_id_state != BackupServiceState.SUCCESS:
-                event.fail(
-                    f"Failed: no backup-id {backup_id} not successful, state is: {backup_id_state}"
-                )
-                return
-            output, closed_idx = self._restore_and_try_close_indices_if_needed(backup_id)
+            closed_idx = self._close_indices_if_needed(backup_id)
+            output = self._restore(backup_id)
             logger.debug(f"Restore action: received response: {output}")
             logger.info(f"Restore action succeeded for backup_id {backup_id}")
-        except OpenSearchListBackupError as e:
-            event.fail(f"Failed: {e}, closed indices: {closed_idx}")
+        except (
+            OpenSearchHttpError,
+            OpenSearchRestoreIndexClosingError,
+            OpenSearchRestoreCheckError,
+        ) as e:
+            event.fail(f"Failed: {e}")
             return
-        if self.get_service_status(output) != BackupServiceState.SUCCESS:
-            status = str(self.get_service_status(output))
-            event.fail(f"Failed with: {status}, closed indices: {closed_idx}")
-        event.set_results({"state": "successful restore!", "closed-indices": str(closed_idx)})
 
-    def _on_create_backup_action(self, event: ActionEvent) -> None:
+        # Post execution checks
+        # Was the call successful?
+        state = self.get_service_status(output)
+        if state != BackupServiceState.SUCCESS:
+            event.fail(f"Restore failed with {state}")
+            return
+
+        shards = output.get("shards", {})
+        if shards.get("successful", -1) != shards.get("total", 0):
+            event.fail("Failed to restore all the shards")
+            return
+
+        msg = "Restore is complete" if self._is_restore_complete() else "Restore in progress..."
+        self.charm.status.clear(RestoreInProgress)
+        event.set_results(
+            {"backup-id": backup_id, "status": msg, "closed-indices": str(closed_idx)}
+        )
+
+    def _on_create_backup_action(self, event: ActionEvent) -> None:  # noqa: C901
         """Creates a backup from the current cluster."""
         if not self._can_unit_perform_backup(event):
-            event.fail("Failed: backup service is not configured yet")
+            event.fail("Failed: backup service is not configured or busy")
             return
 
         new_backup_id = None
         try:
-            # Check if any backup is not running already, or RetryError happens
-            if self.is_backup_in_progress():
-                event.fail("Backup still in progress: aborting this request...")
-                return
             # Increment by 1 the latest snapshot_id (set to 0 if no snapshot was previously made)
             new_backup_id = int(max(self._list_backups().keys() or [0])) + 1
             logger.debug(
@@ -335,21 +383,17 @@ class OpenSearchBackup(Object):
                         "PUT",
                         f"_snapshot/{S3_REPOSITORY}/{new_backup_id}?wait_for_completion=false",
                         payload={
-                            "indices": "*",
-                            "ignore_unavailable": False,
-                            "include_global_state": True,
-                            "partial": False,
+                            "indices": "*",  # Take all indices
+                            "partial": False,  # It is the default value, but we want to avoid partial backups
                         },
                     )
                 )
             )
 
             logger.info(f"Backup request submitted with backup-id {new_backup_id}")
+            logger.info(f"Backup completed with backup-id {new_backup_id}")
         except (
-            RetryError,
-            ValueError,
             OpenSearchHttpError,
-            requests.HTTPError,
             OpenSearchListBackupError,
         ) as e:
             event.fail(f"Failed with exception: {e}")
@@ -367,15 +411,17 @@ class OpenSearchBackup(Object):
         """
         # First, validate the plugin is present and correctly configured.
         if self._plugin_status != PluginState.ENABLED:
-            event.fail(f"Failed: plugin is not ready yet, current status is {self._plugin_status}")
+            logger.warning(
+                f"Failed: plugin is not ready yet, current status is {self._plugin_status}"
+            )
             return False
 
         # Then, check the repo status
         status = self._check_repo_status()
         if status != BackupServiceState.SUCCESS:
-            event.fail(f"Failed: repo status is {status}")
+            logger.warning(f"Failed: repo status is {status}")
             return False
-        return True
+        return not self.is_backup_in_progress()
 
     def _list_backups(self) -> Dict[int, str]:
         """Returns a mapping of snapshot ids / state."""
@@ -388,17 +434,32 @@ class OpenSearchBackup(Object):
             for snapshot in response.get("snapshots", [])
         }
 
-    def is_backup_in_progress(self, backup_id=None) -> bool:
-        """Returns True if backup is in progress, False otherwise."""
-        return self._query_backup_status(backup_id) in [
+    def is_backup_in_progress(self) -> bool:
+        """Returns True if backup is in progress, False otherwise.
+
+        We filter the _query_backup_status() and seek for the following states:
+        - SNAPSHOT_IN_PROGRESS
+        """
+        if self._query_backup_status() in [
             BackupServiceState.SNAPSHOT_IN_PROGRESS,
-        ]
+            BackupServiceState.RESPONSE_FAILED_NETWORK,
+        ]:
+            # We have a backup in progress or we cannot reach the API
+            # taking the "safe path" of informing a backup is in progress
+            return True
+        return False
 
     def _query_backup_status(self, backup_id=None) -> BackupServiceState:
-        target = f"_snapshot/{S3_REPOSITORY}/"
-        target += f"{backup_id}" if backup_id else "_all"
-        output = self._request("GET", target)
-        logger.debug(f"Backup status: {output}")
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(5)):
+                with attempt:
+                    target = f"_snapshot/{S3_REPOSITORY}/"
+                    target += f"{backup_id}" if backup_id else "_all"
+                    output = self._request("GET", target)
+                    logger.debug(f"Backup status: {output}")
+        except RetryError as e:
+            logger.error(f"_request failed with: {e}")
+            return BackupServiceState.RESPONSE_FAILED_NETWORK
         return self.get_service_status(output)
 
     def _on_s3_credentials_changed(self, event: EventBase) -> None:
@@ -424,7 +485,9 @@ class OpenSearchBackup(Object):
 
         try:
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
-            self.charm.plugin_manager._configure_if_needed(plugin)
+            if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
+                self.charm.plugin_manager.apply_config(plugin.disable())
+            self.charm.plugin_manager.apply_config(plugin.config())
         except OpenSearchError as e:
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 self.charm.status.set(WaitingStatus("s3-changed: cluster not ready yet"))
@@ -480,20 +543,8 @@ class OpenSearchBackup(Object):
             self.charm.model.get_relation(S3_RELATION)
             and self.charm.model.get_relation(S3_RELATION).units
         ):
-            # There are still members in the relation, defer until it is finished
-            # Make a relation-change in the peer relation, so it triggers this unit back
-            counter = self.charm.peers_data.get(Scope.UNIT, "s3_broken")
-            if counter:
-                self.charm.peers_data.put(Scope.UNIT, "s3_broken", counter + 1)
-            else:
-                self.charm.peers_data.put(Scope.UNIT, "s3_broken", 1)
             event.defer()
             return
-
-        # Second part of this work-around
-        if self.charm.peers_data.get(Scope.UNIT, "s3_broken"):
-            # Now, we can delete it
-            self.charm.peers_data.delete(Scope.UNIT, "s3_broken")
 
         self.charm.status.set(MaintenanceStatus("Disabling backup service..."))
         snapshot_status = self._check_snapshot_status()
@@ -529,11 +580,9 @@ class OpenSearchBackup(Object):
             self._execute_s3_broken_calls()
 
         try:
-            self.charm.plugin_manager.set_event_scope(
-                OpenSearchPluginEventScope.RELATION_BROKEN_EVENT
-            )
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
-            self.charm.plugin_manager._disable_if_needed(plugin)
+            if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
+                self.charm.plugin_manager.apply_config(plugin.disable())
         except OpenSearchError as e:
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 self.charm.status.set(WaitingStatus("s3-broken event: cluster not ready yet"))
@@ -543,14 +592,8 @@ class OpenSearchBackup(Object):
                 )
                 # There was an unexpected error, log it and block the unit
                 logger.error(e)
-            self.charm.plugin_manager.reset_event_scope()
             event.defer()
             return
-        # we need to do this task, so we will ask for an exception from lint
-        except:  # noqa: E722
-            self.charm.plugin_manager.reset_event_scope()
-            return
-        self.charm.plugin_manager.reset_event_scope()
         self.charm.status.set(ActiveStatus())
 
     def _execute_s3_broken_calls(self):
@@ -560,13 +603,13 @@ class OpenSearchBackup(Object):
     def _check_repo_status(self) -> BackupServiceState:
         try:
             return self.get_service_status(self._request("GET", f"_snapshot/{S3_REPOSITORY}"))
-        except (ValueError, OpenSearchHttpError, requests.HTTPError):
+        except OpenSearchHttpError:
             return BackupServiceState.RESPONSE_FAILED_NETWORK
 
     def _check_snapshot_status(self) -> BackupServiceState:
         try:
             return self.get_snapshot_status(self._request("GET", "/_snapshot/_status"))
-        except (ValueError, OpenSearchHttpError, requests.HTTPError):
+        except OpenSearchHttpError:
             return BackupServiceState.RESPONSE_FAILED_NETWORK
 
     def _get_endpoint_protocol(self, endpoint: str) -> str:
@@ -642,7 +685,6 @@ class OpenSearchBackup(Object):
         Raises:
           - ValueError
           - OpenSearchHttpError
-          - requests.HTTPError
         """
         if "retries" not in kwargs.keys():
             kwargs["retries"] = 6
