@@ -13,6 +13,7 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import Any, Dict, List, Optional
 
+from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -270,17 +271,25 @@ class OpenSearchPluginManager:
         self._keystore.delete(config.secret_entries_to_del)
         self._keystore.add(config.secret_entries_to_add)
         # Add and remove configuration if applies
-        if config.config_entries_to_del:
+        settings = ClusterTopology.get_cluster_settings(
+            self._charm.opensearch,
+            include_defaults=True,
+        )
+        should_restart = False
+        # Do we have the option set?
+        if any([key in config.config_entries_to_del for key in settings.keys()]):
             self._opensearch_config.delete_plugin(config.config_entries_to_del)
+            should_restart = True
 
         if config.config_entries_to_add:
             self._opensearch_config.add_plugin(config.config_entries_to_add)
+            should_restart = True
 
         if config.secret_entries_to_del or config.secret_entries_to_add:
             self._keystore.reload_keystore()
 
         # Return True if some configuration entries changed
-        return True if config.config_entries_to_add or config.config_entries_to_del else False
+        return should_restart
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""
