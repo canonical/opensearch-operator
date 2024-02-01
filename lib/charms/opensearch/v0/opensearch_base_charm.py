@@ -187,6 +187,10 @@ class OpenSearchBaseCharm(CharmBase):
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
+        # Ensure the leader will check lock status at every hook execution
+        if self.model.unit.is_leader():
+            self.on[SERVICE_MANAGER].process_locks.emit()
+
     def _on_defer_trigger(self, _: DeferTriggerEvent):
         """Hook for the trigger_defer event."""
         pass
