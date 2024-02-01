@@ -262,7 +262,6 @@ async def get_secret_data(ops_test, secret_uri):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.usefixtures("only_with_juju_secrets")
 async def test_scaling_secrets(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag.
 
@@ -529,7 +528,6 @@ async def test_admin_permissions(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.usefixtures("only_with_juju_secrets")
 async def test_admin_permissions_secrets(ops_test: OpsTest):
     """Test admin permissions behave the way we want.
 
@@ -656,7 +654,6 @@ async def test_normal_user_permissions(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.usefixtures("only_with_juju_secrets")
 async def test_normal_user_permissions_secrets(ops_test: OpsTest):
     """Test normal user permissions behave the way we want.
 
@@ -767,7 +764,6 @@ async def test_relation_broken(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.usefixtures("only_with_juju_secrets")
 async def test_relation_broken_secrets(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     # Retrieve the relation user.
