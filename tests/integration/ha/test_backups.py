@@ -27,9 +27,9 @@ from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .helpers import (
     app_name,
     assert_continuous_writes_consistency,
-    start_and_check_continuous_writes,
     backup_cluster,
     restore_cluster,
+    start_and_check_continuous_writes,
 )
 from .helpers_data import index_docs_count
 
@@ -380,11 +380,12 @@ async def test_remove_and_readd_s3_relation(
         backups_by_cloud[cloud_name] = []
     backups_by_cloud[cloud_name].append(backup_id)
 
-    logger.info("Restoring backup")
-    assert await restore_cluster(
-        ops_test,
-        1,  # backup_id
-        unit_ip,
-        leader_id,
-    )
-    assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
+    for id in [1, backup_id]:
+        logger.info(f"Restoring backup-id: {id}")
+        assert await restore_cluster(
+            ops_test,
+            id,  # backup_id of the 1st backup and then the latest backup
+            unit_ip,
+            leader_id,
+        )
+        assert await start_and_check_continuous_writes(ops_test, unit_ip, app)

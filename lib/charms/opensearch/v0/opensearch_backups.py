@@ -614,8 +614,11 @@ class OpenSearchBackup(Object):
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 self.charm.plugin_manager.apply_config(plugin.disable())
         except OpenSearchBackupPluginNotSetError:
-            logger.warning("s3-credentials: plugin is missing: relation has not been configured.")
-            return
+            # Nothing to do here, as the plugin is not set and we only configure the
+            # plugin using API calls
+            logger.info(
+                "s3-broken event happened after relation info was removed - nothing to do here."
+            )
         except OpenSearchError as e:
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 self.charm.status.set(WaitingStatus("s3-broken event: cluster not ready yet"))
