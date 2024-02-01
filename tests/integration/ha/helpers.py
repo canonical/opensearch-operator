@@ -492,7 +492,7 @@ async def wait_restore_finish(ops_test, unit_ip):
                         raise Exception()
 
 
-async def continuous_writes_increases(ops_test: OpsTest, unit_ip: str, app: str) -> bool:
+async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app: str) -> bool:
     """Asserts that ContinuousWrites.INDEX_NAME is writable.
 
     Given we are restoring an index, we need to make sure ContinuousWrites restart at
@@ -506,7 +506,7 @@ async def continuous_writes_increases(ops_test: OpsTest, unit_ip: str, app: str)
     )
     writer = ContinuousWrites(ops_test, app, initial_count=initial_count)
     await writer.start()
-    time.sleep(5)
+    time.sleep(10)
     result = await writer.stop()
     return result.count > initial_count
 

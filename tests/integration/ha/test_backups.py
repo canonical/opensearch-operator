@@ -27,7 +27,7 @@ from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .helpers import (
     app_name,
     assert_continuous_writes_consistency,
-    assert_continuous_writes_increasing,
+    start_and_check_continuous_writes,
     backup_cluster,
     restore_cluster,
 )
@@ -261,7 +261,7 @@ async def test_restore_cluster(
         unit_ip,
         leader_id,
     )
-    assert await assert_continuous_writes_increasing(ops_test, unit_ip, app)
+    assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
 
 
 @pytest.mark.parametrize(
@@ -325,7 +325,7 @@ async def test_restore_cluster_after_app_destroyed(
     if cloud_name not in backups_by_cloud:
         backups_by_cloud[cloud_name] = []
     backups_by_cloud[cloud_name].append(backup_id)
-    assert await assert_continuous_writes_increasing(ops_test, leader_unit_ip, app)
+    assert await start_and_check_continuous_writes(ops_test, leader_unit_ip, app)
 
 
 @pytest.mark.parametrize(
@@ -387,4 +387,4 @@ async def test_remove_and_readd_s3_relation(
         unit_ip,
         leader_id,
     )
-    assert await assert_continuous_writes_increasing(ops_test, unit_ip, app)
+    assert await start_and_check_continuous_writes(ops_test, unit_ip, app)

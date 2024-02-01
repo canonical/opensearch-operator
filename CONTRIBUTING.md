@@ -99,7 +99,7 @@ For that, pass the access / secret / service account information as env. variabl
 To run the test only against microceph:
 
 ```shell
-tox -e integration -- tests/integration/ha/test_backups.py  # test backup service
+tox -e integration -- tests/integration/ha/test_backups.py --group='microceph' # test backup service
 ```
 
 And against public clouds + microceph:
