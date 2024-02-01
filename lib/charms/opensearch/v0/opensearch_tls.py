@@ -23,10 +23,10 @@ from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.tls_certificates_interface.v2.tls_certificates import (
+from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiringEvent,
-    TLSCertificatesRequiresV2,
+    TLSCertificatesRequiresV3,
     generate_csr,
     generate_private_key,
 )
@@ -54,7 +54,7 @@ class OpenSearchTLS(Object):
 
         self.charm = charm
         self.peer_relation = peer_relation
-        self.certs = TLSCertificatesRequiresV2(charm, TLS_RELATION)
+        self.certs = TLSCertificatesRequiresV3(charm, TLS_RELATION)
 
         self.framework.observe(
             self.charm.on.set_tls_private_key_action, self._on_set_tls_private_key
