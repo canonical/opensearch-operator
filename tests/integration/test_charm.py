@@ -64,6 +64,9 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     result = await run_action(ops_test, 0, "get-password")
     assert result.status == "failed"
 
+    # Deploy TLS Certificates operator.
+    config = {"ca-common-name": "CN_CA"}
+    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(

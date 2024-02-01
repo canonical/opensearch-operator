@@ -8,6 +8,8 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
+from tests.integration.ha.continuous_writes import ContinuousWrites
+
 from ..ha.helpers import SECOND_APP_NAME, assert_continuous_writes_consistency
 from ..helpers import (
     APP_NAME,
@@ -60,8 +62,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 # using a unit without need - when other tests may need the unit on the CI
 @pytest.mark.group(1)
 async def test_multi_clusters_db_isolation(
-    ops_test: OpsTest,
-    c_writes,
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Check that writes in cluster not replicated to another cluster."""
     app = (await app_name(ops_test)) or APP_NAME

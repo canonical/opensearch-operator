@@ -58,10 +58,12 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     model_conf["update-status-hook-interval"] = "1m"
     await ops_test.model.set_config(model_conf)
 
+    config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
             my_charm, num_units=3, series=SERIES, config={"plugin_opensearch_knn": True}
         ),
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
     )
 
     # Relate it to OpenSearch to set up TLS.
