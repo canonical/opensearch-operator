@@ -2,7 +2,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import glob
 import os
 import pathlib
@@ -57,17 +56,17 @@ async def _build(ops_test, charmpath):
 
 
 @pytest.fixture(scope="module")
-def application_charm(ops_test: OpsTest):
+async def application_charm(ops_test: OpsTest):
     """Build the application charm."""
     shutil.copyfile(
         "./lib/charms/data_platform_libs/v0/data_interfaces.py",
         "./tests/integration/relations/opensearch_provider/application-charm/lib/charms/data_platform_libs/v0/data_interfaces.py",
     )
     test_charm_path = "./tests/integration/relations/opensearch_provider/application-charm"
-    return asyncio.get_event_loop().run_until_complete(_build(ops_test, test_charm_path))
+    return await _build(ops_test, test_charm_path)
 
 
 @pytest.fixture(scope="module")
-def opensearch_charm(ops_test: OpsTest):
+async def opensearch_charm(ops_test: OpsTest):
     """Build the opensearch charm as well."""
-    return asyncio.get_event_loop().run_until_complete(_build(ops_test, "."))
+    return await _build(ops_test, ".")

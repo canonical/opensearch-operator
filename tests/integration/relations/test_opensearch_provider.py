@@ -464,70 +464,6 @@ async def test_admin_relation(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_admin_permissions(ops_test: OpsTest):
-    """Test admin permissions behave the way we want.
-
-    admin-only actions include:
-    - creating multiple indices
-    - removing indices they've created
-    - set cluster roles.
-
-    verify that:
-    - we can't remove .opendistro_security index
-      - otherwise create client-admin-role
-    - verify neither admin nor default users can access user api
-      - otherwise create client-default-role
-    """
-    test_unit = ops_test.model.applications[CLIENT_APP_NAME].units[0]
-    # Verify admin can't access security API
-    security_api_endpoint = "/_plugins/_security/api/internalusers"
-    run_dump_users = await run_request(
-        ops_test,
-        unit_name=test_unit.name,
-        endpoint=security_api_endpoint,
-        method="GET",
-        relation_id=admin_relation.id,
-        relation_name=ADMIN_RELATION_NAME,
-    )
-    results = json.loads(run_dump_users["results"])
-    logging.info(results)
-    assert "403 Client Error: Forbidden for url:" in results[0], results
-
-    # verify admin can't delete users
-    first_relation_user = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
-    )
-    first_relation_user_endpoint = f"/_plugins/_security/api/internalusers/{first_relation_user}"
-    run_delete_users = await run_request(
-        ops_test,
-        unit_name=test_unit.name,
-        endpoint=first_relation_user_endpoint,
-        method="DELETE",
-        relation_id=admin_relation.id,
-        relation_name=ADMIN_RELATION_NAME,
-    )
-    results = json.loads(run_delete_users["results"])
-    logging.info(results)
-    assert "403 Client Error: Forbidden for url:" in results[0], results
-
-    # verify admin can't modify protected indices
-    for protected_index in PROTECTED_INDICES:
-        protected_index_endpoint = f"/{protected_index}"
-        run_remove_distro = await run_request(
-            ops_test,
-            unit_name=test_unit.name,
-            endpoint=protected_index_endpoint,
-            method="DELETE",
-            relation_id=admin_relation.id,
-            relation_name=ADMIN_RELATION_NAME,
-        )
-        results = json.loads(run_remove_distro["results"])
-        logging.info(results)
-        assert "Error:" in results[0], results
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
 async def test_admin_permissions_secrets(ops_test: OpsTest):
     """Test admin permissions behave the way we want.
 
@@ -596,64 +532,6 @@ async def test_admin_permissions_secrets(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_normal_user_permissions(ops_test: OpsTest):
-    """Test normal user permissions behave the way we want.
-
-    verify that:
-    - we can't remove .opendistro_security index
-    - verify neither admin nor default users can access user api
-    """
-    test_unit = ops_test.model.applications[CLIENT_APP_NAME].units[0]
-
-    # Verify normal users can't access security API
-    security_api_endpoint = "/_plugins/_security/api/internalusers"
-    run_dump_users = await run_request(
-        ops_test,
-        unit_name=test_unit.name,
-        endpoint=security_api_endpoint,
-        method="GET",
-        relation_id=client_relation.id,
-        relation_name=FIRST_RELATION_NAME,
-    )
-    results = json.loads(run_dump_users["results"])
-    logging.info(results)
-    assert "403 Client Error: Forbidden for url:" in results[0], results
-
-    # verify normal users can't delete users
-    first_relation_user = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
-    )
-    first_relation_user_endpoint = f"/_plugins/_security/api/internalusers/{first_relation_user}"
-    run_delete_users = await run_request(
-        ops_test,
-        unit_name=test_unit.name,
-        endpoint=first_relation_user_endpoint,
-        method="DELETE",
-        relation_id=client_relation.id,
-        relation_name=FIRST_RELATION_NAME,
-    )
-    results = json.loads(run_delete_users["results"])
-    logging.info(results)
-    assert "403 Client Error: Forbidden for url:" in results[0], results
-
-    # verify user can't modify protected indices
-    for protected_index in PROTECTED_INDICES:
-        protected_index_endpoint = f"/{protected_index}"
-        run_remove_index = await run_request(
-            ops_test,
-            unit_name=test_unit.name,
-            endpoint=protected_index_endpoint,
-            method="DELETE",
-            relation_id=client_relation.id,
-            relation_name=FIRST_RELATION_NAME,
-        )
-        results = json.loads(run_remove_index["results"])
-        logging.info(results)
-        assert "Error:" in results[0], results
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
 async def test_normal_user_permissions_secrets(ops_test: OpsTest):
     """Test normal user permissions behave the way we want.
 
@@ -711,55 +589,6 @@ async def test_normal_user_permissions_secrets(ops_test: OpsTest):
         results = json.loads(run_remove_index["results"])
         logging.info(results)
         assert "Error:" in results[0], results
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_relation_broken(ops_test: OpsTest):
-    """Test that the user is removed when the relation is broken."""
-    # Retrieve the relation user.
-    relation_user = await get_application_relation_data(
-        ops_test, f"{CLIENT_APP_NAME}/0", FIRST_RELATION_NAME, "username"
-    )
-    await ops_test.model.wait_for_idle(
-        status="active",
-        apps=[SECONDARY_CLIENT_APP_NAME] + ALL_APPS,
-        idle_period=70,
-        timeout=1600,
-    )
-
-    # Break the relation.
-    await asyncio.gather(
-        ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
-            f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
-            f"{CLIENT_APP_NAME}:{FIRST_RELATION_NAME}",
-        ),
-        ops_test.model.applications[OPENSEARCH_APP_NAME].remove_relation(
-            f"{OPENSEARCH_APP_NAME}:{ClientRelationName}",
-            f"{CLIENT_APP_NAME}:{ADMIN_RELATION_NAME}",
-        ),
-    )
-
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[CLIENT_APP_NAME], status="blocked", idle_period=70),
-        ops_test.model.wait_for_idle(
-            apps=[OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, SECONDARY_CLIENT_APP_NAME],
-            status="active",
-            idle_period=70,
-            timeout=1600,
-        ),
-    )
-
-    leader_ip = await get_leader_unit_ip(ops_test)
-    users = await http_request(
-        ops_test,
-        "GET",
-        f"https://{ip_to_url(leader_ip)}:9200/_plugins/_security/api/internalusers/",
-        verify=False,
-    )
-    logger.info(relation_user)
-    logger.info(users)
-    assert relation_user not in users.keys()
 
 
 @pytest.mark.group(1)
