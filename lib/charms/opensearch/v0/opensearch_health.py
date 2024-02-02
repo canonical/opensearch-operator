@@ -157,7 +157,6 @@ class OpenSearchHealth:
         message = WaitingForSpecificBusyShards.format(" - ".join(message))
         self._charm.status.set(WaitingStatus(message))
 
-    @staticmethod
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
