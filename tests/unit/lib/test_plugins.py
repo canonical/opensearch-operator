@@ -333,6 +333,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
             [call("POST", "_nodes/reload_secure_settings")]
         )
 
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.ClusterTopology.get_cluster_settings")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._extra_conf")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
     @patch(
@@ -341,16 +342,15 @@ class TestOpenSearchPlugin(unittest.TestCase):
     @patch(
         "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._installed_plugins"
     )
-    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
     def test_disable_plugin(
         self,
         _,
-        mock_load,
         mock_installed_plugins,
         mock_plugin_relation,
         mock_is_enabled,
-        mock_extra_conf,
+        __,
+        mock_get_cluster_settings,
     ) -> None:
         """Tests end-to-end the disable of a plugin."""
         # Keystore-related mocks
@@ -370,8 +370,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         # Mock _installed_plugins to return test
         mock_installed_plugins.return_value = ["test"]
 
-        # load_node will be called multiple times
-        mock_load.side_effect = {"param": "tested"}
+        mock_get_cluster_settings.return_value = {"param": "tested"}
         mock_plugin_relation.return_value = False
         # plugin is initially disabled and enabled when method self._disable calls self.status
         mock_is_enabled.return_value = True

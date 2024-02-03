@@ -369,9 +369,16 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
+        if self.unit == event.departing_unit:
+            # If this unit is leaving, then it will get N-1 -departed events
+            # we do not want it to run the logic below for each of them
+            # Run at the next leader-elected instead
+            return
+
         if not (self.unit.is_leader() and self.opensearch.is_node_up()):
             return
 
+        # It means the leader is processing a non-leader leaving the cluster
         remaining_nodes = [
             node
             for node in self._get_nodes(True)
