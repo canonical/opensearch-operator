@@ -372,11 +372,15 @@ class OpenSearchBaseCharm(CharmBase):
         if not (self.unit.is_leader() and self.opensearch.is_node_up()):
             return
 
-        remaining_nodes = [
-            node
-            for node in self._get_nodes(True)
-            if node.name != event.departing_unit.name.replace("/", "-")
-        ]
+        departing_node = event.departing_unit.name.replace("/", "-")
+        current_nodes = self._get_nodes(True)
+        remaining_nodes = [node for node in current_nodes if node.name != departing_node]
+
+        # the departing unit(s) haven't yet stopped - we do the re-balancing only after
+        # the departing unit(s) fully stopped.
+        if len(current_nodes) > len(remaining_nodes):
+            event.defer()
+            return
 
         if len(remaining_nodes) == self.app.planned_units():
             self._compute_and_broadcast_updated_topology(remaining_nodes)
@@ -405,13 +409,6 @@ class OpenSearchBaseCharm(CharmBase):
                 # todo: remove this if snap storage reuse is solved.
                 self.peers_data.delete(Scope.APP, "security_index_initialised")
 
-        # we attempt to flush the translog to disk
-        if self.opensearch.is_node_up():
-            try:
-                self.opensearch.request("POST", "/_flush?wait_for_ongoing", retries=3)
-            except OpenSearchHttpError:
-                # if it's a failed attempt we move on
-                pass
         try:
             self._stop_opensearch()
         finally:
@@ -729,6 +726,12 @@ class OpenSearchBaseCharm(CharmBase):
             else:
                 # 1. Add current node to the voting + alloc exclusions
                 self.opensearch_alloc.exclusions.add_current()
+
+                # we attempt to flush the translog to disk
+                self.opensearch.request(
+                    "POST", "/_flush?wait_for_ongoing=true", resp_status_code=True, retries=3
+                )
+
                 self.health.wait_for_shards_relocation()
 
                 # we check if risk of data loss
