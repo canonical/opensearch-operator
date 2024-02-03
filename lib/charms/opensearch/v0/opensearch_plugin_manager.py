@@ -15,7 +15,10 @@ from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
+    OpenSearchHttpError,
+)
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
@@ -128,15 +131,44 @@ class OpenSearchPluginManager:
             }
         return {**self._charm_config, "opensearch-version": self._opensearch.version}
 
+    def _is_cluster_ready(self) -> bool:
+        """Returns True if the cluster is ready."""
+        try:
+            total_units = len(self.app.planned_units)
+
+            # Get the local node information
+            nodes_local_output = self.request(
+                "GET",
+                "/_nodes/process",
+                use_localhost=True,
+            )
+            if len(nodes_local_output.get("_nodes", {}).get("successful", -1)) != total_units:
+                return False
+
+            # Now check if all the nodes are up and seeing the right counts
+            for node in nodes_local_output["nodes"].values():
+                resp = self.request(
+                    "GET",
+                    "/_nodes/process",
+                    use_localhost=False,
+                    host=node["ip"],
+                )
+                if len(resp.get["_nodes"].get("successful", -1)) != total_units:
+                    return False
+
+            return (
+                self._charm.opensearch.is_started()
+                and self._charm.health.apply(wait_for_green_first=True) == HealthColors.GREEN
+            )
+        except (OpenSearchHttpError, Exception):
+            return False
+
     def run(self) -> bool:
         """Runs a check on each plugin: install, execute config changes or remove.
 
         This method should be called at config-changed event. Returns if needed restart.
         """
-        if not self._charm.opensearch.is_started() or self._charm.health.apply() not in [
-            HealthColors.GREEN,
-            HealthColors.YELLOW,
-        ]:
+        if not self._is_cluster_ready():
             # If the health is not green, then raise a cluster-not-ready error
             # The classes above should then defer their own events in waiting.
             # Defer is important as next steps to configure plugins will involve

@@ -372,7 +372,8 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit == event.departing_unit:
             # If this unit is leaving, then it will get N-1 -departed events
             # we do not want it to run the logic below for each of them
-            # Run at the next leader-elected instead
+            # If this unit is the leader, then node roles will be recomputed
+            # anyway at the next leader-elected
             return
 
         if not (self.unit.is_leader() and self.opensearch.is_node_up()):

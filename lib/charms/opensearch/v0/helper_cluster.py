@@ -65,37 +65,18 @@ class ClusterTopology:
         include_defaults: bool = False,
     ) -> Dict[str, any]:
         """Get the cluster settings."""
-
-        def _convert_settings(settings):
-            """Converts the settings dictionary.
-
-            Original format: {"knn": {"plugin": {"enabled": True} } }
-            to:              {'knn.plugin.enabled': True}
-
-            Which is the format found in the opensearch.yaml.
-            """
-            for key, value in settings.items():
-                if isinstance(value, dict):
-                    for k, v in value.items():
-                        yield from _convert_settings({f"{key}.{k}": v})
-                else:
-                    yield {key: value}
-
+        default = "true" if include_defaults else "false"
         settings = opensearch.request(
             "GET",
-            f"/_cluster/settings?include_defaults={'true' if include_defaults else 'false'}",
+            f"/_cluster/settings?flat_settings=true&include_defaults={default}",
             host=host,
             alt_hosts=alt_hosts,
         )
 
         result = {}
-        for el in ["persistent", "transient", "defaults"]:
+        for el in ["defaults", "transient", "persistent"]:
             if el in settings:
-                for item in _convert_settings(settings[el]):
-                    result = {
-                        **result,
-                        **item,
-                    }
+                result = {**result, **settings[el]}
         return result
 
     @staticmethod
