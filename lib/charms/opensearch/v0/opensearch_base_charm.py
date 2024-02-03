@@ -510,7 +510,9 @@ class OpenSearchBaseCharm(CharmBase):
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
+            self.status.clear(PluginConfigStart)
         except OpenSearchPluginRelationClusterNotReadyError:
+            self.status.clear(PluginConfigStart)
             logger.warning("Plugin management: cluster not ready yet at config changed")
             event.defer()
             return
@@ -519,7 +521,6 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
         self.status.clear(PluginConfigChangeError)
-        self.status.clear(PluginConfigStart)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
