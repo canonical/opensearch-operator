@@ -9,17 +9,11 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
 from dateutil.parser import parse
-from integration.helpers import cluster_health, get_leader_unit_ip, http_request
 from pytest_operator.plugin import OpsTest
-from tenacity import (
-    RetryError,
-    Retrying,
-    retry,
-    stop_after_attempt,
-    stop_after_delay,
-    wait_fixed,
-    wait_random,
-)
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+
+from tests.integration.ha.helpers import get_shards_by_state
+from tests.integration.helpers import cluster_health, get_leader_unit_ip
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)s", datefmt="%H:%M:%S"
@@ -366,34 +360,3 @@ async def wait_until(  # noqa: C901
         )
         _dump_juju_logs(model=ops_test.model.info.name, lines=3000)
         raise
-
-
-@retry(
-    wait=wait_fixed(wait=15) + wait_random(0, 5),
-    stop=stop_after_attempt(25),
-)
-async def get_shards_by_state(ops_test: OpsTest, unit_ip: str) -> Dict[str, List[str]]:
-    """Returns all shard statuses for all indexes in the cluster.
-
-    Args:
-        ops_test: The ops test framework instance.
-        unit_ip: The ip of the OpenSearch unit.
-
-    Returns:
-        Whether all indexes have been successfully replicated and shards started.
-    """
-    response = await http_request(
-        ops_test,
-        "GET",
-        f"https://{unit_ip}:9200/_cat/shards",
-    )
-
-    logger.info(f"Shards:\n{response}")
-
-    indexes_by_status = {}
-    for shard in response:
-        indexes_by_status.setdefault(shard["state"], []).append(
-            f"{shard['node']}/{shard['index']}"
-        )
-
-    return indexes_by_status
