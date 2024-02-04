@@ -134,26 +134,24 @@ class OpenSearchPluginManager:
     def _is_cluster_ready(self) -> bool:
         """Returns True if the cluster is ready."""
         try:
-            total_units = len(self.app.planned_units)
+            total_units = self._charm.app.planned_units()
 
             # Get the local node information
-            nodes_local_output = self.request(
+            nodes_local_output = self._opensearch.request(
                 "GET",
                 "/_nodes/process",
-                use_localhost=True,
             )
-            if len(nodes_local_output.get("_nodes", {}).get("successful", -1)) != total_units:
+            if nodes_local_output.get("_nodes", {}).get("successful", -1) != total_units:
                 return False
 
             # Now check if all the nodes are up and seeing the right counts
             for node in nodes_local_output["nodes"].values():
-                resp = self.request(
+                resp = self._opensearch.request(
                     "GET",
                     "/_nodes/process",
-                    use_localhost=False,
                     host=node["ip"],
                 )
-                if len(resp.get["_nodes"].get("successful", -1)) != total_units:
+                if resp["_nodes"].get("successful", -1) != total_units:
                     return False
 
             return (
