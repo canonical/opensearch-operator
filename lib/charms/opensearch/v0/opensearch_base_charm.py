@@ -484,9 +484,10 @@ class OpenSearchBaseCharm(CharmBase):
         self.status.set(MaintenanceStatus(PluginConfigStart))
         try:
             if self.plugin_manager.run():
-                self.on[self.service_manager.name].acquire_lock.emit(
-                    callback_override="_restart_opensearch"
-                )
+                # self.on[self.service_manager.name].acquire_lock.emit(
+                #     callback_override="_restart_opensearch"
+                # )
+                pass
         except OpenSearchPluginRelationClusterNotReadyError:
             logger.warning("Plugin management: cluster not ready yet at config changed")
             event.defer()

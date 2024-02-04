@@ -12,9 +12,6 @@ from dateutil.parser import parse
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.ha.helpers import get_shards_by_state
-from tests.integration.helpers import cluster_health, get_leader_unit_ip
-
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)s", datefmt="%H:%M:%S"
 )
@@ -344,12 +341,6 @@ async def wait_until(  # noqa: C901
                 ):
                     logger.info(f"{now()} -- Waiting for model: complete.\n\n\n")
                     return
-
-                health = await cluster_health()
-                shards = await get_shards_by_state(
-                    ops_test, await get_leader_unit_ip(ops_test, "opensearch")
-                )
-                logger.info(f"\n\nHealth: {health}\nShards: {shards}\n\n")
                 raise Exception
     except RetryError:
         logger.error("wait_until -- Timed out!\n\n\n")

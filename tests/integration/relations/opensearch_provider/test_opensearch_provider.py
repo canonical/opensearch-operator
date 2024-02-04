@@ -11,12 +11,10 @@ import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.helpers import get_shards_by_state
 from tests.integration.helpers import APP_NAME as OPENSEARCH_APP_NAME
 from tests.integration.helpers import (
     MODEL_CONFIG,
     SERIES,
-    cluster_health,
     get_application_unit_ids,
     get_leader_unit_ip,
     http_request,
@@ -287,13 +285,6 @@ async def test_scaling_secrets(ops_test: OpsTest):
 
     # Test scale down
     opensearch_unit_ids = get_application_unit_ids(ops_test, OPENSEARCH_APP_NAME)
-
-    health = await cluster_health()
-    shards = await get_shards_by_state(
-        ops_test, await get_leader_unit_ip(ops_test, OPENSEARCH_APP_NAME)
-    )
-    logger.info(f"\n\nHealth: {health}\nShards: {shards}\n\n")
-
     await ops_test.model.applications[OPENSEARCH_APP_NAME].destroy_unit(
         f"{OPENSEARCH_APP_NAME}/{max(opensearch_unit_ids)}"
     )
