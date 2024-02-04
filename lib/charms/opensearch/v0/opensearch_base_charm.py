@@ -378,9 +378,9 @@ class OpenSearchBaseCharm(CharmBase):
 
         # the departing unit(s) haven't yet stopped - we do the re-balancing only after
         # the departing unit(s) fully stopped.
-        if len(current_nodes) > len(remaining_nodes):
-            event.defer()
-            return
+        # if len(current_nodes) > len(remaining_nodes):
+        #     event.defer()
+        #     return
 
         if len(remaining_nodes) == self.app.planned_units():
             self._compute_and_broadcast_updated_topology(remaining_nodes)
