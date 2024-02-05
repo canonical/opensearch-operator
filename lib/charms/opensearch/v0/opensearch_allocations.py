@@ -14,7 +14,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_internal_data import Scope
 
 # The unique Charmhub library identifier, never change it
-LIBID = "51c1ac864e9a4d12b1d1ef27c0ff2e50"
+LIBID = "6bc81739e4a7453f9e2bf92017be33cd"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
@@ -33,6 +33,42 @@ class OpenSearchExclusionsException(OpenSearchError):
 
 ALLOCS_TO_DELETE = "allocation-exclusions-to-delete"
 VOTING_TO_DELETE = "delete-voting-exclusions"
+
+
+class OpenSearchAllocation:
+    """Operations related to shards allocations."""
+
+    def __init__(self, charm):
+        self._charm = charm
+        self._opensearch = self._charm.opensearch
+
+        self.exclusions = OpenSearchExclusions(charm)
+
+    def disable_replicas(self) -> bool:
+        """Disable the allocation of replica shards."""
+        try:
+            resp = self._opensearch.request(
+                method="PUT",
+                endpoint="/_cluster/settings",
+                payload={"persistent": {"cluster.routing.allocation.enable": "primaries"}},
+                retries=3,
+            )
+            return resp["acknowledged"]
+        except OpenSearchHttpError:
+            return False
+
+    def enable_all(self) -> bool:
+        """Enable all allocation (primaries, replica shards)."""
+        try:
+            resp = self._opensearch.request(
+                method="PUT",
+                endpoint="/_cluster/settings",
+                payload={"persistent": {"cluster.routing.allocation.enable": "all"}},
+                retries=3,
+            )
+            return resp["acknowledged"]
+        except OpenSearchHttpError:
+            return False
 
 
 class OpenSearchExclusions:

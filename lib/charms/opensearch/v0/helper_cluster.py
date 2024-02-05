@@ -273,13 +273,17 @@ class ClusterState:
         opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
-    ) -> List[Dict[str, str]]:
+    ) -> Dict[str, Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
-        endpoint = "/_cat/indices?expand_wildcards=all"
-        idx = {}
-        for index in opensearch.request("GET", endpoint, host=host, alt_hosts=alt_hosts):
-            idx[index["index"]] = {"health": index["health"], "status": index["status"]}
-        return idx
+        resp = opensearch.request(
+            "GET", "/_cat/indices?expand_wildcards=all", host=host, alt_hosts=alt_hosts
+        )
+
+        indices = {}
+        for index in resp:
+            indices[index["index"]] = {"health": index["health"], "status": index["status"]}
+
+        return indices
 
     @staticmethod
     def shards_by_state(
@@ -320,26 +324,3 @@ class ClusterState:
             busy_shards[unit_name].append(shard["index"])
 
         return busy_shards
-
-    @staticmethod
-    def health(
-        opensearch: OpenSearchDistribution,
-        wait_for_green: bool,
-        host: Optional[str] = None,
-        alt_hosts: Optional[List[str]] = None,
-    ) -> Dict[str, any]:
-        """Fetch the cluster health."""
-        endpoint = "/_cluster/health"
-
-        timeout = 5
-        if wait_for_green:
-            endpoint = f"{endpoint}?wait_for_status=green&timeout=1m"
-            timeout = 75
-
-        return opensearch.request(
-            "GET",
-            endpoint,
-            host=host,
-            alt_hosts=alt_hosts,
-            timeout=timeout,
-        )

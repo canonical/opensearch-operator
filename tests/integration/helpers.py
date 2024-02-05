@@ -299,6 +299,7 @@ async def http_request(
         payload: the body of the request if any.
         resp_status_code: whether to only return the http response code.
         verify: whether verify certificate chain or not
+        user: the opensearch user used to authentify the request
         user_password: use alternative password than the admin one in the secrets.
         app: the name of the current application.
         json_resp: return a json response or simply log
