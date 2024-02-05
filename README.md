@@ -18,7 +18,7 @@ Bootstrap a [lxd controller](https://juju.is/docs/olm/lxd#heading--create-a-cont
 juju add-model opensearch
 ```
 
-Configure the system settings required by [OpenSearch](https://opensearch.org/docs/2.6/opensearch/install/important-settings/),
+Configure the system settings required by [OpenSearch](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/),
 we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model. 
 As well as setting some kernel settings on the host machine.
 ```

@@ -68,7 +68,7 @@ charmcraft pack
 
 ### Deploy
 
-OpenSearch has a set of system requirements to correctly function, you can find the list [here](https://opensearch.org/docs/2.6/opensearch/install/important-settings/).
+OpenSearch has a set of system requirements to correctly function, you can find the list [here](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/).
 Some of those settings must be set using cloudinit-userdata on the model, while others must be set on the host machine:
 ```bash
 cat <<EOF > cloudinit-userdata.yaml
