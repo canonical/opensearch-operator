@@ -187,7 +187,7 @@ async def test_build_and_deploy(
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
-    tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
+    tls_config = {"ca-common-name": "CN_CA"}
 
     # Convert to integer as environ always returns string
     app_num_units = 3
@@ -211,8 +211,8 @@ async def test_build_and_deploy(
     )
 
     # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR_NAME)
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR_NAME)
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
@@ -272,8 +272,8 @@ async def test_restore_cluster_after_app_destroyed(ops_test: OpsTest) -> None:
         ops_test.model.deploy(my_charm, num_units=app_num_units, series=SERIES),
     )
     # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.relate(APP_NAME, S3_INTEGRATOR_NAME)
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR_NAME)
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME],
         status="active",
@@ -315,7 +315,7 @@ async def test_remove_and_readd_s3_relation(ops_test: OpsTest) -> None:
     )
 
     logger.info("Re-add s3-credentials relation")
-    await ops_test.model.relate(app, S3_INTEGRATOR_NAME)
+    await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR_NAME)
     await ops_test.model.wait_for_idle(
         apps=[app],
         status="active",
