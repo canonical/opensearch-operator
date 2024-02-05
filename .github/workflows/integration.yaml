@@ -126,7 +126,7 @@ jobs:
       - name: Get journalctl from LXCs if Needed
         if: ${{ failure() }}
         run: |
-          juju exec --application opensearch -- sudo journalctl --boot
+          juju exec -m test --application opensearch -- sudo journalctl --boot
 
 
   backup-microceph-integration-test:
