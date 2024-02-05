@@ -13,6 +13,7 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import Any, Dict, List, Optional
 
+from charms.opensearch.v0.constants_charm import PluginConfigStart
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -33,9 +34,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginRelationClusterNotReadyError,
     OpenSearchPluginRemoveError,
     PluginState,
-)
-from charms.opensearch.v0.constants_charm import (
-    PluginConfigStart,
 )
 from ops.model import MaintenanceStatus
 
