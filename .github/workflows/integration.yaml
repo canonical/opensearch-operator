@@ -123,11 +123,6 @@ jobs:
           SECRETS_FROM_GITHUB: ""
 #          SECRETS_FROM_GITHUB: ${{ secrets.integration-test }}
 
-      - name: Get journalctl from LXCs if Needed
-        if: ${{ failure() }}
-        run: |
-          juju exec -m test --application opensearch -- sudo journalctl --boot
-
 
   backup-microceph-integration-test:
     needs:
