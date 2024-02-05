@@ -39,7 +39,7 @@ IDLE_PERIOD = 75
 TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
 
 MODEL_CONFIG = {
-    "logging-config": "<root>=DEBUG;unit=DEBUG",
+    "logging-config": "<root>=INFO;unit=DEBUG",
     "update-status-hook-interval": "5m",
     "cloudinit-userdata": """postruncmd:
         - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
