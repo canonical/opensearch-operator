@@ -65,10 +65,9 @@ class ClusterTopology:
         include_defaults: bool = False,
     ) -> Dict[str, any]:
         """Get the cluster settings."""
-        default = "true" if include_defaults else "false"
         settings = opensearch.request(
             "GET",
-            f"/_cluster/settings?flat_settings=true&include_defaults={default}",
+            f"/_cluster/settings?flat_settings=true&include_defaults={str(include_defaults).lower()}",
             host=host,
             alt_hosts=alt_hosts,
         )
