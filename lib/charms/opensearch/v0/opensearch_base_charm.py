@@ -376,11 +376,11 @@ class OpenSearchBaseCharm(CharmBase):
         current_nodes = self._get_nodes(True)
         remaining_nodes = [node for node in current_nodes if node.name != departing_node]
 
-        # the departing unit(s) haven't yet stopped - we do the re-balancing only after
-        # the departing unit(s) fully stopped.
-        # if len(current_nodes) > len(remaining_nodes):
-        #     event.defer()
-        #     return
+        # check if the departing unit hasn't yet stopped - we only perform the
+        # re-balancing after the departing unit fully stopped.
+        if len(current_nodes) > len(remaining_nodes):
+            event.defer()
+            return
 
         if len(remaining_nodes) == self.app.planned_units():
             self._compute_and_broadcast_updated_topology(remaining_nodes)
@@ -730,7 +730,7 @@ class OpenSearchBaseCharm(CharmBase):
 
                 # we attempt to flush the translog to disk
                 self.opensearch.request(
-                    "POST", "/_flush?wait_for_ongoing=true", resp_status_code=True, retries=3
+                    "POST", "/_flush?wait_if_ongoing=true", resp_status_code=True, retries=3
                 )
 
                 self.health.wait_for_shards_relocation()
