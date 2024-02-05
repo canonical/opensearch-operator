@@ -321,9 +321,6 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
         model_name=model_name,
     )
 
-    import pdb
-
-    pdb.set_trace()
     # Set the config to false, then to true
     for knn_enabled in [False, True]:
         # get current timestamp, to compare with restarts later

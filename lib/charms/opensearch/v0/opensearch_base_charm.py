@@ -369,17 +369,9 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
-        if self.unit == event.departing_unit:
-            # If this unit is leaving, then it will get N-1 -departed events
-            # we do not want it to run the logic below for each of them
-            # If this unit is the leader, then node roles will be recomputed
-            # anyway at the next leader-elected
-            return
-
         if not (self.unit.is_leader() and self.opensearch.is_node_up()):
             return
 
-        # It means the leader is processing a non-leader leaving the cluster
         remaining_nodes = [
             node
             for node in self._get_nodes(True)
@@ -504,13 +496,11 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        self.status.set(MaintenanceStatus(PluginConfigStart))
         try:
             if self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
-            self.status.clear(PluginConfigStart)
         except OpenSearchPluginRelationClusterNotReadyError:
             self.status.clear(PluginConfigStart)
             logger.warning("Plugin management: cluster not ready yet at config changed")

@@ -34,6 +34,10 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginRemoveError,
     PluginState,
 )
+from charms.opensearch.v0.constants_charm import (
+    PluginConfigStart,
+)
+from ops.model import MaintenanceStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -184,6 +188,10 @@ class OpenSearchPluginManager:
                     restart_needed,
                 ]
             )
+            if restart_needed:
+                self._charm.status.set(MaintenanceStatus(PluginConfigStart))
+
+        self._charm.status.clear(PluginConfigStart)
         return restart_needed
 
     def _install_plugin(self, plugin: OpenSearchPlugin) -> bool:
