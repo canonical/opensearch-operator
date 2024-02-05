@@ -81,14 +81,14 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
-    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
+    config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(my_charm, num_units=2, series=SERIES),
     )
 
     # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
@@ -113,7 +113,7 @@ async def test_multi_clusters_db_isolation(
     # deploy new cluster
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.deploy(my_charm, num_units=1, application_name=SECOND_APP_NAME)
-    await ops_test.model.relate(SECOND_APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(SECOND_APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
     # wait
     await wait_until(

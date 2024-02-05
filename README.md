@@ -18,30 +18,32 @@ Bootstrap a [lxd controller](https://juju.is/docs/olm/lxd#heading--create-a-cont
 juju add-model opensearch
 ```
 
-Configure the system settings required by [OpenSearch](https://opensearch.org/docs/2.6/opensearch/install/important-settings/),
-we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model.
+Configure the system settings required by [OpenSearch](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/),
+we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model. 
+As well as setting some kernel settings on the host machine.
 ```
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
-    - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
-    - [ 'sysctl', '-w', 'vm.swappiness=0' ]
-    - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]
-    - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
+    - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
+    - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
+    - [ 'echo', 'net.ipv4.tcp_retries2=5', '>>', '/etc/sysctl.conf' ]
+    - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
+    - [ 'sysctl', '-p' ]
 EOF
 
-juju model-config ./cloudinit-userdata.yaml
-```
-or in a single machine:
-```
-sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
+echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
+echo "vm.swappiness=0" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+
+juju model-config --file=./cloudinit-userdata.yaml
 ```
 
 ### Basic Usage
 To deploy a single unit of OpenSearch using its default configuration.
 
 ```shell
-juju deploy opensearch --channel edge
+juju deploy opensearch --channel=2/edge
 ```
 
 ## Relations
@@ -53,26 +55,37 @@ Supported [relations](https://juju.is/docs/olm/relations):
 To connect to the Charmed OpenSearch Operator and exchange data, relate to the `opensearch-client` endpoint:
 
 ```shell
-juju deploy data-integrator --channel=edge
+juju deploy data-integrator --channel=2/edge
 juju relate opensearch data-integrator
 ```
 
-#### `tls-certificates` interface:
+### TLS:
 
-The Charmed OpenSearch Operator also supports TLS encryption on the HTTP and Transport layers. TLS is enabled by default:
+The Charmed OpenSearch Operator also supports TLS encryption on the HTTP and Transport layers. TLS is enabled by default.
+
+The charm relies on the `tls-certificates` interface.
+
+#### 1. Self-signed certificates:
 
 ```shell
-# Deploy the TLS Certificates Operator.
-juju deploy tls-certificates-operator --channel=edge
+# Deploy the self-signed TLS Certificates Operator.
+juju deploy self-signed-certificates --channel=latest/stable
+
 # Add the necessary configurations for TLS.
-juju config tls-certificates-operator generate-self-signed-certificates="true" ca-common-name="Test CA"
+juju config \
+    self-signed-certificates \
+    ca-common-name="Test CA" \
+    certificate-validity=365 \
+    root-ca-validity=365
+    
 # Enable TLS via relation.
-juju relate opensearch tls-certificates-operator
+juju integrate self-signed-certificates opensearch
+
 # Disable TLS by removing relation.
-juju remove-relation opensearch tls-certificates-operator
+juju remove-relation opensearch self-signed-certificates
 ```
 
-**Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the TLS Certificates Operator [here](https://charmhub.io/tls-certificates-operator).
+**Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The Self Signed Certificates Operator offers a variety of configuration options. Read more on the TLS Certificates Operator [here](https://charmhub.io/self-signed-certificates).
 
 ## Security
 Security issues in the Charmed OpenSearch Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
