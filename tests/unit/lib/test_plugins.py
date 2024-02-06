@@ -120,6 +120,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         }
         self.charm.opensearch.is_started = MagicMock(return_value=True)
         self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
+        self.plugin_manager._is_cluster_ready = MagicMock(return_value=True)
 
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_installed")

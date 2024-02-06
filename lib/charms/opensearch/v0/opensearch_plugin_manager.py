@@ -13,6 +13,7 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import Any, Dict, List, Optional
 
+from charms.opensearch.v0.constants_charm import PluginConfigStart
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -33,6 +34,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginRemoveError,
     PluginState,
 )
+from ops.model import MaintenanceStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -149,26 +151,19 @@ class OpenSearchPluginManager:
         err_msgs = []
         restart_needed = False
         for plugin in self.plugins:
-            # These are independent plugins.
-            # Any plugin that errors, if that is an OpenSearchPluginError, then
-            # it is an "expected" error, such as missing additional config; should
-            # not influence the execution of other plugins.
-            # Capture them and raise all of them at the end.
-            try:
-                restart_needed = any(
-                    [
-                        self._install_if_needed(plugin),
-                        self._configure_if_needed(plugin),
-                        self._disable_if_needed(plugin),
-                        self._remove_if_needed(plugin),
-                        restart_needed,
-                    ]
-                )
-            except OpenSearchPluginError as e:
-                err_msgs.append(str(e))
+            restart_needed = any(
+                [
+                    self._install_if_needed(plugin),
+                    self._configure_if_needed(plugin),
+                    self._disable_if_needed(plugin),
+                    self._remove_if_needed(plugin),
+                    restart_needed,
+                ]
+            )
+            if restart_needed:
+                self._charm.status.set(MaintenanceStatus(PluginConfigStart))
 
-        if err_msgs:
-            raise OpenSearchPluginError("\n".join(err_msgs))
+        self._charm.status.clear(PluginConfigStart)
         return restart_needed
 
     def _install_plugin(self, plugin: OpenSearchPlugin) -> bool:

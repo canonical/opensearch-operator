@@ -54,6 +54,7 @@ class TestOpenSearchKNN(unittest.TestCase):
         }
         self.charm.opensearch.is_started = MagicMock(return_value=True)
         self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
+        self.plugin_manager._is_cluster_ready = MagicMock(return_value=True)
 
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
