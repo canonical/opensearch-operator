@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+
 import json
 import logging
 import subprocess
@@ -18,9 +19,7 @@ from tenacity import (
     wait_random,
 )
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers_data import index_docs_count
-from tests.integration.helpers import (
+from ..helpers import (
     get_application_unit_ids,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
@@ -28,8 +27,15 @@ from tests.integration.helpers import (
     juju_version_major,
     run_action,
 )
+from .continuous_writes import ContinuousWrites
+from .helpers_data import index_docs_count
 
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
+
+
+SECOND_APP_NAME = "second-opensearch"
+ORIGINAL_RESTART_DELAY = 20
+RESTART_DELAY = 360
 
 
 logger = logging.getLogger(__name__)
@@ -205,6 +211,16 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
             )
         )
     return result
+
+
+async def assert_continuous_writes_increasing(
+    c_writes: ContinuousWrites,
+) -> None:
+    """Asserts that the continuous writes are increasing."""
+    writes_count = await c_writes.count()
+    time.sleep(5)
+    more_writes = await c_writes.count()
+    assert more_writes > writes_count, "Writes not continuing to DB"
 
 
 async def assert_continuous_writes_consistency(
@@ -476,8 +492,8 @@ async def wait_restore_finish(ops_test, unit_ip):
                         raise Exception()
 
 
-async def continuous_writes_increases(ops_test: OpsTest, unit_ip: str, app: str) -> bool:
-    """Asserts that TEST_BACKUP_INDEX is writable while under continuous writes.
+async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app: str) -> bool:
+    """Asserts that ContinuousWrites.INDEX_NAME is writable.
 
     Given we are restoring an index, we need to make sure ContinuousWrites restart at
     the tip of that index instead of doc_id = 0.
@@ -490,18 +506,19 @@ async def continuous_writes_increases(ops_test: OpsTest, unit_ip: str, app: str)
     )
     writer = ContinuousWrites(ops_test, app, initial_count=initial_count)
     await writer.start()
-    time.sleep(5)
+    time.sleep(10)
     result = await writer.stop()
     return result.count > initial_count
 
 
-async def backup_cluster(ops_test: OpsTest, leader_id: int) -> bool:
+async def backup_cluster(ops_test: OpsTest, leader_id: int) -> int:
     """Runs the backup of the cluster."""
     action = await run_action(ops_test, leader_id, "create-backup")
     logger.debug(f"create-backup output: {action}")
 
     await wait_backup_finish(ops_test, leader_id)
-    return action.status == "completed"
+    assert action.status == "completed"
+    return int(action.response["backup-id"])
 
 
 async def restore_cluster(ops_test: OpsTest, backup_id: int, unit_ip: str, leader_id: int) -> bool:
