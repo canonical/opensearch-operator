@@ -247,12 +247,7 @@ class TestHelperCluster(unittest.TestCase):
         """Test the get_cluster_settings method."""
         request_mock.return_value = {
             "persistent": {
-                "knn": {
-                    "plugin": {
-                        "enabled": "true",
-                    },
-                    "test": True,
-                },
+                "knn.plugin.enabled": "true",
                 "cluster.routing.allocation.enable": "all",
             },
             "transient": {
@@ -262,7 +257,6 @@ class TestHelperCluster(unittest.TestCase):
 
         expected_settings = {
             "knn.plugin.enabled": "true",
-            "knn.test": True,
             "cluster.routing.allocation.enable": "all",
             "indices.recovery.max_bytes_per_sec": "50mb",
         }
@@ -275,7 +269,7 @@ class TestHelperCluster(unittest.TestCase):
         self.assertEqual(settings, expected_settings)
         request_mock.assert_called_once_with(
             "GET",
-            "/_cluster/settings?include_defaults=true",
+            "/_cluster/settings?flat_settings=true&include_defaults=true",
             host=None,
             alt_hosts=None,
         )

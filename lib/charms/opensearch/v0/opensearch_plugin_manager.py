@@ -13,6 +13,7 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import Any, Dict, List, Optional
 
+from charms.opensearch.v0.constants_charm import PluginConfigStart
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
@@ -31,6 +32,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginRemoveError,
     PluginState,
 )
+from ops.model import MaintenanceStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -154,6 +156,10 @@ class OpenSearchPluginManager:
                     restart_needed,
                 ]
             )
+            if restart_needed:
+                self._charm.status.set(MaintenanceStatus(PluginConfigStart))
+
+        self._charm.status.clear(PluginConfigStart)
         return restart_needed
 
     def _install_plugin(self, plugin: OpenSearchPlugin) -> bool:
