@@ -220,10 +220,6 @@ class OpenSearchBaseCharm(CharmBase):
         # this is in case we're coming from 0 to N units, we don't want to use the rest api
         self._put_admin_user()
 
-        # Ensure the leader will check lock status at every hook execution
-        if self.model.get_relation(SERVICE_MANAGER):
-            self.on[SERVICE_MANAGER].process_locks.emit()
-
         self.status.clear(AdminUserInitProgress)
 
     def _on_start(self, event: StartEvent):
