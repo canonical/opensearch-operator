@@ -21,7 +21,6 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     PeerRelationName,
     PluginConfigChangeError,
-    PluginConfigStart,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -504,7 +503,6 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        self.status.set(MaintenanceStatus(PluginConfigStart))
         try:
             if self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
@@ -519,7 +517,6 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
         self.status.clear(PluginConfigChangeError)
-        self.status.clear(PluginConfigStart)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
