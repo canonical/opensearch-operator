@@ -252,6 +252,16 @@ class TestOpenSearchPlugin(unittest.TestCase):
         # Mock _installed_plugins to return test
         mock_installed_plugins.return_value = ["test"]
 
+        self.charm._get_nodes = MagicMock(
+            return_value={
+                "1": {},
+                "2": {},
+                "3": {},
+            }
+        )
+        self.charm.app.planned_units = MagicMock(return_value=3)
+        self.charm.opensearch.is_node_up = MagicMock(return_value=True)
+
         mock_load.return_value = {}
         # run is called, but only _configure method really matter:
         # Set install to false, so only _configure is evaluated
@@ -300,6 +310,16 @@ class TestOpenSearchPlugin(unittest.TestCase):
 
         # Return a fake content of the relation
         mock_process_relation.return_value = {"param": "tested"}
+
+        self.charm._get_nodes = MagicMock(
+            return_value={
+                "1": {},
+                "2": {},
+                "3": {},
+            }
+        )
+        self.charm.app.planned_units = MagicMock(return_value=3)
+        self.charm.opensearch.is_node_up = MagicMock(return_value=True)
 
         # Keystore-related mocks
         self.plugin_manager._keystore._add = MagicMock()
@@ -371,6 +391,16 @@ class TestOpenSearchPlugin(unittest.TestCase):
         }
         # Mock _installed_plugins to return test
         mock_installed_plugins.return_value = ["test"]
+
+        self.charm._get_nodes = MagicMock(
+            return_value={
+                "1": {},
+                "2": {},
+                "3": {},
+            }
+        )
+        self.charm.app.planned_units = MagicMock(return_value=3)
+        self.charm.opensearch.is_node_up = MagicMock(return_value=True)
 
         mock_get_cluster_settings.return_value = {"param": "tested"}
         mock_plugin_relation.return_value = False
