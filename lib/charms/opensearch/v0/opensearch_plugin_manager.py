@@ -135,10 +135,17 @@ class OpenSearchPluginManager:
 
         This method should be called at config-changed event. Returns if needed restart.
         """
-        if not self._charm.opensearch.is_started() or self._charm.health.apply() not in [
-            HealthColors.GREEN,
-            HealthColors.YELLOW,
-        ]:
+        if not (self._charm.opensearch.is_started() and self._charm.opensearch.is_node_up()):
+            raise OpenSearchPluginRelationClusterNotReadyError()
+
+        if not (
+            len(self._charm._get_nodes(True)) == self._charm.app.planned_units()
+            and self._charm.health.apply()
+            in [
+                HealthColors.GREEN,
+                HealthColors.YELLOW,
+            ]
+        ):
             # If the health is not green, then raise a cluster-not-ready error
             # The classes above should then defer their own events in waiting.
             # Defer is important as next steps to configure plugins will involve

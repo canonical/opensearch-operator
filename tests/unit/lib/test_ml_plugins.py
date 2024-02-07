@@ -93,6 +93,16 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.plugin_manager._opensearch_config.add_plugin = MagicMock()
         self.charm.status = MagicMock()
 
+        self.charm._get_nodes = MagicMock(
+            return_value={
+                "1": {},
+                "2": {},
+                "3": {},
+            }
+        )
+        self.charm.app.planned_units = MagicMock(return_value=3)
+        self.charm.opensearch.is_node_up = MagicMock(return_value=True)
+
         mock_cluster_settings.return_value = {"knn.plugin.enabled": True}
 
         self.harness.update_config({"plugin_opensearch_knn": False})
