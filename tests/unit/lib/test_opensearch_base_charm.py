@@ -187,6 +187,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         with patch(f"{self.OPENSEARCH_DISTRO}.start") as start:
             # initialisation of the security index
             _get_nodes.reset_mock()
+            self.charm.opensearch.is_node_up = MagicMock(return_value=True)
             self.peers_data.delete(Scope.APP, "security_index_initialised")
             _can_service_start.return_value = True
             self.harness.set_leader(True)

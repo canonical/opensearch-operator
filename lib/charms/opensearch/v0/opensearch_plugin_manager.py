@@ -268,26 +268,35 @@ class OpenSearchPluginManager:
         """
         self._keystore.delete(config.secret_entries_to_del)
         self._keystore.add(config.secret_entries_to_add)
-        # Add and remove configuration if applies
-        settings = ClusterTopology.get_cluster_settings(
-            self._charm.opensearch,
-            include_defaults=True,
-        )
-        should_restart = False
-        # Do we have the option set?
-        if any([key in config.config_entries_to_del for key in settings.keys()]):
-            self._opensearch_config.delete_plugin(config.config_entries_to_del)
-            should_restart = True
-
-        if config.config_entries_to_add:
-            self._opensearch_config.add_plugin(config.config_entries_to_add)
-            should_restart = True
-
         if config.secret_entries_to_del or config.secret_entries_to_add:
             self._keystore.reload_keystore()
 
-        # Return True if some configuration entries changed
-        return should_restart
+        # Add and remove configuration if applies
+        current_settings = ClusterTopology.get_cluster_settings(
+            self._charm.opensearch,
+            include_defaults=True,
+        )
+        to_remove = config.config_entries_to_del
+        if isinstance(config.config_entries_to_del, list):
+            # No keys should have value "None", therefore, setting them to None means
+            # the original current_settings will be changed.
+            to_remove = dict(
+                zip(config.config_entries_to_del, [None] * len(config.config_entries_to_del))
+            )
+        if current_settings == {
+            **current_settings,
+            **to_remove,
+            **config.config_entries_to_add,
+        }:
+            # Nothing to do here
+            return False
+
+        # Update the configuration
+        if config.config_entries_to_del:
+            self._opensearch_config.delete_plugin(config.config_entries_to_del)
+        if config.config_entries_to_add:
+            self._opensearch_config.add_plugin(config.config_entries_to_add)
+        return True
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""

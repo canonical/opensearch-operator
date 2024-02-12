@@ -14,6 +14,9 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
+SERVICE_MANAGER = "service"
+
+
 # Blocked statuses
 WaitingToStart = "Waiting for OpenSearch to start..."
 InstallError = "Could not install OpenSearch."
@@ -57,9 +60,11 @@ PClusterWrongRolesProvided = "Cannot start cluster with current set of roles."
 PClusterWrongNodesCountForQuorum = (
     "Even number of members in quorum if current unit started. Add or remove 1 unit."
 )
+LockIsBlockedOnUnit = "Lock in {} is blocked on unit: {}"
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
+LockRetryLater = "{} postponed: retrying to rerun later"
 
 
 # Maintenance statuses

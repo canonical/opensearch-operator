@@ -67,6 +67,12 @@ class OpenSearchSnap(OpenSearchDistribution):
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()
 
+    def is_active(self) -> bool:
+        """Check if OpenSearch daemon is active."""
+        if self._opensearch.services[self.SERVICE_NAME]["active"]:
+            return True
+        return False
+
     @override
     def _start_service(self):
         """Start the snap exposed "daemon" service."""

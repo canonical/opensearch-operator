@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Set, Union
 
 import requests
 import urllib3.exceptions
+from charms.opensearch.v0.constants_charm import SERVICE_MANAGER
 from charms.opensearch.v0.constants_secrets import ADMIN_PW
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
@@ -24,6 +25,7 @@ from charms.opensearch.v0.helper_networking import (
     get_host_ip,
     is_reachable,
     reachable_hosts,
+    unit_ip,
 )
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -104,11 +106,7 @@ class OpenSearchDistribution(ABC):
 
         # start the opensearch service
         self._start_service()
-
-        start = datetime.now()
-        while not _is_connected() and (datetime.now() - start).seconds < 75:
-            time.sleep(3)
-        else:
+        if not _is_connected():
             raise OpenSearchStartTimeoutError()
 
     def restart(self):
@@ -145,6 +143,10 @@ class OpenSearchDistribution(ABC):
 
         return reachable
 
+    def is_active(self) -> bool:
+        """Check if OpenSearch daemon is active."""
+        pass
+
     @abstractmethod
     def is_failed(self) -> bool:
         """Check if OpenSearch daemon has failed."""
@@ -157,6 +159,16 @@ class OpenSearchDistribution(ABC):
 
         try:
             resp_code = self.request("GET", "/_nodes", resp_status_code=True)
+            return resp_code < 400
+        except (OpenSearchHttpError, Exception):
+            return False
+
+    def is_remote_node_up(self, unit, relation: str = SERVICE_MANAGER) -> bool:
+        """Get status of current node. This assumes OpenSearch is Running."""
+        try:
+            resp_code = self.request(
+                "GET", "/_nodes", host=unit_ip(self._charm, unit, relation), resp_status_code=True
+            )
             return resp_code < 400
         except (OpenSearchHttpError, Exception):
             return False

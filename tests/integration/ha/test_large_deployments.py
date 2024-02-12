@@ -120,6 +120,8 @@ async def test_set_roles_manually(
         assert node.temperature is None, "Node temperature was erroneously set."
 
     # change cluster name and roles + temperature, should trigger a rolling restart
+
+    logger.info("Changing cluster name and roles + temperature.")
     await ops_test.model.applications[app].set_config(
         {"cluster_name": "new_cluster_name", "roles": "cluster_manager, data.cold"}
     )
@@ -131,6 +133,8 @@ async def test_set_roles_manually(
         wait_for_exact_units=len(nodes),
         idle_period=IDLE_PERIOD,
     )
+
+    logger.info("Checking if the cluster name and roles + temperature were changed.")
     assert await check_cluster_formation_successful(
         ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
     )
