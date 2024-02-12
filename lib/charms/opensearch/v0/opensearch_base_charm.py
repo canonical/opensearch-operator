@@ -447,14 +447,6 @@ class OpenSearchBaseCharm(CharmBase):
         if not self.opensearch.is_node_up():
             return
 
-        # Extra logging: list shards and index status
-        logger.debug(
-            "indices status:\n"
-            f"{self.opensearch.request('GET', '/_cat/indices?v')}\n"
-            "indices shards:\n"
-            f"{self.opensearch.request('GET', '/_cat/shards?v')}\n"
-        )
-
         # if there are exclusions to be removed
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
