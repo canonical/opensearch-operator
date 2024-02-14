@@ -10,6 +10,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchOpsLockAlreadyAcquiredError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
+from charms.rolling_ops.v0.retriable_rolling_ops import WorkloadLockManager
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
@@ -20,12 +21,12 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 
 
-class OpenSearchOpsLock:
+class OpenSearchOpsLock(WorkloadLockManager):
     """This class covers the configuration changes depending on certain actions."""
 
     LOCK_INDEX = ".ops_lock"
@@ -34,6 +35,38 @@ class OpenSearchOpsLock:
     def __init__(self, charm):
         self._charm = charm
         self._opensearch = charm.opensearch
+
+    def acquire_lock(self):
+        """Acquire the lock."""
+        self.acquire()
+
+    def release_lock(self):
+        """Release the lock."""
+        self.release()
+
+    def is_departing(self) -> bool:
+        """Checks if the lock is held."""
+        try:
+            status_code = self._opensearch.request(
+                "GET",
+                endpoint=f"/{OpenSearchOpsLock.LOCK_INDEX}",
+                host=self._charm.unit_ip if self._opensearch.is_node_up() else None,
+                alt_hosts=self._charm.alt_hosts,
+                retries=3,
+                resp_status_code=True,
+            )
+            if status_code < 300:
+                return True
+        except OpenSearchHttpError as e:
+            logger.warning(f"Error checking for ops_lock: {e}")
+            pass
+        return False
+
+    def can_node_be_safe_stopped(self) -> bool:
+        """Check if the node can be safely stopped."""
+        # TODO: use PR#175 logic to check if the node can be safely stopped
+        # based on the existing shards and replicas
+        return True
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(0.5), reraise=True)
     def acquire(self):

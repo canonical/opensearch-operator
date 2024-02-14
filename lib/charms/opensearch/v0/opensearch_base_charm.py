@@ -59,11 +59,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
-from charms.opensearch.v0.opensearch_locking import (
-    OpenSearchOpsLock,
-    OpenSearchRetryLockLaterException,
-    OpenSearchRollingOpsManager,
-)
+from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
     VOTING_TO_DELETE,
@@ -83,6 +79,10 @@ from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
+from charms.rolling_ops.v0.retriable_rolling_ops import (
+    RetriableRollingOpsManager,
+    RollingOpsRetryLockLaterError,
+)
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
@@ -154,8 +154,11 @@ class OpenSearchBaseCharm(CharmBase):
         self.plugin_manager = OpenSearchPluginManager(self)
         self.backup = OpenSearchBackup(self)
 
-        self.service_manager = OpenSearchRollingOpsManager(
-            self, relation=SERVICE_MANAGER, callback=self._restart_opensearch
+        self.service_manager = RetriableRollingOpsManager(
+            self,
+            relation=SERVICE_MANAGER,
+            callback=self._restart_opensearch,
+            workload_lock_manager=self.ops_lock,
         )
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
@@ -754,7 +757,7 @@ class OpenSearchBaseCharm(CharmBase):
         finally:
             if retry_restart_later:
                 # Message the lock manager we want to retry this lock later.
-                raise OpenSearchRetryLockLaterException()
+                raise RollingOpsRetryLockLaterError()
 
     def _can_service_start(self) -> bool:  # noqa C901
         """Return if the opensearch service can start."""
