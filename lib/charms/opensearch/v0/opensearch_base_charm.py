@@ -654,9 +654,6 @@ class OpenSearchBaseCharm(CharmBase):
             self._set_node_conf(nodes)
         except OpenSearchHttpError:
             self.peers_data.delete(Scope.UNIT, "starting")
-            event.defer()
-            self._post_start_init()
-            return
         except OpenSearchProvidedRolesException as e:
             logger.exception(e)
             self.peers_data.delete(Scope.UNIT, "starting")
