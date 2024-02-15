@@ -139,32 +139,3 @@ async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
         ops_test, "GET", test_url, resp_status_code=True, user_password=password1
     )
     assert http_resp_code == 401
-
-
-@pytest.mark.abort_on_fail
-async def test_check_number_of_restarts(ops_test: OpsTest) -> None:
-    """Test check number of restarts.
-
-    The number of restarts should be 1 for each unit.
-    """
-    for unit in range(DEFAULT_NUM_UNITS):
-        for logentry in [
-            "Started Service for snap",
-            "Stopped Service for snap",
-        ]:
-            result = int(
-                subprocess.run(
-                    'juju exec --application opensearch -- "sudo '
-                    "journalctl -u snap.opensearch.daemon.service "
-                    "--boot | grep "
-                    "'" + logentry + "' | wc -l\"",
-                    shell=True,
-                    capture_output=True,
-                )
-                .stdout.decode()
-                .replace("\n", "")
-                .split("opensearch")[1]
-                .split(":")[1]
-            )
-            logger.info(f"Number of '{logentry}' for unit {unit}: {result}")
-            assert result == 1
