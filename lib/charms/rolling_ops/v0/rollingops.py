@@ -330,6 +330,8 @@ class RollingOpsManager(Object):
 
         if lock.is_pending():
             self.model.unit.status = WaitingStatus("Awaiting {} operation".format(self.name))
+        # elif self.model.unit.status.message == "Awaiting {} operation".format(self.name):
+        #     self.model.unit.status = ActiveStatus()
 
         if lock.is_held():
             self.charm.on[self.name].run_with_lock.emit()
@@ -394,6 +396,15 @@ class RollingOpsManager(Object):
 
     def _on_run_with_lock(self: CharmBase, event: RunWithLock):
         lock = Lock(self)
+        if not lock.is_held():
+            logger.warning("Lock not held anymore. Abandon this event and reacquire it.")
+            callback_name = relation.data[self.charm.unit].get(
+                "callback_override", self._callback.__name__
+            )
+            # We have the callback override, reuse it in this acquire
+            self.charm.on[self.name].acquire_lock.emit(callback_name)
+            return
+
         self.model.unit.status = MaintenanceStatus("Executing {} operation".format(self.name))
         relation = self.model.get_relation(self.name)
 
@@ -401,15 +412,29 @@ class RollingOpsManager(Object):
         callback_name = relation.data[self.charm.unit].get(
             "callback_override", self._callback.__name__
         )
-        callback = getattr(self.charm, callback_name)
-        callback(event)
 
-        lock.release()  # Updates relation data
-        if lock.unit == self.model.unit:
-            self.charm.on[self.name].process_locks.emit()
+        try:
+            callback = getattr(self.charm, callback_name)
+            callback(event)
 
-        # cleanup old callback overrides
-        relation.data[self.charm.unit].update({"callback_override": ""})
+        except Exception as e:
+            logger.error(f"Error running callback {callback_name} failed: {e}")
+            raise e
 
-        if self.model.unit.status.message == f"Executing {self.name} operation":
-            self.model.unit.status = ActiveStatus()
+        else:
+            if not event.deferred:
+                # We had no errors and we are not deferring this event, so we can release the lock
+                # cleanup old callback override and finish safely.
+                relation.data[self.charm.unit].update({"callback_override": ""})
+
+        finally:
+            # Continue with the default path
+            if event.deferred:
+                logger.warning("Callback deferred. Release this lock and reacquire it later.")
+
+            lock.release()  # Updates relation data
+            if lock.unit == self.model.unit:
+                self.charm.on[self.name].process_locks.emit()
+
+            if self.model.unit.status.message == f"Executing {self.name} operation":
+                self.model.unit.status = ActiveStatus()
