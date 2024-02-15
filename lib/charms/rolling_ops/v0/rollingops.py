@@ -398,6 +398,7 @@ class RollingOpsManager(Object):
         lock = Lock(self)
         if not lock.is_held():
             logger.warning("Lock not held anymore. Abandon this event and reacquire it.")
+            relation = self.model.get_relation(self.name)
             callback_name = relation.data[self.charm.unit].get(
                 "callback_override", self._callback.__name__
             )
