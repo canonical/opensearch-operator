@@ -145,6 +145,7 @@ class OpenSearchPluginManager:
             logger.info("Cluster not ready, wait for the next event...")
             raise OpenSearchNotFullyReadyError()
 
+        err_msgs = []
         restart_needed = False
         for plugin in self.plugins:
             # These are independent plugins.
@@ -152,15 +153,21 @@ class OpenSearchPluginManager:
             # it is an "expected" error, such as missing additional config; should
             # not influence the execution of other plugins.
             # Capture them and raise all of them at the end.
-            restart_needed = any(
-                [
-                    self._install_if_needed(plugin),
-                    self._configure_if_needed(plugin),
-                    self._disable_if_needed(plugin),
-                    self._remove_if_needed(plugin),
-                    restart_needed,
-                ]
-            )
+            try:
+                restart_needed = any(
+                    [
+                        self._install_if_needed(plugin),
+                        self._configure_if_needed(plugin),
+                        self._disable_if_needed(plugin),
+                        self._remove_if_needed(plugin),
+                        restart_needed,
+                    ]
+                )
+            except OpenSearchPluginError as e:
+                err_msgs.append(str(e))
+
+        if err_msgs:
+            raise OpenSearchPluginError("\n".join(err_msgs))
         return restart_needed
 
     def _install_plugin(self, plugin: OpenSearchPlugin) -> bool:

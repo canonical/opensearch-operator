@@ -50,7 +50,15 @@ import math
 from typing import Any, Dict, List, Set, Tuple
 
 from charms.data_platform_libs.v0.s3 import S3Requirer
-from charms.opensearch.v0.constants_charm import PluginConfigError, RestoreInProgress
+from charms.opensearch.v0.constants_charm import (
+    BackupConfigureStart,
+    BackupDeferRelBrokenAsInProgress,
+    BackupInDisabling,
+    BackupSetupFailed,
+    BackupSetupStart,
+    PluginConfigError,
+    RestoreInProgress,
+)
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -65,7 +73,7 @@ from charms.opensearch.v0.opensearch_plugins import (
 )
 from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
@@ -482,7 +490,7 @@ class OpenSearchBackup(Object):
         if self.s3_client.get_s3_connection_info().get("tls-ca-chain"):
             raise NotImplementedError
 
-        self.charm.status.set(WaitingStatus("Setting up backup service"))
+        self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
         try:
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
@@ -500,9 +508,7 @@ class OpenSearchBackup(Object):
             event.defer()
             return
         except OpenSearchError as e:
-            self.charm.status.set(
-                BlockedStatus("Unexpected error during plugin configuration, check the logs")
-            )
+            self.charm.status.set(BlockedStatus(PluginConfigError))
             # There was an unexpected error, log it and block the unit
             logger.error(e)
             event.defer()
@@ -512,15 +518,17 @@ class OpenSearchBackup(Object):
             PluginState.ENABLED,
             PluginState.WAITING_FOR_UPGRADE,
         ]:
-            self.charm.status.set(WaitingStatus(f"Plugin in state {self._plugin_status}"))
             event.defer()
             return
 
         if not self.charm.unit.is_leader():
             # Plugin is configured locally for this unit. Now the leader proceed.
-            self.charm.status.set(ActiveStatus())
+            self.charm.status.clear(PluginConfigError)
+            self.charm.status.clear(BackupSetupStart)
             return
         self.apply_api_config_if_needed()
+        self.charm.status.clear(PluginConfigError)
+        self.charm.status.clear(BackupSetupStart)
 
     def apply_api_config_if_needed(self) -> None:
         """Runs the post restart routine and API calls needed to setup/disable backup.
@@ -530,14 +538,16 @@ class OpenSearchBackup(Object):
         # Backup relation has been recently made available with all the parameters needed.
         # Steps:
         #     (1) set up as maintenance;
-        self.charm.status.set(MaintenanceStatus("Configuring backup service..."))
+        self.charm.status.set(MaintenanceStatus(BackupConfigureStart))
         #     (2) run the request; and
         state = self._register_snapshot_repo()
         #     (3) based on the response, set the message status
         if state != BackupServiceState.SUCCESS:
-            self.charm.status.set(BlockedStatus(f"Backup setup failed with {state}"))
-        else:
-            self.charm.status.set(ActiveStatus())
+            logger.error(f"Failed to setup backup service with state {state}")
+            self.charm.status.set(BlockedStatus(BackupSetupFailed))
+            return
+        self.charm.status.clear(BackupSetupFailed)
+        self.charm.status.clear(BackupConfigureStart)
 
     def _on_s3_broken(self, event: EventBase) -> None:  # noqa: C901
         """Processes the broken s3 relation.
@@ -554,19 +564,17 @@ class OpenSearchBackup(Object):
             event.defer()
             return
 
-        self.charm.status.set(MaintenanceStatus("Disabling backup service..."))
+        self.charm.status.set(MaintenanceStatus(BackupInDisabling))
         snapshot_status = self._check_snapshot_status()
         if snapshot_status in [
             BackupServiceState.SNAPSHOT_IN_PROGRESS,
         ]:
             # 1) snapshot is either in progress or partially taken: block and defer this event
-            self.charm.status.set(
-                MaintenanceStatus(
-                    f"Disabling backup postponed until backup in progress: {snapshot_status}"
-                )
-            )
+            self.charm.status.set(WaitingStatus(BackupDeferRelBrokenAsInProgress))
             event.defer()
             return
+        self.charm.status.clear(BackupDeferRelBrokenAsInProgress)
+
         if snapshot_status in [
             BackupServiceState.SNAPSHOT_PARTIALLY_TAKEN,
         ]:
@@ -605,6 +613,7 @@ class OpenSearchBackup(Object):
             logger.error(e)
             event.defer()
             return
+        self.charm.status.clear(BackupInDisabling)
         self.charm.status.clear(PluginConfigError)
 
     def _execute_s3_broken_calls(self):
