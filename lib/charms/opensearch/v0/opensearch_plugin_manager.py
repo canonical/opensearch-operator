@@ -154,6 +154,8 @@ class OpenSearchPluginManager:
 
         restart_needed = False
         for plugin in self.plugins:
+            logger.info(f"Checking plugin {plugin.name}...")
+            logger.debug(f"Status: {self.status(plugin)}")
             restart_needed = any(
                 [
                     self._install_if_needed(plugin),
@@ -163,6 +165,7 @@ class OpenSearchPluginManager:
                     restart_needed,
                 ]
             )
+            logger.debug(f"Finished Plugin {plugin.name} status: {self.status(plugin)}")
             if restart_needed:
                 self._charm.status.set(MaintenanceStatus(PluginConfigStart))
 
@@ -283,8 +286,6 @@ class OpenSearchPluginManager:
             to_remove = dict(
                 zip(config.config_entries_to_del, [None] * len(config.config_entries_to_del))
             )
-        logger.debug(f"apply_config: {current_settings}")
-
         if current_settings == {
             **current_settings,
             **to_remove,
