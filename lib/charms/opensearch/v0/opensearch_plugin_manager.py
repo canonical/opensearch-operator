@@ -283,12 +283,17 @@ class OpenSearchPluginManager:
             to_remove = dict(
                 zip(config.config_entries_to_del, [None] * len(config.config_entries_to_del))
             )
+        logger.debug(f"apply_config: {current_settings}")
+
         if current_settings == {
             **current_settings,
             **to_remove,
             **config.config_entries_to_add,
         }:
             # Nothing to do here
+            logger.info(
+                "apply_config: nothing to do, return"
+            )
             return False
 
         # Update the configuration
