@@ -14,7 +14,10 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
+    OpenSearchNotFullyReadyError,
+)
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
@@ -26,7 +29,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingConfigError,
     OpenSearchPluginMissingDepsError,
-    OpenSearchPluginRelationClusterNotReadyError,
     OpenSearchPluginRemoveError,
     PluginState,
 )
@@ -140,10 +142,16 @@ class OpenSearchPluginManager:
             # The classes above should then defer their own events in waiting.
             # Defer is important as next steps to configure plugins will involve
             # calls to the APIs of the cluster.
-            raise OpenSearchPluginRelationClusterNotReadyError()
+            logger.info("Cluster not ready, wait for the next event...")
+            raise OpenSearchNotFullyReadyError()
 
         restart_needed = False
         for plugin in self.plugins:
+            # These are independent plugins.
+            # Any plugin that errors, if that is an OpenSearchPluginError, then
+            # it is an "expected" error, such as missing additional config; should
+            # not influence the execution of other plugins.
+            # Capture them and raise all of them at the end.
             restart_needed = any(
                 [
                     self._install_if_needed(plugin),

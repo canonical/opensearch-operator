@@ -70,14 +70,14 @@ class TestOpenSearchKNN(unittest.TestCase):
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
     def test_disable_via_config_change(
         self,
-        mock_put,
-        mock_load,
+        _,
+        __,
         mock_is_started,
         mock_status,
         mock_is_enabled,
         mock_version,
         mock_acquire_lock,
-        deployment_desc,
+        ___,
     ) -> None:
         """Tests entire config_changed event with KNN plugin."""
         mock_status.return_value = PluginState.ENABLED

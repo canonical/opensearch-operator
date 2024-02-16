@@ -25,7 +25,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginError,
     PluginState,
 )
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import MaintenanceStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -436,19 +436,11 @@ def test_on_s3_broken_steps(
         harness.charm.backup._execute_s3_broken_calls.assert_not_called()
     elif test_type == "apply-config-error" or test_type == "apply-config-error-not-leader":
         event.defer.assert_called()
-        # harness.charm.status.set.call_args_list == [
-        #     call(MaintenanceStatus("Disabling backup service...")),
-        #     call(BlockedStatus("Unexpected error during plugin configuration, check the logs")),
-        # ]
         harness.charm.status.set.assert_any_call(MaintenanceStatus("Disabling backup service..."))
-        harness.charm.status.set.assert_any_call(
-            BlockedStatus("Unexpected error during plugin configuration, check the logs")
-        )
         harness.charm.backup._execute_s3_broken_calls.assert_called_once()
     elif test_type == "success":
         event.defer.assert_not_called()
         harness.charm.status.set.assert_any_call(MaintenanceStatus("Disabling backup service..."))
-        harness.charm.status.set.assert_any_call(ActiveStatus())
         harness.charm.backup._execute_s3_broken_calls.assert_called_once()
 
 

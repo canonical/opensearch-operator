@@ -75,10 +75,7 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     StartMode,
 )
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
-from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchPluginError,
-    OpenSearchPluginRelationClusterNotReadyError,
-)
+from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
@@ -502,7 +499,7 @@ class OpenSearchBaseCharm(CharmBase):
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
-        except OpenSearchPluginRelationClusterNotReadyError:
+        except OpenSearchNotFullyReadyError:
             logger.warning("Plugin management: cluster not ready yet at config changed")
             event.defer()
             return

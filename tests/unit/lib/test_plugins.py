@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import charms
+from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import (
@@ -379,3 +380,64 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.plugin_manager._keystore._add.assert_not_called()
         self.plugin_manager._keystore._delete.assert_called()
         self.plugin_manager._opensearch_config.delete_plugin.assert_has_calls([call(["param"])])
+
+
+class TestOpenSearchBackupPlugin(unittest.TestCase):
+    def setUp(self) -> None:
+        self.harness = Harness(OpenSearchOperatorCharm)
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+        self.charm = self.harness.charm
+        self.charm.opensearch.paths.plugins = "tests/unit/resources"
+        self.plugin_manager = self.charm.plugin_manager
+        self.plugin_manager._plugins_path = self.charm.opensearch.paths.plugins
+
+    def test_name(self):
+        plugin = OpenSearchBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        assert plugin.name == "repository-s3"
+
+    def test_config_missing_all_configs(self):
+        plugin = OpenSearchBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        with patch("charms.opensearch.v0.opensearch_plugins.logger.error") as mock_logger:
+            plugin.config()
+            mock_logger.assert_called_with("Missing AWS access-key and secret-key configuration")
+
+    def test_config_with_valid_keys(self):
+        plugin = OpenSearchBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        plugin._extra_config = {
+            "access-key": "ACCESS_KEY",
+            "secret-key": "SECRET_KEY",
+        }
+        expected_config = OpenSearchPluginConfig(
+            secret_entries_to_del=[
+                "s3.client.default.access_key",
+                "s3.client.default.secret_key",
+            ],
+            secret_entries_to_add={
+                "s3.client.default.access_key": "ACCESS_KEY",
+                "s3.client.default.secret_key": "SECRET_KEY",
+            },
+        )
+        self.assertEqual(plugin.config().__dict__, expected_config.__dict__)
+
+    def test_disable(self):
+        plugin = OpenSearchBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        expected_config = OpenSearchPluginConfig(
+            secret_entries_to_del=[
+                "s3.client.default.access_key",
+                "s3.client.default.secret_key",
+            ],
+        )
+        self.assertEqual(plugin.disable().__dict__, expected_config.__dict__)
