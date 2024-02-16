@@ -295,9 +295,7 @@ class OpenSearchPluginManager:
             **config.config_entries_to_add,
         }:
             # Nothing to do here
-            logger.info(
-                "apply_config: nothing to do, return"
-            )
+            logger.info("apply_config: nothing to do, return")
             return False
 
         # Update the configuration
