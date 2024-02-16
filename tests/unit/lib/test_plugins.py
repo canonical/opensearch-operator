@@ -340,10 +340,13 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_plugin_relation.return_value = True
         # plugin is initially disabled and enabled when method self._disable calls self.status
         mock_is_enabled.side_effect = [
+            False,  # called by logger
             False,  # called by self.status, in self._install
             False,  # called by self._configure
             True,  # called by self.status, in self._disable
+            True,  # called by logger
         ]
+        charms.opensearch.v0.opensearch_plugin_manager.logger = MagicMock()
         self.assertTrue(self.plugin_manager.run())
         self.plugin_manager._keystore._add.assert_has_calls([call("key1", "secret1")])
         self.charm.opensearch.config.put.assert_has_calls(
