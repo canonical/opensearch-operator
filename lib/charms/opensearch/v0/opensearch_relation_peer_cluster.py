@@ -32,6 +32,7 @@ from ops import (
     BlockedStatus,
     EventBase,
     Object,
+    Relation,
     RelationChangedEvent,
     RelationDepartedEvent,
     RelationEvent,
@@ -85,7 +86,7 @@ class OpenSearchPeerClusterRelation(Object):
         if not rel_id:
             raise ValueError("Relation id must be provided as arguments.")
 
-        relation = self.charm.model.get_relation(self.relation_name, relation_id=rel_id)
+        relation = self.get_rel(rel_id=rel_id)
         if relation:
             return relation.data[relation.app if rel_app else self.charm.app].get(key)
 
@@ -105,7 +106,7 @@ class OpenSearchPeerClusterRelation(Object):
         if not rel_id:
             raise ValueError("Relation id must be provided as arguments.")
 
-        relation = self.charm.model.get_relation(self.relation_name, relation_id=rel_id)
+        relation = self.get_rel(rel_id=rel_id)
         if relation:
             relation.data[self.charm.app].update(data)
 
@@ -116,11 +117,13 @@ class OpenSearchPeerClusterRelation(Object):
         if not event and not rel_id:
             raise ValueError("Relation Event or relation id must be provided as arguments.")
 
-        relation = self.charm.model.get_relation(
-            self.relation_name, relation_id=rel_id if rel_id else event.relation.id
-        )
+        relation = self.get_rel(rel_id=rel_id if rel_id else event.relation.id)
         if relation:
             relation.data[self.charm.app].pop(key, None)
+
+    def get_rel(self, rel_id: Optional[int]) -> Optional[Relation]:
+        """Retrieve the relation object assigned to this id."""
+        return self.charm.model.get_relation(self.relation_name, relation_id=rel_id)
 
 
 class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
@@ -153,16 +156,14 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
-        deployment_desc = self.peer_cm.deployment_desc()
-        if not deployment_desc:
+        if not (deployment_desc := self.peer_cm.deployment_desc()):
             event.defer()
             return
 
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             return
 
-        data = event.relation.data.get(event.app)
-        if not data:
+        if not (data := event.relation.data.get(event.app)):
             logger.debug(f"\n\nPROVIDER: _on_peer_cluster_relation_changed: not data leaving...\n\n")
             return
 
@@ -171,12 +172,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ]
 
         # fetch emitting app planned units and broadcast
-        planned_units = json.loads(data.get("planned_units"))
-        self._put_planned_units(planned_units["app"], planned_units["count"], target_relation_ids)
+        self._put_planned_units(target_relation_ids)
 
         # todo: store the rel id in the main cluster peer rel databag and upon re-election, clone all rel data
-        candidate_failover_cm_app = data.get("candidate_failover_orchestrator_app")
-        if not candidate_failover_cm_app:
+        if not (candidate_failover_cm_app := data.get("candidate_failover_orchestrator_app")):
             self.refresh_relation_data(event)
             return
 
@@ -205,17 +204,15 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             rel.id for rel in self.charm.model.relations[self.relation_name]
         ]
 
-        # compute the data that needs to be broadcast to all related clusters
+        # compute the data that needs to be broadcast to all related clusters (success or error)
         rel_data = self._rel_data()
 
-        # exit if current cluster not a main nor failover cluster
-        if self._notify_on_invalid_relation(rel_data, all_relation_ids):
+        # exit if current cluster should not have been considered a provider
+        if self._notify_if_wrong_integration(rel_data, all_relation_ids):
             return
 
         # store the main/failover-cm planned units count
-        self._put_planned_units(
-            self.charm.app.name, self.charm.app.planned_units(), all_relation_ids
-        )
+        self._put_planned_units(all_relation_ids)
 
         cluster_type = "main"
         if self.charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.FAILOVER_ORCHESTRATOR:
@@ -234,7 +231,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             })
             self.put_in_rel_data(data={"orchestrators": orchestrators}, rel_id=rel_id)
 
-            # there is no error to broadcast
+            # there is no error to broadcast - we clear any previously boradcasted error
             if isinstance(rel_data, PeerClusterRelData):
                 self.delete_from_rel_data("error_data", rel_id=rel_id)
 
@@ -245,7 +242,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if should_defer:
             event.defer()
 
-    def _notify_on_invalid_relation(
+    def _notify_if_wrong_integration(
         self, rel_data: Union[PeerClusterRelData, PeerClusterRelErrorData], target_relation_ids: List[int]
     ) -> bool:
         """Check if relation is invalid and notify related sub-clusters."""
@@ -260,48 +257,36 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         return True
 
-    def _put_planned_units(self, app: str, count: int, target_relation_ids: List[int]):
+    def _put_planned_units(self, target_relation_ids: List[int]) -> None:
         """Save in the peer cluster rel data the planned units count per app."""
-        cluster_fleet_planned_units = self.charm.peers_data.get_object(
-            Scope.APP, "cluster_fleet_planned_units"
-        ) or {}
-
-        cluster_fleet_planned_units.update({
-            app: count,
-            self.charm.app.name: self.charm.app.planned_units(),
-        })
+        cluster_fleet_planned_units = {self.charm.app.name: self.charm.app.planned_units()}
+        for rel_id in target_relation_ids:
+            app = self.get_rel(rel_id).app  # todo: need to ensure unicity of app name for cross models
+            cluster_fleet_planned_units[app.name] = app.planned_units()
 
         for rel_id in target_relation_ids:
-            self.put_in_rel_data(data={"planned_units": cluster_fleet_planned_units}, rel_id=rel_id)
+            self.put_in_rel_data(
+                data={"cluster_fleet_planned_units": cluster_fleet_planned_units}, rel_id=rel_id
+            )
 
         self.charm.peers_data.put_object(
             Scope.APP, "cluster_fleet_planned_units", cluster_fleet_planned_units
         )
 
-    def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent):
+    def _on_peer_cluster_relation_departed(self, _: RelationDepartedEvent) -> None:
         """Event received by all units in sub-cluster when a sub-cluster leaves the relation."""
-        # TODO
-        # this is where sub-clusters configured to auto-generated should probably recompute
-        # should the one with "min(rel_id)" propose to change?
-        pass
+        # we need to update the fleet planned units
+        target_relation_ids = [
+            rel.id for rel in self.charm.model.relations[self.relation_name]
+        ]
+        self._put_planned_units(target_relation_ids)
 
-    def _is_ready_for_relation(self) -> bool:
-        """Check if the current cluster is ready to take on a Peer Cluster relation."""
-        """# if primary CM
-            # check if admin user initialized
-            # tls configured
-            # nodes up
-            # whenever new CM joins current ==> update relation data
-        # if secondary CM
-            # is it related to a primary CM ??
-            # is there a peer_rel data object shared with me
-            # check on CM list"""
-        pass
+        # TODO: this is where sub-clusters configured to auto-generated should trigger recompute
+        # we should make the one with "min(rel_id)" propose to change?
 
     def _rel_data(self) -> Union[PeerClusterRelData, PeerClusterRelErrorData]:
         """Build and return the peer cluster rel data to be shared with requirer sub-clusters."""
-        rel_err_data = self._rel_err_data()
-        if rel_err_data:
+        if rel_err_data := self._rel_err_data():
             return rel_err_data
 
         # check that this cluster is fully ready, otherwise put "configuring" in
@@ -338,20 +323,16 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         peer_cms = self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
         failover_cm_app = peer_cms.get("failover_app")
 
-        should_sever_relation = False
-        should_wait = True
-        blocked_msg = None
-        message_suffix = f"in related {deployment_desc.typ} peer-cluster"
+        should_sever_relation, should_wait, blocked_msg = False, True, None
+        message_suffix = f"in related '{deployment_desc.typ}' peer-cluster"
 
         if not deployment_desc:
             blocked_msg = "'main/failover' cluster not configured yet."
         elif deployment_desc.typ == DeploymentType.OTHER:
-            should_sever_relation = True
-            should_wait = False
+            should_sever_relation, should_wait = True, False
             blocked_msg = "Related to non 'main/failover'-orchestrator peer-cluster."
         elif failover_cm_app and failover_cm_app != self.charm.app.name:
-            should_sever_relation = True
-            should_wait = False
+            should_sever_relation, should_wait = True, False
             blocked_msg = "Cannot have 2 'failover'-orchestrators. Relate to the existing failover cluster."
         elif not self.charm.is_admin_user_configured():
             blocked_msg = "Admin user not fully configured {message_suffix}."
@@ -363,11 +344,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             blocked_msg = f"Waiting for every unit {message_suffix} to have started."
         else:
             try:
-                local_cms = self._fetch_local_cm_nodes()
-                if not local_cms:
+                if not self._fetch_local_cm_nodes():
                     blocked_msg = f"No reported 'cluster_manager' eligible nodes {message_suffix}"
             except OpenSearchHttpError as e:
-                logger.exception(e)
+                logger.error(e)
                 blocked_msg = f"Could not fetch nodes {message_suffix}"
 
         if not blocked_msg:
@@ -423,16 +403,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         logger.debug("\n\n\n\n\n\n -------------------------------------------\n\t--- REQUIRER")
 
-        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-        if not deployment_desc:  # cluster not ready yet
+        # check if current cluster ready
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             event.defer()
             return
 
-        # register in the 'main/failover'-CMs / save the number of planned units of the current app
-        self._put_planned_units(event)
-
-        data = event.relation.data.get(event.app)
-        if not data:
+        if not (data := event.relation.data.get(event.app)):
             return
 
         # fetch main and failover clusters relations ids if any
@@ -440,13 +416,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # fetch error from current data + alternate relations (main and failover)-cm,
         # so we don't keep overriding the statuses
-        error_data = self._get_error_data_from_relations(data, orchestrators)
-        if error_data:
-            self.set_err_status(error_data)
-            # todo: set errors in the deployment desc -- run_with relation data, what about
-            #  cleanup after they're solved??
-            # todo: handle the cleanup of these in peer cluster relation broken / (departed
-            #  with planned units 0 ??)
+        if error_from_providers := self._error_from_providers(data, orchestrators):
+            self._set_error(label="error_from_providers", error=error_from_providers)
+            # todo: set errors in the deployment desc -- run_with relation data?
             return
 
         # this indicates there is no "success data" passed
@@ -455,15 +427,13 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         data = PeerClusterRelData.from_str(data["data"])
 
-        # handle error states that can only be figured out from the requirer side
-        error_data = self._rel_err_data(data, event.relation.id)
-        if error_data:
-            self.set_err_status(error_data.to_dict())
-            event.defer()  # need to defer this hook, as this is a requirer error
+        # handle error states that can only be figured out from the requirer side, and defer
+        if error_from_requirer := self._error_from_requirer(data, event.relation.id):
+            self._set_error(label="error_from_requirer", error=error_from_requirer.to_dict())
             return
-        else:
-            # cleanup old client status
-            pass
+
+        # we clear previous error statuses
+        self._clear_errors("error_from_provider", "error_from_requirer")
 
         # this means it's a previous "main orchestrator" that was unrelated then re-related
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
@@ -488,26 +458,14 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # store the security related settings in secrets, peer_data, disk
         self._set_security_conf(data)
 
-        # check if ready
-        if not self.charm.is_tls_fully_configured():
-            if not self.charm.model.get_relation(TLS_RELATION):
-                self.charm.status.set(BlockedStatus(TLSRelationMissing), app=True)
-                logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: TLS not related -- deferring...\n\n")
-            else:
-                self.charm.status.set(BlockedStatus(TLSNotFullyConfigured), app=True)
-                logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: TLS not STORED fully -- deferring...\n\n")
-            event.defer()
-            logger.debug(f"\n------------------------------------------------\n\n\n")
+        # check if there are any security misconfigurations / violations
+        if error_from_tls := self._error_from_tls(data):
+            self._set_error(label="error_from_tls", error=error_from_tls)
+            if error_from_tls.should_wait:
+                event.defer()
             return
 
-        # compare CAs
-        unit_transport_ca_cert = self.charm.secrets.get_object(
-            Scope.UNIT, CertType.UNIT_TRANSPORT.val
-        )["ca-cert"]
-        if unit_transport_ca_cert != data.credentials.admin_tls["ca-cert"]:
-            self.charm.status.set(BlockedStatus("CA certificate mismatch between clusters."))
-            logger.debug(f"\n------------------------------------------------\n\n\n")
-            return
+        self._clear_errors("error_from_tls")
 
         # aggregate all CMs (main + failover if any)
         for cm_node in self._cm_nodes(orchestrators):
@@ -534,34 +492,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: STORED EVERYTHING NEEDED...")
 
-    def _get_error_data_from_relations(
-        self, data: Optional[Dict[str, Any]], orchestrators: PeerClusterOrchestrators
-    ) -> Optional[Dict[str, Any]]:
-        """Return the error data broadcast through the relation."""
-        # check for errors in alternate relation (in case related to main and failover)
-        # so we don't keep overriding the statuses
-        error_data = None
-        if orchestrators.main_rel_id != -1:
-            error_data = self.get_obj_from_rel_data(
-                key="error_data", rel_id=orchestrators.main_rel_id, rel_app=True
-            )
-        elif "error_data" in (data or {}):
-            error_data = json.loads(data["error_data"])
-        elif orchestrators.failover_rel_id != -1:
-            error_data = self.get_obj_from_rel_data(
-                key="error_data", rel_id=orchestrators.main_rel_id, rel_app=True
-            )
-
-        return error_data
-
-    def set_err_status(self, error: Optional[Dict[str, Any]]) -> None:
-        error = PeerClusterRelErrorData.from_dict(error)
-        err_message = error.blocked_message
-        self.charm.status.set(
-            WaitingStatus(err_message) if error.should_wait else BlockedStatus(err_message),
-            app=True,
-        )
-
     def _related_orchestrators(
         self, event: RelationChangedEvent, data: MutableMapping[str, str]
     ) -> PeerClusterOrchestrators:
@@ -586,27 +516,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             logger.debug(f"\nRELATION: peer_orchestrators: {orchestrators}")
 
         return PeerClusterOrchestrators.from_dict(orchestrators)
-
-    def _put_planned_units(self, event: RelationEvent):
-        """Report self planned units and store the fleet's on the peer data bag."""
-        # register the number of planned units in the current cluster, to be communicated to the main-cm
-        self.put_in_rel_data(
-            data={
-                "planned_units": json.dumps({
-                    "app": self.charm.app.name,
-                    "count": self.charm.app.planned_units(),
-                }),
-            },
-            rel_id=event.relation.id,
-        )
-
-        # self in the current app's peer databag
-        cluster_fleet_planned_units = self.get_obj_from_rel_data(
-            "planned_units", rel_id=event.relation.id, rel_app=True
-        )
-        cluster_fleet_planned_units.update({self.charm.app.name: self.charm.app.planned_units()})
-
-        self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_planned_units", cluster_fleet_planned_units)
 
     def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent):
         """Handle when 'main/failover'-CMs leave the relation (app or relation removal)."""
@@ -739,37 +648,71 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         return cm_nodes
 
-    def _rel_err_data(
+    def _error_from_providers(
+        self, data: Optional[MutableMapping[str, Any]], orchestrators: PeerClusterOrchestrators
+    ) -> Optional[Dict[str, Any]]:
+        """Return the error data broadcast through the relation."""
+        # check for errors in alternate relation (in case related to main and failover)
+        # so we don't keep overriding the statuses
+        error_data = None
+        if orchestrators.main_rel_id != -1:
+            error_data = self.get_obj_from_rel_data(
+                key="error_data", rel_id=orchestrators.main_rel_id, rel_app=True
+            )
+        elif "error_data" in (data or {}):
+            error_data = json.loads(data["error_data"])
+        elif orchestrators.failover_rel_id != -1:
+            error_data = self.get_obj_from_rel_data(
+                key="error_data", rel_id=orchestrators.main_rel_id, rel_app=True
+            )
+
+        return error_data
+
+    def _error_from_requirer(
         self, peer_cluster_rel_data: PeerClusterRelData, event_rel_id: int
     ) -> Optional[PeerClusterRelErrorData]:
-        """Build error peer relation data object."""
-        deployment_desc = self.peer_cm.deployment_desc()
-
-        logger.debug(f"_rel_err_data - event_rel_id: {event_rel_id}")
-
+        """Compute error if relation is wrong and can only be figured out on the local requirer side."""
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators")
         )
         if not orchestrators.main_app and not orchestrators.failover_app:
             return None
 
-        logger.debug(f"_rel_err_data - event_rel_id: {event_rel_id} -- "
-                     f"[main_cm_rel_id: {orchestrators.main_rel_id}, "
-                     f"failover_cm_rel_id: {orchestrators.failover_rel_id}]")
-
-        should_sever_relation = False
-        should_wait = True
         blocked_msg = None
-
-        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+        if (deployment_desc := self.peer_cm.deployment_desc()).typ == DeploymentType.MAIN_ORCHESTRATOR:
             blocked_msg = "Main cluster-orchestrator cannot be requirer of relation."
-            should_wait = False
-            should_sever_relation = True
         elif event_rel_id not in [orchestrators.main_rel_id, orchestrators.failover_rel_id]:
             blocked_msg = ("A cluster can only be related to 1 main and 1 "
                            "failover-clusters at most.")
-            should_wait = False
-            should_sever_relation = True
+
+        if not blocked_msg:
+            return None
+
+        return PeerClusterRelErrorData(
+            cluster_name=peer_cluster_rel_data.cluster_name,
+            should_sever_relation=True,
+            should_wait=False,
+            blocked_message=blocked_msg,
+            deployment_desc=deployment_desc,
+        )
+
+    def _error_from_tls(self, peer_cluster_rel_data: PeerClusterRelData) -> Optional[PeerClusterRelErrorData]:
+        """Compute TLS related errors."""
+        blocked_msg, should_sever_relation, should_wait = None, False, True
+
+        if not self.charm.is_tls_fully_configured():  # check if TLS ready
+            blocked_msg = (
+                TLSNotFullyConfigured
+                if self.charm.model.get_relation(TLS_RELATION)
+                else TLSRelationMissing
+            )
+        else:  # compare CAs
+            unit_transport_ca_cert = self.charm.secrets.get_object(
+                Scope.UNIT, CertType.UNIT_TRANSPORT.val
+            )["ca-cert"]
+            if unit_transport_ca_cert != peer_cluster_rel_data.credentials.admin_tls["ca-cert"]:
+                blocked_msg = "CA certificate mismatch between clusters."
+                should_sever_relation, should_wait = True, False
 
         if not blocked_msg:
             return None
@@ -779,5 +722,23 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             should_sever_relation=should_sever_relation,
             should_wait=should_wait,
             blocked_message=blocked_msg,
-            deployment_desc=deployment_desc,
+            deployment_desc=self.peer_cm.deployment_desc(),
         )
+
+    def _set_error(self, label: str, error: Optional[Dict[str, Any]]) -> None:
+        """Set error status from the passed errors and store for future deletion."""
+        error = PeerClusterRelErrorData.from_dict(error)
+        err_message = error.blocked_message
+        self.charm.status.set(
+            WaitingStatus(err_message) if error.should_wait else BlockedStatus(err_message),
+            app=True,
+        )
+
+        # we should keep track of set messages for targeted deletion later
+        self.charm.peers_data.put(Scope.APP, label, err_message)
+
+    def _clear_errors(self, *error_labels: str):
+        """Clear previously set Peer clusters related statuses."""
+        for error_label in error_labels:
+            self.charm.status.clear(error_label)
+            self.charm.peers_data.delete(error_label)

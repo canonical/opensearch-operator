@@ -234,10 +234,3 @@ class PeerClusterOrchestrators(Model):
     main_app: Optional[str]
     failover_rel_id: int = -1
     failover_app: Optional[str]
-
-
-class PeerClusterPlannedUnits(Model):
-    """Model class for each of the PClusters planned units."""
-
-    app: str
-    count: int
