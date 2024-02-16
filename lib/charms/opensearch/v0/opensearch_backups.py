@@ -50,17 +50,17 @@ import math
 from typing import Any, Dict, List, Set, Tuple
 
 from charms.data_platform_libs.v0.s3 import S3Requirer
-from charms.opensearch.v0.constants_charm import RestoreInProgress
+from charms.opensearch.v0.constants_charm import PluginConfigError, RestoreInProgress
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
+    OpenSearchNotFullyReadyError,
 )
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchGCSBackupPlugin,
     OpenSearchPluginError,
-    OpenSearchPluginRelationClusterNotReadyError,
     OpenSearchS3BackupPlugin,
     PluginState,
 )
@@ -521,15 +521,22 @@ class OpenSearchBackup(Object):
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 self.charm.plugin_manager.apply_config(plugin.disable())
             self.charm.plugin_manager.apply_config(plugin.config())
+        except OpenSearchNotFullyReadyError:
+            logger.warning("s3-changed: cluster not ready yet")
+            event.defer()
+            return
+        except OpenSearchPluginError as e:
+            # This is only possible if we could not apply keys to the store.
+            # That is generally transient.
+            logger.error(e)
+            event.defer()
+            return
         except OpenSearchError as e:
-            if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
-                self.charm.status.set(WaitingStatus("s3-changed: cluster not ready yet"))
-            else:
-                self.charm.status.set(
-                    BlockedStatus("Unexpected error during plugin configuration, check the logs")
-                )
-                # There was an unexpected error, log it and block the unit
-                logger.error(e)
+            self.charm.status.set(
+                BlockedStatus("Unexpected error during plugin configuration, check the logs")
+            )
+            # There was an unexpected error, log it and block the unit
+            logger.error(e)
             event.defer()
             return
 
@@ -614,20 +621,24 @@ class OpenSearchBackup(Object):
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 self.charm.plugin_manager.apply_config(plugin.disable())
         except OpenSearchBackupPluginNotSetError:
-            logger.warning("s3-credentials: plugin is missing: relation has not been configured.")
+            logger.info("s3-credentials: plugin is missing: relation has not been configured.")
+            # We can simply leave, as there will be another event to handle this
             return
-        except OpenSearchError as e:
-            if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
-                self.charm.status.set(WaitingStatus("s3-broken event: cluster not ready yet"))
-            else:
-                self.charm.status.set(
-                    BlockedStatus("Unexpected error during plugin configuration, check the logs")
-                )
-                # There was an unexpected error, log it and block the unit
-                logger.error(e)
+        except OpenSearchNotFullyReadyError:
+            logger.warning("s3-credentials: cluster not ready yet")
             event.defer()
             return
-        self.charm.status.set(ActiveStatus())
+        except OpenSearchPluginError as e:
+            logger.error(e)
+            event.defer()
+            return
+        except OpenSearchError as e:
+            self.charm.status.set(BlockedStatus(PluginConfigError))
+            # There was an unexpected error, log it and block the unit
+            logger.error(e)
+            event.defer()
+            return
+        self.charm.status.clear(PluginConfigError)
 
     def _execute_s3_broken_calls(self):
         """Executes the s3 broken API calls."""

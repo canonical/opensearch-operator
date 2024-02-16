@@ -13,7 +13,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
-    OpenSearchPluginError,
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingDepsError,
     OpenSearchS3BackupPlugin,
@@ -474,12 +473,12 @@ class TestOpenSearchGCSBackupPlugin(unittest.TestCase):
             plugins_path=self.plugin_manager._plugins_path,
             extra_config={},
         )
-        try:
+        with patch("charms.opensearch.v0.opensearch_plugins.logger.error") as mock_logger:
             plugin.config()
-        except OpenSearchPluginError as e:
-            assert str(e) == "Missing GCS service-account or secret-key configuration"
-        else:
-            raise AssertionError("Expected OpenSearchPluginError to be raised")
+            mock_logger.assert_called_with(
+                "Config error: secret-key - argument should be a bytes-like"
+                " object or ASCII string, not 'NoneType'"
+            )
 
     def test_config_with_service_account(self):
         plugin = OpenSearchGCSBackupPlugin(
@@ -500,12 +499,9 @@ class TestOpenSearchGCSBackupPlugin(unittest.TestCase):
             extra_config={},
         )
         plugin._extra_config = {"service-account": "invalid-base64-value"}
-        try:
+        with patch("charms.opensearch.v0.opensearch_plugins.logger.error") as mock_logger:
             plugin.config()
-        except OpenSearchPluginError:
-            pass  # expected
-        else:
-            raise AssertionError("Expected OpenSearchPluginError to be raised")
+            mock_logger.assert_called_with("Config error: service-account - Incorrect padding")
 
     def test_disable(self):
         plugin = OpenSearchGCSBackupPlugin(
@@ -542,12 +538,9 @@ class TestOpenSearchS3BackupPlugin(unittest.TestCase):
             plugins_path=self.plugin_manager._plugins_path,
             extra_config={},
         )
-        try:
+        with patch("charms.opensearch.v0.opensearch_plugins.logger.error") as mock_logger:
             plugin.config()
-        except OpenSearchPluginError as e:
-            assert str(e) == "Missing AWS access-key and secret-key configuration"
-        else:
-            raise AssertionError("Expected OpenSearchPluginError to be raised")
+            mock_logger.assert_called_with("Missing AWS access-key and secret-key configuration")
 
     def test_config_with_valid_keys(self):
         plugin = OpenSearchS3BackupPlugin(

@@ -57,6 +57,7 @@ PClusterWrongRolesProvided = "Cannot start cluster with current set of roles."
 PClusterWrongNodesCountForQuorum = (
     "Even number of members in quorum if current unit started. Add or remove 1 unit."
 )
+PluginConfigError = "Unexpected error during plugin configuration, check the logs"
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"

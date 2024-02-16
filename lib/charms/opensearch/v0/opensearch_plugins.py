@@ -42,13 +42,6 @@ these errors are handled by the plugin manager and the charm at config-changed. 
 case, plugin manager receives the error and prepares a status message to be returned to the
 charm. The charm will then set the status message at the end of config-changed.
 
-If a given error is relevant for logging but not enough to set the status message, then
-error can be raised with a flag only_log=True. In this case, the plugin manager will log
-the error as WARN and the charm will not set the status message for that particular error.
-
-Relation management depends on each class. It is advised to also consider the only_log
-flag as well in this case.
-
 
 ========================================================================================
 
@@ -105,9 +98,8 @@ class MyPlugin(OpenSearchPlugin):
                 secret_entries_on_add={...}  # Key-value pairs to be added to keystore
             )
         except MyPluginError as e:
-            # If we do not want to set the status message with str(e), then raise it
-            # with only_log=True.
-            raise OpenSearchPluginError(str(e), only_log=True)
+            # If we want to set the status message with str(e), then raise it with:
+            raise e
 
     def disable(self) -> Tuple[OpenSearchPluginConfig, OpenSearchPluginConfig]:
         # Use the self._extra_config to retrieve any extra configuration.
@@ -311,24 +303,12 @@ logger = logging.getLogger(__name__)
 class OpenSearchPluginError(OpenSearchError):
     """Exception thrown when an opensearch plugin is invalid."""
 
-    def __init__(self, msg, only_log=False):
+    def __init__(self, msg):
         super().__init__(msg)
-        self._only_log = only_log
-
-    @property
-    def only_log(self) -> bool:
-        """Returns the only_log property."""
-        return self._only_log
 
 
-class OpenSearchPluginRelationClusterNotReadyError(OpenSearchPluginError):
-    """Exception thrown when making API calls and cluster is not yet ready.
-
-    This exception in specific should be handled by classes managing the relations of plugins.
-    """
-
-    def __init__(self, only_log=True):
-        super().__init__("The cluster is not ready yet.", only_log)
+class OpenSearchPluginOnlyLogError(OpenSearchPluginError):
+    """Exception thrown when an opensearch plugin is invalid, but only used for logging."""
 
 
 class OpenSearchPluginMissingDepsError(OpenSearchPluginError):
@@ -497,10 +477,8 @@ class OpenSearchS3BackupPlugin(OpenSearchPlugin):
         )
         """
         if not self._extra_config.get("access-key") or not self._extra_config.get("secret-key"):
-            raise OpenSearchPluginError(
-                "Missing AWS access-key and secret-key configuration",
-                only_log=True,
-            )
+            logger.error("Missing AWS access-key and secret-key configuration")
+            return
         return OpenSearchPluginConfig(
             # Try to remove the previous values
             secret_entries_to_del=[
@@ -564,10 +542,7 @@ class OpenSearchGCSBackupPlugin(OpenSearchPlugin):
         if not self._extra_config.get("service-account") and not self._extra_config.get(
             "secret-key"
         ):
-            raise OpenSearchPluginError(
-                "Missing GCS service-account or secret-key configuration",
-                only_log=True,
-            )
+            logger.error("Missing GCS service-account or secret-key configuration")
 
         data, conf = (
             (self._extra_config["service-account"], "service-account")
@@ -582,7 +557,8 @@ class OpenSearchGCSBackupPlugin(OpenSearchPlugin):
             # to the user that GCS cannot be configured.
             # We may also be dealing with a non-base64 encoded secret-key coming from the relation
             # for another plugin, e.g. repository-s3.
-            raise OpenSearchPluginError(f"Config error: {conf} - {str(e)}", only_log=True)
+            logger.error(f"Config error: {conf} - {str(e)}")
+            return
         return OpenSearchPluginConfig(
             # Try to remove the previous values
             secret_entries_to_del=[
