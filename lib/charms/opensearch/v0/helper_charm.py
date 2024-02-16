@@ -5,7 +5,7 @@
 import re
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from ops import EventBase
+from ops import CharmBase, EventBase
 from ops.model import ActiveStatus, StatusBase
 
 # The unique Charmhub library identifier, never change it
@@ -75,3 +75,34 @@ class Status:
             return
 
         context.status = status
+
+
+class RelDepartureReason(BaseStrEnum):
+    """Enum depicting the 3 various causes of a Relation Departed event."""
+
+    APP_REMOVAL = "app-removal"
+    SCALE_DOWN = "scale-down"
+    REL_BROKEN = "rel-broken"
+
+
+def relation_departure_reason(charm: CharmBase, relation_name: str) -> RelDepartureReason:
+    """Compute the reason behind a relation departed event."""
+    # fetch relation info
+    goal_state = charm.model._backend._run("goal-state", return_output=True, use_json=True)
+    rel_info = goal_state["relations"][relation_name]
+
+    # check dying units
+    dying_units = [
+        unit_data["status"] == "dying"
+        for unit, unit_data in rel_info.items()
+        if unit != relation_name
+    ]
+
+    # check if app removal
+    if all(dying_units):
+        return RelDepartureReason.APP_REMOVAL
+
+    if any(dying_units):
+        return RelDepartureReason.SCALE_DOWN
+
+    return RelDepartureReason.REL_BROKEN

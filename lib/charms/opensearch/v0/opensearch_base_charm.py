@@ -231,7 +231,7 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        if deployment_desc.typ != DeploymentType.MAIN_CLUSTER_MANAGER:
+        if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
             return
 
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
@@ -334,8 +334,8 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         if (
-                not self.peers_data.get(Scope.APP, "security_index_initialised")
-                or not self.opensearch.is_node_up()
+            not self.peers_data.get(Scope.APP, "security_index_initialised")
+            or not self.opensearch.is_node_up()
         ):
             return
 
@@ -527,8 +527,8 @@ class OpenSearchBaseCharm(CharmBase):
             # the admin certificate if missing and the TLS relation is established.
             cluster_changed_to_main_cm = (
                 previous_deployment_desc is not None
-                and previous_deployment_desc.typ != DeploymentType.MAIN_CLUSTER_MANAGER
-                and self.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_CLUSTER_MANAGER
+                and previous_deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
+                and self.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
             )
             if cluster_changed_to_main_cm:
                 # we check if we need to create the admin user
@@ -563,7 +563,7 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
-        if not self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_CLUSTER_MANAGER:
+        if not self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
             event.fail("The action can be run only on the leader unit of the main cluster.")
             return
 
@@ -889,7 +889,7 @@ class OpenSearchBaseCharm(CharmBase):
     def _remove_data_role_from_dedicated_cm_if_needed(self, event: EventBase) -> bool:
         """Remove the data role from the first started CM node."""
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
-        if not deployment_desc or deployment_desc.typ != DeploymentType.MAIN_CLUSTER_MANAGER:
+        if not deployment_desc or deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
             return False
 
         if not self.peers_data.get(Scope.UNIT, "remove-data-role", default=False):
@@ -1049,7 +1049,7 @@ class OpenSearchBaseCharm(CharmBase):
         hosts = self.alt_hosts
         logger.debug(f"\nHosts: {hosts}\nDeployment desc: {self.opensearch_peer_cm.deployment_desc().to_dict()}\rel_data: {self.opensearch_peer_cm.rel_data()}")
         if (
-            self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_CLUSTER_MANAGER
+            self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR
             and (peer_cm_rel_data := self.opensearch_peer_cm.rel_data()) is not None
         ):
             hosts.extend([node.ip for node in peer_cm_rel_data.cm_nodes])
@@ -1078,7 +1078,7 @@ class OpenSearchBaseCharm(CharmBase):
             # and store the security index
             if (
                 self.unit.is_leader()
-                and deployment_desc.typ == DeploymentType.MAIN_CLUSTER_MANAGER
+                and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
                 and "data" not in computed_roles
                 and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
             ):

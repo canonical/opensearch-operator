@@ -92,8 +92,8 @@ class Node(Model):
 class DeploymentType(BaseStrEnum):
     """Nature of a sub cluster deployment."""
 
-    MAIN_CLUSTER_MANAGER = "main-cluster-manager"
-    FAILOVER_CLUSTER_MANAGER = "failover-cluster-manager"
+    MAIN_ORCHESTRATOR = "main-orchestrator-cluster"
+    FAILOVER_ORCHESTRATOR = "failover-orchestrator-cluster"
     OTHER = "other"
 
 
@@ -193,7 +193,7 @@ class DeploymentDescription(Model):
     @root_validator
     def set_promotion_time(cls, values):  # noqa: N805
         """Set promotion time of a failover to a main CM."""
-        if values["typ"] == DeploymentType.MAIN_CLUSTER_MANAGER:
+        if values["typ"] == DeploymentType.MAIN_ORCHESTRATOR:
             values["promotion_time"] = datetime.now().timestamp()
 
         return values
@@ -225,3 +225,19 @@ class PeerClusterRelErrorData(Model):
     should_wait: bool
     blocked_message: str
     deployment_desc: Optional[DeploymentDescription]
+
+
+class PeerClusterOrchestrators(Model):
+    """Model class for the PClusters registered main/failover clusters."""
+
+    main_rel_id: int = -1
+    main_app: Optional[str]
+    failover_rel_id: int = -1
+    failover_app: Optional[str]
+
+
+class PeerClusterPlannedUnits(Model):
+    """Model class for each of the PClusters planned units."""
+
+    app: str
+    count: int

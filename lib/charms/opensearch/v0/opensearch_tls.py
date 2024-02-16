@@ -125,7 +125,7 @@ class OpenSearchTLS(Object):
         if (
             self.charm.unit.is_leader()
             and admin_cert is None
-            and deployment_desc.typ == DeploymentType.MAIN_CLUSTER_MANAGER
+            and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
         ):
             self._request_certificate(Scope.APP, CertType.APP_ADMIN)
 

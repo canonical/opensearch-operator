@@ -16,7 +16,7 @@ from charms.opensearch.v0.constants_charm import (
     PClusterWrongNodesCountForQuorum,
     PClusterWrongRelation,
     PClusterWrongRolesProvided,
-    PeerClusterManagerRelationName,
+    PeerClusterOrchestratorRelationName,
     PeerRelationName,
 )
 from charms.opensearch.v0.helper_cluster import ClusterTopology
@@ -138,7 +138,8 @@ class OpenSearchPeerClustersManager:
             Scope.APP, "deployment-description", new_deployment_desc.to_dict()
         )
 
-        logger.debug(f"REQUIRER: run_with_relation_data: \ncurrent_deployment_desc: {current_deployment_desc.to_dict()}\nVS\n{new_deployment_desc.to_dict()}...\n\n")
+        logger.debug(f"REQUIRER: run_with_relation_data: \ncurrent_deployment_desc: "
+                     f"{current_deployment_desc.to_dict()}\nVS\n{new_deployment_desc.to_dict()}...\n\n")
 
     def _user_config(self):
         """Build a user provided config object."""
@@ -335,25 +336,25 @@ class OpenSearchPeerClustersManager:
 
         return DeploymentDescription.from_dict(current_deployment_desc)
 
-    def promote_to_main_cluster_manager(self) -> None:
+    def promote_to_main_orchestrator(self) -> None:
         """Update the deployment type of the current deployment desc."""
         deployment_desc = self.deployment_desc()
         if not deployment_desc:
             return
 
-        deployment_desc.typ = DeploymentType.MAIN_CLUSTER_MANAGER
+        deployment_desc.typ = DeploymentType.MAIN_ORCHESTRATOR
         deployment_desc.promotion_time = datetime.now().timestamp()
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
 
-    def demote_to_failover_cluster_manager(self) -> None:
+    def demote_to_failover_orchestrator(self) -> None:
         """Update the deployment type of the current deployment desc."""
         deployment_desc = self.deployment_desc()
         if not deployment_desc:
             return
 
-        deployment_desc.typ = DeploymentType.FAILOVER_CLUSTER_MANAGER
+        deployment_desc.typ = DeploymentType.FAILOVER_ORCHESTRATOR
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
@@ -411,7 +412,7 @@ class OpenSearchPeerClustersManager:
         if peer_main_cm_rel_id == -1:
             return False
 
-        rel = self._charm.model.get_relation(PeerClusterManagerRelationName, peer_main_cm_rel_id)
+        rel = self._charm.model.get_relation(PeerClusterOrchestratorRelationName, peer_main_cm_rel_id)
         return rel is not None
 
     def fetch_data_from_peer_cluster_rel(self, key: str) -> Optional[str]:
@@ -422,7 +423,7 @@ class OpenSearchPeerClustersManager:
             return None
 
         relation = self._charm.model.get_relation(
-            PeerClusterManagerRelationName, peer_main_cm_rel_id
+            PeerClusterOrchestratorRelationName, peer_main_cm_rel_id
         )
         return relation.data[self._charm.app].get(key)
 
@@ -445,7 +446,7 @@ class OpenSearchPeerClustersManager:
         )
         # logger.debug(f"Stored peer_main_cm_rel_id: {peer_main_cm_rel_id}")
 
-        rel = self._charm.model.get_relation(PeerClusterManagerRelationName, peer_main_cm_rel_id)
+        rel = self._charm.model.get_relation(PeerClusterOrchestratorRelationName, peer_main_cm_rel_id)
         return PeerClusterRelData.from_str(rel.data[rel.app].get("data"))
 
     def err_rel_data(self) -> Optional[PeerClusterRelErrorData]:
@@ -458,7 +459,7 @@ class OpenSearchPeerClustersManager:
         )
         # logger.debug(f"Stored peer_main_cm_rel_id: {peer_main_cm_rel_id}")
 
-        rel = self._charm.model.get_relation(PeerClusterManagerRelationName, peer_main_cm_rel_id)
+        rel = self._charm.model.get_relation(PeerClusterOrchestratorRelationName, peer_main_cm_rel_id)
         return PeerClusterRelErrorData.from_str(rel.data[rel.app].get("error-data"))
 
     def _pre_validate_roles_change(self, new_roles: List[str], prev_roles: List[str]):
@@ -515,9 +516,9 @@ class OpenSearchPeerClustersManager:
         )
 
         if has_cm_roles and not config.init_hold:
-            return DeploymentType.MAIN_CLUSTER_MANAGER
+            return DeploymentType.MAIN_ORCHESTRATOR
 
         if has_cm_roles and config.init_hold:
-            return DeploymentType.FAILOVER_CLUSTER_MANAGER
+            return DeploymentType.FAILOVER_ORCHESTRATOR
 
         return DeploymentType.OTHER
