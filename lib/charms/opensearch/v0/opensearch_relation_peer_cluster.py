@@ -449,7 +449,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         if self.charm.peers_data.get_object(Scope.APP, "orchestrators") != orchestrators.to_dict():
             # register main and failover cm app names if any, another benefit of the following is
-            # to trigger a peer_rel_changed event on each units to populate their unicast_hosts.txt
+            # to trigger a peer_rel_changed event on each unit to populate their unicast_hosts.txt
             # with new CMs / delete old ones
             self.charm.peers_data.put_object(
                 scope=Scope.APP, key="orchestrators", value=orchestrators.to_dict(),
