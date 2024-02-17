@@ -110,16 +110,9 @@ class OpenSearchTLS(Object):
 
     def _on_tls_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Request certificate when TLS relation joined."""
-        logger.debug(f"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-                     f"_on_tls_relation_joined: {self.charm.unit_name}"
-                     f"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            logger.debug(f"\n\nABOUT TO DEFER --- _on_tls_relation_joined")
             event.defer()
             return
-
-        logger.debug(f"_on_tls_relation_joined: requesting certificates...")
 
         admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         if (
@@ -175,7 +168,6 @@ class OpenSearchTLS(Object):
             self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
         except OpenSearchError as e:
             logger.exception(e)
-            logger.debug(f"\n\nABOUT TO DEFER --- _on_certificate_available")
             event.defer()
 
     def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
@@ -229,12 +221,8 @@ class OpenSearchTLS(Object):
             merge=True,
         )
 
-        logger.debug(f"\n\n\n_request_certificate: {self.charm.unit_name}")
         if self.charm.model.get_relation(TLS_RELATION):
-            logger.debug(f"\n_request_certificate: TRUE: self.charm.model.get_relation(TLS_RELATION)")
             self.certs.request_certificate_creation(certificate_signing_request=csr)
-        else:
-            logger.debug(f"\n_request_certificate: FALSE: self.charm.model.get_relation(TLS_RELATION)")
 
     def _request_certificate_renewal(
         self, scope: Scope, cert_type: CertType, secrets: Dict[str, str]

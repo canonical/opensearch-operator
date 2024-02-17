@@ -4,7 +4,7 @@
 """Cluster-related data structures / model classes."""
 from datetime import datetime
 from abc import ABC
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
@@ -32,8 +32,10 @@ class Model(ABC, BaseModel):
         return self.dict()
 
     @classmethod
-    def from_dict(cls, input_dict: Dict[str, Any]):
+    def from_dict(cls, input_dict: Optional[Dict[str, Any]]):
         """Create a new instance of this class from a json/dict repr."""
+        if not input_dict:  # to handle when classes defined defaults
+            return cls()
         return cls(**input_dict)
 
     @classmethod
@@ -230,7 +232,24 @@ class PeerClusterRelErrorData(Model):
 class PeerClusterOrchestrators(Model):
     """Model class for the PClusters registered main/failover clusters."""
 
+    _TYPES = Literal["main", "failover"]
+
     main_rel_id: int = -1
     main_app: Optional[str]
     failover_rel_id: int = -1
     failover_app: Optional[str]
+
+    def delete(self, typ: _TYPES) -> None:
+        """Delete an orchestrator from the current pair."""
+        if typ == "main":
+            self.main_rel_id = -1
+            self.main_app = None
+        else:
+            self.failover_rel_id = -1
+            self.failover_app = None
+
+    def promote_failover(self) -> None:
+        """Delete previous main orchestrator and promote failover if any."""
+        self.main_app = self.failover_app
+        self.main_rel_id = self.failover_rel_id
+        self.delete("failover")

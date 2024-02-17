@@ -26,7 +26,7 @@ from charms.opensearch.v0.models import (
     PeerClusterRelDataCredentials,
     PeerClusterRelErrorData,
 )
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchError, OpenSearchHttpError
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import (
     BlockedStatus,
@@ -58,20 +58,8 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-class OpenSearchPeerClusterRelationError(OpenSearchError):
-    pass
-
-
-class OpenSearchPeerClusterProviderError(OpenSearchPeerClusterRelationError):
-    """Peer cl"""
-    pass
-
-
-class OpenSearchPeerClusterRequirerError(OpenSearchPeerClusterRelationError):
-    pass
-
-
 class OpenSearchPeerClusterRelation(Object):
+    """Base class for Peer cluster relations."""
 
     def __init__(self, charm: "OpenSearchBaseCharm", relation_name: str):
         super().__init__(charm, relation_name)
@@ -144,7 +132,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         )
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
-        """Event received by all units in main/failover CM when new sub-cluster joins the relation."""
+        """Received by all units in main/failover clusters when new sub-cluster joins the rel."""
         self.refresh_relation_data(event)
 
         # TODO: is the below still needed
@@ -164,7 +152,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return
 
         if not (data := event.relation.data.get(event.app)):
-            logger.debug(f"\n\nPROVIDER: _on_peer_cluster_relation_changed: not data leaving...\n\n")
             return
 
         target_relation_ids = [
@@ -174,25 +161,27 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # fetch emitting app planned units and broadcast
         self._put_planned_units(target_relation_ids)
 
-        # todo: store the rel id in the main cluster peer rel databag and upon re-election, clone all rel data
+        # todo: store the rel id in the main-orchestrator peer data, and clone all on promotion
         if not (candidate_failover_cm_app := data.get("candidate_failover_orchestrator_app")):
             self.refresh_relation_data(event)
             return
 
-        orchestrators = self.get_obj_from_rel_data("orchestrators", rel_id=int(target_relation_ids[0]))
-        if orchestrators.get("failover_app"):
-            logger.info("A failover cluster orchestrator has already been registered.")
+        orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object("orchestrators")
+        )
+        if orchestrators.failover_app:
+            logger.info("A failover cluster orchestrator is already registered.")
             self.refresh_relation_data(event)
             return
 
         # no failover cluster was already registered, we do it
+        orchestrators.failover_app = candidate_failover_cm_app
+        orchestrators.failover_rel_id = event.relation.id
+
+        self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
         for rel_id in target_relation_ids:
-            orchestrators.update({
-                "failover_app": candidate_failover_cm_app,
-                "failover_rel_id": event.relation.id,
-            })
             self.put_in_rel_data(
-                data={"orchestrators": json.dumps(orchestrators)}, rel_id=rel_id
+                data={"orchestrators": json.dumps(orchestrators.to_dict())}, rel_id=rel_id
             )
 
     def refresh_relation_data(self, event: EventBase):
@@ -231,7 +220,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             })
             self.put_in_rel_data(data={"orchestrators": orchestrators}, rel_id=rel_id)
 
-            # there is no error to broadcast - we clear any previously boradcasted error
+            # there is no error to broadcast - we clear any previously broadcasted error
             if isinstance(rel_data, PeerClusterRelData):
                 self.delete_from_rel_data("error_data", rel_id=rel_id)
 
@@ -319,23 +308,23 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _rel_err_data(self) -> Optional[PeerClusterRelErrorData]:
         """Build error peer relation data object."""
         deployment_desc = self.peer_cm.deployment_desc()
+        orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object(Scope.APP, "orchestrators")
+        )
 
-        peer_cms = self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
-        failover_cm_app = peer_cms.get("failover_app")
-
-        should_sever_relation, should_wait, blocked_msg = False, True, None
+        should_sever_relation, blocked_msg = False, None
         message_suffix = f"in related '{deployment_desc.typ}' peer-cluster"
 
         if not deployment_desc:
-            blocked_msg = "'main/failover' cluster not configured yet."
+            blocked_msg = "'main/failover'-orchestrators not configured yet."
         elif deployment_desc.typ == DeploymentType.OTHER:
-            should_sever_relation, should_wait = True, False
-            blocked_msg = "Related to non 'main/failover'-orchestrator peer-cluster."
-        elif failover_cm_app and failover_cm_app != self.charm.app.name:
-            should_sever_relation, should_wait = True, False
-            blocked_msg = "Cannot have 2 'failover'-orchestrators. Relate to the existing failover cluster."
+            should_sever_relation = True
+            blocked_msg = "Related to non 'main/failover'-orchestrator cluster."
+        elif orchestrators.failover_app and orchestrators.failover_cm_app != self.charm.app.name:
+            should_sever_relation = True
+            blocked_msg = "Cannot have 2 'failover'-orchestrators. Relate to the existing failover."
         elif not self.charm.is_admin_user_configured():
-            blocked_msg = "Admin user not fully configured {message_suffix}."
+            blocked_msg = f"Admin user not fully configured {message_suffix}."
         elif not self.charm.is_tls_full_configured_in_cluster():
             blocked_msg = f"TLS not fully configured {message_suffix}."
         elif not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
@@ -356,7 +345,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         return PeerClusterRelErrorData(
             cluster_name=deployment_desc.config.cluster_name if deployment_desc else None,
             should_sever_relation=should_sever_relation,
-            should_wait=should_wait,
+            should_wait=not should_sever_relation,
             blocked_message=blocked_msg,
             deployment_desc=deployment_desc,
         )
@@ -414,20 +403,16 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # fetch main and failover clusters relations ids if any
         orchestrators = self._related_orchestrators(event, data)
 
-        # fetch error from current data + alternate relations (main and failover)-cm,
-        # so we don't keep overriding the statuses
+        # fetch provider data and only set if one not already set (by another main/failover rel)
         if error_from_providers := self._error_from_providers(data, orchestrators):
             self._set_error(label="error_from_providers", error=error_from_providers)
             # todo: set errors in the deployment desc -- run_with relation data?
             return
 
-        # this indicates there is no "success data" passed
-        if "data" not in data:
-            return
-
+        # we fetch the success data
         data = PeerClusterRelData.from_str(data["data"])
 
-        # handle error states that can only be figured out from the requirer side, and defer
+        # handle error states that can only be figured out from the requirer side
         if error_from_requirer := self._error_from_requirer(data, event.relation.id):
             self._set_error(label="error_from_requirer", error=error_from_requirer.to_dict())
             return
@@ -437,7 +422,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # this means it's a previous "main orchestrator" that was unrelated then re-related
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            logger.debug(f"REQUIRER: DEMOTING")
+            logger.debug("REQUIRER: DEMOTING")
             self.charm.opensearch_peer_cm.demote_to_failover_orchestrator()
             deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
 
@@ -447,13 +432,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 data={"candidate_failover_orchestrator_app": self.charm.app.name}, rel_id=event.relation.id
             )
 
-        if self.charm.peers_data.get_object(Scope.APP, "orchestrators") != orchestrators.to_dict():
-            # register main and failover cm app names if any, another benefit of the following is
-            # to trigger a peer_rel_changed event on each unit to populate their unicast_hosts.txt
-            # with new CMs / delete old ones
-            self.charm.peers_data.put_object(
-                scope=Scope.APP, key="orchestrators", value=orchestrators.to_dict(),
-            )
+        # register main and failover cm app names if any
+        self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
 
         # store the security related settings in secrets, peer_data, disk
         self._set_security_conf(data)
@@ -474,7 +454,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
-        logger.debug(f"\n------------------------------------------------\n\n\n")
+        logger.debug("\n------------------------------------------------\n\n\n")
 
     def _set_security_conf(self, data: PeerClusterRelData) -> None:
         """Store security related config."""
@@ -490,7 +470,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
         self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
 
-        logger.debug(f"REQUIRER: _on_peer_cluster_relation_changed: STORED EVERYTHING NEEDED...")
+        logger.debug("REQUIRER: _on_peer_cluster_relation_changed: STORED EVERYTHING NEEDED...")
 
     def _related_orchestrators(
         self, event: RelationChangedEvent, data: MutableMapping[str, str]
@@ -519,109 +499,86 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
     def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent):
         """Handle when 'main/failover'-CMs leave the relation (app or relation removal)."""
-        # this is where sub-clusters configured to auto-generated should probably recompute
-        # self.charm.trigger_leader_peer_rel_changed()
-        if not self.charm.unit.is_leader():  # To run the cleanup logic just once.
+        if not self.charm.unit.is_leader():
             return
 
         logger.debug(f"\n\n\n_on_peer_cluster_relation_departed: {event.relation.id}")
 
-        peer_cm_conf = self.charm.peers_data.get_object(Scope.APP, "orchestrators")
+        # fetch registered orchestrators
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators")
         )
-
         logger.debug(f"\n\n\n_on_peer_cluster_relation_departed: \n{orchestrators}\n\n")
 
         # a cluster of type "other" is departing (wrong relation), we can safely ignore.
         if event.relation.id not in [orchestrators.main_rel_id, orchestrators.failover_rel_id]:
             return
 
-        # check the cluster who triggered this hook
+        # check the cluster which triggered this hook
         event_src_cluster_type = (
             "main" if event.relation.id == orchestrators.main_rel_id else "failover"
         )
 
-        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-        if deployment_desc.typ == DeploymentType.OTHER:
-            peer_cm_conf.pop(f"{event_src_cluster_type}-rel-id", None)
-            peer_cm_conf.pop(f"{event_src_cluster_type}-app", None)
-            self.charm.peers_data.put(Scope.APP, "orchestrators", peer_cm_conf)
+        if self.charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.OTHER:
+            orchestrators.delete(event_src_cluster_type)
+            self.charm.peers_data.put(Scope.APP, "orchestrators", orchestrators.to_dict())
             return
 
+        # from here on, the current app is either a "main" or potential "failover" clusters
+
         # handle scale-down at the charm level storage detaching, or??
-        event_reason = relation_departure_reason(self.charm, self.relation_name)
-        if event_reason == RelDepartureReason.SCALE_DOWN:
+        if relation_departure_reason(self.charm, self.relation_name) == RelDepartureReason.SCALE_DOWN:
             return
 
         # fetch cluster manager nodes across all peer clusters
-        full_cms = self._cm_nodes(orchestrators)
-        main_cms = [cm for cm in full_cms if cm.app_name == orchestrators.main_app]
-        non_main_cms = [cm for cm in full_cms if cm.app_name != orchestrators.main_app]
+        cms = self._cm_nodes(orchestrators)
+
+        # delete the orchestrator that triggered this event
+        orchestrators.delete(event_src_cluster_type)
 
         # the 'main' cluster orchestrator is the one being removed
         if event_src_cluster_type == "main":
-            if not orchestrators.failover_app:
-                self.charm.status.set(
-                    BlockedStatus("Main-cluster-orchestrator removed, and no failover cluster related.")
-                )
-                self.charm.peers_data.delete(Scope.APP, "orchestrators")
-                return
+            self._handle_main_orchestrator_departure(orchestrators, cms)
 
-            if orchestrators.failover_app != self.charm.app.name:
-                peer_cm_conf.pop("main_app", None)
-                peer_cm_conf.pop("main_rel_id", None)
-                self.charm.peers_data.put(Scope.APP, "orchestrators", peer_cm_conf)
-                return
+        self.charm.peers_data.put(Scope.APP, "orchestrators", orchestrators.to_dict())
 
-            # current cluster is failover
-            # TODO: copy and store all data previously in main CM
-            self.charm.opensearch_peer_cm.promote_to_main_orchestrator()
+        # let's broadcast the new conf to all related apps
+        for rel_id in [rel.id for rel in self.charm.model.relations[self.relation_name]]:
+            self.put_in_rel_data(data={"orchestrators": orchestrators.to_dict()}, rel_id=rel_id)
 
-            # ensuring quorum
-            if len(non_main_cms) % 2 == 0:
-                message = "Scale-up this application by an odd number of units{} to ensure quorum."
-                if event_reason == RelDepartureReason.REL_BROKEN and len(main_cms) % 2 == 1:
-                    message = message.format(f"and scale-'down/up' {orchestrators.main_app} by 1 unit.")
-
-                self.charm.status.set(message)
-
-            # update peer rel data of current unit
-            self.charm.peers_data.put_object(
-                scope=Scope.APP,
-                key="orchestrators",
-                value={
-                    "main_app": peer_cm_conf.get("failover_app"),
-                    "main_rel_id": peer_cm_conf.get("failover_rel_id"),
-                }
+    def _handle_main_orchestrator_departure(
+        self, orchestrators: PeerClusterOrchestrators, cms: List[Node]
+    ) -> None:
+        """Handle the departure of the main orchestrator."""
+        if not orchestrators.failover_app:
+            self.charm.status.set(
+                BlockedStatus("Main-cluster-orchestrator removed, and no failover cluster related.")
             )
-
-            # broadcast the new conf to all related units
-            target_rel_ids = [rel.id for rel in self.charm.model.relations[self.relation_name]]
-
-            for rel_id in target_rel_ids:
-                peer_cm_conf.update({
-                    "main_app": self.charm.app.name,
-                    "main_rel_id": rel_id,
-                })
-                self.put_in_rel_data(data={"orchestrators": json.dumps(peer_cm_conf)}, rel_id=event.relation.id)
+            self.charm.peers_data.put(Scope.APP, "orchestrators", orchestrators.to_dict())
             return
 
-        # the following indicates that we are removing a failover cluster
-        peer_cm_conf.pop("failover_app", None)
-        peer_cm_conf.pop("failover_rel_id", None)
-        self.charm.peers_data.put(Scope.APP, "orchestrators", peer_cm_conf)
+        if orchestrators.failover_app != self.charm.app.name:
+            self.charm.peers_data.put(Scope.APP, "orchestrators", orchestrators.to_dict())
+            return
 
-        # broadcast the new conf to all related units
-        if orchestrators.main_app == self.charm.app.name:
-            self.charm.peers_data.put_object(
-                scope=Scope.APP,
-                key="orchestrators",
-                value={
-                    "main_app": peer_cm_conf.get("main_app"),
-                    "main_rel_id": peer_cm_conf.get("main_rel_id"),
-                },
-            )
+        # current cluster is failover
+        self.charm.opensearch_peer_cm.promote_to_main_orchestrator()
+
+        # ensuring quorum
+        main_cms = [cm for cm in cms if cm.app_name == orchestrators.main_app]
+        non_main_cms = [cm for cm in cms if cm not in main_cms]
+        if len(non_main_cms) % 2 == 0:
+            message = "Scale-up this application by an odd number of units{} to ensure quorum."
+            if (
+                relation_departure_reason(self.charm, self.relation_name) == RelDepartureReason.REL_BROKEN
+                and len(main_cms) % 2 == 1
+            ):
+                message = message.format(f"and scale-'down/up' {orchestrators.main_app} by 1 unit.")
+
+            self.charm.status.set(message)
+
+        # update peer rel data of current unit
+        orchestrators.promote_failover()
 
     def _cm_nodes(self, orchestrators: PeerClusterOrchestrators) -> List[Node]:
         """Fetch the cm nodes passed from the peer cluster relation not api call."""
@@ -671,7 +628,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     def _error_from_requirer(
         self, peer_cluster_rel_data: PeerClusterRelData, event_rel_id: int
     ) -> Optional[PeerClusterRelErrorData]:
-        """Compute error if relation is wrong and can only be figured out on the local requirer side."""
+        """Fetch error when relation is wrong and can only be computed on the requirer side."""
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators")
         )

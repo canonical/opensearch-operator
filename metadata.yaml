@@ -17,7 +17,7 @@ peers:
     interface: rolling_op
 
 provides:
-  peer-cluster-manager:
+  peer-cluster-orchestrator:
     interface: peer_cluster
     optional: true
   opensearch-client:
@@ -36,7 +36,7 @@ requires:
     limit: 1
   peer-cluster:
     interface: peer_cluster
-    limit: 2  # main cluster_manager + failover_cluster_manager
+    limit: 2  # (main+failover)_cluster_orchestrator(s)
     optional: true
   s3-credentials:
     interface: s3

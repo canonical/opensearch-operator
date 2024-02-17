@@ -623,29 +623,23 @@ class OpenSearchBaseCharm(CharmBase):
         - Run the security admin script
         """
         # Get the list of stored secrets for this cert
-        logger.debug(f"on_tls_conf_set: {scope}:{cert_type}\n")
         current_secrets = self.secrets.get_object(scope, cert_type.val)
-        logger.debug(f"on_tls_conf_set: fetched curr secrets\n")
 
         # Store cert/key on disk - must happen after opensearch stop for transport certs renewal
         self.store_tls_resources(cert_type, current_secrets)
-        logger.debug(f"on_tls_conf_set: stored curr secrets\n")
 
         if scope == Scope.UNIT:
             # node http or transport cert
             self.opensearch_config.set_node_tls_conf(cert_type, current_secrets)
-            logger.debug(f"on_tls_conf_set: set node conf\n")
         else:
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
             self.opensearch_config.set_admin_tls_conf(current_secrets)
-            logger.debug(f"on_tls_conf_set: set admin tls conf\n")
 
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal and self.is_admin_user_configured() and self.is_tls_fully_configured():
             self.on[self.service_manager.name].acquire_lock.emit(
                 callback_override="_restart_opensearch"
             )
-            logger.debug(f"on_tls_conf_set: restart\n")
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
@@ -740,17 +734,13 @@ class OpenSearchBaseCharm(CharmBase):
 
         try:
             # Retrieve the nodes of the cluster, needed to configure this node
-            logger.debug(f"Calling get nodes...")
             nodes = self._get_nodes(False)
-            logger.debug(f"Called get nodes... Validating roles...")
 
             # validate the roles prior to starting
             self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
-            logger.debug(f"Validated roles... calling set node conf")
 
             # Set the configuration of the node
             self._set_node_conf(nodes)
-            logger.debug(f"Called set nodes conf...")
         except OpenSearchHttpError:
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
@@ -1073,8 +1063,8 @@ class OpenSearchBaseCharm(CharmBase):
         ).start == StartMode.WITH_PROVIDED_ROLES:
             computed_roles = deployment_desc.config.roles
 
-            # This is the case where the 1st and main cluster manager to be deployed
-            # with no "data" role in the provided roles, we need to add the role to be able to create
+            # This is the case where the 1st and main orchestrator to be deployed with no
+            # "data" role in the provided roles, we need to add the role to be able to create
             # and store the security index
             if (
                 self.unit.is_leader()
@@ -1111,7 +1101,6 @@ class OpenSearchBaseCharm(CharmBase):
                 # indicates that this unit is part of the "initial cm nodes"
                 self.peers_data.put(Scope.UNIT, "bootstrap_contributor", True)
 
-        logger.debug(f"Writing on file....")
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
         self.opensearch_config.set_node(
             cluster_name=deployment_desc.config.cluster_name,
