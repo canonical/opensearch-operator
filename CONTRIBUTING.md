@@ -21,6 +21,41 @@ this operator.
 - Please help us out in ensuring easy to review branches by rebasing your pull request branch onto
   the `main` branch. This also avoids merge commits and creates a linear Git commit history.
 
+
+## Build charm
+
+Build the charm in this git repository using tox.
+
+There are two alternatives to build the charm: using the charm cache or not.
+Cache will speed the build by downloading all dependencies from charmcraftcache-hub.
+
+### Build Without Cache
+
+To run the traditional build only using `charmcraft`, run the following command:
+
+```shell
+tox -e build-production
+```
+
+### Build With Cache
+
+First, ensure you have the right dependencies:
+* charmcraft v2.5.4+
+* charmcraftcache
+
+By running the following commands:
+
+```shell
+pip install charmcraftcache
+sudo snap refresh charmcraft --channel=latest/beta
+```
+
+Then, start the build:
+
+```shell
+tox -e build-dev
+```
+
 ## Developing
 
 You can create an environment for development with `tox`:
@@ -32,41 +67,67 @@ source venv/bin/activate
 
 ### Testing
 
-To run tests, run the following
+To run tests, first build the charm as described above, then run the following
 
 ```shell
 tox -e format       # update your code according to linting rules
 tox -e lint         # code style
 tox -e unit         # unit tests
-tox -m integration  # integration tests, running on juju 2.
+tox -m integration  # integration tests, running on juju 3.
 tox                 # runs 'format', 'lint', and 'unit' environments
 ```
 
-Integration tests can be run for separate areas of functionality:
+Integration tests can be run for separate files:
 
 ```shell
-tox -e charm-integration      # basic charm integration tests
-tox -e tls-integration        # TLS-specific integration tests
-tox -e client-integration     # Validates the `opensearch-client` integration
-tox -e ha-integration         # HA tests
-tox -e h-scaling-integration  # HA tests specific to horizontal scaling
+tox -e integration -- tests/integration/ha/test_storage.py
 ```
 
-If you're running tests on juju 3, run the following command to change libjuju to the correct version:
+#### Running different versions of libjuju
+
+To try different versions of libjuju, run:
 
 ```shell
-export LIBJUJU_VERSION_SPECIFIER="==3.3.0.0"
+poetry add --lock --group integration,unit juju@<YOUR CHOSEN VERSION>
 ```
 
-## Build charm
+#### Testing Backups
 
-Build the charm in this git repository using:
+Backup testing installs microceph and, optionally, can run on AWS and GCP object stores.
+For that, pass the access / secret / service account information as env. variables.
+
+To run the test only against microceph:
 
 ```shell
-charmcraft pack
+tox -e integration -- tests/integration/ha/test_backups.py --group='microceph' # test backup service
 ```
 
-### Deploy
+And against public clouds + microceph:
+
+```shell
+SECRETS_FROM_GITHUB=$(cat <path-to>/credentials.json) tox -e integration -- tests/integration/ha/test_backups.py
+```
+
+Where, for AWS only, `credentials.json` should look like (the `IGNORE` is necessary to remove GCP):
+```json
+{ "AWS_ACCESS_KEY": ..., "AWS_SECRET_KEY": ..., "GCP_SECRET_KEY": "IGNORE" }
+```
+
+For GCP only, some additional information is needed. The pytest script runs with `boto3` and needs `GCP_{ACCESS,SECRET}_KEY` to clean up the object store; whereas OpenSearch uses the `service account` json file.
+
+```json
+{ "AWS_SECRET_KEY": "IGNORE", "GCP_ACCESS_KEY": ..., "GCP_SECRET_KEY": ..., "GCP_SERVICE_ACCOUNT": ... }
+```
+
+Combine both if AWS and GCP are to be used.
+
+
+#### Cleaning Test Environment
+
+Remove the following files / folders: `poetry.lock`, `.tox`, `requirements*`.
+
+
+## Deploy
 
 OpenSearch has a set of system requirements to correctly function, you can find the list [here](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/).
 Some of those settings must be set using cloudinit-userdata on the model, while others must be set on the host machine:

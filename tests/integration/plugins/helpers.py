@@ -18,8 +18,8 @@ from tenacity import (
     wait_random,
 )
 
-from tests.integration.ha.helpers_data import bulk_insert, create_index
-from tests.integration.helpers import get_application_unit_ids, http_request
+from ..ha.helpers_data import bulk_insert, create_index
+from ..helpers import get_application_unit_ids, http_request
 
 logger = logging.getLogger(__name__)
 

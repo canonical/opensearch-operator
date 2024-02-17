@@ -3,7 +3,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
@@ -17,7 +16,11 @@ from unit.lib.test_opensearch_internal_data import TestOpenSearchInternalData
 from charm import OpenSearchOperatorCharm
 
 
-@pytest.mark.usefixtures("only_with_juju_secrets")
+class JujuVersionMock:
+    def has_secrets(self):
+        return True
+
+
 class TestOpenSearchSecrets(TestOpenSearchInternalData):
     """Ensuring that secrets interfaces and expected behavior are preserved.
 
@@ -36,6 +39,8 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
         self.unit = self.charm.unit
         self.secrets = self.charm.secrets
         self.store = self.charm.secrets
+
+        JujuVersion.from_environ = MagicMock(return_value=JujuVersionMock())
 
         self.peers_rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
