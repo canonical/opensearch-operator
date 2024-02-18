@@ -11,7 +11,7 @@ config-changed, upgrade, s3-credentials-changed, etc.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.constants_charm import PluginConfigStart
 from charms.opensearch.v0.helper_cluster import ClusterTopology
@@ -260,6 +260,42 @@ class OpenSearchPluginManager:
         except KeyError as e:
             raise OpenSearchPluginMissingConfigError(e)
 
+    def _compute_settings(
+        self, config: OpenSearchPluginConfig
+    ) -> Tuple[Dict[str, str], Dict[str, str]]:
+        """Returns the current and the new configuration."""
+        current_settings = ClusterTopology.get_cluster_settings(
+            self._charm.opensearch,
+            include_defaults=True,
+        )
+        to_remove = dict(
+            zip(config.config_entries_to_del, [None] * len(config.config_entries_to_del))
+        )
+        new_conf = {
+            **current_settings,
+            **to_remove,
+            **config.config_entries_to_add,
+        }
+        logger.debug(
+            "Difference between current and new configuration: \n"
+            + str(
+                {
+                    "in current but not in new_conf": {
+                        k: v for k, v in current_settings.items() if k not in new_conf.keys()
+                    },
+                    "in new_conf but not in current": {
+                        k: v for k, v in new_conf.items() if k not in current_settings.keys()
+                    },
+                    "in both but different values": {
+                        k: v
+                        for k, v in new_conf.items()
+                        if k in current_settings.keys() and current_settings[k] != v
+                    },
+                }
+            )
+        )
+        return current_settings, new_conf
+
     def apply_config(self, config: OpenSearchPluginConfig) -> bool:
         """Runs the configuration changes as passed via OpenSearchPluginConfig.
 
@@ -274,39 +310,7 @@ class OpenSearchPluginManager:
         if config.secret_entries_to_del or config.secret_entries_to_add:
             self._keystore.reload_keystore()
 
-        # Add and remove configuration if applies
-        current_settings = ClusterTopology.get_cluster_settings(
-            self._charm.opensearch,
-            include_defaults=True,
-        )
-        to_remove = config.config_entries_to_del
-        if isinstance(config.config_entries_to_del, list):
-            # No keys should have value "None", therefore, setting them to None means
-            # the original current_settings will be changed.
-            to_remove = dict(
-                zip(config.config_entries_to_del, [None] * len(config.config_entries_to_del))
-            )
-
-        new_conf = {
-            **current_settings,
-            **to_remove,
-            **config.config_entries_to_add,
-        }
-
-        diffs = {
-            "in current but not in new_conf": {
-                k: v for k, v in current_settings.items() if k not in new_conf.keys()
-            },
-            "in new_conf but not in current": {
-                k: v for k, v in new_conf.items() if k not in current_settings.keys()
-            },
-            "in both but different values": {
-                k: v
-                for k, v in new_conf.items()
-                if k in current_settings.keys() and current_settings[k] != v
-            },
-        }
-        logger.debug(f"Difference between current and new configuration: \n{diffs}")
+        current_settings, new_conf = self._compute_settings(config)
         if current_settings == new_conf:
             # Nothing to do here
             logger.info("apply_config: nothing to do, return")
@@ -348,32 +352,28 @@ class OpenSearchPluginManager:
     def _is_enabled(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is enabled.
 
-        The main question to answer is if we would remove the configuration from
-        opensearch.yaml and/or add some other configuration instead.
-        If yes, then we know that the service is enabled.
+        The main question to answer is if we would have it in the configuration
+        from cluster settings. If yes, then we know that the service is enabled.
 
-        The disable() method is used, as a given entry will be removed from opensearch.yml.
-
-        If disable() returns a list, then check if the keys in the stored_plugin_conf
-        matches the list values; otherwise, if a dict, then check if the keys and values match.
-        If they match in any of the cases above, then return True.
+        Check if the configuration from enable() is present or not.
         """
         try:
-            plugin_conf = plugin.disable().config_entries_to_del
-            keystore_conf = plugin.disable().secret_entries_to_del
-            stored_plugin_conf = self._opensearch_config.get_plugin(plugin_conf)
-
-            if any(k not in self._keystore.list() for k in keystore_conf):
+            current_settings, new_conf = self._compute_settings(plugin.config())
+            if current_settings != new_conf:
                 return False
 
-            # Using sets to guarantee matches; stored_plugin_conf will be a dict
-            if isinstance(plugin_conf, list):
-                return set(plugin_conf) == set(stored_plugin_conf)
-            else:  # plugin_conf is a dict
-                return plugin_conf == stored_plugin_conf
+            # Now, focus in on the keystore part
+            keys_available = self._keystore.list()
+            keys_to_add = plugin.config().secret_entries_to_add
+            if any(k not in keys_available for k in keys_to_add):
+                return False
+            keys_to_del = plugin.config().secret_entries_to_del
+            if any(k in keys_available for k in keys_to_del):
+                return False
         except (KeyError, OpenSearchPluginError) as e:
             logger.warning(f"_is_enabled: error with {e}")
             return False
+        return True
 
     def _needs_upgrade(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin needs upgrade."""
