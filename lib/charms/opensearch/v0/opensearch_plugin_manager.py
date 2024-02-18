@@ -173,6 +173,7 @@ class OpenSearchPluginManager:
             if restart_needed:
                 self._charm.status.set(MaintenanceStatus(PluginConfigStart))
 
+        logger.info(f"Plugin check finished, restart needed: {restart_needed}")
         self._charm.status.clear(PluginConfigStart)
         return restart_needed
 
@@ -266,11 +267,6 @@ class OpenSearchPluginManager:
         1) Remove the entries to be deleted
         2) Add entries, if available
 
-        For example:
-            KNN needs to:
-            1) Remove from configuration: {"knn.plugin.enabled": "True"}
-            2) Add to configuration: {"knn.plugin.enabled": "False"}
-
         Returns True if a configuration change was performed.
         """
         self._keystore.delete(config.secret_entries_to_del)
@@ -290,11 +286,28 @@ class OpenSearchPluginManager:
             to_remove = dict(
                 zip(config.config_entries_to_del, [None] * len(config.config_entries_to_del))
             )
-        if current_settings == {
+
+        new_conf = {
             **current_settings,
             **to_remove,
             **config.config_entries_to_add,
-        }:
+        }
+
+        diffs = {
+            "in current but not in new_conf": {
+                k: v for k, v in current_settings.items() if k not in new_conf.keys()
+            },
+            "in new_conf but not in current": {
+                k: v for k, v in new_conf.items() if k not in current_settings.keys()
+            },
+            "in both but different values": {
+                k: v
+                for k, v in new_conf.items()
+                if k in current_settings.keys() and current_settings[k] != v
+            },
+        }
+        logger.debug(f"Difference between current and new configuration: \n{diffs}")
+        if current_settings == new_conf:
             # Nothing to do here
             logger.info("apply_config: nothing to do, return")
             return False
