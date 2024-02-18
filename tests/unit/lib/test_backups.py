@@ -436,10 +436,6 @@ def test_on_s3_broken_steps(
         harness.charm.backup._execute_s3_broken_calls.assert_not_called()
     elif test_type == "apply-config-error" or test_type == "apply-config-error-not-leader":
         event.defer.assert_called()
-        # harness.charm.status.set.call_args_list == [
-        #     call(MaintenanceStatus("Disabling backup service...")),
-        #     call(BlockedStatus("Unexpected error during plugin configuration, check the logs")),
-        # ]
         harness.charm.status.set.assert_any_call(MaintenanceStatus("Disabling backup service..."))
         harness.charm.status.set.assert_any_call(
             BlockedStatus("Unexpected error during plugin configuration, check the logs")
