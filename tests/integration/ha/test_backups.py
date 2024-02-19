@@ -147,8 +147,6 @@ def microceph():
                 uceph,
                 "-c",
                 "latest/edge",
-                "-d",
-                "/dev/sdc",
                 "-a",
                 "accesskey",
                 "-s",
