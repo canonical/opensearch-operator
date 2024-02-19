@@ -451,10 +451,6 @@ class TestOpenSearchBackupPlugin(unittest.TestCase):
             "secret-key": "SECRET_KEY",
         }
         expected_config = OpenSearchPluginConfig(
-            secret_entries_to_del=[
-                "s3.client.default.access_key",
-                "s3.client.default.secret_key",
-            ],
             secret_entries_to_add={
                 "s3.client.default.access_key": "ACCESS_KEY",
                 "s3.client.default.secret_key": "SECRET_KEY",

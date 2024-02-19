@@ -132,11 +132,8 @@ class OpenSearchPluginManager:
             }
         return {**self._charm_config, "opensearch-version": self._opensearch.version}
 
-    def run(self) -> bool:
-        """Runs a check on each plugin: install, execute config changes or remove.
-
-        This method should be called at config-changed event. Returns if needed restart.
-        """
+    def check_plugin_manager_ready(self) -> bool:
+        """Checks if the plugin manager is ready to run."""
         if not (self._charm.opensearch.is_started() and self._charm.opensearch.is_node_up()):
             raise OpenSearchNotFullyReadyError()
 
@@ -153,6 +150,15 @@ class OpenSearchPluginManager:
             # Defer is important as next steps to configure plugins will involve
             # calls to the APIs of the cluster.
             logger.info("Cluster not ready, wait for the next event...")
+            return False
+        return True
+
+    def run(self) -> bool:
+        """Runs a check on each plugin: install, execute config changes or remove.
+
+        This method should be called at config-changed event. Returns if needed restart.
+        """
+        if not self.check_plugin_manager_ready():
             raise OpenSearchNotFullyReadyError()
 
         err_msgs = []

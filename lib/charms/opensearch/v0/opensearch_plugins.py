@@ -481,11 +481,6 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
             logger.error("Missing AWS access-key and secret-key configuration")
             return OpenSearchPluginConfig()
         return OpenSearchPluginConfig(
-            # Try to remove the previous values
-            secret_entries_to_del=[
-                "s3.client.default.access_key",
-                "s3.client.default.secret_key",
-            ],
             secret_entries_to_add={
                 # Remove any entries with None value
                 k: v
