@@ -138,7 +138,7 @@ class OpenSearchPluginManager:
         This method should be called at config-changed event. Returns if needed restart.
         """
         if not (self._charm.opensearch.is_started() and self._charm.opensearch.is_node_up()):
-            raise OpenSearchPluginRelationClusterNotReadyError()
+            raise OpenSearchNotFullyReadyError()
 
         if not (
             len(self._charm._get_nodes(True)) == self._charm.app.planned_units()
@@ -160,21 +160,33 @@ class OpenSearchPluginManager:
         for plugin in self.plugins:
             logger.info(f"Checking plugin {plugin.name}...")
             logger.debug(f"Status: {self.status(plugin)}")
-            restart_needed = any(
-                [
-                    self._install_if_needed(plugin),
-                    self._configure_if_needed(plugin),
-                    self._disable_if_needed(plugin),
-                    self._remove_if_needed(plugin),
-                    restart_needed,
-                ]
-            )
+            # These are independent plugins.
+            # Any plugin that errors, if that is an OpenSearchPluginError, then
+            # it is an "expected" error, such as missing additional config; should
+            # not influence the execution of other plugins.
+            # Capture them and raise all of them at the end.
+            try:
+                restart_needed = any(
+                    [
+                        self._install_if_needed(plugin),
+                        self._configure_if_needed(plugin),
+                        self._disable_if_needed(plugin),
+                        self._remove_if_needed(plugin),
+                        restart_needed,
+                    ]
+                )
+            except OpenSearchPluginError as e:
+                err_msgs.append(str(e))
+
             logger.debug(f"Finished Plugin {plugin.name} status: {self.status(plugin)}")
             if restart_needed:
                 self._charm.status.set(MaintenanceStatus(PluginConfigStart))
 
         logger.info(f"Plugin check finished, restart needed: {restart_needed}")
         self._charm.status.clear(PluginConfigStart)
+
+        if err_msgs:
+            raise OpenSearchPluginError("\n".join(err_msgs))
         return restart_needed
 
     def _install_plugin(self, plugin: OpenSearchPlugin) -> bool:
