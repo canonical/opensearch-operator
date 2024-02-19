@@ -497,20 +497,13 @@ class OpenSearchBackup(Object):
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 self.charm.plugin_manager.apply_config(plugin.disable())
             self.charm.plugin_manager.apply_config(plugin.config())
-        except OpenSearchNotFullyReadyError:
-            logger.warning("s3-changed: cluster not ready yet")
-            event.defer()
-            return
-        except OpenSearchPluginError as e:
-            # This is only possible if we could not apply keys to the store.
-            # That is generally transient.
-            logger.error(e)
-            event.defer()
-            return
         except OpenSearchError as e:
-            self.charm.status.set(BlockedStatus(PluginConfigError))
-            # There was an unexpected error, log it and block the unit
-            logger.error(e)
+            if isinstance(e, OpenSearchNotFullyReadyError):
+                logger.warning("s3-changed: cluster not ready yet")
+            else:
+                self.charm.status.set(BlockedStatus(PluginConfigError))
+                # There was an unexpected error, log it and block the unit
+                logger.error(e)
             event.defer()
             return
 
@@ -599,18 +592,13 @@ class OpenSearchBackup(Object):
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 self.charm.plugin_manager.apply_config(plugin.disable())
-        except OpenSearchNotFullyReadyError:
-            logger.warning("s3-credentials: cluster not ready yet")
-            event.defer()
-            return
-        except OpenSearchPluginError as e:
-            logger.error(e)
-            event.defer()
-            return
         except OpenSearchError as e:
-            self.charm.status.set(BlockedStatus(PluginConfigError))
-            # There was an unexpected error, log it and block the unit
-            logger.error(e)
+            if isinstance(e, OpenSearchNotFullyReadyError):
+                logger.warning("s3-changed: cluster not ready yet")
+            else:
+                self.charm.status.set(BlockedStatus(PluginConfigError))
+                # There was an unexpected error, log it and block the unit
+                logger.error(e)
             event.defer()
             return
         self.charm.status.clear(BackupInDisabling)
