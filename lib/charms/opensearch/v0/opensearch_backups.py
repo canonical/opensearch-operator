@@ -66,11 +66,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
-from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchBackupPlugin,
-    OpenSearchPluginError,
-    PluginState,
-)
+from charms.opensearch.v0.opensearch_plugins import OpenSearchBackupPlugin, PluginState
 from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
