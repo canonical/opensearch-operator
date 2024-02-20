@@ -328,19 +328,18 @@ class OpenSearchProvider(Object):
         """
         if not self.unit.is_leader():
             # We're updating app databags in this function, so it can't be called on follower
-            # units.
+            # units. This is not checked in `set_tls_ca`, in data-interfaces.
             return
-        if not ca_chain:
-            try:
-                if ca_chain := self.charm.secrets.get_object(
-                    Scope.APP, CertType.APP_ADMIN.val
-                ).get("chain"):
-                    self.opensearch_provides.set_tls_ca(relation_id, ca_chain)
-                else:
-                    logger.warning("unable to get ca_chain")
-            except AttributeError:
-                # cert doesn't exist - presumably we don't yet have a TLS relation.
-                return
+        try:
+            # If the ca_chain=None, then we try to load the CA from the app-admin secret.
+            _ch_chain = ca_chain or self.charm.secrets.get_object(
+                Scope.APP, CertType.APP_ADMIN.val
+            ).get("chain")
+        except AttributeError:
+            # cert doesn't exist - presumably we don't yet have a TLS relation.
+            logger.warning("unable to get ca_chain")
+            return
+        self.opensearch_provides.set_tls_ca(relation_id, _ch_chain)
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         if not self.unit.is_leader():
