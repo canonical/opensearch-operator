@@ -13,7 +13,6 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import Any, Dict, List, Optional
 
-from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchNotFullyReadyError,
@@ -52,11 +51,6 @@ ConfigExposedPlugins = {
         "class": OpenSearchKnn,
         "config": "plugin_opensearch_knn",
         "relation": None,
-    },
-    "repository-s3": {
-        "class": OpenSearchBackupPlugin,
-        "config": None,
-        "relation": "s3-credentials",
     },
 }
 
@@ -163,7 +157,12 @@ class OpenSearchPluginManager:
                         restart_needed,
                     ]
                 )
-            except OpenSearchPluginMissingConfigError as e:
+            except (
+                OpenSearchPluginMissingDepsError,
+                OpenSearchPluginMissingConfigError,
+                OpenSearchPluginInstallError,
+                OpenSearchPluginRemoveError,
+            ) as e:
                 # This is a more serious issue, as we are missing some input from
                 # the user. The charm should block.
                 raise e
@@ -183,9 +182,7 @@ class OpenSearchPluginManager:
         if plugin.dependencies:
             missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
             if missing_deps:
-                raise OpenSearchPluginMissingDepsError(
-                    f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
-                )
+                raise OpenSearchPluginMissingDepsError(plugin.name, missing_deps)
 
         # Add the plugin
         try:
@@ -198,9 +195,7 @@ class OpenSearchPluginManager:
             # Check for dependencies
             missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
             if missing_deps:
-                raise OpenSearchPluginMissingDepsError(
-                    f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
-                )
+                raise OpenSearchPluginMissingDepsError(plugin.name, missing_deps)
 
             self._opensearch.run_bin("opensearch-plugin", f"install --batch {plugin.name}")
         except KeyError as e:
@@ -210,7 +205,7 @@ class OpenSearchPluginManager:
                 logger.info(f"Plugin {plugin.name} already installed, continuing...")
                 # Nothing installed, as plugin already exists
                 return False
-            raise OpenSearchPluginInstallError(f"Failed to install plugin {plugin.name}: {e}")
+            raise OpenSearchPluginInstallError(plugin.name)
         # Install successful
         return True
 
@@ -240,7 +235,7 @@ class OpenSearchPluginManager:
                 return False
             return self.apply_config(plugin.config())
         except KeyError as e:
-            raise OpenSearchPluginMissingConfigError(e)
+            raise OpenSearchPluginMissingConfigError(plugin.name, configs=[f"{e}"])
 
     def _disable_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""
@@ -255,7 +250,7 @@ class OpenSearchPluginManager:
                 return False
             return self.apply_config(plugin.disable())
         except KeyError as e:
-            raise OpenSearchPluginMissingConfigError(e)
+            raise OpenSearchPluginMissingConfigError(plugin.name, configs=[f"{e}"])
 
     def apply_config(self, config: OpenSearchPluginConfig) -> bool:
         """Runs the configuration changes as passed via OpenSearchPluginConfig.
@@ -373,7 +368,7 @@ class OpenSearchPluginManager:
             if "not found" in str(e):
                 logger.info(f"Plugin {plugin.name} to be deleted, not found. Continuing...")
                 return False
-            raise OpenSearchPluginRemoveError(f"Failed to remove plugin {plugin.name}: {e}")
+            raise OpenSearchPluginRemoveError(plugin.name)
         return True
 
     def _installed_plugins(self) -> List[str]:

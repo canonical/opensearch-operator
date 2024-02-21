@@ -301,13 +301,23 @@ class OpenSearchPluginError(OpenSearchError):
 class OpenSearchPluginMissingDepsError(OpenSearchPluginError):
     """Exception thrown when an opensearch plugin misses installed dependencies."""
 
+    def __init__(self, name, deps):
+        super().__init__(f"Failed to install plugin: {name} - missing dependencies {deps}")
+        self.deps = deps
+
 
 class OpenSearchPluginInstallError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin installation fails."""
 
+    def __init__(self, name):
+        super().__init__("Failed to install plugin: {}".format(name))
+
 
 class OpenSearchPluginRemoveError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin removal fails."""
+
+    def __init__(self, name):
+        super().__init__("Failed to remove plugin: {}".format(name))
 
 
 class OpenSearchPluginMissingConfigError(OpenSearchPluginError):
@@ -315,6 +325,10 @@ class OpenSearchPluginMissingConfigError(OpenSearchPluginError):
 
     The plugin itself should raise a KeyError, to avoid burden in the plugin development.
     """
+
+    def __init__(self, name, configs: List[str]):
+        super().__init__(f"Plugin {name} is missing configs: {configs}")
+        self.configs = configs
 
 
 class OpenSearchPluginEventScope(BaseStrEnum):
@@ -472,7 +486,12 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         """
         if not self._extra_config.get("access-key") or not self._extra_config.get("secret-key"):
             raise OpenSearchPluginMissingConfigError(
-                "Missing AWS access-key and secret-key configuration"
+                self.name,
+                [
+                    conf
+                    for conf in ["access-key", "secret-key"]
+                    if not self._extra_config.get(conf)
+                ],
             )
 
         return OpenSearchPluginConfig(
