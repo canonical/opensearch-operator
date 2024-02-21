@@ -163,6 +163,10 @@ class OpenSearchPluginManager:
                         restart_needed,
                     ]
                 )
+            except OpenSearchPluginMissingConfigError as e:
+                # This is a more serious issue, as we are missing some input from
+                # the user. The charm should block.
+                raise e
             except OpenSearchPluginError as e:
                 err_msgs.append(str(e))
 
