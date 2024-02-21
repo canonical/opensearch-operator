@@ -134,24 +134,15 @@ class OpenSearchPluginManager:
 
     def check_plugin_manager_ready(self) -> bool:
         """Checks if the plugin manager is ready to run."""
-        if not (self._charm.opensearch.is_started() and self._charm.opensearch.is_node_up()):
-            raise OpenSearchNotFullyReadyError()
-
-        if not (
-            len(self._charm._get_nodes(True)) == self._charm.app.planned_units()
+        return (
+            self._charm.opensearch.is_node_up()
+            and len(self._charm._get_nodes(True)) == self._charm.app.planned_units()
             and self._charm.health.apply()
             in [
                 HealthColors.GREEN,
                 HealthColors.YELLOW,
             ]
-        ):
-            # If the health is not green, then raise a cluster-not-ready error
-            # The classes above should then defer their own events in waiting.
-            # Defer is important as next steps to configure plugins will involve
-            # calls to the APIs of the cluster.
-            logger.info("Cluster not ready, wait for the next event...")
-            return False
-        return True
+        )
 
     def run(self) -> bool:
         """Runs a check on each plugin: install, execute config changes or remove.
