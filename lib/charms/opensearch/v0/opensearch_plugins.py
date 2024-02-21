@@ -471,8 +471,10 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         )
         """
         if not self._extra_config.get("access-key") or not self._extra_config.get("secret-key"):
-            logger.error("Missing AWS access-key and secret-key configuration")
-            return OpenSearchPluginConfig()
+            raise OpenSearchPluginMissingConfigError(
+                "Missing AWS access-key and secret-key configuration"
+            )
+
         return OpenSearchPluginConfig(
             # Try to remove the previous values
             secret_entries_to_del=[
