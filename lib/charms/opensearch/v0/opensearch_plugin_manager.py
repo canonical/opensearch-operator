@@ -20,6 +20,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchBackupPlugin,
     OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
@@ -51,6 +52,11 @@ ConfigExposedPlugins = {
         "class": OpenSearchKnn,
         "config": "plugin_opensearch_knn",
         "relation": None,
+    },
+    "repository-s3": {
+        "class": OpenSearchBackupPlugin,
+        "config": None,
+        "relation": "s3-credentials",
     },
 }
 
@@ -165,9 +171,9 @@ class OpenSearchPluginManager:
             ) as e:
                 # This is a more serious issue, as we are missing some input from
                 # the user. The charm should block.
-                raise e
-            except OpenSearchPluginError as e:
                 err_msgs.append(str(e))
+            except OpenSearchPluginError as e:
+                logger.error(f"Plugin {plugin.name} failed: {str(e)}")
 
         if err_msgs:
             raise OpenSearchPluginError("\n".join(err_msgs))
@@ -226,10 +232,7 @@ class OpenSearchPluginManager:
     def _configure_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """Gathers all the configuration changes needed and applies them."""
         try:
-            if (
-                not self._user_requested_to_enable(plugin)
-                or self.status(plugin) != PluginState.INSTALLED
-            ):
+            if self.status(plugin) != PluginState.INSTALLED:
                 # Leave this method if either user did not request to enable this plugin
                 # or plugin has been already enabled.
                 return False
@@ -285,13 +288,19 @@ class OpenSearchPluginManager:
         """Returns the status for a given plugin."""
         if not self._is_installed(plugin):
             return PluginState.MISSING
-        if not self._is_enabled(plugin):
-            if self._user_requested_to_enable(plugin):
-                return PluginState.INSTALLED
-            return PluginState.DISABLED
+
         if self._needs_upgrade(plugin):
             return PluginState.WAITING_FOR_UPGRADE
-        return PluginState.ENABLED
+
+        # The _user_request_to_enable comes first, as it ensures there is a relation/config
+        # set, which will be used by _is_enabled to determine if we are enabled or not.
+        if not self._user_requested_to_enable(plugin) and not self._is_enabled(plugin):
+            return PluginState.DISABLED
+
+        if self._is_enabled(plugin):
+            return PluginState.ENABLED
+
+        return PluginState.INSTALLED
 
     def _is_installed(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is installed."""
@@ -300,9 +309,10 @@ class OpenSearchPluginManager:
     def _user_requested_to_enable(self, plugin: OpenSearchPlugin) -> bool:
         """Returns True if user requested plugin to be enabled."""
         plugin_data = ConfigExposedPlugins[plugin.name]
-        if not self._charm.config.get(
-            plugin_data["config"], False
-        ) and not self._is_plugin_relation_set(plugin_data["relation"]):
+        if not (
+            self._charm.config.get(plugin_data["config"], False)
+            or self._is_plugin_relation_set(plugin_data["relation"])
+        ):
             # User asked to disable this plugin
             return False
         return True
