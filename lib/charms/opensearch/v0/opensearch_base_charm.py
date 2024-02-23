@@ -82,6 +82,10 @@ from charms.opensearch.v0.opensearch_plugins import (
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
+from charms.opensearch.v0.opensearch_upgrade import (
+    OpenSearchUpgrade,
+    get_opensearch_dependencies_model,
+)
 from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v3.tls_certificates import (
@@ -152,6 +156,12 @@ class OpenSearchBaseCharm(CharmBase):
             refresh_events=[self.on.set_password_action, self.on.secret_changed],
             metrics_rules_dir="./src/alert_rules/prometheus",
             log_slots=["opensearch:logs"],
+        )
+        self.upgrade = OpenSearchUpgrade(
+            self,
+            dependency_model=get_opensearch_dependencies_model(),
+            relation_name="upgrade",
+            substrate="vm",
         )
 
         self.plugin_manager = OpenSearchPluginManager(self)
@@ -741,6 +751,11 @@ class OpenSearchBaseCharm(CharmBase):
     def _restart_opensearch(self, event: EventBase) -> None:
         """Restart OpenSearch if possible."""
         if not self.peers_data.get(Scope.UNIT, "starting", False):
+            # Safeguard against starting while upgrading
+            if not self.upgrade.idle:
+                event.defer()
+                return
+
             try:
                 self._stop_opensearch()
             except OpenSearchStopError as e:
