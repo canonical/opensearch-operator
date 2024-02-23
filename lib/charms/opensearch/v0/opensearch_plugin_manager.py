@@ -13,7 +13,6 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from charms.opensearch.v0.constants_charm import PluginConfigStart
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -34,7 +33,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginRemoveError,
     PluginState,
 )
-from ops.model import MaintenanceStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -174,13 +172,8 @@ class OpenSearchPluginManager:
                 )
             except OpenSearchPluginError as e:
                 err_msgs.append(str(e))
-
             logger.debug(f"Finished Plugin {plugin.name} status: {self.status(plugin)}")
-            if restart_needed:
-                self._charm.status.set(MaintenanceStatus(PluginConfigStart))
-
         logger.info(f"Plugin check finished, restart needed: {restart_needed}")
-        self._charm.status.clear(PluginConfigStart)
 
         if err_msgs:
             raise OpenSearchPluginError("\n".join(err_msgs))
@@ -280,11 +273,8 @@ class OpenSearchPluginManager:
         to_remove = dict(
             zip(config.config_entries_to_del, [None] * len(config.config_entries_to_del))
         )
-        new_conf = {
-            **current_settings,
-            **to_remove,
-            **config.config_entries_to_add,
-        }
+        new_conf = dict(current_settings | to_remove | config.config_entries_to_add)
+
         logger.debug(
             "Difference between current and new configuration: \n"
             + str(
@@ -371,7 +361,7 @@ class OpenSearchPluginManager:
             if current_settings != new_conf:
                 return False
 
-            # Now, focus in on the keystore part
+            # Now, focus on the keystore part
             keys_available = self._keystore.list()
             keys_to_add = plugin.config().secret_entries_to_add
             if any(k not in keys_available for k in keys_to_add):
