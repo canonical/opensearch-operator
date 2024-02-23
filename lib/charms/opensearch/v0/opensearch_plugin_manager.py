@@ -77,6 +77,7 @@ class OpenSearchPluginManager:
         self._charm_config = self._charm.model.config
         self._plugins_path = self._opensearch.paths.plugins
         self._keystore = OpenSearchKeystore(self._charm)
+        self._cached_plugin_list = None
         self._event_scope = OpenSearchPluginEventScope.DEFAULT
 
     def set_event_scope(self, event_scope: OpenSearchPluginEventScope) -> None:
@@ -208,6 +209,7 @@ class OpenSearchPluginManager:
                 )
 
             self._opensearch.run_bin("opensearch-plugin", f"install --batch {plugin.name}")
+            self._cached_plugin_list = None
         except KeyError as e:
             raise OpenSearchPluginMissingConfigError(e)
         except OpenSearchCmdError as e:
@@ -401,6 +403,7 @@ class OpenSearchPluginManager:
         """Remove a plugin without restarting the node."""
         try:
             self._opensearch.run_bin("opensearch-plugin", f"remove {plugin.name}")
+            self._cached_plugin_list = None
         except OpenSearchCmdError as e:
             if "not found" in str(e):
                 logger.info(f"Plugin {plugin.name} to be deleted, not found. Continuing...")
@@ -411,6 +414,12 @@ class OpenSearchPluginManager:
     def _installed_plugins(self) -> List[str]:
         """List plugins."""
         try:
-            return self._opensearch.run_bin("opensearch-plugin", "list").split("\n")
+            if self._cached_plugin_list:
+                logger.debug("Returning cached plugin list")
+            else:
+                self._cached_plugin_list = self._opensearch.run_bin(
+                    "opensearch-plugin", "list"
+                ).split("\n")
+            return self._cached_plugin_list
         except OpenSearchCmdError as e:
             raise OpenSearchPluginError("Failed to list plugins: " + str(e))
