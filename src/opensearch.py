@@ -61,8 +61,6 @@ class OpenSearchSnap(OpenSearchDistribution):
     @override
     def install(self):
         """Install opensearch from the snapcraft store."""
-        if self._opensearch.present:
-            return
         try:
             self._opensearch.ensure(snap.SnapState.Latest, revision=OPENSEARCH_SNAP_REVISION)
             self._opensearch.connect("process-control")
@@ -73,6 +71,14 @@ class OpenSearchSnap(OpenSearchDistribution):
         except SnapError as e:
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()
+
+    @override
+    def present(self) -> bool:
+        """Check if the snap is installed in the right version."""
+        return (
+            self._opensearch.present
+            and OPENSEARCH_SNAP_REVISION == self._opensearch.revision
+        )
 
     @override
     def _start_service(self):

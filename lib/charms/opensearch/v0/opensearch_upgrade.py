@@ -4,9 +4,9 @@
 """Manages the OpenSearch upgrade process."""
 
 
-import bisect
 import json
 import logging
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from charms.data_platform_libs.v0.upgrade import (
     ClusterNotReadyError,
@@ -19,9 +19,9 @@ from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
-    OpenSearchInstallError,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
+from ops.framework import EventBase
 from ops.model import MaintenanceStatus
 from pydantic import BaseModel
 from typing_extensions import override
@@ -38,6 +38,20 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
+
+
+class PostUpgrade(EventBase):
+    """Marks the end of an upgrade.
+
+    Originally, it was tried to use "upgrade-changed" event for this task, but
+    the "upgrade-changed" event runs with or without upgrades being granted.
+    They also run at the start of the deployment.
+
+    This event is emitted when the upgrade is finished on the leader, and deferred
+    until the upgrade is done.
+    """
+
+    pass
 
 
 class OpenSearchDependenciesModel(BaseModel):
@@ -60,38 +74,66 @@ class OpenSearchUpgrade(DataUpgrade):
     def __init__(self, charm, **kwargs) -> None:
         """Initialize the class."""
         super().__init__(charm, **kwargs)
+
+        self.charm.on.define_event("{}_post_upgrade".format(self.relation_name), PostUpgrade)
+        self.framework.observe(charm.on[self.relation_name].post_upgrade, self._on_post_upgrade)
+
         self.charm = charm
         self.framework.observe(
             self.charm.on[self.relation_name].relation_changed, self._on_upgrade_changed
         )
 
-    def _get_node_roles(self):
-        """Get the node roles."""
-        try:
-            # TODO: FINISH!
-            ClusterTopology.nodes_by_role(
-                ClusterTopology.nodes(self.opensearch, True, self.alt_hosts)
-            )
-
-        except OpenSearchHttpError as e:
-            if e.response.status_code == 503:
-                raise ClusterNotReadyError("Cluster is not ready")
-            raise
-
     @override
     def build_upgrade_stack(self) -> list[int]:
         """Build the upgrade stack.
 
-        This/leader/primary will be the last.
+        The upgrade stack is built in a way the upgrade order is:
+        - non-manager nodes
+        - manager eligible nodes
+        - elected manager
         """
         upgrade_stack = []
-        for unit in self.peer_relation.units:
-            bisect.insort(upgrade_stack, int(unit.name.split("/")[1]))
+        nodes = ClusterTopology.nodes(self.charm.opensearch, True, self.charm.alt_hosts)
+        units = set(self.peer_relation.units)
+        units.add(self.charm.unit)
 
-        # TODO: organize the list to have the charm leader and the elected cluster
-        # manager as the last ones.
-        # Use the _get_node_roles to build a dict in this case
-        upgrade_stack.insert(0, self.charm.unit.name.split("/")[1])
+        if len(units) != len(nodes):
+            raise ClusterNotReadyError(
+                message="Upgrade failed. Cluster is not ready",
+                cause="Not all units are online",
+                resolution="Ensure all units are online in the cluster",
+            )
+
+        try:
+            elected_manager = None
+            for node in nodes:
+                if node.elected_manager:
+                    elected_manager = node.name.split("-")[-1]
+                    # Insert the elected manager as the last one
+                    continue
+                if "cluster_manager" not in node.roles:
+                    # Insert the non-manager node at the beginning of the queue
+                    upgrade_stack.append(node.name.split("-")[1])
+                else:
+                    # Insert the eligible manager as the last ones.
+                    upgrade_stack.insert(0, node.name.split("-")[1])
+
+            if not elected_manager:
+                raise ClusterNotReadyError(
+                    message="Upgrade failed. Cluster is not ready",
+                    cause="Cluster does not have elected a manager",
+                    resolution="Ensure a manager is elected in the cluster",
+                )
+
+            # the elected manager is the last unit to upgrade.
+            upgrade_stack.insert(0, elected_manager)
+        except OpenSearchHttpError:
+            raise ClusterNotReadyError(
+                message="Upgrade failed. Cluster is not ready",
+                cause="Cluster is unreachable",
+                resolution="Ensure the network to the cluster is fixed",
+            )
+
         return upgrade_stack
 
     @override
@@ -100,7 +142,7 @@ class OpenSearchUpgrade(DataUpgrade):
         fail_message = "Pre-upgrade check failed. Cannot upgrade."
 
         try:
-            online_nodes = ClusterTopology.nodes(self.opensearch, True, self.alt_hosts)
+            online_nodes = ClusterTopology.nodes(self.charm.opensearch, True, self.charm.alt_hosts)
             if self.charm.health.apply() != HealthColors.GREEN:
                 raise ClusterNotReadyError(
                     message=fail_message,
@@ -108,7 +150,7 @@ class OpenSearchUpgrade(DataUpgrade):
                     resolution="Ensure cluster is healthy before upgrading",
                 )
 
-            if online_nodes < self.charm.app.planned_units():
+            if len(online_nodes) < self.charm.app.planned_units():
                 # case any not fully online unit is found
                 raise ClusterNotReadyError(
                     message=fail_message,
@@ -131,17 +173,17 @@ class OpenSearchUpgrade(DataUpgrade):
     def _toggle_shard_replication(self, enable=True):
         fail_message = "Prepare upgrade failed. It is not possible to disable replication."
         try:
-            resp = self.opensearch.request(
-                "POST",
+            resp = self.charm.opensearch.request(
+                "PUT",
                 "/_cluster/settings",
-                json={
+                payload={
                     "persistent": {
-                        "cluster.routing.allocation.enable": "primaries" if enable else "all"
+                        "cluster.routing.allocation.enable": "all" if enable else "primaries"
                     }
                 },
             )
             if not (
-                resp["acknowledged"] == "true"
+                resp["acknowledged"]
                 and resp["persistent"]["cluster"]["routing"]["allocation"]["enable"] == "primaries"
             ):
                 # It is the equivalent error
@@ -156,9 +198,9 @@ class OpenSearchUpgrade(DataUpgrade):
     def _flush_wait_for_ongoing(self):
         fail_message = "Prepare upgrade failed. It is not possible to disable replication."
         try:
-            resp = self.opensearch.request(
+            resp = self.charm.opensearch.request(
                 "POST",
-                "/_flush?wait_for_ongoing",
+                "/_flush?wait_if_ongoing",
             )
             if not (
                 resp["_shards"]["total"] == resp["_shards"]["successful"]
@@ -178,7 +220,6 @@ class OpenSearchUpgrade(DataUpgrade):
         fail_message = "Prepare upgrade failed. Cannot upgrade."
         try:
             self._toggle_shard_replication(enable=False)
-            self._flush_wait_for_ongoing()
         except OpenSearchHttpError:
             raise ClusterNotReadyError(
                 message=fail_message,
@@ -186,25 +227,35 @@ class OpenSearchUpgrade(DataUpgrade):
                 resolution=f"Ensure {self.charm.unit.name} is reachable",
             )
 
+    @retry(reraise=True, stop=stop_after_attempt(5), wait=wait_fixed(15))
+    def _execute_upgrade(self):
+        # If this is the first, unit, execute the pre-upgrade steps
+        self.charm.unit.status = MaintenanceStatus("stopping services..")
+        self._flush_wait_for_ongoing()
+        self.charm._stop_opensearch()
+
+        self.charm.unit.status = MaintenanceStatus("upgrading opensearch...")
+        self.charm.opensearch.install()
+        if not self.charm.opensearch.present:
+            logger.error("Failed to install opensearch application")
+            self.set_unit_failed()
+            return
+        self.charm.unit.status = MaintenanceStatus("starting opensearch...")
+        # Remove the exclusions that could not be removed when no units were online
+        self.opensearch.start(wait_until_http_200=True)
+        self.opensearch_exclusions.delete_current()
+
+
     @override
     def _on_upgrade_granted(self, event: UpgradeGrantedEvent) -> None:  # noqa: C901
         """Handle the upgrade granted event."""
         try:
-            # If this is the first, unit, execute the pre-upgrade steps
-            if self.idle:
-                self._pre_upgrade_prepare_if_needed()
-
-            self.charm.unit.status = MaintenanceStatus("stopping services..")
-            self.charm.opensearch._stop_opensearch()
-
-            self.charm.unit.status = MaintenanceStatus("upgrading opensearch...")
-            if not self.charm.opensearch.install():
-                logger.error("Failed to install opensearch application")
-                self.set_unit_failed()
-                return
-            self.charm.unit.status = MaintenanceStatus("check if upgrade is possible")
-            self.charm.opensearch._stop_opensearch()
-        except (ClusterNotReadyError, VersionError, OpenSearchInstallError) as e:
+            self._execute_upgrade()
+        except (
+            ClusterNotReadyError,
+            VersionError,
+            OpenSearchError,
+        ) as e:
             if isinstance(e, ClusterNotReadyError):
                 logger.exception("Cluster is not ready for upgrade")
             elif isinstance(e, VersionError):
@@ -217,7 +268,7 @@ class OpenSearchUpgrade(DataUpgrade):
         # Check the unit is running
         try:
             # Only asking the local node
-            online_nodes = ClusterTopology.nodes(self.opensearch, True, None)
+            online_nodes = ClusterTopology.nodes(self.charm.opensearch, True, None)
             if not online_nodes or online_nodes != self.charm.app.planned_units():
                 raise ClusterNotReadyError(
                     message="Upgrade failed. Cluster is not ready",
@@ -232,16 +283,25 @@ class OpenSearchUpgrade(DataUpgrade):
             return
 
         if self.charm.unit.is_leader():
+            # As documented in the upgrades lib
             self.charm.on[self.relation_name].relation_changed.emit(
                 self.model.get_relation(self.relation_name)
             )
+            self.charm.on[self.relation_name].post_upgrade.emit()
+
+    def _on_post_upgrade(self, event) -> None:
+        if not self.idle:
+            event.defer()
+            return
+        try:
+            self._toggle_shard_replication(enable=True)
+        except OpenSearchHttpError:
+            event.defer()
+            return
 
     def _on_upgrade_changed(self, event) -> None:
         """Handle the upgrade changed event."""
-        if not self.upgrade.idle:
-            event.defer()
-            return
-        self._toggle_shard_replication(enable=True)
+        pass
 
     @override
     def log_rollback_instructions(self) -> None:

@@ -736,6 +736,9 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
+
+        # TODO: Add a similar check for backup/restore operations
+
         self.status.set(WaitingStatus(ServiceIsStopping))
 
         # 1. Add current node to the voting + alloc exclusions

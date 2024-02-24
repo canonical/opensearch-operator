@@ -216,6 +216,27 @@ class ClusterTopology:
         return result
 
     @staticmethod
+    def elected_manager_name(
+        opensearch: OpenSearchDistribution,
+        use_localhost: bool,
+        hosts: Optional[List[str]] = None,
+    ) -> str:
+        """Get the elected manager name."""
+        host: Optional[str] = None  # defaults to current unit ip
+        alt_hosts: Optional[List[str]] = hosts
+        if not use_localhost and hosts:
+            host, alt_hosts = hosts[0], hosts[1:]
+
+        if use_localhost or host:
+            response = opensearch.request(
+                "GET", "/_cat/nodes?format=json", host=host, alt_hosts=alt_hosts, retries=3
+            )
+            for node in response:
+                if node.get("cluster_manager") == "*":
+                    return node["name"]
+        return None
+
+    @staticmethod
     def nodes(
         opensearch: OpenSearchDistribution,
         use_localhost: bool,
@@ -232,6 +253,9 @@ class ClusterTopology:
             response = opensearch.request(
                 "GET", "/_nodes", host=host, alt_hosts=alt_hosts, retries=3
             )
+            elected_manager = ClusterTopology.elected_manager_name(
+                opensearch, use_localhost, hosts
+            )
             if "nodes" in response:
                 for obj in response["nodes"].values():
                     node = Node(
@@ -240,6 +264,7 @@ class ClusterTopology:
                         ip=obj["ip"],
                         app_name="-".join(obj["name"].split("-")[:-1]),
                         temperature=obj.get("attributes", {}).get("temp"),
+                        elected_manager=elected_manager == obj["name"],
                     )
                     nodes.append(node)
 
