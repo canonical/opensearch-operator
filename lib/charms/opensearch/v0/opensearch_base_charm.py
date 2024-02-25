@@ -395,6 +395,9 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
+        if not self.backup.is_idle():
+            raise OpenSearchHAError("Backup/restore operation in progress")
+
         # acquire lock to ensure only 1 unit removed at a time
         self.ops_lock.acquire()
 
@@ -623,6 +626,14 @@ class OpenSearchBaseCharm(CharmBase):
 
         return self._are_all_tls_resources_stored()
 
+    def check_if_starting(self) -> bool:
+        """Check if the service is starting."""
+        rel = self.model.get_relation(PeerRelationName)
+        for unit in rel.units.union({self.unit}):
+            if rel.data[unit].get("starting") == "True":
+                return True
+        return False
+
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if self.opensearch.is_started():
@@ -736,8 +747,8 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
-
-        # TODO: Add a similar check for backup/restore operations
+        if not self.backup.is_idle():
+            raise OpenSearchStopError("Backup/restore operation in progress")
 
         self.status.set(WaitingStatus(ServiceIsStopping))
 

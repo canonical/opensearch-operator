@@ -5,13 +5,10 @@
 import logging
 
 import pytest
-
 from pytest_operator.plugin import OpsTest
+
 from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (
-    app_name,
-    assert_continuous_writes_consistency,
-)
+from tests.integration.ha.helpers import app_name, assert_continuous_writes_consistency
 from tests.integration.helpers import (
     APP_NAME,
     MODEL_CONFIG,
@@ -20,14 +17,28 @@ from tests.integration.helpers import (
     get_leader_unit_id,
     run_action,
 )
-from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
 
 
 OPENSEARCH_INITIAL_CHANNEL = "2/edge"
+
+
+@pytest.fixture()
+async def c_writes(ops_test: OpsTest):
+    """Creates instance of the ContinuousWrites."""
+    app = (await app_name(ops_test)) or APP_NAME
+    return ContinuousWrites(ops_test, app)
+
+
+@pytest.fixture()
+async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
+    """Starts continuous write operations and clears writes at the end of the test."""
+    await c_writes.start()
+    yield
+    await c_writes.clear()
+    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
 @pytest.mark.abort_on_fail
@@ -60,7 +71,7 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
         timeout=1400,
-        idle_period=IDLE_PERIOD,
+        idle_period=50,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
 
@@ -91,7 +102,7 @@ async def test_upgrade_from_channel(
         apps=[APP_NAME],
         status="active",
         timeout=1400,
-        idle_period=IDLE_PERIOD,
+        idle_period=50,
     )
 
     # continuous writes checks

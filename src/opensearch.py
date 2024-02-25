@@ -75,10 +75,7 @@ class OpenSearchSnap(OpenSearchDistribution):
     @override
     def present(self) -> bool:
         """Check if the snap is installed in the right version."""
-        return (
-            self._opensearch.present
-            and OPENSEARCH_SNAP_REVISION == self._opensearch.revision
-        )
+        return self._opensearch.present and OPENSEARCH_SNAP_REVISION == self._opensearch.revision
 
     @override
     def _start_service(self):

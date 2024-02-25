@@ -6,7 +6,6 @@
 
 import json
 import logging
-from tenacity import retry, stop_after_attempt, wait_fixed
 
 from charms.data_platform_libs.v0.upgrade import (
     ClusterNotReadyError,
@@ -19,11 +18,14 @@ from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
+    OpenSearchInstallError,
+    OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
 from ops.framework import EventBase
-from ops.model import MaintenanceStatus
+from ops.model import ActiveStatus, MaintenanceStatus
 from pydantic import BaseModel
+from tenacity import retry, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
 logger = logging.getLogger(__name__)
@@ -158,6 +160,20 @@ class OpenSearchUpgrade(DataUpgrade):
                     resolution="Ensure all units are online in the cluster",
                 )
 
+            if self.charm.check_if_starting():
+                raise ClusterNotReadyError(
+                    message=fail_message,
+                    cause="Cluster is starting",
+                    resolution="Ensure cluster has finished its start cycle before proceeding",
+                )
+
+            if not self.charm.backup.is_idle():
+                raise ClusterNotReadyError(
+                    message=fail_message,
+                    cause="Backup is in progress",
+                    resolution="Ensure backup is completed before upgrading",
+                )
+
         except OpenSearchHttpError:
             raise ClusterNotReadyError(
                 message=fail_message,
@@ -219,6 +235,7 @@ class OpenSearchUpgrade(DataUpgrade):
         """Disables the replication and flushes the cluster."""
         fail_message = "Prepare upgrade failed. Cannot upgrade."
         try:
+            self._flush_wait_for_ongoing()
             self._toggle_shard_replication(enable=False)
         except OpenSearchHttpError:
             raise ClusterNotReadyError(
@@ -231,26 +248,42 @@ class OpenSearchUpgrade(DataUpgrade):
     def _execute_upgrade(self):
         # If this is the first, unit, execute the pre-upgrade steps
         self.charm.unit.status = MaintenanceStatus("stopping services..")
-        self._flush_wait_for_ongoing()
         self.charm._stop_opensearch()
 
         self.charm.unit.status = MaintenanceStatus("upgrading opensearch...")
         self.charm.opensearch.install()
         if not self.charm.opensearch.present:
             logger.error("Failed to install opensearch application")
-            self.set_unit_failed()
-            return
+            raise OpenSearchInstallError()
+
+    @retry(reraise=True, stop=stop_after_attempt(5), wait=wait_fixed(15))
+    def _enable_service(self):
         self.charm.unit.status = MaintenanceStatus("starting opensearch...")
         # Remove the exclusions that could not be removed when no units were online
-        self.opensearch.start(wait_until_http_200=True)
-        self.opensearch_exclusions.delete_current()
+        # start the opensearch service
+        self.charm.opensearch._start_service()
+        if not self.charm.opensearch.is_node_up():
+            raise OpenSearchStartTimeoutError()
+        self.charm.opensearch_exclusions.delete_current()
 
+    @retry(reraise=True, stop=stop_after_attempt(5), wait=wait_fixed(15))
+    def _ensure_post_upgrade_checks(self):
+        # Only asking the local node
+        online_nodes = ClusterTopology.nodes(self.charm.opensearch, True, None)
+        if not online_nodes or len(online_nodes) != self.charm.app.planned_units():
+            raise ClusterNotReadyError(
+                message="Post upgrade check failed. Cluster is not ready",
+                cause="Not all units are online",
+                resolution="Ensure all units are online in the cluster",
+            )
+        # TODO: check node's indices and shards health
 
     @override
     def _on_upgrade_granted(self, event: UpgradeGrantedEvent) -> None:  # noqa: C901
         """Handle the upgrade granted event."""
         try:
             self._execute_upgrade()
+            self._enable_service()
         except (
             ClusterNotReadyError,
             VersionError,
@@ -260,25 +293,18 @@ class OpenSearchUpgrade(DataUpgrade):
                 logger.exception("Cluster is not ready for upgrade")
             elif isinstance(e, VersionError):
                 logger.exception("Failed to upgrade OpenSearch")
+            elif isinstance(e, OpenSearchInstallError):
+                logger.exception("Failed to install OpenSearch")
             else:
                 logger.exception("Failed to stop/start MySQL server")
             self.set_unit_failed()
             return
 
-        # Check the unit is running
+        # Check the unit is running post-upgrade
         try:
-            # Only asking the local node
-            online_nodes = ClusterTopology.nodes(self.charm.opensearch, True, None)
-            if not online_nodes or online_nodes != self.charm.app.planned_units():
-                raise ClusterNotReadyError(
-                    message="Upgrade failed. Cluster is not ready",
-                    cause="Not all units are online",
-                    resolution="Ensure all units are online in the cluster",
-                )
-            # TODO: check node's indices and shards health
-
-        except OpenSearchError:
-            logger.exception("Failed to check the new node")
+            self._ensure_post_upgrade_checks()
+        except (ClusterNotReadyError, OpenSearchError):
+            logger.exception("Cluster is not recovered after upgrade")
             self.set_unit_failed()
             return
 
@@ -289,13 +315,16 @@ class OpenSearchUpgrade(DataUpgrade):
             )
             self.charm.on[self.relation_name].post_upgrade.emit()
 
+        self.set_unit_completed()
+        self.charm.unit.status = ActiveStatus()
+
     def _on_post_upgrade(self, event) -> None:
         if not self.idle:
             event.defer()
             return
         try:
             self._toggle_shard_replication(enable=True)
-        except OpenSearchHttpError:
+        except OpenSearchError:
             event.defer()
             return
 

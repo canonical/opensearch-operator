@@ -89,7 +89,7 @@ S3_REPO_BASE_PATH = "/"
 
 INDICES_TO_EXCLUDE_AT_RESTORE = {".opendistro_security", ".opensearch-observability"}
 
-REPO_NOT_CREATED_ERR = "repository type [s3] does not exist"
+REPO_NOT_CREATED_ERR = f"[{S3_REPOSITORY}] does not exist"
 REPO_NOT_ACCESS_ERR = f"[{S3_REPOSITORY}] path [{S3_REPO_BASE_PATH}] is not accessible"
 REPO_CREATING_ERR = "Could not determine repository generation from root blobs"
 RESTORE_OPEN_INDEX_WITH_SAME_NAME = "because an open index with same name already exists"
@@ -289,6 +289,24 @@ class OpenSearchBackup(Object):
             raise OpenSearchRestoreCheckError(f"_restore: unexpected response {output}")
 
         return output["snapshot"]
+
+    def is_idle(self) -> bool:
+        """Checks if the backup system is idle.
+
+        The backup system is idle if it is configured and there are no backups in
+        progress and no restore in progress.
+        """
+        try:
+            output = self._request("GET", f"_snapshot/{S3_REPOSITORY}")
+            return (
+                self.get_service_status(output) in [
+                    BackupServiceState.REPO_NOT_CREATED,
+                    BackupServiceState.REPO_MISSING
+                ] or not (self.is_backup_in_progress() or self._is_restore_complete())
+            )
+        except OpenSearchHttpError:
+            # It means we've failed to retrieve the information about repository
+            return True
 
     def _is_restore_complete(self) -> bool:
         """Checks if the restore is finished.
