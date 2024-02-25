@@ -190,10 +190,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
             test_plugin = self.plugin_manager.plugins[0]
             self.plugin_manager._install_if_needed(test_plugin)
         except OpenSearchPluginMissingDepsError as e:
-            assert (
-                str(e)
-                == "('test', ['test-plugin-dependency'])"
-            )
+            assert str(e) == "('test', ['test-plugin-dependency'])"
             succeeded = True
         # Check if we had any other exception
         assert succeeded is True
@@ -403,9 +400,7 @@ class TestOpenSearchBackupPlugin(unittest.TestCase):
         try:
             plugin.config()
         except OpenSearchPluginMissingConfigError as e:
-            assert (
-                str(e) == "('repository-s3', ['access-key', 'secret-key'])"
-            )
+            assert str(e) == "('repository-s3', ['access-key', 'secret-key'])"
         else:
             assert False
 
