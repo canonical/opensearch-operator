@@ -294,15 +294,12 @@ logger = logging.getLogger(__name__)
 class OpenSearchPluginError(OpenSearchError):
     """Exception thrown when an opensearch plugin is invalid."""
 
-    def __init__(self, msg):
-        super().__init__(msg)
-
 
 class OpenSearchPluginMissingDepsError(OpenSearchPluginError):
     """Exception thrown when an opensearch plugin misses installed dependencies."""
 
     def __init__(self, name, deps):
-        super().__init__(f"Failed to install plugin: {name} - missing dependencies {deps}")
+        self.name = name
         self.deps = deps
 
 
@@ -310,14 +307,14 @@ class OpenSearchPluginInstallError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin installation fails."""
 
     def __init__(self, name):
-        super().__init__("Failed to install plugin: {}".format(name))
+        self.name = name
 
 
 class OpenSearchPluginRemoveError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin removal fails."""
 
     def __init__(self, name):
-        super().__init__("Failed to remove plugin: {}".format(name))
+        self.name = name
 
 
 class OpenSearchPluginMissingConfigError(OpenSearchPluginError):
@@ -327,7 +324,7 @@ class OpenSearchPluginMissingConfigError(OpenSearchPluginError):
     """
 
     def __init__(self, name, configs: List[str]):
-        super().__init__(f"Plugin {name} is missing configs: {configs}")
+        self.name = name
         self.configs = configs
 
 
