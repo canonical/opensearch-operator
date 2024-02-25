@@ -154,7 +154,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
             test_plugin = self.plugin_manager.plugins[0]
             self.plugin_manager._install_if_needed(test_plugin)
         except OpenSearchPluginInstallError as e:
-            assert str(e) == "Failed to install plugin: test"
+            assert str(e) == "test"
             succeeded = True
         finally:
             # We may reach this point because of another exception, check it:
@@ -192,7 +192,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         except OpenSearchPluginMissingDepsError as e:
             assert (
                 str(e)
-                == "Failed to install plugin: test - missing dependencies ['test-plugin-dependency']"
+                == "('test', ['test-plugin-dependency'])"
             )
             succeeded = True
         # Check if we had any other exception
@@ -404,7 +404,7 @@ class TestOpenSearchBackupPlugin(unittest.TestCase):
             plugin.config()
         except OpenSearchPluginMissingConfigError as e:
             assert (
-                str(e) == "Plugin repository-s3 is missing configs: ['access-key', 'secret-key']"
+                str(e) == "('repository-s3', ['access-key', 'secret-key'])"
             )
         else:
             assert False
