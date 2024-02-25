@@ -332,14 +332,15 @@ class OpenSearchProvider(Object):
             return
         if not ca_chain:
             try:
-                ca_chain = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val).get(
-                    "chain"
-                )
+                if ca_chain := self.charm.secrets.get_object(
+                    Scope.APP, CertType.APP_ADMIN.val
+                ).get("chain"):
+                    self.opensearch_provides.set_tls_ca(relation_id, ca_chain)
+                else:
+                    logger.warning("unable to get ca_chain")
             except AttributeError:
                 # cert doesn't exist - presumably we don't yet have a TLS relation.
                 return
-
-        self.opensearch_provides.set_tls_ca(relation_id, ca_chain)
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         if not self.unit.is_leader():

@@ -11,8 +11,7 @@ from charms.opensearch.v0.constants_charm import ClusterHealthYellow
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (
+from ..ha.helpers import (
     all_nodes,
     assert_continuous_writes_consistency,
     get_elected_cm_unit_id,
@@ -20,12 +19,7 @@ from tests.integration.ha.helpers import (
     get_shards_by_index,
     get_shards_by_state,
 )
-from tests.integration.ha.helpers_data import (
-    create_dummy_docs,
-    create_dummy_indexes,
-    delete_dummy_indexes,
-)
-from tests.integration.helpers import (
+from ..helpers import (
     APP_NAME,
     IDLE_PERIOD,
     MODEL_CONFIG,
@@ -38,28 +32,15 @@ from tests.integration.helpers import (
     get_leader_unit_id,
     get_leader_unit_ip,
 )
-from tests.integration.helpers_deployments import wait_until
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..helpers_deployments import wait_until
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .continuous_writes import ContinuousWrites
+from .helpers_data import create_dummy_docs, create_dummy_indexes, delete_dummy_indexes
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture()
-async def c_writes(ops_test: OpsTest):
-    """Creates instance of the ContinuousWrites."""
-    app = (await app_name(ops_test)) or APP_NAME
-    return ContinuousWrites(ops_test, app)
-
-
-@pytest.fixture()
-async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Starts continuous write operations and clears writes at the end of the test."""
-    await c_writes.start()
-    yield
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
-
-
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -71,7 +52,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
-
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
@@ -87,6 +67,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_horizontal_scale_up(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -134,6 +115,7 @@ async def test_horizontal_scale_up(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_shards_realloc(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -243,6 +225,7 @@ async def test_safe_scale_down_shards_realloc(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_roles_reassigning(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -337,6 +320,7 @@ async def test_safe_scale_down_roles_reassigning(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.group(1)
 async def test_safe_scale_down_remove_leaders(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
@@ -351,6 +335,8 @@ async def test_safe_scale_down_remove_leaders(
     """
     app = (await app_name(ops_test)) or APP_NAME
     init_units_count = len(ops_test.model.applications[app].units)
+
+    c_writes_obj = c_writes
 
     # scale up by 2 units
     await ops_test.model.applications[app].add_unit(count=3)
@@ -422,7 +408,7 @@ async def test_safe_scale_down_remove_leaders(
     # sleep for a couple of minutes for the model to stabilise
     time.sleep(IDLE_PERIOD + 60)
 
-    writes = await c_writes.count()
+    writes = await c_writes_obj.count()
 
     # check that the primary shard reelection happened
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -437,8 +423,8 @@ async def test_safe_scale_down_remove_leaders(
 
     # check that writes are still going after the removal / p_shard reelection
     time.sleep(3)
-    new_writes = await c_writes.count()
+    new_writes = await c_writes_obj.count()
     assert new_writes > writes
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes_obj, app)

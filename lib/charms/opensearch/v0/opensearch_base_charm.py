@@ -21,7 +21,6 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     PeerRelationName,
     PluginConfigChangeError,
-    PluginConfigStart,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -496,7 +495,6 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        self.status.set(MaintenanceStatus(PluginConfigStart))
         try:
             if self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
@@ -511,7 +509,6 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
         self.status.clear(PluginConfigChangeError)
-        self.status.clear(PluginConfigStart)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -615,29 +612,31 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
+        logger.debug("Rolling Ops Manager: _start_opensearch called")
         if self.opensearch.is_started():
             try:
+                logger.debug("_start_opensearch: opensearch is started")
                 self._post_start_init()
+                logger.debug("_start_opensearch: post init executed")
             except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
                 event.defer()
                 self.defer_trigger_event.emit()
             return
-
         if not self._can_service_start():
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
+            logger.debug("_start_opensearch: can_service_start == False")
 
             # emit defer trigger event which won't do anything to force retry of current event
             self.defer_trigger_event.emit()
             return
 
         if self.peers_data.get(Scope.UNIT, "starting", False) and self.opensearch.is_failed():
+            logger.debug("_start_opensearch: starting == True and opensearch is failed")
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
             return
-
         self.unit.status = WaitingStatus(WaitingToStart)
-
         rel = self.model.get_relation(PeerRelationName)
         for unit in rel.units.union({self.unit}):
             if rel.data[unit].get("starting") == "True":
@@ -645,27 +644,27 @@ class OpenSearchBaseCharm(CharmBase):
                 return
 
         self.peers_data.put(Scope.UNIT, "starting", True)
+        logger.debug("_start_opensearch: starting == True")
 
         try:
             # Retrieve the nodes of the cluster, needed to configure this node
             nodes = self._get_nodes(False)
-
             # validate the roles prior to starting
             self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
 
+            logger.debug("_start_opensearch: _set_node_conf is being called")
             # Set the configuration of the node
             self._set_node_conf(nodes)
         except OpenSearchHttpError:
             self.peers_data.delete(Scope.UNIT, "starting")
-            event.defer()
-            self._post_start_init()
-            return
         except OpenSearchProvidedRolesException as e:
             logger.exception(e)
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
             self.unit.status = BlockedStatus(str(e))
             return
+
+        logger.debug("_start_opensearch: roles validated")
 
         try:
             self.opensearch.start(
@@ -674,7 +673,9 @@ class OpenSearchBaseCharm(CharmBase):
                     or self.peers_data.get(Scope.APP, "security_index_initialised", False)
                 )
             )
+            logger.debug("_start_opensearch: application started")
             self._post_start_init()
+            logger.debug("_start_opensearch: post start init executed")
         except (OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
             # emit defer_trigger event which won't do anything to force retry of current event
@@ -685,6 +686,7 @@ class OpenSearchBaseCharm(CharmBase):
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
             self.defer_trigger_event.emit()
+        logger.debug("_start_opensearch: finished!!")
 
     def _post_start_init(self):
         """Initialization post OpenSearch start."""
@@ -740,9 +742,12 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _restart_opensearch(self, event: EventBase) -> None:
         """Restart OpenSearch if possible."""
+        logger.debug("Rolling Ops Manager: Restarting OpenSearch called")
         if not self.peers_data.get(Scope.UNIT, "starting", False):
             try:
+                logger.debug("Rolling Ops Manager: starting == False")
                 self._stop_opensearch()
+                logger.debug("Rolling Ops Manager: stop_opensearch called")
             except OpenSearchStopError as e:
                 logger.exception(e)
                 event.defer()

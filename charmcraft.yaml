@@ -3,15 +3,26 @@
 
 type: charm
 bases:
+  # Whenever "bases" is changed:
+  # - Update tests/integration/conftest.py::pytest_configure()
+  # - Update .github/workflow/ci.yaml integration-test matrix
   - build-on:
       - name: "ubuntu"
         channel: "22.04"
     run-on:
       - name: "ubuntu"
         channel: "22.04"
-
 parts:
   charm:
+    override-pull: |
+      craftctl default
+      if [[ ! -f requirements.txt ]]
+      then
+          echo 'ERROR: Use "tox run -e build-dev" instead of calling "charmcraft pack" directly' >&2
+          exit 1
+      fi
+    charm-strict-dependencies: true
+    charm-entrypoint: src/charm.py
     build-packages:
       - cargo
       - libffi-dev

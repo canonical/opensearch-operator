@@ -3,11 +3,11 @@
 
 """OpenSearch Backup.
 
-This file holds the implementation of the OpenSearchBackup, OpenSearchBackupPlugin classes
-as well as the configuration and state enum.
+This file holds the implementation of the OpenSearchBackup as well as the configuration
+and state enum.
 
 The OpenSearchBackup class listens to both relation changes from S3_RELATION and API calls
-and responses. The OpenSearchBackupPlugin holds the configuration info. The classes together
+and responses. The backup plugins hold the configuration info. The classes together
 manages the events related to backup/restore cycles.
 
 The removal of backup only reverses step the API calls, to avoid accidentally deleting the
@@ -58,8 +58,10 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
 )
 from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchBackupPlugin,
+    OpenSearchGCSBackupPlugin,
+    OpenSearchPluginError,
     OpenSearchPluginRelationClusterNotReadyError,
+    OpenSearchS3BackupPlugin,
     PluginState,
 )
 from ops.charm import ActionEvent
@@ -97,6 +99,13 @@ RESTORE_OPEN_INDEX_WITH_SAME_NAME = "because an open index with same name alread
 
 class OpenSearchBackupError(OpenSearchError):
     """Exception thrown when an opensearch backup-related action fails."""
+
+
+class OpenSearchBackupPluginNotSetError(OpenSearchPluginError):
+    """Exception thrown when plugin accessed via get_plugin but relaiton not set.
+
+    This exception allows to differ between multiple errors in s3-broken relation.
+    """
 
 
 class OpenSearchRestoreError(OpenSearchError):
@@ -156,8 +165,32 @@ class OpenSearchBackup(Object):
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
 
     @property
+    def endpoint_type(self) -> str:
+        """Returns the type of backup solution to use: s3 or GCS."""
+        if not self.s3_client.get_s3_connection_info():
+            # There is no endpoint available.
+            raise OpenSearchBackupPluginNotSetError("endpoint_type: failed to retrieve s3 info")
+        return (
+            "gcs"
+            if "googleapis.com" in self.s3_client.get_s3_connection_info().get("endpoint")
+            else "s3"
+        )
+
+    @property
+    def _plugin_class(self):
+        """Returns the plugin class based on the type."""
+        return (
+            OpenSearchS3BackupPlugin if self.endpoint_type == "s3" else OpenSearchGCSBackupPlugin
+        )
+
+    @property
+    def plugin(self):
+        """Returns the plugin based on the type."""
+        return self.charm.plugin_manager.get_plugin(self._plugin_class)
+
+    @property
     def _plugin_status(self):
-        return self.charm.plugin_manager.get_plugin_status(OpenSearchBackupPlugin)
+        return self.charm.plugin_manager.get_plugin_status(self._plugin_class)
 
     def _format_backup_list(self, backups: List[Tuple[Any]]) -> str:
         """Formats provided list of backups as a table."""
@@ -484,7 +517,7 @@ class OpenSearchBackup(Object):
         self.charm.status.set(WaitingStatus("Setting up backup service"))
 
         try:
-            plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
+            plugin = self.charm.plugin_manager.get_plugin(self._plugin_class)
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 self.charm.plugin_manager.apply_config(plugin.disable())
             self.charm.plugin_manager.apply_config(plugin.config())
@@ -515,10 +548,7 @@ class OpenSearchBackup(Object):
         self.apply_api_config_if_needed()
 
     def apply_api_config_if_needed(self) -> None:
-        """Runs the post restart routine and API calls needed to setup/disable backup.
-
-        This method should be called by the charm in its restart callback resolution.
-        """
+        """Registers the snapshot repo in the cluster."""
         # Backup relation has been recently made available with all the parameters needed.
         # Steps:
         #     (1) set up as maintenance;
@@ -580,9 +610,12 @@ class OpenSearchBackup(Object):
             self._execute_s3_broken_calls()
 
         try:
-            plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
+            plugin = self.charm.plugin_manager.get_plugin(self._plugin_class)
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 self.charm.plugin_manager.apply_config(plugin.disable())
+        except OpenSearchBackupPluginNotSetError:
+            logger.warning("s3-credentials: plugin is missing: relation has not been configured.")
+            return
         except OpenSearchError as e:
             if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
                 self.charm.status.set(WaitingStatus("s3-broken event: cluster not ready yet"))
@@ -634,7 +667,7 @@ class OpenSearchBackup(Object):
                 "PUT",
                 f"_snapshot/{S3_REPOSITORY}",
                 payload={
-                    "type": "s3",
+                    "type": self.endpoint_type,
                     "settings": {
                         "endpoint": info.get("endpoint"),
                         "protocol": self._get_endpoint_protocol(info.get("endpoint")),
