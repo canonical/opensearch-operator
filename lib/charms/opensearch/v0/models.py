@@ -2,8 +2,8 @@
 # See LICENSE file for licensing details.
 
 """Cluster-related data structures / model classes."""
-from datetime import datetime
 from abc import ABC
+from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -94,8 +94,8 @@ class Node(Model):
 class DeploymentType(BaseStrEnum):
     """Nature of a sub cluster deployment."""
 
-    MAIN_ORCHESTRATOR = "main-orchestrator-cluster"
-    FAILOVER_ORCHESTRATOR = "failover-orchestrator-cluster"
+    MAIN_ORCHESTRATOR = "main-orchestrator"
+    FAILOVER_ORCHESTRATOR = "failover-orchestrator"
     OTHER = "other"
 
 

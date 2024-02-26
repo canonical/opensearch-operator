@@ -20,14 +20,14 @@ def juju_has_secrets(mocker: MockerFixture):
         juju_version = juju_version[2:]  # Removing == symbol
 
     if juju_version < "3":
-        mocker.patch.object(
-            JujuVersion, "has_secrets", new_callable=PropertyMock
-        ).return_value = False
+        mocker.patch.object(JujuVersion, "has_secrets", new_callable=PropertyMock).return_value = (
+            False
+        )
         return False
     else:
-        mocker.patch.object(
-            JujuVersion, "has_secrets", new_callable=PropertyMock
-        ).return_value = True
+        mocker.patch.object(JujuVersion, "has_secrets", new_callable=PropertyMock).return_value = (
+            True
+        )
         return True
 
 

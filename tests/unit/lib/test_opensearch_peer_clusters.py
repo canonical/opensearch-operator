@@ -89,7 +89,8 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                 ),
                 start=StartMode.WITH_PROVIDED_ROLES,
                 pending_directives=directives,
-                typ=DeploymentType.MAIN_CLUSTER_MANAGER,
+                app=self.charm.app.name,
+                typ=DeploymentType.MAIN_ORCHESTRATOR,
                 state=DeploymentState(value=State.ACTIVE),
             )
             can_start = self.peer_cm.can_start(deployment_desc)
@@ -105,7 +106,8 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             config=self.user_configs["roles_ok"],
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
-            typ=DeploymentType.MAIN_CLUSTER_MANAGER,
+            app=self.charm.app.name,
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
             state=DeploymentState(value=State.ACTIVE),
         )
         with self.assertRaises(OpenSearchProvidedRolesException):

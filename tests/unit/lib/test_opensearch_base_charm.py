@@ -42,7 +42,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
-            typ=DeploymentType.MAIN_CLUSTER_MANAGER,
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            app="opensearch",
             state=DeploymentState(value=State.ACTIVE),
         ),
         "ko": DeploymentDescription(
@@ -50,6 +51,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
             typ=DeploymentType.OTHER,
+            app="opensearch",
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
         ),
     }
@@ -72,7 +74,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.opensearch.is_failed.return_value = False
 
         self.peers_data = self.charm.peers_data
-        self.peer_cm = self.charm.opensearch_peer_cm
 
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
@@ -94,13 +95,19 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             self.charm.on.install.emit()
             self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
-    def test_on_leader_elected(self, _put_admin_user, _purge_users):
+    def test_on_leader_elected(self, _put_admin_user, _purge_users, deployment_desc):
         """Test on leader elected event."""
         self.harness.set_leader(True)
+        deployment_desc.return_value = self.deployment_descriptions["ok"]
+
         _purge_users.assert_called_once()
-        _put_admin_user.assert_called_once()
+        _put_admin_user.assert_not_called()
+        print(f"\nstatus: {self.harness.model.unit.status}")
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
         _purge_users.reset_mock()
@@ -111,12 +118,19 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _purge_users.assert_called_once()
         _put_admin_user.assert_called_once()
 
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
-    def test_on_leader_elected_index_initialised(self, _put_admin_user, _purge_users):
+    def test_on_leader_elected_index_initialised(self, _put_admin_user, _purge_users, deployment_desc):
         # security_index_initialised
         self.peers_data.put(Scope.APP, "security_index_initialised", True)
         self.harness.set_leader(True)
+
+        print(f"test leader elected index initialised: {self.deployment_descriptions['ok'].to_dict()}")
+        deployment_desc.return_value = self.deployment_descriptions["ok"]
+
         self.charm.on.leader_elected.emit()
         _put_admin_user.assert_not_called()
         _purge_users.assert_not_called()
@@ -132,7 +146,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
     @patch(f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.can_start")
-    @patch(f"{BASE_CHARM_CLASS}._is_tls_fully_configured")
+    @patch(f"{BASE_CHARM_CLASS}.is_tls_fully_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_client_auth")
     @patch(f"{BASE_CHARM_CLASS}._get_nodes")
     @patch(f"{BASE_CHARM_CLASS}._set_node_conf")
@@ -151,7 +165,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _set_node_conf,
         _get_nodes,
         set_client_auth,
-        _is_tls_fully_configured,
+        is_tls_fully_configured,
         can_start,
         deployment_desc,
     ):
@@ -161,12 +175,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             is_node_up.return_value = True
             self.peers_data.put(Scope.APP, "security_index_initialised", True)
             self.charm.on.start.emit()
-            _is_tls_fully_configured.assert_not_called()
+            is_tls_fully_configured.assert_not_called()
 
             # test when setup not complete
             is_node_up.return_value = False
             self.peers_data.delete(Scope.APP, "security_index_initialised")
-            _is_tls_fully_configured.return_value = False
+            is_tls_fully_configured.return_value = False
             self.charm.on.start.emit()
             set_client_auth.assert_not_called()
 
@@ -175,8 +189,10 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.charm.on.start.emit()
         _set_node_conf.assert_not_called()
 
+        _get_nodes.reset_mock()
+
         # _get_nodes succeeds
-        _is_tls_fully_configured.return_value = True
+        is_tls_fully_configured.return_value = True
         _get_nodes.side_effect = None
         _can_service_start.return_value = False
         self.charm.on.start.emit()
