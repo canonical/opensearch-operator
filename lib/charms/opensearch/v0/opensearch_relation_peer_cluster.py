@@ -9,11 +9,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, MutableMapping, Optional, Uni
 from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
-    TLSNotFullyConfigured,
-    TLSRelationMissing,
 )
 from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
-from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
+from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import (
     RelDepartureReason,
     relation_departure_reason,
@@ -70,22 +68,24 @@ class OpenSearchPeerClusterRelation(Object):
         self.charm = charm
         self.peer_cm = charm.opensearch_peer_cm
 
-    def get_from_rel(self, key: str, rel_id: int = None, rel_app: bool = False) -> Optional[str]:
+    def get_from_rel(
+        self, key: str, rel_id: int = None, remote_app: bool = False
+    ) -> Optional[str]:
         """Fetch relation data by key from relation id (from an int or relation event)."""
         if not rel_id:
             raise ValueError("Relation id must be provided as arguments.")
 
         relation = self.get_rel(rel_id=rel_id)
         if relation:
-            return relation.data[relation.app if rel_app else self.charm.app].get(key)
+            return relation.data[relation.app if remote_app else self.charm.app].get(key)
 
         return None
 
     def get_obj_from_rel(
-        self, key: str, rel_id: int = None, rel_app: bool = True
+        self, key: str, rel_id: int = None, remote_app: bool = True
     ) -> Dict[Any, Any]:
         """Get object from peer cluster relation data."""
-        data = self.get_from_rel(key, rel_id=rel_id, rel_app=rel_app) or "{}"
+        data = self.get_from_rel(key, rel_id=rel_id, remote_app=remote_app) or "{}"
         return json.loads(data)
 
     def put_in_rel(self, data: Dict[str, Any], rel_id: Optional[int] = None) -> None:
@@ -186,7 +186,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # broadcast the new failover in all the cluster fleet
         for rel_id in target_relation_ids:
             orchestrators = PeerClusterOrchestrators.from_dict(
-                self.get_obj_from_rel("orchestrators", rel_id, rel_app=False)
+                self.get_obj_from_rel("orchestrators", rel_id, remote_app=False)
             )
             orchestrators.failover_app = candidate_failover_app
             self.put_in_rel(
@@ -602,7 +602,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             rel.id for rel in self.charm.model.relations[PeerClusterOrchestratorRelationName]
         ]:
             rel_orchestrators = PeerClusterOrchestrators.from_dict(
-                self.get_obj_from_rel("orchestrators", rel_id, rel_app=False)
+                self.get_obj_from_rel("orchestrators", rel_id, remote_app=False)
             )
 
             rel_orchestrators.delete(event_src_cluster_type)
@@ -742,14 +742,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         """Compute TLS related errors."""
         blocked_msg, should_sever_relation = None, False
 
-        # check if TLS configured in secrets + certs stored in disk of leader
-        if not self.charm.is_tls_fully_configured():
-            blocked_msg = (
-                TLSNotFullyConfigured
-                if self.charm.model.get_relation(TLS_RELATION)
-                else TLSRelationMissing
-            )
-        else:  # compare CAs
+        if self.charm.is_tls_fully_configured():  # compare CAs
             unit_transport_ca_cert = self.charm.secrets.get_object(
                 Scope.UNIT, CertType.UNIT_TRANSPORT.val
             )["ca-cert"]

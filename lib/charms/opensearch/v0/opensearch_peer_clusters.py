@@ -156,7 +156,7 @@ class OpenSearchPeerClustersManager:
         deployment_state = DeploymentState(value=State.ACTIVE)
         if config.init_hold:
             # checks if peer cluster relation is set
-            if not self.is_peer_cluster_manager_relation_set():
+            if not self.is_peer_cluster_orchestrator_relation_set():
                 deployment_state = DeploymentState(
                     value=State.BLOCKED_WAITING_FOR_RELATION, message=PClusterNoRelation
                 )
@@ -369,7 +369,7 @@ class OpenSearchPeerClustersManager:
 
         # validate the full-cluster wide count of cm+voting_only nodes to keep the quorum
         full_cluster_planned_units = self._charm.app.planned_units()
-        if self.is_peer_cluster_manager_relation_set():
+        if self.is_peer_cluster_orchestrator_relation_set():
             cluster_fleet_planned_units = self._charm.peers_data.get_object(
                 Scope.APP, "cluster_fleet_planned_units"
             )
@@ -400,7 +400,7 @@ class OpenSearchPeerClustersManager:
 
         raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
 
-    def is_peer_cluster_manager_relation_set(self) -> bool:
+    def is_peer_cluster_orchestrator_relation_set(self) -> bool:
         """Return whether the peer cluster relation is established."""
         orchestrators = PeerClusterOrchestrators.from_dict(
             self._charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
@@ -417,7 +417,7 @@ class OpenSearchPeerClustersManager:
 
     def rel_data(self) -> Optional[PeerClusterRelData]:
         """Return the peer cluster rel data if any."""
-        if not self.is_peer_cluster_manager_relation_set():
+        if not self.is_peer_cluster_orchestrator_relation_set():
             return None
 
         orchestrators = PeerClusterOrchestrators.from_dict(
@@ -456,7 +456,7 @@ class OpenSearchPeerClustersManager:
         if "data" in prev_roles and "data" not in new_roles:
             # this is dangerous as this might induce downtime + error on start when data on disk
             # we need to check if there are other sub-clusters with the data roles
-            if not self.is_peer_cluster_manager_relation_set():
+            if not self.is_peer_cluster_orchestrator_relation_set():
                 raise OpenSearchProvidedRolesException(DataRoleRemovalForbidden)
 
             # todo guarantee unicity of unit names on peer_relation_joined

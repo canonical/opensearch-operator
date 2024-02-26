@@ -225,8 +225,7 @@ class OpenSearchBaseCharm(CharmBase):
         # users. Purge the user list before initialising the users the charm requires.
         self._purge_users()
 
-        deployment_desc = self.opensearch_peer_cm.deployment_desc()
-        if not deployment_desc:
+        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
             event.defer()
             return
 
@@ -818,7 +817,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
-            if self.opensearch_peer_cm.is_peer_cluster_manager_relation_set():
+            if self.opensearch_peer_cm.is_peer_cluster_orchestrator_relation_set():
                 self.peer_cluster_provider.refresh_relation_data(event)
 
     def _stop_opensearch(self) -> None:
