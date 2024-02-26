@@ -6,6 +6,7 @@ import logging
 from random import choice
 from typing import Dict, List, Optional
 
+from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -22,6 +23,13 @@ LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
+
+
+class IndexStateEnum(BaseStrEnum):
+    """Enum for index states."""
+
+    OPEN = "open"
+    CLOSED = "closed"
 
 
 class ClusterTopology:
@@ -267,9 +275,9 @@ class ClusterState:
         alt_hosts: Optional[List[str]] = None,
     ) -> List[Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
-        idx = opensearch.request("GET", "/_cat/indices", host=host, alt_hosts=alt_hosts)
+        endpoint = "/_cat/indices?expand_wildcards=all"
         idx = {}
-        for index in opensearch.request("GET", "/_cat/indices", host=host, alt_hosts=alt_hosts):
+        for index in opensearch.request("GET", endpoint, host=host, alt_hosts=alt_hosts):
             idx[index["index"]] = {"health": index["health"], "status": index["status"]}
         return idx
 

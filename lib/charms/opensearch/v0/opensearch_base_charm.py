@@ -22,6 +22,7 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     PeerRelationName,
     PluginConfigChangeError,
+    PluginConfigStart,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -90,7 +91,7 @@ from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
-from charms.tls_certificates_interface.v1.tls_certificates import (
+from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
 from ops.charm import (
@@ -531,19 +532,22 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
+        self.status.set(MaintenanceStatus(PluginConfigStart))
         try:
             if self.opensearch.is_started() and self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
-        except OpenSearchPluginError as e:
-            logger.exception(e)
-            if isinstance(e, OpenSearchPluginRelationClusterNotReadyError):
-                logger.warning("Plugin management: cluster not ready yet at config changed")
-            else:
-                # There was an unexpected error, log it and block the unit
-                self.status.set(BlockedStatus(PluginConfigChangeError))
+        except OpenSearchPluginRelationClusterNotReadyError:
+            logger.warning("Plugin management: cluster not ready yet at config changed")
             event.defer()
+            return
+        except OpenSearchPluginError:
+            self.status.set(BlockedStatus(PluginConfigChangeError))
+            event.defer()
+            return
+        self.status.clear(PluginConfigChangeError)
+        self.status.clear(PluginConfigStart)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -825,7 +829,7 @@ class OpenSearchBaseCharm(CharmBase):
             # 1. Add current node to the voting + alloc exclusions
             self.opensearch_exclusions.add_current()
 
-        # TODO: should be block until all shards move ?
+        # TODO: should block until all shards move addressed in PR DPE-2234
 
         # 2. stop the service
         self.opensearch.stop()

@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 CLIENT_APP_NAME = "application"
 SECONDARY_CLIENT_APP_NAME = "secondary-application"
-TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
+TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
 
 NUM_UNITS = 3
@@ -60,7 +60,7 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
     new_model_conf["update-status-hook-interval"] = "1m"
 
     await ops_test.model.set_config(new_model_conf)
-    tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
+    tls_config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
             application_charm,
@@ -74,11 +74,11 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
         ),
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
     )
-    await ops_test.model.relate(OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
     global client_relation
-    client_relation = await ops_test.model.add_relation(
+    client_relation = await ops_test.model.integrate(
         f"{OPENSEARCH_APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:{FIRST_RELATION_NAME}"
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
@@ -342,7 +342,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     logger.info(
         f"Adding relation {SECONDARY_CLIENT_APP_NAME}:{SECOND_RELATION_NAME} with {OPENSEARCH_APP_NAME}"
     )
-    second_client_relation = await ops_test.model.add_relation(
+    second_client_relation = await ops_test.model.integrate(
         f"{SECONDARY_CLIENT_APP_NAME}:{SECOND_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, SECONDARY_CLIENT_APP_NAME)
@@ -385,7 +385,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     """Test that two different applications can connect to the database."""
     # Relate the new application and wait for them to exchange connection data.
-    second_app_first_client_relation = await ops_test.model.add_relation(
+    second_app_first_client_relation = await ops_test.model.integrate(
         f"{SECONDARY_CLIENT_APP_NAME}:{FIRST_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
     await wait_until(
@@ -422,7 +422,7 @@ async def test_admin_relation(ops_test: OpsTest):
     """Test we can create relations with admin permissions."""
     # Add an admin relation and wait for them to exchange data
     global admin_relation
-    admin_relation = await ops_test.model.add_relation(
+    admin_relation = await ops_test.model.integrate(
         f"{CLIENT_APP_NAME}:{ADMIN_RELATION_NAME}", OPENSEARCH_APP_NAME
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
@@ -810,7 +810,7 @@ async def test_relation_broken_secrets(ops_test: OpsTest):
 @pytest.mark.abort_on_fail
 async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     """Verify that if we recreate a relation, we can access the same index."""
-    client_relation = await ops_test.model.add_relation(
+    client_relation = await ops_test.model.integrate(
         f"{OPENSEARCH_APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:{FIRST_RELATION_NAME}"
     )
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)

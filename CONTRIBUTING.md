@@ -55,7 +55,7 @@ tox -e h-scaling-integration  # HA tests specific to horizontal scaling
 If you're running tests on juju 3, run the following command to change libjuju to the correct version:
 
 ```shell
-export LIBJUJU_VERSION_SPECIFIER="==3.2.0.1"
+export LIBJUJU_VERSION_SPECIFIER="==3.3.0.0"
 ```
 
 ## Build charm
@@ -68,23 +68,22 @@ charmcraft pack
 
 ### Deploy
 
-OpenSearch has a set of system requirements to correctly function, you can find the list [here](https://opensearch.org/docs/2.6/opensearch/install/important-settings/).
-To set those settings using cloudinit-userdata:
+OpenSearch has a set of system requirements to correctly function, you can find the list [here](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/).
+Some of those settings must be set using cloudinit-userdata on the model, while others must be set on the host machine:
 ```bash
-# Create a cloudinit-userdata file, to set the required system settings of opensearch.
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
-    - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
-    - [ 'sysctl', '-w', 'vm.swappiness=0' ]
-    - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]
-    - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
+    - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
+    - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
+    - [ 'echo', 'net.ipv4.tcp_retries2=5', '>>', '/etc/sysctl.conf' ]
+    - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
+    - [ 'sysctl', '-p' ]
 EOF
-```
 
-or in a single machine:
-```bash
-sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
+echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
+echo "vm.swappiness=0" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
 ```
 
 Then create a new model and set the previously generated file in it.
@@ -96,7 +95,7 @@ juju add-model dev
 juju model-config logging-config="<root>=INFO;unit=DEBUG"
 
 # Add cloudinit-userdata
-juju model-config ./cloudinit-userdata.yaml
+juju model-config --file=./cloudinit-userdata.yaml
 
 # Increase the frequency of the update-status event
 juju model-config update-status-hook-interval=1m
@@ -104,20 +103,24 @@ juju model-config update-status-hook-interval=1m
 
 You can then deploy the charm with a TLS relation.
 ```bash
-# Deploy the TLS-certificates operator
-juju deploy tls-certificates-operator --channel edge --show-log --verbose
+# Deploy the self-signed-certificates operator
+juju deploy self-signed-certificates --channel=latest/stable --show-log --verbose
 
 # generate a CA certificate
-juju config tls-certificates-operator generate-self-signed-certificates=true ca-common-name="CN_CA"
-
+juju config \
+    self-signed-certificates \
+    ca-common-name="CN_CA" \
+    certificate-validity=365 \
+    root-ca-validity=365
+    
 # Deploy the opensearch charm
 juju deploy -n 1 ./opensearch_ubuntu-22.04-amd64.charm --series jammy --show-log --verbose
 
-# Relate the opensearch charm with the TLS operator
-juju relate tls-certificates-operator opensearch
+# Relate the opensearch charm with the self-signed-certificates operator
+juju integrate self-signed-certificates opensearch
 ```
 
-**Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the TLS Certificates Operator [here](https://charmhub.io/tls-certificates-operator).
+**Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the self-signed-certificates Operator [here](https://charmhub.io/self-signed-certificates).
 
 
 ## Canonical Contributor Agreement

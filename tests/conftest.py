@@ -24,11 +24,9 @@ def juju_has_secrets(mocker: MockerFixture):
             False
         )
         return False
-    else:
-        mocker.patch.object(JujuVersion, "has_secrets", new_callable=PropertyMock).return_value = (
-            True
-        )
-        return True
+
+    mocker.patch.object(JujuVersion, "has_secrets", new_callable=PropertyMock).return_value = True
+    return True
 
 
 @pytest.fixture

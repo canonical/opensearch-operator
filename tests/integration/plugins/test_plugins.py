@@ -60,7 +60,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.set_config(model_conf)
 
     # Deploy TLS Certificates operator.
-    config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
+    config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(
@@ -69,7 +69,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     )
 
     # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
@@ -92,7 +92,7 @@ async def test_prometheus_exporter_enabled_by_default(ops_test):
 
 async def test_prometheus_exporter_cos_relation(ops_test):
     await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
-    await ops_test.model.relate(APP_NAME, COS_APP_NAME)
+    await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME],
         status="active",

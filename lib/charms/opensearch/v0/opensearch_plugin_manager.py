@@ -219,7 +219,7 @@ class OpenSearchPluginManager:
                 # Leave this method if either user did not request to enable this plugin
                 # or plugin has been already enabled.
                 return False
-            return self._apply_config(plugin.config())
+            return self.apply_config(plugin.config())
         except KeyError as e:
             raise OpenSearchPluginMissingConfigError(e)
 
@@ -234,11 +234,11 @@ class OpenSearchPluginManager:
                 # represents a plugin that has been installed but either not yet configured
                 # or user explicitly disabled.
                 return False
-            return self._apply_config(plugin.disable())
+            return self.apply_config(plugin.disable())
         except KeyError as e:
             raise OpenSearchPluginMissingConfigError(e)
 
-    def _apply_config(self, config: OpenSearchPluginConfig) -> bool:
+    def apply_config(self, config: OpenSearchPluginConfig) -> bool:
         """Runs the configuration changes as passed via OpenSearchPluginConfig.
 
         For each: configuration and secret
