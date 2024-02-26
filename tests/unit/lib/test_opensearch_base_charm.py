@@ -107,7 +107,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         _purge_users.assert_called_once()
         _put_admin_user.assert_not_called()
-        print(f"\nstatus: {self.harness.model.unit.status}")
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
         _purge_users.reset_mock()
@@ -123,12 +122,13 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     )
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
-    def test_on_leader_elected_index_initialised(self, _put_admin_user, _purge_users, deployment_desc):
+    def test_on_leader_elected_index_initialised(
+        self, _put_admin_user, _purge_users, deployment_desc
+    ):
         # security_index_initialised
         self.peers_data.put(Scope.APP, "security_index_initialised", True)
         self.harness.set_leader(True)
 
-        print(f"test leader elected index initialised: {self.deployment_descriptions['ok'].to_dict()}")
         deployment_desc.return_value = self.deployment_descriptions["ok"]
 
         self.charm.on.leader_elected.emit()
