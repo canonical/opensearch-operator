@@ -550,7 +550,7 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
-        if not self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+        if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
             event.fail("The action can be run only on the leader unit of the main cluster.")
             return
 
