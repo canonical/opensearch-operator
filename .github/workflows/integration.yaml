@@ -48,6 +48,7 @@ jobs:
           - charm-integration
           - tls-integration
           - client-integration
+          - h-scaling-integration
           - ha-base-integration
           - ha-networking-integration
           - ha-multi-clusters-integration
@@ -55,9 +56,6 @@ jobs:
           - plugins-integration
 #          - ha-backup-integration
         runner: ["ubuntu-22.04"]
-        include:
-          - tox-environments: h-scaling-integration
-            runner: "Ubuntu_4C_16G"
     name: ${{ matrix.tox-environments }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
