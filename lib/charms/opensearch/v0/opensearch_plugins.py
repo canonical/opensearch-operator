@@ -298,23 +298,13 @@ class OpenSearchPluginError(OpenSearchError):
 class OpenSearchPluginMissingDepsError(OpenSearchPluginError):
     """Exception thrown when an opensearch plugin misses installed dependencies."""
 
-    def __init__(self, name, deps):
-        self.name = name
-        self.deps = deps
-
 
 class OpenSearchPluginInstallError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin installation fails."""
 
-    def __init__(self, name):
-        self.name = name
-
 
 class OpenSearchPluginRemoveError(OpenSearchPluginError):
     """Exception thrown when opensearch plugin removal fails."""
-
-    def __init__(self, name):
-        self.name = name
 
 
 class OpenSearchPluginMissingConfigError(OpenSearchPluginError):
@@ -322,10 +312,6 @@ class OpenSearchPluginMissingConfigError(OpenSearchPluginError):
 
     The plugin itself should raise a KeyError, to avoid burden in the plugin development.
     """
-
-    def __init__(self, name, configs: List[str]):
-        self.name = name
-        self.configs = configs
 
 
 class OpenSearchPluginEventScope(BaseStrEnum):
