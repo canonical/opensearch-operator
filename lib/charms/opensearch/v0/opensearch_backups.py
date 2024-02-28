@@ -298,12 +298,10 @@ class OpenSearchBackup(Object):
         """
         try:
             output = self._request("GET", f"_snapshot/{S3_REPOSITORY}")
-            return (
-                self.get_service_status(output) in [
-                    BackupServiceState.REPO_NOT_CREATED,
-                    BackupServiceState.REPO_MISSING
-                ] or not (self.is_backup_in_progress() or self._is_restore_complete())
-            )
+            return self.get_service_status(output) in [
+                BackupServiceState.REPO_NOT_CREATED,
+                BackupServiceState.REPO_MISSING,
+            ] or not (self.is_backup_in_progress() or self._is_restore_complete())
         except OpenSearchHttpError:
             # It means we've failed to retrieve the information about repository
             return True

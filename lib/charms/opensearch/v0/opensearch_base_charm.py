@@ -393,10 +393,17 @@ class OpenSearchBaseCharm(CharmBase):
         else:
             event.defer()
 
+    def _unstopable_op_in_progress(self) -> bool:
+        return (
+            not self.backup.is_idle()
+            or not self.upgrade.idle
+            or self.peers_data.get(Scope.UNIT, "starting", False)
+        )
+
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
-        if not self.backup.is_idle():
-            raise OpenSearchHAError("Backup/restore operation in progress")
+        if self._unstopable_op_in_progress():
+            raise OpenSearchHAError("Important operation in progress, cannot stop")
 
         # acquire lock to ensure only 1 unit removed at a time
         self.ops_lock.acquire()
@@ -764,19 +771,18 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _restart_opensearch(self, event: EventBase) -> None:
         """Restart OpenSearch if possible."""
-        if not self.peers_data.get(Scope.UNIT, "starting", False):
-            # Safeguard against starting while upgrading
-            if not self.upgrade.idle:
-                event.defer()
-                return
+        if self._unstopable_op_in_progress():
+            # Safeguard against starting while an important operation is in progress
+            event.defer()
+            return
 
-            try:
-                self._stop_opensearch()
-            except OpenSearchStopError as e:
-                logger.exception(e)
-                event.defer()
-                self.status.set(WaitingStatus(ServiceIsStopping))
-                return
+        try:
+            self._stop_opensearch()
+        except OpenSearchStopError as e:
+            logger.exception(e)
+            event.defer()
+            self.status.set(WaitingStatus(ServiceIsStopping))
+            return
 
         self._start_opensearch(event)
 

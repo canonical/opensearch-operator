@@ -200,7 +200,9 @@ class OpenSearchUpgrade(DataUpgrade):
             )
             if not (
                 resp["acknowledged"]
-                and resp["persistent"]["cluster"]["routing"]["allocation"]["enable"] == "primaries"
+                and resp["persistent"]["cluster"]["routing"]["allocation"]["enable"] == "all"
+                if enable
+                else "primaries"
             ):
                 # It is the equivalent error
                 raise KeyError()
