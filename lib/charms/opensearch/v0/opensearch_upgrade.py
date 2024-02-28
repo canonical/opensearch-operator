@@ -315,7 +315,10 @@ class OpenSearchUpgrade(DataUpgrade):
             self.charm.on[self.relation_name].relation_changed.emit(
                 self.model.get_relation(self.relation_name)
             )
-            self.charm.on[self.relation_name].post_upgrade.emit()
+        # All units emit this event
+        # Avoids the condition where the leader goes away before we can
+        # actually execute this task
+        self.charm.on[self.relation_name].post_upgrade.emit()
 
         self.set_unit_completed()
         self.charm.unit.status = ActiveStatus()
@@ -325,7 +328,8 @@ class OpenSearchUpgrade(DataUpgrade):
             event.defer()
             return
         try:
-            self._toggle_shard_replication(enable=True)
+            if self.charm.unit.is_leader():
+                self._toggle_shard_replication(enable=True)
         except OpenSearchError:
             event.defer()
             return
