@@ -468,13 +468,14 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         )
         """
         if not self._extra_config.get("access-key") or not self._extra_config.get("secret-key"):
-            raise OpenSearchPluginMissingConfigError(
-                self.name,
-                [
-                    conf
-                    for conf in ["access-key", "secret-key"]
-                    if not self._extra_config.get(conf)
-                ],
+            raise OpenSearchPluginMissingConfigError("Plugin {} missing: {}".format(
+                    self.name,
+                    [
+                        conf
+                        for conf in ["access-key", "secret-key"]
+                        if not self._extra_config.get(conf)
+                    ],
+                )
             )
 
         return OpenSearchPluginConfig(
