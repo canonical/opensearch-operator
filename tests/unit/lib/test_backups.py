@@ -490,12 +490,18 @@ class TestBackups(unittest.TestCase):
         assert self.charm.backup._get_endpoint_protocol("https://10.0.0.2:8000") == "https"
         assert self.charm.backup._get_endpoint_protocol("test.not-valid-url") == "https"
 
+    @patch(
+        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.check_plugin_manager_ready"
+    )
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup.apply_api_config_if_needed")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.apply_config")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
-    def test_00_update_relation_data(self, __, mock_apply_config, _, mock_status) -> None:
+    def test_00_update_relation_data(
+        self, __, mock_apply_config, _, mock_status, mock_pm_ready
+    ) -> None:
         """Tests if new relation without data returns."""
+        mock_pm_ready.return_value = True
         mock_status.return_value = PluginState.INSTALLED
         self.harness.update_relation_data(
             self.s3_rel_id,
@@ -513,10 +519,6 @@ class TestBackups(unittest.TestCase):
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
-                secret_entries_to_del=[
-                    "s3.client.default.access_key",
-                    "s3.client.default.secret_key",
-                ],
                 secret_entries_to_add={
                     "s3.client.default.access_key": "aaaa",
                     "s3.client.default.secret_key": "bbbb",

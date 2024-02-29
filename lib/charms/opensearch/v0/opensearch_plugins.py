@@ -277,6 +277,7 @@ from typing import Any, Dict, List, Optional
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from jproperties import Properties
+from pydantic import BaseModel, validator
 
 # The unique Charmhub library identifier, never change it
 LIBID = "3b05456c6e304680b4af8e20dae246a2"
@@ -331,20 +332,28 @@ class PluginState(BaseStrEnum):
     WAITING_FOR_UPGRADE = "waiting-for-upgrade"
 
 
-class OpenSearchPluginConfig:
-    """Represent the configuration of a plugin to be applied when configuring or disabling it."""
+class OpenSearchPluginConfig(BaseModel):
+    """Represent the configuration of a plugin to be applied when configuring or disabling it.
 
-    def __init__(
-        self,
-        config_entries_to_add: Optional[Dict[str, str]] = None,
-        config_entries_to_del: Optional[List[str]] = None,
-        secret_entries_to_add: Optional[Dict[str, str]] = None,
-        secret_entries_to_del: Optional[List[str]] = None,
-    ):
-        self.config_entries_to_add = config_entries_to_add or {}
-        self.config_entries_to_del = config_entries_to_del or []
-        self.secret_entries_to_add = secret_entries_to_add or {}
-        self.secret_entries_to_del = secret_entries_to_del or []
+    The config may receive any type of data, but will convert everything to strings and
+    pay attention to special types, such as booleans, which need to be "true" or "false".
+    """
+
+    config_entries_to_add: Optional[Dict[str, str]] = {}
+    config_entries_to_del: Optional[List[str]] = []
+    secret_entries_to_add: Optional[Dict[str, str]] = {}
+    secret_entries_to_del: Optional[List[str]] = []
+
+    @validator("config_entries_to_add", "secret_entries_to_add", allow_reuse=True, pre=True)
+    def convert_values_to_add(cls, conf) -> Dict[str, str]:  # noqa N805
+        """Converts the object to a dictionary.
+
+        Respects the conversion for boolean to {"true", "false"}.
+        """
+        return {
+            key: str(val).lower() if isinstance(val, bool) else str(val)
+            for key, val in conf.items()
+        }
 
 
 class OpenSearchPlugin:
@@ -389,9 +398,9 @@ class OpenSearchPlugin:
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = [...]|{...},
+            config_entries_to_del = [...],
             secret_entries_to_add = {...},
-            secret_entries_to_del = [...]|{...},
+            secret_entries_to_del = [...],
         )
 
         May throw KeyError if accessing some source, such as self._extra_config, but the
@@ -406,9 +415,9 @@ class OpenSearchPlugin:
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = [...]|{...},
+            config_entries_to_del = [...],
             secret_entries_to_add = {...},
-            secret_entries_to_del = [...]|{...},
+            secret_entries_to_del = [...],
         )
 
         May throw KeyError if accessing some source, such as self._extra_config, but the
@@ -429,14 +438,12 @@ class OpenSearchKnn(OpenSearchPlugin):
         """Returns a plugin config object to be applied for enabling the current plugin."""
         return OpenSearchPluginConfig(
             config_entries_to_add={"knn.plugin.enabled": True},
-            config_entries_to_del={"knn.plugin.enabled": False},
         )
 
     def disable(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for disabling the current plugin."""
         return OpenSearchPluginConfig(
             config_entries_to_add={"knn.plugin.enabled": False},
-            config_entries_to_del={"knn.plugin.enabled": True},
         )
 
     @property
@@ -462,9 +469,9 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = [...]|{...},
+            config_entries_to_del = [...],
             secret_entries_to_add = {...},
-            secret_entries_to_del = [...]|{...},
+            secret_entries_to_del = [...],
         )
         """
         if not self._extra_config.get("access-key") or not self._extra_config.get("secret-key"):
@@ -480,11 +487,6 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
             )
 
         return OpenSearchPluginConfig(
-            # Try to remove the previous values
-            secret_entries_to_del=[
-                "s3.client.default.access_key",
-                "s3.client.default.secret_key",
-            ],
             secret_entries_to_add={
                 # Remove any entries with None value
                 k: v
@@ -502,9 +504,9 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         Format:
         OpenSearchPluginConfig(
             config_entries_to_add = {...},
-            config_entries_to_del = [...]|{...},
+            config_entries_to_del = [...],
             secret_entries_to_add = {...},
-            secret_entries_to_del = [...]|{...},
+            secret_entries_to_del = [...],
         )
         """
         return OpenSearchPluginConfig(

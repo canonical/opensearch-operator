@@ -3,8 +3,8 @@
 
 """OpenSearch Backup.
 
-This file holds the implementation of the OpenSearchBackup, OpenSearchBackupPlugin classes
-as well as the configuration and state enum.
+This file holds the implementation of the OpenSearchBackup class, as well as the state enum
+and configuration.
 
 The OpenSearchBackup class listens to both relation changes from S3_RELATION and API calls
 and responses. The OpenSearchBackupPlugin holds the configuration info. The classes together
@@ -467,7 +467,7 @@ class OpenSearchBackup(Object):
             return BackupServiceState.RESPONSE_FAILED_NETWORK
         return self.get_service_status(output)
 
-    def _on_s3_credentials_changed(self, event: EventBase) -> None:
+    def _on_s3_credentials_changed(self, event: EventBase) -> None:  # noqa: C901
         """Calls the plugin manager config handler.
 
         This method will iterate over the s3 relation and check:
@@ -489,8 +489,14 @@ class OpenSearchBackup(Object):
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
         try:
+            if not self.charm.plugin_manager.check_plugin_manager_ready():
+                raise OpenSearchNotFullyReadyError()
+
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
+                # We need to explicitly disable the plugin before reconfiguration
+                # That happens because, differently from the actual configs, we cannot
+                # retrieve the key values and check if they changed.
                 self.charm.plugin_manager.apply_config(plugin.disable())
             self.charm.plugin_manager.apply_config(plugin.config())
         except OpenSearchError as e:
@@ -507,6 +513,7 @@ class OpenSearchBackup(Object):
             PluginState.ENABLED,
             PluginState.WAITING_FOR_UPGRADE,
         ]:
+            logger.warning("_on_s3_credentials_changed: plugin is not enabled.")
             event.defer()
             return
 
