@@ -13,11 +13,14 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import Any, Dict, List, Optional
 
-from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
+    OpenSearchNotFullyReadyError,
+)
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchBackupPlugin,
     OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
@@ -26,7 +29,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingConfigError,
     OpenSearchPluginMissingDepsError,
-    OpenSearchPluginRelationClusterNotReadyError,
     OpenSearchPluginRemoveError,
     PluginState,
 )
@@ -140,19 +142,41 @@ class OpenSearchPluginManager:
             # The classes above should then defer their own events in waiting.
             # Defer is important as next steps to configure plugins will involve
             # calls to the APIs of the cluster.
-            raise OpenSearchPluginRelationClusterNotReadyError()
+            logger.info("Cluster not ready, wait for the next event...")
+            raise OpenSearchNotFullyReadyError()
 
+        err_msgs = []
         restart_needed = False
         for plugin in self.plugins:
-            restart_needed = any(
-                [
-                    self._install_if_needed(plugin),
-                    self._configure_if_needed(plugin),
-                    self._disable_if_needed(plugin),
-                    self._remove_if_needed(plugin),
-                    restart_needed,
-                ]
-            )
+            # These are independent plugins.
+            # Any plugin that errors, if that is an OpenSearchPluginError, then
+            # it is an "expected" error, such as missing additional config; should
+            # not influence the execution of other plugins.
+            # Capture them and raise all of them at the end.
+            try:
+                restart_needed = any(
+                    [
+                        self._install_if_needed(plugin),
+                        self._configure_if_needed(plugin),
+                        self._disable_if_needed(plugin),
+                        self._remove_if_needed(plugin),
+                        restart_needed,
+                    ]
+                )
+            except (
+                OpenSearchPluginMissingDepsError,
+                OpenSearchPluginMissingConfigError,
+                OpenSearchPluginInstallError,
+                OpenSearchPluginRemoveError,
+            ) as e:
+                # This is a more serious issue, as we are missing some input from
+                # the user. The charm should block.
+                err_msgs.append(str(e))
+            except OpenSearchPluginError as e:
+                logger.error(f"Plugin {plugin.name} failed: {str(e)}")
+
+        if err_msgs:
+            raise OpenSearchPluginError("\n".join(err_msgs))
         return restart_needed
 
     def _install_plugin(self, plugin: OpenSearchPlugin) -> bool:
@@ -164,9 +188,7 @@ class OpenSearchPluginManager:
         if plugin.dependencies:
             missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
             if missing_deps:
-                raise OpenSearchPluginMissingDepsError(
-                    f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
-                )
+                raise OpenSearchPluginMissingDepsError(plugin.name, missing_deps)
 
         # Add the plugin
         try:
@@ -179,9 +201,7 @@ class OpenSearchPluginManager:
             # Check for dependencies
             missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
             if missing_deps:
-                raise OpenSearchPluginMissingDepsError(
-                    f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
-                )
+                raise OpenSearchPluginMissingDepsError(plugin.name, missing_deps)
 
             self._opensearch.run_bin("opensearch-plugin", f"install --batch {plugin.name}")
         except KeyError as e:
@@ -191,7 +211,7 @@ class OpenSearchPluginManager:
                 logger.info(f"Plugin {plugin.name} already installed, continuing...")
                 # Nothing installed, as plugin already exists
                 return False
-            raise OpenSearchPluginInstallError(f"Failed to install plugin {plugin.name}: {e}")
+            raise OpenSearchPluginInstallError(plugin.name)
         # Install successful
         return True
 
@@ -212,16 +232,13 @@ class OpenSearchPluginManager:
     def _configure_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """Gathers all the configuration changes needed and applies them."""
         try:
-            if (
-                not self._user_requested_to_enable(plugin)
-                or self.status(plugin) != PluginState.INSTALLED
-            ):
+            if self.status(plugin) != PluginState.INSTALLED:
                 # Leave this method if either user did not request to enable this plugin
                 # or plugin has been already enabled.
                 return False
             return self.apply_config(plugin.config())
         except KeyError as e:
-            raise OpenSearchPluginMissingConfigError(e)
+            raise OpenSearchPluginMissingConfigError(plugin.name, configs=[f"{e}"])
 
     def _disable_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""
@@ -236,7 +253,7 @@ class OpenSearchPluginManager:
                 return False
             return self.apply_config(plugin.disable())
         except KeyError as e:
-            raise OpenSearchPluginMissingConfigError(e)
+            raise OpenSearchPluginMissingConfigError(plugin.name, configs=[f"{e}"])
 
     def apply_config(self, config: OpenSearchPluginConfig) -> bool:
         """Runs the configuration changes as passed via OpenSearchPluginConfig.
@@ -271,13 +288,19 @@ class OpenSearchPluginManager:
         """Returns the status for a given plugin."""
         if not self._is_installed(plugin):
             return PluginState.MISSING
-        if not self._is_enabled(plugin):
-            if self._user_requested_to_enable(plugin):
-                return PluginState.INSTALLED
-            return PluginState.DISABLED
+
         if self._needs_upgrade(plugin):
             return PluginState.WAITING_FOR_UPGRADE
-        return PluginState.ENABLED
+
+        # The _user_request_to_enable comes first, as it ensures there is a relation/config
+        # set, which will be used by _is_enabled to determine if we are enabled or not.
+        if not self._user_requested_to_enable(plugin) and not self._is_enabled(plugin):
+            return PluginState.DISABLED
+
+        if self._is_enabled(plugin):
+            return PluginState.ENABLED
+
+        return PluginState.INSTALLED
 
     def _is_installed(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is installed."""
@@ -286,9 +309,10 @@ class OpenSearchPluginManager:
     def _user_requested_to_enable(self, plugin: OpenSearchPlugin) -> bool:
         """Returns True if user requested plugin to be enabled."""
         plugin_data = ConfigExposedPlugins[plugin.name]
-        if not self._charm.config.get(
-            plugin_data["config"], False
-        ) and not self._is_plugin_relation_set(plugin_data["relation"]):
+        if not (
+            self._charm.config.get(plugin_data["config"], False)
+            or self._is_plugin_relation_set(plugin_data["relation"])
+        ):
             # User asked to disable this plugin
             return False
         return True
@@ -354,7 +378,7 @@ class OpenSearchPluginManager:
             if "not found" in str(e):
                 logger.info(f"Plugin {plugin.name} to be deleted, not found. Continuing...")
                 return False
-            raise OpenSearchPluginRemoveError(f"Failed to remove plugin {plugin.name}: {e}")
+            raise OpenSearchPluginRemoveError(plugin.name)
         return True
 
     def _installed_plugins(self) -> List[str]:

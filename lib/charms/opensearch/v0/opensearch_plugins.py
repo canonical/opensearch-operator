@@ -31,6 +31,18 @@ MISSING (not installed yet) > INSTALLED (plugin installed, but not configured ye
 ENABLED (configuration has been applied) > WAITING_FOR_UPGRADE (if an upgrade is needed)
 > ENABLED (back to enabled state once upgrade has been applied)
 
+WHERE PLUGINS ARE USED:
+Plugins are managed in the OpenSearchPluginManager class, which is called by the charm;
+and also in the code that manages the relations, e.g. OpenSearchBackups. The latter may
+access one or more plugins directly to retrieve information for their own relations.
+
+ERROR HANDLING:
+Plugins can raise errors that subclass OpenSearchPluginError. In the case of the charm,
+these errors are handled by the plugin manager and the charm at config-changed. In this
+case, plugin manager receives the error and prepares a status message to be returned to the
+charm. The charm will then set the status message at the end of config-changed.
+
+
 ========================================================================================
 
                              STEPS TO ADD A NEW PLUGIN
@@ -80,10 +92,14 @@ class MyPlugin(OpenSearchPlugin):
 
         # If using the self._extra_config, or any other dict to build the class below
         # let the KeyError happen and the plugin manager will capture it.
-        return OpenSearchPluginConfig(
-            config_entries_on_add={...}, # Key-value pairs to be added to opensearch.yaml
-            secret_entries_on_add={...}  # Key-value pairs to be added to keystore
-        )
+        try:
+            return OpenSearchPluginConfig(
+                config_entries_on_add={...}, # Key-value pairs to be added to opensearch.yaml
+                secret_entries_on_add={...}  # Key-value pairs to be added to keystore
+            )
+        except MyPluginError as e:
+            # If we want to set the status message with str(e), then raise it with:
+            raise e
 
     def disable(self) -> Tuple[OpenSearchPluginConfig, OpenSearchPluginConfig]:
         # Use the self._extra_config to retrieve any extra configuration.
@@ -279,13 +295,6 @@ class OpenSearchPluginError(OpenSearchError):
     """Exception thrown when an opensearch plugin is invalid."""
 
 
-class OpenSearchPluginRelationClusterNotReadyError(OpenSearchPluginError):
-    """Exception thrown when making API calls and cluster is not yet ready.
-
-    This exception in specific should be handled by classes managing the relations of plugins.
-    """
-
-
 class OpenSearchPluginMissingDepsError(OpenSearchPluginError):
     """Exception thrown when an opensearch plugin misses installed dependencies."""
 
@@ -458,6 +467,18 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
             secret_entries_to_del = [...]|{...},
         )
         """
+        if not self._extra_config.get("access-key") or not self._extra_config.get("secret-key"):
+            raise OpenSearchPluginMissingConfigError(
+                "Plugin {} missing: {}".format(
+                    self.name,
+                    [
+                        conf
+                        for conf in ["access-key", "secret-key"]
+                        if not self._extra_config.get(conf)
+                    ],
+                )
+            )
+
         return OpenSearchPluginConfig(
             # Try to remove the previous values
             secret_entries_to_del=[

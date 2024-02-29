@@ -6,12 +6,14 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import charms
+from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPlugin,
     OpenSearchPluginConfig,
     OpenSearchPluginInstallError,
+    OpenSearchPluginMissingConfigError,
     OpenSearchPluginMissingDepsError,
     PluginState,
 )
@@ -119,6 +121,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         }
         self.charm.opensearch.is_started = MagicMock(return_value=True)
         self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
+        self.charm.opensearch.version = "2.9.0"
 
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_installed")
@@ -139,12 +142,8 @@ class TestOpenSearchPlugin(unittest.TestCase):
         assert test_plugin.version == "2.9.0.0"
         assert self.plugin_manager.status(test_plugin) == PluginState.WAITING_FOR_UPGRADE
 
-    @patch(
-        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
-        new_callable=PropertyMock,
-    )
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
-    def test_failed_install_plugin(self, _, mock_version) -> None:
+    def test_failed_install_plugin(self, _) -> None:
         """Tests a failed command."""
         succeeded = False
         self.charm.opensearch._run_cmd = MagicMock(
@@ -155,18 +154,14 @@ class TestOpenSearchPlugin(unittest.TestCase):
             test_plugin = self.plugin_manager.plugins[0]
             self.plugin_manager._install_if_needed(test_plugin)
         except OpenSearchPluginInstallError as e:
-            assert str(e) == "Failed to install plugin test: this is a test"
+            assert str(e) == "test"
             succeeded = True
         finally:
             # We may reach this point because of another exception, check it:
             assert succeeded is True
 
-    @patch(
-        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
-        new_callable=PropertyMock,
-    )
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
-    def test_failed_install_plugin_already_exists(self, _, mock_version) -> None:
+    def test_failed_install_plugin_already_exists(self, _) -> None:
         """Tests a failed command when the plugin already exists."""
         succeeded = True
         self.charm.opensearch._run_cmd = MagicMock(
@@ -195,10 +190,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
             test_plugin = self.plugin_manager.plugins[0]
             self.plugin_manager._install_if_needed(test_plugin)
         except OpenSearchPluginMissingDepsError as e:
-            assert (
-                str(e)
-                == "Failed to install test, missing dependencies: ['test-plugin-dependency']"
-            )
+            assert str(e) == "('test', ['test-plugin-dependency'])"
             succeeded = True
         # Check if we had any other exception
         assert succeeded is True
@@ -323,6 +315,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
             False,  # called by self._configure
             True,  # called by self.status, in self._disable
         ]
+
         self.assertTrue(self.plugin_manager.run())
         self.plugin_manager._keystore._add.assert_has_calls([call("key1", "secret1")])
         self.charm.opensearch.config.put.assert_has_calls(
@@ -375,7 +368,72 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_plugin_relation.return_value = False
         # plugin is initially disabled and enabled when method self._disable calls self.status
         mock_is_enabled.return_value = True
+
         self.assertTrue(self.plugin_manager.run())
         self.plugin_manager._keystore._add.assert_not_called()
         self.plugin_manager._keystore._delete.assert_called()
         self.plugin_manager._opensearch_config.delete_plugin.assert_has_calls([call(["param"])])
+
+
+class TestOpenSearchBackupPlugin(unittest.TestCase):
+    def setUp(self) -> None:
+        self.harness = Harness(OpenSearchOperatorCharm)
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+        self.charm = self.harness.charm
+        self.charm.opensearch.paths.plugins = "tests/unit/resources"
+        self.plugin_manager = self.charm.plugin_manager
+        self.plugin_manager._plugins_path = self.charm.opensearch.paths.plugins
+
+    def test_name(self):
+        plugin = OpenSearchBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        assert plugin.name == "repository-s3"
+
+    def test_config_missing_all_configs(self):
+        plugin = OpenSearchBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        try:
+            plugin.config()
+        except OpenSearchPluginMissingConfigError as e:
+            assert str(e) == "Plugin repository-s3 missing: ['access-key', 'secret-key']"
+        else:
+            assert False
+
+    def test_config_with_valid_keys(self):
+        plugin = OpenSearchBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        plugin._extra_config = {
+            "access-key": "ACCESS_KEY",
+            "secret-key": "SECRET_KEY",
+        }
+        expected_config = OpenSearchPluginConfig(
+            secret_entries_to_del=[
+                "s3.client.default.access_key",
+                "s3.client.default.secret_key",
+            ],
+            secret_entries_to_add={
+                "s3.client.default.access_key": "ACCESS_KEY",
+                "s3.client.default.secret_key": "SECRET_KEY",
+            },
+        )
+        self.assertEqual(plugin.config().__dict__, expected_config.__dict__)
+
+    def test_disable(self):
+        plugin = OpenSearchBackupPlugin(
+            plugins_path=self.plugin_manager._plugins_path,
+            extra_config={},
+        )
+        expected_config = OpenSearchPluginConfig(
+            secret_entries_to_del=[
+                "s3.client.default.access_key",
+                "s3.client.default.secret_key",
+            ],
+        )
+        self.assertEqual(plugin.disable().__dict__, expected_config.__dict__)
