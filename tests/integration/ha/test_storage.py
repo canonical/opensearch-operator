@@ -4,86 +4,21 @@
 
 import asyncio
 import logging
-import random
 import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import (
-    app_name,
-    storage_id,
-    storage_type,
-    update_restart_delay,
-)
-from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (
-    APP_NAME,
-    MODEL_CONFIG,
-    SERIES,
-    get_application_unit_ids,
-    get_reachable_unit_ips,
-    http_request,
-)
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..ha.helpers import app_name, storage_id, storage_type
+from ..ha.test_horizontal_scaling import IDLE_PERIOD
+from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, get_application_unit_ids
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .continuous_writes import ContinuousWrites
 
 logger = logging.getLogger(__name__)
 
 
-SECOND_APP_NAME = "second-opensearch"
-ORIGINAL_RESTART_DELAY = 20
-RESTART_DELAY = 360
-
-
-@pytest.fixture()
-async def reset_restart_delay(ops_test: OpsTest):
-    """Resets service file delay on all units."""
-    yield
-    app = (await app_name(ops_test)) or APP_NAME
-    for unit_id in get_application_unit_ids(ops_test, app):
-        await update_restart_delay(ops_test, app, unit_id, ORIGINAL_RESTART_DELAY)
-
-
-@pytest.fixture()
-async def c_writes(ops_test: OpsTest):
-    """Creates instance of the ContinuousWrites."""
-    app = (await app_name(ops_test)) or APP_NAME
-    return ContinuousWrites(ops_test, app)
-
-
-@pytest.fixture()
-async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Starts continuous write operations and clears writes at the end of the test."""
-    await c_writes.start()
-    yield
-
-    reachable_ip = random.choice(await get_reachable_unit_ips(ops_test))
-    await http_request(ops_test, "GET", f"https://{reachable_ip}:9200/_cat/nodes", json_resp=False)
-    await http_request(
-        ops_test, "GET", f"https://{reachable_ip}:9200/_cat/shards", json_resp=False
-    )
-
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
-
-
-@pytest.fixture()
-async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Same as previous runner, but starts continuous writes on cluster wide replicated index."""
-    await c_writes.start(repl_on_all_nodes=True)
-    yield
-
-    reachable_ip = random.choice(await get_reachable_unit_ips(ops_test))
-    await http_request(ops_test, "GET", f"https://{reachable_ip}:9200/_cat/nodes", json_resp=False)
-    await http_request(
-        ops_test, "GET", f"https://{reachable_ip}:9200/_cat/shards", json_resp=False
-    )
-
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
-
-
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -95,7 +30,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
-
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
@@ -114,6 +48,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_after_scale_down(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -176,6 +111,7 @@ async def test_storage_reuse_after_scale_down(
     assert writes_result.max_stored_id == (await c_writes.max_stored_id())
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_in_new_cluster_after_app_removal(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner

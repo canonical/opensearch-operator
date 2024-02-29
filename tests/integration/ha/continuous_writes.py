@@ -22,11 +22,7 @@ from tenacity import (
     wait_random,
 )
 
-from tests.integration.helpers import (
-    get_admin_secrets,
-    get_application_unit_ips,
-    opensearch_client,
-)
+from ..helpers import get_admin_secrets, get_application_unit_ips, opensearch_client
 
 logging.getLogger("opensearch").setLevel(logging.ERROR)
 logging.getLogger("opensearchpy.helpers").setLevel(logging.ERROR)

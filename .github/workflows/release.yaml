@@ -8,48 +8,41 @@ on:
       - main
 
 jobs:
-  pre-integration-checks:
+  ci-tests:
+    name: Tests
+    uses: ./.github/workflows/ci.yaml
     secrets: inherit
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - libjuju: ==3.3.0.0
-    uses: ./.github/workflows/pre_integration_checks.yaml
-    with:
-      libjuju-version-specifier: ${{ matrix.libjuju }}
 
-  integration:
+  # release-libraries:
+  #   name: Release libraries
+  #   needs:
+  #     - ci-tests
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 60
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Release charm libraries
+  #       uses: canonical/charming-actions/release-libraries@2.3.0
+  #       with:
+  #         credentials: ${{ secrets.CHARMHUB_TOKEN }}
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: Build charm
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v11.1.2
+
+  release:
+    name: Release charm
     needs:
-      - pre-integration-checks
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - snap: 3.1/stable
-            libjuju: ==3.3.0.0
-    uses: ./.github/workflows/integration.yaml
+      - build
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v11.1.2
     with:
-      juju-snap-channel: ${{ matrix.snap }}
-      libjuju-version-specifier: ${{ matrix.libjuju }}
-
-
-  release-to-charmhub:
-    name: Release to CharmHub
-    needs:
-      - pre-integration-checks
-      - integration
-    runs-on: ubuntu-22.04
-    timeout-minutes: 60
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@2.1.1
-        id: channel
-      - name: Upload charm to charmhub
-        uses: canonical/charming-actions/upload-charm@2.1.1
-        with:
-          credentials: "${{ secrets.CHARMHUB_TOKEN }}"
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
-          channel: "2/edge"
+      channel: latest/edge
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+    secrets:
+      charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
+    permissions:
+      contents: write  # Needed to create GitHub release
