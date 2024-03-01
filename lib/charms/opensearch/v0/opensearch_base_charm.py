@@ -493,22 +493,21 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        self.status.set(MaintenanceStatus(PluginConfigStart))
         try:
+            self.status.set(MaintenanceStatus(PluginConfigStart))
             if self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
-        except OpenSearchNotFullyReadyError:
-            logger.warning("Plugin management: cluster not ready yet at config changed")
-            event.defer()
-            return
-        except OpenSearchPluginError:
-            self.status.set(BlockedStatus(PluginConfigChangeError))
+            self.status.clear(PluginConfigStart)
+        except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
+            if isinstance(e, OpenSearchNotFullyReadyError):
+                logger.warning("Plugin management: cluster not ready yet at config changed")
+            else:
+                self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
             return
         self.status.clear(PluginConfigChangeError)
-        self.status.clear(PluginConfigStart)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -619,7 +618,6 @@ class OpenSearchBaseCharm(CharmBase):
                 event.defer()
                 self.defer_trigger_event.emit()
             return
-
         if not self._can_service_start():
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
@@ -632,9 +630,7 @@ class OpenSearchBaseCharm(CharmBase):
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
             return
-
         self.unit.status = WaitingStatus(WaitingToStart)
-
         rel = self.model.get_relation(PeerRelationName)
         for unit in rel.units.union({self.unit}):
             if rel.data[unit].get("starting") == "True":
@@ -646,7 +642,6 @@ class OpenSearchBaseCharm(CharmBase):
         try:
             # Retrieve the nodes of the cluster, needed to configure this node
             nodes = self._get_nodes(False)
-
             # validate the roles prior to starting
             self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
 

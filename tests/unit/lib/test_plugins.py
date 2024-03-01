@@ -122,6 +122,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.charm.opensearch.is_started = MagicMock(return_value=True)
         self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
         self.charm.opensearch.version = "2.9.0"
+        self.plugin_manager._is_cluster_ready = MagicMock(return_value=True)
 
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_installed")
@@ -242,6 +243,16 @@ class TestOpenSearchPlugin(unittest.TestCase):
         # Mock _installed_plugins to return test
         mock_installed_plugins.return_value = ["test"]
 
+        self.charm._get_nodes = MagicMock(
+            return_value={
+                "1": {},
+                "2": {},
+                "3": {},
+            }
+        )
+        self.charm.app.planned_units = MagicMock(return_value=3)
+        self.charm.opensearch.is_node_up = MagicMock(return_value=True)
+
         mock_load.return_value = {}
         # run is called, but only _configure method really matter:
         # Set install to false, so only _configure is evaluated
@@ -291,6 +302,16 @@ class TestOpenSearchPlugin(unittest.TestCase):
         # Return a fake content of the relation
         mock_process_relation.return_value = {"param": "tested"}
 
+        self.charm._get_nodes = MagicMock(
+            return_value={
+                "1": {},
+                "2": {},
+                "3": {},
+            }
+        )
+        self.charm.app.planned_units = MagicMock(return_value=3)
+        self.charm.opensearch.is_node_up = MagicMock(return_value=True)
+
         # Keystore-related mocks
         self.plugin_manager._keystore._add = MagicMock()
         self.plugin_manager._opensearch.request = MagicMock(return_value={"status": 200})
@@ -311,11 +332,13 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_plugin_relation.return_value = True
         # plugin is initially disabled and enabled when method self._disable calls self.status
         mock_is_enabled.side_effect = [
+            False,  # called by logger
             False,  # called by self.status, in self._install
             False,  # called by self._configure
             True,  # called by self.status, in self._disable
+            True,  # called by logger
         ]
-
+        charms.opensearch.v0.opensearch_plugin_manager.logger = MagicMock()
         self.assertTrue(self.plugin_manager.run())
         self.plugin_manager._keystore._add.assert_has_calls([call("key1", "secret1")])
         self.charm.opensearch.config.put.assert_has_calls(
@@ -326,6 +349,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
             [call("POST", "_nodes/reload_secure_settings")]
         )
 
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.ClusterTopology.get_cluster_settings")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._extra_conf")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
     @patch(
@@ -334,16 +358,15 @@ class TestOpenSearchPlugin(unittest.TestCase):
     @patch(
         "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._installed_plugins"
     )
-    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
     def test_disable_plugin(
         self,
         _,
-        mock_load,
         mock_installed_plugins,
         mock_plugin_relation,
         mock_is_enabled,
-        mock_extra_conf,
+        __,
+        mock_get_cluster_settings,
     ) -> None:
         """Tests end-to-end the disable of a plugin."""
         # Keystore-related mocks
@@ -363,8 +386,17 @@ class TestOpenSearchPlugin(unittest.TestCase):
         # Mock _installed_plugins to return test
         mock_installed_plugins.return_value = ["test"]
 
-        # load_node will be called multiple times
-        mock_load.side_effect = {"param": "tested"}
+        self.charm._get_nodes = MagicMock(
+            return_value={
+                "1": {},
+                "2": {},
+                "3": {},
+            }
+        )
+        self.charm.app.planned_units = MagicMock(return_value=3)
+        self.charm.opensearch.is_node_up = MagicMock(return_value=True)
+
+        mock_get_cluster_settings.return_value = {"param": "tested"}
         mock_plugin_relation.return_value = False
         # plugin is initially disabled and enabled when method self._disable calls self.status
         mock_is_enabled.return_value = True
@@ -414,10 +446,6 @@ class TestOpenSearchBackupPlugin(unittest.TestCase):
             "secret-key": "SECRET_KEY",
         }
         expected_config = OpenSearchPluginConfig(
-            secret_entries_to_del=[
-                "s3.client.default.access_key",
-                "s3.client.default.secret_key",
-            ],
             secret_entries_to_add={
                 "s3.client.default.access_key": "ACCESS_KEY",
                 "s3.client.default.secret_key": "SECRET_KEY",
