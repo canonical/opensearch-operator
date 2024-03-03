@@ -64,6 +64,7 @@ class Node(Model):
     ip: str
     app_name: str
     temperature: Optional[str] = None
+    elected_manager: bool = False
 
     @classmethod
     @validator("roles")

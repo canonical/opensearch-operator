@@ -128,6 +128,11 @@ class OpenSearchDistribution(ABC):
             time.sleep(3)
 
     @abstractmethod
+    def present(self) -> bool:
+        """Checks if the workload is installed and in the right version."""
+        pass
+
+    @abstractmethod
     def _start_service(self):
         """Start the opensearch service."""
         pass

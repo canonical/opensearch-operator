@@ -79,6 +79,10 @@ from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
+from charms.opensearch.v0.opensearch_upgrade import (
+    OpenSearchUpgrade,
+    get_opensearch_dependencies_model,
+)
 from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v3.tls_certificates import (
@@ -149,6 +153,12 @@ class OpenSearchBaseCharm(CharmBase):
             refresh_events=[self.on.set_password_action, self.on.secret_changed],
             metrics_rules_dir="./src/alert_rules/prometheus",
             log_slots=["opensearch:logs"],
+        )
+        self.upgrade = OpenSearchUpgrade(
+            self,
+            dependency_model=get_opensearch_dependencies_model(),
+            relation_name="upgrade",
+            substrate="vm",
         )
 
         self.plugin_manager = OpenSearchPluginManager(self)
@@ -380,8 +390,18 @@ class OpenSearchBaseCharm(CharmBase):
         else:
             event.defer()
 
+    def _unstopable_op_in_progress(self) -> bool:
+        return (
+            not self.backup.is_idle()
+            or not self.upgrade.idle
+            or self.peers_data.get(Scope.UNIT, "starting", False)
+        )
+
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
+        if self._unstopable_op_in_progress():
+            raise OpenSearchHAError("Important operation in progress, cannot stop")
+
         # acquire lock to ensure only 1 unit removed at a time
         self.ops_lock.acquire()
 
@@ -609,6 +629,14 @@ class OpenSearchBaseCharm(CharmBase):
 
         return self._are_all_tls_resources_stored()
 
+    def check_if_starting(self) -> bool:
+        """Check if the service is starting."""
+        rel = self.model.get_relation(PeerRelationName)
+        for unit in rel.units.union({self.unit}):
+            if rel.data[unit].get("starting") == "True":
+                return True
+        return False
+
     def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if self.opensearch.is_started():
@@ -718,6 +746,9 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
+        if not self.backup.is_idle():
+            raise OpenSearchStopError("Backup/restore operation in progress")
+
         self.status.set(WaitingStatus(ServiceIsStopping))
 
         # 1. Add current node to the voting + alloc exclusions
@@ -732,14 +763,18 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _restart_opensearch(self, event: EventBase) -> None:
         """Restart OpenSearch if possible."""
-        if not self.peers_data.get(Scope.UNIT, "starting", False):
-            try:
-                self._stop_opensearch()
-            except OpenSearchStopError as e:
-                logger.exception(e)
-                event.defer()
-                self.status.set(WaitingStatus(ServiceIsStopping))
-                return
+        if self._unstopable_op_in_progress():
+            # Safeguard against starting while an important operation is in progress
+            event.defer()
+            return
+
+        try:
+            self._stop_opensearch()
+        except OpenSearchStopError as e:
+            logger.exception(e)
+            event.defer()
+            self.status.set(WaitingStatus(ServiceIsStopping))
+            return
 
         self._start_opensearch(event)
 
