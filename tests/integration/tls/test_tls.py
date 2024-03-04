@@ -7,7 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import (
+from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
@@ -17,17 +17,16 @@ from tests.integration.helpers import (
     get_application_unit_names,
     get_leader_unit_ip,
 )
-from tests.integration.helpers_deployments import wait_until
-from tests.integration.tls.helpers import (
-    check_security_index_initialised,
-    check_unit_tls_configured,
-)
+from ..helpers_deployments import wait_until
+from ..tls.helpers import check_security_index_initialised, check_unit_tls_configured
 
 logger = logging.getLogger(__name__)
+
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
@@ -58,6 +57,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_security_index_initialised(ops_test: OpsTest) -> None:
     """Test that the security index is well initialised."""
@@ -66,6 +66,7 @@ async def test_security_index_initialised(ops_test: OpsTest) -> None:
     assert await check_security_index_initialised(ops_test, leader_unit_ip)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_tls_configured(ops_test: OpsTest) -> None:
     """Test that TLS is enabled when relating to the TLS Certificates Operator."""
@@ -73,6 +74,7 @@ async def test_tls_configured(ops_test: OpsTest) -> None:
         assert await check_unit_tls_configured(ops_test, unit_ip, unit_name)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_cluster_formation_after_tls(ops_test: OpsTest) -> None:
     """Test that the cluster formation is successful after TLS setup."""
