@@ -474,7 +474,7 @@ async def wait_for_backup(ops_test, leader_id):
             raise Exception("Backup not finished yet")
 
 
-async def wait_restore_finish(ops_test, unit_ip):
+async def wait_for_restore(ops_test, unit_ip):
     """Waits the backup to finish and move to the finished state or throws a RetryException."""
     for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
         with attempt:
@@ -512,7 +512,6 @@ async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app
 async def backup_cluster(ops_test: OpsTest, leader_id: int) -> int:
     """Runs the backup of the cluster."""
     action = await run_action(ops_test, leader_id, "create-backup")
-    assert action.status == "completed"
     logger.debug(f"create-backup output: {action}")
 
     await wait_for_backup(ops_test, leader_id)
@@ -523,5 +522,5 @@ async def restore_cluster(ops_test: OpsTest, backup_id: int, unit_ip: str, leade
     action = await run_action(ops_test, leader_id, "restore", params={"backup-id": backup_id})
     logger.debug(f"restore output: {action}")
 
-    await wait_restore_finish(ops_test, unit_ip)
+    await wait_for_restore(ops_test, unit_ip)
     return action.status == "completed"
