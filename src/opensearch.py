@@ -34,7 +34,7 @@ from utils import extract_tarball
 logger = logging.getLogger(__name__)
 
 
-OPENSEARCH_SNAP_REVISION = 37
+OPENSEARCH_SNAP_REVISION = 39
 
 
 class OpenSearchSnap(OpenSearchDistribution):
