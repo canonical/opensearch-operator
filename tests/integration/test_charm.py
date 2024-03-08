@@ -9,6 +9,8 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
+from opensearch import OPENSEARCH_SNAP_REVISION
+
 from .helpers import (
     APP_NAME,
     MODEL_CONFIG,
@@ -23,7 +25,6 @@ from .helpers import (
 from .helpers_deployments import wait_until
 from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
-from opensearch import OPENSEARCH_SNAP_REVISION
 
 logger = logging.getLogger(__name__)
 
