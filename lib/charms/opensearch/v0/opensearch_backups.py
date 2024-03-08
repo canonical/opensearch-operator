@@ -89,7 +89,7 @@ S3_REPO_BASE_PATH = "/"
 
 INDICES_TO_EXCLUDE_AT_RESTORE = {".opendistro_security", ".opensearch-observability"}
 
-REPO_NOT_CREATED_ERR = f"[{S3_REPOSITORY}] does not exist"
+REPO_NOT_CREATED_ERR = "repository type [s3] does not exist"
 REPO_NOT_ACCESS_ERR = f"[{S3_REPOSITORY}] path [{S3_REPO_BASE_PATH}] is not accessible"
 REPO_CREATING_ERR = "Could not determine repository generation from root blobs"
 RESTORE_OPEN_INDEX_WITH_SAME_NAME = "because an open index with same name already exists"
