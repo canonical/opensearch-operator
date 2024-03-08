@@ -3,12 +3,15 @@
 # See LICENSE file for licensing details.
 
 import logging
+import subprocess
 
 import pytest
+import yaml
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
     APP_NAME,
+    EXPECTED_SNAP_REVISION,
     MODEL_CONFIG,
     SERIES,
     get_admin_secrets,
@@ -141,3 +144,31 @@ async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
         ops_test, "GET", test_url, resp_status_code=True, user_password=password1
     )
     assert http_resp_code == 401
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_check_pinned_revision(ops_test: OpsTest) -> None:
+    """Test check the pinned revision."""
+    leader_id = await get_leader_unit_id(ops_test)
+
+    installed_info = yaml.safe_load(
+        subprocess.check_output(
+            [
+                "juju",
+                "ssh",
+                f"opensearch/{leader_id}",
+                "--",
+                "sudo",
+                "snap",
+                "info",
+                "opensearch",
+                "--color=never",
+                "--unicode=always",
+            ],
+            text=True,
+        ).replace("\r\n", "\n")
+    )["installed"].split()
+    logger.info(f"Installed snap: {installed_info}")
+    assert installed_info[1] == f"({EXPECTED_SNAP_REVISION})"
+    assert installed_info[3] == "held"
