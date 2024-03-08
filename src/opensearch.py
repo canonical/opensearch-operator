@@ -34,6 +34,9 @@ from utils import extract_tarball
 logger = logging.getLogger(__name__)
 
 
+OPENSEARCH_SNAP_REVISION = 37
+
+
 class OpenSearchSnap(OpenSearchDistribution):
     """Snap distribution of opensearch, only overrides properties and logic proper to the snap."""
 
@@ -58,11 +61,13 @@ class OpenSearchSnap(OpenSearchDistribution):
     @override
     def install(self):
         """Install opensearch from the snapcraft store."""
-        if self._opensearch.present:
-            return
         try:
-            self._opensearch.ensure(snap.SnapState.Latest, channel="edge")
+            self._opensearch.ensure(snap.SnapState.Latest, revision=OPENSEARCH_SNAP_REVISION)
             self._opensearch.connect("process-control")
+            if not self._opensearch.held:
+                # hold the snap in charm determined revision
+                self._opensearch.hold()
+
         except SnapError as e:
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()
