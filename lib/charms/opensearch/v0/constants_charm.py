@@ -92,3 +92,6 @@ COSPort = "9200"
 # Opensearch Users
 OpenSearchUsers = {"admin", "monitor"}
 OpenSearchRoles = set()
+
+# Opensearch Snap revision
+OPENSEARCH_SNAP_REVISION = 39

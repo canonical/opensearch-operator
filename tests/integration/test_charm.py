@@ -7,11 +7,11 @@ import subprocess
 
 import pytest
 import yaml
+from charms.opensearch.v0.constants_charm import OPENSEARCH_SNAP_REVISION
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
     APP_NAME,
-    EXPECTED_SNAP_REVISION,
     MODEL_CONFIG,
     SERIES,
     get_admin_secrets,
@@ -170,5 +170,5 @@ async def test_check_pinned_revision(ops_test: OpsTest) -> None:
         ).replace("\r\n", "\n")
     )["installed"].split()
     logger.info(f"Installed snap: {installed_info}")
-    assert installed_info[1] == f"({EXPECTED_SNAP_REVISION})"
+    assert installed_info[1] == f"({OPENSEARCH_SNAP_REVISION})"
     assert installed_info[3] == "held"
