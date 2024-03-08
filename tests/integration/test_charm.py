@@ -25,7 +25,6 @@ from .helpers import (
 from .helpers_deployments import wait_until
 from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
-
 logger = logging.getLogger(__name__)
 
 
