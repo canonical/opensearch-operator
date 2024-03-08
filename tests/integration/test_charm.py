@@ -11,7 +11,6 @@ from pytest_operator.plugin import OpsTest
 
 from .helpers import (
     APP_NAME,
-    EXPECTED_SNAP_REVISION,
     MODEL_CONFIG,
     SERIES,
     get_admin_secrets,
@@ -23,6 +22,8 @@ from .helpers import (
 )
 from .helpers_deployments import wait_until
 from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
+
+from opensearch import OPENSEARCH_SNAP_REVISION
 
 logger = logging.getLogger(__name__)
 
@@ -170,5 +171,5 @@ async def test_check_pinned_revision(ops_test: OpsTest) -> None:
         ).replace("\r\n", "\n")
     )["installed"].split()
     logger.info(f"Installed snap: {installed_info}")
-    assert installed_info[1] == f"({EXPECTED_SNAP_REVISION})"
+    assert installed_info[1] == f"({OPENSEARCH_SNAP_REVISION})"
     assert installed_info[3] == "held"
