@@ -29,7 +29,6 @@ from .helpers_deployments import Status, get_application_units, get_unit_hostnam
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 
-EXPECTED_SNAP_REVISION = 37
 SERIES = "jammy"
 UNIT_IDS = [0, 1, 2]
 IDLE_PERIOD = 75

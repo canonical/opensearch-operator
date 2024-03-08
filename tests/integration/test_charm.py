@@ -7,9 +7,8 @@ import subprocess
 
 import pytest
 import yaml
+from charms.opensearch.v0.constants_charm import OPENSEARCH_SNAP_REVISION
 from pytest_operator.plugin import OpsTest
-
-from opensearch import OPENSEARCH_SNAP_REVISION
 
 from .helpers import (
     APP_NAME,

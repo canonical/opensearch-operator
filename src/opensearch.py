@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 import requests
+from charms.opensearch.v0.constants_charm import OPENSEARCH_SNAP_REVISION
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution, Paths
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -32,9 +33,6 @@ from tenacity import Retrying, retry, stop_after_attempt, wait_exponential, wait
 from utils import extract_tarball
 
 logger = logging.getLogger(__name__)
-
-
-OPENSEARCH_SNAP_REVISION = 39
 
 
 class OpenSearchSnap(OpenSearchDistribution):
