@@ -232,6 +232,7 @@ async def test_backup_cluster(
         leader_id,
     )
     assert global_backup_id > 0
+    logger.info(f"backup-id: {global_backup_id}")
     if cloud_name not in backups_by_cloud:
         backups_by_cloud[cloud_name] = []
     backups_by_cloud[cloud_name].append(global_backup_id)
@@ -269,6 +270,7 @@ async def test_restore_cluster(
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
     logger.info("Restoring backup")
+    logger.info(f"Restoring backup-id: {global_backup_id}")
     assert await restore_cluster(
         ops_test,
         global_backup_id,  # backup_id
@@ -324,6 +326,7 @@ async def test_restore_cluster_after_app_destroyed(
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
     logger.info("Restoring backup")
+    logger.info(f"Restoring backup-id: {global_backup_id}")
     assert await restore_cluster(
         ops_test,
         global_backup_id,  # backup_id
@@ -337,6 +340,7 @@ async def test_restore_cluster_after_app_destroyed(
         leader_id,
     )
     assert backup_id > 0
+    logger.info(f"Created backup-id: {backup_id}")
     if cloud_name not in backups_by_cloud:
         backups_by_cloud[cloud_name] = []
     backups_by_cloud[cloud_name].append(backup_id)
