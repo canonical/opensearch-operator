@@ -46,7 +46,6 @@ class OpenSearchBaseCharm(CharmBase):
 
 import json
 import logging
-import math
 from datetime import datetime
 from typing import Any, Dict, List, Set, Tuple
 
@@ -173,7 +172,6 @@ class OpenSearchBackup(Object):
         output.append("-" * len(output[0]))
 
         for backup_id, backup_status in backups:
-            tab = " " * math.floor((10 - len(str(backup_id))) / 2)
             output.append("{:<20s} | {:s}".format(backup_id, backup_status))
         return "\n".join(output)
 
@@ -392,7 +390,7 @@ class OpenSearchBackup(Object):
             event.fail("Failed: backup service is not configured or busy")
             return
 
-        new_backup_id = datetime.now().strftime(BACKUP_ID_FORMAT)
+        new_backup_id = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
         try:
             logger.debug(
                 f"Create backup action request id {new_backup_id} response is:"
@@ -408,14 +406,18 @@ class OpenSearchBackup(Object):
                 )
             )
 
-            logger.info(f"Backup request submitted with backup-id {new_backup_id}")
+            logger.info(
+                f"Backup request submitted with backup-id {self._format_backup_id(new_backup_id)}"
+            )
         except (
             OpenSearchHttpError,
             OpenSearchListBackupError,
         ) as e:
             event.fail(f"Failed with exception: {e}")
             return
-        event.set_results({"backup-id": new_backup_id, "status": "Backup is running."})
+        event.set_results(
+            {"backup-id": self._format_backup_id(new_backup_id), "status": "Backup is running."}
+        )
 
     def _can_unit_perform_backup(self, event: ActionEvent) -> bool:
         """Checks if the actions run from this unit can be executed or not.
@@ -451,7 +453,7 @@ class OpenSearchBackup(Object):
         Used this proxy function to remove the setup complexity in the loop at _list_backups.
         """
         return datetime.strftime(
-            datetime.strptime(backup_id[:-1], format_from),
+            datetime.strptime(backup_id, format_from),
             format_to,
         )
 

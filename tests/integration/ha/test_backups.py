@@ -63,7 +63,7 @@ value_before_backup, value_after_backup = None, None
 # store it in a common place. Besides, there are multiple tests
 # that will access the same clouds and potentially conflict with hard
 # coded backup_ids.
-global_backup_id = 0
+global_backup_id = None
 
 
 @pytest.fixture(scope="session")
@@ -231,7 +231,7 @@ async def test_backup_cluster(
         ops_test,
         leader_id,
     )
-    assert global_backup_id > 0
+    assert global_backup_id != None
     logger.info(f"backup-id: {global_backup_id}")
     if cloud_name not in backups_by_cloud:
         backups_by_cloud[cloud_name] = []
@@ -339,7 +339,7 @@ async def test_restore_cluster_after_app_destroyed(
         ops_test,
         leader_id,
     )
-    assert backup_id > 0
+    assert backup_id != None
     logger.info(f"Created backup-id: {backup_id}")
     if cloud_name not in backups_by_cloud:
         backups_by_cloud[cloud_name] = []
@@ -395,7 +395,7 @@ async def test_remove_and_readd_s3_relation(
         ops_test,
         leader_id,
     )
-    assert backup_id > 0
+    assert backup_id != None
     if cloud_name not in backups_by_cloud:
         backups_by_cloud[cloud_name] = []
     backups_by_cloud[cloud_name].append(backup_id)
@@ -549,7 +549,7 @@ async def test_backup_and_switch_configs(
             ops_test,
             leader_id,
         )
-        assert backup_id > 0
+        assert backup_id != None
         if cloud_name not in backups_by_cloud:
             backups_by_cloud[cloud_name] = []
         backups_by_cloud[cloud_name].append(backup_id)

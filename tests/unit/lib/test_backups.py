@@ -20,8 +20,8 @@ from charms.opensearch.v0.opensearch_backups import (
     S3_REPOSITORY,
     BackupServiceState,
     OpenSearchBackupPlugin,
-    OpenSearchRestoreIndexClosingError,
     OpenSearchRestoreCheckError,
+    OpenSearchRestoreIndexClosingError,
 )
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
@@ -669,6 +669,7 @@ class TestBackups(unittest.TestCase):
     def test_on_create_backup_action_success(self, mock_request, mock_time):
         event = MagicMock()
         mock_time.now().strftime.return_value = "2023.01.01-00.00.00"
+        self.charm.backup._format_backup_id = MagicMock(return_value="2023-01-01T00:00:00Z")
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
         self.charm.backup.is_backup_in_progress = MagicMock(return_value=False)
         self.charm.backup.get_service_status = MagicMock(return_value="Backup completed.")
@@ -679,7 +680,7 @@ class TestBackups(unittest.TestCase):
             == f"_snapshot/{S3_REPOSITORY}/2023.01.01-00.00.00?wait_for_completion=false"
         )
         event.set_results.assert_called_with(
-            {"backup-id": "2023.01.01-00.00.00", "status": "Backup is running."}
+            {"backup-id": "2023-01-01T00:00:00Z", "status": "Backup is running."}
         )
 
     def test_on_create_backup_action_failure(self):
