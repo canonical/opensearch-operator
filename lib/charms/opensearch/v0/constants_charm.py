@@ -94,4 +94,4 @@ OpenSearchUsers = {"admin", "monitor"}
 OpenSearchRoles = set()
 
 # Opensearch Snap revision
-OPENSEARCH_SNAP_REVISION = 39
+OPENSEARCH_SNAP_REVISION = 40
