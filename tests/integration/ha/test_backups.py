@@ -231,7 +231,7 @@ async def test_backup_cluster(
         ops_test,
         leader_id,
     )
-    assert global_backup_id != None
+    assert global_backup_id is not None
     logger.info(f"backup-id: {global_backup_id}")
     if cloud_name not in backups_by_cloud:
         backups_by_cloud[cloud_name] = []
@@ -339,7 +339,7 @@ async def test_restore_cluster_after_app_destroyed(
         ops_test,
         leader_id,
     )
-    assert backup_id != None
+    assert backup_id is not None
     logger.info(f"Created backup-id: {backup_id}")
     if cloud_name not in backups_by_cloud:
         backups_by_cloud[cloud_name] = []
@@ -395,7 +395,7 @@ async def test_remove_and_readd_s3_relation(
         ops_test,
         leader_id,
     )
-    assert backup_id != None
+    assert backup_id is not None
     if cloud_name not in backups_by_cloud:
         backups_by_cloud[cloud_name] = []
     backups_by_cloud[cloud_name].append(backup_id)
@@ -549,7 +549,7 @@ async def test_backup_and_switch_configs(
             ops_test,
             leader_id,
         )
-        assert backup_id != None
+        assert backup_id is not None
         if cloud_name not in backups_by_cloud:
             backups_by_cloud[cloud_name] = []
         backups_by_cloud[cloud_name].append(backup_id)
