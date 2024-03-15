@@ -5,7 +5,6 @@
 import re
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from ops import EventBase
 from ops.model import ActiveStatus, StatusBase
 
 # The unique Charmhub library identifier, never change it

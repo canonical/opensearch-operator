@@ -98,7 +98,7 @@ from ops.charm import (
     StorageDetachingEvent,
     UpdateStatusEvent,
 )
-from ops.framework import EventBase, EventSource
+from ops.framework import EventBase
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
 # The unique Charmhub library identifier, never change it
