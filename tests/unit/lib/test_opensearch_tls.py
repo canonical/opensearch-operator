@@ -91,12 +91,12 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_relation_joined_admin(self, _, _put_admin_user, _request_certificate):
-        """Test on certificate relation joined event."""
+    def test_on_relation_created_admin(self, _, _put_admin_user, _request_certificate):
+        """Test on certificate relation created event."""
         event_mock = MagicMock()
 
         self.harness.set_leader(is_leader=True)
-        self.charm.tls._on_tls_relation_joined(event_mock)
+        self.charm.tls._on_tls_relation_created(event_mock)
         self.assertEqual(
             _request_certificate.mock_calls,
             [
@@ -109,12 +109,12 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_relation_joined_non_admin(self, _, _put_admin_user, _request_certificate):
-        """Test on certificate relation joined event."""
+    def test_on_relation_created_non_admin(self, _, _put_admin_user, _request_certificate):
+        """Test on certificate relation created event."""
         event_mock = MagicMock()
 
         self.harness.set_leader(is_leader=False)
-        self.charm.tls._on_tls_relation_joined(event_mock)
+        self.charm.tls._on_tls_relation_created(event_mock)
         self.assertEqual(
             _request_certificate.mock_calls,
             [
