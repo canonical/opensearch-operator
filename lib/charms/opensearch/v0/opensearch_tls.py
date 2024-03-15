@@ -31,7 +31,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     generate_csr,
     generate_private_key,
 )
-from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
+from ops.charm import ActionEvent, RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import Object
 
 # The unique Charmhub library identifier, never change it
@@ -62,7 +62,7 @@ class OpenSearchTLS(Object):
         )
 
         self.framework.observe(
-            self.charm.on[TLS_RELATION].relation_joined, self._on_tls_relation_joined
+            self.charm.on[TLS_RELATION].relation_created, self._on_tls_relation_created
         )
         self.framework.observe(
             self.charm.on[TLS_RELATION].relation_broken, self._on_tls_relation_broken
@@ -108,12 +108,11 @@ class OpenSearchTLS(Object):
             secrets = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)
             self._request_certificate_renewal(Scope.UNIT, cert_type, secrets)
 
-    def _on_tls_relation_joined(self, event: RelationJoinedEvent) -> None:
-        """Request certificate when TLS relation joined."""
+    def _on_tls_relation_created(self, event: RelationCreatedEvent) -> None:
+        """Request certificate when TLS relation created."""
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             event.defer()
             return
-
         admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         if (
             self.charm.unit.is_leader()
