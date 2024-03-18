@@ -341,14 +341,6 @@ class OpenSearchProvider(Object):
             return
         self.opensearch_provides.set_tls_ca(relation_id, _ch_chain)
 
-    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
-        if not self.unit.is_leader():
-            return
-        if self.opensearch.is_node_up():
-            self.update_endpoints(event.relation)
-        else:
-            event.defer()
-
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
         # remove departing unit from endpoints available to requirer charm.
