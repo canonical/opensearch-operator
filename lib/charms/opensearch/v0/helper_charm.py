@@ -5,7 +5,6 @@
 import re
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from ops import EventBase
 from ops.model import ActiveStatus, StatusBase
 
 # The unique Charmhub library identifier, never change it
@@ -17,12 +16,6 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
-
-
-class DeferTriggerEvent(EventBase):
-    """Dummy event to be triggered to trigger the deferral of another event."""
-
-    pass
 
 
 class Status:

@@ -34,7 +34,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_charm import DeferTriggerEvent, Status
+from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
@@ -98,7 +98,7 @@ from ops.charm import (
     StorageDetachingEvent,
     UpdateStatusEvent,
 )
-from ops.framework import EventBase, EventSource
+from ops.framework import EventBase
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
 # The unique Charmhub library identifier, never change it
@@ -121,8 +121,6 @@ logger = logging.getLogger(__name__)
 
 class OpenSearchBaseCharm(CharmBase):
     """Base class for OpenSearch charms."""
-
-    defer_trigger_event = EventSource(DeferTriggerEvent)
 
     def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
         super().__init__(*args)
@@ -160,9 +158,6 @@ class OpenSearchBaseCharm(CharmBase):
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
 
-        # helper to defer events without any additional logic
-        self.framework.observe(self.defer_trigger_event, self._on_defer_trigger)
-
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
@@ -186,10 +181,6 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
-
-    def _on_defer_trigger(self, _: DeferTriggerEvent):
-        """Hook for the trigger_defer event."""
-        pass
 
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
@@ -337,7 +328,6 @@ class OpenSearchBaseCharm(CharmBase):
         ):
             # we defer because we want the temporary status to be updated
             event.defer()
-            self.defer_trigger_event.emit()
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -616,14 +606,10 @@ class OpenSearchBaseCharm(CharmBase):
                 self._post_start_init()
             except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
                 event.defer()
-                self.defer_trigger_event.emit()
             return
         if not self._can_service_start():
             self.peers_data.delete(Scope.UNIT, "starting")
             event.defer()
-
-            # emit defer trigger event which won't do anything to force retry of current event
-            self.defer_trigger_event.emit()
             return
 
         if self.peers_data.get(Scope.UNIT, "starting", False) and self.opensearch.is_failed():
@@ -669,14 +655,11 @@ class OpenSearchBaseCharm(CharmBase):
             self._post_start_init()
         except (OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
-            # emit defer_trigger event which won't do anything to force retry of current event
-            self.defer_trigger_event.emit()
         except OpenSearchStartError as e:
             logger.exception(e)
             self.peers_data.delete(Scope.UNIT, "starting")
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
-            self.defer_trigger_event.emit()
 
     def _post_start_init(self):
         """Initialization post OpenSearch start."""
