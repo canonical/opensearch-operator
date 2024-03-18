@@ -44,7 +44,6 @@ from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.charm import (
     CharmBase,
     RelationBrokenEvent,
-    RelationChangedEvent,
     RelationDepartedEvent,
 )
 from ops.framework import Object
