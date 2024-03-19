@@ -509,7 +509,7 @@ async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app
     return result.count > initial_count
 
 
-async def backup_cluster(ops_test: OpsTest, leader_id: int) -> int:
+async def backup_cluster(ops_test: OpsTest, leader_id: int) -> str:
     """Runs the backup of the cluster."""
     action = await run_action(ops_test, leader_id, "create-backup")
     logger.debug(f"create-backup output: {action}")
