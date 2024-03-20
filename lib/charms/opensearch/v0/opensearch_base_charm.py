@@ -496,6 +496,9 @@ class OpenSearchBaseCharm(CharmBase):
             else:
                 self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
+            # Decided to defer the event. We can clean up the status and reset it once the
+            # config-changed is called again.
+            self.status.clear(PluginConfigStart)
             return
         self.status.clear(PluginConfigChangeError)
 
