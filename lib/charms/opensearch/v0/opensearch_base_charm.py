@@ -484,12 +484,14 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         try:
-            self.status.set(MaintenanceStatus(PluginConfigStart))
+            if not self.plugin_manager.check_plugin_manager_ready():
+                raise OpenSearchNotFullyReadyError()
+            self.status.set(MaintenanceStatus(PluginConfigCheck))
             if self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
-            self.status.clear(PluginConfigStart)
+            self.status.clear(PluginConfigCheck)
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
                 logger.warning("Plugin management: cluster not ready yet at config changed")
@@ -498,7 +500,7 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             # Decided to defer the event. We can clean up the status and reset it once the
             # config-changed is called again.
-            self.status.clear(PluginConfigStart)
+            self.status.clear(PluginConfigCheck)
             return
         self.status.clear(PluginConfigChangeError)
 
