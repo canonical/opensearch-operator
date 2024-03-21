@@ -21,7 +21,7 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     PeerRelationName,
     PluginConfigChangeError,
-    PluginConfigStart,
+    PluginConfigCheck,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
