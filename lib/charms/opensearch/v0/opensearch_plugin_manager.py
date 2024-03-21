@@ -154,9 +154,6 @@ class OpenSearchPluginManager:
 
         This method should be called at config-changed event. Returns if needed restart.
         """
-        if not self.check_plugin_manager_ready():
-            raise OpenSearchNotFullyReadyError()
-
         err_msgs = []
         restart_needed = False
         for plugin in self.plugins:
