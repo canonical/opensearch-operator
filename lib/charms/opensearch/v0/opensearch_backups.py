@@ -99,7 +99,7 @@ REPO_NOT_ACCESS_ERR = f"[{S3_REPOSITORY}] path [{S3_REPO_BASE_PATH}] is not acce
 REPO_CREATING_ERR = "Could not determine repository generation from root blobs"
 RESTORE_OPEN_INDEX_WITH_SAME_NAME = "because an open index with same name already exists"
 BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
-OPENSEARCH_BACKUP_ID_FORMAT = "%Y.%m.%d-%H.%M.%S"
+OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
 class OpenSearchBackupError(OpenSearchError):
