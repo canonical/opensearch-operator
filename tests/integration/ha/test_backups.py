@@ -20,7 +20,7 @@ import logging
 import subprocess
 import time
 import uuid
-from typing import Any, Dict, Generator
+from typing import Any, Dict
 
 import boto3
 import pytest
@@ -58,7 +58,7 @@ TIMEOUT = 10 * 60
 BackupsPath = f"opensearch/{uuid.uuid4()}"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def cloud_configs(
     github_secrets: Dict[str, str], microceph: Dict[str, str]
 ) -> Dict[str, Dict[str, str]]:
@@ -83,7 +83,7 @@ def cloud_configs(
     return results
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def cloud_credentials(
     github_secrets: Dict[str, str], microceph: Dict[str, str]
 ) -> Dict[str, Dict[str, str]]:
@@ -115,12 +115,12 @@ async def _backup_docs_count(ops_test: OpsTest, app: str, unit_ip: str, backup_i
     }
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def remove_backups(
     ops_test: OpsTest,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
-) -> Generator[Any, Any, Any]:
+):
     """Remove previously created backups from the cloud-corresponding bucket."""
     yield
 
