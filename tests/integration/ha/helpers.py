@@ -487,8 +487,6 @@ async def wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip):
                     if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
                         raise Exception(f"Recovery failed for shard {shard}")
 
-            raise Exception("Backup system not settled yet")
-
 
 async def delete_backup(ops_test: OpsTest, backup_id: int) -> None:
     """Deletes a backup."""

@@ -204,9 +204,9 @@ async def test_build_and_deploy(ops_test: OpsTest, cloud_name: Dict[str, Dict[st
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
 
     await asyncio.gather(
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
         ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
     )
@@ -483,14 +483,10 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest) -> None:
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-
-    s3_charm = S3_INTEGRATOR
-    # Convert to integer as environ always returns string
-    app_num_units = 3
     await asyncio.gather(
-        ops_test.model.deploy(s3_charm, channel=S3_INTEGRATOR_CHANNEL),
-        ops_test.model.deploy(my_charm, num_units=app_num_units, series=SERIES),
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
+        ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -547,12 +543,8 @@ async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
         app=S3_INTEGRATOR,
     )
     await ops_test.model.wait_for_idle(
-        apps=[S3_INTEGRATOR],
+        apps=[app, S3_INTEGRATOR],
         status="active",
-        timeout=TIMEOUT,
-    )
-    await ops_test.model.wait_for_idle(
-        apps=[app],
         timeout=TIMEOUT,
     )
 
