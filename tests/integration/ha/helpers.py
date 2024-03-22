@@ -515,7 +515,7 @@ async def backup_cluster(ops_test: OpsTest, leader_id: int) -> str:
     logger.debug(f"create-backup output: {action}")
 
     await wait_for_backup(ops_test, leader_id)
-    return int(action.response["backup-id"])
+    return action.response["backup-id"]
 
 
 async def restore_cluster(ops_test: OpsTest, backup_id: int, unit_ip: str, leader_id: int) -> bool:
