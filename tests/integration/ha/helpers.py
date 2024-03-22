@@ -9,6 +9,7 @@ import time
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import Node
+from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
 from tenacity import (
     RetryError,
@@ -23,6 +24,7 @@ from ..helpers import (
     get_application_unit_ids,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
+    get_leader_unit_ip,
     http_request,
     juju_version_major,
     run_action,
@@ -456,10 +458,11 @@ async def print_logs(ops_test: OpsTest, app: str, unit_id: int, msg: str) -> str
     return msg
 
 
-async def wait_for_backup(ops_test, leader_id):
+async def wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip):
     """Waits the backup to finish and move to the finished state or throws a RetryException."""
     for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
         with attempt:
+            # First, check if current backups are finished
             action = await run_action(
                 ops_test, leader_id, "list-backups", params={"output": "json"}
             )
@@ -467,17 +470,12 @@ async def wait_for_backup(ops_test, leader_id):
             # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
             backups = json.loads(action.response["backups"])
             logger.debug(f"Backups recovered: {backups}")
-            if action.status == "completed" and len(backups) > 0:
+            if action.status != "completed" or len(backups) == 0:
+                raise Exception("Failed to retrieve backup list or list is empty")
+            else:
                 logger.debug(f"list-backups output: {action}")
-                return
 
-            raise Exception("Backup not finished yet")
-
-
-async def wait_for_restore(ops_test, unit_ip):
-    """Waits the backup to finish and move to the finished state or throws a RetryException."""
-    for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
-        with attempt:
+            # Now, check if we have finished the restore
             indices_status = await http_request(
                 ops_test,
                 "GET",
@@ -487,7 +485,20 @@ async def wait_for_restore(ops_test, unit_ip):
                 # Now, check the status of each shard
                 for shard in info["shards"]:
                     if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
-                        raise Exception()
+                        raise Exception(f"Recovery failed for shard {shard}")
+
+            raise Exception("Backup system not settled yet")
+
+
+async def delete_backup(ops_test: OpsTest, backup_id: int) -> None:
+    """Deletes a backup."""
+    # Now, check if we have finished the restore
+    unit_ip = await get_leader_unit_ip(ops_test)
+    await http_request(
+        ops_test,
+        "DELETE",
+        f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/{backup_id}",
+    )
 
 
 async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app: str) -> bool:
@@ -509,18 +520,25 @@ async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app
     return result.count > initial_count
 
 
-async def backup_cluster(ops_test: OpsTest, leader_id: int) -> str:
+async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> bool:
     """Runs the backup of the cluster."""
     action = await run_action(ops_test, leader_id, "create-backup")
     logger.debug(f"create-backup output: {action}")
 
-    await wait_for_backup(ops_test, leader_id)
-    return int(action.response["backup-id"])
+    await wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip)
+    return action.status == "completed"
 
 
-async def restore_cluster(ops_test: OpsTest, backup_id: int, unit_ip: str, leader_id: int) -> bool:
+async def restore(ops_test: OpsTest, backup_id: int, unit_ip: str, leader_id: int) -> bool:
     action = await run_action(ops_test, leader_id, "restore", params={"backup-id": backup_id})
     logger.debug(f"restore output: {action}")
 
-    await wait_for_restore(ops_test, unit_ip)
+    await wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip)
     return action.status == "completed"
+
+
+async def list_backups(ops_test: OpsTest, leader_id: int) -> Dict[str, str]:
+    action = await run_action(ops_test, leader_id, "list-backups", params={"output": "json"})
+    assert action.status == "completed"
+    backups = action.response["backups"]
+    return backups
