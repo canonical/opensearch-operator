@@ -16,10 +16,7 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.helper_cluster import ClusterTopology
-from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchCmdError,
-    OpenSearchNotFullyReadyError,
-)
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
@@ -154,9 +151,6 @@ class OpenSearchPluginManager:
 
         This method should be called at config-changed event. Returns if needed restart.
         """
-        if not self.check_plugin_manager_ready():
-            raise OpenSearchNotFullyReadyError()
-
         err_msgs = []
         restart_needed = False
         for plugin in self.plugins:
