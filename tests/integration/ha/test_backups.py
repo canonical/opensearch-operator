@@ -258,7 +258,8 @@ async def test_create_and_list_backups(
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
     # Make sure we took a snapshot with data
-    for backup_id in list_backups(ops_test, leader_id).keys():
+    backups = await list_backups(ops_test, leader_id)
+    for backup_id in backups.keys():
         assert (
             await _backup_docs_count(ops_test, app, unit_ip, backup_id)[
                 ContinuousWrites.INDEX_NAME
