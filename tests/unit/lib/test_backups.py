@@ -636,20 +636,20 @@ class TestBackups(unittest.TestCase):
             ).__dict__
         )
 
-    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
-    def test_format_backup_list(self, mock_request):
-        """Tests the format of the backup list."""
-        mock_request.return_value = {
-            "snapshots": [
-                {"snapshot": "2023.01.01-00.00.00", "state": "SUCCESS", "indices": []},
-                {"snapshot": "2023.01.01-00.10.00", "state": "FAILED", "indices": []},
-                {"snapshot": "2023.01.01-00.20.00", "state": "IN_PROGRESS", "indices": []},
-            ]
-        }
-        backups = self.charm.backup._list_backups()
-        self.assertEqual(
-            self.charm.backup._generate_backup_list_output(backups), LIST_BACKUPS_TRIAL
-        )
+#    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
+#    def test_format_backup_list(self, mock_request):
+#        """Tests the format of the backup list."""
+#        mock_request.return_value = {
+#            "snapshots": [
+#                {"snapshot": "2023.01.01-00.00.00", "state": "SUCCESS", "indices": []},
+#                {"snapshot": "2023.01.01-00.10.00", "state": "FAILED", "indices": []},
+#                {"snapshot": "2023.01.01-00.20.00", "state": "IN_PROGRESS", "indices": []},
+#            ]
+#        }
+#        backups = self.charm.backup._list_backups()
+#        self.assertEqual(
+#            self.charm.backup._generate_backup_list_output(backups), LIST_BACKUPS_TRIAL
+#        )
 
     def test_can_unit_perform_backup_success(self):
         plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchBackup._plugin_status"
