@@ -209,6 +209,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.plugin_manager.run = MagicMock(return_value=False)
         self.charm.opensearch_config.update_host_if_needed = MagicMock(return_value=False)
         self.charm.opensearch.is_started = MagicMock(return_value=True)
+        self.plugin_manager.check_plugin_manager_ready = MagicMock(return_value=True)
         self.harness.update_config({})
         self.plugin_manager.run.assert_called()
 
