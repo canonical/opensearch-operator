@@ -41,12 +41,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
-from ops.charm import (
-    CharmBase,
-    RelationBrokenEvent,
-    RelationChangedEvent,
-    RelationDepartedEvent,
-)
+from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
 
@@ -340,14 +335,6 @@ class OpenSearchProvider(Object):
             logger.warning("unable to get ca_chain")
             return
         self.opensearch_provides.set_tls_ca(relation_id, _ch_chain)
-
-    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
-        if not self.unit.is_leader():
-            return
-        if self.opensearch.is_node_up():
-            self.update_endpoints(event.relation)
-        else:
-            event.defer()
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Check if this relation is being removed, and update the peer databag accordingly."""
