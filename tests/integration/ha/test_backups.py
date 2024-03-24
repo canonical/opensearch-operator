@@ -378,8 +378,17 @@ async def test_restore_to_new_cluster(
 
     # Now, try a backup & restore with continuous writes
     logger.info("Final stage of DR test: try a backup & restore with continuous writes")
-    count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
-    writer: ContinuousWrites = ContinuousWrites(ops_test, app, initial_count=count)
+    # We need to delete the existing ContinuousWrites.INDEX_NAME because the doc count will match
+    # if we use the initial_count in ContinuousWrites. However, the "max_stored_id" continues
+    # to grow after several restores. Therefore, we need to delete the index and restart.
+    await http_request(
+        ops_test,
+        "DELETE",
+        f"https://{unit_ip}:9200/{ContinuousWrites.INDEX_NAME}",
+        json_resp=True,
+    )
+    # Now restart from scratch
+    writer: ContinuousWrites = ContinuousWrites(ops_test, app)
     await writer.start()
     time.sleep(10)
     assert (
