@@ -20,7 +20,7 @@ import logging
 import subprocess
 import time
 import uuid
-from typing import Any, Dict
+from typing import Dict
 
 import boto3
 import pytest
@@ -42,8 +42,8 @@ from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .helpers import (
     app_name,
     assert_continuous_writes_consistency,
+    assert_cwrites_backup_consistency,
     create_backup,
-    delete_backup,
     list_backups,
     restore,
     start_and_check_continuous_writes,
@@ -58,7 +58,10 @@ TIMEOUT = 10 * 60
 BackupsPath = f"opensearch/{uuid.uuid4()}"
 
 
-@pytest.fixture(scope="module")
+cwrites_backup_doc_count = {}
+
+
+@pytest.fixture(scope="session")
 def cloud_configs(
     github_secrets: Dict[str, str], microceph: Dict[str, str]
 ) -> Dict[str, Dict[str, str]]:
@@ -83,7 +86,7 @@ def cloud_configs(
     return results
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def cloud_credentials(
     github_secrets: Dict[str, str], microceph: Dict[str, str]
 ) -> Dict[str, Dict[str, str]]:
@@ -102,22 +105,9 @@ def cloud_credentials(
     return results
 
 
-async def _backup_docs_count(ops_test: OpsTest, app: str, unit_ip: str, backup_id: int) -> int:
-    """Get the doc count of the index."""
-    resp = await http_request(
-        ops_test,
-        "GET",
-        f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/{backup_id}/_status",
-        json_resp=True,
-    )
-    return {
-        elem["snapshot"]: elem["indices"] for elem in resp["hits"]["total"]["value"]["snapshots"]
-    }
-
-
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def remove_backups(
-    ops_test: OpsTest,
+    # ops_test: OpsTest,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
 ):
@@ -125,19 +115,6 @@ def remove_backups(
     yield
 
     logger.info("Cleaning backups from cloud buckets")
-    loop = asyncio.get_running_loop()
-    leader_id_task = loop.create_task(get_leader_unit_id(ops_test))
-    loop.run_until_complete(leader_id_task)
-    leader_id = leader_id_task.result()
-
-    list_backups_task = loop.create_task(run_action(ops_test, leader_id, "list-backups"))
-    loop.run_until_complete(list_backups_task)
-    backups = list_backups_task.result().response
-    assert backups
-
-    for backup in backups:
-        loop.run_until_complete(delete_backup(ops_test, leader_id, backup["backup-id"]))
-
     for cloud_name, config in cloud_configs.items():
         if (
             cloud_name not in cloud_credentials
@@ -232,7 +209,7 @@ async def test_build_and_deploy(ops_test: OpsTest, cloud_name: Dict[str, Dict[st
     ],
 )
 @pytest.mark.abort_on_fail
-async def test_create_and_list_backups(
+async def test_create_backup_and_restore(
     ops_test: OpsTest,
     c_writes: ContinuousWrites,
     c_writes_runner,
@@ -250,68 +227,23 @@ async def test_create_and_list_backups(
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
     logger.info("Creating backup")
-    assert await create_backup(
+    assert (
+        backup_id := await create_backup(
+            ops_test,
+            leader_id,
+            unit_ip=unit_ip,
+        )
+    ) != ""
+    global cwrites_backup_doc_count
+    cwrites_backup_doc_count[backup_id] = await index_docs_count(
         ops_test,
-        leader_id,
-        unit_ip=unit_ip,
+        app,
+        unit_ip,
+        ContinuousWrites.INDEX_NAME,
     )
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
-    # Make sure we took a snapshot with data
-    backups = await list_backups(ops_test, leader_id)
-    for backup_id in backups.keys():
-        assert (
-            await _backup_docs_count(ops_test, app, unit_ip, backup_id)[
-                ContinuousWrites.INDEX_NAME
-            ]
-            > 0
-        )
-
-
-@pytest.mark.parametrize(
-    "cloud_name",
-    [
-        (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
-        (pytest.param("aws", marks=pytest.mark.group("aws"))),
-    ],
-)
-@pytest.mark.abort_on_fail
-async def test_restore(
-    ops_test: OpsTest,
-    cloud_configs: Dict[str, Dict[str, str]],
-    cloud_credentials: Dict[str, Dict[str, str]],
-    cloud_name: str,
-) -> None:
-    """Restores the cluster and tries to search for index."""
-    unit_ip: str = await get_leader_unit_ip(ops_test)
-    app: str = (await app_name(ops_test)) or APP_NAME
-    leader_id: str = await get_leader_unit_id(ops_test)
-    config: Dict[str, str] = cloud_configs[cloud_name]
-
-    logger.info(f"Syncing credentials for {cloud_name}")
-    await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
-
-    backups: Dict[str, Any] = await list_backups(ops_test, leader_id)
-    for backup_id in backups.keys():
-        logger.info("Restoring backup")
-        await restore(
-            ops_test,
-            backup_id,
-            unit_ip,
-            leader_id,
-        )
-        # Ensure we have the number of docs correctly restored
-        assert await _backup_docs_count(ops_test, app, unit_ip, backup_id)[
-            ContinuousWrites.INDEX_NAME
-        ] == index_docs_count(
-            ops_test,
-            app,
-            unit_ip,
-            ContinuousWrites.INDEX_NAME,
-        )
-
-    # restart the continuous writes and check the cluster is still accessible post restore
-    assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
+    await assert_cwrites_backup_consistency(ops_test, leader_id, unit_ip, backup_id)
 
 
 @pytest.mark.parametrize(
@@ -360,36 +292,23 @@ async def test_remove_and_readd_s3_relation(
     logger.info(f"Syncing credentials for {cloud_name}")
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-    logger.info("Creating backup")
-    assert await create_backup(
+    assert (
+        backup_id := await create_backup(
+            ops_test,
+            leader_id,
+            unit_ip=unit_ip,
+        )
+    ) != ""
+    global cwrites_backup_doc_count
+    cwrites_backup_doc_count[backup_id] = await index_docs_count(
         ops_test,
-        leader_id,
-        unit_ip=unit_ip,
+        app,
+        unit_ip,
+        ContinuousWrites.INDEX_NAME,
     )
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
-
-    # Now, try a recovery
-    backups = await list_backups(ops_test, leader_id)
-    for backup_id in backups.keys():
-        logger.info("Restoring backup")
-        await restore(
-            ops_test,
-            backup_id,
-            unit_ip,
-            leader_id,
-        )
-        # Ensure we have the number of docs correctly restored
-        assert await _backup_docs_count(ops_test, app, unit_ip, backup_id)[
-            ContinuousWrites.INDEX_NAME
-        ] == index_docs_count(
-            ops_test,
-            app,
-            unit_ip,
-            ContinuousWrites.INDEX_NAME,
-        )
-    # restart the continuous writes and check the cluster is still accessible post restore
-    assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
+    await assert_cwrites_backup_consistency(ops_test, leader_id, unit_ip, backup_id)
 
 
 @pytest.mark.parametrize(
@@ -408,7 +327,10 @@ async def test_restore_to_new_cluster(
 ) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
 
-    Restores the backup and then checks if the same TEST_BACKUP_INDEX is there.
+    Restores each of the previous backups we created and compare with their doc count.
+    The cluster is considered healthy if:
+    1) At each backup restored, check our track of doc count vs. current index count
+    2) Try to write to that new index.
     """
     app: str = (await app_name(ops_test)) or APP_NAME
 
@@ -437,27 +359,22 @@ async def test_restore_to_new_cluster(
 
     logger.info(f"Syncing credentials for {cloud_name}")
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
-
     backups = await list_backups(ops_test, leader_id)
+
+    global cwrites_backup_doc_count
     for backup_id in backups.keys():
-        logger.info("Restoring backup")
-        await restore(
-            ops_test,
-            backup_id,
-            unit_ip,
-            leader_id,
+        assert await restore(ops_test, backup_id, unit_ip, leader_id)
+        new_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
+
+        assert new_count == cwrites_backup_doc_count[backup_id]
+        # restart the continuous writes and check the cluster is still accessible post restore
+        assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
+
+        # Now, remove the index to ensure we are not counting the same documents twice
+        resp = await http_request(
+            ops_test, "DELETE", f"https://{unit_ip}:9200/{ContinuousWrites.INDEX_NAME}"
         )
-        # Ensure we have the number of docs correctly restored
-        assert await _backup_docs_count(ops_test, app, unit_ip, backup_id)[
-            ContinuousWrites.INDEX_NAME
-        ] == index_docs_count(
-            ops_test,
-            app,
-            unit_ip,
-            ContinuousWrites.INDEX_NAME,
-        )
-    # restart the continuous writes and check the cluster is still accessible post restore
-    assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
+        logger.debug(f"Index deletion response: {resp}")
 
 
 # -------------------------------------------------------------------------------------------
@@ -586,34 +503,13 @@ async def test_change_config_and_backup_restore(
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
         logger.info("Creating backup")
-        assert await create_backup(
-            ops_test,
-            leader_id,
-            unit_ip=unit_ip,
-        )
-
-        # Stop the continuous writes for the restore
-        result: Any = await writer.stop()
-        assert result.count > initial_count
-
-        logger.info("Restoring backup")
-        backups: Dict[int, str] = await list_backups(ops_test, leader_id)
-        for backup_id in backups.keys():
-            logger.info("Restoring backup")
-            await restore(
+        assert (
+            backup_id := await create_backup(
                 ops_test,
-                backup_id,
-                unit_ip,
                 leader_id,
+                unit_ip=unit_ip,
             )
-            # Ensure we have the number of docs correctly restored
-            assert await _backup_docs_count(ops_test, app, unit_ip, backup_id)[
-                ContinuousWrites.INDEX_NAME
-            ] == index_docs_count(
-                ops_test,
-                app,
-                unit_ip,
-                ContinuousWrites.INDEX_NAME,
-            )
-        # restart the continuous writes and check the cluster is still accessible post restore
-        assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
+        ) != ""
+        # continuous writes checks
+        await assert_continuous_writes_consistency(ops_test, writer, app)
+        await assert_cwrites_backup_consistency(ops_test, leader_id, unit_ip, backup_id)

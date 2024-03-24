@@ -518,16 +518,17 @@ async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app
     return result.count > initial_count
 
 
-async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> bool:
+async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> str:
     """Runs the backup of the cluster."""
     action = await run_action(ops_test, leader_id, "create-backup")
     logger.debug(f"create-backup output: {action}")
 
     await wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip)
-    return action.status == "completed"
+    assert action.status == "completed"
+    return action.response["backup-id"]
 
 
-async def restore(ops_test: OpsTest, backup_id: int, unit_ip: str, leader_id: int) -> bool:
+async def restore(ops_test: OpsTest, backup_id: str, unit_ip: str, leader_id: int) -> bool:
     action = await run_action(ops_test, leader_id, "restore", params={"backup-id": backup_id})
     logger.debug(f"restore output: {action}")
 
@@ -538,5 +539,31 @@ async def restore(ops_test: OpsTest, backup_id: int, unit_ip: str, leader_id: in
 async def list_backups(ops_test: OpsTest, leader_id: int) -> Dict[str, str]:
     action = await run_action(ops_test, leader_id, "list-backups", params={"output": "json"})
     assert action.status == "completed"
-    backups = action.response["backups"]
-    return backups
+    return json.loads(action.response["backups"])
+
+
+async def assert_cwrites_backup_consistency(
+    ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: str, loss: float = 0.01
+) -> None:
+    """Ensures that continuous writes index has at least the value below.
+
+    assert new_count >= <current-doc-count> * (1 - loss) documents.
+    """
+    original_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
+    logger.debug(f"cwrites current count is: {original_count}")
+
+    # Now, remove the index to ensure we are not counting the same documents twice
+    resp = await http_request(
+        ops_test, "DELETE", f"https://{unit_ip}:9200/{ContinuousWrites.INDEX_NAME}"
+    )
+    logger.debug(f"Index deletion response: {resp}")
+
+    # As stated on: https://discuss.elastic.co/t/how-to-parse-snapshot-dat-file/218888,
+    # the only way to discover the documents in a backup is to recover it and check
+    # on opensearch.
+    # The logic below will run over each backup id, restore it and ensure continuous writes
+    # index loss is within the "loss" parameter.
+    assert await restore(ops_test, backup_id, unit_ip, leader_id)
+    new_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
+    logger.debug(f"Restored index count is: {new_count}")
+    assert new_count >= int(original_count * (1 - loss))

@@ -263,6 +263,7 @@ async def index_docs_count(
     ):
         with attempt:  # Raises RetryError if failed after "retries"
             resp = await http_request(ops_test, "GET", endpoint, app=app)
+            logger.debug(f"Index count response: {resp['count']}")
             if isinstance(resp["count"], int):
                 return resp["count"]
             return int(resp["count"])

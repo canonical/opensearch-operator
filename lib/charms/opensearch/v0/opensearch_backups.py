@@ -198,7 +198,7 @@ class OpenSearchBackup(Object):
                 f"List backups action failed - {str(e)} - check the application logs for the full stack trace."
             )
         if event.params.get("output").lower() == "json":
-            event.set_results({"backups": (json.dumps(backups)).replace("_", "-")})
+            event.set_results({"backups": json.dumps(backups)})
         elif event.params.get("output").lower() == "table":
             event.set_results({"backups": self._generate_backup_list_output(backups)})
         else:
@@ -329,7 +329,7 @@ class OpenSearchBackup(Object):
             event.fail("Failed: previous restore is still in progress")
             return
         # Now, validate the backup is working
-        backup_id = str(event.params.get("backup-id"))
+        backup_id = event.params.get("backup-id")
         if not self._is_backup_available_for_restore(backup_id):
             event.fail(f"Failed: no backup-id {backup_id}")
             return
