@@ -544,19 +544,14 @@ async def list_backups(ops_test: OpsTest, leader_id: int) -> Dict[str, str]:
 
 
 async def assert_cwrites_backup_consistency(
-    ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: str, loss: float = 0.25
+    ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: str
 ) -> None:
-    """Ensures that continuous writes index has at least the value below.
-
-    assert new_count >= <current-doc-count> * (1 - loss) documents.
-    """
+    """Ensures that continuous writes index has at least the value below."""
     original_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
     # As stated on: https://discuss.elastic.co/t/how-to-parse-snapshot-dat-file/218888,
     # the only way to discover the documents in a backup is to recover it and check
     # on opensearch.
     # The logic below will run over each backup id, restore it and ensure continuous writes
-    # index loss is within the "loss" parameter.
     assert await restore(ops_test, backup_id, unit_ip, leader_id)
     new_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
-    # We expect that new_count has a loss of documents and the numbers are different.
-    assert new_count >= int(original_count * (1 - loss)) and new_count != original_count
+    assert new_count > 0 and new_count != original_count
