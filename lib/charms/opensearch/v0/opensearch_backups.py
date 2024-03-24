@@ -542,7 +542,7 @@ class OpenSearchBackup(Object):
             logger.error(f"Failed to setup backup service with state {state}")
             self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
             return
-        self.charm.status.clear(BackupSetupFailed)
+        self.charm.status.clear(BackupSetupFailed, app=True)
         self.charm.status.clear(BackupConfigureStart)
 
     def _on_s3_broken(self, event: EventBase) -> None:  # noqa: C901

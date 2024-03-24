@@ -378,6 +378,7 @@ async def test_restore_to_new_cluster(
 
     # Now, try a backup & restore with continuous writes
     logger.info("Final stage of DR test: try a backup & restore with continuous writes")
+    count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
     writer: ContinuousWrites = ContinuousWrites(ops_test, app, initial_count=count)
     await writer.start()
     time.sleep(10)
@@ -439,7 +440,11 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest) -> None:
 @pytest.mark.group("all")
 @pytest.mark.abort_on_fail
 async def test_repo_missing_message(ops_test: OpsTest) -> None:
-    """Check the repo is missing."""
+    """Check the repo is missing error returned by OpenSearch.
+
+    We use the message format to monitor the cluster status. We need to know if this
+    message pattern changed between releases of OpenSearch.
+    """
     unit_ip = await get_leader_unit_ip(ops_test)
     resp = await http_request(
         ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}", json_resp=True
