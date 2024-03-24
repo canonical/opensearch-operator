@@ -229,8 +229,6 @@ async def test_create_backup_and_restore(
 
     logger.info(f"Syncing credentials for {cloud_name}")
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
-
-    logger.info("Creating backup")
     assert (
         backup_id := await create_backup(
             ops_test,
@@ -369,21 +367,30 @@ async def test_restore_to_new_cluster(
     # We are expecting 2x backups available
     assert len(backups) == 2
     assert len(cwrites_backup_doc_count) == 2
+    count = 0
     for backup_id in backups.keys():
         assert await restore(ops_test, backup_id, unit_ip, leader_id)
-        new_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
-        logger.info(
-            f"Current count is {new_count}, expected {cwrites_backup_doc_count[backup_id]}"
-        )
-        assert new_count == cwrites_backup_doc_count[backup_id]
+        count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
+        logger.debug(f"Current count is {count}, expected {cwrites_backup_doc_count[backup_id]}")
+        assert count == cwrites_backup_doc_count[backup_id]
         # restart the continuous writes and check the cluster is still accessible post restore
         assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
 
-        # Now, remove the index to ensure we are not counting the same documents twice
-        resp = await http_request(
-            ops_test, "DELETE", f"https://{unit_ip}:9200/{ContinuousWrites.INDEX_NAME}"
+    # Now, try a backup & restore with continuous writes
+    logger.info("Final stage of DR test: try a backup & restore with continuous writes")
+    writer: ContinuousWrites = ContinuousWrites(ops_test, app, initial_count=count)
+    await writer.start()
+    time.sleep(10)
+    assert (
+        backup_id := await create_backup(
+            ops_test,
+            leader_id,
+            unit_ip=unit_ip,
         )
-        logger.debug(f"Index deletion response: {resp}")
+    ) != ""
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, writer, app)
+    await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
 
 
 # -------------------------------------------------------------------------------------------
@@ -437,7 +444,7 @@ async def test_repo_missing_message(ops_test: OpsTest) -> None:
     resp = await http_request(
         ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}", json_resp=True
     )
-    logger.info(f"Response: {resp}")
+    logger.debug(f"Response: {resp}")
     assert resp["status"] == 404
     assert "repository_missing_exception" in resp["error"]["type"]
 
@@ -485,7 +492,7 @@ async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
     resp = await http_request(
         ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/_all", json_resp=True
     )
-    logger.info(f"Response: {resp}")
+    logger.debug(f"Response: {resp}")
     assert resp["status"] == 500
     assert "repository_exception" in resp["error"]["type"]
     assert "Could not determine repository generation from root blobs" in resp["error"]["reason"]
@@ -505,7 +512,7 @@ async def test_change_config_and_backup_restore(
 
     initial_count: int = 0
     for cloud_name in cloud_configs.keys():
-        logger.info(
+        logger.debug(
             f"Index {ContinuousWrites.INDEX_NAME} has {initial_count} documents, starting there"
         )
         # Start the ContinuousWrites here instead of bringing as a fixture because we want to do
@@ -518,7 +525,6 @@ async def test_change_config_and_backup_restore(
         config: Dict[str, str] = cloud_configs[cloud_name]
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-        logger.info("Creating backup")
         assert (
             backup_id := await create_backup(
                 ops_test,

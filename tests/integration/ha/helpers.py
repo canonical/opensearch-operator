@@ -551,8 +551,6 @@ async def assert_cwrites_backup_consistency(
     assert new_count >= <current-doc-count> * (1 - loss) documents.
     """
     original_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
-    logger.info(f"cwrites current count is: {original_count}")
-
     # As stated on: https://discuss.elastic.co/t/how-to-parse-snapshot-dat-file/218888,
     # the only way to discover the documents in a backup is to recover it and check
     # on opensearch.
@@ -560,6 +558,5 @@ async def assert_cwrites_backup_consistency(
     # index loss is within the "loss" parameter.
     assert await restore(ops_test, backup_id, unit_ip, leader_id)
     new_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
-    logger.info(f"Restored index count is: {new_count}")
     # We expect that new_count has a loss of documents and the numbers are different.
     assert new_count >= int(original_count * (1 - loss)) and new_count != original_count
