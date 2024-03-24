@@ -387,8 +387,9 @@ async def test_restore_to_new_cluster(
         f"https://{unit_ip}:9200/{ContinuousWrites.INDEX_NAME}",
         json_resp=True,
     )
-    # Now restart from scratch
-    writer: ContinuousWrites = ContinuousWrites(ops_test, app)
+    assert await restore(ops_test, next(iter(backups)), unit_ip, leader_id)
+    count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
+    writer: ContinuousWrites = ContinuousWrites(ops_test, app, initial_count=count)
     await writer.start()
     time.sleep(10)
     assert (
