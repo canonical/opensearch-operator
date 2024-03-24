@@ -540,7 +540,7 @@ class OpenSearchBackup(Object):
         #     (3) based on the response, set the message status
         if state != BackupServiceState.SUCCESS:
             logger.error(f"Failed to setup backup service with state {state}")
-            self.charm.status.set(BlockedStatus(BackupSetupFailed))
+            self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
             return
         self.charm.status.clear(BackupSetupFailed)
         self.charm.status.clear(BackupConfigureStart)

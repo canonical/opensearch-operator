@@ -38,6 +38,7 @@ from ..helpers import (
     http_request,
     run_action,
 )
+from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .helpers import (
     app_name,
@@ -469,9 +470,16 @@ async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
         app=S3_INTEGRATOR,
     )
     await ops_test.model.wait_for_idle(
-        apps=[app, S3_INTEGRATOR],
+        apps=[S3_INTEGRATOR],
         status="active",
         timeout=TIMEOUT,
+    )
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["blocked"],
+        units_statuses=["active"],
+        idle_period=30,
     )
 
     resp = await http_request(
