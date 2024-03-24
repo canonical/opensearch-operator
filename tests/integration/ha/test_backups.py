@@ -58,6 +58,9 @@ TIMEOUT = 10 * 60
 BackupsPath = f"opensearch/{uuid.uuid4()}"
 
 
+# We use this global variable to track the current relation of:
+#    backup-id <-> continuous-writes index document count
+# We use this global variable then to restore each backup on full DR scenario.
 cwrites_backup_doc_count = {}
 
 
@@ -234,6 +237,9 @@ async def test_create_backup_and_restore(
             unit_ip=unit_ip,
         )
     ) != ""
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
     global cwrites_backup_doc_count
     cwrites_backup_doc_count[backup_id] = await index_docs_count(
         ops_test,
@@ -241,9 +247,6 @@ async def test_create_backup_and_restore(
         unit_ip,
         ContinuousWrites.INDEX_NAME,
     )
-    # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
-    await assert_cwrites_backup_consistency(ops_test, leader_id, unit_ip, backup_id)
 
 
 @pytest.mark.parametrize(
@@ -299,6 +302,9 @@ async def test_remove_and_readd_s3_relation(
             unit_ip=unit_ip,
         )
     ) != ""
+    # continuous writes checks
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
     global cwrites_backup_doc_count
     cwrites_backup_doc_count[backup_id] = await index_docs_count(
         ops_test,
@@ -306,9 +312,6 @@ async def test_remove_and_readd_s3_relation(
         unit_ip,
         ContinuousWrites.INDEX_NAME,
     )
-    # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
-    await assert_cwrites_backup_consistency(ops_test, leader_id, unit_ip, backup_id)
 
 
 @pytest.mark.parametrize(
@@ -362,10 +365,15 @@ async def test_restore_to_new_cluster(
     backups = await list_backups(ops_test, leader_id)
 
     global cwrites_backup_doc_count
+    # We are expecting 2x backups available
+    assert len(backups) == 2
+    assert len(cwrites_backup_doc_count) == 2
     for backup_id in backups.keys():
         assert await restore(ops_test, backup_id, unit_ip, leader_id)
         new_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
-
+        logger.info(
+            f"Current count is {new_count}, expected {cwrites_backup_doc_count[backup_id]}"
+        )
         assert new_count == cwrites_backup_doc_count[backup_id]
         # restart the continuous writes and check the cluster is still accessible post restore
         assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
@@ -512,4 +520,4 @@ async def test_change_config_and_backup_restore(
         ) != ""
         # continuous writes checks
         await assert_continuous_writes_consistency(ops_test, writer, app)
-        await assert_cwrites_backup_consistency(ops_test, leader_id, unit_ip, backup_id)
+        await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)

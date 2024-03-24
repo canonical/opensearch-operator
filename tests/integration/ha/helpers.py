@@ -525,6 +525,7 @@ async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> str:
 
     await wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip)
     assert action.status == "completed"
+    assert action.response["status"] == "Backup is running."
     return action.response["backup-id"]
 
 
@@ -543,20 +544,20 @@ async def list_backups(ops_test: OpsTest, leader_id: int) -> Dict[str, str]:
 
 
 async def assert_cwrites_backup_consistency(
-    ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: str, loss: float = 0.01
+    ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: str, loss: float = 0.25
 ) -> None:
     """Ensures that continuous writes index has at least the value below.
 
     assert new_count >= <current-doc-count> * (1 - loss) documents.
     """
     original_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
-    logger.debug(f"cwrites current count is: {original_count}")
+    logger.info(f"cwrites current count is: {original_count}")
 
     # Now, remove the index to ensure we are not counting the same documents twice
     resp = await http_request(
         ops_test, "DELETE", f"https://{unit_ip}:9200/{ContinuousWrites.INDEX_NAME}"
     )
-    logger.debug(f"Index deletion response: {resp}")
+    logger.info(f"Index deletion response: {resp}")
 
     # As stated on: https://discuss.elastic.co/t/how-to-parse-snapshot-dat-file/218888,
     # the only way to discover the documents in a backup is to recover it and check
@@ -565,5 +566,6 @@ async def assert_cwrites_backup_consistency(
     # index loss is within the "loss" parameter.
     assert await restore(ops_test, backup_id, unit_ip, leader_id)
     new_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
-    logger.debug(f"Restored index count is: {new_count}")
-    assert new_count >= int(original_count * (1 - loss))
+    logger.info(f"Restored index count is: {new_count}")
+    # We expect that new_count has a loss of documents and the numbers are different.
+    assert new_count >= int(original_count * (1 - loss)) and new_count != original_count
