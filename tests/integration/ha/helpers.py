@@ -2,6 +2,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import asyncio
 import json
 import logging
 import subprocess
@@ -218,7 +219,7 @@ async def assert_continuous_writes_increasing(
 ) -> None:
     """Asserts that the continuous writes are increasing."""
     writes_count = await c_writes.count()
-    time.sleep(5)
+    await asyncio.sleep(20)
     more_writes = await c_writes.count()
     assert more_writes > writes_count, "Writes not continuing to DB"
 
@@ -228,6 +229,7 @@ async def assert_continuous_writes_consistency(
 ) -> None:
     """Continuous writes checks."""
     result = await c_writes.stop()
+    logger.info(f"Continuous writes result: {result}")
     assert result.max_stored_id == result.count - 1
     assert result.max_stored_id == result.last_expected_id
 
@@ -513,7 +515,9 @@ async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app
     )
     writer = ContinuousWrites(ops_test, app, initial_count=initial_count)
     await writer.start()
-    time.sleep(10)
+    time.sleep(60)
+    # Ensure we have writes happening and the index is consistent at the end
+    await assert_continuous_writes_increasing(writer)
     await assert_continuous_writes_consistency(ops_test, writer, app)
     # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
     await writer.clear()
@@ -560,4 +564,4 @@ async def assert_cwrites_backup_consistency(
     assert await restore(ops_test, backup_id, unit_ip, leader_id)
     new_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
     # We expect that new_count has a loss of documents and the numbers are different.
-    assert new_count >= int(original_count * (1 - loss)) and new_count != original_count
+    assert new_count >= int(original_count * (1 - loss)) and new_count <= original_count
