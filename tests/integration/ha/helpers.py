@@ -205,6 +205,7 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
                 roles=node["roles"],
                 ip=node["ip"],
                 app_name="-".join(node["name"].split("-")[:-1]),
+                unit_number=int(node["name"].split("-")[-1]),
                 temperature=node.get("attributes", {}).get("temp"),
             )
         )

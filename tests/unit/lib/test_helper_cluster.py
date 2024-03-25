@@ -22,18 +22,54 @@ class TestHelperCluster(unittest.TestCase):
     def cluster1_5_nodes_conf(self) -> List[Node]:
         """Returns the expected config of a 5 "planned" nodes cluster."""
         return [
-            Node(name="cm1", roles=self.cm_roles, ip="0.0.0.1", app_name=self.cluster1),
-            Node(name="cm2", roles=self.cm_roles, ip="0.0.0.2", app_name=self.cluster1),
-            Node(name="cm3", roles=self.cm_roles, ip="0.0.0.3", app_name=self.cluster1),
-            Node(name="cm4", roles=self.cm_roles, ip="0.0.0.4", app_name=self.cluster1),
-            Node(name="cm5", roles=self.cm_roles, ip="0.0.0.5", app_name=self.cluster1),
+            Node(
+                name="cm1",
+                roles=self.cm_roles,
+                ip="0.0.0.1",
+                app_name=self.cluster1,
+                unit_number=0,
+            ),
+            Node(
+                name="cm2",
+                roles=self.cm_roles,
+                ip="0.0.0.2",
+                app_name=self.cluster1,
+                unit_number=1,
+            ),
+            Node(
+                name="cm3",
+                roles=self.cm_roles,
+                ip="0.0.0.3",
+                app_name=self.cluster1,
+                unit_number=3,
+            ),
+            Node(
+                name="cm4",
+                roles=self.cm_roles,
+                ip="0.0.0.4",
+                app_name=self.cluster1,
+                unit_number=4,
+            ),
+            Node(
+                name="cm5",
+                roles=self.cm_roles,
+                ip="0.0.0.5",
+                app_name=self.cluster1,
+                unit_number=5,
+            ),
         ]
 
     def cluster1_6_nodes_conf(self):
         """Returns the expected config of a 6 "planned" nodes cluster."""
         nodes = self.cluster1_5_nodes_conf()
         nodes.append(
-            Node(name="data1", roles=self.base_roles, ip="0.0.0.6", app_name=self.cluster1)
+            Node(
+                name="data1",
+                roles=self.base_roles,
+                ip="0.0.0.6",
+                app_name=self.cluster1,
+                unit_number=6,
+            )
         )
         return nodes
 
@@ -41,11 +77,41 @@ class TestHelperCluster(unittest.TestCase):
         """Returns the expected config of the sub-cluster 2."""
         roles = ["cluster_manager", "data", "ml"]
         return [
-            Node(name="cm_data_ml1", roles=roles, ip="0.0.0.11", app_name=self.cluster2),
-            Node(name="cm_data_ml2", roles=roles, ip="0.0.0.12", app_name=self.cluster2),
-            Node(name="cm_data_ml3", roles=roles, ip="0.0.0.13", app_name=self.cluster2),
-            Node(name="cm_data_ml4", roles=roles, ip="0.0.0.14", app_name=self.cluster2),
-            Node(name="cm_data_ml5", roles=roles, ip="0.0.0.15", app_name=self.cluster2),
+            Node(
+                name="cm_data_ml1",
+                roles=roles,
+                ip="0.0.0.11",
+                app_name=self.cluster2,
+                unit_number=0,
+            ),
+            Node(
+                name="cm_data_ml2",
+                roles=roles,
+                ip="0.0.0.12",
+                app_name=self.cluster2,
+                unit_number=1,
+            ),
+            Node(
+                name="cm_data_ml3",
+                roles=roles,
+                ip="0.0.0.13",
+                app_name=self.cluster2,
+                unit_number=2,
+            ),
+            Node(
+                name="cm_data_ml4",
+                roles=roles,
+                ip="0.0.0.14",
+                app_name=self.cluster2,
+                unit_number=3,
+            ),
+            Node(
+                name="cm_data_ml5",
+                roles=roles,
+                ip="0.0.0.15",
+                app_name=self.cluster2,
+                unit_number=4,
+            ),
         ]
 
     def setUp(self) -> None:
@@ -61,10 +127,10 @@ class TestHelperCluster(unittest.TestCase):
         planned_units = 5
         cluster_5_conf = self.cluster1_5_nodes_conf()
 
-        self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units), self.cm_roles)
+        self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units, unit_number=0), self.cm_roles)
         for start_index in range(1, 5):
             self.assertCountEqual(
-                ClusterTopology.suggest_roles(cluster_5_conf[:start_index], planned_units),
+                ClusterTopology.suggest_roles(cluster_5_conf[:start_index], planned_units, unit_number=start_index),
                 self.cm_roles,
             )
 
@@ -74,46 +140,57 @@ class TestHelperCluster(unittest.TestCase):
 
         planned_units = 6
 
-        self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units), self.cm_roles)
+        self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units, unit_number=0), self.cm_roles)
         for start_index in range(1, 5):
             self.assertCountEqual(
-                ClusterTopology.suggest_roles(cluster_6_conf[:start_index], planned_units),
+                ClusterTopology.suggest_roles(cluster_6_conf[:start_index], planned_units, unit_number=start_index),
                 self.cm_roles,
             )
 
         self.assertCountEqual(
-            ClusterTopology.suggest_roles(cluster_6_conf[:-1], planned_units), self.base_roles
+            ClusterTopology.suggest_roles(cluster_6_conf[:-1], planned_units, unit_number=5), self.base_roles
         )
 
     def test_auto_recompute_node_roles_in_cluster_6(self):
         """Test the automatic suggestion of new roles to an existing node."""
-        cluster_conf = self.cluster1_6_nodes_conf()
+        cluster_conf = {node.name: node for node in self.cluster1_6_nodes_conf()}
 
         # remove a cluster manager node
-        computed_node_to_change = ClusterTopology.node_with_new_roles(
-            app_name=self.cluster1,
-            remaining_nodes=[node for node in cluster_conf if node.name != "cm1"],
+        old_cluster_conf = cluster_conf.copy()
+        old_cluster_conf.pop("cm1")
+        new_cluster_conf = ClusterTopology.recompute_nodes_conf(
+            app_name=self.cluster1, nodes=list(old_cluster_conf.values())
         )
-        self.assertEqual(computed_node_to_change.name, "data1")
-        self.assertCountEqual(computed_node_to_change.roles, self.cm_roles)
+        assert new_cluster_conf["data1"].roles == self.cm_roles
+        # Assert other remaining nodes unchanged
+        old_cluster_conf.pop("data1")
+        new_cluster_conf.pop("data1")
+        assert old_cluster_conf == new_cluster_conf
 
         # remove a data node
-        computed_node_to_change = ClusterTopology.node_with_new_roles(
-            app_name=self.cluster1,
-            remaining_nodes=[node for node in cluster_conf if node.name != "data1"],
+        old_cluster_conf = cluster_conf.copy()
+        old_cluster_conf.pop("data1")
+        new_cluster_conf = ClusterTopology.recompute_nodes_conf(
+            app_name=self.cluster1, nodes=list(old_cluster_conf.values())
         )
-        self.assertIsNone(computed_node_to_change)
+        # Assert all remaining nodes unchanged
+        assert old_cluster_conf == new_cluster_conf
 
     def test_auto_recompute_node_roles_in_cluster_5(self):
         """Test the automatic suggestion of new roles to an existing node."""
-        cluster_conf = self.cluster1_5_nodes_conf()
+        cluster_conf = {node.name: node for node in self.cluster1_5_nodes_conf()}
 
         # remove a cluster manager node
-        computed_node_to_change = ClusterTopology.node_with_new_roles(
-            app_name=self.cluster1,
-            remaining_nodes=[node for node in cluster_conf if node.name != "cm1"],
+        old_cluster_conf = cluster_conf.copy()
+        old_cluster_conf.pop("cm1")
+        new_cluster_conf = ClusterTopology.recompute_nodes_conf(
+            app_name=self.cluster1, nodes=list(old_cluster_conf.values())
         )
-        self.assertCountEqual(computed_node_to_change.roles, self.base_roles)
+        assert new_cluster_conf["cm5"].roles == self.base_roles
+        # Assert other remaining nodes unchanged
+        old_cluster_conf.pop("cm5")
+        new_cluster_conf.pop("cm5")
+        assert old_cluster_conf == new_cluster_conf
 
     def test_auto_recompute_node_roles_in_previous_non_auto_gen_cluster(self):
         """Test the automatic suggestion of new roles to an existing node."""
@@ -126,7 +203,6 @@ class TestHelperCluster(unittest.TestCase):
             new_node.roles.append("custom_role")
             first_cluster_nodes.append(new_node)
 
-        # remove a cluster manager node
         computed_node_to_change = ClusterTopology.recompute_nodes_conf(
             app_name=self.cluster2,
             nodes=cluster_conf + first_cluster_nodes,
@@ -139,6 +215,7 @@ class TestHelperCluster(unittest.TestCase):
                 roles=self.cm_roles,
                 ip=node.ip,
                 app_name=node.app_name,
+                unit_number=node.unit_number,
                 temperature=node.temperature,
             )
         self.assertCountEqual(computed_node_to_change, expected)
@@ -156,55 +233,6 @@ class TestHelperCluster(unittest.TestCase):
             ClusterTopology.get_cluster_managers_names(self.cluster1_5_nodes_conf()),
             ["cm1", "cm2", "cm3", "cm4", "cm5"],
         )
-
-    def test_topology_nodes_count_by_role(self):
-        """Test correct mapping role / count of nodes with the role."""
-        self.assertDictEqual(
-            ClusterTopology.nodes_count_by_role(self.cluster1_6_nodes_conf()),
-            {
-                "cluster_manager": 5,
-                "coordinating_only": 6,
-                "data": 6,
-                "ingest": 6,
-                "ml": 6,
-            },
-        )
-
-    def test_refill_node_with_default_roles(self):
-        """Test the automatic suggestion of new roles to an existing node."""
-        # First test with previously set roles in a cluster
-        cluster2_nodes = self.cluster2_nodes_conf()
-
-        expected = []
-        for node in cluster2_nodes:
-            expected.append(
-                Node(
-                    name=node.name,
-                    roles=self.cm_roles,
-                    ip=node.ip,
-                    app_name=node.app_name,
-                    temperature=node.temperature,
-                )
-            )
-        expected.sort(key=lambda node: node.name)
-        refilled = ClusterTopology.refill_node_with_default_roles(
-            app_name=self.cluster2,
-            nodes=cluster2_nodes,
-        )
-        refilled.sort(key=lambda node: node.name)
-        for index in range(len(refilled)):
-            self.assertEqual(refilled[index], expected[index])
-
-        # test on auto-gen roles: expected no changes
-        expected = self.cluster1_5_nodes_conf()
-        expected.sort(key=lambda node: node.name)
-        refilled = ClusterTopology.refill_node_with_default_roles(
-            app_name=self.cluster1,
-            nodes=self.cluster1_5_nodes_conf(),
-        )
-        refilled.sort(key=lambda node: node.name)
-        for index in range(len(refilled)):
-            self.assertEqual(refilled[index], expected[index])
 
     @patch("charms.opensearch.v0.helper_cluster.ClusterState.shards")
     def test_state_busy_shards_by_unit(self, shards):
@@ -227,7 +255,11 @@ class TestHelperCluster(unittest.TestCase):
     def test_node_obj_creation_from_json(self):
         """Test the creation of a Node object from a dict representation."""
         raw_node = Node(
-            name="cm1", roles=["cluster_manager"], ip="0.0.0.11", app_name=self.cluster1
+            name="cm1",
+            roles=["cluster_manager"],
+            ip="0.0.0.11",
+            app_name=self.cluster1,
+            unit_number=0,
         )
         from_json_node = Node.from_dict(
             {
@@ -235,6 +267,7 @@ class TestHelperCluster(unittest.TestCase):
                 "roles": ["cluster_manager"],
                 "ip": "0.0.0.11",
                 "app_name": self.cluster1,
+                "unit_number": 0,
             }
         )
 
