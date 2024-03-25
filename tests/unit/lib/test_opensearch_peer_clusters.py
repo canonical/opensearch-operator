@@ -117,6 +117,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     roles=["cluster_manager", "data"],
                     ip="1.1.1.1",
                     app_name="logs",
+                    unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units[0:3]
             ]
@@ -131,9 +132,10 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     roles=["cluster_manager", "data"],
                     ip="1.1.1.1",
                     app_name="logs",
+                    unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units[0:4]
-            ] + [Node(name="node", roles=["ml"], ip="0.0.0.0", app_name="logs")]
+            ] + [Node(name="node", roles=["ml"], ip="0.0.0.0", app_name="logs", unit_number=7)]
             self.peer_cm.validate_roles(nodes=nodes, on_new_unit=False)
 
     @patch("ops.model.Model.get_relation")
@@ -161,9 +163,10 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     roles=["data"],
                     ip="1.1.1.1",
                     app_name="logs",
+                    unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units
-            ] + [Node(name="node-5", roles=["data"], ip="2.2.2.2", app_name="logs")]
+            ] + [Node(name="node-5", roles=["data"], ip="2.2.2.2", app_name="logs", unit_number=5)]
             self.peer_cm._pre_validate_roles_change(new_roles=["ml"], prev_roles=["data", "ml"])
         except OpenSearchProvidedRolesException:
             self.fail("_pre_validate_roles_change() failed unexpectedly.")
@@ -188,6 +191,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     roles=["data"],
                     ip="1.1.1.1",
                     app_name="logs",
+                    unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units
             ]
