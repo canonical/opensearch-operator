@@ -89,23 +89,29 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                 ),
                 start=StartMode.WITH_PROVIDED_ROLES,
                 pending_directives=directives,
-                typ=DeploymentType.MAIN_CLUSTER_MANAGER,
+                app=self.charm.app.name,
+                typ=DeploymentType.MAIN_ORCHESTRATOR,
                 state=DeploymentState(value=State.ACTIVE),
             )
             can_start = self.peer_cm.can_start(deployment_desc)
             self.assertEqual(can_start, expected)
 
+    @patch(f"{PEER_CLUSTERS_MANAGER}.is_peer_cluster_orchestrator_relation_set")
     @patch("ops.model.Model.get_relation")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
-    def test_validate_roles(self, deployment_desc, get_relation):
+    def test_validate_roles(
+        self, deployment_desc, get_relation, is_peer_cluster_orchestrator_relation_set
+    ):
         """Test the roles' validation."""
+        is_peer_cluster_orchestrator_relation_set.return_value = False
         get_relation.return_value.units = set(self.p_units)
 
         deployment_desc.return_value = DeploymentDescription(
             config=self.user_configs["roles_ok"],
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
-            typ=DeploymentType.MAIN_CLUSTER_MANAGER,
+            app=self.charm.app.name,
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
             state=DeploymentState(value=State.ACTIVE),
         )
         with self.assertRaises(OpenSearchProvidedRolesException):
@@ -139,9 +145,9 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
     @patch("ops.model.Model.get_relation")
     @patch(f"{BASE_LIB_PATH}.helper_cluster.ClusterTopology.nodes")
     @patch(f"{BASE_CHARM_CLASS}.alt_hosts")
-    @patch(f"{PEER_CLUSTERS_MANAGER}.is_peer_cluster_relation_set")
+    @patch(f"{PEER_CLUSTERS_MANAGER}.is_peer_cluster_orchestrator_relation_set")
     def test_pre_validate_roles_change(
-        self, is_peer_cluster_relation_set, alt_hosts, nodes, get_relation
+        self, is_peer_cluster_orchestrator_relation_set, alt_hosts, nodes, get_relation
     ):
         """Test the pre_validation of roles change."""
         get_relation.return_value.units = set(self.p_units)
@@ -154,7 +160,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             self.peer_cm._pre_validate_roles_change(new_roles=[], prev_roles=["data", "ml"])
 
             # test on a multi clusters fleet - happy path
-            is_peer_cluster_relation_set.return_value = True
+            is_peer_cluster_orchestrator_relation_set.return_value = True
             nodes.return_value = [
                 Node(
                     name=node.name.replace("/", "-"),
@@ -177,11 +183,11 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                 new_roles=["data"], prev_roles=["cluster_manager", "data"]
             )
         with self.assertRaises(OpenSearchProvidedRolesException):
-            is_peer_cluster_relation_set.return_value = False
+            is_peer_cluster_orchestrator_relation_set.return_value = False
             self.peer_cm._pre_validate_roles_change(new_roles=["ml"], prev_roles=["ml", "data"])
         with self.assertRaises(OpenSearchProvidedRolesException):
             # no other data nodes in cluster fleet
-            is_peer_cluster_relation_set.return_value = True
+            is_peer_cluster_orchestrator_relation_set.return_value = True
             nodes.return_value = [
                 Node(
                     name=node.name.replace("/", "-"),

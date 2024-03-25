@@ -21,6 +21,7 @@ from typing import Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_networking import get_host_public_ip
+from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v3.tls_certificates import (
@@ -86,8 +87,17 @@ class OpenSearchTLS(Object):
         except ValueError as e:
             event.fail(str(e))
 
+    def request_new_admin_certificate(self) -> None:
+        """Request the generation of a new admin certificate."""
+        if not self.charm.unit.is_leader():
+            return
+
+        self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+
     def request_new_unit_certificates(self) -> None:
         """Requests a new certificate with the given scope and type from the tls operator."""
+        self.charm.peers_data.delete(Scope.UNIT, "tls_configured")
+
         for cert_type in [CertType.UNIT_HTTP, CertType.UNIT_TRANSPORT]:
             csr = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)["csr"].encode("utf-8")
             self.certs.request_certificate_revocation(csr)
@@ -98,10 +108,18 @@ class OpenSearchTLS(Object):
             secrets = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)
             self._request_certificate_renewal(Scope.UNIT, cert_type, secrets)
 
-    def _on_tls_relation_joined(self, _: RelationJoinedEvent) -> None:
+    def _on_tls_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Request certificate when TLS relation joined."""
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            event.defer()
+            return
+
         admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if self.charm.unit.is_leader() and admin_cert is None:
+        if (
+            self.charm.unit.is_leader()
+            and admin_cert is None
+            and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+        ):
             self._request_certificate(Scope.APP, CertType.APP_ADMIN)
 
         self._request_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
@@ -149,11 +167,12 @@ class OpenSearchTLS(Object):
         try:
             self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
         except OpenSearchError as e:
-            logger.error(e)
+            logger.exception(e)
             event.defer()
 
     def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
         """Request the new certificate when old certificate is expiring."""
+        self.charm.peers_data.delete(Scope.UNIT, "tls_configured")
         try:
             scope, cert_type, secrets = self._find_secret(event.certificate, "cert")
             logger.debug(f"{scope.val}.{cert_type.val} TLS certificate expiring.")
@@ -180,12 +199,13 @@ class OpenSearchTLS(Object):
             password = password.encode("utf-8")
 
         subject = self._get_subject(cert_type)
+        organization = self.charm.opensearch_peer_cm.deployment_desc().config.cluster_name
         csr = generate_csr(
             add_unique_id_to_subject_name=False,
             private_key=key,
             private_key_password=password,
             subject=subject,
-            organization=self.charm.app.name,
+            organization=organization,
             **self._get_sans(cert_type),
         )
 
@@ -196,7 +216,7 @@ class OpenSearchTLS(Object):
                 "key": key.decode("utf-8"),
                 "key-password": password,
                 "csr": csr.decode("utf-8"),
-                "subject": f"/O={self.charm.app.name}/CN={subject}",
+                "subject": f"/O={self.charm.opensearch_peer_cm.deployment_desc().config.cluster_name}/CN={subject}",
             },
             merge=True,
         )
@@ -213,11 +233,12 @@ class OpenSearchTLS(Object):
         old_csr = secrets["csr"].encode("utf-8")
 
         subject = self._get_subject(cert_type)
+        organization = self.charm.opensearch_peer_cm.deployment_desc().config.cluster_name
         new_csr = generate_csr(
             private_key=key,
             private_key_password=(None if key_password is None else key_password.encode("utf-8")),
             subject=subject,
-            organization=self.charm.app.name,
+            organization=organization,
             **self._get_sans(cert_type),
         )
 

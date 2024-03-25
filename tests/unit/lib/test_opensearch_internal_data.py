@@ -4,6 +4,7 @@
 """Unit test for the helper_cluster library."""
 
 import unittest
+from unittest.mock import patch
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.models import (
@@ -22,6 +23,8 @@ from charm import OpenSearchOperatorCharm
 
 
 class TestOpenSearchInternalData(unittest.TestCase):
+    BASE_LIB_PATH = "charms.opensearch.v0"
+
     def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
@@ -151,17 +154,20 @@ class TestOpenSearchInternalData(unittest.TestCase):
     @parameterized.expand([Scope.APP, Scope.UNIT])
     def test_put_and_get_complex_obj(self, scope):
         """Test putting complex nested object."""
-        deployment = DeploymentDescription(
-            config=PeerClusterConfig(
-                cluster_name="logs", init_hold=False, roles=["cluster_manager", "data"]
-            ),
-            start=StartMode.WITH_PROVIDED_ROLES,
-            pending_directives=[],
-            typ=DeploymentType.MAIN_CLUSTER_MANAGER,
-            state=DeploymentState(value=State.ACTIVE),
-        )
-        self.store.put_object(scope, "deployment", deployment.to_dict())
-        fetched_deployment = DeploymentDescription.from_dict(
-            self.store.get_object(scope, "deployment")
-        )
-        self.assertEqual(deployment, fetched_deployment)
+        with patch(f"{self.BASE_LIB_PATH}.models.datetime") as datetime:
+            datetime.now.return_value.timestamp.return_value = 12345788.12
+            deployment = DeploymentDescription(
+                config=PeerClusterConfig(
+                    cluster_name="logs", init_hold=False, roles=["cluster_manager", "data"]
+                ),
+                start=StartMode.WITH_PROVIDED_ROLES,
+                pending_directives=[],
+                app=self.charm.app.name,
+                typ=DeploymentType.MAIN_ORCHESTRATOR,
+                state=DeploymentState(value=State.ACTIVE),
+            )
+            self.store.put_object(scope, "deployment", deployment.to_dict())
+            fetched_deployment = DeploymentDescription.from_dict(
+                self.store.get_object(scope, "deployment")
+            )
+            self.assertEqual(deployment, fetched_deployment)
