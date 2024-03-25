@@ -514,8 +514,9 @@ async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app
     writer = ContinuousWrites(ops_test, app, initial_count=initial_count)
     await writer.start()
     time.sleep(10)
-    result = await writer.stop()
-    return result.count > initial_count
+    await assert_continuous_writes_consistency(ops_test, writer, app)
+    # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
+    await writer.clear()
 
 
 async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> str:

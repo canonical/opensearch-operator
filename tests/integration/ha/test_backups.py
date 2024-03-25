@@ -400,6 +400,8 @@ async def test_restore_to_new_cluster(
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, writer, app)
     await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
+    # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
+    await writer.clear()
 
 
 # -------------------------------------------------------------------------------------------
@@ -548,3 +550,5 @@ async def test_change_config_and_backup_restore(
         # continuous writes checks
         await assert_continuous_writes_consistency(ops_test, writer, app)
         await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
+        # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
+        await writer.clear()
