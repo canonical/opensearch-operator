@@ -1063,7 +1063,7 @@ class OpenSearchBaseCharm(CharmBase):
             computed_roles = (
                 update_conf.roles
                 if update_conf
-                else ClusterTopology.suggest_roles(nodes, self.app.planned_units(), self.unit_id)
+                else ClusterTopology.suggest_roles(nodes, self.app.planned_units())
             )
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)

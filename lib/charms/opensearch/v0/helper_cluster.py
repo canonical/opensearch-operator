@@ -35,18 +35,23 @@ class ClusterTopology:
     """Class for creating the best possible configuration for a Node."""
 
     @staticmethod
-    def suggest_roles(nodes: List[Node], planned_units: int, unit_number: int) -> List[str]:
+    def suggest_roles(nodes: List[Node], planned_units: int) -> List[str]:
         """Get roles for a Node.
+
+        This method should be read in the context of a "rolling" start -
+        only 1 unit at a time will call this.
 
         For now, we don't allow to end-user control roles.
         The logic here is, if number of planned units is:
             — odd: "all" the nodes are cm_eligible nodes.
             — even: "all - 1" are cm_eligible and 1 data node.
         """
+        max_cms = ClusterTopology.max_cluster_manager_nodes(planned_units)
+
         base_roles = ["data", "ingest", "ml", "coordinating_only"]
         full_roles = base_roles + ["cluster_manager"]
-        highest_unit_number = max(node.unit_number for node in nodes)
-        if planned_units % 2 == 0 and unit_number == highest_unit_number:
+        nodes_by_roles = ClusterTopology.nodes_count_by_role(nodes)
+        if nodes_by_roles.get("cluster_manager", 0) == max_cms:
             return base_roles
         return full_roles
 
@@ -99,6 +104,15 @@ class ClusterTopology:
         return nodes_by_name
 
     @staticmethod
+    def max_cluster_manager_nodes(planned_units) -> int:
+        """Get the max number of CM nodes in a cluster."""
+        max_managers = planned_units
+        if planned_units % 2 == 0:
+            max_managers -= 1
+
+        return max_managers
+
+    @staticmethod
     def get_cluster_managers_ips(nodes: List[Node]) -> List[str]:
         """Get the nodes of cluster manager eligible nodes."""
         result = []
@@ -115,6 +129,18 @@ class ClusterTopology:
         for node in nodes:
             if node.is_cm_eligible():
                 result.append(node.name)
+
+        return result
+
+    @staticmethod
+    def nodes_count_by_role(nodes: List[Node]) -> Dict[str, int]:
+        """Count number of nodes by role."""
+        result = {}
+        for node in nodes:
+            for role in node.roles:
+                if role not in result:
+                    result[role] = 0
+                result[role] += 1
 
         return result
 

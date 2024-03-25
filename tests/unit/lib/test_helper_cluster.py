@@ -128,14 +128,10 @@ class TestHelperCluster(unittest.TestCase):
         planned_units = 5
         cluster_5_conf = self.cluster1_5_nodes_conf()
 
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles([], planned_units, unit_number=0), self.cm_roles
-        )
+        self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units), self.cm_roles)
         for start_index in range(1, 5):
             self.assertCountEqual(
-                ClusterTopology.suggest_roles(
-                    cluster_5_conf[:start_index], planned_units, unit_number=start_index
-                ),
+                ClusterTopology.suggest_roles(cluster_5_conf[:start_index], planned_units),
                 self.cm_roles,
             )
 
@@ -145,19 +141,15 @@ class TestHelperCluster(unittest.TestCase):
 
         planned_units = 6
 
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles([], planned_units, unit_number=0), self.cm_roles
-        )
+        self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units), self.cm_roles)
         for start_index in range(1, 5):
             self.assertCountEqual(
-                ClusterTopology.suggest_roles(
-                    cluster_6_conf[:start_index], planned_units, unit_number=start_index
-                ),
+                ClusterTopology.suggest_roles(cluster_6_conf[:start_index], planned_units),
                 self.cm_roles,
             )
 
         self.assertCountEqual(
-            ClusterTopology.suggest_roles(cluster_6_conf[:-1], planned_units, unit_number=5),
+            ClusterTopology.suggest_roles(cluster_6_conf[:-1], planned_units),
             self.base_roles,
         )
 
