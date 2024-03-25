@@ -77,6 +77,7 @@ class ClusterTopology:
         """Recompute the configuration of all the nodes (cluster set to auto-generate roles)."""
         if not nodes:
             return {}
+        logger.debug(f"Roles before re-balancing {({node.name: node.roles for node in nodes})=}")
         nodes_by_name = {}
         current_cluster_nodes = []
         for node in nodes:
@@ -103,6 +104,9 @@ class ClusterTopology:
                 unit_number=node.unit_number,
                 temperature=node.temperature,
             )
+        logger.debug(
+            f"Roles after re-balancing {({name: node.roles for name, node in nodes_by_name.items()})=}"
+        )
         return nodes_by_name
 
     @staticmethod
