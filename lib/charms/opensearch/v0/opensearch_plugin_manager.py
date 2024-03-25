@@ -10,14 +10,17 @@ This class is instantiated at the operator level and is called at every relevant
 config-changed, upgrade, s3-credentials-changed, etc.
 """
 
+import copy
+import functools
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
-from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
+from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchBackupPlugin,
     OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
@@ -26,7 +29,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingConfigError,
     OpenSearchPluginMissingDepsError,
-    OpenSearchPluginRelationClusterNotReadyError,
     OpenSearchPluginRemoveError,
     PluginState,
 )
@@ -75,6 +77,11 @@ class OpenSearchPluginManager:
         self._plugins_path = self._opensearch.paths.plugins
         self._keystore = OpenSearchKeystore(self._charm)
         self._event_scope = OpenSearchPluginEventScope.DEFAULT
+
+    @functools.cached_property
+    def cluster_config(self):
+        """Returns the cluster configuration."""
+        return ClusterTopology.get_cluster_settings(self._charm.opensearch, include_defaults=True)
 
     def set_event_scope(self, event_scope: OpenSearchPluginEventScope) -> None:
         """Sets the event scope of the plugin manager.
@@ -127,32 +134,57 @@ class OpenSearchPluginManager:
             }
         return {**self._charm_config, "opensearch-version": self._opensearch.version}
 
+    def check_plugin_manager_ready(self) -> bool:
+        """Checks if the plugin manager is ready to run."""
+        return (
+            self._charm.opensearch.is_node_up()
+            and len(self._charm._get_nodes(True)) == self._charm.app.planned_units()
+            and self._charm.health.apply()
+            in [
+                HealthColors.GREEN,
+                HealthColors.YELLOW,
+            ]
+        )
+
     def run(self) -> bool:
         """Runs a check on each plugin: install, execute config changes or remove.
 
         This method should be called at config-changed event. Returns if needed restart.
         """
-        if not self._charm.opensearch.is_started() or self._charm.health.apply() not in [
-            HealthColors.GREEN,
-            HealthColors.YELLOW,
-        ]:
-            # If the health is not green, then raise a cluster-not-ready error
-            # The classes above should then defer their own events in waiting.
-            # Defer is important as next steps to configure plugins will involve
-            # calls to the APIs of the cluster.
-            raise OpenSearchPluginRelationClusterNotReadyError()
-
+        err_msgs = []
         restart_needed = False
         for plugin in self.plugins:
-            restart_needed = any(
-                [
-                    self._install_if_needed(plugin),
-                    self._configure_if_needed(plugin),
-                    self._disable_if_needed(plugin),
-                    self._remove_if_needed(plugin),
-                    restart_needed,
-                ]
-            )
+            logger.info(f"Checking plugin {plugin.name}...")
+            logger.debug(f"Status: {self.status(plugin)}")
+            # These are independent plugins.
+            # Any plugin that errors, if that is an OpenSearchPluginError, then
+            # it is an "expected" error, such as missing additional config; should
+            # not influence the execution of other plugins.
+            # Capture them and raise all of them at the end.
+            try:
+                restart_needed = any(
+                    [
+                        self._install_if_needed(plugin),
+                        self._configure_if_needed(plugin),
+                        self._disable_if_needed(plugin),
+                        self._remove_if_needed(plugin),
+                        restart_needed,
+                    ]
+                )
+            except (
+                OpenSearchPluginMissingDepsError,
+                OpenSearchPluginMissingConfigError,
+                OpenSearchPluginInstallError,
+                OpenSearchPluginRemoveError,
+            ) as e:
+                # This is a more serious issue, as we are missing some input from
+                # the user. The charm should block.
+                err_msgs.append(str(e))
+            logger.debug(f"Finished Plugin {plugin.name} status: {self.status(plugin)}")
+        logger.info(f"Plugin check finished, restart needed: {restart_needed}")
+
+        if err_msgs:
+            raise OpenSearchPluginError("\n".join(err_msgs))
         return restart_needed
 
     def _install_plugin(self, plugin: OpenSearchPlugin) -> bool:
@@ -164,9 +196,7 @@ class OpenSearchPluginManager:
         if plugin.dependencies:
             missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
             if missing_deps:
-                raise OpenSearchPluginMissingDepsError(
-                    f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
-                )
+                raise OpenSearchPluginMissingDepsError(plugin.name, missing_deps)
 
         # Add the plugin
         try:
@@ -179,9 +209,7 @@ class OpenSearchPluginManager:
             # Check for dependencies
             missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
             if missing_deps:
-                raise OpenSearchPluginMissingDepsError(
-                    f"Failed to install {plugin.name}, missing dependencies: {missing_deps}"
-                )
+                raise OpenSearchPluginMissingDepsError(plugin.name, missing_deps)
 
             self._opensearch.run_bin("opensearch-plugin", f"install --batch {plugin.name}")
         except KeyError as e:
@@ -191,7 +219,7 @@ class OpenSearchPluginManager:
                 logger.info(f"Plugin {plugin.name} already installed, continuing...")
                 # Nothing installed, as plugin already exists
                 return False
-            raise OpenSearchPluginInstallError(f"Failed to install plugin {plugin.name}: {e}")
+            raise OpenSearchPluginInstallError(plugin.name)
         # Install successful
         return True
 
@@ -212,16 +240,13 @@ class OpenSearchPluginManager:
     def _configure_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """Gathers all the configuration changes needed and applies them."""
         try:
-            if (
-                not self._user_requested_to_enable(plugin)
-                or self.status(plugin) != PluginState.INSTALLED
-            ):
+            if self.status(plugin) != PluginState.INSTALLED:
                 # Leave this method if either user did not request to enable this plugin
                 # or plugin has been already enabled.
                 return False
             return self.apply_config(plugin.config())
         except KeyError as e:
-            raise OpenSearchPluginMissingConfigError(e)
+            raise OpenSearchPluginMissingConfigError(plugin.name, configs=[f"{e}"])
 
     def _disable_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""
@@ -236,7 +261,40 @@ class OpenSearchPluginManager:
                 return False
             return self.apply_config(plugin.disable())
         except KeyError as e:
-            raise OpenSearchPluginMissingConfigError(e)
+            raise OpenSearchPluginMissingConfigError(plugin.name, configs=[f"{e}"])
+
+    def _compute_settings(
+        self, config: OpenSearchPluginConfig
+    ) -> Tuple[Dict[str, str], Dict[str, str]]:
+        """Returns the current and the new configuration."""
+        current_settings = self.cluster_config
+        # We use current_settings and new_conf and check for any differences
+        # therefore, we need to make a deepcopy here before editing new_conf
+        new_conf = copy.deepcopy(current_settings)
+        for key_to_del in config.config_entries_to_del:
+            if key_to_del in new_conf:
+                del new_conf[key_to_del]
+        new_conf |= config.config_entries_to_add
+
+        logger.debug(
+            "Difference between current and new configuration: \n"
+            + str(
+                {
+                    "in current but not in new_conf": {
+                        k: v for k, v in current_settings.items() if k not in new_conf.keys()
+                    },
+                    "in new_conf but not in current": {
+                        k: v for k, v in new_conf.items() if k not in current_settings.keys()
+                    },
+                    "in both but different values": {
+                        k: v
+                        for k, v in new_conf.items()
+                        if k in current_settings.keys() and current_settings[k] != v
+                    },
+                }
+            )
+        )
+        return current_settings, new_conf
 
     def apply_config(self, config: OpenSearchPluginConfig) -> bool:
         """Runs the configuration changes as passed via OpenSearchPluginConfig.
@@ -245,39 +303,43 @@ class OpenSearchPluginManager:
         1) Remove the entries to be deleted
         2) Add entries, if available
 
-        For example:
-            KNN needs to:
-            1) Remove from configuration: {"knn.plugin.enabled": "True"}
-            2) Add to configuration: {"knn.plugin.enabled": "False"}
-
         Returns True if a configuration change was performed.
         """
         self._keystore.delete(config.secret_entries_to_del)
         self._keystore.add(config.secret_entries_to_add)
-        # Add and remove configuration if applies
-        if config.config_entries_to_del:
-            self._opensearch_config.delete_plugin(config.config_entries_to_del)
-
-        if config.config_entries_to_add:
-            self._opensearch_config.add_plugin(config.config_entries_to_add)
-
         if config.secret_entries_to_del or config.secret_entries_to_add:
             self._keystore.reload_keystore()
 
-        # Return True if some configuration entries changed
-        return True if config.config_entries_to_add or config.config_entries_to_del else False
+        current_settings, new_conf = self._compute_settings(config)
+        if current_settings == new_conf:
+            # Nothing to do here
+            logger.info("apply_config: nothing to do, return")
+            return False
+
+        # Update the configuration
+        if config.config_entries_to_del:
+            self._opensearch_config.delete_plugin(config.config_entries_to_del)
+        if config.config_entries_to_add:
+            self._opensearch_config.add_plugin(config.config_entries_to_add)
+        return True
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""
         if not self._is_installed(plugin):
             return PluginState.MISSING
-        if not self._is_enabled(plugin):
-            if self._user_requested_to_enable(plugin):
-                return PluginState.INSTALLED
-            return PluginState.DISABLED
+
         if self._needs_upgrade(plugin):
             return PluginState.WAITING_FOR_UPGRADE
-        return PluginState.ENABLED
+
+        # The _user_request_to_enable comes first, as it ensures there is a relation/config
+        # set, which will be used by _is_enabled to determine if we are enabled or not.
+        if not self._user_requested_to_enable(plugin) and not self._is_enabled(plugin):
+            return PluginState.DISABLED
+
+        if self._is_enabled(plugin):
+            return PluginState.ENABLED
+
+        return PluginState.INSTALLED
 
     def _is_installed(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is installed."""
@@ -286,9 +348,10 @@ class OpenSearchPluginManager:
     def _user_requested_to_enable(self, plugin: OpenSearchPlugin) -> bool:
         """Returns True if user requested plugin to be enabled."""
         plugin_data = ConfigExposedPlugins[plugin.name]
-        if not self._charm.config.get(
-            plugin_data["config"], False
-        ) and not self._is_plugin_relation_set(plugin_data["relation"]):
+        if not (
+            self._charm.config.get(plugin_data["config"], False)
+            or self._is_plugin_relation_set(plugin_data["relation"])
+        ):
             # User asked to disable this plugin
             return False
         return True
@@ -296,32 +359,28 @@ class OpenSearchPluginManager:
     def _is_enabled(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is enabled.
 
-        The main question to answer is if we would remove the configuration from
-        opensearch.yaml and/or add some other configuration instead.
-        If yes, then we know that the service is enabled.
+        The main question to answer is if we would have it in the configuration
+        from cluster settings. If yes, then we know that the service is enabled.
 
-        The disable() method is used, as a given entry will be removed from opensearch.yml.
-
-        If disable() returns a list, then check if the keys in the stored_plugin_conf
-        matches the list values; otherwise, if a dict, then check if the keys and values match.
-        If they match in any of the cases above, then return True.
+        Check if the configuration from enable() is present or not.
         """
         try:
-            plugin_conf = plugin.disable().config_entries_to_del
-            keystore_conf = plugin.disable().secret_entries_to_del
-            stored_plugin_conf = self._opensearch_config.get_plugin(plugin_conf)
-
-            if any(k not in self._keystore.list() for k in keystore_conf):
+            current_settings, new_conf = self._compute_settings(plugin.config())
+            if current_settings != new_conf:
                 return False
 
-            # Using sets to guarantee matches; stored_plugin_conf will be a dict
-            if isinstance(plugin_conf, list):
-                return set(plugin_conf) == set(stored_plugin_conf)
-            else:  # plugin_conf is a dict
-                return plugin_conf == stored_plugin_conf
+            # Now, focus on the keystore part
+            keys_available = self._keystore.list()
+            keys_to_add = plugin.config().secret_entries_to_add
+            if any(k not in keys_available for k in keys_to_add):
+                return False
+            keys_to_del = plugin.config().secret_entries_to_del
+            if any(k in keys_available for k in keys_to_del):
+                return False
         except (KeyError, OpenSearchPluginError) as e:
             logger.warning(f"_is_enabled: error with {e}")
             return False
+        return True
 
     def _needs_upgrade(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin needs upgrade."""
@@ -354,7 +413,7 @@ class OpenSearchPluginManager:
             if "not found" in str(e):
                 logger.info(f"Plugin {plugin.name} to be deleted, not found. Continuing...")
                 return False
-            raise OpenSearchPluginRemoveError(f"Failed to remove plugin {plugin.name}: {e}")
+            raise OpenSearchPluginRemoveError(plugin.name)
         return True
 
     def _installed_plugins(self) -> List[str]:

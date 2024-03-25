@@ -3,11 +3,14 @@
 # See LICENSE file for licensing details.
 
 import logging
+import subprocess
 
 import pytest
+import yaml
+from charms.opensearch.v0.constants_charm import OPENSEARCH_SNAP_REVISION
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import (
+from .helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
@@ -18,8 +21,8 @@ from tests.integration.helpers import (
     http_request,
     run_action,
 )
-from tests.integration.helpers_deployments import wait_until
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .helpers_deployments import wait_until
+from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +30,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_NUM_UNITS = 2
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -42,6 +46,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(wait_for_exact_units=DEFAULT_NUM_UNITS, timeout=1800)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_status(ops_test: OpsTest) -> None:
     """Verifies that the application and unit are active."""
@@ -54,6 +59,7 @@ async def test_status(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == DEFAULT_NUM_UNITS
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     """Test the retrieval of admin secrets."""
@@ -64,14 +70,13 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
-    await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=1000
-    )
-
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1200, wait_for_exact_units=DEFAULT_NUM_UNITS
+        apps=[APP_NAME],
+        status="active",
+        timeout=1200,
+        wait_for_exact_units=DEFAULT_NUM_UNITS,
     )
 
     leader_ip = await get_leader_unit_ip(ops_test)
@@ -92,6 +97,7 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     assert result.status == "failed"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
     """Test the rotation and change of admin password."""
@@ -138,3 +144,31 @@ async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
         ops_test, "GET", test_url, resp_status_code=True, user_password=password1
     )
     assert http_resp_code == 401
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_check_pinned_revision(ops_test: OpsTest) -> None:
+    """Test check the pinned revision."""
+    leader_id = await get_leader_unit_id(ops_test)
+
+    installed_info = yaml.safe_load(
+        subprocess.check_output(
+            [
+                "juju",
+                "ssh",
+                f"opensearch/{leader_id}",
+                "--",
+                "sudo",
+                "snap",
+                "info",
+                "opensearch",
+                "--color=never",
+                "--unicode=always",
+            ],
+            text=True,
+        ).replace("\r\n", "\n")
+    )["installed"].split()
+    logger.info(f"Installed snap: {installed_info}")
+    assert installed_info[1] == f"({OPENSEARCH_SNAP_REVISION})"
+    assert installed_info[3] == "held"

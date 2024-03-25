@@ -59,9 +59,12 @@ PClusterWrongRolesProvided = "Cannot start cluster with current set of roles."
 PClusterWrongNodesCountForQuorum = (
     "Even number of members in quorum if current unit started. Add or remove 1 unit."
 )
+PluginConfigError = "Unexpected error during plugin configuration, check the logs"
+BackupSetupFailed = "Backup setup failed, check logs for details"
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
+BackupDeferRelBrokenAsInProgress = "Backup service cannot be stopped: backup in progress."
 
 
 # Maintenance statuses
@@ -73,8 +76,10 @@ HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 NewIndexRequested = "new index {index} requested"
 RestoreInProgress = "Restore in progress..."
-PluginConfigStart = "Plugin configuration started."
-
+PluginConfigCheck = "Plugin configuration check."
+BackupSetupStart = "Backup setup started."
+BackupConfigureStart = "Configuring backup service..."
+BackupInDisabling = "Disabling backup service..."
 
 # Relation Interfaces
 ClientRelationName = "opensearch-client"
@@ -90,3 +95,6 @@ COSPort = "9200"
 # Opensearch Users
 OpenSearchUsers = {"admin", "monitor"}
 OpenSearchRoles = set()
+
+# Opensearch Snap revision
+OPENSEARCH_SNAP_REVISION = 40

@@ -21,6 +21,33 @@ this operator.
 - Please help us out in ensuring easy to review branches by rebasing your pull request branch onto
   the `main` branch. This also avoids merge commits and creates a linear Git commit history.
 
+
+## Build charm
+
+Build the charm in this git repository using tox.
+
+There are two alternatives to build the charm: using the charm cache or not.
+Cache will speed the build by downloading all dependencies from charmcraftcache-hub.
+
+First, ensure you have the right dependencies:
+* charmcraft v2.5.4+
+* charmcraftcache
+
+By running the following commands:
+
+```shell
+pipx install charmcraftcache
+tox -e build-dev
+```
+
+### Build Without Cache
+
+To run the traditional build only using `charmcraft`, run the following command:
+
+```shell
+tox -e build-production
+```
+
 ## Developing
 
 You can create an environment for development with `tox`:
@@ -32,41 +59,66 @@ source venv/bin/activate
 
 ### Testing
 
-To run tests, run the following
+To run tests, first build the charm as described above, then run the following
 
 ```shell
 tox -e format       # update your code according to linting rules
 tox -e lint         # code style
 tox -e unit         # unit tests
-tox -m integration  # integration tests, running on juju 2.
+tox -e integration  # integration tests, running on juju 3.
 tox                 # runs 'format', 'lint', and 'unit' environments
 ```
 
-Integration tests can be run for separate areas of functionality:
+Integration tests can be run for separate files:
 
 ```shell
-tox -e charm-integration      # basic charm integration tests
-tox -e tls-integration        # TLS-specific integration tests
-tox -e client-integration     # Validates the `opensearch-client` integration
-tox -e ha-integration         # HA tests
-tox -e h-scaling-integration  # HA tests specific to horizontal scaling
+tox -e integration -- tests/integration/tls/test_tls.py
+tox -e integration -- tests/integration/relations/test_charm.py
+tox -e integration -- tests/integration/plugins/test_plugins.py
+tox -e integration -- tests/integration/ha/test_storage.py
+tox -e integration -- tests/integration/ha/test_large_deployments.py
+tox -e integration -- tests/integration/ha/test_horizontal_scaling.py
+tox -e integration -- tests/integration/ha/test_ha_networking.py
+tox -e integration -- tests/integration/ha/test_ha_multi_clusters.py
+tox -e integration -- tests/integration/relations/test_opensearch_provider.py
+tox -e integration -- tests/integration/ha/test_ha.py
+tox -e integration -- tests/integration/ha/test_backups.py
 ```
 
-If you're running tests on juju 3, run the following command to change libjuju to the correct version:
+#### Running different major versions of Juju
+
+For integration tests, libjuju must be in-sync with the target juju version.
+Make sure that the version of libjuju installed is compatible with the bootstrapped
+controller version. If not, update it with:
 
 ```shell
-export LIBJUJU_VERSION_SPECIFIER="==3.3.0.0"
+poetry add --lock --group integration juju@<YOUR CHOSEN VERSION>
 ```
 
-## Build charm
+#### FOR DEVELOPMENT ONLY: Testing Backups In Your Local Machine
 
-Build the charm in this git repository using:
+Backup testing installs microceph and can run on S3 (aws) object stores.
+To setup your environment, you should set the: access / secret / service account information as environment variables.
+
+To run the test only against microceph:
 
 ```shell
-charmcraft pack
+tox -e integration -- tests/integration/ha/test_backups.py --group='microceph' # test backup service for microceph
 ```
 
-### Deploy
+And against public clouds + microceph:
+
+```shell
+SECRETS_FROM_GITHUB=$(cat <path-to>/credentials.json) tox -e integration -- tests/integration/ha/test_backups.py
+```
+
+Where, for AWS only, `credentials.json` should look like:
+```shell
+$ cat credentials.json
+{ "AWS_ACCESS_KEY": ..., "AWS_SECRET_KEY": ...}
+```
+
+## Deploy
 
 OpenSearch has a set of system requirements to correctly function, you can find the list [here](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/).
 Some of those settings must be set using cloudinit-userdata on the model, while others must be set on the host machine:

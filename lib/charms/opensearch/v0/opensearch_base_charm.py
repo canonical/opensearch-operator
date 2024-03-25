@@ -22,7 +22,7 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     PeerRelationName,
     PluginConfigChangeError,
-    PluginConfigStart,
+    PluginConfigCheck,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -36,7 +36,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_charm import DeferTriggerEvent, Status
+from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
@@ -78,10 +78,7 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     StartMode,
 )
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
-from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchPluginError,
-    OpenSearchPluginRelationClusterNotReadyError,
-)
+from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
 from charms.opensearch.v0.opensearch_relation_peer_cluster import (
     OpenSearchPeerClusterProvider,
     OpenSearchPeerClusterRequirer,
@@ -108,7 +105,7 @@ from ops.charm import (
     StorageDetachingEvent,
     UpdateStatusEvent,
 )
-from ops.framework import EventBase, EventSource
+from ops.framework import EventBase
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
@@ -132,8 +129,6 @@ logger = logging.getLogger(__name__)
 
 class OpenSearchBaseCharm(CharmBase):
     """Base class for OpenSearch charms."""
-
-    defer_trigger_event = EventSource(DeferTriggerEvent)
 
     def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
         super().__init__(*args)
@@ -174,9 +169,6 @@ class OpenSearchBaseCharm(CharmBase):
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
         self.peer_cluster_requirer = OpenSearchPeerClusterRequirer(self)
 
-        # helper to defer events without any additional logic
-        self.framework.observe(self.defer_trigger_event, self._on_defer_trigger)
-
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
@@ -200,10 +192,6 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
-
-    def _on_defer_trigger(self, _: DeferTriggerEvent):
-        """Hook for the trigger_defer event."""
-        pass
 
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
@@ -365,7 +353,6 @@ class OpenSearchBaseCharm(CharmBase):
         ):
             # we defer because we want the temporary status to be updated
             event.defer()
-            # self.defer_trigger_event.emit()
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -531,22 +518,26 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        self.status.set(MaintenanceStatus(PluginConfigStart))
         try:
-            if self.opensearch.is_started() and self.plugin_manager.run():
+            if not self.plugin_manager.check_plugin_manager_ready():
+                raise OpenSearchNotFullyReadyError()
+            self.status.set(MaintenanceStatus(PluginConfigCheck))
+            if self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
-        except OpenSearchPluginRelationClusterNotReadyError:
-            logger.warning("Plugin management: cluster not ready yet at config changed")
+            self.status.clear(PluginConfigCheck)
+        except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
+            if isinstance(e, OpenSearchNotFullyReadyError):
+                logger.warning("Plugin management: cluster not ready yet at config changed")
+            else:
+                self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
-            return
-        except OpenSearchPluginError:
-            self.status.set(BlockedStatus(PluginConfigChangeError))
-            event.defer()
+            # Decided to defer the event. We can clean up the status and reset it once the
+            # config-changed is called again.
+            self.status.clear(PluginConfigCheck)
             return
         self.status.clear(PluginConfigChangeError)
-        self.status.clear(PluginConfigStart)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -713,7 +704,6 @@ class OpenSearchBaseCharm(CharmBase):
                 self._post_start_init(event)
             except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
                 event.defer()
-                # self.defer_trigger_event.emit()
             return
 
         if not self._can_service_start():
@@ -767,14 +757,11 @@ class OpenSearchBaseCharm(CharmBase):
             self._post_start_init(event)
         except (OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
-            # emit defer_trigger event which won't do anything to force retry of current event
-            # self.defer_trigger_event.emit()
         except OpenSearchStartError as e:
             logger.exception(e)
             self.peers_data.delete(Scope.UNIT, "starting")
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
-            # self.defer_trigger_event.emit()
 
     def _post_start_init(self, event: EventBase):
         """Initialization post OpenSearch start."""
@@ -1268,9 +1255,13 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _scrape_config(self) -> List[Dict]:
         """Generates the scrape config as needed."""
-        app_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        ca = app_secrets.get("ca-cert")
-        pwd = self.secrets.get(Scope.APP, self.secrets.password_key(COSUser))
+        if (
+            not (app_secrets := self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val))
+            or not (ca := app_secrets.get("ca-cert"))
+            or not (pwd := self.secrets.get(Scope.APP, self.secrets.password_key(COSUser)))
+        ):
+            # Not yet ready, waiting for certain values to be set
+            return []
         return [
             {
                 "metrics_path": "/_prometheus/metrics",

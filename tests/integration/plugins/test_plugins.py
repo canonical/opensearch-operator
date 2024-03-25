@@ -9,10 +9,10 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError
 
-from tests.integration.ha.helpers import app_name
-from tests.integration.ha.helpers_data import bulk_insert, create_index, search
-from tests.integration.ha.test_horizontal_scaling import IDLE_PERIOD
-from tests.integration.helpers import (
+from ..ha.helpers import app_name
+from ..ha.helpers_data import bulk_insert, create_index, search
+from ..ha.test_horizontal_scaling import IDLE_PERIOD
+from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
@@ -25,7 +25,7 @@ from tests.integration.helpers import (
     http_request,
     run_action,
 )
-from tests.integration.plugins.helpers import (
+from ..plugins.helpers import (
     create_index_and_bulk_insert,
     generate_bulk_training_data,
     get_application_unit_ids_start_time,
@@ -33,15 +33,14 @@ from tests.integration.plugins.helpers import (
     is_knn_training_complete,
     run_knn_training,
 )
-from tests.integration.relations.opensearch_provider.helpers import (
-    get_unit_relation_data,
-)
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..relations.helpers import get_unit_relation_data
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 COS_APP_NAME = "grafana-agent"
 COS_RELATION_NAME = "cos-agent"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -62,10 +61,10 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(
             my_charm, num_units=3, series=SERIES, config={"plugin_opensearch_knn": True}
         ),
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -79,6 +78,8 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.abort_on_fail
+@pytest.mark.group(1)
 async def test_prometheus_exporter_enabled_by_default(ops_test):
     """Test that Prometheus Exporter is running before the relation is there."""
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
@@ -90,6 +91,8 @@ async def test_prometheus_exporter_enabled_by_default(ops_test):
     assert len(response_str.split("\n")) > 500
 
 
+@pytest.mark.abort_on_fail
+@pytest.mark.group(1)
 async def test_prometheus_exporter_cos_relation(ops_test):
     await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
@@ -119,6 +122,8 @@ async def test_prometheus_exporter_cos_relation(ops_test):
     assert relation_data["scheme"] == "https"
 
 
+@pytest.mark.abort_on_fail
+@pytest.mark.group(1)
 async def test_monitoring_user_fetch_prometheus_data(ops_test):
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
     endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
@@ -139,6 +144,8 @@ async def test_monitoring_user_fetch_prometheus_data(ops_test):
     assert len(response_str.split("\n")) > 500
 
 
+@pytest.mark.abort_on_fail
+@pytest.mark.group(1)
 async def test_prometheus_monitor_user_password_change(ops_test):
     # Password change applied as expected
     leader_id = await get_leader_unit_id(ops_test, APP_NAME)
@@ -161,6 +168,8 @@ async def test_prometheus_monitor_user_password_change(ops_test):
     assert relation_data["password"] == new_password
 
 
+@pytest.mark.abort_on_fail
+@pytest.mark.group(1)
 async def test_knn_enabled_disabled(ops_test):
     config = await ops_test.model.applications[APP_NAME].get_config()
     assert config["plugin_opensearch_knn"]["default"] is True
@@ -177,8 +186,10 @@ async def test_knn_enabled_disabled(ops_test):
 
     config = await ops_test.model.applications[APP_NAME].get_config()
     assert config["plugin_opensearch_knn"]["value"] is True
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=45)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
@@ -218,10 +229,11 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
     # Insert data in bulk
     await bulk_insert(ops_test, app, leader_unit_ip, payload)
     query = {"size": 2, "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}}}
-    docs = await search(ops_test, app, leader_unit_ip, index_name, query)
+    docs = await search(ops_test, app, leader_unit_ip, index_name, query, retries=30)
     assert len(docs) == 2
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
     """Uploads data and runs a query search against the NMSLIB KNNEngine."""
@@ -261,10 +273,11 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
     # Insert data in bulk
     await bulk_insert(ops_test, app, leader_unit_ip, payload)
     query = {"size": 2, "query": {"knn": {vector_name: {"vector": payload_list[0], "k": 2}}}}
-    docs = await search(ops_test, app, leader_unit_ip, index_name, query)
+    docs = await search(ops_test, app, leader_unit_ip, index_name, query, retries=30)
     assert len(docs) == 2
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_knn_training_search(ops_test: OpsTest) -> None:
     """Tests the entire cycle of KNN plugin.

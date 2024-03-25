@@ -54,7 +54,12 @@ class TestOpenSearchKNN(unittest.TestCase):
         }
         self.charm.opensearch.is_started = MagicMock(return_value=True)
         self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
+        self.plugin_manager._is_cluster_ready = MagicMock(return_value=True)
+        charms.opensearch.v0.helper_cluster.ClusterTopology.get_cluster_settings = MagicMock(
+            return_value={}
+        )
 
+    @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.is_node_up")
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
@@ -70,14 +75,15 @@ class TestOpenSearchKNN(unittest.TestCase):
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
     def test_disable_via_config_change(
         self,
-        mock_put,
-        mock_load,
+        _,
+        __,
         mock_is_started,
         mock_status,
         mock_is_enabled,
         mock_version,
         mock_acquire_lock,
-        deployment_desc,
+        ___,
+        mock_is_node_up,
     ) -> None:
         """Tests entire config_changed event with KNN plugin."""
         mock_status.return_value = PluginState.ENABLED
@@ -89,12 +95,12 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.plugin_manager._opensearch_config.delete_plugin = MagicMock()
         self.plugin_manager._opensearch_config.add_plugin = MagicMock()
         self.charm.status = MagicMock()
+        mock_is_node_up.return_value = True
+        self.charm._get_nodes = MagicMock(return_value=[1])
+        self.charm.planned_units = MagicMock(return_value=1)
 
         self.harness.update_config({"plugin_opensearch_knn": False})
         mock_acquire_lock.assert_called_once()
-        self.plugin_manager._opensearch_config.delete_plugin.assert_called_once_with(
-            {"knn.plugin.enabled": True}
-        )
         self.plugin_manager._opensearch_config.add_plugin.assert_called_once_with(
-            {"knn.plugin.enabled": False}
+            {"knn.plugin.enabled": "false"}
         )

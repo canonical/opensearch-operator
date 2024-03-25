@@ -241,3 +241,38 @@ class TestHelperCluster(unittest.TestCase):
         self.assertEqual(raw_node.name, from_json_node.name)
         self.assertEqual(raw_node.roles, from_json_node.roles)
         self.assertEqual(raw_node.ip, from_json_node.ip)
+
+    @patch("charms.opensearch.v0.helper_cluster.OpenSearchDistribution.request")
+    def test_get_cluster_settings(self, request_mock):
+        """Test the get_cluster_settings method."""
+        request_mock.return_value = {
+            "defaults": {
+                "knn.plugin.enabled": "false",
+            },
+            "persistent": {
+                "knn.plugin.enabled": "true",
+                "cluster.routing.allocation.enable": "all",
+            },
+            "transient": {
+                "indices.recovery.max_bytes_per_sec": "50mb",
+            },
+        }
+
+        expected_settings = {
+            "knn.plugin.enabled": "true",
+            "cluster.routing.allocation.enable": "all",
+            "indices.recovery.max_bytes_per_sec": "50mb",
+        }
+
+        settings = ClusterTopology.get_cluster_settings(
+            self.opensearch,
+            include_defaults=True,
+        )
+
+        self.assertEqual(settings, expected_settings)
+        request_mock.assert_called_once_with(
+            "GET",
+            "/_cluster/settings?flat_settings=true&include_defaults=true",
+            host=None,
+            alt_hosts=None,
+        )

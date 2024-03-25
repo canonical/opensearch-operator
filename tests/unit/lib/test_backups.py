@@ -8,7 +8,11 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import charms
 import pytest
 import tenacity
-from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.constants_charm import (
+    BackupDeferRelBrokenAsInProgress,
+    BackupInDisabling,
+    PeerRelationName,
+)
 from charms.opensearch.v0.helper_cluster import IndexStateEnum
 from charms.opensearch.v0.opensearch_backups import (
     S3_RELATION,
@@ -25,7 +29,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginError,
     PluginState,
 )
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -427,28 +431,16 @@ def test_on_s3_broken_steps(
         harness.charm.backup._execute_s3_broken_calls.assert_not_called()
     elif test_type == "snapshot-in-progress":
         event.defer.assert_called()
-        harness.charm.status.set.assert_any_call(MaintenanceStatus("Disabling backup service..."))
-        harness.charm.status.set.assert_any_call(
-            MaintenanceStatus(
-                "Disabling backup postponed until backup in progress: snapshot in progress"
-            )
-        )
+        harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))
+        harness.charm.status.set.assert_any_call(WaitingStatus(BackupDeferRelBrokenAsInProgress))
         harness.charm.backup._execute_s3_broken_calls.assert_not_called()
     elif test_type == "apply-config-error" or test_type == "apply-config-error-not-leader":
         event.defer.assert_called()
-        # harness.charm.status.set.call_args_list == [
-        #     call(MaintenanceStatus("Disabling backup service...")),
-        #     call(BlockedStatus("Unexpected error during plugin configuration, check the logs")),
-        # ]
-        harness.charm.status.set.assert_any_call(MaintenanceStatus("Disabling backup service..."))
-        harness.charm.status.set.assert_any_call(
-            BlockedStatus("Unexpected error during plugin configuration, check the logs")
-        )
+        harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))
         harness.charm.backup._execute_s3_broken_calls.assert_called_once()
     elif test_type == "success":
         event.defer.assert_not_called()
-        harness.charm.status.set.assert_any_call(MaintenanceStatus("Disabling backup service..."))
-        harness.charm.status.set.assert_any_call(ActiveStatus())
+        harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))
         harness.charm.backup._execute_s3_broken_calls.assert_called_once()
 
 
@@ -498,12 +490,18 @@ class TestBackups(unittest.TestCase):
         assert self.charm.backup._get_endpoint_protocol("https://10.0.0.2:8000") == "https"
         assert self.charm.backup._get_endpoint_protocol("test.not-valid-url") == "https"
 
+    @patch(
+        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.check_plugin_manager_ready"
+    )
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup.apply_api_config_if_needed")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.apply_config")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
-    def test_00_update_relation_data(self, __, mock_apply_config, _, mock_status) -> None:
+    def test_00_update_relation_data(
+        self, __, mock_apply_config, _, mock_status, mock_pm_ready
+    ) -> None:
         """Tests if new relation without data returns."""
+        mock_pm_ready.return_value = True
         mock_status.return_value = PluginState.INSTALLED
         self.harness.update_relation_data(
             self.s3_rel_id,
@@ -521,10 +519,6 @@ class TestBackups(unittest.TestCase):
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
-                secret_entries_to_del=[
-                    "s3.client.default.access_key",
-                    "s3.client.default.secret_key",
-                ],
                 secret_entries_to_add={
                     "s3.client.default.access_key": "aaaa",
                     "s3.client.default.secret_key": "bbbb",

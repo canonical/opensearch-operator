@@ -58,6 +58,23 @@ class ClusterTopology:
         return base_roles + ["cluster_manager"]
 
     @staticmethod
+    def get_cluster_settings(
+        opensearch: OpenSearchDistribution,
+        host: Optional[str] = None,
+        alt_hosts: Optional[List[str]] = None,
+        include_defaults: bool = False,
+    ) -> Dict[str, any]:
+        """Get the cluster settings."""
+        settings = opensearch.request(
+            "GET",
+            f"/_cluster/settings?flat_settings=true&include_defaults={str(include_defaults).lower()}",
+            host=host,
+            alt_hosts=alt_hosts,
+        )
+
+        return dict(settings["defaults"] | settings["persistent"] | settings["transient"])
+
+    @staticmethod
     def recompute_nodes_conf(app_name: str, nodes: List[Node]) -> Dict[str, Node]:
         """Recompute the configuration of all the nodes (cluster set to auto-generate roles)."""
         # in case the cluster nodes' roles were previously "manually generated" - we need
@@ -330,6 +347,14 @@ class ClusterState:
     ) -> Dict[str, any]:
         """Fetch the cluster health."""
         endpoint = "/_cluster/health"
+
+        # Extra logging: list shards and index status
+        logger.debug(
+            "indices status:\n"
+            f"{opensearch.request('GET', '/_cat/indices?v')}\n"
+            "indices shards:\n"
+            f"{opensearch.request('GET', '/_cat/shards?v')}\n"
+        )
 
         timeout = 5
         if wait_for_green:

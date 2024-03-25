@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 import requests
+from charms.opensearch.v0.constants_charm import OPENSEARCH_SNAP_REVISION
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution, Paths
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -58,11 +59,13 @@ class OpenSearchSnap(OpenSearchDistribution):
     @override
     def install(self):
         """Install opensearch from the snapcraft store."""
-        if self._opensearch.present:
-            return
         try:
-            self._opensearch.ensure(snap.SnapState.Latest, channel="edge")
+            self._opensearch.ensure(snap.SnapState.Latest, revision=OPENSEARCH_SNAP_REVISION)
             self._opensearch.connect("process-control")
+            if not self._opensearch.held:
+                # hold the snap in charm determined revision
+                self._opensearch.hold()
+
         except SnapError as e:
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()
@@ -131,7 +134,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             conf=f"{self._SNAP_DATA}/etc/opensearch",
             data=f"{self._SNAP_COMMON}/var/lib/opensearch",
             logs=f"{self._SNAP_COMMON}/var/log/opensearch",
-            jdk=f"{self._SNAP}/usr/lib/jvm/java-17-openjdk-amd64",
+            jdk=f"{self._SNAP}/usr/lib/jvm/java-21-openjdk-amd64",
             tmp=f"{self._SNAP_COMMON}/usr/share/tmp",
             bin=f"{self._SNAP}/usr/share/opensearch/bin",
         )

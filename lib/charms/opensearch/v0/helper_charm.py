@@ -22,12 +22,6 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-class DeferTriggerEvent(EventBase):
-    """Dummy event to be triggered to trigger the deferral of another event."""
-
-    pass
-
-
 class Status:
     """Class for managing the various status changes in a charm."""
 
