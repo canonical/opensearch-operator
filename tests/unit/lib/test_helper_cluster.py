@@ -36,7 +36,8 @@ class TestHelperCluster(unittest.TestCase):
                 app_name=self.cluster1,
                 unit_number=1,
             ),
-            # Unit number 2 omitted on purpose (unit numbers are not guaranteed to be sequential on VM charms)
+            # Unit number 2 omitted on purpose
+            # (unit numbers are not guaranteed to be sequential on VM charms)
             Node(
                 name="cm3",
                 roles=self.cm_roles,
