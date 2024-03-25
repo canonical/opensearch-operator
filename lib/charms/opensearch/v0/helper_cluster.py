@@ -75,6 +75,8 @@ class ClusterTopology:
     @staticmethod
     def recompute_nodes_conf(app_name: str, nodes: List[Node]) -> Dict[str, Node]:
         """Recompute the configuration of all the nodes (cluster set to auto-generate roles)."""
+        if not nodes:
+            return {}
         nodes_by_name = {}
         current_cluster_nodes = []
         for node in nodes:
