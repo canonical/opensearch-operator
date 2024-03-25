@@ -885,7 +885,7 @@ class OpenSearchBaseCharm(CharmBase):
             computed_roles = (
                 update_conf.roles
                 if update_conf
-                else ClusterTopology.suggest_roles(nodes, self.app.planned_units())
+                else ClusterTopology.suggest_roles(nodes, self.app.planned_units(), self.unit_id)
             )
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
@@ -1006,6 +1006,7 @@ class OpenSearchBaseCharm(CharmBase):
                     roles=deployment_desc.config.roles,
                     ip=node.ip,
                     app_name=self.app.name,
+                    unit_number=self.unit_id,
                     temperature=deployment_desc.config.data_temperature,
                 )
                 for node in current_nodes
@@ -1109,7 +1110,7 @@ class OpenSearchBaseCharm(CharmBase):
     @property
     def unit_id(self) -> int:
         """ID of the current unit."""
-        return int(self.unit.name.split("/")[1])
+        return int(self.unit.name.split("/")[-1])
 
     @property
     def alt_hosts(self) -> Optional[List[str]]:
