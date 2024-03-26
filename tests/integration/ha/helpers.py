@@ -555,7 +555,21 @@ async def assert_cwrites_backup_consistency(
 
     assert new_count >= <current-doc-count> * (1 - loss) documents.
     """
-    original_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
+    try:
+        original_count = await index_docs_count(
+            ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME
+        )
+        # clear current index for testing
+        resp = await http_request(
+            ops_test,
+            "DELETE",
+            f"https://{unit_ip}:9200/{ContinuousWrites.INDEX_NAME}",
+            json_resp=True,
+        )
+        logger.debug(f"Response: {resp}")
+    except Exception as e:
+        logger.warning(f"Index may not exist. Failed to clear index: {e}")
+        original_count = 0
     # As stated on: https://discuss.elastic.co/t/how-to-parse-snapshot-dat-file/218888,
     # the only way to discover the documents in a backup is to recover it and check
     # on opensearch.

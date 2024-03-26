@@ -315,15 +315,6 @@ async def test_remove_and_readd_s3_relation(
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
-    # clear current index for testing
-    resp = await http_request(
-        ops_test,
-        "DELETE",
-        f"https://{unit_ip}:9200/{ContinuousWrites.INDEX_NAME}",
-        json_resp=True,
-    )
-    logger.debug(f"Response: {resp}")
-
     await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
     global cwrites_backup_doc_count
     cwrites_backup_doc_count[backup_id] = await index_docs_count(
@@ -421,9 +412,9 @@ async def test_restore_to_new_cluster(
     # continuous writes checks
     await assert_continuous_writes_increasing(writer)
     await assert_continuous_writes_consistency(ops_test, writer, app)
+    await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
     # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
     await writer.clear()
-    await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
 
 
 # -------------------------------------------------------------------------------------------
@@ -572,7 +563,6 @@ async def test_change_config_and_backup_restore(
         # continuous writes checks
         await assert_continuous_writes_increasing(writer)
         await assert_continuous_writes_consistency(ops_test, writer, app)
+        await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
         # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
         await writer.clear()
-
-        await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
