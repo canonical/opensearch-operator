@@ -274,7 +274,7 @@ class OpenSearchDistribution(ABC):
                         )
 
                     response = s.request(**request_kwargs)
-
+                    response.raise_for_status()
                     return response
             except (requests.exceptions.RequestException, urllib3.exceptions.HTTPError) as e:
                 logger.error(
