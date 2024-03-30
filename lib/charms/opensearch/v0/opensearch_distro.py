@@ -14,16 +14,13 @@ from datetime import datetime
 from functools import cached_property
 from os.path import exists
 from typing import Dict, List, Optional, Set, Union
-from urllib3.exceptions import HTTPError
 
 import requests
-from requests import RequestException
-
 from charms.opensearch.v0.constants_secrets import ADMIN_PW
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
-from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
 from charms.opensearch.v0.helper_http import error_http_retry_log, full_urls
+from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
@@ -31,7 +28,9 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from tenacity import retry, stop_after_attempt, wait_fixed, Retrying
+from requests import RequestException
+from tenacity import Retrying, retry, stop_after_attempt, wait_fixed
+from urllib3.exceptions import HTTPError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -208,6 +207,7 @@ class OpenSearchDistribution(ABC):
             ValueError if method or endpoint are missing
             OpenSearchHttpError if hosts are unreachable
         """
+
         def call(url: str) -> requests.Response:
             """Performs an HTTP request."""
             for attempt in Retrying(
@@ -216,7 +216,7 @@ class OpenSearchDistribution(ABC):
                 before_sleep=error_http_retry_log(logger, retries, method, url, payload),
                 reraise=True,
             ):
-                with (attempt, requests.Session() as s):
+                with attempt, requests.Session() as s:
                     s.auth = ("admin", self._charm.secrets.get(Scope.APP, ADMIN_PW))
 
                     request_kwargs = {
@@ -244,7 +244,8 @@ class OpenSearchDistribution(ABC):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        if not (urls := full_urls(host or self.host, self.port, endpoint, alt_hosts, check_hosts_reach)):
+        urls = full_urls(host or self.host, self.port, endpoint, alt_hosts, check_hosts_reach)
+        if not urls:
             raise OpenSearchHttpError(
                 f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
             )
