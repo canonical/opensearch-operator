@@ -14,17 +14,16 @@ from datetime import datetime
 from functools import cached_property
 from os.path import exists
 from typing import Dict, List, Optional, Set, Union
+from urllib3.exceptions import HTTPError
 
 import requests
-import urllib3.exceptions
+from requests import RequestException
+
 from charms.opensearch.v0.constants_secrets import ADMIN_PW
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
-from charms.opensearch.v0.helper_networking import (
-    get_host_ip,
-    is_reachable,
-    reachable_hosts,
-)
+from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
+from charms.opensearch.v0.helper_http import error_http_retry_log, full_urls
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
@@ -32,7 +31,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import retry, stop_after_attempt, wait_fixed, Retrying
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -209,54 +208,16 @@ class OpenSearchDistribution(ABC):
             ValueError if method or endpoint are missing
             OpenSearchHttpError if hosts are unreachable
         """
-
-        def full_urls() -> List[str]:
-            """Returns a list of reachable hosts."""
-            primary_host = host or self.host
-            target_hosts = [primary_host]
-            if alt_hosts:
-                target_hosts.extend(
-                    [alt_host for alt_host in alt_hosts if alt_host != primary_host]
-                )
-
-            if not check_hosts_reach:
-                return target_hosts
-
-            return [
-                f"https://{host_candidate}:{self.port}/{endpoint}"
-                for host_candidate in reachable_hosts(target_hosts)
-            ]
-
-        def call(
-            remaining_retries: int,
-            return_failed_resp: bool,
-            error_response: Optional[requests.Response] = None,
-        ) -> requests.Response:
+        def call(url: str) -> requests.Response:
             """Performs an HTTP request."""
-            if remaining_retries < 0:
-                if error_response is None:
-                    raise OpenSearchHttpError()
-
-                if return_failed_resp:
-                    return error_response
-
-                raise OpenSearchHttpError(
-                    response_body=error_response.text, response_code=error_response.status_code
-                )
-
-            urls = full_urls()
-            if not urls:
-                logger.error(
-                    f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
-                )
-                raise OpenSearchHttpError()
-
-            try:
-                with requests.Session() as s:
-                    s.auth = (
-                        "admin",
-                        self._charm.secrets.get(Scope.APP, ADMIN_PW),
-                    )
+            for attempt in Retrying(
+                stop=stop_after_attempt(retries),
+                wait=wait_fixed(1),
+                before_sleep=error_http_retry_log(logger, retries, method, url, payload),
+                reraise=True,
+            ):
+                with (attempt, requests.Session() as s):
+                    s.auth = ("admin", self._charm.secrets.get(Scope.APP, ADMIN_PW))
 
                     request_kwargs = {
                         "method": method.upper(),
@@ -276,17 +237,6 @@ class OpenSearchDistribution(ABC):
                     response = s.request(**request_kwargs)
                     response.raise_for_status()
                     return response
-            except (requests.exceptions.RequestException, urllib3.exceptions.HTTPError) as e:
-                logger.error(
-                    f"Request {method} to {urls[0]} with payload: {payload} failed. "
-                    f"(Attempts left: {remaining_retries})\n{e}"
-                )
-                time.sleep(1)
-                return call(
-                    remaining_retries - 1,
-                    return_failed_resp,
-                    e.response if isinstance(e, requests.exceptions.HTTPError) else None,
-                )
 
         if None in [endpoint, method]:
             raise ValueError("endpoint or method missing")
@@ -294,10 +244,25 @@ class OpenSearchDistribution(ABC):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        resp = call(retries, resp_status_code)
+        if not (urls := full_urls(host or self.host, self.port, endpoint, alt_hosts, check_hosts_reach)):
+            raise OpenSearchHttpError(
+                f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
+            )
 
-        if resp_status_code:
-            return resp.status_code
+        try:
+            resp = call(urls[0])
+            if resp_status_code:
+                return resp.status_code
+        except (RequestException, HTTPError) as e:
+            if isinstance(e, HTTPError):
+                raise OpenSearchHttpError(response_body=str(e))
+
+            if resp_status_code:
+                return e.response.status_code
+
+            raise OpenSearchHttpError(
+                response_body=e.response.text, response_code=e.response.status_code
+            )
 
         try:
             return resp.json()
