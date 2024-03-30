@@ -230,25 +230,17 @@ async def test_create_backup_and_restore(
 
     logger.info(f"Syncing credentials for {cloud_name}")
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
+
     assert (
         backup_id := await create_backup(
             ops_test,
             leader_id,
             unit_ip=unit_ip,
         )
-    ) != ""
+    ) > 0
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
-    # clear current index for testing
-    resp = await http_request(
-        ops_test,
-        "DELETE",
-        f"https://{unit_ip}:9200/{ContinuousWrites.INDEX_NAME}",
-        json_resp=True,
-    )
-    logger.debug(f"Response: {resp}")
-
     await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
     global cwrites_backup_doc_count
     cwrites_backup_doc_count[backup_id] = await index_docs_count(
@@ -390,15 +382,6 @@ async def test_restore_to_new_cluster(
 
     # Now, try a backup & restore with continuous writes
     logger.info("Final stage of DR test: try a backup & restore with continuous writes")
-    # We need to delete the existing ContinuousWrites.INDEX_NAME because the doc count will match
-    # if we use the initial_count in ContinuousWrites. However, the "max_stored_id" continues
-    # to grow after several restores. Therefore, we need to delete the index and restart.
-    await http_request(
-        ops_test,
-        "DELETE",
-        f"https://{unit_ip}:9200/{ContinuousWrites.INDEX_NAME}",
-        json_resp=True,
-    )
     writer: ContinuousWrites = ContinuousWrites(ops_test, app)
     await writer.start()
     time.sleep(10)

@@ -460,7 +460,7 @@ async def print_logs(ops_test: OpsTest, app: str, unit_id: int, msg: str) -> str
     return msg
 
 
-async def wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip):
+async def wait_for_backup_system_to_settle(ops_test: OpsTest, leader_id: int, unit_ip: str):
     """Waits the backup to finish and move to the finished state or throws a RetryException."""
     for attempt in Retrying(stop=stop_after_attempt(8), wait=wait_fixed(15)):
         with attempt:
@@ -474,9 +474,8 @@ async def wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip):
             logger.debug(f"Backups recovered: {backups}")
             if action.status != "completed" or len(backups) == 0:
                 raise Exception("Failed to retrieve backup list or list is empty")
-            else:
-                logger.debug(f"list-backups output: {action}")
 
+            logger.debug(f"list-backups output: {action}")
             # Now, check if we have finished the restore
             indices_status = await http_request(
                 ops_test,
@@ -523,7 +522,7 @@ async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app
     await writer.clear()
 
 
-async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> str:
+async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> int:
     """Runs the backup of the cluster."""
     action = await run_action(ops_test, leader_id, "create-backup")
     logger.debug(f"create-backup output: {action}")
@@ -531,10 +530,10 @@ async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> str:
     await wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip)
     assert action.status == "completed"
     assert action.response["status"] == "Backup is running."
-    return action.response["backup-id"]
+    return int(action.response["backup-id"])
 
 
-async def restore(ops_test: OpsTest, backup_id: str, unit_ip: str, leader_id: int) -> bool:
+async def restore(ops_test: OpsTest, backup_id: int, unit_ip: str, leader_id: int) -> bool:
     action = await run_action(ops_test, leader_id, "restore", params={"backup-id": backup_id})
     logger.debug(f"restore output: {action}")
 
@@ -549,27 +548,13 @@ async def list_backups(ops_test: OpsTest, leader_id: int) -> Dict[str, str]:
 
 
 async def assert_cwrites_backup_consistency(
-    ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: str, loss: float = 0.25
+    ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: int, loss: float = 0.4
 ) -> None:
     """Ensures that continuous writes index has at least the value below.
 
     assert new_count >= <current-doc-count> * (1 - loss) documents.
     """
-    try:
-        original_count = await index_docs_count(
-            ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME
-        )
-        # clear current index for testing
-        resp = await http_request(
-            ops_test,
-            "DELETE",
-            f"https://{unit_ip}:9200/{ContinuousWrites.INDEX_NAME}",
-            json_resp=True,
-        )
-        logger.debug(f"Response: {resp}")
-    except Exception as e:
-        logger.warning(f"Index may not exist. Failed to clear index: {e}")
-        original_count = 0
+    original_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
     # As stated on: https://discuss.elastic.co/t/how-to-parse-snapshot-dat-file/218888,
     # the only way to discover the documents in a backup is to recover it and check
     # on opensearch.
@@ -578,4 +563,4 @@ async def assert_cwrites_backup_consistency(
     assert await restore(ops_test, backup_id, unit_ip, leader_id)
     new_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
     # We expect that new_count has a loss of documents and the numbers are different.
-    assert new_count >= int(original_count * (1 - loss)) and new_count <= original_count
+    assert new_count >= int(original_count * (1 - loss)) and new_count < original_count

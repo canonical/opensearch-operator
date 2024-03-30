@@ -329,7 +329,7 @@ class OpenSearchBackup(Object):
             event.fail("Failed: previous restore is still in progress")
             return
         # Now, validate the backup is working
-        backup_id = event.params.get("backup-id")
+        backup_id = str(event.params.get("backup-id"))
         if not self._is_backup_available_for_restore(backup_id):
             event.fail(f"Failed: no backup-id {backup_id}")
             return
