@@ -668,8 +668,7 @@ class TestBackups(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
     def test_on_create_backup_action_success(self, mock_request, mock_time):
         event = MagicMock()
-        mock_time.now().strftime.return_value = "2023.01.01-00.00.00"
-        self.charm.backup._format_backup_id = MagicMock(return_value="2023-01-01T00:00:00Z")
+        mock_time.now().strftime.return_value = "2023-01-01T00:00:00Z"
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
         self.charm.backup.is_backup_in_progress = MagicMock(return_value=False)
         self.charm.backup.get_service_status = MagicMock(return_value="Backup completed.")
@@ -677,7 +676,7 @@ class TestBackups(unittest.TestCase):
         assert mock_request.call_args[0][0] == "PUT"
         assert (
             mock_request.call_args[0][1]
-            == f"_snapshot/{S3_REPOSITORY}/2023.01.01-00.00.00?wait_for_completion=false"
+            == f"_snapshot/{S3_REPOSITORY}/2023-01-01t00:00:00z?wait_for_completion=false"
         )
         event.set_results.assert_called_with(
             {"backup-id": "2023-01-01T00:00:00Z", "status": "Backup is running."}
