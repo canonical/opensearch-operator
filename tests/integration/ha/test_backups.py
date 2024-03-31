@@ -390,8 +390,10 @@ async def test_restore_to_new_cluster(
     for backup_id in backups.keys():
         assert await restore(ops_test, backup_id, unit_ip, leader_id)
         count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
-        logger.debug(f"Current count is {count}, expected {cwrites_backup_doc_count[backup_id]}")
+
+        # Ensure we have the same doc count as we had on the original cluster
         assert count == cwrites_backup_doc_count[backup_id]
+
         # restart the continuous writes and check the cluster is still accessible post restore
         assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
 

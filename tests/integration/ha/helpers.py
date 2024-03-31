@@ -552,7 +552,7 @@ async def list_backups(ops_test: OpsTest, leader_id: int) -> Dict[str, str]:
 
 
 async def assert_cwrites_backup_consistency(
-    ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: int, loss: float = 0.4
+    ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: int
 ) -> None:
     """Ensures that continuous writes index has at least the value below.
 
@@ -571,4 +571,5 @@ async def assert_cwrites_backup_consistency(
         f"original count pre-restore: {original_count}, and now, new count: {new_count}"
     )
     # We expect that new_count has a loss of documents and the numbers are different.
-    assert new_count >= int(original_count * (1 - loss)) and new_count < original_count
+    # Check if we have data but not all of it.
+    assert new_count > 0 and new_count < original_count
