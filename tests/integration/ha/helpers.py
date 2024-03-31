@@ -522,22 +522,21 @@ async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app
     await writer.clear()
 
 
-async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> int:
+async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> str:
     """Runs the backup of the cluster."""
     action = await run_action(ops_test, leader_id, "create-backup")
     logger.debug(f"create-backup output: {action}")
-
     await wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip)
     assert action.status == "completed"
     assert action.response["status"] == "Backup is running."
-    return int(action.response["backup-id"])
+    return action.response["backup-id"]
 
 
-async def restore(ops_test: OpsTest, backup_id: int, unit_ip: str, leader_id: int) -> bool:
+async def restore(ops_test: OpsTest, backup_id: str, unit_ip: str, leader_id: int) -> bool:
     """Restores a backup."""
     id = backup_id
-    if not isinstance(backup_id, int):
-        id = int(backup_id)
+    if not isinstance(id, str):
+        id = str(backup_id)
     action = await run_action(ops_test, leader_id, "restore", params={"backup-id": id})
     logger.debug(f"restore output: {action}")
 

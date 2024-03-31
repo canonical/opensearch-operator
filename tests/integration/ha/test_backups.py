@@ -240,7 +240,7 @@ async def test_create_backup_and_restore(
             leader_id,
             unit_ip=unit_ip,
         )
-    ) > 0
+    ) != ""
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
@@ -306,7 +306,7 @@ async def test_remove_and_readd_s3_relation(
             leader_id,
             unit_ip=unit_ip,
         )
-    ) > 0
+    ) != ""
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
@@ -408,7 +408,7 @@ async def test_restore_to_new_cluster(
             leader_id,
             unit_ip=unit_ip,
         )
-    ) > 0
+    ) != ""
     # continuous writes checks
     await assert_continuous_writes_increasing(writer)
     await assert_continuous_writes_consistency(ops_test, writer, app)

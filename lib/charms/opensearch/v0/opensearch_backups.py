@@ -46,7 +46,7 @@ class OpenSearchBaseCharm(CharmBase):
 
 import json
 import logging
-import math
+from datetime import datetime
 from typing import Any, Dict, List, Set, Tuple
 
 from charms.data_platform_libs.v0.s3 import S3Requirer
@@ -98,6 +98,8 @@ REPO_NOT_CREATED_ERR = "repository type [s3] does not exist"
 REPO_NOT_ACCESS_ERR = f"[{S3_REPOSITORY}] path [{S3_REPO_BASE_PATH}] is not accessible"
 REPO_CREATING_ERR = "Could not determine repository generation from root blobs"
 RESTORE_OPEN_INDEX_WITH_SAME_NAME = "because an open index with same name already exists"
+BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
 class OpenSearchBackupError(OpenSearchError):
@@ -166,12 +168,11 @@ class OpenSearchBackup(Object):
 
     def _format_backup_list(self, backups: List[Tuple[Any]]) -> str:
         """Formats provided list of backups as a table."""
-        output = ["{:<10s} | {:s}".format(" backup-id ", "backup-status")]
+        output = ["{:<20s} | {:s}".format(" backup-id", "backup-status")]
         output.append("-" * len(output[0]))
 
         for backup_id, backup_status in backups:
-            tab = " " * math.floor((10 - len(str(backup_id))) / 2)
-            output.append("{:<10s} | {:s}".format(f"{tab}{backup_id}", backup_status))
+            output.append("{:<20s} | {:s}".format(backup_id, backup_status))
         return "\n".join(output)
 
     def _generate_backup_list_output(self, backups: Dict[str, Any]) -> str:
@@ -270,11 +271,21 @@ class OpenSearchBackup(Object):
         return indices_to_close
 
     def _restore(self, backup_id: int) -> Dict[str, Any]:
-        """Runs the restore and processes the response."""
+        """Runs the restore and processes the response.
+
+        Backups come in the user-formatted string, YYYY-MM-DDTHH:MM:SSZ.
+        """
         backup_indices = self._list_backups()[backup_id]["indices"]
+        # now, fix the id format for the actual request
+        id = self._format_backup_id(
+            backup_id,
+            format_from=BACKUP_ID_FORMAT,
+            format_to=OPENSEARCH_BACKUP_ID_FORMAT,
+        )
+        # The restore call will close indices if there is a matching name.
         output = self._request(
             "POST",
-            f"_snapshot/{S3_REPOSITORY}/{backup_id}/_restore?wait_for_completion=true",
+            f"_snapshot/{S3_REPOSITORY}/{id}/_restore?wait_for_completion=true",
             payload={
                 "indices": ",".join(
                     [f"-{idx}" for idx in INDICES_TO_EXCLUDE_AT_RESTORE & set(backup_indices)]
@@ -329,7 +340,7 @@ class OpenSearchBackup(Object):
             event.fail("Failed: previous restore is still in progress")
             return
         # Now, validate the backup is working
-        backup_id = str(event.params.get("backup-id"))
+        backup_id = event.params.get("backup-id")
         if not self._is_backup_available_for_restore(backup_id):
             event.fail(f"Failed: no backup-id {backup_id}")
             return
@@ -350,6 +361,7 @@ class OpenSearchBackup(Object):
             OpenSearchRestoreIndexClosingError,
             OpenSearchRestoreCheckError,
         ) as e:
+            self.charm.status.clear(RestoreInProgress)
             event.fail(f"Failed: {e}")
             return
 
@@ -358,11 +370,13 @@ class OpenSearchBackup(Object):
         state = self.get_service_status(output)
         if state != BackupServiceState.SUCCESS:
             event.fail(f"Restore failed with {state}")
+            self.charm.status.clear(RestoreInProgress)
             return
 
         shards = output.get("shards", {})
         if shards.get("successful", -1) != shards.get("total", 0):
             event.fail("Failed to restore all the shards")
+            self.charm.status.clear(RestoreInProgress)
             return
 
         msg = "Restore is complete" if self._is_restore_complete() else "Restore in progress..."
@@ -377,10 +391,8 @@ class OpenSearchBackup(Object):
             event.fail("Failed: backup service is not configured or busy")
             return
 
-        new_backup_id = None
+        new_backup_id = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
         try:
-            # Increment by 1 the latest snapshot_id (set to 0 if no snapshot was previously made)
-            new_backup_id = int(max(self._list_backups().keys() or [0])) + 1
             logger.debug(
                 f"Create backup action request id {new_backup_id} response is:"
                 + self.get_service_status(
@@ -395,15 +407,18 @@ class OpenSearchBackup(Object):
                 )
             )
 
-            logger.info(f"Backup request submitted with backup-id {new_backup_id}")
-            logger.info(f"Backup completed with backup-id {new_backup_id}")
+            logger.info(
+                f"Backup request submitted with backup-id {self._format_backup_id(new_backup_id)}"
+            )
         except (
             OpenSearchHttpError,
             OpenSearchListBackupError,
         ) as e:
             event.fail(f"Failed with exception: {e}")
             return
-        event.set_results({"backup-id": new_backup_id, "status": "Backup is running."})
+        event.set_results(
+            {"backup-id": self._format_backup_id(new_backup_id), "status": "Backup is running."}
+        )
 
     def _can_unit_perform_backup(self, event: ActionEvent) -> bool:
         """Checks if the actions run from this unit can be executed or not.
@@ -428,11 +443,26 @@ class OpenSearchBackup(Object):
             return False
         return not self.is_backup_in_progress()
 
+    def _format_backup_id(
+        self,
+        backup_id: str,
+        format_from: str = OPENSEARCH_BACKUP_ID_FORMAT,
+        format_to: str = BACKUP_ID_FORMAT,
+    ) -> str:
+        """Formats the backup id.
+
+        Used this proxy function to remove the setup complexity in the loop at _list_backups.
+        """
+        return datetime.strftime(
+            datetime.strptime(backup_id, format_from),
+            format_to,
+        )
+
     def _list_backups(self) -> Dict[int, str]:
         """Returns a mapping of snapshot ids / state."""
         response = self._request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
         return {
-            snapshot["snapshot"]: {
+            self._format_backup_id(snapshot["snapshot"]): {
                 "state": snapshot["state"],
                 "indices": snapshot.get("indices", []),
             }
