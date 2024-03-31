@@ -38,7 +38,7 @@ from ..helpers import (
     http_request,
     run_action,
 )
-from ..helpers_deployments import wait_until
+from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .helpers import (
     app_name,
@@ -149,9 +149,12 @@ async def _configure_s3(
     ops_test: OpsTest, config: Dict[str, str], credentials: Dict[str, str], app_name: str
 ) -> None:
     await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
+    s3_integrator_id = (await get_application_units(ops_test, S3_INTEGRATOR))[
+        0
+    ].id  # We redeploy s3-integrator once, so we may have anything >=0 as id
     await run_action(
         ops_test,
-        0,
+        s3_integrator_id,
         "sync-s3-credentials",
         params=credentials,
         app=S3_INTEGRATOR,
@@ -338,30 +341,42 @@ async def test_restore_to_new_cluster(
     1) At each backup restored, check our track of doc count vs. current index count
     2) Try to write to that new index.
     """
-    app: str = (await app_name(ops_test)) or APP_NAME
-
+    if app := await app_name(ops_test):
+        return
     logging.info("Destroying the application")
-    await ops_test.model.remove_application(app, block_until_done=True)
-    app_num_units: int = 3
-    my_charm = await ops_test.build_charm(".")
-    config: Dict[str, str] = cloud_configs[cloud_name]
-
-    # Redeploy
     await asyncio.gather(
-        ops_test.model.deploy(my_charm, num_units=app_num_units, series=SERIES),
+        ops_test.model.remove_application(S3_INTEGRATOR, block_until_done=True),
+        ops_test.model.remove_application(app, block_until_done=True),
+        ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True),
     )
+
+    logging.info("Deploying a new cluster")
+    my_charm = await ops_test.build_charm(".")
+    await ops_test.model.set_config(MODEL_CONFIG)
+    # Deploy TLS Certificates operator.
+    config = {"ca-common-name": "CN_CA"}
+
+    await asyncio.gather(
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
+        ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
+    )
+
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
+    # Credentials not set yet, this will move the opensearch to blocked state
+    # Credentials are set per test scenario
+    await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
 
     leader_id = await get_leader_unit_id(ops_test)
     unit_ip = await get_leader_unit_ip(ops_test)
+    config: Dict[str, str] = cloud_configs[cloud_name]
 
     logger.info(f"Syncing credentials for {cloud_name}")
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
