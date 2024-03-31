@@ -303,7 +303,7 @@ async def test_remove_and_readd_s3_relation(
             leader_id,
             unit_ip=unit_ip,
         )
-    ) != ""
+    ) > 0
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
@@ -391,10 +391,12 @@ async def test_restore_to_new_cluster(
             leader_id,
             unit_ip=unit_ip,
         )
-    ) != ""
+    ) > 0
     # continuous writes checks
     await assert_continuous_writes_increasing(writer)
     await assert_continuous_writes_consistency(ops_test, writer, app)
+    # This assert assures we have taken a new backup, after the last restore from the original
+    # cluster. That means the index is writable.
     await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
     # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
     await writer.clear()

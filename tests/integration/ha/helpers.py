@@ -534,7 +534,11 @@ async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> int:
 
 
 async def restore(ops_test: OpsTest, backup_id: int, unit_ip: str, leader_id: int) -> bool:
-    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": backup_id})
+    """Restores a backup."""
+    id = backup_id
+    if not isinstance(backup_id, int):
+        id = int(backup_id)
+    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": id})
     logger.debug(f"restore output: {action}")
 
     await wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip)
