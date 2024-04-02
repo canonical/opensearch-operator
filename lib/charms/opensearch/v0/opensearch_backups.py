@@ -66,6 +66,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
+from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
 from charms.opensearch.v0.opensearch_plugins import OpenSearchBackupPlugin, PluginState
 from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
@@ -92,7 +93,11 @@ S3_REPOSITORY = "s3-repository"
 
 S3_REPO_BASE_PATH = "/"
 
-INDICES_TO_EXCLUDE_AT_RESTORE = {".opendistro_security", ".opensearch-observability"}
+INDICES_TO_EXCLUDE_AT_RESTORE = {
+    ".opendistro_security",
+    ".opensearch-observability",
+    OpenSearchOpsLock.LOCK_INDEX,
+}
 
 REPO_NOT_CREATED_ERR = "repository type [s3] does not exist"
 REPO_NOT_ACCESS_ERR = f"[{S3_REPOSITORY}] path [{S3_REPO_BASE_PATH}] is not accessible"
