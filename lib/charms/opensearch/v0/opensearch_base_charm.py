@@ -66,7 +66,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
-from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
+from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import (
     ALLOCS_TO_DELETE,
     VOTING_TO_DELETE,
@@ -87,7 +87,6 @@ from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
-from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
@@ -105,7 +104,7 @@ from ops.charm import (
     StorageDetachingEvent,
     UpdateStatusEvent,
 )
-from ops.framework import EventBase
+from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
@@ -127,8 +126,19 @@ STORAGE_NAME = "opensearch-data"
 logger = logging.getLogger(__name__)
 
 
+class _StartOpenSearch(EventBase):
+    pass
+
+
+class _RestartOpenSearch(EventBase):
+    pass
+
+
 class OpenSearchBaseCharm(CharmBase):
     """Base class for OpenSearch charms."""
+
+    _start_opensearch_event = EventSource(_StartOpenSearch)
+    _restart_opensearch_event = EventSource(_RestartOpenSearch)
 
     def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
         super().__init__(*args)
@@ -147,7 +157,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.tls = OpenSearchTLS(self, TLS_RELATION)
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
-        self.ops_lock = OpenSearchOpsLock(self)
+        self.node_lock = OpenSearchNodeLock(self)
         self.cos_integration = COSAgentProvider(
             self,
             relation_name=COSRelationName,
@@ -161,13 +171,13 @@ class OpenSearchBaseCharm(CharmBase):
         self.plugin_manager = OpenSearchPluginManager(self)
         self.backup = OpenSearchBackup(self)
 
-        self.service_manager = RollingOpsManager(
-            self, relation=SERVICE_MANAGER, callback=self._start_opensearch
-        )
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
         self.peer_cluster_requirer = OpenSearchPeerClusterRequirer(self)
+
+        self.framework.observe(self._start_opensearch_event, self._start_opensearch)
+        self.framework.observe(self._restart_opensearch_event, self._restart_opensearch)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
@@ -271,7 +281,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         # request the start of OpenSearch
         self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
-        self.on[self.service_manager.name].acquire_lock.emit(callback_override="_start_opensearch")
+        self._start_opensearch_event.emit()
 
     def _apply_peer_cm_directives_and_check_if_can_start(self) -> bool:
         """Apply the directives computed by the opensearch peer cluster manager."""
@@ -404,7 +414,9 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
         # acquire lock to ensure only 1 unit removed at a time
-        self.ops_lock.acquire()
+        if not self.node_lock.acquired:
+            # Raise uncaught exception to prevent Juju from removing unit
+            raise Exception("Unable to acquire lock: Another unit is being removed.")
 
         # if the leader is departing, and this hook fails "leader elected" won"t trigger,
         # so we want to re-balance the node roles from here
@@ -446,7 +458,7 @@ class OpenSearchBaseCharm(CharmBase):
                     raise OpenSearchHAError(ClusterHealthUnknown)
         finally:
             # release lock
-            self.ops_lock.release()
+            self.node_lock.release()
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
@@ -523,9 +535,7 @@ class OpenSearchBaseCharm(CharmBase):
                 raise OpenSearchNotFullyReadyError()
             self.status.set(MaintenanceStatus(PluginConfigCheck))
             if self.plugin_manager.run():
-                self.on[self.service_manager.name].acquire_lock.emit(
-                    callback_override="_restart_opensearch"
-                )
+                self._restart_opensearch_event.emit()
             self.status.clear(PluginConfigCheck)
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
@@ -615,9 +625,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal and self.is_admin_user_configured() and self.is_tls_fully_configured():
-            self.on[self.service_manager.name].acquire_lock.emit(
-                callback_override="_restart_opensearch"
-            )
+            self._restart_opensearch_event.emit()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
@@ -696,8 +704,14 @@ class OpenSearchBaseCharm(CharmBase):
 
             self.tls.request_new_admin_certificate()
 
-    def _start_opensearch(self, event: EventBase) -> None:  # noqa: C901
+    def _start_opensearch(
+        self, event: _StartOpenSearch | _RestartOpenSearch
+    ) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
+        if not self.node_lock.acquired:
+            logger.debug("Lock to start opensearch not acquired. Will retry next event")
+            event.defer()
+            return
         self.peers_data.delete(Scope.UNIT, "started")
         if self.opensearch.is_started():
             try:
@@ -707,24 +721,17 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         if not self._can_service_start():
-            self.peers_data.delete(Scope.UNIT, "starting")
+            self.node_lock.release()
             event.defer()
             return
 
-        if self.peers_data.get(Scope.UNIT, "starting", False) and self.opensearch.is_failed():
-            self.peers_data.delete(Scope.UNIT, "starting")
+        # TODO: need to check if not first execution after acquiring lock?
+        if self.opensearch.is_failed():
+            self.node_lock.release()
             event.defer()
             return
 
         self.unit.status = WaitingStatus(WaitingToStart)
-
-        rel = self.model.get_relation(PeerRelationName)
-        for unit in rel.units.union({self.unit}):
-            if rel.data[unit].get("starting") == "True":
-                event.defer()
-                return
-
-        self.peers_data.put(Scope.UNIT, "starting", True)
 
         try:
             # Retrieve the nodes of the cluster, needed to configure this node
@@ -736,12 +743,12 @@ class OpenSearchBaseCharm(CharmBase):
             # Set the configuration of the node
             self._set_node_conf(nodes)
         except OpenSearchHttpError:
-            self.peers_data.delete(Scope.UNIT, "starting")
+            self.node_lock.release()
             event.defer()
             return
         except OpenSearchProvidedRolesException as e:
             logger.exception(e)
-            self.peers_data.delete(Scope.UNIT, "starting")
+            self.node_lock.release()
             event.defer()
             self.unit.status = BlockedStatus(str(e))
             return
@@ -758,7 +765,7 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
         except OpenSearchStartError as e:
             logger.exception(e)
-            self.peers_data.delete(Scope.UNIT, "starting")
+            self.node_lock.release()
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
 
@@ -785,8 +792,8 @@ class OpenSearchBaseCharm(CharmBase):
         # Remove the exclusions that could not be removed when no units were online
         self.opensearch_exclusions.delete_current()
 
-        # Remove the 'starting' flag on the unit
-        self.peers_data.delete(Scope.UNIT, "starting")
+        self.node_lock.release()
+
         self.peers_data.put(Scope.UNIT, "started", True)
 
         # apply post_start fixes to resolve start related upstream bugs
@@ -824,16 +831,20 @@ class OpenSearchBaseCharm(CharmBase):
         # 3. Remove the exclusions
         self.opensearch_exclusions.delete_current()
 
-    def _restart_opensearch(self, event: EventBase) -> None:
+    def _restart_opensearch(self, event: _RestartOpenSearch) -> None:
         """Restart OpenSearch if possible."""
-        if not self.peers_data.get(Scope.UNIT, "starting", False):
-            try:
-                self._stop_opensearch()
-            except OpenSearchStopError as e:
-                logger.exception(e)
-                event.defer()
-                self.status.set(WaitingStatus(ServiceIsStopping))
-                return
+        if not self.node_lock.acquired:
+            logger.debug("Lock to restart opensearch not acquired. Will retry next event")
+            event.defer()
+            return
+
+        try:
+            self._stop_opensearch()
+        except OpenSearchStopError as e:
+            logger.exception(e)
+            event.defer()
+            self.status.set(WaitingStatus(ServiceIsStopping))
+            return
 
         self._start_opensearch(event)
 
@@ -1145,9 +1156,7 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         self.status.set(WaitingStatus(WaitingToStart))
-        self.on[self.service_manager.name].acquire_lock.emit(
-            callback_override="_restart_opensearch"
-        )
+        self._restart_opensearch_event.emit()
 
     def _recompute_roles_if_needed(self, event: RelationChangedEvent):
         """Recompute node roles:self-healing that didn't trigger leader related event occurred."""

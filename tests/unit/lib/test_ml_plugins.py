@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import charms
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn, PluginState
-from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -63,7 +62,6 @@ class TestOpenSearchKNN(unittest.TestCase):
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
-    @patch.object(RollingOpsManager, "_on_acquire_lock")
     @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
