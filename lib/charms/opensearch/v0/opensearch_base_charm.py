@@ -127,11 +127,17 @@ logger = logging.getLogger(__name__)
 
 
 class _StartOpenSearch(EventBase):
-    pass
+    """Attempt to acquire lock & start OpenSearch.
+
+    This event will be deferred until OpenSearch starts.
+    """
 
 
 class _RestartOpenSearch(EventBase):
-    pass
+    """Attempt to acquire lock & restart OpenSearch.
+
+    This event will be deferred until OpenSearch stops. Then, `_StartOpenSearch` will be emitted.
+    """
 
 
 class OpenSearchBaseCharm(CharmBase):
