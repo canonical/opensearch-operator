@@ -136,7 +136,10 @@ class OpenSearchNodeLock(ops.Object):
                 # No unit has lock
                 return False
             raise
-        return document_data["unit-name"] == self._charm.unit.name
+        try:
+            return document_data["unit-name"] == self._charm.unit.name
+        except KeyError:
+            raise Exception(f"foo {document_data=}")
 
     @property
     def acquired(self) -> bool:
