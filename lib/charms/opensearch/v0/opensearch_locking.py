@@ -122,7 +122,6 @@ class OpenSearchNodeLock(ops.Object):
     """
 
     _OPENSEARCH_INDEX = ".charm_node_lock"
-    # TODO: retries in requests
 
     def __init__(self, charm: "opensearch_base_charm.OpenSearchBaseCharm"):
         super().__init__(charm, "opensearch-node-lock")  # TODO: key
