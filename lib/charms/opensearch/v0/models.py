@@ -3,7 +3,8 @@
 
 """Cluster-related data structures / model classes."""
 from abc import ABC
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Literal, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
@@ -31,8 +32,10 @@ class Model(ABC, BaseModel):
         return self.dict()
 
     @classmethod
-    def from_dict(cls, input_dict: Dict[str, Any]):
+    def from_dict(cls, input_dict: Optional[Dict[str, Any]]):
         """Create a new instance of this class from a json/dict repr."""
+        if not input_dict:  # to handle when classes defined defaults
+            return cls()
         return cls(**input_dict)
 
     @classmethod
@@ -91,8 +94,8 @@ class Node(Model):
 class DeploymentType(BaseStrEnum):
     """Nature of a sub cluster deployment."""
 
-    MAIN_CLUSTER_MANAGER = "main-cluster-manager"
-    CLUSTER_MANAGER_FAILOVER = "cluster-manager-failover"
+    MAIN_ORCHESTRATOR = "main-orchestrator"
+    FAILOVER_ORCHESTRATOR = "failover-orchestrator"
     OTHER = "other"
 
 
@@ -141,22 +144,6 @@ class DeploymentState(Model):
         return values
 
 
-class PeerClusterRelDataCredentials(Model):
-    """Model class for credentials passed on the PCluster relation."""
-
-    admin_username: str
-    admin_password: str
-
-
-class PeerClusterRelData(Model):
-    """Model class for the PCluster relation data."""
-
-    cluster_name: Optional[str]
-    cm_nodes: List[str]
-    credentials: PeerClusterRelDataCredentials
-    tls_ca: str
-
-
 class PeerClusterConfig(Model):
     """Model class for the multi-clusters related config set by the user."""
 
@@ -201,4 +188,68 @@ class DeploymentDescription(Model):
     start: StartMode
     pending_directives: List[Directive]
     typ: DeploymentType
+    app: str
     state: DeploymentState = DeploymentState(value=State.ACTIVE)
+    promotion_time: Optional[float]
+
+    @root_validator
+    def set_promotion_time(cls, values):  # noqa: N805
+        """Set promotion time of a failover to a main CM."""
+        if values["typ"] == DeploymentType.MAIN_ORCHESTRATOR:
+            values["promotion_time"] = datetime.now().timestamp()
+
+        return values
+
+
+class PeerClusterRelDataCredentials(Model):
+    """Model class for credentials passed on the PCluster relation."""
+
+    admin_username: str
+    admin_password: str
+    admin_password_hash: str
+    admin_tls: Dict[str, Optional[str]]
+
+
+class PeerClusterRelData(Model):
+    """Model class for the PCluster relation data."""
+
+    cluster_name: str
+    cm_nodes: List[Node]
+    credentials: PeerClusterRelDataCredentials
+    deployment_desc: Optional[DeploymentDescription]
+
+
+class PeerClusterRelErrorData(Model):
+    """Model class for the PCluster relation data."""
+
+    cluster_name: Optional[str]
+    should_sever_relation: bool
+    should_wait: bool
+    blocked_message: str
+    deployment_desc: Optional[DeploymentDescription]
+
+
+class PeerClusterOrchestrators(Model):
+    """Model class for the PClusters registered main/failover clusters."""
+
+    _TYPES = Literal["main", "failover"]
+
+    main_rel_id: int = -1
+    main_app: Optional[str]
+    failover_rel_id: int = -1
+    failover_app: Optional[str]
+
+    def delete(self, typ: _TYPES) -> None:
+        """Delete an orchestrator from the current pair."""
+        if typ == "main":
+            self.main_rel_id = -1
+            self.main_app = None
+        else:
+            self.failover_rel_id = -1
+            self.failover_app = None
+
+    def promote_failover(self) -> None:
+        """Delete previous main orchestrator and promote failover if any."""
+        self.main_app = self.failover_app
+        self.main_rel_id = self.failover_rel_id
+        self.delete("failover")

@@ -13,6 +13,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterState
+from charms.opensearch.v0.models import StartMode
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops.model import BlockedStatus, WaitingStatus
@@ -39,6 +40,7 @@ class HealthColors:
     YELLOW_TEMP = "yellow-temp"
     RED = "red"
     UNKNOWN = "unknown"
+    IGNORE = "ignore"
 
 
 class OpenSearchHealth:
@@ -60,6 +62,21 @@ class OpenSearchHealth:
             status = self._fetch_status(host, wait_for_green_first)
             if not status:
                 return HealthColors.UNKNOWN
+
+            # the health depends on data nodes, for large deployments: an ML cluster
+            # may not be concerned about reporting or relying on the health of the
+            # data nodes in other clusters. We should therefore get this info from
+            # the deployment descriptor which has an overview of all the cluster
+            if not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc()):
+                return HealthColors.UNKNOWN
+
+            # compute health only in clusters where data nodes exist
+            compute_health = (
+                deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+                or "data" in deployment_desc.config.roles
+            )
+            if not compute_health:
+                return HealthColors.IGNORE
 
             if app:
                 self.apply_for_app(status)

@@ -7,7 +7,10 @@ import subprocess
 
 import pytest
 import yaml
-from charms.opensearch.v0.constants_charm import OPENSEARCH_SNAP_REVISION
+from charms.opensearch.v0.constants_charm import (
+    OPENSEARCH_SNAP_REVISION,
+    TLSRelationMissing,
+)
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
@@ -43,18 +46,11 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         num_units=DEFAULT_NUM_UNITS,
         series=SERIES,
     )
-    await ops_test.model.wait_for_idle(wait_for_exact_units=DEFAULT_NUM_UNITS, timeout=1800)
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_status(ops_test: OpsTest) -> None:
-    """Verifies that the application and unit are active."""
     await wait_until(
         ops_test,
         apps=[APP_NAME],
         wait_for_exact_units=DEFAULT_NUM_UNITS,
-        apps_statuses=["blocked"],
+        apps_full_statuses={APP_NAME: {"blocked": [TLSRelationMissing]}},
     )
     assert len(ops_test.model.applications[APP_NAME].units) == DEFAULT_NUM_UNITS
 
@@ -72,10 +68,11 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[APP_NAME],
-        status="active",
-        timeout=1200,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=DEFAULT_NUM_UNITS,
     )
 
