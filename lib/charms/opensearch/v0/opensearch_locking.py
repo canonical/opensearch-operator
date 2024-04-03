@@ -38,7 +38,6 @@ class _PeerRelationEndpoint(ops.Object):
     def __init__(self, charm: ops.CharmBase):
         super().__init__(charm, self._NAME)
         self._charm = charm
-        self._relation = self._charm.model.get_relation(self._NAME)
         self.framework.observe(
             self._charm.on[self._NAME].relation_changed, self._on_peer_relation_changed
         )
@@ -94,6 +93,12 @@ class _PeerRelationEndpoint(ops.Object):
     def _unit_with_lock(self):
         assert self._relation
         self._relation.data[self._charm.app].pop("unit-with-lock", None)
+
+    @property
+    def _relation(self):
+        # Use property instead of `self._relation =` in `__init__()` because of ops Harness unit
+        # tests
+        return self._charm.model.get_relation(self._NAME)
 
     def _on_peer_relation_changed(self, _=None):
         """Grant & release lock"""
