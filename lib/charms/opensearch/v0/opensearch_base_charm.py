@@ -704,9 +704,7 @@ class OpenSearchBaseCharm(CharmBase):
 
             self.tls.request_new_admin_certificate()
 
-    def _start_opensearch(  # noqa: C901
-        self, event: _StartOpenSearch | _RestartOpenSearch
-    ) -> None:
+    def _start_opensearch(self, event: _StartOpenSearch) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if not self.node_lock.acquired:
             logger.debug("Lock to start opensearch not acquired. Will retry next event")
@@ -847,7 +845,7 @@ class OpenSearchBaseCharm(CharmBase):
             self.status.set(WaitingStatus(ServiceIsStopping))
             return
 
-        self._start_opensearch(event)
+        self._start_opensearch_event.emit()
 
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""
