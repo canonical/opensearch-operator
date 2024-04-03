@@ -74,10 +74,10 @@ class OpenSearchCmdError(OpenSearchError):
 class OpenSearchHttpError(OpenSearchError):
     """Exception thrown when an OpenSearch REST call fails."""
 
-    def __init__(self, response_body: Optional[str] = None, response_code: Optional[int] = None):
+    def __init__(self, response_text: Optional[str] = None, response_code: Optional[int] = None):
         try:
-            self.response_text = response_body
-            self.response_body = json.loads(response_body)
+            self.response_text = response_text
+            self.response_body = json.loads(response_text)
         except (json.JSONDecodeError, TypeError):
             self.response_body = {}
         finally:
