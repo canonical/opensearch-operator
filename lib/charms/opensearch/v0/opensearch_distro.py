@@ -16,6 +16,7 @@ from os.path import exists
 from typing import Dict, List, Optional, Set, Union
 
 import requests
+import urllib3.exceptions
 from charms.opensearch.v0.constants_secrets import ADMIN_PW
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
@@ -28,9 +29,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from requests import RequestException
 from tenacity import Retrying, retry, stop_after_attempt, wait_fixed
-from urllib3.exceptions import HTTPError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -254,8 +253,8 @@ class OpenSearchDistribution(ABC):
             resp = call(urls[0])
             if resp_status_code:
                 return resp.status_code
-        except (RequestException, HTTPError) as e:
-            if isinstance(e, HTTPError) or not e.response:
+        except (requests.RequestException, urllib3.exceptions.HTTPError) as e:
+            if not isinstance(e, requests.HTTPError) or not e.response:
                 raise OpenSearchHttpError(response_body=str(e))
 
             if resp_status_code:
