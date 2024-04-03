@@ -236,7 +236,7 @@ class OpenSearchNodeLock(ops.Object):
                 try:
                     self._opensearch.request(
                         "DELETE",
-                        endpoint=f"/{self._OPENSEARCH_INDEX}/_doc/0",
+                        endpoint=f"/{self._OPENSEARCH_INDEX}/_doc/0?refresh=true",
                         host=host,
                         alt_hosts=self._charm.alt_hosts,
                         retries=3,
