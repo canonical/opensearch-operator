@@ -707,9 +707,9 @@ class OpenSearchBaseCharm(CharmBase):
 
             self.tls.request_new_admin_certificate()
 
-    def _start_opensearch(
+    def _start_opensearch(  # noqa: C901
         self, event: _StartOpenSearch | _RestartOpenSearch
-    ) -> None:  # noqa: C901
+    ) -> None:
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if not self.node_lock.acquired:
             logger.debug("Lock to start opensearch not acquired. Will retry next event")
