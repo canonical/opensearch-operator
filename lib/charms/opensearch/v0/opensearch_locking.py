@@ -99,8 +99,7 @@ class _PeerRelationEndpoint(ops.Object):
         """Grant & release lock"""
         if not self._charm.unit.is_leader():
             return
-        if not self._relation:
-            return
+        assert self._relation
         if self._unit_with_lock and self._unit_requested_lock(
             self._charm.model.get_unit(self._unit_with_lock)
         ):
