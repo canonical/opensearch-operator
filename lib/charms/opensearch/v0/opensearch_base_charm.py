@@ -521,23 +521,23 @@ class OpenSearchBaseCharm(CharmBase):
         try:
             if not self.plugin_manager.check_plugin_manager_ready():
                 raise OpenSearchNotFullyReadyError()
-            self.status.set(MaintenanceStatus(PluginConfigCheck))
+            self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
             if self.plugin_manager.run():
                 self.on[self.service_manager.name].acquire_lock.emit(
                     callback_override="_restart_opensearch"
                 )
-            self.status.clear(PluginConfigCheck)
+            self.status.clear(PluginConfigCheck, app=True)
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
                 logger.warning("Plugin management: cluster not ready yet at config changed")
             else:
-                self.status.set(BlockedStatus(PluginConfigChangeError))
+                self.status.set(BlockedStatus(PluginConfigChangeError), app=True)
             event.defer()
             # Decided to defer the event. We can clean up the status and reset it once the
             # config-changed is called again.
-            self.status.clear(PluginConfigCheck)
+            self.status.clear(PluginConfigCheck, app=True)
             return
-        self.status.clear(PluginConfigChangeError)
+        self.status.clear(PluginConfigChangeError, app=True)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
