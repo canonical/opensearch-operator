@@ -70,7 +70,6 @@ def harness():
     )
 
     # Replace some unused methods that will be called as part of set_leader with mock
-    charm.service_manager._update_locks = MagicMock()
     charm._put_admin_user = MagicMock()
     harness_obj.add_relation(PeerRelationName, "opensearch")
     harness_obj.set_leader(is_leader=True)
