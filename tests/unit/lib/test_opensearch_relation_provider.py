@@ -4,8 +4,8 @@
 import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
+import charms.opensearch.v0.opensearch_locking as opensearch_locking
 from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
-from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.model import ActiveStatus, BlockedStatus
@@ -28,7 +28,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.opensearch_provider = self.charm.opensearch_provider
 
         self.peers_rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
-        self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
+        self.lock_fallback_rel_id = self.harness.add_relation(
+            opensearch_locking._PeerRelationEndpoint._NAME, self.charm.app.name
+        )
 
         # Define an opensearch_provider relation
         self.client_rel_id = self.harness.add_relation(ClientRelationName, "application")
