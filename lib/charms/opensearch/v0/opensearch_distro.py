@@ -257,10 +257,13 @@ class OpenSearchDistribution(ABC):
                 f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
             )
 
+        resp = None
         try:
             resp = call(urls[0])
             if resp_status_code:
                 return resp.status_code
+
+            return resp.json()
         except (requests.RequestException, urllib3.exceptions.HTTPError) as e:
             if not isinstance(e, requests.RequestException) or e.response is None:
                 raise OpenSearchHttpError(response_text=str(e))
@@ -271,11 +274,10 @@ class OpenSearchDistribution(ABC):
             raise OpenSearchHttpError(
                 response_text=e.response.text, response_code=e.response.status_code
             )
-
-        try:
-            return resp.json()
         except requests.JSONDecodeError:
             raise OpenSearchHttpError(response_text=resp.text)
+        except Exception as e:
+            raise OpenSearchHttpError(response_text=str(e))
 
     def write_file(self, path: str, data: str, override: bool = True):
         """Persists data into file. Useful for files generated on the fly, such as certs etc."""
