@@ -29,7 +29,13 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from tenacity import Retrying, retry, stop_after_attempt, wait_fixed
+from tenacity import (
+    Retrying,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_fixed,
+)
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -210,6 +216,8 @@ class OpenSearchDistribution(ABC):
         def call(url: str) -> requests.Response:
             """Performs an HTTP request."""
             for attempt in Retrying(
+                retry=retry_if_exception_type(requests.RequestException)
+                | retry_if_exception_type(urllib3.exceptions.HTTPError),
                 stop=stop_after_attempt(retries),
                 wait=wait_fixed(1),
                 before_sleep=error_http_retry_log(logger, retries, method, url, payload),
