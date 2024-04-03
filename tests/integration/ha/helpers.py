@@ -551,7 +551,7 @@ async def list_backups(ops_test: OpsTest, leader_id: int) -> Dict[str, str]:
     return json.loads(action.response["backups"])
 
 
-async def assert_cwrites_backup_consistency(
+async def assert_restore_indices_and_compare_consistency(
     ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: int
 ) -> None:
     """Ensures that continuous writes index has at least the value below.

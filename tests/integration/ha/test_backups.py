@@ -44,7 +44,7 @@ from .helpers import (
     app_name,
     assert_continuous_writes_consistency,
     assert_continuous_writes_increasing,
-    assert_cwrites_backup_consistency,
+    assert_restore_indices_and_compare_consistency,
     create_backup,
     list_backups,
     restore,
@@ -244,7 +244,9 @@ async def test_create_backup_and_restore(
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
-    await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
+    await assert_restore_indices_and_compare_consistency(
+        ops_test, app, leader_id, unit_ip, backup_id
+    )
     global cwrites_backup_doc_count
     cwrites_backup_doc_count[backup_id] = await index_docs_count(
         ops_test,
@@ -310,7 +312,9 @@ async def test_remove_and_readd_s3_relation(
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
-    await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
+    await assert_restore_indices_and_compare_consistency(
+        ops_test, app, leader_id, unit_ip, backup_id
+    )
     global cwrites_backup_doc_count
     cwrites_backup_doc_count[backup_id] = await index_docs_count(
         ops_test,
@@ -414,7 +418,9 @@ async def test_restore_to_new_cluster(
     await assert_continuous_writes_consistency(ops_test, writer, app)
     # This assert assures we have taken a new backup, after the last restore from the original
     # cluster. That means the index is writable.
-    await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
+    await assert_restore_indices_and_compare_consistency(
+        ops_test, app, leader_id, unit_ip, backup_id
+    )
     # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
     await writer.clear()
 
@@ -565,6 +571,8 @@ async def test_change_config_and_backup_restore(
         # continuous writes checks
         await assert_continuous_writes_increasing(writer)
         await assert_continuous_writes_consistency(ops_test, writer, app)
-        await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
+        await assert_restore_indices_and_compare_consistency(
+            ops_test, app, leader_id, unit_ip, backup_id
+        )
         # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
         await writer.clear()
