@@ -66,6 +66,23 @@ BackupsPath = f"opensearch/{uuid.uuid4()}"
 cwrites_backup_doc_count = {}
 
 
+# Keeps track of the current continuous_writes object that we are using.
+# This is relevant for the case where we have a test failure and we need to clean
+# the cluster
+global_cwrites = None
+
+
+@pytest.fixture(scope="function")
+async def force_clear_cwrites_index():
+    """Force clear the global cwrites_backup_doc_count."""
+    global global_cwrites
+    try:
+        if global_cwrites:
+            await global_cwrites.clear()
+    except Exception:
+        pass
+
+
 @pytest.fixture(scope="session")
 def cloud_configs(
     github_secrets: Dict[str, str], microceph: Dict[str, str]
@@ -337,6 +354,7 @@ async def test_restore_to_new_cluster(
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
     cloud_name: str,
+    force_clear_cwrites_index,
 ) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
 
@@ -404,6 +422,11 @@ async def test_restore_to_new_cluster(
     # Now, try a backup & restore with continuous writes
     logger.info("Final stage of DR test: try a backup & restore with continuous writes")
     writer: ContinuousWrites = ContinuousWrites(ops_test, app)
+
+    # store the global cwrites object
+    global global_cwrites
+    global_cwrites = writer
+
     await writer.start()
     time.sleep(10)
     assert (
@@ -540,6 +563,7 @@ async def test_change_config_and_backup_restore(
     ops_test: OpsTest,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
+    force_clear_cwrites_index,
 ) -> None:
     """Run for each cloud and update the cluster config."""
     unit_ip: str = await get_leader_unit_ip(ops_test)
@@ -554,6 +578,11 @@ async def test_change_config_and_backup_restore(
         # Start the ContinuousWrites here instead of bringing as a fixture because we want to do
         # it for every cloud config we have and we have to stop it before restore, right down.
         writer: ContinuousWrites = ContinuousWrites(ops_test, app, initial_count=initial_count)
+
+        # store the global cwrites object
+        global global_cwrites
+        global_cwrites = writer
+
         await writer.start()
         time.sleep(10)
 
