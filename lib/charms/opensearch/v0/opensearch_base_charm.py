@@ -845,6 +845,7 @@ class OpenSearchBaseCharm(CharmBase):
             self._stop_opensearch()
         except OpenSearchStopError as e:
             logger.exception(e)
+            # TODO: should lock be released?
             event.defer()
             self.status.set(WaitingStatus(ServiceIsStopping))
             return
