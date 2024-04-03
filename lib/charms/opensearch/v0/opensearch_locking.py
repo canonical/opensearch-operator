@@ -51,7 +51,7 @@ class _PeerRelationEndpoint(ops.Object):
         return _PeerLockState.NOT_ACQUIRED
 
     def request_lock(self):
-        """Request lock for this unit"""
+        """Request lock for this unit."""
         if not self._relation:
             return
         self._relation.data[self._charm.unit]["lock-requested"] = json.dumps(True)
@@ -60,7 +60,7 @@ class _PeerRelationEndpoint(ops.Object):
             self._on_peer_relation_changed()
 
     def release_lock(self):
-        """Release lock for this unit"""
+        """Release lock for this unit."""
         if not self._relation:
             return
         self._relation.data[self._charm.unit].pop("lock-requested", None)
@@ -69,7 +69,7 @@ class _PeerRelationEndpoint(ops.Object):
             self._on_peer_relation_changed()
 
     def _unit_requested_lock(self, unit: ops.Unit):
-        """Whether unit requested lock"""
+        """Whether unit requested lock."""
         assert self._relation
         value = self._relation.data[unit].get("lock-requested")
         if not value:
@@ -101,7 +101,7 @@ class _PeerRelationEndpoint(ops.Object):
         return self._charm.model.get_relation(self._NAME)
 
     def _on_peer_relation_changed(self, _=None):
-        """Grant & release lock"""
+        """Grant & release lock."""
         if not self._charm.unit.is_leader():
             return
         assert self._relation
@@ -134,7 +134,7 @@ class OpenSearchNodeLock(ops.Object):
         self._peer = _PeerRelationEndpoint(self._charm)
 
     def _lock_acquired(self, host):
-        """Whether this unit has already acquired OpenSearch lock"""
+        """Whether this unit has already acquired OpenSearch lock."""
         try:
             document_data = self._opensearch.request(
                 "GET",
@@ -151,8 +151,8 @@ class OpenSearchNodeLock(ops.Object):
         return document_data["unit-name"] == self._charm.unit.name
 
     @property
-    def acquired(self) -> bool:
-        """Attempt to acquire lock
+    def acquired(self) -> bool:  # noqa: C901
+        """Attempt to acquire lock.
 
         Returns:
             Whether lock was acquired
@@ -222,7 +222,7 @@ class OpenSearchNodeLock(ops.Object):
             return self._peer.state is _PeerLockState.ACQUIRED_BY_THIS_UNIT
 
     def release(self):
-        """Release lock
+        """Release lock.
 
         Limitation: if lock acquired via OpenSearch document and all units offline, OpenSearch
         document lock will not be released
