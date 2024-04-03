@@ -254,7 +254,7 @@ class OpenSearchDistribution(ABC):
             if resp_status_code:
                 return resp.status_code
         except (requests.RequestException, urllib3.exceptions.HTTPError) as e:
-            if not isinstance(e, requests.HTTPError) or not e.response:
+            if not isinstance(e, requests.HTTPError):
                 raise OpenSearchHttpError(response_body=str(e))
 
             if resp_status_code:
