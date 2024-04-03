@@ -53,6 +53,8 @@ class _PeerRelationEndpoint(ops.Object):
 
     def request_lock(self):
         """Request lock for this unit"""
+        if not self._relation:
+            return
         self._relation.data[self._charm.unit]["lock-requested"] = json.dumps(True)
         if self._charm.unit.is_leader():
             # A separate relation-changed event won't get fired
@@ -60,6 +62,8 @@ class _PeerRelationEndpoint(ops.Object):
 
     def release_lock(self):
         """Release lock for this unit"""
+        if not self._relation:
+            return
         self._relation.data[self._charm.unit].pop("lock-requested", None)
         if self._charm.unit.is_leader():
             # A separate relation-changed event won't get fired
@@ -67,6 +71,7 @@ class _PeerRelationEndpoint(ops.Object):
 
     def _unit_requested_lock(self, unit: ops.Unit):
         """Whether unit requested lock"""
+        assert self._relation
         value = self._relation.data[unit].get("lock-requested")
         if not value:
             return False
@@ -82,15 +87,19 @@ class _PeerRelationEndpoint(ops.Object):
 
     @_unit_with_lock.setter
     def _unit_with_lock(self, value: str):
+        assert self._relation
         self._relation.data[self._charm.app]["unit-with-lock"] = value
 
     @_unit_with_lock.deleter
     def _unit_with_lock(self):
+        assert self._relation
         self._relation.data[self._charm.app].pop("unit-with-lock", None)
 
     def _on_peer_relation_changed(self, _=None):
         """Grant & release lock"""
         if not self._charm.unit.is_leader():
+            return
+        if not self._relation:
             return
         if self._unit_with_lock and self._unit_requested_lock(
             self._charm.model.get_unit(self._unit_with_lock)
