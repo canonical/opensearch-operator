@@ -186,8 +186,7 @@ class OpenSearchNodeLock(ops.Object):
                     # Index already created
                     pass
                 else:
-                    logger.exception("Error creating OpenSearch lock index")
-                    return False
+                    raise
             # Attempt to create document id 0
             try:
                 self._opensearch.request(
@@ -209,8 +208,7 @@ class OpenSearchNodeLock(ops.Object):
                         # `self._lock_acquired()`)
                         return False
                 else:
-                    logger.exception("Error creating OpenSearch lock document")
-                    return False
+                    raise
             # Lock acquired
             # Release peer databag lock, if any
             self._peer.release_lock()
