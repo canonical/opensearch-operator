@@ -56,6 +56,7 @@ class _PeerRelationEndpoint(ops.Object):
             return
         self._relation.data[self._charm.unit]["lock-requested"] = json.dumps(True)
         if self._charm.unit.is_leader():
+            logger.debug("[Node lock] Requested peer lock as leader unit")
             # A separate relation-changed event won't get fired
             self._on_peer_relation_changed()
 
@@ -65,6 +66,7 @@ class _PeerRelationEndpoint(ops.Object):
             return
         self._relation.data[self._charm.unit].pop("lock-requested", None)
         if self._charm.unit.is_leader():
+            logger.debug("[Node lock] Released peer lock as leader unit")
             # A separate relation-changed event won't get fired
             self._on_peer_relation_changed()
 
@@ -109,13 +111,16 @@ class _PeerRelationEndpoint(ops.Object):
             self._charm.model.get_unit(self._unit_with_lock)
         ):
             # Lock still in use, do not release
+            logger.debug("[Node lock] (leader) lock still in use")
             return
         # TODO: adjust which unit gets priority on lock?
         for unit in (*self._relation.units, self._charm.unit):
             if self._unit_requested_lock(unit):
                 self._unit_with_lock = unit.name
+                logger.debug(f"[Node lock] (leader) granted peer lock to {unit.name=}")
                 break
         else:
+            logger.debug("[Node lock] (leader) cleared peer lock")
             del self._unit_with_lock
 
 
@@ -158,7 +163,9 @@ class OpenSearchNodeLock(ops.Object):
             Whether lock was acquired
         """
         # In peer databag, check if lock acquired by another unit
+        logger.debug(f"[Node lock] {self._peer.state=}")
         if self._peer.state is _PeerLockState.ACQUIRED_BY_ANOTHER_UNIT:
+            logger.debug("[Node lock] Not acquired: another unit has peer lock")
             return False
 
         if self._opensearch.is_node_up():
@@ -166,6 +173,7 @@ class OpenSearchNodeLock(ops.Object):
         else:
             host = None
         if host or self._charm.alt_hosts:
+            logger.debug("[Node lock] Using opensearch for lock")
             # Acquire opensearch lock
             # Create index if it doesn't exist
             try:
@@ -206,19 +214,26 @@ class OpenSearchNodeLock(ops.Object):
                         # Another unit has lock
                         # (Or document deleted after last request & before request in
                         # `self._lock_acquired()`)
+                        logger.debug("[Node lock] Not acquired: another unit has opensearch lock")
                         return False
                 else:
                     raise
             # Lock acquired
             # Release peer databag lock, if any
+            logger.debug("[Node lock] Acquired via opensearch")
             self._peer.release_lock()
+            logger.debug("[Node lock] Released redundant peer lock (if held)")
             return True
         else:
+            logger.debug("[Node lock] Using peer databag for lock")
             # Request peer databag lock
             self._peer.request_lock()
             # If expression is True:
             # - Lock granted in previous Juju event
             # - OR, unit is leader & lock granted in this Juju event
+            logger.debug(
+                f"[Node lock] Attempted to acquire peer lock. Result: {self._peer.state=}"
+            )
             return self._peer.state is _PeerLockState.ACQUIRED_BY_THIS_UNIT
 
     def release(self):
@@ -227,13 +242,16 @@ class OpenSearchNodeLock(ops.Object):
         Limitation: if lock acquired via OpenSearch document and all units offline, OpenSearch
         document lock will not be released
         """
+        logger.debug("[Node lock] Releasing lock")
         if self._opensearch.is_node_up():
             host = self._charm.unit_ip
         else:
             host = None
         if host or self._charm.alt_hosts:
+            logger.debug("[Node lock] Checking which unit has opensearch lock")
             # Check if this unit currently has lock
             if self._lock_acquired(host):
+                logger.debug("[Node lock] Releasing opensearch lock")
                 # Delete document id 0
                 try:
                     self._opensearch.request(
@@ -246,4 +264,7 @@ class OpenSearchNodeLock(ops.Object):
                 except OpenSearchHttpError as e:
                     if e.response_code != 404:
                         raise
+                logger.debug("[Node lock] Released opensearch lock")
         self._peer.release_lock()
+        logger.debug("[Node lock] Released peer lock (if held)")
+        logger.debug("[Node lock] Released lock")
