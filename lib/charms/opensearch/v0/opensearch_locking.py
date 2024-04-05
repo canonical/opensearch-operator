@@ -128,7 +128,7 @@ class OpenSearchNodeLock(ops.Object):
     _OPENSEARCH_INDEX = ".charm_node_lock"
 
     def __init__(self, charm: "opensearch_base_charm.OpenSearchBaseCharm"):
-        super().__init__(charm, "opensearch-node-lock")  # TODO: key
+        super().__init__(charm, "opensearch-node-lock")
         self._charm = charm
         self._opensearch = charm.opensearch
         self._peer = _PeerRelationEndpoint(self._charm)
