@@ -81,9 +81,11 @@ class OpenSearchHttpError(OpenSearchError):
         except (json.JSONDecodeError, TypeError):
             self.response_body = {}
         self.response_code = response_code
-        super().__init__(
-            f"HTTP error {self.response_code=}\n{self.response_body=}\n{self.response_text=}"
-        )
+        if self.response_body:
+            message = f"HTTP error {self.response_code=}\n{self.response_body=}"
+        else:
+            message = f"HTTP error {self.response_code=}\n{self.response_text=}"
+        super().__init__(message)
 
 
 class OpenSearchHAError(OpenSearchError):
