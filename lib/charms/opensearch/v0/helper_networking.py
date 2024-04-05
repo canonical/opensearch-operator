@@ -6,7 +6,7 @@ import logging
 import os
 import socket
 import subprocess
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from ops.charm import CharmBase
 from ops.model import Unit

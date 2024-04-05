@@ -20,7 +20,7 @@ import urllib3.exceptions
 from charms.opensearch.v0.constants_secrets import ADMIN_PW
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
-from charms.opensearch.v0.helper_http import error_http_retry_log, full_urls
+from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -156,7 +156,8 @@ class OpenSearchDistribution(ABC):
     def is_node_up(self, host: str = None) -> bool:
         """Get status of node. This assumes OpenSearch is Running.
 
-        Defaults to this unit"""
+        Defaults to this unit
+        """
         if host is None:
             host = self.host
         if not is_reachable(host, self.port):

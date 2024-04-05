@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 """File containing http related helpers."""
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from tenacity import RetryCallState
 
