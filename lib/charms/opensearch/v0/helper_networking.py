@@ -94,13 +94,3 @@ def is_reachable(host: str, port: int) -> bool:
         return False
     finally:
         s.close()
-
-
-def reachable_hosts(hosts: List[str]) -> List[str]:
-    """Returns a list of reachable hosts."""
-    reachable: List[str] = []
-    for host_candidate in hosts:
-        if is_reachable(host_candidate, 9200):
-            reachable.append(host_candidate)
-
-    return reachable

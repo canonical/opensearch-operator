@@ -153,13 +153,17 @@ class OpenSearchDistribution(ABC):
         """Check if OpenSearch daemon has failed."""
         pass
 
-    def is_node_up(self) -> bool:
-        """Get status of current node. This assumes OpenSearch is Running."""
-        if not self.is_started():
+    def is_node_up(self, host: str = None) -> bool:
+        """Get status of node. This assumes OpenSearch is Running.
+
+        Defaults to this unit"""
+        if host is None:
+            host = self.host
+        if not is_reachable(host, self.port):
             return False
 
         try:
-            resp_code = self.request("GET", "/_nodes", resp_status_code=True)
+            resp_code = self.request("GET", "/_nodes", host=host, resp_status_code=True)
             return resp_code < 400
         except (OpenSearchHttpError, Exception):
             return False
@@ -190,7 +194,6 @@ class OpenSearchDistribution(ABC):
         payload: Optional[Union[str, Dict[str, any], List[Dict[str, any]]]] = None,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
-        check_hosts_reach: bool = True,
         resp_status_code: bool = False,
         retries: int = 0,
         timeout: int = 5,
@@ -203,7 +206,6 @@ class OpenSearchDistribution(ABC):
             payload: str, JSON obj or array body payload.
             host: host of the node we wish to make a request on, by default current host.
             alt_hosts: in case the default host is unreachable, fallback/alternative hosts.
-            check_hosts_reach: if true, performs a ping for each host
             resp_status_code: whether to only return the HTTP code from the response.
             retries: number of retries
             timeout: number of seconds before a timeout happens
@@ -228,7 +230,7 @@ class OpenSearchDistribution(ABC):
 
                     request_kwargs = {
                         "method": method.upper(),
-                        "url": urls[0],
+                        "url": url,
                         "verify": f"{self.paths.certs}/chain.pem",
                         "headers": {
                             "Accept": "application/json",
@@ -251,7 +253,11 @@ class OpenSearchDistribution(ABC):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        urls = full_urls(host or self.host, self.port, endpoint, alt_hosts, check_hosts_reach)
+        urls = [
+            f"https://{host_candidate}:{self.port}/{endpoint}"
+            for host_candidate in (host or self.host, *alt_hosts)
+            if self.is_node_up(host_candidate)
+        ]
         if not urls:
             raise OpenSearchHttpError(
                 f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
