@@ -930,9 +930,7 @@ class OpenSearchBaseCharm(CharmBase):
             return False
 
         self.status.set(WaitingStatus(WaitingToStart))
-        self.on[self.service_manager.name].acquire_lock.emit(
-            callback_override="_restart_opensearch"
-        )
+        self._restart_opensearch_event.emit()
         return True
 
     def _purge_users(self):
