@@ -153,13 +153,12 @@ class OpenSearchDistribution(ABC):
         """Check if OpenSearch daemon has failed."""
         pass
 
-    def is_node_up(self, host: str = None) -> bool:
+    def is_node_up(self, host: Optional[str] = None) -> bool:
         """Get status of node. This assumes OpenSearch is Running.
 
         Defaults to this unit
         """
-        if host is None:
-            host = self.host
+        host = host or self.host
         if not is_reachable(host, self.port):
             return False
 
