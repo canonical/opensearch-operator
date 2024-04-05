@@ -1200,6 +1200,7 @@ class OpenSearchBaseCharm(CharmBase):
                     roles=roles,
                     ip=node.ip,
                     app_name=node.app_name,
+                    unit_number=self.unit_id,
                     temperature=temperature,
                 )
 
@@ -1302,7 +1303,7 @@ class OpenSearchBaseCharm(CharmBase):
     @property
     def unit_id(self) -> int:
         """ID of the current unit."""
-        return int(self.unit.name.split("/")[1])
+        return int(self.unit.name.split("/")[-1])
 
     @property
     def alt_hosts(self) -> Optional[List[str]]:
