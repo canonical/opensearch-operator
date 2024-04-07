@@ -415,3 +415,9 @@ class OpenSearchProvider(Object):
 
         if endpoints != databag_endpoints:
             self.opensearch_provides.set_endpoints(relation.id, endpoints)
+
+    def update_dashboards_password(self):
+        """Update each Opensearch Dashboards relation with the latest kibanaserver."""
+        pwd = self.secrets.get(Scope.APP, self.secrets.password_key(KibanaserverUser))
+        for relation in self.dashboards_relations:
+            self.opensearch_provides.set_credentials(relation.id, KibanaserverUser, pwd)

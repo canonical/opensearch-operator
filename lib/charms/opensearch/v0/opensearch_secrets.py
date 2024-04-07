@@ -14,6 +14,7 @@ information for the Opensearch charm.
 import logging
 from typing import Dict, Optional, Union
 
+from charms.opensearch.v0.constants_charm import KibanaserverUser
 from charms.opensearch.v0.constants_secrets import PW_POSTFIX
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchSecretInsertionError
@@ -69,17 +70,24 @@ class OpenSearchSecrets(Object, RelationDataStore):
             logging.info(f"Label {event.secret.label} was meaningless for us, returning")
             return
 
+        keys = [CertType.APP_ADMIN.val, self._charm.secrets.password_key(KibanaserverUser)]
         if (
             label_parts["application_name"] != self._charm.app.name
             or label_parts["scope"] != Scope.APP
-            or label_parts["key"] != CertType.APP_ADMIN.val
+            or label_parts["key"] not in keys
         ):
             logger.info("Secret %s was not relevant for us.", event.secret.label)
             return
 
         logger.debug("Secret change for %s", str(label_parts["key"]))
-        if not self._charm.unit.is_leader():
+
+        if not self._charm.unit.is_leader() and label_parts["key"] == CertType.APP_ADMIN.val:
             self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
+
+        if self._charm.unit.is_leader() and label_parts["key"] == self._charm.secrets.password_key(
+            KibanaserverUser
+        ):
+            self._charm.opensearch_provider.update_dashboards_password()
 
     @property
     def implements_secrets(self):
