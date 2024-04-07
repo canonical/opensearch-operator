@@ -17,10 +17,10 @@ from .helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
-    get_admin_secrets,
     get_application_unit_ids,
     get_leader_unit_id,
     get_leader_unit_ip,
+    get_secrets,
     http_request,
     run_action,
 )
@@ -80,7 +80,7 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     test_url = f"https://{leader_ip}:9200/"
 
     # 2. run the action after finishing the config of TLS
-    result = await get_admin_secrets(ops_test)
+    result = await get_secrets(ops_test)
     assert result.get("username") == "admin"
     assert result.get("password")
     assert result.get("ca-chain")
@@ -115,11 +115,11 @@ async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
     assert result.status == "failed"
 
     # 3. change password and verify the new password works and old password not
-    password0 = (await get_admin_secrets(ops_test, leader_id))["password"]
+    password0 = (await get_secrets(ops_test, leader_id))["password"]
     result = await run_action(ops_test, leader_id, "set-password", {"password": "new_pwd"})
     password1 = result.response.get("admin-password")
     assert password1
-    assert password1 == (await get_admin_secrets(ops_test, leader_id))["password"]
+    assert password1 == (await get_secrets(ops_test, leader_id))["password"]
 
     http_resp_code = await http_request(ops_test, "GET", test_url, resp_status_code=True)
     assert http_resp_code == 200
@@ -139,6 +139,53 @@ async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
 
     http_resp_code = await http_request(
         ops_test, "GET", test_url, resp_status_code=True, user_password=password1
+    )
+    assert http_resp_code == 401
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+@pytest.mark.parametrize("user", [("monitor"), ("kibanaserver")])
+async def test_actions_rotate_system_user_password(ops_test: OpsTest, user) -> None:
+    """Test the rotation and change of admin password."""
+    leader_ip = await get_leader_unit_ip(ops_test)
+    test_url = f"https://{leader_ip}:9200/"
+
+    leader_id = await get_leader_unit_id(ops_test)
+
+    # run the action w/o password parameter
+    password0 = (await get_secrets(ops_test, leader_id, user))["password"]
+    result = await run_action(ops_test, leader_id, "set-password", {"username": user})
+    password1 = result.response.get(f"{user}-password")
+    assert password1 != password0
+
+    # 1. change password with auto-generated one
+    http_resp_code = await http_request(
+        ops_test, "GET", test_url, resp_status_code=True, user=user, user_password=password1
+    )
+    assert http_resp_code == 200
+
+    http_resp_code = await http_request(
+        ops_test, "GET", test_url, resp_status_code=True, user=user, user_password=password0
+    )
+    assert http_resp_code == 401
+
+    # 2. change password and verify the new password works and old password not
+    password0 = (await get_secrets(ops_test, leader_id, user))["password"]
+    result = await run_action(
+        ops_test, leader_id, "set-password", {"username": user, "password": "new_pwd"}
+    )
+    password1 = result.response.get(f"{user}-password")
+    assert password1
+    assert password1 == (await get_secrets(ops_test, leader_id, user))["password"]
+
+    http_resp_code = await http_request(
+        ops_test, "GET", test_url, resp_status_code=True, user=user, user_password=password1
+    )
+    assert http_resp_code == 200
+
+    http_resp_code = await http_request(
+        ops_test, "GET", test_url, resp_status_code=True, user=user, user_password=password0
     )
     assert http_resp_code == 401
 
