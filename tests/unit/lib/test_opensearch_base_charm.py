@@ -105,7 +105,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     )
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
-    def test_on_leader_elected(self, _put_admin_user, _purge_users, deployment_desc):
+    @patch(f"{BASE_CHARM_CLASS}._put_kibanaserver_user")
+    def test_on_leader_elected(self, _, _put_admin_user, _purge_users, deployment_desc):
         """Test on leader elected event."""
         deployment_desc.return_value = self.deployment_descriptions["ok"]
         self.harness.set_leader(True)
@@ -127,8 +128,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     )
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
+    @patch(f"{BASE_CHARM_CLASS}._put_kibanaserver_user")
     def test_on_leader_elected_index_initialised(
-        self, _put_admin_user, _purge_users, deployment_desc
+        self, _, _put_admin_user, _purge_users, deployment_desc
     ):
         # security_index_initialised
         self.peers_data.put(Scope.APP, "security_index_initialised", True)
@@ -162,10 +164,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._initialize_security_index")
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
+    @patch(f"{BASE_CHARM_CLASS}._put_kibanaserver_user")
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
     def test_on_start(
         self,
         request,
+        _,
         _put_admin_user,
         _purge_users,
         _initialize_security_index,

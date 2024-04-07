@@ -26,6 +26,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.app = self.charm.app
         self.unit = self.charm.unit
         self.opensearch_provider = self.charm.opensearch_provider
+        self.secrets = self.charm.secrets
 
         self.peers_rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.lock_fallback_rel_id = self.harness.add_relation(
@@ -37,7 +38,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.harness.add_relation_unit(self.client_rel_id, "application/0")
 
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
+    @patch("charms.opensearch.v0.opensearch_distro.YamlConfigSetter.put")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
     @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
@@ -101,6 +102,67 @@ class TestOpenSearchProvider(unittest.TestCase):
         _set_credentials.assert_not_called()
         _set_version.assert_not_called()
 
+    @patch("charm.OpenSearchOperatorCharm._purge_users")
+    @patch("charms.opensearch.v0.opensearch_distro.YamlConfigSetter.put")
+    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
+    @patch(
+        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
+        new_callable=PropertyMock,
+        return_value="1",
+    )
+    @patch(
+        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request",
+        return_value={"status": "OK"},
+    )
+    @patch(
+        "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.create_opensearch_users"
+    )
+    @patch(
+        "charms.opensearch.v0.opensearch_relation_provider.generate_hashed_password",
+        return_value=("hashed_pw", "password"),
+    )
+    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_credentials")
+    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides.set_version")
+    def test_on_index_requested_kibanaserver(
+        self,
+        _set_version,
+        _set_credentials,
+        _gen_pw,
+        _create_users,
+        _request,
+        _opensearch_version,
+        _is_node_up,
+        _,
+        __,
+    ):
+        event = MagicMock()
+        event.relation.id = 1
+        # username = self.opensearch_provider._relation_username(event.relation)
+        username = "kibanaserver"
+        # hashed_pw, password = _gen_pw.return_value
+
+        self.harness.set_leader(False)
+        self.opensearch_provider._on_index_requested(event)
+        _is_node_up.assert_not_called()
+
+        self.harness.set_leader(True)
+        password = self.harness.charm.secrets.get("app", self.secrets.password_key(username))
+        _is_node_up.return_value = False
+        self.opensearch_provider._on_index_requested(event)
+        event.defer.assert_called()
+
+        _is_node_up.return_value = True
+        event.extra_user_roles = "kibana_server"
+        event.index = ".opensearch-dashboards"
+        self.unit.status = ActiveStatus()
+        self.opensearch_provider._on_index_requested(event)
+        _create_users.assert_not_called()
+        _set_credentials.assert_called_with(event.relation.id, username, password)
+        _set_version.assert_called_with(event.relation.id, _opensearch_version())
+        self.assertNotIsInstance(self.unit.status, BlockedStatus)
+        _set_credentials.reset_mock()
+        _set_version.reset_mock()
+
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_user")
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_role")
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.patch_user")
@@ -148,8 +210,9 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
+    @patch("charm.OpenSearchOperatorCharm._put_kibanaserver_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_relation_broken(self, _, __, _is_node_up, _remove_users, _unit_departing):
+    def test_on_relation_broken(self, _, __, ___, _is_node_up, _remove_users, _unit_departing):
         event = MagicMock()
         event.relation.id = 0
         depart_flag = self.opensearch_provider._depart_flag(event.relation)
@@ -179,8 +242,9 @@ class TestOpenSearchProvider(unittest.TestCase):
     )
     @patch("charm.OpenSearchOperatorCharm._get_nodes")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
+    @patch("charm.OpenSearchOperatorCharm._put_kibanaserver_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_update_endpoints(self, _, __, _nodes, _is_node_up, _set_endpoints):
+    def test_update_endpoints(self, _, __, ___, _nodes, _is_node_up, _set_endpoints):
         self.harness.set_leader(True)
         node = MagicMock()
         node.ip = "4.4.4.4"
