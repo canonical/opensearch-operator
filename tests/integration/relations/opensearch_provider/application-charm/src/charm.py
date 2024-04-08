@@ -45,10 +45,16 @@ class ApplicationCharm(CharmBase):
         # permissions.
         self.admin_opensearch = OpenSearchRequires(self, "admin", "admin-index", "admin,default")
 
+        # Simulating Opensearch Dashboards connection request
+        self.dashboards = OpenSearchRequires(
+            self, "opensearch-dashboards", ".opensearch-dashboards", "kibana_server"
+        )
+
         self.relations = {
             "first-index": self.first_opensearch,
             "second-index": self.second_opensearch,
             "admin": self.admin_opensearch,
+            "opensearch-dashboards": self.dashboards,
         }
 
         for relation_handler in self.relations.values():
@@ -89,7 +95,7 @@ class ApplicationCharm(CharmBase):
         return connected
 
     def _get_requires(self, relation_name):
-        for requires in [self.admin_opensearch, self.first_opensearch, self.second_opensearch]:
+        for requires in self.relations.values():
             if requires.relation_name == relation_name:
                 return requires
 
@@ -97,7 +103,7 @@ class ApplicationCharm(CharmBase):
         if not hasattr(event, "relation"):
             return
 
-        requires = self._get_requires(event.relation.name)
+        requires = self.relations.get(event.relation.name)
         tls_ca = requires.fetch_relation_field(event.relation.id, "tls-ca")
 
         if not tls_ca:

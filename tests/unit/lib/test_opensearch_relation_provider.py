@@ -6,6 +6,16 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms.opensearch.v0.opensearch_locking as opensearch_locking
 from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
+from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
+from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
+from charms.opensearch.v0.constants_charm import (
+    ClientRelationName,
+    KibanaserverRole,
+    KibanaserverUser,
+    PeerRelationName,
+)
+from charms.opensearch.v0.helper_security import generate_password
+from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.model import ActiveStatus, BlockedStatus
@@ -13,6 +23,8 @@ from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
 from tests.helpers import patch_network_get
+
+DASHBOARDS_CHARM = "opensearch-dashboards"
 
 
 @patch_network_get("1.1.1.1")
@@ -146,7 +158,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         _is_node_up.assert_not_called()
 
         self.harness.set_leader(True)
-        password = self.harness.charm.secrets.get("app", self.secrets.password_key(username))
+        password = self.harness.charm.secrets.get(Scope.APP, self.secrets.password_key(username))
         _is_node_up.return_value = False
         self.opensearch_provider._on_index_requested(event)
         event.defer.assert_called()
@@ -254,3 +266,101 @@ class TestOpenSearchProvider(unittest.TestCase):
         endpoints = [f"{node.ip}:{self.charm.opensearch.port}" for node in _nodes.return_value]
         self.opensearch_provider.update_endpoints(relation)
         _set_endpoints.assert_called_with(relation.id, ",".join(endpoints))
+
+    def add_dashboard_relation(self):
+        opensearch_relation = self.harness.add_relation(
+            "opensearch-client", "opensearch-dashboards"
+        )
+        self.harness.update_relation_data(
+            opensearch_relation,
+            f"{DASHBOARDS_CHARM}",
+            {"requested-secrets": '["username", "password", "tls", "tls-ca", "uris"]'},
+        )
+        event = MagicMock()
+        relation = MagicMock()
+        relation.id = opensearch_relation
+        event.extra_user_roles = "kibana_server"
+        event.index = ".opensearch-dashboards"
+        event.relation = relation
+        self.opensearch_provider._on_index_requested(event)
+        return opensearch_relation
+
+    @patch(
+        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request",
+        return_value={"status": 200, "version": {"number": "2.12"}},
+    )
+    @patch(
+        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up",
+        return_value=True,
+    )
+    @patch("charm.OpenSearchOperatorCharm._get_nodes")
+    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
+    @patch("charm.OpenSearchOperatorCharm._put_kibanaserver_user")
+    @patch("charm.OpenSearchOperatorCharm._purge_users")
+    def test_update_dashboards_password(
+        self,
+        _,
+        __,
+        ___,
+        _nodes,
+        _is_node_up,
+        ____,  # ______
+    ):
+        self.harness.set_leader(True)
+        node = MagicMock()
+        node.ip = "4.4.4.4"
+        _nodes.return_value = [node]
+
+        # Assign Kibanaserver password
+        username = KibanaserverUser
+        orig_pwd = generate_password()
+        pw_label_field = self.secrets.password_key(username)
+        self.harness.charm.secrets.put(Scope.APP, pw_label_field, orig_pwd)
+
+        # Create 2 relations
+        opensearch_relation1 = self.add_dashboard_relation()
+        opensearch_relation2 = self.add_dashboard_relation()
+
+        self.harness.update_relation_data(
+            opensearch_relation1, f"{DASHBOARDS_CHARM}", {"extra-user-roles": KibanaserverRole}
+        )
+
+        self.harness.update_relation_data(
+            opensearch_relation2, f"{DASHBOARDS_CHARM}", {"extra-user-roles": KibanaserverRole}
+        )
+
+        # Check the relations have the correct Kibanaserver password
+        peer_secret_label = "opensearch:app:kibanaserver-password"
+        rel1_secret_label = f"opensearch-client.{opensearch_relation1}.user.secret"
+        rel2_secret_label = f"opensearch-client.{opensearch_relation2}.user.secret"
+
+        peer_secret = self.harness.model.get_secret(label=peer_secret_label)
+        rel1_secret = self.harness.model.get_secret(label=rel1_secret_label)
+        rel2_secret = self.harness.model.get_secret(label=rel2_secret_label)
+
+        peer_password = peer_secret.get_content().get(pw_label_field)
+        assert peer_password == orig_pwd
+        assert peer_password == rel1_secret.get_content().get("password")
+        assert peer_password == rel2_secret.get_content().get("password")
+
+        # Change local Kibanaserver password
+        new_pwd = generate_password()
+        pw_label_field = self.secrets.password_key(username)
+        self.harness.charm.secrets.put(Scope.APP, pw_label_field, new_pwd)
+
+        # Normally a secret_changed event is supposed to be triggered
+        # (Unittests may not do that for the leader...?)
+        secret_event = MagicMock()
+        secret_event.relation = self.peers_rel_id
+        secret_event.secret = peer_secret
+        self.charm.secrets._on_secret_changed(secret_event)
+
+        # Check that password got changed on the Dashboard relations
+        peer_secret = self.harness.model.get_secret(label=peer_secret_label)
+        rel1_secret = self.harness.model.get_secret(label=rel1_secret_label)
+        rel2_secret = self.harness.model.get_secret(label=rel2_secret_label)
+
+        peer_password = peer_secret.peek_content().get(pw_label_field)
+        assert peer_password == new_pwd
+        assert peer_password == rel1_secret.peek_content().get("password")
+        assert peer_password == rel2_secret.peek_content().get("password")
