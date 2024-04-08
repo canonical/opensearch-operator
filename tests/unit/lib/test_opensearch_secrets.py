@@ -4,7 +4,11 @@
 from unittest.mock import MagicMock, patch
 
 import charms.opensearch.v0.opensearch_locking as opensearch_locking
-from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
+from charms.opensearch.v0.constants_charm import (
+    ClientRelationName,
+    KibanaserverUser,
+    PeerRelationName,
+)
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import JujuVersion
@@ -51,8 +55,13 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
 
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._put_kibanaserver_user")
+    @patch(
+        "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.update_dashboards_password"
+    )
     @patch("charm.OpenSearchOperatorCharm.store_tls_resources")
-    def test_on_secret_changed_app(self, mock_store_tls_resources, _, __):
+    def test_on_secret_changed_app(
+        self, mock_store_tls_resources, mock_update_dashboard_pw, _, __
+    ):
         event = MagicMock()
         event.secret = MagicMock()
 
@@ -69,6 +78,10 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
         event.secret.label = f"opensearch:app:{CertType.APP_ADMIN.val}"
         self.secrets._on_secret_changed(event)
         mock_store_tls_resources.assert_not_called()
+
+        event.secret.label = f"opensearch:app:{KibanaserverUser}-password"
+        self.secrets._on_secret_changed(event)
+        mock_update_dashboard_pw.assert_called()
 
     @patch("charm.OpenSearchOperatorCharm.store_tls_resources")
     def test_on_secret_changed_unit(self, mock_store_tls_resources):

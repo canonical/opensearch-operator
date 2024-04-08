@@ -16,8 +16,10 @@ from ..helpers import (
     MODEL_CONFIG,
     SERIES,
     get_application_unit_ids,
+    get_leader_unit_id,
     get_leader_unit_ip,
     http_request,
+    run_action,
 )
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -32,12 +34,14 @@ logger = logging.getLogger(__name__)
 
 CLIENT_APP_NAME = "application"
 SECONDARY_CLIENT_APP_NAME = "secondary-application"
-ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME]
+DASHBOARDS_APP_NAME = "opensearch-dashboards"
+ALL_APPS = [OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME, CLIENT_APP_NAME, DASHBOARDS_APP_NAME]
 
 NUM_UNITS = 3
 
 FIRST_RELATION_NAME = "first-index"
 SECOND_RELATION_NAME = "second-index"
+DASHBOARDS_RELATION_NAME = "opensearch-dashboards"
 ADMIN_RELATION_NAME = "admin"
 PROTECTED_INDICES = [
     ".opendistro_security",
@@ -52,7 +56,9 @@ PROTECTED_INDICES = [
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_charm):
+async def test_create_relation(
+    ops_test: OpsTest, application_charm, opensearch_charm, opensearch_dashboards_charm
+):
     """Test basic functionality of relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
@@ -67,6 +73,12 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
         ops_test.model.deploy(
             application_charm,
             application_name=CLIENT_APP_NAME,
+        ),
+        ops_test.model.deploy(
+            opensearch_dashboards_charm,
+            application_name=DASHBOARDS_APP_NAME,
+            num_units=NUM_UNITS,
+            series=SERIES,
         ),
         ops_test.model.deploy(
             opensearch_charm,
@@ -197,6 +209,69 @@ async def get_secret_data(ops_test, secret_uri):
     complete_command = f"show-secret {secret_uri} --reveal --format=json"
     _, stdout, _ = await ops_test.juju(*complete_command.split())
     return json.loads(stdout)[secret_unique_id]["content"]["Data"]
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_dashboard_relation(ops_test: OpsTest):
+    """Test we can create relations with admin permissions."""
+    # Add a dashboard relation and wait for them to exchange data
+    global dashboards_relation
+    dashboards_relation = await ops_test.model.integrate(
+        OPENSEARCH_APP_NAME, DASHBOARDS_RELATION_NAME
+    )
+    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, DASHBOARDS_RELATION_NAME)
+
+    await wait_until(
+        ops_test,
+        apps=ALL_APPS,
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        idle_period=70,
+    )
+
+    # On this request, kibanaserver user with its own password should be exposed
+    secret_uri = await get_application_relation_data(
+        ops_test, f"{DASHBOARDS_APP_NAME}/0", DASHBOARDS_RELATION_NAME, "secret-user"
+    )
+    relation_user_data = await get_secret_data(ops_test, secret_uri)
+    relation_user_name = relation_user_data.get("username")
+    relation_user_pwd = relation_user_data.get("password")
+
+    assert relation_user_name == "kibanaserver"
+
+    leader_id = await get_leader_unit_id(ops_test)
+    result = await run_action(ops_test, leader_id, "get-password", {"username": "kibanaserver"})
+    assert relation_user_pwd == result.response.get("password")
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_dashboard_relation_password_change(ops_test: OpsTest):
+    """Test we can create relations with admin permissions."""
+    # Changing Opensearch kibanaserver password
+    leader_id = await get_leader_unit_id(ops_test)
+    result = await run_action(ops_test, leader_id, "get-password", {"username": "kibanaserver"})
+    orig_pwd = result.response.get("password")
+    result = await run_action(ops_test, leader_id, "set-password", {"username": "kibanaserver"})
+    result = await run_action(ops_test, leader_id, "get-password", {"username": "kibanaserver"})
+    new_pwd = result.response.get("password")
+    assert orig_pwd != new_pwd
+
+    # Checking if password also changed for the relation
+    secret_uri = await get_application_relation_data(
+        ops_test, f"{DASHBOARDS_APP_NAME}/0", DASHBOARDS_RELATION_NAME, "secret-user"
+    )
+    relation_user_data = await get_secret_data(ops_test, secret_uri)
+    relation_user_name = relation_user_data.get("username")
+    relation_user_pwd = relation_user_data.get("password")
+
+    assert relation_user_name == "kibanaserver"
+    assert relation_user_pwd == new_pwd
+
+    # Double-checking
+    result = await run_action(ops_test, leader_id, "get-password", {"username": "kibanaserver"})
+    assert relation_user_pwd == result.response.get("password")
 
 
 @pytest.mark.group(1)

@@ -23,3 +23,10 @@ async def application_charm(ops_test: OpsTest):
 async def opensearch_charm(ops_test: OpsTest):
     """Build the opensearch charm."""
     return await ops_test.build_charm(".")
+
+
+@pytest.fixture(scope="module")
+async def opensearch_dashboards_charm(ops_test: OpsTest):
+    """Build the dashboards charm -- temporary, to be removed."""
+    test_charm_path = "./tests/integration/relations/opensearch_provider/opensearch-dashboards-operator"
+    return await ops_test.build_charm(test_charm_path)
