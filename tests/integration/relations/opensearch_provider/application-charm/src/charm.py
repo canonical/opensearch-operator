@@ -45,16 +45,10 @@ class ApplicationCharm(CharmBase):
         # permissions.
         self.admin_opensearch = OpenSearchRequires(self, "admin", "admin-index", "admin,default")
 
-        # Simulating Opensearch Dashboards connection request
-        self.dashboards = OpenSearchRequires(
-            self, "opensearch-dashboards", ".opensearch-dashboards", "kibana_server"
-        )
-
         self.relations = {
             "first-index": self.first_opensearch,
             "second-index": self.second_opensearch,
             "admin": self.admin_opensearch,
-            "opensearch-dashboards": self.dashboards,
         }
 
         for relation_handler in self.relations.values():

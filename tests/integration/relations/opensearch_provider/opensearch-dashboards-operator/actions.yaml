@@ -1,0 +1,31 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+get-password:
+  description: Returns the Opensearch Dashboards super user password
+  params:
+    username:
+      type: string
+      description: The username, the default value 'kibanauser'.
+
+# pre-upgrade-check:
+#   description: Run necessary pre-upgrade checks before executing a charm upgrade.
+
+set-password:
+  description: Change the system user's password, which is used by the charm.
+    It is for internal charm users and SHOULD NOT be used by applications.
+    This action must be called on the leader unit.
+  params:
+    username:
+      type: string
+      description: The username, the default value 'kibanauser'.
+    password:
+      type: string
+      description: Optional. The password will be auto-generated if this option is not specified.
+
+set-tls-private-key:
+  description: Set the privates key, which will be used for certificate signing requests (CSR). Run for each unit separately.
+  params:
+    internal-key:
+      type: string
+      description: The content of private key for internal communications with clients. Content will be auto-generated if this option is not specified.
