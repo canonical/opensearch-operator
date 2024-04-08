@@ -41,7 +41,7 @@ NUM_UNITS = 3
 
 FIRST_RELATION_NAME = "first-index"
 SECOND_RELATION_NAME = "second-index"
-DASHBOARDS_RELATION_NAME = "opensearch-dashboards"
+DASHBOARDS_RELATION_NAME = "opensearch_client"
 ADMIN_RELATION_NAME = "admin"
 PROTECTED_INDICES = [
     ".opendistro_security",
@@ -77,7 +77,6 @@ async def test_create_relation(
         ops_test.model.deploy(
             opensearch_dashboards_charm,
             application_name=DASHBOARDS_APP_NAME,
-            num_units=NUM_UNITS,
             series=SERIES,
         ),
         ops_test.model.deploy(
@@ -217,10 +216,8 @@ async def test_dashboard_relation(ops_test: OpsTest):
     """Test we can create relations with admin permissions."""
     # Add a dashboard relation and wait for them to exchange data
     global dashboards_relation
-    dashboards_relation = await ops_test.model.integrate(
-        OPENSEARCH_APP_NAME, DASHBOARDS_RELATION_NAME
-    )
-    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, DASHBOARDS_RELATION_NAME)
+    dashboards_relation = await ops_test.model.integrate(OPENSEARCH_APP_NAME, DASHBOARDS_APP_NAME)
+    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, DASHBOARDS_APP_NAME)
 
     await wait_until(
         ops_test,

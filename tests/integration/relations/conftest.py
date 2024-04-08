@@ -28,5 +28,7 @@ async def opensearch_charm(ops_test: OpsTest):
 @pytest.fixture(scope="module")
 async def opensearch_dashboards_charm(ops_test: OpsTest):
     """Build the dashboards charm -- temporary, to be removed."""
-    test_charm_path = "./tests/integration/relations/opensearch_provider/opensearch-dashboards-operator"
+    test_charm_path = (
+        "./tests/integration/relations/opensearch_provider/opensearch-dashboards-operator"
+    )
     return await ops_test.build_charm(test_charm_path)
