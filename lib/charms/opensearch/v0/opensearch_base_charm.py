@@ -345,13 +345,13 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
-        if (
-            self.unit.is_leader()
-            and self.opensearch.is_node_up()
-            and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
-        ):
-            # we defer because we want the temporary status to be updated
-            event.defer()
+        # if (
+        #     self.unit.is_leader()
+        #     and self.opensearch.is_node_up()
+        #     and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
+        # ):
+        #     # we defer because we want the temporary status to be updated
+        #     event.defer()
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
