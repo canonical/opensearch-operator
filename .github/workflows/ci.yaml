@@ -3,7 +3,7 @@
 name: Tests
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-3
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
@@ -72,7 +72,7 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@logsink
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v11.1.2
     with:
       artifact-prefix: packed-charm-cache-true
       cloud: lxd
