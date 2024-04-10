@@ -722,6 +722,7 @@ class OpenSearchBaseCharm(CharmBase):
                 self._post_start_init(event)
             except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
                 event.defer()
+                logger.exception("FOOBAR start")
             return
 
         if not self._can_service_start():
@@ -787,6 +788,7 @@ class OpenSearchBaseCharm(CharmBase):
         # may be thrown when calling a node - we want to ensure this node is perfectly ready
         # before marking it as ready
         if not self.opensearch.is_node_up():
+            logger.warning("FOO not ready")
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
         # cleanup bootstrap conf in the node
