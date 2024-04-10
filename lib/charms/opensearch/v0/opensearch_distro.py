@@ -258,7 +258,7 @@ class OpenSearchDistribution(ABC):
             endpoint = endpoint[1:]
 
         urls = []
-        for host_candidate in (host or self.host, *alt_hosts):
+        for host_candidate in (host or self.host, *(alt_hosts or [])):
             if check_hosts_reach and not self.is_node_up(host_candidate):
                 continue
             urls.append(f"https://{host_candidate}:{self.port}/{endpoint}")
