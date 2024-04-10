@@ -163,7 +163,9 @@ class OpenSearchDistribution(ABC):
             return False
 
         try:
-            resp_code = self.request("GET", "/_nodes", host=host, resp_status_code=True)
+            resp_code = self.request(
+                "GET", "/_nodes", host=host, check_hosts_reach=False, resp_status_code=True
+            )
             return resp_code < 400
         except (OpenSearchHttpError, Exception):
             return False
@@ -194,6 +196,7 @@ class OpenSearchDistribution(ABC):
         payload: Optional[Union[str, Dict[str, any], List[Dict[str, any]]]] = None,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
+        check_hosts_reach: bool = True,
         resp_status_code: bool = False,
         retries: int = 0,
         timeout: int = 5,
@@ -206,6 +209,7 @@ class OpenSearchDistribution(ABC):
             payload: str, JSON obj or array body payload.
             host: host of the node we wish to make a request on, by default current host.
             alt_hosts: in case the default host is unreachable, fallback/alternative hosts.
+            check_hosts_reach: if true, performs a ping for each host
             resp_status_code: whether to only return the HTTP code from the response.
             retries: number of retries
             timeout: number of seconds before a timeout happens
@@ -253,11 +257,11 @@ class OpenSearchDistribution(ABC):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        urls = [
-            f"https://{host_candidate}:{self.port}/{endpoint}"
-            for host_candidate in (host or self.host, *alt_hosts)
-            if self.is_node_up(host_candidate)
-        ]
+        urls = []
+        for host_candidate in (host or self.host, *alt_hosts):
+            if check_hosts_reach and not self.is_node_up(host_candidate):
+                continue
+            urls.append(f"https://{host_candidate}:{self.port}/{endpoint}")
         if not urls:
             raise OpenSearchHttpError(
                 f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
