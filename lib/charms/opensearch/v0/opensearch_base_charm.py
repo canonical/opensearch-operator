@@ -41,6 +41,7 @@ from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
     is_reachable,
+    reachable_hosts,
     unit_ip,
     units_ips,
 )
@@ -1313,6 +1314,4 @@ class OpenSearchBaseCharm(CharmBase):
         if not all_hosts:
             return None
 
-        return [
-            host for host in all_hosts if host != self.unit_ip and self.opensearch.is_node_up(host)
-        ]
+        return reachable_hosts([host for host in all_hosts if host != self.unit_ip])
