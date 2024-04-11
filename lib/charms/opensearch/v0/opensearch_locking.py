@@ -172,7 +172,8 @@ class OpenSearchNodeLock(ops.Object):
             host = self._charm.unit_ip
         else:
             host = None
-        if host or self._charm.alt_hosts:
+        alt_hosts = [host for host in self._charm.alt_hosts if self._opensearch.is_node_up(host)]
+        if host or alt_hosts:
             logger.debug("[Node lock] Using opensearch for lock")
             # Acquire opensearch lock
             # Create index if it doesn't exist
@@ -181,7 +182,7 @@ class OpenSearchNodeLock(ops.Object):
                     "PUT",
                     endpoint=f"/{self._OPENSEARCH_INDEX}",
                     host=host,
-                    alt_hosts=self._charm.alt_hosts,
+                    alt_hosts=alt_hosts,
                     retries=3,
                     payload={"settings": {"index": {"auto_expand_replicas": "0-all"}}},
                 )
@@ -201,7 +202,7 @@ class OpenSearchNodeLock(ops.Object):
                     "PUT",
                     endpoint=f"/{self._OPENSEARCH_INDEX}/_create/0?refresh=true",
                     host=host,
-                    alt_hosts=self._charm.alt_hosts,
+                    alt_hosts=alt_hosts,
                     retries=3,
                     payload={"unit-name": self._charm.unit.name},
                 )
@@ -247,7 +248,8 @@ class OpenSearchNodeLock(ops.Object):
             host = self._charm.unit_ip
         else:
             host = None
-        if host or self._charm.alt_hosts:
+        alt_hosts = [host for host in self._charm.alt_hosts if self._opensearch.is_node_up(host)]
+        if host or alt_hosts:
             logger.debug("[Node lock] Checking which unit has opensearch lock")
             # Check if this unit currently has lock
             if self._lock_acquired(host):
@@ -258,7 +260,7 @@ class OpenSearchNodeLock(ops.Object):
                         "DELETE",
                         endpoint=f"/{self._OPENSEARCH_INDEX}/_doc/0?refresh=true",
                         host=host,
-                        alt_hosts=self._charm.alt_hosts,
+                        alt_hosts=alt_hosts,
                         retries=3,
                     )
                 except OpenSearchHttpError as e:
