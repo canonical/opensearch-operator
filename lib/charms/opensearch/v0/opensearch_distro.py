@@ -279,7 +279,7 @@ class OpenSearchDistribution(ABC):
                 raise OpenSearchHttpError(response_text=str(e))
 
             if resp_status_code:
-                logger.exception(f"FOO {e.response.status_code}")
+                logger.exception(f"FOO {e.response.status_code}\n{e.response.json()}\n")
                 return e.response.status_code
 
             raise OpenSearchHttpError(
