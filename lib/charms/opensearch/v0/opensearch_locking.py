@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 """Ensure that only one node (re)starts, joins the cluster, or leaves the cluster at a time."""
-import enum
 import json
 import logging
 import typing
