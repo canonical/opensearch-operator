@@ -733,7 +733,6 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
-        # TODO: need to check if not first execution after acquiring lock?
         if self.opensearch.is_failed():
             self.node_lock.release()
             event.defer()
@@ -851,7 +850,7 @@ class OpenSearchBaseCharm(CharmBase):
             self._stop_opensearch()
         except OpenSearchStopError as e:
             logger.exception(e)
-            # TODO: should lock be released?
+            self.node_lock.release()
             event.defer()
             self.status.set(WaitingStatus(ServiceIsStopping))
             return
