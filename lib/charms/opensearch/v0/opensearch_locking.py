@@ -26,12 +26,6 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-class _PeerLockState(enum.Enum):
-    ACQUIRED_BY_THIS_UNIT = enum.auto()
-    ACQUIRED_BY_ANOTHER_UNIT = enum.auto()
-    NOT_ACQUIRED = enum.auto()
-
-
 class _PeerRelationEndpoint(ops.Object):
     _NAME = "node-lock-fallback"
 
@@ -43,24 +37,29 @@ class _PeerRelationEndpoint(ops.Object):
         )
 
     @property
-    def state(self):
-        if self._unit_with_lock:
-            if self._unit_with_lock == self._charm.unit.name:
-                return _PeerLockState.ACQUIRED_BY_THIS_UNIT
-            return _PeerLockState.ACQUIRED_BY_ANOTHER_UNIT
-        return _PeerLockState.NOT_ACQUIRED
+    def acquired(self) -> bool:
+        """Attempt to acquire lock.
 
-    def request_lock(self):
-        """Request lock for this unit."""
+        Returns:
+            Whether lock was acquired
+        """
         if not self._relation:
-            return
+            return False
         self._relation.data[self._charm.unit]["lock-requested"] = json.dumps(True)
         if self._charm.unit.is_leader():
             logger.debug("[Node lock] Requested peer lock as leader unit")
             # A separate relation-changed event won't get fired
             self._on_peer_relation_changed()
+        acquired = self._unit_with_lock == self._charm.unit.name
+        if acquired:
+            logger.debug("[Node lock] Acquired via peer databag")
+        else:
+            logger.debug(
+                f"[Node lock] Not acquired. Unit with peer databag lock: {self._unit_with_lock}"
+            )
+        return acquired
 
-    def release_lock(self):
+    def release(self):
         """Release lock for this unit."""
         if not self._relation:
             return
@@ -138,8 +137,8 @@ class OpenSearchNodeLock(ops.Object):
         self._opensearch = charm.opensearch
         self._peer = _PeerRelationEndpoint(self._charm)
 
-    def _lock_acquired(self, host):
-        """Whether this unit has already acquired OpenSearch lock."""
+    def _unit_with_lock(self, host) -> str | None:
+        """Unit that has acquired OpenSearch lock."""
         try:
             document_data = self._opensearch.request(
                 "GET",
@@ -151,9 +150,9 @@ class OpenSearchNodeLock(ops.Object):
         except OpenSearchHttpError as e:
             if e.response_code == 404:
                 # No unit has lock
-                return False
+                return
             raise
-        return document_data["unit-name"] == self._charm.unit.name
+        return document_data["unit-name"]
 
     @property
     def acquired(self) -> bool:  # noqa: C901
@@ -162,12 +161,6 @@ class OpenSearchNodeLock(ops.Object):
         Returns:
             Whether lock was acquired
         """
-        # In peer databag, check if lock acquired by another unit
-        logger.debug(f"[Node lock] {self._peer.state=}")
-        if self._peer.state is _PeerLockState.ACQUIRED_BY_ANOTHER_UNIT:
-            logger.debug("[Node lock] Not acquired: another unit has peer lock")
-            return False
-
         if self._opensearch.is_node_up():
             host = self._charm.unit_ip
         else:
@@ -211,31 +204,29 @@ class OpenSearchNodeLock(ops.Object):
                     "error", {}
                 ).get("reason", ""):
                     # Document already created
-                    if not self._lock_acquired(host):
+                    if (unit := self._unit_with_lock(host)) != self._charm.unit.name:
                         # Another unit has lock
                         # (Or document deleted after last request & before request in
                         # `self._lock_acquired()`)
-                        logger.debug("[Node lock] Not acquired: another unit has opensearch lock")
+                        logger.debug(
+                            f"[Node lock] Not acquired. Unit with opensearch lock: {unit}"
+                        )
                         return False
                 else:
                     raise
             # Lock acquired
             # Release peer databag lock, if any
             logger.debug("[Node lock] Acquired via opensearch")
-            self._peer.release_lock()
+            self._peer.release()
             logger.debug("[Node lock] Released redundant peer lock (if held)")
             return True
         else:
             logger.debug("[Node lock] Using peer databag for lock")
             # Request peer databag lock
-            self._peer.request_lock()
-            # If expression is True:
+            # If return value is True:
             # - Lock granted in previous Juju event
             # - OR, unit is leader & lock granted in this Juju event
-            logger.debug(
-                f"[Node lock] Attempted to acquire peer lock. Result: {self._peer.state=}"
-            )
-            return self._peer.state is _PeerLockState.ACQUIRED_BY_THIS_UNIT
+            return self._peer.acquired
 
     def release(self):
         """Release lock.
@@ -252,7 +243,7 @@ class OpenSearchNodeLock(ops.Object):
         if host or alt_hosts:
             logger.debug("[Node lock] Checking which unit has opensearch lock")
             # Check if this unit currently has lock
-            if self._lock_acquired(host):
+            if self._unit_with_lock(host) == self._charm.unit.name:
                 logger.debug("[Node lock] Releasing opensearch lock")
                 # Delete document id 0
                 try:
@@ -267,6 +258,6 @@ class OpenSearchNodeLock(ops.Object):
                     if e.response_code != 404:
                         raise
                 logger.debug("[Node lock] Released opensearch lock")
-        self._peer.release_lock()
+        self._peer.release()
         logger.debug("[Node lock] Released peer lock (if held)")
         logger.debug("[Node lock] Released lock")
