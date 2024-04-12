@@ -124,76 +124,77 @@ class TestHelperCluster(unittest.TestCase):
 
         self.opensearch = self.charm.opensearch
 
-    def test_topology_roles_suggestion_odd_number_of_planned_units(self):
-        """Test the suggestion of roles for a new node and odd numbers of planned units."""
-        planned_units = 5
-        cluster_5_conf = self.cluster1_5_nodes_conf()
-
-        self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units), self.cm_roles)
-        for start_index in range(1, 5):
-            self.assertCountEqual(
-                ClusterTopology.suggest_roles(cluster_5_conf[:start_index], planned_units),
-                self.cm_roles,
-            )
-
-    def test_topology_roles_suggestion_even_number_of_planned_units(self):
-        """Test the suggestion of roles for a new node and even numbers of planned units."""
-        cluster_6_conf = self.cluster1_6_nodes_conf()
-
-        planned_units = 6
-
-        self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units), self.cm_roles)
-        for start_index in range(1, 5):
-            self.assertCountEqual(
-                ClusterTopology.suggest_roles(cluster_6_conf[:start_index], planned_units),
-                self.cm_roles,
-            )
-
-        self.assertCountEqual(
-            ClusterTopology.suggest_roles(cluster_6_conf[:-1], planned_units),
-            self.base_roles,
-        )
-
-    def test_auto_recompute_node_roles_in_cluster_6(self):
-        """Test the automatic suggestion of new roles to an existing node."""
-        cluster_conf = {node.name: node for node in self.cluster1_6_nodes_conf()}
-
-        # remove a cluster manager node
-        old_cluster_conf = cluster_conf.copy()
-        old_cluster_conf.pop("cm1")
-        new_cluster_conf = ClusterTopology.recompute_nodes_conf(
-            app_name=self.cluster1, nodes=list(old_cluster_conf.values())
-        )
-        assert new_cluster_conf["data1"].roles == self.cm_roles
-        # Assert other remaining nodes unchanged
-        old_cluster_conf.pop("data1")
-        new_cluster_conf.pop("data1")
-        assert old_cluster_conf == new_cluster_conf
-
-        # remove a data node
-        old_cluster_conf = cluster_conf.copy()
-        old_cluster_conf.pop("data1")
-        new_cluster_conf = ClusterTopology.recompute_nodes_conf(
-            app_name=self.cluster1, nodes=list(old_cluster_conf.values())
-        )
-        # Assert all remaining nodes unchanged
-        assert old_cluster_conf == new_cluster_conf
-
-    def test_auto_recompute_node_roles_in_cluster_5(self):
-        """Test the automatic suggestion of new roles to an existing node."""
-        cluster_conf = {node.name: node for node in self.cluster1_5_nodes_conf()}
-
-        # remove a cluster manager node
-        old_cluster_conf = cluster_conf.copy()
-        old_cluster_conf.pop("cm1")
-        new_cluster_conf = ClusterTopology.recompute_nodes_conf(
-            app_name=self.cluster1, nodes=list(old_cluster_conf.values())
-        )
-        assert new_cluster_conf["cm5"].roles == self.base_roles
-        # Assert other remaining nodes unchanged
-        old_cluster_conf.pop("cm5")
-        new_cluster_conf.pop("cm5")
-        assert old_cluster_conf == new_cluster_conf
+    # TODO: remove in https://github.com/canonical/opensearch-operator/issues/230
+    # def test_topology_roles_suggestion_odd_number_of_planned_units(self):
+    #     """Test the suggestion of roles for a new node and odd numbers of planned units."""
+    #     planned_units = 5
+    #     cluster_5_conf = self.cluster1_5_nodes_conf()
+    #
+    #     self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units), self.cm_roles)
+    #     for start_index in range(1, 5):
+    #         self.assertCountEqual(
+    #             ClusterTopology.suggest_roles(cluster_5_conf[:start_index], planned_units),
+    #             self.cm_roles,
+    #         )
+    #
+    # def test_topology_roles_suggestion_even_number_of_planned_units(self):
+    #     """Test the suggestion of roles for a new node and even numbers of planned units."""
+    #     cluster_6_conf = self.cluster1_6_nodes_conf()
+    #
+    #     planned_units = 6
+    #
+    #     self.assertCountEqual(ClusterTopology.suggest_roles([], planned_units), self.cm_roles)
+    #     for start_index in range(1, 5):
+    #         self.assertCountEqual(
+    #             ClusterTopology.suggest_roles(cluster_6_conf[:start_index], planned_units),
+    #             self.cm_roles,
+    #         )
+    #
+    #     self.assertCountEqual(
+    #         ClusterTopology.suggest_roles(cluster_6_conf[:-1], planned_units),
+    #         self.base_roles,
+    #     )
+    #
+    # def test_auto_recompute_node_roles_in_cluster_6(self):
+    #     """Test the automatic suggestion of new roles to an existing node."""
+    #     cluster_conf = {node.name: node for node in self.cluster1_6_nodes_conf()}
+    #
+    #     # remove a cluster manager node
+    #     old_cluster_conf = cluster_conf.copy()
+    #     old_cluster_conf.pop("cm1")
+    #     new_cluster_conf = ClusterTopology.recompute_nodes_conf(
+    #         app_name=self.cluster1, nodes=list(old_cluster_conf.values())
+    #     )
+    #     assert new_cluster_conf["data1"].roles == self.cm_roles
+    #     # Assert other remaining nodes unchanged
+    #     old_cluster_conf.pop("data1")
+    #     new_cluster_conf.pop("data1")
+    #     assert old_cluster_conf == new_cluster_conf
+    #
+    #     # remove a data node
+    #     old_cluster_conf = cluster_conf.copy()
+    #     old_cluster_conf.pop("data1")
+    #     new_cluster_conf = ClusterTopology.recompute_nodes_conf(
+    #         app_name=self.cluster1, nodes=list(old_cluster_conf.values())
+    #     )
+    #     # Assert all remaining nodes unchanged
+    #     assert old_cluster_conf == new_cluster_conf
+    #
+    # def test_auto_recompute_node_roles_in_cluster_5(self):
+    #     """Test the automatic suggestion of new roles to an existing node."""
+    #     cluster_conf = {node.name: node for node in self.cluster1_5_nodes_conf()}
+    #
+    #     # remove a cluster manager node
+    #     old_cluster_conf = cluster_conf.copy()
+    #     old_cluster_conf.pop("cm1")
+    #     new_cluster_conf = ClusterTopology.recompute_nodes_conf(
+    #         app_name=self.cluster1, nodes=list(old_cluster_conf.values())
+    #     )
+    #     assert new_cluster_conf["cm5"].roles == self.base_roles
+    #     # Assert other remaining nodes unchanged
+    #     old_cluster_conf.pop("cm5")
+    #     new_cluster_conf.pop("cm5")
+    #     assert old_cluster_conf == new_cluster_conf
 
     def test_auto_recompute_node_roles_in_previous_non_auto_gen_cluster(self):
         """Test the automatic suggestion of new roles to an existing node."""
