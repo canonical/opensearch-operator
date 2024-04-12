@@ -52,14 +52,29 @@ class _PeerRelationLock(ops.Object):
             logger.debug("[Node lock] Requested peer lock as leader unit")
             # A separate relation-changed event won't get fired
             self._on_peer_relation_changed()
-        acquired = self._unit_with_lock == self._charm.unit.name
-        if acquired:
-            logger.debug("[Node lock] Acquired via peer databag")
-        else:
+        if self._unit_with_lock != self._charm.unit.name:
             logger.debug(
                 f"[Node lock] Not acquired. Unit with peer databag lock: {self._unit_with_lock}"
             )
-        return acquired
+            return False
+        if (
+            self._charm.unit.is_leader()
+            and self._relation.data[self._charm.app]["leader-acquired-lock-after-juju-event-id"]
+            == os.environ["JUJU_CONTEXT_ID"]
+        ):
+            # `unit-with-lock` was set in this Juju event
+            # If the charm code raises an uncaught exception later in the Juju event,
+            # `unit-with-lock` will be reverted to its previous value—which could allow another
+            # unit to get the lock.
+            # Therefore, we cannot use the lock now. We must wait until the next Juju event,
+            # when `unit-with-lock` has been committed (i.e. won't be reverted), to use the
+            # lock.
+            logger.debug(
+                "[Node lock] Not acquired. Waiting until next Juju event to use peer databag lock for leader unit"
+            )
+            return False
+        logger.debug("[Node lock] Acquired via peer databag")
+        return True
 
     def release(self):
         """Release lock for this unit."""
@@ -84,32 +99,13 @@ class _PeerRelationLock(ops.Object):
 
     @property
     def _unit_with_lock(self):
-        if self._relation and (unit := self._relation.data[self._charm.app].get("unit-with-lock")):
-            if (
-                self._charm.unit.is_leader()
-                and unit == self._charm.unit.name
-                and self._relation.data[self._charm.app][
-                    "leader-acquired-lock-after-juju-event-id"
-                ]
-                == os.environ["JUJU_CONTEXT_ID"]
-            ):
-                # `unit-with-lock` was set in this Juju event
-                # If the charm code raises an uncaught exception later in the Juju event,
-                # `unit-with-lock` will be reverted to its previous value—which could allow another
-                # unit to get the lock.
-                # Therefore, we cannot use the lock now. We must wait until the next Juju event,
-                # when `unit-with-lock` has been committed (i.e. won't be reverted), to use the
-                # lock.
-                logger.debug(
-                    "[Node lock] Waiting until next Juju event to use peer databag lock for leader unit"
-                )
-                return
-            return unit
+        if self._relation:
+            return self._relation.data[self._charm.app].get("unit-with-lock")
 
     @_unit_with_lock.setter
     def _unit_with_lock(self, value: str):
         assert self._relation
-        assert self._relation.data[self._charm.app].get("unit-with-lock") != value
+        assert self._unit_with_lock != value
         if value == self._charm.unit.name:
             logger.debug("[Node lock] (leader) granted peer lock to own unit")
             # Prevent leader unit from using lock in the same Juju event that it was granted
