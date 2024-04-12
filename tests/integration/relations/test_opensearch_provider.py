@@ -393,6 +393,7 @@ async def test_admin_relation(ops_test: OpsTest):
         relation_id=admin_relation.id,
         relation_name=ADMIN_RELATION_NAME,
     )
+    logging.info(f"{run_bulk_read_index=}")
     results = json.loads(run_bulk_read_index["results"])
     logging.info(results)
     artists = [
