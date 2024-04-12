@@ -422,7 +422,7 @@ class OpenSearchBaseCharm(CharmBase):
         # acquire lock to ensure only 1 unit removed at a time
         if not self.node_lock.acquired:
             # Raise uncaught exception to prevent Juju from removing unit
-            raise Exception("Unable to acquire lock: Another unit is being removed.")
+            raise Exception("Unable to acquire lock: Another unit is starting or stopping.")
 
         # if the leader is departing, and this hook fails "leader elected" won"t trigger,
         # so we want to re-balance the node roles from here
