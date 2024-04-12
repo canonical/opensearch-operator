@@ -795,8 +795,9 @@ class OpenSearchBaseCharm(CharmBase):
         # apply cluster health
         self.health.apply()
 
-        # Creating the monitoring user
-        self._put_monitoring_user()
+        if self.unit.is_leader():
+            # Creating the monitoring user
+            self._put_monitoring_user()
 
         # clear waiting to start status
         self.status.clear(WaitingToStart)
