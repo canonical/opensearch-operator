@@ -46,14 +46,8 @@ class ClusterTopology:
             — odd: "all" the nodes are cm_eligible nodes.
             — even: "all - 1" are cm_eligible and 1 data node.
         """
-        max_cms = ClusterTopology.max_cluster_manager_nodes(planned_units)
-
-        base_roles = ["data", "ingest", "ml", "coordinating_only"]
-        full_roles = base_roles + ["cluster_manager"]
-        nodes_by_roles = ClusterTopology.nodes_count_by_role(nodes)
-        if nodes_by_roles.get("cluster_manager", 0) == max_cms:
-            return base_roles
-        return full_roles
+        # TODO: remove in https://github.com/canonical/opensearch-operator/issues/230
+        return ["data", "ingest", "ml", "coordinating_only", "cluster_manager"]
 
     @staticmethod
     def get_cluster_settings(
@@ -74,6 +68,7 @@ class ClusterTopology:
 
     @staticmethod
     def recompute_nodes_conf(app_name: str, nodes: List[Node]) -> Dict[str, Node]:
+        # TODO: remove in https://github.com/canonical/opensearch-operator/issues/230
         """Recompute the configuration of all the nodes (cluster set to auto-generate roles)."""
         if not nodes:
             return {}
@@ -86,19 +81,11 @@ class ClusterTopology:
             else:
                 # Leave node unchanged
                 nodes_by_name[node.name] = node
-        base_roles = ["data", "ingest", "ml", "coordinating_only"]
-        full_roles = base_roles + ["cluster_manager"]
-        highest_unit_number = max(node.unit_number for node in current_cluster_nodes)
         for node in current_cluster_nodes:
-            # we do this in order to remove any non-default role / add any missing default role
-            if len(current_cluster_nodes) % 2 == 0 and node.unit_number == highest_unit_number:
-                roles = base_roles
-            else:
-                roles = full_roles
-
             nodes_by_name[node.name] = Node(
                 name=node.name,
-                roles=roles,
+                # we do this in order to remove any non-default role / add any missing default role
+                roles=["data", "ingest", "ml", "coordinating_only", "cluster_manager"],
                 ip=node.ip,
                 app_name=node.app_name,
                 unit_number=node.unit_number,
