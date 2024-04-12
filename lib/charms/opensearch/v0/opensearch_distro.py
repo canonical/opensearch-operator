@@ -20,7 +20,7 @@ import urllib3.exceptions
 from charms.opensearch.v0.constants_secrets import ADMIN_PW
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
-from charms.opensearch.v0.helper_http import error_http_retry_log, full_urls
+from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -153,13 +153,19 @@ class OpenSearchDistribution(ABC):
         """Check if OpenSearch daemon has failed."""
         pass
 
-    def is_node_up(self) -> bool:
-        """Get status of current node. This assumes OpenSearch is Running."""
-        if not self.is_started():
+    def is_node_up(self, host: Optional[str] = None) -> bool:
+        """Get status of node. This assumes OpenSearch is Running.
+
+        Defaults to this unit
+        """
+        host = host or self.host
+        if not is_reachable(host, self.port):
             return False
 
         try:
-            resp_code = self.request("GET", "/_nodes", resp_status_code=True)
+            resp_code = self.request(
+                "GET", "/_nodes", host=host, check_hosts_reach=False, resp_status_code=True
+            )
             return resp_code < 400
         except (OpenSearchHttpError, Exception):
             return False
@@ -228,7 +234,7 @@ class OpenSearchDistribution(ABC):
 
                     request_kwargs = {
                         "method": method.upper(),
-                        "url": urls[0],
+                        "url": url,
                         "verify": f"{self.paths.certs}/chain.pem",
                         "headers": {
                             "Accept": "application/json",
@@ -251,7 +257,11 @@ class OpenSearchDistribution(ABC):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        urls = full_urls(host or self.host, self.port, endpoint, alt_hosts, check_hosts_reach)
+        urls = []
+        for host_candidate in (host or self.host, *(alt_hosts or [])):
+            if check_hosts_reach and not self.is_node_up(host_candidate):
+                continue
+            urls.append(f"https://{host_candidate}:{self.port}/{endpoint}")
         if not urls:
             raise OpenSearchHttpError(
                 f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."

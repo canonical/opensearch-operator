@@ -2,9 +2,8 @@
 # See LICENSE file for licensing details.
 
 """File containing http related helpers."""
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-from charms.opensearch.v0.helper_networking import reachable_hosts
 from tenacity import RetryCallState
 
 # The unique Charmhub library identifier, never change it
@@ -31,20 +30,3 @@ def error_http_retry_log(
         )
 
     return log_error
-
-
-def full_urls(
-    primary_host: str, port: int, path: str, alt_hosts: List[str], check_hosts_reach: bool = False
-) -> List[str]:
-    """Returns a list of well formatted and potentially reachable hosts."""
-    target_hosts = [primary_host]
-    if alt_hosts:
-        target_hosts.extend([alt_host for alt_host in alt_hosts if alt_host != primary_host])
-
-    if not check_hosts_reach:
-        return target_hosts
-
-    return [
-        f"https://{host_candidate}:{port}/{path}"
-        for host_candidate in reachable_hosts(target_hosts)
-    ]
