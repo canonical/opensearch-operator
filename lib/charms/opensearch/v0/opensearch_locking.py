@@ -87,6 +87,7 @@ class _PeerRelationLock(ops.Object):
         if self._relation and (unit := self._relation.data[self._charm.app].get("unit-with-lock")):
             if (
                 self._charm.unit.is_leader()
+                and unit == self._charm.unit.name
                 and self._relation.data[self._charm.app][
                     "leader-acquired-lock-after-juju-event-id"
                 ]
