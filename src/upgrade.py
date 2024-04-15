@@ -17,8 +17,6 @@ import typing
 import ops
 import poetry.core.constraints.version as poetry_version
 
-import workload
-
 logger = logging.getLogger(__name__)
 
 PEER_RELATION_ENDPOINT_NAME = "upgrade-version-a"
@@ -216,7 +214,7 @@ class Upgrade(abc.ABC):
         """
 
     @abc.abstractmethod
-    def upgrade_unit(self, *, workload_: workload.Workload, tls: bool) -> None:
+    def upgrade_unit(self) -> None:
         """Upgrade this unit.
 
         Only applies to machine charm

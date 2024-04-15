@@ -11,11 +11,10 @@ import logging
 import time
 import typing
 
+import charms.opensearch.v0.constants_charm as constants_charm
 import ops
 
-import snap
 import upgrade
-import workload
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +36,10 @@ class Upgrade(upgrade.Upgrade):
     def unit_state(self, value: str) -> None:
         if value == "healthy":
             # Set snap revision on first install
-            self._unit_databag["snap_revision"] = snap.REVISION
-            logger.debug(f"Saved {snap.REVISION=} in unit databag while setting state healthy")
+            self._unit_databag["snap_revision"] = constants_charm.OPENSEARCH_SNAP_REVISION
+            logger.debug(
+                f"Saved {constants_charm.OPENSEARCH_SNAP_REVISION=} in unit databag while setting state healthy"
+            )
         # Super call
         upgrade.Upgrade.unit_state.fset(self, value)
 
@@ -89,7 +90,7 @@ class Upgrade(upgrade.Upgrade):
     @property
     def _app_workload_version(self) -> str:
         """Snap revision for current charm code"""
-        return snap.REVISION
+        return constants_charm.OPENSEARCH_SNAP_REVISION
 
     def reconcile_partition(self, *, action_event: ops.ActionEvent = None) -> None:
         """Handle Juju action to confirm first upgraded unit is healthy and resume upgrade."""
@@ -135,9 +136,12 @@ class Upgrade(upgrade.Upgrade):
                 return False
         return False
 
-    def upgrade_unit(self, *, workload_: workload.Workload, tls: bool) -> None:
+    def upgrade_unit(self) -> None:
         logger.debug(f"Upgrading {self.authorized=}")
         self.unit_state = "upgrading"
-        workload_.upgrade(unit=self._unit, tls=tls)
-        self._unit_databag["snap_revision"] = snap.REVISION
-        logger.debug(f"Saved {snap.REVISION=} in unit databag after upgrade")
+        # workload_.upgrade(unit=self._unit, tls=tls)
+        raise NotImplementedError
+        self._unit_databag["snap_revision"] = constants_charm.OPENSEARCH_SNAP_REVISION
+        logger.debug(
+            f"Saved {constants_charm.OPENSEARCH_SNAP_REVISION=} in unit databag after upgrade"
+        )
