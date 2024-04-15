@@ -5,6 +5,7 @@
 
 """Charmed Machine Operator for OpenSearch."""
 import logging
+import typing
 from os import remove
 from os.path import exists
 from typing import Dict
@@ -20,6 +21,7 @@ from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus
 from overrides import override
 
+import machine_upgrade
 import upgrade
 from opensearch import OpenSearchSnap
 
@@ -40,6 +42,13 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.on[upgrade.RESUME_ACTION_NAME].action, self._on_resume_upgrade_action
         )
         self.framework.observe(self.on["force-upgrade"].action, self._on_force_upgrade_action)
+
+    @property
+    def _upgrade(self) -> typing.Optional[machine_upgrade.Upgrade]:
+        try:
+            return machine_upgrade.Upgrade(self)
+        except upgrade.PeerRelationNotReady:
+            pass
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
