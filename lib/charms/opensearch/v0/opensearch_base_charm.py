@@ -734,6 +734,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         if self.opensearch.is_failed():
             self.node_lock.release()
+            self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
             return
 
