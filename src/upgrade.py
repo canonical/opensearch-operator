@@ -131,6 +131,7 @@ class Upgrade(abc.ABC):
     def get_unit_juju_status(
         self, *, workload_status: typing.Optional[ops.StatusBase]
     ) -> typing.Optional[ops.StatusBase]:
+        # TODO: revise status handling & priority
         if self.in_progress:
             return self._get_unit_healthy_status(workload_status=workload_status)
 
