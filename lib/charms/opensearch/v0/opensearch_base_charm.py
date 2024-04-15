@@ -108,6 +108,8 @@ from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
+import lifecycle
+
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
 
@@ -148,6 +150,8 @@ class OpenSearchBaseCharm(CharmBase):
 
     def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
         super().__init__(*args)
+        # Instantiate before registering other event observers
+        self._unit_lifecycle = lifecycle.Unit(self, subordinated_relation_endpoint_names=None)
 
         if distro is None:
             raise ValueError("The type of the opensearch distro must be specified.")
