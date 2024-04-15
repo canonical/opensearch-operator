@@ -97,7 +97,7 @@ OpenSearchUsers = {"admin", "monitor"}
 OpenSearchRoles = set()
 
 # Opensearch Snap revision
-OPENSEARCH_SNAP_REVISION = 40
+OPENSEARCH_SNAP_REVISION = 40  # Keep in sync with `workload_version` file
 
 # User-face Backup ID format
 OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"

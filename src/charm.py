@@ -9,6 +9,7 @@ from os import remove
 from os.path import exists
 from typing import Dict
 
+import ops
 from charms.opensearch.v0.constants_charm import InstallError, InstallProgress
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import to_pkcs8
@@ -19,6 +20,7 @@ from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus
 from overrides import override
 
+import upgrade
 from opensearch import OpenSearchSnap
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,13 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         super().__init__(*args, distro=OpenSearchSnap)  # OpenSearchTarball
 
         self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(
+            self.on[upgrade.PEER_RELATION_ENDPOINT_NAME].relation_changed, self._reconcile_upgrade
+        )
+        self.framework.observe(
+            self.on[upgrade.RESUME_ACTION_NAME].action, self._on_resume_upgrade_action
+        )
+        self.framework.observe(self.on["force-upgrade"].action, self._on_force_upgrade_action)
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
@@ -40,6 +49,55 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.status.clear(InstallProgress)
         except OpenSearchInstallError:
             self.unit.status = BlockedStatus(InstallError)
+
+    def _reconcile_upgrade(self, _=None):
+        """Handle upgrade events."""
+
+    def _on_upgrade_charm(self, _):
+        if self._unit_lifecycle.authorized_leader:
+            if not self._upgrade.in_progress:
+                logger.info("Charm upgraded. MySQL Router version unchanged")
+            self._upgrade.upgrade_resumed = False
+            # Only call `reconcile` on leader unit to avoid race conditions with `upgrade_resumed`
+            self._reconcile_upgrade()
+
+    def _on_resume_upgrade_action(self, event: ops.ActionEvent) -> None:
+        if not self._unit_lifecycle.authorized_leader:
+            message = f"Must run action on leader unit. (e.g. `juju run {self.app.name}/leader {upgrade.RESUME_ACTION_NAME}`)"
+            logger.debug(f"Resume upgrade event failed: {message}")
+            event.fail(message)
+            return
+        if not self._upgrade or not self._upgrade.in_progress:
+            message = "No upgrade in progress"
+            logger.debug(f"Resume upgrade event failed: {message}")
+            event.fail(message)
+            return
+        self._upgrade.reconcile_partition(action_event=event)
+
+    def _on_force_upgrade_action(self, event: ops.ActionEvent) -> None:
+        if not self._upgrade or not self._upgrade.in_progress:
+            message = "No upgrade in progress"
+            logger.debug(f"Force upgrade event failed: {message}")
+            event.fail(message)
+            return
+        if not self._upgrade.upgrade_resumed:
+            message = f"Run `juju run {self.app.name}/leader resume-upgrade` before trying to force upgrade"
+            logger.debug(f"Force upgrade event failed: {message}")
+            event.fail(message)
+            return
+        if self._upgrade.unit_state != "outdated":
+            message = "Unit already upgraded"
+            logger.debug(f"Force upgrade event failed: {message}")
+            event.fail(message)
+            return
+        logger.debug("Forcing upgrade")
+        event.log(f"Forcefully upgrading {self.unit.name}")
+        self._upgrade.upgrade_unit(
+            workload_=self.get_workload(event=None), tls=self._tls_certificate_saved
+        )
+        self._reconcile_upgrade()  # TODO: keep?
+        event.set_results({"result": f"Forcefully upgraded {self.unit.name}"})
+        logger.debug("Forced upgrade")
 
     @override
     def store_tls_resources(
