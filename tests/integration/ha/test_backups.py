@@ -545,6 +545,7 @@ async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
         apps=[app],
         apps_statuses=["blocked"],
         units_statuses=["active"],
+        wait_for_exact_units=3,
         idle_period=30,
     )
 

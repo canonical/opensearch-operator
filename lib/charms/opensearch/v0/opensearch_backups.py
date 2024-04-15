@@ -555,6 +555,7 @@ class OpenSearchBackup(Object):
         if state != BackupServiceState.SUCCESS:
             logger.error(f"Failed to setup backup service with state {state}")
             self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
+            self.charm.status.clear(BackupConfigureStart)
             return
         self.charm.status.clear(BackupSetupFailed, app=True)
         self.charm.status.clear(BackupConfigureStart)
@@ -720,10 +721,8 @@ class OpenSearchBackup(Object):
         try:
             result = self.charm.opensearch.request(*args, **kwargs)
         except OpenSearchHttpError as e:
-            if not e.response_text:
-                return None
-            return e.response_text
-        return result
+            return e.response_body if e.response_body else None
+        return result if isinstance(result, dict) else None
 
     def get_service_status(  # noqa: C901
         self, response: dict[str, Any] | None
