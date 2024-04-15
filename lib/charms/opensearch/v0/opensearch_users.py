@@ -10,7 +10,7 @@ import logging
 from typing import Dict, List, Optional, Set
 
 from charms.opensearch.v0.constants_charm import ClientRelationName, OpenSearchUsers
-from charms.opensearch.v0.opensearch_distro import OpenSearchHttpError
+from charms.opensearch.v0.opensearch_distro import OpenSearchError, OpenSearchHttpError
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +253,16 @@ class OpenSearchUserManager:
         )
         self._remove_lingering_users(relation_users)
         self._remove_lingering_roles(relation_users)
+
+    def update_user_password(self, username: str, hashed_pwd: str = None):
+        """Change user hashed password."""
+        resp = self.opensearch.request(
+            "PATCH",
+            f"/_plugins/_security/api/internalusers/{username}",
+            [{"op": "replace", "path": "/hash", "value": hashed_pwd}],
+        )
+        if resp.get("status") != "OK":
+            raise OpenSearchError(f"{resp}")
 
     def _remove_lingering_users(self, relation_users: Set[str]):
         app_users = relation_users | OpenSearchUsers
