@@ -20,6 +20,8 @@ from charms.opensearch.v0.constants_charm import (
     COSRelationName,
     COSRole,
     COSUser,
+    KibanaserverUser,
+    OpenSearchUsers,
     PeerRelationName,
     PluginConfigChangeError,
     PluginConfigCheck,
@@ -34,7 +36,7 @@ from charms.opensearch.v0.constants_charm import (
     TLSRelationMissing,
     WaitingToStart,
 )
-from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
+from charms.opensearch.v0.constants_secrets import ADMIN_PW_HASH
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
@@ -241,6 +243,9 @@ class OpenSearchBaseCharm(CharmBase):
 
         # this is in case we're coming from 0 to N units, we don't want to use the rest api
         self._put_admin_user()
+
+        # Restore the other system user that was purged
+        self._put_kibanaserver_user()
 
         self.status.clear(AdminUserInitProgress)
 
@@ -569,15 +574,19 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         user_name = event.params.get("username")
-        if user_name not in ["admin", COSUser]:
-            event.fail(f"Only the 'admin' and {COSUser} username is allowed for this action.")
+        if user_name not in OpenSearchUsers:
+            event.fail(f"Only the {OpenSearchUsers} usernames is allowed for this action.")
+            return
+
+        function = getattr(self, f"_put_{user_name}_user")
+        if not function:
+            event.fail(f"No action defined to change credentials for {user_name}.")
             return
 
         password = event.params.get("password") or generate_password()
         try:
+            function(password)
             label = self.secrets.password_key(user_name)
-            self._put_admin_user(password)
-            password = self.secrets.get(Scope.APP, label)
             event.set_results({label: password})
         except OpenSearchError as e:
             event.fail(f"Failed changing the password: {e}")
@@ -585,8 +594,8 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
         user_name = event.params.get("username")
-        if user_name not in ["admin", COSUser]:
-            event.fail(f"Only the 'admin' and {COSUser} username is allowed for this action.")
+        if user_name not in OpenSearchUsers:
+            event.fail(f"Only the {OpenSearchUsers} username is allowed for this action.")
             return
 
         if not self.is_admin_user_configured():
@@ -811,7 +820,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         if self.unit.is_leader():
             # Creating the monitoring user
-            self._put_monitoring_user()
+            self._put_monitor_user()
 
         # clear waiting to start status
         self.status.clear(WaitingToStart)
@@ -955,23 +964,28 @@ class OpenSearchBaseCharm(CharmBase):
             if user != "_meta":
                 self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
 
-    def _put_admin_user(self, pwd: Optional[str] = None):
-        """Change password of Admin user."""
-        # update
-        if pwd is not None:
-            hashed_pwd, pwd = generate_hashed_password(pwd)
-            resp = self.opensearch.request(
-                "PATCH",
-                "/_plugins/_security/api/internalusers/admin",
-                [{"op": "replace", "path": "/hash", "value": hashed_pwd}],
-            )
-            if resp.get("status") != "OK":
-                raise OpenSearchError(f"{resp}")
-        else:
-            hashed_pwd = self.secrets.get(Scope.APP, ADMIN_PW_HASH)
-            if not hashed_pwd:
-                hashed_pwd, pwd = generate_hashed_password()
+    def _put_or_update_system_user(
+        self, user: str, create_function: callable, pwd: Optional[str] = None
+    ):
+        """Create system user or update it with a new password."""
+        if not self.unit.is_leader():
+            return
 
+        hashed_pwd, pwd = generate_hashed_password(pwd)
+
+        # update
+        if self.secrets.get(Scope.APP, self.secrets.password_key(user)):
+            self.user_manager.update_user_password(user, hashed_pwd)
+        else:
+            create_function(self, hashed_pwd)
+
+        self.secrets.put(Scope.APP, self.secrets.password_key(user), pwd)
+        return (pwd, hashed_pwd)
+
+    def _put_admin_user(self, pwd: Optional[str] = None):
+        """Create password of Admin user."""
+
+        def put_user(self, hashed_pwd: str):
             # reserved: False, prevents this resource from being update-protected from:
             # updates made on the dashboard or the rest api.
             # we grant the admin user all opensearch access + security_rest_api_access
@@ -989,26 +1003,39 @@ class OpenSearchBaseCharm(CharmBase):
                     "description": "Admin user",
                 },
             )
+            self.peers_data.put(Scope.APP, "admin_user_initialized", True)
 
-        self.secrets.put(Scope.APP, ADMIN_PW, pwd)
+        pwd, hashed_pwd = self._put_or_update_system_user("admin", put_user, pwd)
         self.secrets.put(Scope.APP, ADMIN_PW_HASH, hashed_pwd)
-        self.peers_data.put(Scope.APP, "admin_user_initialized", True)
 
-    def _put_monitoring_user(self):
-        """Create the monitoring user, with the right security role."""
-        users = self.user_manager.get_users()
+    def _put_kibanaserver_user(self, pwd: Optional[str] = None):
+        """Change password of the 'kibanaserver' user."""
 
-        if users and COSUser in users:
-            return
+        def put_user(self, hashed_pwd: str):
+            self.opensearch.config.put(
+                "opensearch-security/internal_users.yml",
+                f"{KibanaserverUser}",
+                {
+                    "hash": hashed_pwd,
+                    "reserved": False,
+                    "description": "Kibanaserver user",
+                },
+            )
 
-        hashed_pwd, pwd = generate_hashed_password()
-        roles = [COSRole]
-        self.user_manager.create_user(COSUser, roles, hashed_pwd)
-        self.user_manager.patch_user(
-            COSUser,
-            [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
-        )
-        self.secrets.put(Scope.APP, self.secrets.password_key(COSUser), pwd)
+        self._put_or_update_system_user(KibanaserverUser, put_user, pwd)
+
+    def _put_monitor_user(self, pwd: Optional[str] = None):
+        """Create the monitor user, with the right security role."""
+
+        def put_user(self, hashed_pwd: str):
+            roles = [COSRole]
+            self.user_manager.create_user(COSUser, roles, hashed_pwd)
+            self.user_manager.patch_user(
+                COSUser,
+                [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
+            )
+
+        self._put_or_update_system_user(COSUser, put_user, pwd)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.
