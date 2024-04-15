@@ -70,10 +70,19 @@ class _PeerRelationLock(ops.Object):
             # Therefore, we cannot use the lock now. We must wait until the next Juju event,
             # when `unit-with-lock` has been committed (i.e. won't be reverted), to use the
             # lock.
-            logger.debug(
-                "[Node lock] Not acquired. Waiting until next Juju event to use peer databag lock for leader unit"
-            )
-            return False
+            if self._charm.app.planned_units() <= 1:
+                # No other unit will get peer relation changed
+                # Therefore, no other unit will be able to trigger peer relation changed on this
+                # unit. We must use the lock now and accept that `unit-with-lock` could be reverted
+                # if the charm code raises an uncaught exception later in the Juju event.
+                logger.debug(
+                    "[Node lock] Single unit deployment. Not waiting until next Juju event to use peer databag lock for leader unit"
+                )
+            else:
+                logger.debug(
+                    "[Node lock] Not acquired. Waiting until next Juju event to use peer databag lock for leader unit"
+                )
+                return False
         logger.debug("[Node lock] Acquired via peer databag")
         return True
 
