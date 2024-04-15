@@ -38,6 +38,7 @@ DEFAULT_NUM_UNITS = 2
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy a couple of OpenSearch units."""
+    logger.warning('FOO {a: "b"} { FOO2 } FOO3')
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
