@@ -25,14 +25,16 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-class _PeerRelationEndpoint(ops.Object):
-    _NAME = "node-lock-fallback"
+class _PeerRelationLock(ops.Object):
+    """Fallback lock when all units of OpenSearch are offline."""
+
+    _ENDPOINT_NAME = "node-lock-fallback"
 
     def __init__(self, charm: ops.CharmBase):
-        super().__init__(charm, self._NAME)
+        super().__init__(charm, self._ENDPOINT_NAME)
         self._charm = charm
         self.framework.observe(
-            self._charm.on[self._NAME].relation_changed, self._on_peer_relation_changed
+            self._charm.on[self._ENDPOINT_NAME].relation_changed, self._on_peer_relation_changed
         )
 
     @property
@@ -98,7 +100,7 @@ class _PeerRelationEndpoint(ops.Object):
     def _relation(self):
         # Use property instead of `self._relation =` in `__init__()` because of ops Harness unit
         # tests
-        return self._charm.model.get_relation(self._NAME)
+        return self._charm.model.get_relation(self._ENDPOINT_NAME)
 
     def _on_peer_relation_changed(self, _=None):
         """Grant & release lock."""
@@ -134,7 +136,7 @@ class OpenSearchNodeLock(ops.Object):
         super().__init__(charm, "opensearch-node-lock")
         self._charm = charm
         self._opensearch = charm.opensearch
-        self._peer = _PeerRelationEndpoint(self._charm)
+        self._peer = _PeerRelationLock(self._charm)
 
     def _unit_with_lock(self, host) -> str | None:
         """Unit that has acquired OpenSearch lock."""
