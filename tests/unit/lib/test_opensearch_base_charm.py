@@ -218,7 +218,17 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             self.peers_data.delete(Scope.APP, "security_index_initialised")
             _can_service_start.return_value = True
             self.harness.set_leader(True)
-            self.charm.on.start.emit()
+
+            with patch.dict("os.environ", {"JUJU_CONTEXT_ID": "foo"}):
+                self.charm.on.start.emit()
+            # Leader unit using peer databag lock cannot request & use lock in same Juju event
+            # In regular deployments, a peer relation changed event is triggered on leader after
+            # the event where it requests the lock.
+            # Here, we simulate that by changing `JUJU_CONTEXT_ID` (unique per Juju event)
+            with patch.dict("os.environ", {"JUJU_CONTEXT_ID": "bar"}):
+                # Workaround for Harness not re-emitting deferred events
+                # (https://github.com/canonical/operator/issues/392)
+                self.charm._start_opensearch_event.emit()
 
             # peer cluster manager
             deployment_desc.return_value = self.deployment_descriptions["ok"]
