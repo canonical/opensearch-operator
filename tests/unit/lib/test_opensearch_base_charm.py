@@ -79,7 +79,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.lock_fallback_rel_id = self.harness.add_relation(
-            opensearch_locking._PeerRelationEndpoint._NAME, self.charm.app.name
+            opensearch_locking._PeerRelationLock._ENDPOINT_NAME, self.charm.app.name
         )
 
         self.OPENSEARCH_DISTRO = (
