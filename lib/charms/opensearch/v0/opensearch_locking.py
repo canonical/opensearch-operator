@@ -158,7 +158,7 @@ class _PeerRelationLock(ops.Object):
                 # (Value should never be read)
                 # (If we set the same value that is currently in the databag, a peer relation
                 # changed event will not be triggered)
-                self._relation.data[self._charm.unit]["_trigger"] = os.environ["JUJU_CONTEXT_ID"]
+                self._relation.data[self._charm.unit]["-trigger"] = os.environ["JUJU_CONTEXT_ID"]
             return
         if self._unit_with_lock and self._unit_requested_lock(
             self._charm.model.get_unit(self._unit_with_lock)
