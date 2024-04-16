@@ -700,7 +700,7 @@ class OpenSearchBackup(Object):
             return False
         return True
 
-    def _request(self, *args, **kwargs) -> str | None:
+    def _request(self, *args, **kwargs) -> dict[str, Any] | None:
         """Returns the output of OpenSearchDistribution.request() or throws an error.
 
         Request method can return one of many: Union[Dict[str, any], List[any], int]
