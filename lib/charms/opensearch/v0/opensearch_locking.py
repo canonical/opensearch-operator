@@ -82,7 +82,7 @@ class _PeerRelationLock(ops.Object):
         return value
 
     @property
-    def _unit_with_lock(self):
+    def _unit_with_lock(self) -> str | None:
         if self._relation:
             return self._relation.data[self._charm.app].get("unit-with-lock")
 
