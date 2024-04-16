@@ -78,11 +78,11 @@ jobs:
       cloud: lxd
       juju-snap-channel: 3.3/stable
     secrets:
+      # GitHub appears to redact each line of a multi-line secret
+      # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
       integration-test: |
-        {
-          "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+        { "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
           "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
           "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
           "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
-          "GCP_SERVICE_ACCOUNT": "${{ secrets.GCP_SERVICE_ACCOUNT }}",
-        }
+          "GCP_SERVICE_ACCOUNT": "${{ secrets.GCP_SERVICE_ACCOUNT }}", }
