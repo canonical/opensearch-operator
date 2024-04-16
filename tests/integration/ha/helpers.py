@@ -347,7 +347,7 @@ async def cut_network_from_unit_without_ip_change(
     subprocess.check_call(limit_set_command.split())
     limit_set_command = f"lxc config device set {unit_hostname} eth0 limits.ingress=1kbit"
     subprocess.check_call(limit_set_command.split())
-    limit_set_command = f"lxc config set {unit_hostname} limits.network.priority=10"
+    limit_set_command = f"lxc config device set {unit_hostname} eth0 limits.priority=10"
     subprocess.check_call(limit_set_command.split())
 
     time.sleep(10)
@@ -368,7 +368,7 @@ async def restore_network_for_unit_without_ip_change(unit_hostname: str) -> None
     subprocess.check_call(limit_set_command.split())
     limit_set_command = f"lxc config device set {unit_hostname} eth0 limits.ingress="
     subprocess.check_call(limit_set_command.split())
-    limit_set_command = f"lxc config set {unit_hostname} limits.network.priority="
+    limit_set_command = f"lxc config device set {unit_hostname} eth0 limits.priority="
     subprocess.check_call(limit_set_command.split())
 
     time.sleep(10)
