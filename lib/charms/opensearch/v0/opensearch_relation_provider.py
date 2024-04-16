@@ -164,9 +164,11 @@ class OpenSearchProvider(Object):
         """Return the dashboard relations out of all."""
         result = []
         for relation in self.opensearch_provides.relations:
-            if KibanaserverRole in self.opensearch_provides.fetch_relation_field(
-                relation.id, "extra-user-roles"
-            ):
+            if (
+                roles := self.opensearch_provides.fetch_relation_field(
+                    relation.id, "extra-user-roles"
+                )
+            ) and KibanaserverRole in roles:
                 # if any(key.name == "opensearch-dashboards" for key in relation.data.keys()):
                 result.append(relation)
         return result
