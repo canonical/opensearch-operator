@@ -2,12 +2,15 @@
 # See LICENSE file for licensing details.
 
 """Base class for the OpenSearch Operators."""
+import abc
 import logging
 import random
+import typing
 from abc import abstractmethod
 from datetime import datetime
 from typing import Dict, List, Optional, Type
 
+import upgrade
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
@@ -142,7 +145,7 @@ class _RestartOpenSearch(EventBase):
     """
 
 
-class OpenSearchBaseCharm(CharmBase):
+class OpenSearchBaseCharm(CharmBase, abc.ABC):
     """Base class for OpenSearch charms."""
 
     _start_opensearch_event = EventSource(_StartOpenSearch)
@@ -212,6 +215,11 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
+
+    @property
+    @abc.abstractmethod
+    def _upgrade(self) -> typing.Optional[upgrade.Upgrade]:
+        pass
 
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
@@ -804,6 +812,8 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch_exclusions.delete_current()
 
         self.node_lock.release()
+
+        self._upgrade.unit_state = "healthy"
 
         self.peers_data.put(Scope.UNIT, "started", True)
 

@@ -61,13 +61,33 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _reconcile_upgrade(self, _=None):
         """Handle upgrade events."""
+        if not self._upgrade:
+            logger.debug("Peer relation not available")
+            return
+        if not self._upgrade.versions_set:
+            logger.debug("Peer relation not ready")
+            return
+        if not self._upgrade.is_compatible:
+            self.set_status(event=event)
+            return
+        if self._upgrade.unit_state == "outdated":
+            if self._upgrade.authorized:
+                self._upgrade.upgrade_unit()
+            else:
+                self.set_status(event=event)
+                logger.debug("Waiting to upgrade")
+                return
+        if self._unit_lifecycle.authorized_leader:
+            if not self._upgrade.in_progress:
+                self._upgrade.set_versions_in_app_databag()
+        self.set_status(event=event)
 
     def _on_upgrade_charm(self, _):
         if self._unit_lifecycle.authorized_leader:
             if not self._upgrade.in_progress:
                 logger.info("Charm upgraded. MySQL Router version unchanged")
             self._upgrade.upgrade_resumed = False
-            # Only call `reconcile` on leader unit to avoid race conditions with `upgrade_resumed`
+            # Only call `_reconcile_upgrade` on leader unit to avoid race conditions with `upgrade_resumed`
             self._reconcile_upgrade()
 
     def _on_resume_upgrade_action(self, event: ops.ActionEvent) -> None:
@@ -101,10 +121,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
         logger.debug("Forcing upgrade")
         event.log(f"Forcefully upgrading {self.unit.name}")
-        self._upgrade.upgrade_unit(
-            workload_=self.get_workload(event=None), tls=self._tls_certificate_saved
-        )
-        self._reconcile_upgrade()  # TODO: keep?
+        self._upgrade.upgrade_unit()
+        self._reconcile_upgrade()
         event.set_results({"result": f"Forcefully upgraded {self.unit.name}"})
         logger.debug("Forced upgrade")
 
