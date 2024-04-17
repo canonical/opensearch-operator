@@ -15,6 +15,7 @@ import charms.opensearch.v0.constants_charm as constants_charm
 import ops
 
 import upgrade
+from opensearch import OpenSearchSnap
 
 logger = logging.getLogger(__name__)
 
@@ -136,10 +137,9 @@ class Upgrade(upgrade.Upgrade):
                 return False
         return False
 
-    def upgrade_unit(self) -> None:
+    def upgrade_unit(self, *, snap: OpenSearchSnap) -> None:
         logger.debug(f"Upgrading {self.authorized=}")
         self.unit_state = "upgrading"
-        # workload_.upgrade(unit=self._unit, tls=tls)
-        raise NotImplementedError
+        snap.install()
         self._unit_databag["snap_revision"] = _SNAP_REVISION
         logger.debug(f"Saved {_SNAP_REVISION} in unit databag after upgrade")

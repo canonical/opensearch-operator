@@ -16,6 +16,7 @@ import typing
 
 import ops
 import poetry.core.constraints.version as poetry_version
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +216,7 @@ class Upgrade(abc.ABC):
         """
 
     @abc.abstractmethod
-    def upgrade_unit(self) -> None:
+    def upgrade_unit(self, *, snap: OpenSearchDistribution) -> None:
         """Upgrade this unit.
 
         Only applies to machine charm
