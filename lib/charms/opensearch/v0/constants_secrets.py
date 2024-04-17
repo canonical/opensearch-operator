@@ -15,5 +15,4 @@ LIBPATCH = 1
 
 
 PW_POSTFIX = "password"
-ADMIN_PW = f"admin-{PW_POSTFIX}"
-ADMIN_PW_HASH = f"{ADMIN_PW}-hash"
+HASH_POSTFIX = f"{PW_POSTFIX}-hash"

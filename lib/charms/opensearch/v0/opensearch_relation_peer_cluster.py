@@ -10,7 +10,6 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
 )
-from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import (
     RelDepartureReason,
@@ -320,8 +319,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 cm_nodes=self._fetch_local_cm_nodes(),
                 credentials=PeerClusterRelDataCredentials(
                     admin_username="admin",
-                    admin_password=secrets.get(Scope.APP, ADMIN_PW),
-                    admin_password_hash=secrets.get(Scope.APP, ADMIN_PW_HASH),
+                    admin_password=secrets.get(Scope.APP, secrets.password_key("admin")),
+                    admin_password_hash=secrets.get(Scope.APP, secrets.hash_key("admin")),
                     admin_tls=secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
                 ),
                 deployment_desc=deployment_desc,
@@ -477,8 +476,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     def _set_security_conf(self, data: PeerClusterRelData) -> None:
         """Store security related config."""
         # set admin secrets
-        self.charm.secrets.put(Scope.APP, ADMIN_PW, data.credentials.admin_password)
-        self.charm.secrets.put(Scope.APP, ADMIN_PW_HASH, data.credentials.admin_password_hash)
+        admin_pw_field = self.charm.secrets.password_key("admin")
+        admin_hash_field = self.charm.secrets.hash_key("admin")
+        self.charm.secrets.put(Scope.APP, admin_pw_field, data.credentials.admin_password)
+        self.charm.secrets.put(Scope.APP, admin_hash_field, data.credentials.admin_password_hash)
         self.charm.secrets.put_object(
             Scope.APP, CertType.APP_ADMIN.val, data.credentials.admin_tls
         )
