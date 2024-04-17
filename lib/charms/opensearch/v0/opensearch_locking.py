@@ -185,7 +185,7 @@ class OpenSearchNodeLock(ops.Object):
     Uses OpenSearch document for lock. Falls back to peer databag if no units online
     """
 
-    _OPENSEARCH_INDEX = ".charm_node_lock"
+    OPENSEARCH_INDEX = ".charm_node_lock"
 
     def __init__(self, charm: "opensearch_base_charm.OpenSearchBaseCharm"):
         super().__init__(charm, "opensearch-node-lock")
@@ -198,7 +198,7 @@ class OpenSearchNodeLock(ops.Object):
         try:
             document_data = self._opensearch.request(
                 "GET",
-                endpoint=f"/{self._OPENSEARCH_INDEX}/_source/0",
+                endpoint=f"/{self.OPENSEARCH_INDEX}/_source/0",
                 host=host,
                 alt_hosts=self._charm.alt_hosts,
                 retries=3,
@@ -242,7 +242,7 @@ class OpenSearchNodeLock(ops.Object):
                 try:
                     self._opensearch.request(
                         "PUT",
-                        endpoint=f"/{self._OPENSEARCH_INDEX}",
+                        endpoint=f"/{self.OPENSEARCH_INDEX}",
                         host=host,
                         alt_hosts=alt_hosts,
                         retries=3,
@@ -263,7 +263,7 @@ class OpenSearchNodeLock(ops.Object):
                 try:
                     self._opensearch.request(
                         "PUT",
-                        endpoint=f"/{self._OPENSEARCH_INDEX}/_create/0?refresh=true",
+                        endpoint=f"/{self.OPENSEARCH_INDEX}/_create/0?refresh=true",
                         host=host,
                         alt_hosts=alt_hosts,
                         retries=3,
@@ -330,7 +330,7 @@ class OpenSearchNodeLock(ops.Object):
                 try:
                     self._opensearch.request(
                         "DELETE",
-                        endpoint=f"/{self._OPENSEARCH_INDEX}/_doc/0?refresh=true",
+                        endpoint=f"/{self.OPENSEARCH_INDEX}/_doc/0?refresh=true",
                         host=host,
                         alt_hosts=alt_hosts,
                         retries=3,
