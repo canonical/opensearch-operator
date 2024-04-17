@@ -18,6 +18,8 @@ import upgrade
 
 logger = logging.getLogger(__name__)
 
+_SNAP_REVISION = str(constants_charm.OPENSEARCH_SNAP_REVISION)
+
 
 class Upgrade(upgrade.Upgrade):
     """In-place upgrades on machines"""
@@ -36,10 +38,8 @@ class Upgrade(upgrade.Upgrade):
     def unit_state(self, value: str) -> None:
         if value == "healthy":
             # Set snap revision on first install
-            self._unit_databag["snap_revision"] = constants_charm.OPENSEARCH_SNAP_REVISION
-            logger.debug(
-                f"Saved {constants_charm.OPENSEARCH_SNAP_REVISION=} in unit databag while setting state healthy"
-            )
+            self._unit_databag["snap_revision"] = _SNAP_REVISION
+            logger.debug(f"Saved {_SNAP_REVISION} in unit databag while setting state healthy")
         # Super call
         upgrade.Upgrade.unit_state.fset(self, value)
 
@@ -90,7 +90,7 @@ class Upgrade(upgrade.Upgrade):
     @property
     def _app_workload_version(self) -> str:
         """Snap revision for current charm code"""
-        return constants_charm.OPENSEARCH_SNAP_REVISION
+        return _SNAP_REVISION
 
     def reconcile_partition(self, *, action_event: ops.ActionEvent = None) -> None:
         """Handle Juju action to confirm first upgraded unit is healthy and resume upgrade."""
@@ -141,7 +141,5 @@ class Upgrade(upgrade.Upgrade):
         self.unit_state = "upgrading"
         # workload_.upgrade(unit=self._unit, tls=tls)
         raise NotImplementedError
-        self._unit_databag["snap_revision"] = constants_charm.OPENSEARCH_SNAP_REVISION
-        logger.debug(
-            f"Saved {constants_charm.OPENSEARCH_SNAP_REVISION=} in unit databag after upgrade"
-        )
+        self._unit_databag["snap_revision"] = _SNAP_REVISION
+        logger.debug(f"Saved {_SNAP_REVISION} in unit databag after upgrade")
