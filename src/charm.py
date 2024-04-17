@@ -86,7 +86,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
     def _on_upgrade_charm(self, _):
         if self._unit_lifecycle.authorized_leader:
             if not self._upgrade.in_progress:
-                logger.info("Charm upgraded. MySQL Router version unchanged")
+                logger.info("Charm upgraded. OpenSearch version unchanged")
             self._upgrade.upgrade_resumed = False
             # Only call `_reconcile_upgrade` on leader unit to avoid race conditions with `upgrade_resumed`
             self._reconcile_upgrade()
