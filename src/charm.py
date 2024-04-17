@@ -35,6 +35,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         super().__init__(*args, distro=OpenSearchSnap)  # OpenSearchTarball
 
         self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
             self.on[upgrade.PEER_RELATION_ENDPOINT_NAME].relation_changed, self._reconcile_upgrade
         )
