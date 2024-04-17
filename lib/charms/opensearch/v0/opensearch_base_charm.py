@@ -729,14 +729,21 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
         self.peers_data.delete(Scope.UNIT, "started")
+        logger.info("No started flag yet")
+        logger.info(f"Event: {event}, {event.__dict__}")
+
         if self.opensearch.is_started():
+            logger.info("Trying post_start_init")
             try:
                 self._post_start_init(event)
             except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
+                logging.info(f"Couldn't post_start_init, deferring {event}")
                 event.defer()
             return
 
+        logger.info("Not started yet")
         if not self._can_service_start():
+            logger.info("Service can start, removing 'starting' flag from unit, deferring")
             self.node_lock.release()
             event.defer()
             return
@@ -747,42 +754,55 @@ class OpenSearchBaseCharm(CharmBase):
             event.defer()
             return
 
+        logging.info("Set WaitingToStart status")
         self.unit.status = WaitingStatus(WaitingToStart)
 
         try:
             # Retrieve the nodes of the cluster, needed to configure this node
+            logging.info("Getting nodes.")
             nodes = self._get_nodes(False)
 
             # validate the roles prior to starting
+            logging.info("CM validate start.")
             self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
+            logging.info("CM validate finished.")
 
             # Set the configuration of the node
+            logging.info("Set node_conf start.")
             self._set_node_conf(nodes)
+            logging.info("Set node_conf finished.")
         except OpenSearchHttpError:
             self.node_lock.release()
             event.defer()
             return
         except OpenSearchProvidedRolesException as e:
+            logging.info("Except")
             logger.exception(e)
             self.node_lock.release()
             event.defer()
+            logging.info("Setting blocked")
             self.unit.status = BlockedStatus(str(e))
             return
 
         try:
+            logging.info("Starting opensearch")
             self.opensearch.start(
                 wait_until_http_200=(
                     not self.unit.is_leader()
                     or self.peers_data.get(Scope.APP, "security_index_initialised", False)
                 )
             )
+            logging.info("Started opensearch, about to post_init")
             self._post_start_init(event)
+            logging.info("Post init done.")
         except (OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
         except OpenSearchStartError as e:
+            logging.info("Except in starting opensearch")
             logger.exception(e)
             self.node_lock.release()
             self.status.set(BlockedStatus(ServiceStartError))
+            logging.info(f"Deferring {event} in except2")
             event.defer()
 
     def _post_start_init(self, event: EventBase):
