@@ -8,9 +8,8 @@ import random
 import typing
 from abc import abstractmethod
 from datetime import datetime
-from typing import Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
-import upgrade
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
     AdminUserInitProgress,
@@ -112,6 +111,7 @@ from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 import lifecycle
+import upgrade
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -137,6 +137,17 @@ class _StartOpenSearch(EventBase):
     This event will be deferred until OpenSearch starts.
     """
 
+    def __init__(self, handle, *, ignore_lock=False):
+        super().__init__(handle)
+        # Only used for force upgrade
+        self.ignore_lock = ignore_lock
+
+    def snapshot(self) -> Dict[str, Any]:
+        return {"ignore_lock": self.ignore_lock}
+
+    def restore(self, snapshot: Dict[str, Any]):
+        self.ignore_lock = snapshot["ignore_lock"]
+
 
 class _RestartOpenSearch(EventBase):
     """Attempt to acquire lock & restart OpenSearch.
@@ -145,11 +156,16 @@ class _RestartOpenSearch(EventBase):
     """
 
 
+class _UpgradeOpenSearch(_StartOpenSearch):
+    """TODO"""
+
+
 class OpenSearchBaseCharm(CharmBase, abc.ABC):
     """Base class for OpenSearch charms."""
 
     _start_opensearch_event = EventSource(_StartOpenSearch)
     _restart_opensearch_event = EventSource(_RestartOpenSearch)
+    _upgrade_opensearch_event = EventSource(_UpgradeOpenSearch)
 
     def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
         super().__init__(*args)
@@ -191,6 +207,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.framework.observe(self._start_opensearch_event, self._start_opensearch)
         self.framework.observe(self._restart_opensearch_event, self._restart_opensearch)
+        self.framework.observe(self._upgrade_opensearch_event, self._upgrade_opensearch)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
@@ -728,9 +745,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _start_opensearch(self, event: _StartOpenSearch) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if not self.node_lock.acquired:
-            logger.debug("Lock to start opensearch not acquired. Will retry next event")
-            event.defer()
-            return
+            # (Attempt to acquire lock even if `event.ignore_lock`)
+            if event.ignore_lock:
+                # Only used for force upgrades
+                logger.debug("Starting without lock")
+            else:
+                logger.debug("Lock to start opensearch not acquired. Will retry next event")
+                event.defer()
+                return
         self.peers_data.delete(Scope.UNIT, "started")
         if self.opensearch.is_started():
             try:
@@ -869,6 +891,30 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         self._start_opensearch_event.emit()
+
+    def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:
+        """Upgrade OpenSearch."""
+        if not self.node_lock.acquired:
+            # (Attempt to acquire lock even if `event.ignore_lock`)
+            if event.ignore_lock:
+                logger.debug("Upgrading without lock")
+            else:
+                logger.debug("Lock to upgrade opensearch not acquired. Will retry next event")
+                event.defer()
+                return
+
+        try:
+            self._stop_opensearch()
+        except OpenSearchStopError as e:
+            logger.exception(e)
+            self.node_lock.release()
+            event.defer()
+            self.status.set(WaitingStatus(ServiceIsStopping))
+            return
+
+        self._upgrade.upgrade_unit()
+
+        self._start_opensearch_event.emit(ignore_lock=event.ignore_lock)
 
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""

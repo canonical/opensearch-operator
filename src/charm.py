@@ -72,7 +72,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
         if self._upgrade.unit_state == "outdated":
             if self._upgrade.authorized:
-                self._upgrade.upgrade_unit()
+                self._upgrade_opensearch_event.emit()
             else:
                 # self.set_status(event=event)
                 logger.debug("Waiting to upgrade")
@@ -121,7 +121,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
         logger.debug("Forcing upgrade")
         event.log(f"Forcefully upgrading {self.unit.name}")
-        self._upgrade.upgrade_unit()
+        logger.warning(f"FOO {event.params.get('ignore-lock')=}")  # TODO: remove
+        self._upgrade_opensearch_event.emit(ignore_lock=event.params.get("ignore-lock"))
         self._reconcile_upgrade()
         event.set_results({"result": f"Forcefully upgraded {self.unit.name}"})
         logger.debug("Forced upgrade")
