@@ -66,6 +66,14 @@ class OpenSearchSnap(OpenSearchDistribution):
                 # hold the snap in charm determined revision
                 self._opensearch.hold()
 
+            if self.model.config["profile"] == "production":
+                # TODO: not execute it at install
+                # Move it to config-changed
+                # However, we do not want to restart the node at every config change.
+                # Therefore, we need a logic to compute the current settings and compare vs.
+                # the profile's. If anything changes, then apply the configs and restart.
+                self.opensearch_config.set_profile("production")
+
         except SnapError as e:
             logger.error(f"Failed to install opensearch. \n{e}")
             raise OpenSearchInstallError()
