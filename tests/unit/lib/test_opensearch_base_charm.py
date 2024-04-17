@@ -7,6 +7,7 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
+import charms.opensearch.v0.opensearch_locking as opensearch_locking
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.models import (
     DeploymentDescription,
@@ -18,7 +19,7 @@ from charms.opensearch.v0.models import (
     StartMode,
     State,
 )
-from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER, PeerRelationName
+from charms.opensearch.v0.opensearch_base_charm import PeerRelationName
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchInstallError,
@@ -77,7 +78,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.peers_data = self.charm.peers_data
 
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
-        self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
+        self.lock_fallback_rel_id = self.harness.add_relation(
+            opensearch_locking._PeerRelationLock._ENDPOINT_NAME, self.charm.app.name
+        )
 
         self.OPENSEARCH_DISTRO = (
             f"{self.opensearch.__class__.__module__}.{self.opensearch.__class__.__name__}"
