@@ -37,6 +37,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
+            self.on[upgrade.PEER_RELATION_ENDPOINT_NAME].relation_created,
+            self._on_upgrade_peer_relation_created,
+        )
+        self.framework.observe(
             self.on[upgrade.PEER_RELATION_ENDPOINT_NAME].relation_changed, self._reconcile_upgrade
         )
         self.framework.observe(
@@ -59,6 +63,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.status.clear(InstallProgress)
         except OpenSearchInstallError:
             self.unit.status = BlockedStatus(InstallError)
+
+    def _on_upgrade_peer_relation_created(self, _) -> None:
+        if self._unit_lifecycle.authorized_leader:
+            if not self._upgrade.in_progress:
+                # Save versions on initial start
+                self._upgrade.set_versions_in_app_databag()
 
     def _reconcile_upgrade(self, _=None):
         """Handle upgrade events."""
