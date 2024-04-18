@@ -37,6 +37,15 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.unit.status = MaintenanceStatus(InstallProgress)
         try:
             self.opensearch.install()
+
+            if self.model.config["profile"] == "production":
+                # TODO: not execute it at install
+                # Move it to config-changed
+                # However, we do not want to restart the node at every config change.
+                # Therefore, we need a logic to compute the current settings and compare vs.
+                # the profile's. If anything changes, then apply the configs and restart.
+                self.opensearch_config.set_profile("production")
+
             self.status.clear(InstallProgress)
         except OpenSearchInstallError:
             self.unit.status = BlockedStatus(InstallError)
