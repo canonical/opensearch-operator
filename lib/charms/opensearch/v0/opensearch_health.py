@@ -3,6 +3,7 @@
 
 """Base class for the OpenSearch Health management."""
 import logging
+from time import time_ns
 from typing import Dict, Optional
 
 from charms.opensearch.v0.constants_charm import (
@@ -92,7 +93,7 @@ class OpenSearchHealth:
         if not self._charm.unit.is_leader():
             # this is needed in case the leader is in an error state and doesn't
             # report the status itself
-            self._charm.peers_data.put(Scope.UNIT, "health", status)
+            self._charm.peers_data.put(Scope.UNIT, "update-ts", time_ns())
             return
 
         if status == HealthColors.GREEN:

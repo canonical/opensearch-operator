@@ -1048,14 +1048,7 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
-        # retrieve the updated conf if exists
-        update_conf = (self.peers_data.get_object(Scope.APP, "nodes_config") or {}).get(
-            self.unit_name
-        )
-        if update_conf:
-            update_conf = Node.from_dict(update_conf)
-
-        # set default generated roles, or the ones passed in the updated conf
+        # set user provided roles if any, else generate base roles
         if (
             deployment_desc := self.opensearch_peer_cm.deployment_desc()
         ).start == StartMode.WITH_PROVIDED_ROLES:
@@ -1064,6 +1057,7 @@ class OpenSearchBaseCharm(CharmBase):
             # This is the case where the 1st and main orchestrator to be deployed with no
             # "data" role in the provided roles, we need to add the role to be able to create
             # and store the security index
+            # todo: rework: delay sec index init until 1st data node / handle red health
             if (
                 self.unit.is_leader()
                 and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
@@ -1073,11 +1067,7 @@ class OpenSearchBaseCharm(CharmBase):
                 computed_roles.append("data")
                 self.peers_data.put(Scope.UNIT, "remove-data-role", True)
         else:
-            computed_roles = (
-                update_conf.roles
-                if update_conf
-                else ClusterTopology.suggest_roles(nodes, self.app.planned_units())
-            )
+            computed_roles = ClusterTopology.suggest_roles(nodes, self.app.planned_units())
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
