@@ -15,7 +15,7 @@ import logging
 from typing import Dict, Optional, Union
 
 from charms.opensearch.v0.constants_charm import KibanaserverUser
-from charms.opensearch.v0.constants_secrets import PW_POSTFIX
+from charms.opensearch.v0.constants_secrets import HASH_POSTFIX, PW_POSTFIX
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchSecretInsertionError
 from charms.opensearch.v0.opensearch_internal_data import (
@@ -97,6 +97,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
     def password_key(self, username: str) -> str:
         """Unified key to store password secrets specific to a user."""
         return f"{username}-{PW_POSTFIX}"
+
+    def hash_key(self, username: str) -> str:
+        """Unified key to store password secrets specific to a user."""
+        return f"{username}-{HASH_POSTFIX}"
 
     def label(self, scope: Scope, key: str) -> str:
         """Generated keys to be used within relation data to refer to secret IDs."""

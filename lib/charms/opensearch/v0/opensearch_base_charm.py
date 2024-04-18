@@ -21,6 +21,7 @@ from charms.opensearch.v0.constants_charm import (
     COSRole,
     COSUser,
     KibanaserverUser,
+    OpenSearchSystemUsers,
     OpenSearchUsers,
     PeerRelationName,
     PluginConfigChangeError,
@@ -36,7 +37,6 @@ from charms.opensearch.v0.constants_charm import (
     TLSRelationMissing,
     WaitingToStart,
 )
-from charms.opensearch.v0.constants_secrets import ADMIN_PW_HASH
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
@@ -968,10 +968,14 @@ class OpenSearchBaseCharm(CharmBase):
         self, user: str, create_function: callable, pwd: Optional[str] = None
     ):
         """Create system user or update it with a new password."""
-        if not self.unit.is_leader():
-            return
-
-        hashed_pwd, pwd = generate_hashed_password(pwd)
+        # If leader: global password change
+        # Otherwise: only system users should be considered (assuming they are initialized)
+        if (
+            self.unit.is_leader()
+            or user not in OpenSearchSystemUsers
+            or not (hashed_pwd := self.secrets.get(Scope.APP, self.secrets.hash_key(user)))
+        ):
+            hashed_pwd, pwd = generate_hashed_password(pwd)
 
         # update
         if self.secrets.get(Scope.APP, self.secrets.password_key(user)):
@@ -980,6 +984,8 @@ class OpenSearchBaseCharm(CharmBase):
             create_function(self, hashed_pwd)
 
         self.secrets.put(Scope.APP, self.secrets.password_key(user), pwd)
+        if user in OpenSearchSystemUsers:
+            self.secrets.put(Scope.APP, self.secrets.hash_key(user), hashed_pwd)
         return (pwd, hashed_pwd)
 
     def _put_admin_user(self, pwd: Optional[str] = None):
@@ -1006,7 +1012,6 @@ class OpenSearchBaseCharm(CharmBase):
             self.peers_data.put(Scope.APP, "admin_user_initialized", True)
 
         pwd, hashed_pwd = self._put_or_update_system_user("admin", put_user, pwd)
-        self.secrets.put(Scope.APP, ADMIN_PW_HASH, hashed_pwd)
 
     def _put_kibanaserver_user(self, pwd: Optional[str] = None):
         """Change password of the 'kibanaserver' user."""
