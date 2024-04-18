@@ -912,7 +912,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(WaitingStatus(ServiceIsStopping))
             return
 
-        self._upgrade.upgrade_unit()
+        self._upgrade.upgrade_unit(snap=self.opensearch)
 
         self._start_opensearch_event.emit(ignore_lock=event.ignore_lock)
 
