@@ -510,7 +510,7 @@ class OpenSearchBaseCharm(CharmBase):
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
 
-    def _on_config_changed(self, event: ConfigChangedEvent):
+    def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
         if self.opensearch_config.update_host_if_needed():
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
@@ -539,21 +539,24 @@ class OpenSearchBaseCharm(CharmBase):
         try:
             if not self.plugin_manager.check_plugin_manager_ready():
                 raise OpenSearchNotFullyReadyError()
-            self.status.set(MaintenanceStatus(PluginConfigCheck))
+            if self.unit.is_leader():
+                self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
             if self.plugin_manager.run():
                 self._restart_opensearch_event.emit()
-            self.status.clear(PluginConfigCheck)
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
                 logger.warning("Plugin management: cluster not ready yet at config changed")
             else:
-                self.status.set(BlockedStatus(PluginConfigChangeError))
+                self.status.set(BlockedStatus(PluginConfigChangeError), app=True)
             event.defer()
             # Decided to defer the event. We can clean up the status and reset it once the
             # config-changed is called again.
-            self.status.clear(PluginConfigCheck)
+            if self.unit.is_leader():
+                self.status.clear(PluginConfigCheck, app=True)
             return
-        self.status.clear(PluginConfigChangeError)
+        if self.unit.is_leader():
+            self.status.clear(PluginConfigCheck, app=True)
+            self.status.clear(PluginConfigChangeError, app=True)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -731,6 +734,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         if self.opensearch.is_failed():
             self.node_lock.release()
+            self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
             return
 

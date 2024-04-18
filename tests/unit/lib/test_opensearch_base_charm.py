@@ -33,6 +33,7 @@ from tests.helpers import patch_network_get
 
 
 @patch_network_get("1.1.1.1")
+@patch.dict("os.environ", {"JUJU_CONTEXT_ID": "foo"})
 class TestOpenSearchBaseCharm(unittest.TestCase):
     BASE_LIB_PATH = "charms.opensearch.v0"
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
@@ -79,7 +80,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.lock_fallback_rel_id = self.harness.add_relation(
-            opensearch_locking._PeerRelationEndpoint._NAME, self.charm.app.name
+            opensearch_locking._PeerRelationLock._ENDPOINT_NAME, self.charm.app.name
         )
 
         self.OPENSEARCH_DISTRO = (

@@ -66,6 +66,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
+from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import OpenSearchBackupPlugin, PluginState
 from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
@@ -92,7 +93,11 @@ S3_REPOSITORY = "s3-repository"
 
 S3_REPO_BASE_PATH = "/"
 
-INDICES_TO_EXCLUDE_AT_RESTORE = {".opendistro_security", ".opensearch-observability"}
+INDICES_TO_EXCLUDE_AT_RESTORE = {
+    ".opendistro_security",
+    ".opensearch-observability",
+    OpenSearchNodeLock.OPENSEARCH_INDEX,
+}
 
 REPO_NOT_CREATED_ERR = "repository type [s3] does not exist"
 REPO_NOT_ACCESS_ERR = f"[{S3_REPOSITORY}] path [{S3_REPO_BASE_PATH}] is not accessible"
@@ -198,7 +203,7 @@ class OpenSearchBackup(Object):
                 f"List backups action failed - {str(e)} - check the application logs for the full stack trace."
             )
         if event.params.get("output").lower() == "json":
-            event.set_results({"backups": (json.dumps(backups)).replace("_", "-")})
+            event.set_results({"backups": json.dumps(backups)})
         elif event.params.get("output").lower() == "table":
             event.set_results({"backups": self._generate_backup_list_output(backups)})
         else:
@@ -540,9 +545,9 @@ class OpenSearchBackup(Object):
         #     (3) based on the response, set the message status
         if state != BackupServiceState.SUCCESS:
             logger.error(f"Failed to setup backup service with state {state}")
-            self.charm.status.set(BlockedStatus(BackupSetupFailed))
+            self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
             return
-        self.charm.status.clear(BackupSetupFailed)
+        self.charm.status.clear(BackupSetupFailed, app=True)
         self.charm.status.clear(BackupConfigureStart)
 
     def _on_s3_broken(self, event: EventBase) -> None:  # noqa: C901
