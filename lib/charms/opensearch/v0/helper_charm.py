@@ -80,8 +80,8 @@ class Status:
         """
         context = self.charm.app if app else self.charm.unit
         # Upgrade app status takes priority over other app statuses
-        if app and self.charm._upgrade and (status := self.charm._upgrade.app_status):
-            context.status = status
+        if app and self.charm._upgrade and (upgrade_status := self.charm._upgrade.app_status):
+            context.status = upgrade_status
             return
         if context.status == status:
             return
