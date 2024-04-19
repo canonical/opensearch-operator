@@ -44,23 +44,13 @@ class Upgrade(upgrade.Upgrade):
         # Super call
         upgrade.Upgrade.unit_state.fset(self, value)
 
-    def _get_unit_healthy_status(
-        self, *, workload_status: typing.Optional[ops.StatusBase]
-    ) -> ops.StatusBase:
+    def _get_unit_healthy_status(self) -> ops.StatusBase:
         if self._unit_workload_version == self._app_workload_version:
-            if isinstance(workload_status, ops.WaitingStatus):
-                return ops.WaitingStatus(
-                    f'Router {self._current_versions["workload"]} rev {self._unit_workload_version}'
-                )
             return ops.ActiveStatus(
-                f'Router {self._current_versions["workload"]} rev {self._unit_workload_version} running'
-            )
-        if isinstance(workload_status, ops.WaitingStatus):
-            return ops.WaitingStatus(
-                f'Charmed operator upgraded. Router {self._current_versions["workload"]} rev {self._unit_workload_version}'
+                f'OpenSearch {self._current_versions["workload"]} rev {self._unit_workload_version} running'
             )
         return ops.WaitingStatus(
-            f'Charmed operator upgraded. Router {self._current_versions["workload"]} rev {self._unit_workload_version} running'
+            f'Charmed operator upgraded. OpenSearch {self._current_versions["workload"]} rev {self._unit_workload_version} running'
         )
 
     @property

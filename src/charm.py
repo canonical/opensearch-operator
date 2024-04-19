@@ -79,19 +79,37 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             logger.debug("Peer relation not ready")
             return
         if not self._upgrade.is_compatible:
-            # self.set_status(event=event)
+            self._set_upgrade_status()
             return
         if self._upgrade.unit_state == "outdated":
             if self._upgrade.authorized:
                 self._upgrade_opensearch_event.emit()
             else:
-                # self.set_status(event=event)
+                self._set_upgrade_status()
                 logger.debug("Waiting to upgrade")
                 return
         if self._unit_lifecycle.authorized_leader:
             if not self._upgrade.in_progress:
                 self._upgrade.set_versions_in_app_databag()
-        # self.set_status(event=event)
+        self._set_upgrade_status()
+
+    def _set_upgrade_status(self):
+        # Set/clear upgrade unit status if no other unit status
+        if isinstance(self.unit.status, ops.ActiveStatus) or (
+            isinstance(self.unit.status, ops.WaitingStatus)
+            and self.unit.status.message.startswith("Charmed operator upgraded.")
+        ):
+            self.status.set(self._upgrade.get_unit_juju_status() or ops.ActiveStatus())
+        # Set upgrade app status
+        if status := self._upgrade.app_status:
+            self.status.set(status, app=True)
+        else:
+            # Clear upgrade app status
+            if (
+                isinstance(self.app.status, ops.BlockedStatus)
+                or isinstance(self.app.status, ops.MaintenanceStatus)
+            ) and self.app.status.message.startswith("Upgrad"):
+                self.status.set(ops.ActiveStatus(), app=True)
 
     def _on_upgrade_charm(self, _):
         if self._unit_lifecycle.authorized_leader:

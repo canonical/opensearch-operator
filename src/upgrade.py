@@ -124,17 +124,12 @@ class Upgrade(abc.ABC):
         return sorted((self._unit, *self._peer_relation.units), key=unit_number, reverse=True)
 
     @abc.abstractmethod
-    def _get_unit_healthy_status(
-        self, *, workload_status: typing.Optional[ops.StatusBase]
-    ) -> ops.StatusBase:
+    def _get_unit_healthy_status(self) -> ops.StatusBase:
         """Status shown during upgrade if unit is healthy"""
 
-    def get_unit_juju_status(
-        self, *, workload_status: typing.Optional[ops.StatusBase]
-    ) -> typing.Optional[ops.StatusBase]:
-        # TODO: revise status handling & priority
+    def get_unit_juju_status(self) -> typing.Optional[ops.StatusBase]:
         if self.in_progress:
-            return self._get_unit_healthy_status(workload_status=workload_status)
+            return self._get_unit_healthy_status()
 
     @property
     def app_status(self) -> typing.Optional[ops.StatusBase]:

@@ -3,6 +3,7 @@
 
 """Utility functions for charms related operations."""
 import re
+import typing
 from datetime import datetime
 
 from charms.data_platform_libs.v0.data_interfaces import Scope
@@ -10,6 +11,9 @@ from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from ops import CharmBase
 from ops.model import ActiveStatus, StatusBase
+
+if typing.TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 # The unique Charmhub library identifier, never change it
 LIBID = "293db55a2d8949f8aa5906d04cd541ba"
@@ -34,7 +38,7 @@ class Status:
         Contain = "contain"
         Interpolated = "interpolated"
 
-    def __init__(self, charm):
+    def __init__(self, charm: "OpenSearchBaseCharm"):
         self.charm = charm
 
     def clear(
@@ -58,7 +62,14 @@ class Status:
             condition = status_message in context.status.message
 
         if condition:
-            context.status = ActiveStatus()
+            if (
+                not app
+                and self.charm._upgrade
+                and (status := self.charm._upgrade.get_unit_juju_status())
+            ):
+                context.status = status
+            else:
+                context.status = ActiveStatus()
 
     def set(self, status: StatusBase, app: bool = False):
         """Set status on unit or app IF not already set.
@@ -68,6 +79,10 @@ class Status:
         machines on integration tests (colliding with "idle period").
         """
         context = self.charm.app if app else self.charm.unit
+        # Upgrade app status takes priority over other app statuses
+        if app and self.charm._upgrade and (status := self.charm._upgrade.app_status):
+            context.status = status
+            return
         if context.status == status:
             return
 
