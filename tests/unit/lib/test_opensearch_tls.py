@@ -102,10 +102,10 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_relation_joined_admin(
+    def test_on_relation_created_admin(
         self, _, _put_admin_user, _request_certificate, deployment_desc
     ):
-        """Test on certificate relation joined event."""
+        """Test on certificate relation created event."""
         deployment_desc.return_value = DeploymentDescription(
             config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
             start=StartMode.WITH_GENERATED_ROLES,
@@ -114,11 +114,10 @@ class TestOpenSearchTLS(unittest.TestCase):
             app=self.charm.app.name,
             state=DeploymentState(value=State.ACTIVE),
         )
-
         event_mock = MagicMock()
 
         self.harness.set_leader(is_leader=True)
-        self.charm.tls._on_tls_relation_joined(event_mock)
+        self.charm.tls._on_tls_relation_created(event_mock)
         self.assertEqual(
             _request_certificate.mock_calls,
             [
@@ -134,10 +133,10 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_relation_joined_non_admin(
+    def test_on_relation_created_non_admin(
         self, _, _put_admin_user, _request_certificate, deployment_desc
     ):
-        """Test on certificate relation joined event."""
+        """Test on certificate relation created event."""
         deployment_desc.return_value = DeploymentDescription(
             config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
             start=StartMode.WITH_GENERATED_ROLES,
@@ -146,11 +145,10 @@ class TestOpenSearchTLS(unittest.TestCase):
             app=self.charm.app.name,
             state=DeploymentState(value=State.ACTIVE),
         )
-
         event_mock = MagicMock()
 
         self.harness.set_leader(is_leader=False)
-        self.charm.tls._on_tls_relation_joined(event_mock)
+        self.charm.tls._on_tls_relation_created(event_mock)
         self.assertEqual(
             _request_certificate.mock_calls,
             [
