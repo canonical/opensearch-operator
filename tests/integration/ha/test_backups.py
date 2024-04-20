@@ -25,6 +25,7 @@ from typing import Dict
 
 import boto3
 import pytest
+from charms.opensearch.v0.constants_charm import OPENSEARCH_BACKUP_ID_FORMAT
 from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
 
@@ -252,14 +253,12 @@ async def test_create_backup_and_restore(
     logger.info(f"Syncing credentials for {cloud_name}")
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-    date_before_backup = datetime.now()
+    date_before_backup = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
     assert (
-        datetime.strptime(
-            backup_id := await create_backup(
-                ops_test,
-                leader_id,
-                unit_ip=unit_ip,
-            )
+        backup_id := await create_backup(
+            ops_test,
+            leader_id,
+            unit_ip=unit_ip,
         )
         > date_before_backup
     )
@@ -324,14 +323,12 @@ async def test_remove_and_readd_s3_relation(
     logger.info(f"Syncing credentials for {cloud_name}")
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-    date_before_backup = datetime.now()
+    date_before_backup = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
     assert (
-        datetime.strptime(
-            backup_id := await create_backup(
-                ops_test,
-                leader_id,
-                unit_ip=unit_ip,
-            )
+        backup_id := await create_backup(
+            ops_test,
+            leader_id,
+            unit_ip=unit_ip,
         )
         > date_before_backup
     )
@@ -439,14 +436,12 @@ async def test_restore_to_new_cluster(
 
     await writer.start()
     time.sleep(10)
-    date_before_backup = datetime.now()
+    date_before_backup = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
     assert (
-        datetime.strptime(
-            backup_id := await create_backup(
-                ops_test,
-                leader_id,
-                unit_ip=unit_ip,
-            )
+        backup_id := await create_backup(
+            ops_test,
+            leader_id,
+            unit_ip=unit_ip,
         )
         > date_before_backup
     )
@@ -606,14 +601,12 @@ async def test_change_config_and_backup_restore(
         config: Dict[str, str] = cloud_configs[cloud_name]
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-        date_before_backup = datetime.now()
+        date_before_backup = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
         assert (
-            datetime.strptime(
-                backup_id := await create_backup(
-                    ops_test,
-                    leader_id,
-                    unit_ip=unit_ip,
-                )
+            backup_id := await create_backup(
+                ops_test,
+                leader_id,
+                unit_ip=unit_ip,
             )
             > date_before_backup
         )

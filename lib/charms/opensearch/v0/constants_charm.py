@@ -98,3 +98,6 @@ OpenSearchRoles = set()
 
 # Opensearch Snap revision
 OPENSEARCH_SNAP_REVISION = 40
+
+# User-face Backup ID format
+OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
