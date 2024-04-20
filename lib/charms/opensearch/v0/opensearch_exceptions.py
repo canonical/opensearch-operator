@@ -63,10 +63,6 @@ class OpenSearchNotFullyReadyError(OpenSearchError):
     """Exception thrown when a node is started but not full ready to take on requests."""
 
 
-class OpenSearchOpsLockAlreadyAcquiredError(OpenSearchError):
-    """Exception thrown when a node is started but not full ready to take on requests."""
-
-
 class OpenSearchCmdError(OpenSearchError):
     """Exception thrown when an OpenSearch bin command fails."""
 
@@ -74,12 +70,18 @@ class OpenSearchCmdError(OpenSearchError):
 class OpenSearchHttpError(OpenSearchError):
     """Exception thrown when an OpenSearch REST call fails."""
 
-    def __init__(self, response_body: Optional[str] = None, response_code: Optional[int] = None):
+    def __init__(self, response_text: Optional[str] = None, response_code: Optional[int] = None):
+        self.response_text = response_text
         try:
-            self.response_body = json.loads(response_body)
+            self.response_body = json.loads(response_text)
         except (json.JSONDecodeError, TypeError):
             self.response_body = {}
         self.response_code = response_code
+        if self.response_body:
+            message = f"HTTP error {self.response_code=}\n{self.response_body=}"
+        else:
+            message = f"HTTP error {self.response_code=}\n{self.response_text=}"
+        super().__init__(message)
 
 
 class OpenSearchHAError(OpenSearchError):

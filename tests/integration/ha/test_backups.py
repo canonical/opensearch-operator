@@ -44,7 +44,7 @@ from .helpers import (
     app_name,
     assert_continuous_writes_consistency,
     assert_continuous_writes_increasing,
-    assert_cwrites_backup_consistency,
+    assert_restore_indices_and_compare_consistency,
     create_backup,
     list_backups,
     restore,
@@ -64,6 +64,23 @@ BackupsPath = f"opensearch/{uuid.uuid4()}"
 #    backup-id <-> continuous-writes index document count
 # We use this global variable then to restore each backup on full DR scenario.
 cwrites_backup_doc_count = {}
+
+
+# Keeps track of the current continuous_writes object that we are using.
+# This is relevant for the case where we have a test failure and we need to clean
+# the cluster
+global_cwrites = None
+
+
+@pytest.fixture(scope="function")
+async def force_clear_cwrites_index():
+    """Force clear the global cwrites_backup_doc_count."""
+    global global_cwrites
+    try:
+        if global_cwrites:
+            await global_cwrites.clear()
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="session")
@@ -244,7 +261,9 @@ async def test_create_backup_and_restore(
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
-    await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
+    await assert_restore_indices_and_compare_consistency(
+        ops_test, app, leader_id, unit_ip, backup_id
+    )
     global cwrites_backup_doc_count
     cwrites_backup_doc_count[backup_id] = await index_docs_count(
         ops_test,
@@ -310,7 +329,9 @@ async def test_remove_and_readd_s3_relation(
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
-    await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
+    await assert_restore_indices_and_compare_consistency(
+        ops_test, app, leader_id, unit_ip, backup_id
+    )
     global cwrites_backup_doc_count
     cwrites_backup_doc_count[backup_id] = await index_docs_count(
         ops_test,
@@ -333,6 +354,7 @@ async def test_restore_to_new_cluster(
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
     cloud_name: str,
+    force_clear_cwrites_index,
 ) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
 
@@ -400,6 +422,11 @@ async def test_restore_to_new_cluster(
     # Now, try a backup & restore with continuous writes
     logger.info("Final stage of DR test: try a backup & restore with continuous writes")
     writer: ContinuousWrites = ContinuousWrites(ops_test, app)
+
+    # store the global cwrites object
+    global global_cwrites
+    global_cwrites = writer
+
     await writer.start()
     time.sleep(10)
     assert (
@@ -414,7 +441,9 @@ async def test_restore_to_new_cluster(
     await assert_continuous_writes_consistency(ops_test, writer, app)
     # This assert assures we have taken a new backup, after the last restore from the original
     # cluster. That means the index is writable.
-    await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
+    await assert_restore_indices_and_compare_consistency(
+        ops_test, app, leader_id, unit_ip, backup_id
+    )
     # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
     await writer.clear()
 
@@ -516,6 +545,7 @@ async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
         apps=[app],
         apps_statuses=["blocked"],
         units_statuses=["active"],
+        wait_for_exact_units=3,
         idle_period=30,
     )
 
@@ -534,6 +564,7 @@ async def test_change_config_and_backup_restore(
     ops_test: OpsTest,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
+    force_clear_cwrites_index,
 ) -> None:
     """Run for each cloud and update the cluster config."""
     unit_ip: str = await get_leader_unit_ip(ops_test)
@@ -548,6 +579,11 @@ async def test_change_config_and_backup_restore(
         # Start the ContinuousWrites here instead of bringing as a fixture because we want to do
         # it for every cloud config we have and we have to stop it before restore, right down.
         writer: ContinuousWrites = ContinuousWrites(ops_test, app, initial_count=initial_count)
+
+        # store the global cwrites object
+        global global_cwrites
+        global_cwrites = writer
+
         await writer.start()
         time.sleep(10)
 
@@ -565,6 +601,8 @@ async def test_change_config_and_backup_restore(
         # continuous writes checks
         await assert_continuous_writes_increasing(writer)
         await assert_continuous_writes_consistency(ops_test, writer, app)
-        await assert_cwrites_backup_consistency(ops_test, app, leader_id, unit_ip, backup_id)
+        await assert_restore_indices_and_compare_consistency(
+            ops_test, app, leader_id, unit_ip, backup_id
+        )
         # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
         await writer.clear()

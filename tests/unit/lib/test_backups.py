@@ -37,6 +37,7 @@ from ops.model import MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
+from tests.helpers import patch_network_get
 
 TEST_BUCKET_NAME = "s3://bucket-test"
 TEST_BASE_PATH = "/test"
@@ -73,7 +74,6 @@ def harness():
     )
 
     # Replace some unused methods that will be called as part of set_leader with mock
-    charm.service_manager._update_locks = MagicMock()
     charm._put_admin_user = MagicMock()
     harness_obj.add_relation(PeerRelationName, "opensearch")
     harness_obj.set_leader(is_leader=True)
@@ -448,6 +448,7 @@ def test_on_s3_broken_steps(
         harness.charm.backup._execute_s3_broken_calls.assert_called_once()
 
 
+@patch_network_get("1.1.1.1")
 class TestBackups(unittest.TestCase):
     maxDiff = None
 

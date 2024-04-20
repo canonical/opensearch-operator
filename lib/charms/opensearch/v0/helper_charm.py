@@ -3,9 +3,12 @@
 
 """Utility functions for charms related operations."""
 import re
+from datetime import datetime
 
+from charms.data_platform_libs.v0.data_interfaces import Scope
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from ops import EventBase
+from ops import CharmBase
 from ops.model import ActiveStatus, StatusBase
 
 # The unique Charmhub library identifier, never change it
@@ -17,12 +20,6 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
-
-
-class DeferTriggerEvent(EventBase):
-    """Dummy event to be triggered to trigger the deferral of another event."""
-
-    pass
 
 
 class Status:
@@ -75,3 +72,43 @@ class Status:
             return
 
         context.status = status
+
+
+class RelDepartureReason(BaseStrEnum):
+    """Enum depicting the 3 various causes of a Relation Departed event."""
+
+    APP_REMOVAL = "app-removal"
+    SCALE_DOWN = "scale-down"
+    REL_BROKEN = "rel-broken"
+
+
+def relation_departure_reason(charm: CharmBase, relation_name: str) -> RelDepartureReason:
+    """Compute the reason behind a relation departed event."""
+    # fetch relation info
+    goal_state = charm.model._backend._run("goal-state", return_output=True, use_json=True)
+    rel_info = goal_state["relations"][relation_name]
+
+    # check dying units
+    dying_units = [
+        unit_data["status"] == "dying"
+        for unit, unit_data in rel_info.items()
+        if unit != relation_name
+    ]
+
+    # check if app removal
+    if all(dying_units):
+        return RelDepartureReason.APP_REMOVAL
+
+    if any(dying_units):
+        return RelDepartureReason.SCALE_DOWN
+
+    return RelDepartureReason.REL_BROKEN
+
+
+def trigger_leader_peer_rel_changed(charm: CharmBase) -> None:
+    """Force trigger a peer rel changed event by leader."""
+    if not charm.unit.is_leader():
+        return
+
+    charm.peers_data.put(Scope.APP, "triggered", datetime.now().timestamp())
+    charm.on[PeerRelationName].relation_changed.emit(charm.model.get_relation(PeerRelationName))

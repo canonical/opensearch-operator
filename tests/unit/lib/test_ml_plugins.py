@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import charms
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn, PluginState
-from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -63,7 +62,10 @@ class TestOpenSearchKNN(unittest.TestCase):
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
-    @patch.object(RollingOpsManager, "_on_acquire_lock")
+    @patch(
+        "charms.opensearch.v0.opensearch_locking.OpenSearchNodeLock.acquired",
+        new_callable=PropertyMock,
+    )
     @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
@@ -81,7 +83,7 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_status,
         mock_is_enabled,
         mock_version,
-        mock_acquire_lock,
+        mock_lock_acquired,
         ___,
         mock_is_node_up,
     ) -> None:
@@ -98,9 +100,10 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_is_node_up.return_value = True
         self.charm._get_nodes = MagicMock(return_value=[1])
         self.charm.planned_units = MagicMock(return_value=1)
+        mock_lock_acquired.return_value = False
 
         self.harness.update_config({"plugin_opensearch_knn": False})
-        mock_acquire_lock.assert_called_once()
+        mock_lock_acquired.assert_called_once()
         self.plugin_manager._opensearch_config.add_plugin.assert_called_once_with(
             {"knn.plugin.enabled": "false"}
         )

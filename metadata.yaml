@@ -13,10 +13,13 @@ summary: |
 peers:
   opensearch-peers:
     interface: opensearch_peers
-  service:
-    interface: rolling_op
+  node-lock-fallback:
+    interface: node_lock_fallback
 
 provides:
+  peer-cluster-orchestrator:
+    interface: peer_cluster
+    optional: true
   opensearch-client:
     interface: opensearch_client
   cos-agent:
@@ -31,6 +34,10 @@ requires:
   certificates:
     interface: tls-certificates
     limit: 1
+  peer-cluster:
+    interface: peer_cluster
+    limit: 2  # (main+failover)_cluster_orchestrator(s)
+    optional: true
   s3-credentials:
     interface: s3
     limit: 1

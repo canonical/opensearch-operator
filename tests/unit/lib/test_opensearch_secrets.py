@@ -3,9 +3,9 @@
 
 from unittest.mock import MagicMock, patch
 
+import charms.opensearch.v0.opensearch_locking as opensearch_locking
 from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import JujuVersion
 from ops.testing import Harness
@@ -43,7 +43,9 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
         JujuVersion.from_environ = MagicMock(return_value=JujuVersionMock())
 
         self.peers_rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
-        self.service_rel_id = self.harness.add_relation(SERVICE_MANAGER, self.charm.app.name)
+        self.lock_fallback_rel_id = self.harness.add_relation(
+            opensearch_locking._PeerRelationLock._ENDPOINT_NAME, self.charm.app.name
+        )
         self.client_rel_id = self.harness.add_relation(ClientRelationName, "application")
         self.harness.add_relation_unit(self.client_rel_id, "application/0")
 

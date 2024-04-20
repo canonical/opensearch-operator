@@ -9,6 +9,14 @@ from unittest.mock import MagicMock, Mock, patch
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
+from charms.opensearch.v0.models import (
+    DeploymentDescription,
+    DeploymentState,
+    DeploymentType,
+    PeerClusterConfig,
+    StartMode,
+    State,
+)
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops.testing import Harness
 
@@ -88,15 +96,28 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
         self.secret_store.put_object(Scope.APP, CertType.APP_ADMIN.val, {"csr": event_data_csr})
 
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_relation_joined_admin(self, _, _put_admin_user, _request_certificate):
-        """Test on certificate relation joined event."""
+    def test_on_relation_created_admin(
+        self, _, _put_admin_user, _request_certificate, deployment_desc
+    ):
+        """Test on certificate relation created event."""
+        deployment_desc.return_value = DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            start=StartMode.WITH_GENERATED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            app=self.charm.app.name,
+            state=DeploymentState(value=State.ACTIVE),
+        )
         event_mock = MagicMock()
 
         self.harness.set_leader(is_leader=True)
-        self.charm.tls._on_tls_relation_joined(event_mock)
+        self.charm.tls._on_tls_relation_created(event_mock)
         self.assertEqual(
             _request_certificate.mock_calls,
             [
@@ -106,15 +127,28 @@ class TestOpenSearchTLS(unittest.TestCase):
             ],
         )
 
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_relation_joined_non_admin(self, _, _put_admin_user, _request_certificate):
-        """Test on certificate relation joined event."""
+    def test_on_relation_created_non_admin(
+        self, _, _put_admin_user, _request_certificate, deployment_desc
+    ):
+        """Test on certificate relation created event."""
+        deployment_desc.return_value = DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            start=StartMode.WITH_GENERATED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            app=self.charm.app.name,
+            state=DeploymentState(value=State.ACTIVE),
+        )
         event_mock = MagicMock()
 
         self.harness.set_leader(is_leader=False)
-        self.charm.tls._on_tls_relation_joined(event_mock)
+        self.charm.tls._on_tls_relation_created(event_mock)
         self.assertEqual(
             _request_certificate.mock_calls,
             [
@@ -181,8 +215,13 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch(
         "charms.tls_certificates_interface.v3.tls_certificates.TLSCertificatesRequiresV3.request_certificate_creation"
     )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
-    def test_on_certificate_expiring(self, _put_admin_user, request_certificate_creation):
+    def test_on_certificate_expiring(
+        self, _put_admin_user, deployment_desc, request_certificate_creation
+    ):
         """Test _on_certificate_available event."""
         csr = "csr_12345"
         cert = "cert_12345"
@@ -193,6 +232,15 @@ class TestOpenSearchTLS(unittest.TestCase):
             Scope.UNIT,
             secret_key,
             {"csr": csr, "cert": cert, "key": key},
+        )
+
+        deployment_desc.return_value = DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            start=StartMode.WITH_GENERATED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            app=self.charm.app.name,
+            state=DeploymentState(value=State.ACTIVE),
         )
 
         event_mock = MagicMock(certificate=cert)

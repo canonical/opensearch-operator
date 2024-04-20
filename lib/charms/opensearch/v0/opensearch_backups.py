@@ -66,7 +66,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
-from charms.opensearch.v0.opensearch_locking import OpenSearchOpsLock
+from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import OpenSearchBackupPlugin, PluginState
 from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
@@ -96,7 +96,7 @@ S3_REPO_BASE_PATH = "/"
 INDICES_TO_EXCLUDE_AT_RESTORE = {
     ".opendistro_security",
     ".opensearch-observability",
-    OpenSearchOpsLock.LOCK_INDEX,
+    OpenSearchNodeLock.OPENSEARCH_INDEX,
 }
 
 REPO_NOT_CREATED_ERR = "repository type [s3] does not exist"
@@ -257,7 +257,7 @@ class OpenSearchBackup(Object):
             OpenSearchHttpError
             OpenSearchRestoreIndexClosingError
         """
-        backup_indices = self._list_backups()[backup_id]["indices"]
+        backup_indices = self._list_backups().get(backup_id, {}).get("indices", {})
         indices_to_close = set()
         for index, state in ClusterState.indices(self.charm.opensearch).items():
             if (
@@ -275,12 +275,8 @@ class OpenSearchBackup(Object):
         return indices_to_close
 
     def _restore(self, backup_id: int) -> Dict[str, Any]:
-        """Runs the restore and processes the response.
-
-        Backups come in the user-formatted string, YYYY-MM-DDTHH:MM:SSZ.
-        """
-        backup_indices = self._list_backups()[backup_id]["indices"]
-        # The restore call will close indices if there is a matching name.
+        """Runs the restore and processes the response."""
+        backup_indices = self._list_backups().get(backup_id, {}).get("indices", {})
         output = self._request(
             "POST",
             f"_snapshot/{S3_REPOSITORY}/{backup_id.lower()}/_restore?wait_for_completion=true",
@@ -310,6 +306,8 @@ class OpenSearchBackup(Object):
         Essentially, check for each index shard: for all type=SNAPSHOT and stage=DONE, return True.
         """
         indices_status = self._request("GET", "/_recovery?human")
+        if not indices_status:
+            raise OpenSearchRestoreCheckError("_is_restore_complete: failed to get indices status")
         for info in indices_status.values():
             # Now, check the status of each shard
             for shard in info["shards"]:
@@ -329,13 +327,17 @@ class OpenSearchBackup(Object):
         except OpenSearchListBackupError:
             return False
 
-    def _on_restore_backup_action(self, event: ActionEvent) -> None:
+    def _on_restore_backup_action(self, event: ActionEvent) -> None:  # noqa #C901
         """Restores a backup to the current cluster."""
         if not self._can_unit_perform_backup(event):
             event.fail("Failed: backup service is not configured yet")
             return
-        if not self._is_restore_complete():
-            event.fail("Failed: previous restore is still in progress")
+        try:
+            if not self._is_restore_complete():
+                event.fail("Failed: previous restore is still in progress")
+                return
+        except OpenSearchRestoreCheckError:
+            event.fail("Failed: error connecting to the cluster")
             return
         # Now, validate the backup is working
         backup_id = event.params.get("backup-id")
@@ -377,7 +379,13 @@ class OpenSearchBackup(Object):
             self.charm.status.clear(RestoreInProgress)
             return
 
-        msg = "Restore is complete" if self._is_restore_complete() else "Restore in progress..."
+        try:
+            msg = (
+                "Restore is complete" if self._is_restore_complete() else "Restore in progress..."
+            )
+        except OpenSearchRestoreCheckError:
+            event.fail("Failed: error connecting to the cluster")
+            return
         self.charm.status.clear(RestoreInProgress)
         event.set_results(
             {"backup-id": backup_id, "status": msg, "closed-indices": str(closed_idx)}
@@ -439,7 +447,9 @@ class OpenSearchBackup(Object):
 
     def _list_backups(self) -> Dict[int, str]:
         """Returns a mapping of snapshot ids / state."""
-        response = self._request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
+        # Using the original request method, as we want to raise an http exception if we
+        # cannot get the snapshot list.
+        response = self.charm.opensearch.request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
         return {
             snapshot["snapshot"].upper(): {
                 "state": snapshot["state"],
@@ -550,6 +560,7 @@ class OpenSearchBackup(Object):
         if state != BackupServiceState.SUCCESS:
             logger.error(f"Failed to setup backup service with state {state}")
             self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
+            self.charm.status.clear(BackupConfigureStart)
             return
         self.charm.status.clear(BackupSetupFailed, app=True)
         self.charm.status.clear(BackupConfigureStart)
@@ -694,30 +705,33 @@ class OpenSearchBackup(Object):
             return False
         return True
 
-    def _request(self, *args, **kwargs) -> str:
+    def _request(self, *args, **kwargs) -> dict[str, Any] | None:
         """Returns the output of OpenSearchDistribution.request() or throws an error.
 
         Request method can return one of many: Union[Dict[str, any], List[any], int]
         and raise multiple types of errors.
 
         If int is returned, then throws an exception informing the HTTP request failed.
+        If the request fails, returns the error text or None if only status code is found.
 
         Raises:
           - ValueError
-          - OpenSearchHttpError
         """
         if "retries" not in kwargs.keys():
             kwargs["retries"] = 6
         if "timeout" not in kwargs.keys():
             kwargs["timeout"] = 10
-        result = self.charm.opensearch.request(*args, **kwargs)
+        # We are interested to see the entire response
+        kwargs["resp_status_code"] = False
+        try:
+            result = self.charm.opensearch.request(*args, **kwargs)
+        except OpenSearchHttpError as e:
+            return e.response_body if e.response_body else None
+        return result if isinstance(result, dict) else None
 
-        # If the return is an int type, then there was a request error:
-        if isinstance(result, int):
-            raise OpenSearchHttpError(f"Request failed with code {result}")
-        return result
-
-    def get_service_status(self, response: Dict[str, Any]) -> BackupServiceState:  # noqa: C901
+    def get_service_status(  # noqa: C901
+        self, response: dict[str, Any] | None
+    ) -> BackupServiceState:
         """Returns the response status in a Enum.
 
         Based on:
@@ -728,6 +742,9 @@ class OpenSearchBackup(Object):
             ba78d93acf1da6dae16952d8978de87cb4df2c61/
             plugins/repository-s3/src/yamlRestTest/resources/rest-api-spec/test/repository_s3/40_repository_ec2_credentials.yml
         """
+        if not response:
+            return BackupServiceState.SNAPSHOT_FAILED_UNKNOWN
+
         try:
             if "error" not in response:
                 return BackupServiceState.SUCCESS
@@ -768,8 +785,10 @@ class OpenSearchBackup(Object):
         # Ensure this is not containing any information about snapshots, return SUCCESS
         return self.get_snapshot_status(response)
 
-    def get_snapshot_status(self, response: Dict[str, Any]) -> BackupServiceState:
+    def get_snapshot_status(self, response: Dict[str, Any] | None) -> BackupServiceState:
         """Returns the snapshot status."""
+        if not response:
+            return BackupServiceState.SNAPSHOT_FAILED_UNKNOWN
         # Now, check snapshot status:
         r_str = str(response)
         if "IN_PROGRESS" in r_str:

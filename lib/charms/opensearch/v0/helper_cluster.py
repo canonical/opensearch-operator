@@ -3,7 +3,6 @@
 
 """Utility classes and methods for getting cluster info, configuration info and suggestions."""
 import logging
-from random import choice
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -47,15 +46,8 @@ class ClusterTopology:
             — odd: "all" the nodes are cm_eligible nodes.
             — even: "all - 1" are cm_eligible and 1 data node.
         """
-        max_cms = ClusterTopology.max_cluster_manager_nodes(planned_units)
-
-        base_roles = ["data", "ingest", "ml", "coordinating_only"]
-
-        nodes_by_roles = ClusterTopology.nodes_count_by_role(nodes)
-        if nodes_by_roles.get("cluster_manager", 0) == max_cms:
-            return base_roles
-
-        return base_roles + ["cluster_manager"]
+        # TODO: remove in https://github.com/canonical/opensearch-operator/issues/230
+        return ["data", "ingest", "ml", "coordinating_only", "cluster_manager"]
 
     @staticmethod
     def get_cluster_settings(
@@ -76,107 +68,33 @@ class ClusterTopology:
 
     @staticmethod
     def recompute_nodes_conf(app_name: str, nodes: List[Node]) -> Dict[str, Node]:
+        # TODO: remove in https://github.com/canonical/opensearch-operator/issues/230
         """Recompute the configuration of all the nodes (cluster set to auto-generate roles)."""
-        # in case the cluster nodes' roles were previously "manually generated" - we need
-        # to reset the roles to their expected default values so that "roles re-balancing"
-        # logic (node_with_new_roles) can be safely applied: only change the last node.
-        # Nothing changes to the conf of the nodes if the roles were previously auto-generated.
-        valid_nodes = ClusterTopology.refill_node_with_default_roles(app_name, nodes)
-
-        nodes_by_name = dict([(node.name, node) for node in nodes])
-
-        # compute node with new roles - only returns 1 changed node
-        updated_node = ClusterTopology.node_with_new_roles(app_name, valid_nodes)
-        if updated_node:
-            nodes_by_name[updated_node.name] = updated_node
-
-        return nodes_by_name
-
-    @staticmethod
-    def refill_node_with_default_roles(app_name: str, nodes: List[Node]) -> List[Node]:
-        """Refill the roles of a list of nodes with default values for re-computing.
-
-        This method works hand in hand with node_with_new_roles which assumes a clean
-        base (regarding the auto-generation logic) and only applies changes to 1 node.
-        """
-        base_roles = ["data", "ingest", "ml", "coordinating_only"]
-        full_roles = base_roles + ["cluster_manager"]
-
-        current_cluster_nodes = [node for node in nodes if node.app_name == app_name]
-        current_cm_eligible = [node for node in current_cluster_nodes if node.is_cm_eligible()]
-
-        # we check if the roles were previously balanced in accordance with the auto-generation
-        # logic, in which the max difference between CMs and Non-CMs is 1 node (to keep quorum)
-        unbalanced = len(current_cm_eligible) < len(current_cluster_nodes) - 1
-
-        updated_nodes = []
+        if not nodes:
+            return {}
+        logger.debug(f"Roles before re-balancing {({node.name: node.roles for node in nodes})=}")
+        nodes_by_name = {}
+        current_cluster_nodes = []
+        for node in nodes:
+            if node.app_name == app_name:
+                current_cluster_nodes.append(node)
+            else:
+                # Leave node unchanged
+                nodes_by_name[node.name] = node
         for node in current_cluster_nodes:
-            # we do this in order to remove any non-default role / add any missing default role
-            new_roles = full_roles if unbalanced or node.is_cm_eligible() else base_roles
-            updated = Node(
+            nodes_by_name[node.name] = Node(
                 name=node.name,
-                roles=new_roles,
+                # we do this in order to remove any non-default role / add any missing default role
+                roles=["data", "ingest", "ml", "coordinating_only", "cluster_manager"],
                 ip=node.ip,
                 app_name=node.app_name,
+                unit_number=node.unit_number,
                 temperature=node.temperature,
             )
-            updated_nodes.append(updated)
-
-        return updated_nodes + [node for node in nodes if node.app_name != app_name]
-
-    @staticmethod
-    def node_with_new_roles(app_name: str, remaining_nodes: List[Node]) -> Optional[Node]:
-        """Pick and recompute the roles of the best node to re-balance the cluster.
-
-        Args:
-            app_name: Name of the (current) cluster's app on which the node changes must happen
-                      Important to have this piece of information, as in a multi-cluster
-                      deployments the "remaining nodes" includes nodes from all the fleet.
-            remaining_nodes: List of nodes remaining in a cluster (sub-cluster or full-fleet)
-        """
-        max_cms = ClusterTopology.max_cluster_manager_nodes(len(remaining_nodes))
-
-        nodes_by_roles = ClusterTopology.nodes_by_role(remaining_nodes)
-        nodes_count_by_roles = ClusterTopology.nodes_count_by_role(remaining_nodes)
-        current_cms = nodes_count_by_roles.get("cluster_manager", 0)
-
-        # the nodes involved in the voting are intact, do nothing
-        if current_cms == max_cms:
-            logger.debug("Suggesting NO changes to the nodes.")
-            return None
-
-        if current_cms > max_cms:
-            # remove cm from a node
-            cm = choice(
-                [node for node in nodes_by_roles["cluster_manager"] if node.app_name == app_name]
-            )
-            logger.debug(f"Suggesting - removal of 'CM': {cm.name}")
-            return Node(
-                name=cm.name,
-                roles=[r for r in cm.roles if r != "cluster_manager"],
-                ip=cm.ip,
-                app_name=app_name,
-            )
-
-        # when cm count smaller than expected
-        data_only_nodes = [
-            node for node in nodes_by_roles["data"] if "cluster_manager" not in node.roles
-        ]
-
-        # no data-only node available to change, leave
-        if not data_only_nodes:
-            logger.debug("Suggesting NO changes to the nodes.")
-            return None
-
-        # add cm to a data only (non cm) node
-        data = choice([node for node in data_only_nodes if node.app_name == app_name])
-        logger.debug(f"Suggesting - Addition of 'CM' to data: {data.name}")
-        return Node(
-            name=data.name,
-            roles=data.roles + ["cluster_manager"],
-            ip=data.ip,
-            app_name=app_name,
+        logger.debug(
+            f"Roles after re-balancing {({name: node.roles for name, node in nodes_by_name.items()})=}"
         )
+        return nodes_by_name
 
     @staticmethod
     def max_cluster_manager_nodes(planned_units) -> int:
@@ -256,6 +174,7 @@ class ClusterTopology:
                         roles=obj["roles"],
                         ip=obj["ip"],
                         app_name="-".join(obj["name"].split("-")[:-1]),
+                        unit_number=int(obj["name"].split("-")[-1]),
                         temperature=obj.get("attributes", {}).get("temp"),
                     )
                     nodes.append(node)

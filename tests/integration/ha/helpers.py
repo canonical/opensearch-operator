@@ -208,6 +208,7 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
                 roles=node["roles"],
                 ip=node["ip"],
                 app_name="-".join(node["name"].split("-")[:-1]),
+                unit_number=int(node["name"].split("-")[-1]),
                 temperature=node.get("attributes", {}).get("temp"),
             )
         )
@@ -346,7 +347,7 @@ async def cut_network_from_unit_without_ip_change(
     subprocess.check_call(limit_set_command.split())
     limit_set_command = f"lxc config device set {unit_hostname} eth0 limits.ingress=1kbit"
     subprocess.check_call(limit_set_command.split())
-    limit_set_command = f"lxc config set {unit_hostname} limits.network.priority=10"
+    limit_set_command = f"lxc config device set {unit_hostname} eth0 limits.priority=10"
     subprocess.check_call(limit_set_command.split())
 
     time.sleep(10)
@@ -367,7 +368,7 @@ async def restore_network_for_unit_without_ip_change(unit_hostname: str) -> None
     subprocess.check_call(limit_set_command.split())
     limit_set_command = f"lxc config device set {unit_hostname} eth0 limits.ingress="
     subprocess.check_call(limit_set_command.split())
-    limit_set_command = f"lxc config set {unit_hostname} limits.network.priority="
+    limit_set_command = f"lxc config device set {unit_hostname} eth0 limits.priority="
     subprocess.check_call(limit_set_command.split())
 
     time.sleep(10)
@@ -534,10 +535,7 @@ async def create_backup(ops_test: OpsTest, leader_id: int, unit_ip: str) -> str:
 
 async def restore(ops_test: OpsTest, backup_id: str, unit_ip: str, leader_id: int) -> bool:
     """Restores a backup."""
-    id = backup_id
-    if not isinstance(id, str):
-        id = str(backup_id)
-    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": id})
+    action = await run_action(ops_test, leader_id, "restore", params={"backup-id": backup_id})
     logger.debug(f"restore output: {action}")
 
     await wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip)
@@ -550,7 +548,7 @@ async def list_backups(ops_test: OpsTest, leader_id: int) -> Dict[str, str]:
     return json.loads(action.response["backups"])
 
 
-async def assert_cwrites_backup_consistency(
+async def assert_restore_indices_and_compare_consistency(
     ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: int
 ) -> None:
     """Ensures that continuous writes index has at least the value below.

@@ -20,11 +20,8 @@ import urllib3.exceptions
 from charms.opensearch.v0.constants_secrets import ADMIN_PW
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
-from charms.opensearch.v0.helper_networking import (
-    get_host_ip,
-    is_reachable,
-    reachable_hosts,
-)
+from charms.opensearch.v0.helper_http import error_http_retry_log
+from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
@@ -32,7 +29,13 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import (
+    Retrying,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_fixed,
+)
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -150,13 +153,19 @@ class OpenSearchDistribution(ABC):
         """Check if OpenSearch daemon has failed."""
         pass
 
-    def is_node_up(self) -> bool:
-        """Get status of current node. This assumes OpenSearch is Running."""
-        if not self.is_started():
+    def is_node_up(self, host: Optional[str] = None) -> bool:
+        """Get status of node. This assumes OpenSearch is Running.
+
+        Defaults to this unit
+        """
+        host = host or self.host
+        if not is_reachable(host, self.port):
             return False
 
         try:
-            resp_code = self.request("GET", "/_nodes", resp_status_code=True)
+            resp_code = self.request(
+                "GET", "/_nodes", host=host, check_hosts_reach=False, resp_status_code=True
+            )
             return resp_code < 400
         except (OpenSearchHttpError, Exception):
             return False
@@ -210,57 +219,22 @@ class OpenSearchDistribution(ABC):
             OpenSearchHttpError if hosts are unreachable
         """
 
-        def full_urls() -> List[str]:
-            """Returns a list of reachable hosts."""
-            primary_host = host or self.host
-            target_hosts = [primary_host]
-            if alt_hosts:
-                target_hosts.extend(
-                    [alt_host for alt_host in alt_hosts if alt_host != primary_host]
-                )
-
-            if not check_hosts_reach:
-                return target_hosts
-
-            return [
-                f"https://{host_candidate}:{self.port}/{endpoint}"
-                for host_candidate in reachable_hosts(target_hosts)
-            ]
-
-        def call(
-            remaining_retries: int,
-            return_failed_resp: bool,
-            error_response: Optional[requests.Response] = None,
-        ) -> requests.Response:
+        def call(url: str) -> requests.Response:
             """Performs an HTTP request."""
-            if remaining_retries < 0:
-                if error_response is None:
-                    raise OpenSearchHttpError()
-
-                if return_failed_resp:
-                    return error_response
-
-                raise OpenSearchHttpError(
-                    response_body=error_response.text, response_code=error_response.status_code
-                )
-
-            urls = full_urls()
-            if not urls:
-                logger.error(
-                    f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
-                )
-                raise OpenSearchHttpError()
-
-            try:
-                with requests.Session() as s:
-                    s.auth = (
-                        "admin",
-                        self._charm.secrets.get(Scope.APP, ADMIN_PW),
-                    )
+            for attempt in Retrying(
+                retry=retry_if_exception_type(requests.RequestException)
+                | retry_if_exception_type(urllib3.exceptions.HTTPError),
+                stop=stop_after_attempt(retries),
+                wait=wait_fixed(1),
+                before_sleep=error_http_retry_log(logger, retries, method, url, payload),
+                reraise=True,
+            ):
+                with attempt, requests.Session() as s:
+                    s.auth = ("admin", self._charm.secrets.get(Scope.APP, ADMIN_PW))
 
                     request_kwargs = {
                         "method": method.upper(),
-                        "url": urls[0],
+                        "url": url,
                         "verify": f"{self.paths.certs}/chain.pem",
                         "headers": {
                             "Accept": "application/json",
@@ -274,19 +248,8 @@ class OpenSearchDistribution(ABC):
                         )
 
                     response = s.request(**request_kwargs)
-
+                    response.raise_for_status()
                     return response
-            except (requests.exceptions.RequestException, urllib3.exceptions.HTTPError) as e:
-                logger.error(
-                    f"Request {method} to {urls[0]} with payload: {payload} failed. "
-                    f"(Attempts left: {remaining_retries})\n{e}"
-                )
-                time.sleep(1)
-                return call(
-                    remaining_retries - 1,
-                    return_failed_resp,
-                    e.response if isinstance(e, requests.exceptions.HTTPError) else None,
-                )
 
         if None in [endpoint, method]:
             raise ValueError("endpoint or method missing")
@@ -294,15 +257,37 @@ class OpenSearchDistribution(ABC):
         if endpoint.startswith("/"):
             endpoint = endpoint[1:]
 
-        resp = call(retries, resp_status_code)
+        urls = []
+        for host_candidate in (host or self.host, *(alt_hosts or [])):
+            if check_hosts_reach and not self.is_node_up(host_candidate):
+                continue
+            urls.append(f"https://{host_candidate}:{self.port}/{endpoint}")
+        if not urls:
+            raise OpenSearchHttpError(
+                f"Host {host or self.host}:{self.port} and alternative_hosts: {alt_hosts or []} not reachable."
+            )
 
-        if resp_status_code:
-            return resp.status_code
-
+        resp = None
         try:
+            resp = call(urls[0])
+            if resp_status_code:
+                return resp.status_code
+
             return resp.json()
+        except (requests.RequestException, urllib3.exceptions.HTTPError) as e:
+            if not isinstance(e, requests.RequestException) or e.response is None:
+                raise OpenSearchHttpError(response_text=str(e))
+
+            if resp_status_code:
+                return e.response.status_code
+
+            raise OpenSearchHttpError(
+                response_text=e.response.text, response_code=e.response.status_code
+            )
         except requests.JSONDecodeError:
-            raise OpenSearchHttpError(response_body=resp.text)
+            raise OpenSearchHttpError(response_text=resp.text)
+        except Exception as e:
+            raise OpenSearchHttpError(response_text=str(e))
 
     def write_file(self, path: str, data: str, override: bool = True):
         """Persists data into file. Useful for files generated on the fly, such as certs etc."""
@@ -412,6 +397,7 @@ class OpenSearchDistribution(ABC):
                 roles=current_node["roles"],
                 ip=current_node["ip"],
                 app_name=self._charm.app.name,
+                unit_number=self._charm.unit_id,
                 temperature=current_node.get("attributes", {}).get("temp"),
             )
         except OpenSearchHttpError:
@@ -422,6 +408,7 @@ class OpenSearchDistribution(ABC):
                 roles=conf_on_disk["node.roles"],
                 ip=self._charm.unit_ip,
                 app_name=self._charm.app.name,
+                unit_number=self._charm.unit_id,
                 temperature=conf_on_disk.get("node.attr.temp"),
             )
 
