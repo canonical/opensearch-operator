@@ -637,16 +637,17 @@ class TestBackups(unittest.TestCase):
             ).__dict__
         )
 
-    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
-    def test_format_backup_list(self, mock_request):
+    def test_format_backup_list(self):
         """Tests the format of the backup list."""
-        mock_request.return_value = {
-            "snapshots": [
-                {"snapshot": "2023-01-01T00:00:00Z", "state": "SUCCESS", "indices": []},
-                {"snapshot": "2023-01-01T00:10:00Z", "state": "FAILED", "indices": []},
-                {"snapshot": "2023-01-01T00:20:00Z", "state": "IN_PROGRESS", "indices": []},
-            ]
-        }
+        self.charm.opensearch.request = MagicMock(
+            return_value={
+                "snapshots": [
+                    {"snapshot": "2023-01-01T00:00:00Z", "state": "SUCCESS", "indices": []},
+                    {"snapshot": "2023-01-01T00:10:00Z", "state": "FAILED", "indices": []},
+                    {"snapshot": "2023-01-01T00:20:00Z", "state": "IN_PROGRESS", "indices": []},
+                ]
+            }
+        )
         backups = self.charm.backup._list_backups()
         self.assertEqual(
             self.charm.backup._generate_backup_list_output(backups), LIST_BACKUPS_TRIAL
@@ -708,7 +709,9 @@ class TestBackups(unittest.TestCase):
             side_effect=OpenSearchHttpError(500, "Internal Server Error")
         )
         self.charm.backup._on_create_backup_action(event)
-        event.fail.assert_called_with("Failed with exception: (500, 'Internal Server Error')")
+        event.fail.assert_called_with(
+            "Failed with exception: HTTP error self.response_code='Internal Server Error'\nself.response_text=500"
+        )
 
     def test_on_restore_backup_action(self):
         """Runs the entire restore backup action successfully."""
