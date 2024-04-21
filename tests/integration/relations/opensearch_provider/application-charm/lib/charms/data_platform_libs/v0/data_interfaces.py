@@ -611,7 +611,7 @@ class CachedSecret:
                         "ERROR secret owner cannot use --refresh",
                     ]
                     if isinstance(err, ModelError) and not any(
-                            msg in str(err) for msg in known_model_errors
+                        msg in str(err) for msg in known_model_errors
                     ):
                         raise
                     # Due to: ValueError: Secret owner cannot use refresh=True
@@ -966,7 +966,7 @@ class Data(ABC):
 
     @juju_secrets_only
     def _get_relation_secret_data(
-            self, relation_id: int, group_mapping: SecretGroup, relation_name: Optional[str] = None
+        self, relation_id: int, group_mapping: SecretGroup, relation_name: Optional[str] = None
     ) -> Optional[Dict[str, str]]:
         """Retrieve contents of a Juju Secret that's been stored in the relation databag."""
         secret = self._get_relation_secret(relation_id, group_mapping, relation_name)
@@ -1518,7 +1518,7 @@ class RequirerData(Data):
     # Internal helper functions
 
     def _register_secret_to_relation(
-            self, relation_name: str, relation_id: int, secret_id: str, group: SecretGroup
+        self, relation_name: str, relation_id: int, secret_id: str, group: SecretGroup
     ):
         """Fetch secrets and apply local label on them.
 
@@ -1963,7 +1963,7 @@ class DataPeerData(RequirerData, ProviderData):
 
     @either_static_or_dynamic_secrets
     def _fetch_my_specific_relation_data(
-            self, relation: Relation, fields: Optional[List[str]]
+        self, relation: Relation, fields: Optional[List[str]]
     ) -> Dict[str, str]:
         """Fetch data available (directily or indirectly -- i.e. secrets) from the relation for owner/this_app."""
         return self._fetch_relation_data_with_secrets(
@@ -3075,7 +3075,7 @@ class KafkaRequiresEventHandlers(RequirerEventHandlers):
 
         secret_field_user = self.relation_data._generate_secret_field_name(SECRET_GROUPS.USER)
         if (
-                "username" in diff.added and "password" in diff.added
+            "username" in diff.added and "password" in diff.added
         ) or secret_field_user in diff.added:
             # Emit the default event (the one without an alias).
             logger.info("topic created at %s", datetime.now())
