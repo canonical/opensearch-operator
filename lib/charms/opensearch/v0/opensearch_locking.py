@@ -127,9 +127,9 @@ class _PeerRelationLock(ops.Object):
             # the lock.
             # `JUJU_CONTEXT_ID` is unique for each Juju event
             # (https://matrix.to/#/!xdClnUGkurzjxqiQcN:ubuntu.com/$yEGjGlDaIPBtCi8uB3fH6ZaXUjN7GF-Y2s9YwvtPM-o?via=ubuntu.com&via=matrix.org&via=cutefunny.art)
-            self._relation.data[self._charm.app][
-                "leader-acquired-lock-after-juju-event-id"
-            ] = os.environ["JUJU_CONTEXT_ID"]
+            self._relation.data[self._charm.app]["leader-acquired-lock-after-juju-event-id"] = (
+                os.environ["JUJU_CONTEXT_ID"]
+            )
         self._relation.data[self._charm.app]["unit-with-lock"] = value
 
     @_unit_with_lock.deleter

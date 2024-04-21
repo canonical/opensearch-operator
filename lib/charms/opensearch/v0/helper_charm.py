@@ -3,7 +3,8 @@
 
 """Utility functions for charms related operations."""
 import re
-from datetime import datetime
+from time import time_ns
+from typing import TYPE_CHECKING
 
 from charms.data_platform_libs.v0.data_interfaces import Scope
 from charms.opensearch.v0.constants_charm import PeerRelationName
@@ -20,6 +21,10 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
+
+
+if TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 
 class Status:
@@ -105,10 +110,10 @@ def relation_departure_reason(charm: CharmBase, relation_name: str) -> RelDepart
     return RelDepartureReason.REL_BROKEN
 
 
-def trigger_leader_peer_rel_changed(charm: CharmBase) -> None:
-    """Force trigger a peer rel changed event by leader."""
-    if not charm.unit.is_leader():
+def trigger_peer_rel_changed(charm: "OpenSearchBaseCharm", only_by_leader: bool = False) -> None:
+    """Force trigger a peer rel changed event."""
+    if only_by_leader and not charm.unit.is_leader():
         return
 
-    charm.peers_data.put(Scope.APP, "triggered", datetime.now().timestamp())
+    charm.peers_data.put(Scope.UNIT, "update-ts", time_ns())
     charm.on[PeerRelationName].relation_changed.emit(charm.model.get_relation(PeerRelationName))

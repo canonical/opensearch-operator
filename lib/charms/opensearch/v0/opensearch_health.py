@@ -3,7 +3,6 @@
 
 """Base class for the OpenSearch Health management."""
 import logging
-from time import time_ns
 from typing import Dict, Optional
 
 from charms.opensearch.v0.constants_charm import (
@@ -12,12 +11,15 @@ from charms.opensearch.v0.constants_charm import (
     WaitingForBusyShards,
     WaitingForSpecificBusyShards,
 )
-from charms.opensearch.v0.helper_charm import Status
+from charms.opensearch.v0.helper_charm import Status, trigger_peer_rel_changed
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.models import StartMode
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
-from charms.opensearch.v0.opensearch_internal_data import Scope
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchHAError,
+    OpenSearchHttpError,
+)
 from ops.model import BlockedStatus, WaitingStatus
+from tenacity import retry, stop_after_attempt, wait_exponential, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "93d2c27f38974a59b3bbe39fb27ac98d"
@@ -58,42 +60,78 @@ class OpenSearchHealth:
         app: bool = True,
     ) -> str:
         """Fetch cluster health and set it on the app status."""
+        status = self.get(
+            wait_for_green_first=wait_for_green_first,
+            use_localhost=use_localhost,
+        )
+
+        if app:
+            self._apply_for_app(status)
+        else:
+            self._apply_for_unit(status)
+
+        return status
+
+    def get(self, wait_for_green_first: bool = False, use_localhost: bool = True) -> str:
+        """Fetch the current cluster status."""
+        if not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc()):
+            return HealthColors.UNKNOWN
+
+        # the health depends on data nodes, for large deployments: an ML cluster
+        # may not be concerned about reporting or relying on the health of the
+        # data nodes in other clusters. We should therefore get this info from
+        # the deployment descriptor which has an overview of all the cluster.
+        # compute health only in clusters where data nodes exist
+        compute_health = (
+            deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+            or "data" in deployment_desc.config.roles
+        )
+        if not compute_health:
+            return HealthColors.IGNORE
+
+        host = self._charm.unit_ip if use_localhost else None
         try:
-            host = self._charm.unit_ip if use_localhost else None
-            status = self._fetch_status(host, wait_for_green_first)
-            if not status:
-                return HealthColors.UNKNOWN
-
-            # the health depends on data nodes, for large deployments: an ML cluster
-            # may not be concerned about reporting or relying on the health of the
-            # data nodes in other clusters. We should therefore get this info from
-            # the deployment descriptor which has an overview of all the cluster
-            if not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc()):
-                return HealthColors.UNKNOWN
-
-            # compute health only in clusters where data nodes exist
-            compute_health = (
-                deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-                or "data" in deployment_desc.config.roles
-            )
-            if not compute_health:
-                return HealthColors.IGNORE
-
-            if app:
-                self.apply_for_app(status)
-            else:
-                self.apply_for_unit(status)
-
-            return status
+            response = self._health(wait_for_green=wait_for_green_first, host=host)
         except OpenSearchHttpError:
             return HealthColors.UNKNOWN
 
-    def apply_for_app(self, status: str) -> None:
+        logger.info(f"Health: {response}")
+        try:
+            status = response["status"].lower()
+        except AttributeError as e:
+            logger.error(e)  # means the status was reported as an int (i.e: 503)
+            return HealthColors.UNKNOWN
+
+        if status != HealthColors.YELLOW:
+            return status
+
+        try:
+            # we differentiate between a temp yellow (moving shards) and a permanent
+            # one (such as: missing replicas)
+            shards_by_state = ClusterState.shards_by_state(
+                self._opensearch, host=host, alt_hosts=self._charm.alt_hosts
+            )
+            busy_shards = shards_by_state.get("INITIALIZING", 0) + shards_by_state.get(
+                "RELOCATING", 0
+            )
+            return HealthColors.YELLOW_TEMP if busy_shards > 0 else HealthColors.YELLOW
+        except OpenSearchHttpError:
+            return HealthColors.UNKNOWN
+
+    @retry(stop=stop_after_attempt(15), wait=wait_fixed(5), reraise=True)
+    def wait_for_shards_relocation(self) -> None:
+        """Blocking function until the shards relocation completes in the cluster."""
+        if self.get(wait_for_green_first=True) != HealthColors.YELLOW_TEMP:
+            return
+
+        # we throw an error because various operations should NOT start while data
+        # is being relocated. Examples are: simple stop, unit removal, upgrade
+        raise OpenSearchHAError("Shards haven't completed relocating.")
+
+    def _apply_for_app(self, status: str) -> None:
         """Cluster wide / app status."""
         if not self._charm.unit.is_leader():
-            # this is needed in case the leader is in an error state and doesn't
-            # report the status itself
-            self._charm.peers_data.put(Scope.UNIT, "update-ts", time_ns())
+            trigger_peer_rel_changed(self._charm)
             return
 
         if status == HealthColors.GREEN:
@@ -111,7 +149,7 @@ class OpenSearchHealth:
             # health is yellow permanently (some replica shards are unassigned)
             self._charm.status.set(BlockedStatus(ClusterHealthYellow), app=True)
 
-    def apply_for_unit(self, status: str, host: Optional[str] = None):
+    def _apply_for_unit(self, status: str, host: Optional[str] = None):
         """Apply the health status on the current unit."""
         if status != HealthColors.YELLOW_TEMP:
             self._charm.status.clear(
@@ -132,47 +170,24 @@ class OpenSearchHealth:
         message = WaitingForSpecificBusyShards.format(" - ".join(message))
         self._charm.status.set(WaitingStatus(message))
 
-    def _fetch_status(self, host: Optional[str] = None, wait_for_green_first: bool = False):
-        """Fetch the current cluster status."""
-        response: Optional[Dict[str, any]] = None
-        if wait_for_green_first:
-            try:
-                response = ClusterState.health(
-                    self._opensearch,
-                    wait_for_green=True,
-                    host=host,
-                    alt_hosts=self._charm.alt_hosts,
-                )
-            except OpenSearchHttpError:
-                # it timed out, settle with current status, fetched next without
-                # the 1min wait
-                pass
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        reraise=True,
+    )
+    def _health(self, host: str, wait_for_green: bool) -> Dict[str, any]:
+        """Fetch the cluster health."""
+        endpoint = "/_cluster/health"
 
-        if not response:
-            response = ClusterState.health(
-                self._opensearch,
-                wait_for_green=False,
-                host=host,
-                alt_hosts=self._charm.alt_hosts,
-            )
+        timeout = 5
+        if wait_for_green:
+            endpoint = f"{endpoint}?wait_for_status=green&timeout=1m"
+            timeout = 75
 
-        if not response:
-            return None
-
-        logger.info(f"Health: {response}")
-        try:
-            status = response["status"].lower()
-        except AttributeError as e:
-            logger.error(e)  # means the status was reported as an int (i.e: 503)
-            return None
-
-        if status != HealthColors.YELLOW:
-            return status
-
-        # we differentiate between a temp yellow (moving shards) and a permanent
-        # one (such as: missing replicas)
-        shards_by_state = ClusterState.shards_by_state(
-            self._opensearch, host=host, alt_hosts=self._charm.alt_hosts
+        return self._opensearch.request(
+            "GET",
+            endpoint,
+            host=host,
+            alt_hosts=self._charm.alt_hosts,
+            timeout=timeout,
         )
-        busy_shards = shards_by_state.get("INITIALIZING", 0) + shards_by_state.get("RELOCATING", 0)
-        return HealthColors.YELLOW_TEMP if busy_shards > 0 else HealthColors.YELLOW

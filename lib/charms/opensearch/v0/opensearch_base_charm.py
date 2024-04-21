@@ -36,7 +36,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_charm import Status
+from charms.opensearch.v0.helper_charm import Status, trigger_peer_rel_changed
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
@@ -444,7 +444,7 @@ class OpenSearchBaseCharm(CharmBase):
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
             try:
-                self.opensearch.request("POST", "/_flush?wait_for_ongoing")
+                self.opensearch.request("POST", "/_flush?wait_if_ongoing=true")
             except OpenSearchHttpError:
                 # if it's a failed attempt we move on
                 pass
@@ -491,8 +491,7 @@ class OpenSearchBaseCharm(CharmBase):
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
 
-            health = self.health.apply()
-            if health not in [HealthColors.GREEN, HealthColors.IGNORE]:
+            if (health := self.health.apply()) not in [HealthColors.GREEN, HealthColors.IGNORE]:
                 event.defer()
 
             if health == HealthColors.UNKNOWN:
@@ -512,7 +511,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
+        restart_requested = False
         if self.opensearch_config.update_host_if_needed():
+            restart_requested = True
+
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
             self._delete_stored_tls_resources()
             self.tls.request_new_unit_certificates()
@@ -520,13 +522,12 @@ class OpenSearchBaseCharm(CharmBase):
             # since when an IP change happens, "_on_peer_relation_joined" won't be called,
             # we need to alert the leader that it must recompute the node roles for any unit whose
             # roles were changed while the current unit was cut-off from the rest of the network
-            self.on[PeerRelationName].relation_joined.emit(
-                self.model.get_relation(PeerRelationName)
-            )
+            trigger_peer_rel_changed(self)
 
         previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.unit.is_leader():
             # run peer cluster manager processing
+            # todo add check here if the diff can be known from now on already
             self.opensearch_peer_cm.run()
 
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
@@ -541,7 +542,7 @@ class OpenSearchBaseCharm(CharmBase):
                 raise OpenSearchNotFullyReadyError()
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
-            if self.plugin_manager.run():
+            if self.plugin_manager.run() and not restart_requested:
                 self._restart_opensearch_event.emit()
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
@@ -877,7 +878,7 @@ class OpenSearchBaseCharm(CharmBase):
         # overloading the cluster, units must be started one at a time. So we defer starting
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
         try:
-            if self.health.apply(use_localhost=False, app=False) == HealthColors.YELLOW_TEMP:
+            if self.health.get(use_localhost=False) == HealthColors.YELLOW_TEMP:
                 return False
         except OpenSearchHttpError:
             # this means that the leader unit is not reachable (not started yet),
@@ -1071,7 +1072,7 @@ class OpenSearchBaseCharm(CharmBase):
                 computed_roles.append("data")
                 self.peers_data.put(Scope.UNIT, "remove-data-role", True)
         else:
-            computed_roles = ClusterTopology.suggest_roles(nodes, self.app.planned_units())
+            computed_roles = ClusterTopology.generated_roles()
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)

@@ -442,7 +442,7 @@ class OpenSearchPeerClustersManager:
 
         # if prev_roles None, means auto-generated roles, and will therefore include the cm role
         # for all the units up to the latest if even number of units, which will be voting_only
-        prev_roles = set(prev_roles or ["cluster_manager", "data"])
+        prev_roles = set(prev_roles or ClusterTopology.generated_roles())
         new_roles = set(new_roles)
 
         if "cluster_manager" in new_roles and "voting_only" in new_roles:
