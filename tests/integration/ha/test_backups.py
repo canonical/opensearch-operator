@@ -253,15 +253,15 @@ async def test_create_backup_and_restore(
     logger.info(f"Syncing credentials for {cloud_name}")
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-    date_before_backup = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
-    assert (
+    date_before_backup = datetime.utcnow()
+    assert datetime.strptime(
         backup_id := await create_backup(
             ops_test,
             leader_id,
             unit_ip=unit_ip,
-        )
-        > date_before_backup
-    )
+        ),
+        OPENSEARCH_BACKUP_ID_FORMAT,
+    ) > date_before_backup
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
@@ -323,15 +323,15 @@ async def test_remove_and_readd_s3_relation(
     logger.info(f"Syncing credentials for {cloud_name}")
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-    date_before_backup = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
-    assert (
+    date_before_backup = datetime.utcnow()
+    assert datetime.strptime(
         backup_id := await create_backup(
             ops_test,
             leader_id,
             unit_ip=unit_ip,
-        )
-        > date_before_backup
-    )
+        ),
+        OPENSEARCH_BACKUP_ID_FORMAT,
+    ) > date_before_backup
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
@@ -436,15 +436,15 @@ async def test_restore_to_new_cluster(
 
     await writer.start()
     time.sleep(10)
-    date_before_backup = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
-    assert (
+    date_before_backup = datetime.utcnow()
+    assert datetime.strptime(
         backup_id := await create_backup(
             ops_test,
             leader_id,
             unit_ip=unit_ip,
-        )
-        > date_before_backup
-    )
+        ),
+        OPENSEARCH_BACKUP_ID_FORMAT,
+    ) > date_before_backup
 
     # continuous writes checks
     await assert_continuous_writes_increasing(writer)
@@ -601,15 +601,15 @@ async def test_change_config_and_backup_restore(
         config: Dict[str, str] = cloud_configs[cloud_name]
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-        date_before_backup = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
-        assert (
+        date_before_backup = datetime.utcnow()
+        assert datetime.strptime(
             backup_id := await create_backup(
                 ops_test,
                 leader_id,
                 unit_ip=unit_ip,
-            )
-            > date_before_backup
-        )
+            ),
+            OPENSEARCH_BACKUP_ID_FORMAT,
+        ) > date_before_backup
 
         # continuous writes checks
         await assert_continuous_writes_increasing(writer)
