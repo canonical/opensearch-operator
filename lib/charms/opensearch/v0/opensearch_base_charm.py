@@ -532,9 +532,8 @@ class OpenSearchBaseCharm(CharmBase):
 
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
             self._handle_change_to_main_orchestrator_if_needed(event, previous_deployment_desc)
-        elif not previous_deployment_desc:
-            # deployment desc not initialized yet by leader
-            event.defer()
+
+        if not self.peers_data.get(Scope.APP, "security_index_initialised", False):
             return
 
         try:
