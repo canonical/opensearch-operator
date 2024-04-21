@@ -6,7 +6,9 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.opensearch_health import HealthColors
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn, PluginState
 from ops.testing import Harness
 
@@ -40,6 +42,10 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.charm = self.harness.charm
+
+        self.peers_data = self.charm.peers_data
+        self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
+
         self.charm.opensearch.paths.plugins = "tests/unit/resources"
         self.plugin_manager = self.charm.plugin_manager
         self.plugin_manager._plugins_path = self.charm.opensearch.paths.plugins
@@ -88,6 +94,10 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_is_node_up,
     ) -> None:
         """Tests entire config_changed event with KNN plugin."""
+        self.harness.set_leader(True)
+        self.peers_data.put(Scope.APP, "security_index_initialised", True)
+        self.harness.set_leader(False)
+
         mock_status.return_value = PluginState.ENABLED
         mock_is_enabled.return_value = False
         mock_is_started.return_value = True
