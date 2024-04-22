@@ -96,7 +96,6 @@ class Upgrade(abc.ABC):
             if (
                 previous_versions["workload"] > current_versions["workload"]
                 or previous_versions["workload"].major != current_versions["workload"].major
-                or previous_versions["workload"].minor != current_versions["workload"].minor
             ):
                 logger.debug(
                     f'{previous_versions["workload"]=} incompatible with {current_versions["workload"]=}'
