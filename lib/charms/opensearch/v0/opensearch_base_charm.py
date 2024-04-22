@@ -238,6 +238,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _upgrade(self) -> typing.Optional[upgrade.Upgrade]:
         pass
 
+    @abc.abstractmethod
+    def _reconcile_upgrade(self, _=None):
+        pass
+
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
         if self.peers_data.get(Scope.APP, "security_index_initialised", False):
@@ -836,6 +840,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.node_lock.release()
 
         self._upgrade.unit_state = "healthy"
+        self._reconcile_upgrade()
 
         self.peers_data.put(Scope.UNIT, "started", True)
 
