@@ -249,7 +249,7 @@ class OpenSearchNodeLock(ops.Object):
                         endpoint=f"/{self.OPENSEARCH_INDEX}/_create/0?refresh=true",
                         host=host,
                         alt_hosts=alt_hosts,
-                        retries=3,
+                        retries=0,
                         payload={"unit-name": self._charm.unit.name},
                     )
                 except OpenSearchHttpError as e:

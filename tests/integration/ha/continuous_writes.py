@@ -235,7 +235,7 @@ class ContinuousWrites:
                     ContinuousWrites._index(client, write_value)
 
                 # todo: remove when we get bigger runners (to reduce data transfer time)
-                time.sleep(0.75)
+                time.sleep(1)
             except BulkIndexError:
                 continue
             except (TransportError, ConnectionRefusedError):
@@ -256,7 +256,7 @@ class ContinuousWrites:
         # write last expected written value on disk
         with open(ContinuousWrites.LAST_WRITTEN_VAL_PATH, "w") as f:
             if is_bulk:
-                write_value = (100 * write_value) + 99
+                write_value = (50 * write_value) + 49
 
             f.write(str(write_value))
             os.fsync(f)
@@ -268,8 +268,8 @@ class ContinuousWrites:
     def _bulk(client: OpenSearch, write_value: int) -> None:
         """Bulk Index group of docs."""
         data = []
-        for i in range(100):
-            val = (100 * write_value) + i
+        for i in range(50):
+            val = (50 * write_value) + i
             data.append(
                 {
                     "_index": ContinuousWrites.INDEX_NAME,
