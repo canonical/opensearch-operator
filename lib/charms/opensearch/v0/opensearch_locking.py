@@ -261,7 +261,11 @@ class OpenSearchNodeLock(ops.Object):
                     else:
                         logger.exception("Error creating OpenSearch lock document")
                         return False
-            unit = self._unit_with_lock(host)
+            try:
+                unit = self._unit_with_lock(host)
+            except OpenSearchHttpError:
+                logger.exception("Error checking which unit has OpenSearch lock")
+                return False
             if unit == self._charm.unit.name:
                 # Lock acquired
                 # Release peer databag lock, if any
