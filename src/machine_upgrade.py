@@ -50,10 +50,10 @@ class Upgrade(upgrade.Upgrade):
     def _get_unit_healthy_status(self) -> ops.StatusBase:
         if self._unit_workload_container_version == self._app_workload_container_version:
             return ops.ActiveStatus(
-                f"OpenSearch {self._unit_workload_version} rev {self._unit_workload_container_version} running"
+                f'OpenSearch {self._unit_workload_version} running; Snap rev {self._unit_workload_container_version}; Charmed operator {self._current_versions["charm"]}'
             )
-        return ops.WaitingStatus(
-            f"Charmed operator upgraded. OpenSearch {self._unit_workload_version} rev {self._unit_workload_container_version} running"
+        return ops.ActiveStatus(
+            f'OpenSearch {self._unit_workload_version} running; Snap rev {self._unit_workload_container_version} (outdated); Charmed operator {self._current_versions["charm"]}'
         )
 
     @property
