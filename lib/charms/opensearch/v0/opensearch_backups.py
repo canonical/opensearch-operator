@@ -46,11 +46,12 @@ class OpenSearchBaseCharm(CharmBase):
 
 import json
 import logging
-import math
-from typing import Any, Dict, List, Set, Tuple
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.opensearch.v0.constants_charm import (
+    OPENSEARCH_BACKUP_ID_FORMAT,
     BackupConfigureStart,
     BackupDeferRelBrokenAsInProgress,
     BackupInDisabling,
@@ -171,12 +172,11 @@ class OpenSearchBackup(Object):
 
     def _format_backup_list(self, backups: List[Tuple[Any]]) -> str:
         """Formats provided list of backups as a table."""
-        output = ["{:<10s} | {:s}".format(" backup-id ", "backup-status")]
+        output = ["{:<20s} | {:s}".format(" backup-id", "backup-status")]
         output.append("-" * len(output[0]))
 
         for backup_id, backup_status in backups:
-            tab = " " * math.floor((10 - len(str(backup_id))) / 2)
-            output.append("{:<10s} | {:s}".format(f"{tab}{backup_id}", backup_status))
+            output.append("{:<20s} | {:s}".format(backup_id, backup_status))
         return "\n".join(output)
 
     def _generate_backup_list_output(self, backups: Dict[str, Any]) -> str:
@@ -279,7 +279,7 @@ class OpenSearchBackup(Object):
         backup_indices = self._list_backups().get(backup_id, {}).get("indices", {})
         output = self._request(
             "POST",
-            f"_snapshot/{S3_REPOSITORY}/{backup_id}/_restore?wait_for_completion=true",
+            f"_snapshot/{S3_REPOSITORY}/{backup_id.lower()}/_restore?wait_for_completion=true",
             payload={
                 "indices": ",".join(
                     [f"-{idx}" for idx in INDICES_TO_EXCLUDE_AT_RESTORE & set(backup_indices)]
@@ -340,7 +340,7 @@ class OpenSearchBackup(Object):
             event.fail("Failed: error connecting to the cluster")
             return
         # Now, validate the backup is working
-        backup_id = str(event.params.get("backup-id"))
+        backup_id = event.params.get("backup-id")
         if not self._is_backup_available_for_restore(backup_id):
             event.fail(f"Failed: no backup-id {backup_id}")
             return
@@ -361,6 +361,7 @@ class OpenSearchBackup(Object):
             OpenSearchRestoreIndexClosingError,
             OpenSearchRestoreCheckError,
         ) as e:
+            self.charm.status.clear(RestoreInProgress)
             event.fail(f"Failed: {e}")
             return
 
@@ -369,11 +370,13 @@ class OpenSearchBackup(Object):
         state = self.get_service_status(output)
         if state != BackupServiceState.SUCCESS:
             event.fail(f"Restore failed with {state}")
+            self.charm.status.clear(RestoreInProgress)
             return
 
         shards = output.get("shards", {})
         if shards.get("successful", -1) != shards.get("total", 0):
             event.fail("Failed to restore all the shards")
+            self.charm.status.clear(RestoreInProgress)
             return
 
         try:
@@ -394,16 +397,14 @@ class OpenSearchBackup(Object):
             event.fail("Failed: backup service is not configured or busy")
             return
 
-        new_backup_id = None
+        new_backup_id = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
         try:
-            # Increment by 1 the latest snapshot_id (set to 0 if no snapshot was previously made)
-            new_backup_id = int(max(self._list_backups().keys() or [0])) + 1
             logger.debug(
                 f"Create backup action request id {new_backup_id} response is:"
                 + self.get_service_status(
                     self._request(
                         "PUT",
-                        f"_snapshot/{S3_REPOSITORY}/{new_backup_id}?wait_for_completion=false",
+                        f"_snapshot/{S3_REPOSITORY}/{new_backup_id.lower()}?wait_for_completion=false",
                         payload={
                             "indices": "*",  # Take all indices
                             "partial": False,  # It is the default value, but we want to avoid partial backups
@@ -413,7 +414,6 @@ class OpenSearchBackup(Object):
             )
 
             logger.info(f"Backup request submitted with backup-id {new_backup_id}")
-            logger.info(f"Backup completed with backup-id {new_backup_id}")
         except (
             OpenSearchHttpError,
             OpenSearchListBackupError,
@@ -422,7 +422,7 @@ class OpenSearchBackup(Object):
             return
         event.set_results({"backup-id": new_backup_id, "status": "Backup is running."})
 
-    def _can_unit_perform_backup(self, event: ActionEvent) -> bool:
+    def _can_unit_perform_backup(self, _: ActionEvent) -> bool:
         """Checks if the actions run from this unit can be executed or not.
 
         If not, then register the reason as a failure in the event and returns False.
@@ -451,7 +451,7 @@ class OpenSearchBackup(Object):
         # cannot get the snapshot list.
         response = self.charm.opensearch.request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
         return {
-            snapshot["snapshot"]: {
+            snapshot["snapshot"].upper(): {
                 "state": snapshot["state"],
                 "indices": snapshot.get("indices", []),
             }
@@ -473,12 +473,12 @@ class OpenSearchBackup(Object):
             return True
         return False
 
-    def _query_backup_status(self, backup_id=None) -> BackupServiceState:
+    def _query_backup_status(self, backup_id: Optional[str] = None) -> BackupServiceState:
         try:
             for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(5)):
                 with attempt:
                     target = f"_snapshot/{S3_REPOSITORY}/"
-                    target += f"{backup_id}" if backup_id else "_all"
+                    target += f"{backup_id.lower()}" if backup_id else "_all"
                     output = self._request("GET", target)
                     logger.debug(f"Backup status: {output}")
         except RetryError as e:
