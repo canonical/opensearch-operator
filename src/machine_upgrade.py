@@ -92,7 +92,7 @@ class Upgrade(upgrade.Upgrade):
 
     @property
     def _unit_workload_version(self) -> typing.Optional[str]:
-        """Installed MySQL Router version for this unit"""
+        """Installed OpenSearch version for this unit"""
         return self._unit_databag.get("workload_version")
 
     @_unit_workload_version.setter
