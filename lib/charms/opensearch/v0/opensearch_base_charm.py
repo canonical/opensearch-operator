@@ -721,7 +721,7 @@ class OpenSearchBaseCharm(CharmBase):
             return
         self.peers_data.delete(Scope.UNIT, "started")
         if self.opensearch.is_started():
-            self.unit.open_port('tcp', 9200)
+            self.unit.open_port("tcp", 9200)
             try:
                 self._post_start_init(event)
             except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
