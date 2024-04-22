@@ -78,6 +78,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if not self._upgrade.versions_set:
             logger.debug("Peer relation not ready")
             return
+        if self._unit_lifecycle.authorized_leader and not self._upgrade.in_progress:
+            # Run before checking `self._upgrade.is_compatible` in case incompatible upgrade was
+            # forced & completed on all units.
+            self._upgrade.set_versions_in_app_databag()
         if not self._upgrade.is_compatible:
             self._set_upgrade_status()
             return
@@ -89,9 +93,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 self._set_upgrade_status()
                 logger.debug("Waiting to upgrade")
                 return
-        if self._unit_lifecycle.authorized_leader:
-            if not self._upgrade.in_progress:
-                self._upgrade.set_versions_in_app_databag()
         self._set_upgrade_status()
 
     def _set_upgrade_status(self):
