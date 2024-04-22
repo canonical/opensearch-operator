@@ -3,6 +3,7 @@
 
 """Unit test for the opensearch_plugins library."""
 import unittest
+from collections import namedtuple
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
@@ -14,6 +15,7 @@ from charms.opensearch.v0.constants_charm import (
     PeerRelationName,
 )
 from charms.opensearch.v0.helper_cluster import IndexStateEnum
+from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_backups import (
     S3_RELATION,
     S3_REPOSITORY,
@@ -44,6 +46,12 @@ LIST_BACKUPS_TRIAL = """ backup-id  | backup-status
  backup1   | success
  backup2   | snapshot failed for unknown reason
  backup3   | snapshot in progress"""
+
+
+deployment_desc = namedtuple("deployment_desc", ["typ"])
+charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc = (
+    MagicMock(return_value=deployment_desc(DeploymentType.MAIN_ORCHESTRATOR))
+)
 
 
 @pytest.fixture(scope="session")

@@ -403,8 +403,8 @@ class OpenSearchBackupBase(Object):
     This class does a smooth transition between orchestrator and non-orchestrator clusters.
     """
 
-    def __init__(self, charm: Object):
-        super().__init__(charm, S3_RELATION)
+    def __init__(self, charm: Object, relation_name: str):
+        super().__init__(charm, relation_name)
         self.charm = charm
 
         if not charm.opensearch_peer_cm or not charm.opensearch_peer_cm.deployment_desc():
@@ -457,9 +457,9 @@ class OpenSearchNonOrchestratorBackup(OpenSearchBackupBase):
     peer-cluster relation instead; and must fail any action or major s3-relation events.
     """
 
-    def __init__(self, charm: Object):
+    def __init__(self, charm: Object, relation_name: str = PeerClusterRelationName):
         """Manager of OpenSearch backup relations."""
-        super().__init__(charm, S3_RELATION)
+        super().__init__(charm, relation_name)
 
     def _on_s3_relation_event(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
@@ -474,9 +474,9 @@ class OpenSearchNonOrchestratorBackup(OpenSearchBackupBase):
 class OpenSearchBackup(OpenSearchBackupBase):
     """Implements backup relation and API management."""
 
-    def __init__(self, charm: Object):
+    def __init__(self, charm: Object, relation_name: str = S3_RELATION):
         """Manager of OpenSearch backup relations."""
-        super().__init__(charm, S3_RELATION)
+        super().__init__(charm, relation_name)
 
         # s3 relation handles the config options for s3 backups
         self.framework.observe(self.charm.on[S3_RELATION].relation_broken, self._on_s3_broken)
