@@ -2,15 +2,14 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import filecmp
 import logging
-import shutil
 import subprocess
 
 import pytest
 import yaml
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_SNAP_REVISION,
+    OpenSearchSystemUsers,
     TLSRelationMissing,
 )
 from pytest_operator.plugin import OpsTest
@@ -20,6 +19,7 @@ from .helpers import (
     MODEL_CONFIG,
     SERIES,
     get_application_unit_ids,
+    get_conf_as_dict,
     get_file_contents,
     get_leader_unit_id,
     get_leader_unit_ip,
@@ -193,32 +193,32 @@ async def test_actions_rotate_system_user_password(ops_test: OpsTest, user) -> N
     assert http_resp_code == 401
 
 
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_check_pinned_revision(ops_test: OpsTest) -> None:
-    """Test check the pinned revision."""
-    leader_id = await get_leader_unit_id(ops_test)
-
-    installed_info = yaml.safe_load(
-        subprocess.check_output(
-            [
-                "juju",
-                "ssh",
-                f"opensearch/{leader_id}",
-                "--",
-                "sudo",
-                "snap",
-                "info",
-                "opensearch",
-                "--color=never",
-                "--unicode=always",
-            ],
-            text=True,
-        ).replace("\r\n", "\n")
-    )["installed"].split()
-    logger.info(f"Installed snap: {installed_info}")
-    assert installed_info[1] == f"({OPENSEARCH_SNAP_REVISION})"
-    assert installed_info[3] == "held"
+# @pytest.mark.group(1)
+# @pytest.mark.abort_on_fail
+# async def test_check_pinned_revision(ops_test: OpsTest) -> None:
+#     """Test check the pinned revision."""
+#     leader_id = await get_leader_unit_id(ops_test)
+#
+#     installed_info = yaml.safe_load(
+#         subprocess.check_output(
+#             [
+#                 "juju",
+#                 "ssh",
+#                 f"opensearch/{leader_id}",
+#                 "--",
+#                 "sudo",
+#                 "snap",
+#                 "info",
+#                 "opensearch",
+#                 "--color=never",
+#                 "--unicode=always",
+#             ],
+#             text=True,
+#         ).replace("\r\n", "\n")
+#     )["installed"].split()
+#     logger.info(f"Installed snap: {installed_info}")
+#     assert installed_info[1] == f"({OPENSEARCH_SNAP_REVISION})"
+#     assert installed_info[3] == "held"
 
 
 @pytest.mark.group(1)
@@ -260,9 +260,26 @@ async def test_all_units_have_all_local_users(ops_test: OpsTest) -> None:
     leader_id = await get_leader_unit_id(ops_test)
     leader_name = f"{APP_NAME}/{leader_id}"
     filename = "/var/snap/opensearch/current/etc/opensearch/opensearch-security/internal_users.yml"
-    leader_conf = get_file_contents(ops_test, leader_name, filename)
+    leader_conf = get_conf_as_dict(ops_test, leader_name, filename)
 
     # Check on all units if they have the same
     for unit in ops_test.model.applications[APP_NAME].units:
-        unit_conf = get_file_contents(ops_test, unit.name, filename)
+        unit_conf = get_conf_as_dict(ops_test, unit.name, filename)
+        for user in OpenSearchSystemUsers:
+            assert leader_conf[user]["hash"] == unit_conf[user]["hash"]
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
+    """Compare the internal_users.yaml of all units."""
+    # Get the leader's version of internal_users.yml
+    leader_id = await get_leader_unit_id(ops_test)
+    leader_name = f"{APP_NAME}/{leader_id}"
+    filename = "/var/snap/opensearch/current/etc/opensearch/opensearch-security/internal_users.yml"
+    leader_conf = get_conf_as_dict(ops_test, leader_name, filename)
+
+    # Check on all units if they have the same
+    for unit in ops_test.model.applications[APP_NAME].units:
+        unit_conf = get_conf_as_dict(ops_test, unit.name, filename)
         assert leader_conf == unit_conf

@@ -18,9 +18,7 @@ from charms.opensearch.v0.constants_charm import (
     ClusterHealthUnknown,
     COSPort,
     COSRelationName,
-    COSRole,
     COSUser,
-    KibanaserverUser,
     OpenSearchSystemUsers,
     OpenSearchUsers,
     PeerRelationName,
@@ -241,11 +239,10 @@ class OpenSearchBaseCharm(CharmBase):
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             self.status.set(MaintenanceStatus(AdminUserInitProgress))
 
-        # this is in case we're coming from 0 to N units, we don't want to use the rest api
-        self._put_admin_user()
-
-        # Restore the other system user that was purged
-        self._put_kibanaserver_user()
+        # Restore purged system users in local `internal_users.yml`
+        # with corresponding credentials
+        for user in OpenSearchSystemUsers:
+            self._put_or_update_internal_user_leader(user)
 
         self.status.clear(AdminUserInitProgress)
 
@@ -284,6 +281,13 @@ class OpenSearchBaseCharm(CharmBase):
         self.status.clear(AdminUserNotConfigured)
         self.status.clear(TLSNotFullyConfigured)
         self.status.clear(TLSRelationMissing)
+
+        # Since system users are initialized, we should take them to local internal_users.yml
+        # Leader should be done already
+        if not self.unit.is_leader():
+            self._purge_users()
+            for user in OpenSearchSystemUsers:
+                self._put_or_update_internal_user_unit(user)
 
         self.peers_data.put(Scope.UNIT, "tls_configured", True)
 
@@ -575,17 +579,12 @@ class OpenSearchBaseCharm(CharmBase):
 
         user_name = event.params.get("username")
         if user_name not in OpenSearchUsers:
-            event.fail(f"Only the {OpenSearchUsers} usernames is allowed for this action.")
-            return
-
-        function = getattr(self, f"_put_{user_name}_user")
-        if not function:
-            event.fail(f"No action defined to change credentials for {user_name}.")
+            event.fail(f"Only the {OpenSearchUsers} usernames are allowed for this action.")
             return
 
         password = event.params.get("password") or generate_password()
         try:
-            function(password)
+            self._put_or_update_internal_user_leader(user_name, password)
             label = self.secrets.password_key(user_name)
             event.set_results({label: password})
         except OpenSearchError as e:
@@ -820,7 +819,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         if self.unit.is_leader():
             # Creating the monitoring user
-            self._put_monitor_user()
+            self._put_or_update_internal_user_leader(COSUser)
 
         # clear waiting to start status
         self.status.clear(WaitingToStart)
@@ -964,83 +963,37 @@ class OpenSearchBaseCharm(CharmBase):
             if user != "_meta":
                 self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
 
-    def _put_or_update_system_user(
-        self, user: str, create_function: callable, pwd: Optional[str] = None
-    ):
+    def _put_or_update_internal_user_leader(self, user: str, pwd: Optional[str] = None) -> None:
         """Create system user or update it with a new password."""
-        # If leader: global password change
-        # Otherwise: only system users should be considered (assuming they are initialized)
-        if (
-            self.unit.is_leader()
-            or user not in OpenSearchSystemUsers
-            or not (hashed_pwd := self.secrets.get(Scope.APP, self.secrets.hash_key(user)))
-        ):
-            hashed_pwd, pwd = generate_hashed_password(pwd)
+        # Leader is to set new password and hash, others populate existing hash locally
+        if not self.unit.is_leader():
+            logger.error("Credential change can be only performed by the leader unit.")
 
-        # update
-        if self.secrets.get(Scope.APP, self.secrets.password_key(user)):
+        hashed_pwd, pwd = generate_hashed_password(pwd)
+
+        # Update user credentials via API
+        if secret := self.secrets.get(Scope.APP, self.secrets.password_key(user)):
             self.user_manager.update_user_password(user, hashed_pwd)
-        else:
-            create_function(self, hashed_pwd)
+
+        # New user or system user requires (local re)-initialization
+        if not secret or user in OpenSearchSystemUsers:
+            self.user_manager.put_intenal_user(user, hashed_pwd)
 
         self.secrets.put(Scope.APP, self.secrets.password_key(user), pwd)
+
         if user in OpenSearchSystemUsers:
             self.secrets.put(Scope.APP, self.secrets.hash_key(user), hashed_pwd)
-        return (pwd, hashed_pwd)
 
-    def _put_admin_user(self, pwd: Optional[str] = None):
-        """Create password of Admin user."""
+        self.peers_data.put(Scope.APP, "admin_user_initialized", True)
 
-        def put_user(self, hashed_pwd: str):
-            # reserved: False, prevents this resource from being update-protected from:
-            # updates made on the dashboard or the rest api.
-            # we grant the admin user all opensearch access + security_rest_api_access
-            self.opensearch.config.put(
-                "opensearch-security/internal_users.yml",
-                "admin",
-                {
-                    "hash": hashed_pwd,
-                    "reserved": False,
-                    "backend_roles": ["admin"],
-                    "opendistro_security_roles": [
-                        "security_rest_api_access",
-                        "all_access",
-                    ],
-                    "description": "Admin user",
-                },
-            )
-            self.peers_data.put(Scope.APP, "admin_user_initialized", True)
+    def _put_or_update_internal_user_unit(self, user: str, pwd: Optional[str] = None) -> None:
+        """Create system user or update it with a new password."""
+        # Leader is to set new password and hash, others populate existing hash locally
+        hashed_pwd = self.secrets.get(Scope.APP, self.secrets.hash_key(user))
 
-        pwd, hashed_pwd = self._put_or_update_system_user("admin", put_user, pwd)
-
-    def _put_kibanaserver_user(self, pwd: Optional[str] = None):
-        """Change password of the 'kibanaserver' user."""
-
-        def put_user(self, hashed_pwd: str):
-            self.opensearch.config.put(
-                "opensearch-security/internal_users.yml",
-                f"{KibanaserverUser}",
-                {
-                    "hash": hashed_pwd,
-                    "reserved": False,
-                    "description": "Kibanaserver user",
-                },
-            )
-
-        self._put_or_update_system_user(KibanaserverUser, put_user, pwd)
-
-    def _put_monitor_user(self, pwd: Optional[str] = None):
-        """Create the monitor user, with the right security role."""
-
-        def put_user(self, hashed_pwd: str):
-            roles = [COSRole]
-            self.user_manager.create_user(COSUser, roles, hashed_pwd)
-            self.user_manager.patch_user(
-                COSUser,
-                [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
-            )
-
-        self._put_or_update_system_user(COSUser, put_user, pwd)
+        # System users have to be saved locally in internal_users.yml
+        if user in OpenSearchSystemUsers:
+            self.user_manager.put_intenal_user(user, hashed_pwd)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.

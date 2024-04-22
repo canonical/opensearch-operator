@@ -96,6 +96,7 @@ COSPort = "9200"
 OpenSearchSystemUsers = {"admin", "kibanaserver"}
 OpenSearchUsers = OpenSearchSystemUsers | {"monitor"}
 OpenSearchRoles = set()
+AdminUser = "admin"
 KibanaserverUser = "kibanaserver"
 KibanaserverRole = "kibana_server"
 

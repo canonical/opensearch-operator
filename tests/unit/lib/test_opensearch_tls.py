@@ -138,16 +138,8 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charm.OpenSearchOperatorCharm._put_admin_user")
     @patch("charm.OpenSearchOperatorCharm._put_kibanaserver_user")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-<<<<<<< HEAD
-    def test_on_relation_created_non_admin(
-        self, _, _put_admin_user, _request_certificate, deployment_desc
-||||||| parent of 26a6548 (Unittest changes)
-    def test_on_relation_joined_non_admin(
-        self, _, _put_admin_user, _request_certificate, deployment_desc
-=======
     def test_on_relation_joined_non_admin(
         self, _, __, _put_admin_user, _request_certificate, deployment_desc
->>>>>>> 26a6548 (Unittest changes)
     ):
         """Test on certificate relation created event."""
         deployment_desc.return_value = DeploymentDescription(
