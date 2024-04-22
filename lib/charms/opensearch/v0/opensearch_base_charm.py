@@ -897,12 +897,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         logger.warning(f"FOO1 {event.ignore_lock=}")  # TODO: remove
         if not self.node_lock.acquired:
             # (Attempt to acquire lock even if `event.ignore_lock`)
-            if event.ignore_lock:
-                logger.debug("Upgrading without lock")
-            else:
-                logger.debug("Lock to upgrade opensearch not acquired. Will retry next event")
-                event.defer()
-                return
+            # if event.ignore_lock:
+            #     logger.debug("Upgrading without lock")
+            # else:
+            logger.debug("Lock to upgrade opensearch not acquired. Will retry next event")
+            event.defer()
+            return
 
         try:
             self._stop_opensearch()
@@ -914,6 +914,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         self._upgrade.upgrade_unit(snap=self.opensearch)
+        # todo: call set upgrade status?
 
         self._start_opensearch_event.emit(ignore_lock=event.ignore_lock)
 
