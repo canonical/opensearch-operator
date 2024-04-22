@@ -152,7 +152,6 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
         logger.debug("Forcing upgrade")
         event.log(f"Forcefully upgrading {self.unit.name}")
-        logger.warning(f"FOO {event.params.get('ignore-lock')=}")  # TODO: remove
         self._upgrade_opensearch_event.emit(ignore_lock=event.params["ignore-lock"])
         self._reconcile_upgrade()
         event.set_results({"result": f"Forcefully upgraded {self.unit.name}"})

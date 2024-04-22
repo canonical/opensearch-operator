@@ -894,7 +894,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:
         """Upgrade OpenSearch."""
-        logger.warning(f"FOO1 {event.ignore_lock=}")  # TODO: remove
         if not self.node_lock.acquired:
             # (Attempt to acquire lock even if `event.ignore_lock`)
             if event.ignore_lock:
