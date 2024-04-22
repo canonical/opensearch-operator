@@ -28,8 +28,8 @@ class Upgrade(upgrade.Upgrade):
     @property
     def unit_state(self) -> typing.Optional[str]:
         if (
-            self._unit_workload_version is not None
-            and self._unit_workload_version != self._app_workload_version
+            self._unit_workload_container_version is not None
+            and self._unit_workload_container_version != self._app_workload_container_version
         ):
             logger.debug("Unit upgrade state: outdated")
             return "outdated"
@@ -39,18 +39,21 @@ class Upgrade(upgrade.Upgrade):
     def unit_state(self, value: str) -> None:
         if value == "healthy":
             # Set snap revision on first install
-            self._unit_databag["snap_revision"] = _SNAP_REVISION
-            logger.debug(f"Saved {_SNAP_REVISION} in unit databag while setting state healthy")
+            self._unit_workload_container_version = _SNAP_REVISION
+            self._unit_workload_version = self._current_versions["workload"]
+            logger.debug(
+                f'Saved {_SNAP_REVISION=} and {self._current_versions["workload"]=} in unit databag while setting state healthy'
+            )
         # Super call
         upgrade.Upgrade.unit_state.fset(self, value)
 
     def _get_unit_healthy_status(self) -> ops.StatusBase:
-        if self._unit_workload_version == self._app_workload_version:
+        if self._unit_workload_container_version == self._app_workload_container_version:
             return ops.ActiveStatus(
-                f'OpenSearch {self._current_versions["workload"]} rev {self._unit_workload_version} running'
+                f"OpenSearch {self._unit_workload_version} rev {self._unit_workload_container_version} running"
             )
         return ops.WaitingStatus(
-            f'Charmed operator upgraded. OpenSearch {self._current_versions["workload"]} rev {self._unit_workload_version} running'
+            f"Charmed operator upgraded. OpenSearch {self._unit_workload_version} rev {self._unit_workload_container_version} running"
         )
 
     @property
@@ -65,7 +68,7 @@ class Upgrade(upgrade.Upgrade):
         return super().app_status
 
     @property
-    def _unit_workload_versions(self) -> typing.Dict[str, str]:
+    def _unit_workload_container_versions(self) -> typing.Dict[str, str]:
         """{Unit name: installed snap revision}"""
         versions = {}
         for unit in self._sorted_units:
@@ -74,14 +77,27 @@ class Upgrade(upgrade.Upgrade):
         return versions
 
     @property
-    def _unit_workload_version(self) -> typing.Optional[str]:
+    def _unit_workload_container_version(self) -> typing.Optional[str]:
         """Installed snap revision for this unit"""
         return self._unit_databag.get("snap_revision")
 
+    @_unit_workload_container_version.setter
+    def _unit_workload_container_version(self, value: str):
+        self._unit_databag["snap_revision"] = value
+
     @property
-    def _app_workload_version(self) -> str:
+    def _app_workload_container_version(self) -> str:
         """Snap revision for current charm code"""
         return _SNAP_REVISION
+
+    @property
+    def _unit_workload_version(self) -> typing.Optional[str]:
+        """Installed MySQL Router version for this unit"""
+        return self._unit_databag.get("workload_version")
+
+    @_unit_workload_version.setter
+    def _unit_workload_version(self, value: str):
+        self._unit_databag["workload_version"] = value
 
     def reconcile_partition(self, *, action_event: ops.ActionEvent = None) -> None:
         """Handle Juju action to confirm first upgraded unit is healthy and resume upgrade."""
@@ -110,7 +126,7 @@ class Upgrade(upgrade.Upgrade):
 
     @property
     def authorized(self) -> bool:
-        assert self._unit_workload_version != self._app_workload_version
+        assert self._unit_workload_container_version != self._app_workload_container_version
         for index, unit in enumerate(self._sorted_units):
             if unit.name == self._unit.name:
                 # Higher number units have already upgraded
@@ -120,7 +136,8 @@ class Upgrade(upgrade.Upgrade):
                     return self.upgrade_resumed
                 return True
             if (
-                self._unit_workload_versions.get(unit.name) != self._app_workload_version
+                self._unit_workload_container_versions.get(unit.name)
+                != self._app_workload_container_version
                 or self._peer_relation.data[unit].get("state") != "healthy"
             ):
                 # Waiting for higher number units to upgrade
@@ -131,5 +148,8 @@ class Upgrade(upgrade.Upgrade):
         logger.debug(f"Upgrading {self.authorized=}")
         self.unit_state = "upgrading"
         snap.install()
-        self._unit_databag["snap_revision"] = _SNAP_REVISION
-        logger.debug(f"Saved {_SNAP_REVISION} in unit databag after upgrade")
+        self._unit_workload_container_version = _SNAP_REVISION
+        self._unit_workload_version = self._current_versions["workload"]
+        logger.debug(
+            f'Saved {_SNAP_REVISION=} and {self._current_versions["workload"]=} in unit databag after upgrade'
+        )

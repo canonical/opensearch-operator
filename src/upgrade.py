@@ -112,10 +112,12 @@ class Upgrade(abc.ABC):
 
     @property
     def in_progress(self) -> bool:
-        logger.debug(f"{self._app_workload_version=} {self._unit_workload_versions=}")
+        logger.debug(
+            f"{self._app_workload_container_version=} {self._unit_workload_container_versions=}"
+        )
         return any(
-            version != self._app_workload_version
-            for version in self._unit_workload_versions.values()
+            version != self._app_workload_container_version
+            for version in self._unit_workload_container_versions.values()
         )
 
     @property
@@ -174,8 +176,8 @@ class Upgrade(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def _unit_workload_versions(self) -> typing.Dict[str, str]:
-        """{Unit name: unique identifier for unit's workload version}
+    def _unit_workload_container_versions(self) -> typing.Dict[str, str]:
+        """{Unit name: unique identifier for unit's workload container version}
 
         If and only if this version changes, the workload will restart (during upgrade or
         rollback).
@@ -183,19 +185,19 @@ class Upgrade(abc.ABC):
         On Kubernetes, the workload & charm are upgraded together
         On machines, the charm is upgraded before the workload
 
-        This identifier should be comparable to `_app_workload_version` to determine if the unit &
-        app are the same workload version.
+        This identifier should be comparable to `_app_workload_container_version` to determine if
+        the unit & app are the same workload container version.
         """
 
     @property
     @abc.abstractmethod
-    def _app_workload_version(self) -> str:
-        """Unique identifier for the app's workload version
+    def _app_workload_container_version(self) -> str:
+        """Unique identifier for the app's workload container version
 
         This should match the workload version in the current Juju app charm version.
 
-        This identifier should be comparable to `_get_unit_workload_version` to determine if the
-        app & unit are the same workload version.
+        This identifier should be comparable to `_unit_workload_container_versions` to determine if
+        the app & unit are the same workload container version.
         """
 
     @abc.abstractmethod
