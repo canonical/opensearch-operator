@@ -83,6 +83,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             return
         if self._upgrade.unit_state == "outdated":
             if self._upgrade.authorized:
+                self._set_upgrade_status()
                 self._upgrade_opensearch_event.emit()
             else:
                 self._set_upgrade_status()
