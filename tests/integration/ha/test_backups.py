@@ -26,6 +26,7 @@ import boto3
 import pytest
 from charms.opensearch.v0.constants_charm import (
     BackupDataMissingS3,
+    BackupDataShouldNotRelateS3,
     BackupFailoverClusterMissingS3,
     CheckOrchestratorS3Relation,
     PluginConfigError,
@@ -319,7 +320,7 @@ async def test_large_deployment_build_and_deploy(
             config=failover_orchestrator_conf,
         ),
         ops_test.model.deploy(
-            my_charm, application_name="data-hot", num_units=3, series=SERIES, config=data_hot_conf
+            my_charm, application_name="data-hot", num_units=1, series=SERIES, config=data_hot_conf
         ),
     )
 
@@ -367,8 +368,7 @@ async def test_large_setups_relations(
         units_statuses=["blocked"],
         units_full_statuses={
             "main": {"blocked": [PluginConfigError], "active": []},
-            "failover": {"blocked": [BackupFailoverClusterMissingS3], "active": []},
-            "data-hot": {"blocked": [BackupFailoverClusterMissingS3], "active": []},
+            "failover": {"blocked": [CheckOrchestratorS3Relation], "active": []},
         },
         idle_period=IDLE_PERIOD,
     )
@@ -377,9 +377,44 @@ async def test_large_setups_relations(
     await ops_test.model.integrate("failover", S3_INTEGRATOR)
     await wait_until(
         ops_test,
-        apps=[TLS_CERTIFICATES_APP_NAME, "main", "failover", "data-hot"],
-        apps_statuses=["active"],
-        units_statuses=["active"],
+        apps=["main", "failover", "data-hot"],
+        apps_statuses=["blocked"],
+        units_statuses=["blocked"],
+        units_full_statuses={
+            "main": {"blocked": [PluginConfigError], "active": []},
+            "failover": {"blocked": [BackupFailoverClusterMissingS3], "active": []},
+            "data-hot": {"blocked": [BackupDataMissingS3], "active": []},
+        },
+        idle_period=IDLE_PERIOD,
+    )
+
+    # Now, test relating and removing the relation from data-hot:
+    await ops_test.model.integrate("data-hot", S3_INTEGRATOR)
+    await wait_until(
+        ops_test,
+        apps=["main", "failover", "data-hot"],
+        apps_statuses=["blocked"],
+        units_statuses=["blocked"],
+        units_full_statuses={
+            "main": {"blocked": [PluginConfigError], "active": []},
+            "failover": {"blocked": [BackupFailoverClusterMissingS3], "active": []},
+            "data-hot": {"blocked": [BackupDataShouldNotRelateS3], "active": []},
+        },
+        idle_period=IDLE_PERIOD,
+    )
+
+    # Reverting should return it to normal
+    await ops_test.model.applications["data-hot"].destroy_relation("data-hot", S3_INTEGRATOR)
+    await wait_until(
+        ops_test,
+        apps=["main", "failover", "data-hot"],
+        apps_statuses=["blocked"],
+        units_statuses=["blocked"],
+        units_full_statuses={
+            "main": {"blocked": [PluginConfigError], "active": []},
+            "failover": {"blocked": [BackupFailoverClusterMissingS3], "active": []},
+            "data-hot": {"blocked": [BackupDataMissingS3], "active": []},
+        },
         idle_period=IDLE_PERIOD,
     )
 
@@ -400,38 +435,6 @@ async def test_create_backup_and_restore(
     leader_id = await get_leader_unit_id(ops_test)
     unit_ip = await get_leader_unit_ip(ops_test)
     config = cloud_configs[cloud_name]
-
-    if deploy_type == "large":
-        # We have one extra check for large deployments
-
-        # Main and failover MUST block now:
-        # 1) main because there are information missing
-        # 2) failover because it cannot find s3 as well
-        await wait_until(
-            ops_test,
-            apps=["main", "failover", "data-hot"],
-            units_statuses=["blocked"],
-            units_full_statuses={
-                "main": {"blocked": [PluginConfigError], "active": []},
-                "failover": {"blocked": [CheckOrchestratorS3Relation], "active": []},
-                "data-hot": {"blocked": [BackupDataMissingS3], "active": []},
-            },
-            idle_period=IDLE_PERIOD,
-        )
-        # Now, relate failover cluster to s3-integrator and review the status
-        await ops_test.model.integrate("failover", S3_INTEGRATOR)
-        await wait_until(
-            ops_test,
-            apps=[TLS_CERTIFICATES_APP_NAME, "main", "failover", "data-hot"],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            units_full_statuses={
-                "main": {"blocked": [PluginConfigError], "active": []},
-                "failover": {"blocked": [BackupFailoverClusterMissingS3], "active": []},
-                "data-hot": {"blocked": [BackupDataMissingS3], "active": []},
-            },
-            idle_period=IDLE_PERIOD,
-        )
 
     logger.info(f"Syncing credentials for {cloud_name}")
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)

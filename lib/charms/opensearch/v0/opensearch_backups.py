@@ -57,6 +57,7 @@ from charms.data_platform_libs.v0.s3 import (
 from charms.opensearch.v0.constants_charm import (
     BackupConfigureStart,
     BackupDataMissingS3,
+    BackupDataShouldNotRelateS3,
     BackupDeferRelBrokenAsInProgress,
     BackupFailoverClusterMissingS3,
     BackupInDisabling,
@@ -366,11 +367,10 @@ class OpenSearchDataClusterBackup(OpenSearchBackupBase):
     def __init__(self, charm: Object, relation_name: str = PeerClusterRelationName):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
-
+        self.s3_client = PeerClusterDataS3Requirer(self.charm, PeerClusterRelationName)
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credentials_changed
         )
-        self.s3_client = PeerClusterDataS3Requirer(self.charm, PeerClusterRelationName)
 
     def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
         """Processes the non-orchestrator cluster events."""
@@ -378,7 +378,7 @@ class OpenSearchDataClusterBackup(OpenSearchBackupBase):
             if not self.charm.plugin_manager.check_plugin_manager_ready():
                 logger.warning("s3-changed: cluster not ready yet")
         except OpenSearchError as e:
-            self.charm.status.set(BlockedStatus(PluginConfigError))
+            self.charm.status.set(BlockedStatus(BackupDataMissingS3))
             # There was an unexpected error, log it and block the unit
             logger.error(e)
             event.defer()
@@ -412,14 +412,14 @@ class OpenSearchDataClusterBackup(OpenSearchBackupBase):
             if isinstance(e, OpenSearchNotFullyReadyError):
                 logger.warning("s3-changed: cluster not ready yet")
             else:
-                self.charm.status.set(BlockedStatus(PluginConfigError))
+                self.charm.status.set(BlockedStatus(BackupDataMissingS3))
                 # There was an unexpected error, log it and block the unit
                 logger.error(e)
             event.defer()
 
     def _on_s3_relation_event(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
-        self.charm.status.set(BlockedStatus(BackupDataMissingS3))
+        self.charm.status.set(BlockedStatus(BackupDataShouldNotRelateS3))
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
         return
 
@@ -440,12 +440,11 @@ class OpenSearchFailoverClusterBackup(OpenSearchDataClusterBackup):
     def __init__(self, charm: Object, relation_name: str = PeerClusterRelationName):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
-        self.s3_client = PeerClusterDataS3Requirer(self.charm, PeerClusterRelationName)
 
     def _on_s3_relation_event(self, _) -> None:
         """Processes the non-orchestrator cluster events."""
         if not self._s3_and_peer_exist():
-            # We do not have the s3 and peer relation, nothing to do
+            # We do not have the s3 or peer relation, nothing to do
             logger.warning(
                 "This application is related to S3 but acting as failover unit and "
                 "the main orchestrator did not published the same information."
@@ -464,12 +463,15 @@ class OpenSearchFailoverClusterBackup(OpenSearchDataClusterBackup):
 
     def _s3_and_peer_exist(self) -> bool:
         """Checks if we have both s3 and peer relation to this unit. If not, return False."""
-        return (
+        s3_rel_available = (
             self.charm.model.get_relation(S3_RELATION)
             and self.charm.model.get_relation(S3_RELATION).units
-            and self.charm.model.get_relation(PeerClusterRelationName)
+        )
+        peer_rel_available = (
+            self.charm.model.get_relation(PeerClusterRelationName)
             and self.charm.model.get_relation(PeerClusterRelationName).units
         )
+        return s3_rel_available != peer_rel_available
 
     def _check_s3_vs_peer_relations_data(self) -> bool:
         """Compares the information available for s3.
