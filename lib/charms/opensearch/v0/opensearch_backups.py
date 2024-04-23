@@ -219,6 +219,11 @@ class PeerClusterDataS3Requirer(S3Requirer):
 
     S3_REQUIRED_OPTIONS = ["access-key", "secret-key"]
 
+    def _on_relation_joined(self, _) -> None:
+        """Reimplements the relation joined event to defer it."""
+        # We do not need this method, so we just overload it
+        pass
+
     def _on_relation_changed(self, event) -> None:
         """Reimplements the relation changed, only process the credentials.
 
@@ -325,13 +330,14 @@ class OpenSearchBackupBase(Object):
     """
 
     def __init__(self, charm: Object, relation_name: str = PeerClusterRelationName):
+        """Initializes the opensearch backup base.
+
+        This class will not hold a s3_client object, as it is not intended to really
+        manage the relation besides waiting for the deployment description.
+        """
         super().__init__(charm, relation_name)
         self.charm = charm
 
-        if charm.opensearch_peer_cm and charm.opensearch_peer_cm.deployment_desc():
-            return
-        # Now, we setup the listeners to every event. It should only happen if the deployment
-        # description is not yet available.
         for event in [
             self.charm.on[S3_RELATION].relation_created,
             self.charm.on[S3_RELATION].relation_joined,
@@ -371,6 +377,18 @@ class OpenSearchDataClusterBackup(OpenSearchBackupBase):
         self.s3_client = PeerClusterDataS3Requirer(self.charm, PeerClusterRelationName)
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credentials_changed
+        )
+        self.framework.observe(
+            self.charm.on[S3_RELATION].relation_broken, self._on_s3_relation_broken
+        )
+
+    def peer_s3_data_exists(self) -> bool:
+        """Returns True if all the data for s3 from peer relation is present."""
+        return (
+            self.charm.model.get_relation(PeerClusterRelationName)
+            and self.charm.model.get_relation(PeerClusterRelationName).units
+            and self.charm.opensearch_peer_cm.deployment_desc().s3_credentials.access_key != ""
+            and self.charm.opensearch_peer_cm.deployment_desc().s3_credentials.secret_key != ""
         )
 
     def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
@@ -424,6 +442,12 @@ class OpenSearchDataClusterBackup(OpenSearchBackupBase):
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
         return
 
+    def _on_s3_relation_broken(self, event: EventBase) -> None:
+        """Processes the non-orchestrator cluster events."""
+        self.charm.status.clear(BackupDataMissingS3)
+        logger.info("Non-orchestrator cluster, abandon s3 relation event")
+        return
+
     def _on_s3_relation_action(self, event: EventBase) -> None:
         """Deployment description available, non-orchestrator, fail any actions."""
         event.fail("Failed: execute the action on the orchestrator cluster instead.")
@@ -453,6 +477,7 @@ class OpenSearchFailoverClusterBackup(OpenSearchDataClusterBackup):
             self.charm.status.set(BlockedStatus(CheckOrchestratorS3Relation))
             return
 
+        self.charm.status.clear(CheckOrchestratorS3Relation)
         if not self._check_s3_vs_peer_relations_data():
             # The s3 and peer relation do not match, we must block the unit
             logger.warning(
@@ -461,6 +486,7 @@ class OpenSearchFailoverClusterBackup(OpenSearchDataClusterBackup):
             )
             self.charm.status.set(BlockedStatus(BackupFailoverClusterMissingS3))
             return
+        self.charm.status.clear(BackupFailoverClusterMissingS3)
 
     def _s3_and_peer_exist(self) -> bool:
         """Checks if we have both s3 and peer relation to this unit. If not, return False."""
@@ -468,11 +494,7 @@ class OpenSearchFailoverClusterBackup(OpenSearchDataClusterBackup):
             self.charm.model.get_relation(S3_RELATION)
             and self.charm.model.get_relation(S3_RELATION).units
         )
-        peer_rel_available = (
-            self.charm.model.get_relation(PeerClusterRelationName)
-            and self.charm.model.get_relation(PeerClusterRelationName).units
-        )
-        return s3_rel_available != peer_rel_available
+        return s3_rel_available != self.peer_s3_data_exists()
 
     def _check_s3_vs_peer_relations_data(self) -> bool:
         """Compares the information available for s3.

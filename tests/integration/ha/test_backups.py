@@ -369,7 +369,7 @@ async def test_large_setups_relations(
         apps_statuses=["blocked"],
         units_statuses=["blocked"],
         units_full_statuses={
-            "main": {"blocked": [PluginConfigError], "active": []},
+            "main": {"blocked": [], "active": []},
             "failover": {"blocked": [CheckOrchestratorS3Relation], "active": []},
         },
         idle_period=IDLE_PERIOD,

@@ -136,15 +136,11 @@ class OpenSearchPluginManager:
 
     def check_plugin_manager_ready(self) -> bool:
         """Checks if the plugin manager is ready to run."""
-        return (
-            self._charm.opensearch.is_node_up()
-            and len(self._charm._get_nodes(True)) == self._charm.app.planned_units()
-            and self._charm.health.apply()
-            in [
-                HealthColors.GREEN,
-                HealthColors.YELLOW,
-            ]
-        )
+        return self._charm.opensearch.is_node_up() and self._charm.health.apply() in [
+            HealthColors.GREEN,
+            HealthColors.YELLOW,
+            HealthColors.IGNORE,
+        ]
 
     def run(self) -> bool:
         """Runs a check on each plugin: install, execute config changes or remove.

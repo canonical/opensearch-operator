@@ -330,8 +330,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             else:
                 # Return what we have received from the peer relation
                 s3_credentials = S3RelDataCredentials(
-                    access_key=secrets.get(Scope.APP, "access-key", default=None),
-                    secret_key=secrets.get(Scope.APP, "secret-key", default=None),
+                    access_key=secrets.get(Scope.APP, "access-key", default=""),
+                    secret_key=secrets.get(Scope.APP, "secret-key", default=""),
                 )
             return PeerClusterRelData(
                 cluster_name=deployment_desc.config.cluster_name,
