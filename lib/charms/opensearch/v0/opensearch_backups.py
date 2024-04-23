@@ -57,6 +57,7 @@ from charms.data_platform_libs.v0.s3 import (
 from charms.opensearch.v0.constants_charm import (
     BackupConfigureStart,
     BackupDeferRelBrokenAsInProgress,
+    BackupFailoverClusterMissingS3,
     BackupInDisabling,
     BackupSetupFailed,
     BackupSetupStart,
@@ -303,7 +304,7 @@ class S3CredentialRequiresEvents(ObjectEvents):
     credentials_gone = EventSource(CredentialsGoneEvent)
 
 
-class PeerClusterS3Requirer(S3Requirer):
+class PeerClusterDataS3Requirer(S3Requirer):
     """Reimplements some of the key methods in S3Requirer for non-orchestrated clusters.
 
     This class loads the information from peer-cluster relations instead of s3-relation and
@@ -354,7 +355,7 @@ class PeerClusterOrchestratorS3Requirer(S3Requirer):
         """
         super()._on_relation_joined(event)
         # Now, we need to refresh the peer cm relation data
-        self.charm.peer_cm.refresh_relation_data(event)
+        self.charm.peer_cluster_provider.refresh_relation_data(event)
 
 
 class OpenSearchBackupFactory:
@@ -372,16 +373,17 @@ class OpenSearchBackupFactory:
 
     def __new__(cls, charm, *args, **kwargs):
         """Creates the class depending if it is orchestrator cluster or not."""
-        if not charm.opensearch_peer_cm or not charm.opensearch_peer_cm.deployment_desc():
+        if not charm.opensearch_peer_cm.deployment_desc():
             # Temporary condition: we are waiting for CM to show up and define which type
             # of cluster are we. Once we have that defined, then we will process.
             return OpenSearchBackupBase(charm)
-        elif charm.opensearch_peer_cm.deployment_desc().typ in [
-            DeploymentType.MAIN_ORCHESTRATOR,
-            DeploymentType.FAILOVER_ORCHESTRATOR,
-        ]:
+        elif charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
             return OpenSearchBackup(charm)
-        return OpenSearchNonOrchestratorBackup(charm)
+        elif (
+            charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.FAILOVER_ORCHESTRATOR
+        ):
+            return OpenSearchFailoverClusterBackup(charm)
+        return OpenSearchDataClusterBackup(charm)
 
 
 class OpenSearchBackupBase(Object):
@@ -390,7 +392,7 @@ class OpenSearchBackupBase(Object):
     This class does a smooth transition between orchestrator and non-orchestrator clusters.
     """
 
-    def __init__(self, charm: Object, relation_name: str):
+    def __init__(self, charm: Object, relation_name: str = PeerClusterRelationName):
         super().__init__(charm, relation_name)
         self.charm = charm
 
@@ -414,17 +416,15 @@ class OpenSearchBackupBase(Object):
             return
 
         # We have a deployment descriptor, decide which type of deployment
-        if charm.opensearch_peer_cm.deployment_desc().typ in [
-            DeploymentType.MAIN_ORCHESTRATOR,
-            DeploymentType.FAILOVER_ORCHESTRATOR,
-        ]:
-            self.s3_client = S3Requirer(self.charm, S3_RELATION)
+        if charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
+            self.s3_client = PeerClusterOrchestratorS3Requirer(self.charm, S3_RELATION)
         else:
-            # This is strictly a follower cluster
-            # Ignore any updates in the s3-relation and return errors instead.
-            # For that, we need to *not instantiate* the S3Requirer class and instead listen
-            # to each event and return an error.
-            self.s3_client = PeerClusterS3Requirer(self.charm, PeerClusterRelationName)
+            """There are two different situations here:
+
+            1) The cluster is a failover orchestrator cluster
+            2) The cluster is a data cluster
+            """
+            self.s3_client = PeerClusterDataS3Requirer(self.charm, PeerClusterRelationName)
 
     def _on_s3_relation_event(self, event: EventBase) -> None:
         """Defers the s3 relation events."""
@@ -437,7 +437,36 @@ class OpenSearchBackupBase(Object):
         event.fail("Failed: deployment description not yet available")
 
 
-class OpenSearchNonOrchestratorBackup(OpenSearchBackupBase):
+class OpenSearchFailoverClusterBackup(OpenSearchBackupBase):
+    """Failover orchestrator unit.
+
+    This unit is very similar to the data cluster only, with two differences:
+    (1) it accepts s3-relation without acting on it; and (2) if this unit has been
+    related to a s3 charm, it must check if the information from that s3 exists in the cluster.
+    If not, it must block informing it is connected to a different type of s3-integrator.
+    """
+
+    def __init__(self, charm: Object, relation_name: str = PeerClusterRelationName):
+        """Manager of OpenSearch backup relations."""
+        super().__init__(charm, relation_name)
+        try:
+            response = charm.opensearch.request("GET", f"_snapshot/{S3_REPOSITORY}")
+            if not response.get("repositories", {}).get(S3_REPOSITORY):
+                raise OpenSearchHttpError(REPO_NOT_CREATED_ERR)
+            repo = response["repositories"][S3_REPOSITORY]
+            if (
+                repo.get("bucket") == self.s3_client.get_s3_connection_info().get("bucket")
+                and repo.get("region") == self.s3_client.get_s3_connection_info().get("region")
+                and repo.get("path") == S3_REPO_BASE_PATH
+            ):
+                # The repository and matches the s3 relation info
+                return
+        except OpenSearchHttpError:
+            pass
+        self.charm.status.set(BlockedStatus(BackupFailoverClusterMissingS3))
+
+
+class OpenSearchDataClusterBackup(OpenSearchBackupBase):
     """Simpler implementation of backup relation for non-orchestrator clusters.
 
     In a nutshell, non-orchstrator clusters should receive the backup information via
