@@ -134,6 +134,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             event.fail(message)
             return
         self._upgrade.reconcile_partition(action_event=event)
+        # If next to upgrade, upgrade leader unit
+        self._reconcile_upgrade()
 
     def _on_force_upgrade_action(self, event: ops.ActionEvent) -> None:
         if not self._upgrade or not self._upgrade.in_progress:
