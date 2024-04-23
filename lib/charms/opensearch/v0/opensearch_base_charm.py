@@ -721,7 +721,6 @@ class OpenSearchBaseCharm(CharmBase):
             return
         self.peers_data.delete(Scope.UNIT, "started")
         if self.opensearch.is_started():
-            self.unit.open_port("tcp", 9200)
             try:
                 self._post_start_init(event)
             except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
@@ -816,6 +815,8 @@ class OpenSearchBaseCharm(CharmBase):
 
         # clear waiting to start status
         self.status.clear(WaitingToStart)
+
+        self.unit.open_port("tcp", 9200)
 
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
