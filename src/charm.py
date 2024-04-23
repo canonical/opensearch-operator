@@ -97,10 +97,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _set_upgrade_status(self):
         # Set/clear upgrade unit status if no other unit status
-        if isinstance(self.unit.status, ops.ActiveStatus) or (
-            isinstance(self.unit.status, ops.WaitingStatus)
-            and self.unit.status.message.startswith("Charmed operator upgraded.")
-        ):
+        if isinstance(self.unit.status, ops.ActiveStatus):
             self.status.set(self._upgrade.get_unit_juju_status() or ops.ActiveStatus())
         if not self.unit.is_leader():
             return
