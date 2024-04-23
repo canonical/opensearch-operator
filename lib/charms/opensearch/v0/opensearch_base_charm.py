@@ -365,8 +365,7 @@ class OpenSearchBaseCharm(CharmBase):
         if (
             self.unit.is_leader()
             and self.opensearch.is_node_up()
-            and self.health.apply(wait_for_green_first=True)
-            in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
+            and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
         ):
             # we defer because we want the temporary status to be updated
             event.defer()
@@ -813,7 +812,7 @@ class OpenSearchBaseCharm(CharmBase):
         self.opensearch_fixes.apply_on_start()
 
         # apply cluster health
-        self.health.apply(wait_for_green_first=True)
+        self.health.apply()
 
         if self.unit.is_leader():
             # Creating the monitoring user

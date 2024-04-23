@@ -50,6 +50,12 @@ MODEL_CONFIG = {
 logger = logging.getLogger(__name__)
 
 
+def MODEL_CONFIG_FAST_UPDATE():
+    model_conf = MODEL_CONFIG.copy()
+    model_conf["update-status-hook-interval"] = "2m"
+    return model_conf
+
+
 async def app_name(ops_test: OpsTest) -> Optional[str]:
     """Returns the name of the cluster running OpenSearch.
 
