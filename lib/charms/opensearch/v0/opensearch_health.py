@@ -64,6 +64,7 @@ class OpenSearchHealth:
             wait_for_green_first=wait_for_green_first,
             use_localhost=use_localhost,
         )
+        logger.info(f"Current health of cluster: {status}")
 
         if app:
             self._apply_for_app(status)
@@ -145,7 +146,7 @@ class OpenSearchHealth:
         elif status == HealthColors.YELLOW_TEMP:
             # health is yellow but temporarily (shards are relocating or initializing)
             self._charm.status.set(WaitingStatus(WaitingForBusyShards), app=True)
-        else:
+        elif status == HealthColors.YELLOW:
             # health is yellow permanently (some replica shards are unassigned)
             self._charm.status.set(BlockedStatus(ClusterHealthYellow), app=True)
 
