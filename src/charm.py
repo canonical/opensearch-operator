@@ -118,7 +118,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             if not self._upgrade.in_progress:
                 logger.info("Charm upgraded. OpenSearch version unchanged")
             self._upgrade.upgrade_resumed = False
-            # Only call `_reconcile_upgrade` on leader unit to avoid race conditions with `upgrade_resumed`
+            # Only call `_reconcile_upgrade` on leader unit to avoid race conditions with
+            # `upgrade_resumed`
             self._reconcile_upgrade()
 
     def _on_resume_upgrade_action(self, event: ops.ActionEvent) -> None:

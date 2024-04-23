@@ -27,6 +27,7 @@ class Upgrade(upgrade.Upgrade):
 
     @property
     def unit_state(self) -> typing.Optional[str]:
+        """Unit upgrade state"""
         if (
             self._unit_workload_container_version is not None
             and self._unit_workload_container_version != self._app_workload_container_version
@@ -51,6 +52,7 @@ class Upgrade(upgrade.Upgrade):
 
     @property
     def app_status(self) -> typing.Optional[ops.StatusBase]:
+        """App upgrade status"""
         if not self.is_compatible:
             logger.info(
                 "Upgrade incompatible. If you accept potential *data loss* and *downtime*, you can continue by running `force-upgrade` action on each remaining unit"
@@ -119,6 +121,10 @@ class Upgrade(upgrade.Upgrade):
 
     @property
     def authorized(self) -> bool:
+        """Whether this unit is authorized to upgrade
+
+        Only applies to machine charm
+        """
         assert self._unit_workload_container_version != self._app_workload_container_version
         for index, unit in enumerate(self._sorted_units):
             if unit.name == self._unit.name:
@@ -138,6 +144,10 @@ class Upgrade(upgrade.Upgrade):
         return False
 
     def upgrade_unit(self, *, snap: OpenSearchSnap) -> None:
+        """Upgrade this unit.
+
+        Only applies to machine charm
+        """
         logger.debug(f"Upgrading {self.authorized=}")
         self.unit_state = "upgrading"
         snap.install()

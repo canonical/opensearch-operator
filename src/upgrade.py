@@ -111,6 +111,7 @@ class Upgrade(abc.ABC):
 
     @property
     def in_progress(self) -> bool:
+        """Whether upgrade is in progress"""
         logger.debug(
             f"{self._app_workload_container_version=} {self._unit_workload_container_versions=}"
         )
@@ -129,11 +130,13 @@ class Upgrade(abc.ABC):
         """Status shown during upgrade if unit is healthy"""
 
     def get_unit_juju_status(self) -> typing.Optional[ops.StatusBase]:
+        """Unit upgrade status"""
         if self.in_progress:
             return self._get_unit_healthy_status()
 
     @property
     def app_status(self) -> typing.Optional[ops.StatusBase]:
+        """App upgrade status"""
         if not self.in_progress:
             return
         if not self.upgrade_resumed:
