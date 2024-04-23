@@ -100,7 +100,7 @@ logger = logging.getLogger(__name__)
 # OpenSearch Backups
 S3_RELATION = "s3-credentials"
 S3_REPOSITORY = "s3-repository"
-PEER_CLUSTER_S3_CONFIG_KEY = "s3-configuration"
+PEER_CLUSTER_S3_CONFIG_KEY = "s3-"
 
 
 S3_REPO_BASE_PATH = "/"
@@ -342,32 +342,19 @@ class PeerClusterOrchestratorS3Requirer(S3Requirer):
     relations. This is to ensure that the peer clusters are also updated with the same S3 options.
     """
 
-    def update_connection_info(self, relation_id: int, connection_data: dict) -> None:
-        """Updates the connection info data in both the upstream S3Requirer and in the peer."""
-        # Updated the connection info in the upstream S3Requirer
-        super().update_connection_info(relation_id, connection_data)
+    def _on_relation_joined(self, event) -> None:
+        """Event emitted when the application joins the s3 relation.
 
-        if not self.local_unit.is_leader():
-            return
+        In theory, we'd extend the update_connection_info, but we need to handle the peer data
+        and there is a potential for deferral, besides opensearch_peer_cluster's method
+        refresh_relation_data needs to receive an event.
 
-        relation = self.charm.model.get_relation(PeerClusterRelationName, relation_id)
-
-        if not relation:
-            return
-
-        # update the databag, if connection data did not change with respect to before
-        # the relation changed event is not triggered
-        # configuration options that are list
-        s3_list_options = ["attributes", "tls-ca-chain"]
-        updated_connection_data = {}
-        for configuration_option, configuration_value in connection_data.items():
-            if configuration_option in s3_list_options:
-                updated_connection_data[configuration_option] = json.dumps(configuration_value)
-            else:
-                updated_connection_data[configuration_option] = configuration_value
-
-        relation.data[self.local_app].update(updated_connection_data)
-        logger.debug(f"Updated S3 credentials in peer relation: {updated_connection_data}")
+        We must overload this handler, as we will call the refresh_relation_data from the peer
+        cluster relation and we may have a failure (i.e. the event gets deferred).
+        """
+        super()._on_relation_joined(event)
+        # Now, we need to refresh the peer cm relation data
+        self.charm.peer_cm.refresh_relation_data(event)
 
 
 class OpenSearchBackupFactory:
@@ -463,6 +450,7 @@ class OpenSearchNonOrchestratorBackup(OpenSearchBackupBase):
 
     def _on_s3_relation_event(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
+        self.charm.status.set(BlockedStatus(BackupDeferRelBrokenAsInProgress))
         logger.info("Non-orchestrator cluster, bandon s3 relation event")
         return
 
