@@ -59,12 +59,6 @@ LIST_BACKUPS_TRIAL = """ backup-id  | backup-status
 
 deployment_desc = namedtuple("deployment_desc", ["typ"])
 
-# @pytest.fixture(scope="module", autouse=True)
-# def set_deployment_desc():
-#     charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc = (
-#         MagicMock(return_value=deployment_desc(DeploymentType.MAIN_ORCHESTRATOR))
-#     )
-
 
 def create_deployment_desc():
     return DeploymentDescription(
@@ -85,10 +79,7 @@ def harness():
     charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc = (
         MagicMock(return_value=create_deployment_desc())
     )
-
     harness_obj.begin()
-    # harness_obj.add_relation(PeerRelationName, "opensearch")
-
     charm = harness_obj.charm
     # Override the config to simulate the TestPlugin
     # As config.yaml does not exist, the setup below simulates it

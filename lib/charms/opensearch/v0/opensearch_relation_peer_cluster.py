@@ -317,11 +317,15 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         try:
             secrets = self.charm.secrets
 
-            if self.deployent_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
+            if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
                 # As the main orchestrator, this application must set the S3 information.
                 s3_credentials = S3RelDataCredentials(
-                    access_key=self.charm.s3_client.get_s3_connection_info().get("access-key", ""),
-                    secret_key=self.charm.s3_client.get_s3_connection_info().get("secret-key", ""),
+                    access_key=self.charm.backup.s3_client.get_s3_connection_info().get(
+                        "access-key", ""
+                    ),
+                    secret_key=self.charm.backup.s3_client.get_s3_connection_info().get(
+                        "secret-key", ""
+                    ),
                 )
             else:
                 # Return what we have received from the peer relation

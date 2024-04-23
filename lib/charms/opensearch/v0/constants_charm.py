@@ -62,6 +62,8 @@ PClusterWrongNodesCountForQuorum = (
 PluginConfigError = "Unexpected error during plugin configuration, check the logs"
 BackupSetupFailed = "Backup setup failed, check logs for details"
 BackupFailoverClusterMissingS3 = "Backup failover cluster missing S3 relation"
+CheckOrchestratorS3Relation = "S3 relation mismatch between peer and failover clusters"
+BackupDataMissingS3 = "Data cluster missing S3 information"
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
