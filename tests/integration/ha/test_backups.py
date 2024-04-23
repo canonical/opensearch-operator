@@ -26,6 +26,7 @@ from typing import Dict
 import boto3
 import pytest
 from charms.opensearch.v0.constants_charm import (
+    OPENSEARCH_BACKUP_ID_FORMAT,
     BackupDataMissingS3,
     BackupDataShouldNotRelateS3,
     BackupFailoverClusterMissingS3,
