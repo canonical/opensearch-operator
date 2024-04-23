@@ -138,13 +138,3 @@ async def test_set_roles_manually(
     app_unit_status = await get_application_unit_status(ops_test, app=app)
     assert any(unit.value == "active" for unit in app_unit_status.values())
     # assert app_unit_status[new_unit_id].message == PClusterWrongNodesCountForQuorum
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_set_roles_manually(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
-    """Check roles changes in all nodes."""
-    app = (await app_name(ops_test)) or APP_NAME
-
