@@ -37,13 +37,6 @@ class Upgrade(upgrade.Upgrade):
 
     @unit_state.setter
     def unit_state(self, value: str) -> None:
-        if value == "healthy":
-            # Set snap revision on first install
-            self._unit_workload_container_version = _SNAP_REVISION
-            self._unit_workload_version = self._current_versions["workload"]
-            logger.debug(
-                f'Saved {_SNAP_REVISION=} and {self._current_versions["workload"]=} in unit databag while setting state healthy'
-            )
         # Super call
         upgrade.Upgrade.unit_state.fset(self, value)
 
@@ -152,4 +145,12 @@ class Upgrade(upgrade.Upgrade):
         self._unit_workload_version = self._current_versions["workload"]
         logger.debug(
             f'Saved {_SNAP_REVISION=} and {self._current_versions["workload"]=} in unit databag after upgrade'
+        )
+
+    def save_snap_revision_after_first_install(self):
+        """Set snap revision on first install"""
+        self._unit_workload_container_version = _SNAP_REVISION
+        self._unit_workload_version = self._current_versions["workload"]
+        logger.debug(
+            f'Saved {_SNAP_REVISION=} and {self._current_versions["workload"]=} in unit databag after first install'
         )

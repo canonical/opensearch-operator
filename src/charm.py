@@ -65,6 +65,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.unit.status = BlockedStatus(InstallError)
 
     def _on_upgrade_peer_relation_created(self, _) -> None:
+        self._upgrade.save_snap_revision_after_first_install()
         if self._unit_lifecycle.authorized_leader:
             if not self._upgrade.in_progress:
                 # Save versions on initial start
