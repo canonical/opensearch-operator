@@ -138,11 +138,11 @@ class OpenSearchPluginManager:
         """Checks if the plugin manager is ready to run."""
         return (
             self._charm.opensearch.is_node_up()
-            and len(self._charm._get_nodes(True)) == self._charm.app.planned_units()
             and self._charm.health.apply()
             in [
                 HealthColors.GREEN,
                 HealthColors.YELLOW,
+                HealthColors.IGNORE,
             ]
         )
 
