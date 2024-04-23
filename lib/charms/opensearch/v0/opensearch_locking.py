@@ -336,6 +336,7 @@ class OpenSearchNodeLock(ops.Object):
         # complaining about spamming the index creation endpoint
         try:
             if self.OPENSEARCH_INDEX in ClusterState.indices(self._opensearch, host, alt_hosts):
+                logger.debug(f"{self.OPENSEARCH_INDEX} already created. Skipping creation attempt.")
                 return True
         except OpenSearchHttpError:
             pass
