@@ -19,7 +19,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
 )
 from ops.model import BlockedStatus, WaitingStatus
-from tenacity import retry, stop_after_attempt, wait_exponential, wait_fixed
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "93d2c27f38974a59b3bbe39fb27ac98d"
@@ -73,7 +73,7 @@ class OpenSearchHealth:
 
         return status
 
-    def get(self, wait_for_green_first: bool = False, use_localhost: bool = True) -> str:
+    def get(self, wait_for_green_first: bool = False, use_localhost: bool = True) -> str:  # noqa
         """Fetch the current cluster status."""
         if not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc()):
             return HealthColors.UNKNOWN
@@ -91,9 +91,11 @@ class OpenSearchHealth:
             return HealthColors.IGNORE
 
         host = self._charm.unit_ip if use_localhost else None
-        try:
-            response = self._health(wait_for_green=wait_for_green_first, host=host)
-        except OpenSearchHttpError:
+        response = self._health(host, wait_for_green_first)
+        if wait_for_green_first and not response:
+            response = self._health(host, False)
+
+        if not response:
             return HealthColors.UNKNOWN
 
         logger.info(f"Health: {response}")
@@ -105,6 +107,13 @@ class OpenSearchHealth:
 
         if status != HealthColors.YELLOW:
             return status
+
+        try:
+            logger.debug(
+                f"\n\nHealth: {status} -- Shards: {ClusterState.shards(self._opensearch, host)}\n\n"
+            )
+        except OpenSearchHttpError:
+            pass
 
         try:
             # we differentiate between a temp yellow (moving shards) and a permanent
@@ -171,24 +180,23 @@ class OpenSearchHealth:
         message = WaitingForSpecificBusyShards.format(" - ".join(message))
         self._charm.status.set(WaitingStatus(message))
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        reraise=True,
-    )
-    def _health(self, host: str, wait_for_green: bool) -> Dict[str, any]:
+    def _health(self, host: str, wait_for_green: bool) -> Optional[Dict[str, any]]:
         """Fetch the cluster health."""
         endpoint = "/_cluster/health"
 
         timeout = 5
         if wait_for_green:
             endpoint = f"{endpoint}?wait_for_status=green&timeout=1m"
-            timeout = 75
+            timeout = 61
 
-        return self._opensearch.request(
-            "GET",
-            endpoint,
-            host=host,
-            alt_hosts=self._charm.alt_hosts,
-            timeout=timeout,
-        )
+        try:
+            return self._opensearch.request(
+                "GET",
+                endpoint,
+                host=host,
+                alt_hosts=self._charm.alt_hosts,
+                timeout=timeout,
+                retries=3,
+            )
+        except OpenSearchHttpError:
+            return None
