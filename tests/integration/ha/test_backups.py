@@ -369,10 +369,6 @@ async def test_large_setups_relations_with_misconfiguration(
         "secret-key": "error",
     }
 
-    import pdb
-
-    pdb.set_trace()
-
     logger.info(f"Syncing credentials for {cloud_name}")
     # Not using _configure_s3 as this method will cause opensearch to block
     await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
