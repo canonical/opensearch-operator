@@ -169,3 +169,34 @@ async def test_check_pinned_revision(ops_test: OpsTest) -> None:
     logger.info(f"Installed snap: {installed_info}")
     assert installed_info[1] == f"({OPENSEARCH_SNAP_REVISION})"
     assert installed_info[3] == "held"
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_check_workload_version(ops_test: OpsTest) -> None:
+    """Test to check if the workload_version file is updated."""
+    leader_id = await get_leader_unit_id(ops_test)
+
+    installed_info = yaml.safe_load(
+        subprocess.check_output(
+            [
+                "juju",
+                "ssh",
+                f"opensearch/{leader_id}",
+                "--",
+                "sudo",
+                "snap",
+                "info",
+                "opensearch",
+                "--color=never",
+                "--unicode=always",
+            ],
+            text=True,
+        ).replace("\r\n", "\n")
+    )["installed"].split()
+    logger.info(f"Installed snap: {installed_info}")
+
+    workload_version = None
+    with open("./workload_version") as f:
+        workload_version = f.read().split("\n")[0]
+    assert installed_info[0] == workload_version
