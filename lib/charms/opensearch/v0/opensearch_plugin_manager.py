@@ -137,7 +137,7 @@ class OpenSearchPluginManager:
     def check_plugin_manager_ready(self) -> bool:
         """Checks if the plugin manager is ready to run."""
         return (
-            self._charm.opensearch.is_node_up() 
+            self._charm.opensearch.is_node_up()
             and len(
                 [x for x in self._charm._get_nodes(True) if x.startswith(self._charm.app.name)]
             ) == self._charm.app.planned_units()
