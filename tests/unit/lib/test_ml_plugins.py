@@ -106,6 +106,7 @@ class TestOpenSearchKNN(unittest.TestCase):
                     roles=["cluster_manager"],
                     ip="1.1.1.1",
                     app_name=self.charm.app.name,
+                    unit_number=0,
                 ),
             ]
         )
