@@ -884,7 +884,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.node_lock.release()
 
-        self._upgrade.unit_state = "healthy"
+        self._upgrade.unit_state = upgrade.UnitState.HEALTHY
         self._reconcile_upgrade()
 
         self.peers_data.put(Scope.UNIT, "started", True)

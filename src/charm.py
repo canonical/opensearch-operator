@@ -86,7 +86,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if not self._upgrade.is_compatible:
             self._set_upgrade_status()
             return
-        if self._upgrade.unit_state == "outdated":
+        if self._upgrade.unit_state is upgrade.UnitState.OUTDATED:
             if self._upgrade.authorized:
                 self._set_upgrade_status()
                 self._upgrade_opensearch_event.emit()
@@ -148,7 +148,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             logger.debug(f"Force upgrade event failed: {message}")
             event.fail(message)
             return
-        if self._upgrade.unit_state != "outdated":
+        if self._upgrade.unit_state is not upgrade.UnitState.OUTDATED:
             message = "Unit already upgraded"
             logger.debug(f"Force upgrade event failed: {message}")
             event.fail(message)

@@ -26,18 +26,18 @@ class Upgrade(upgrade.Upgrade):
     """In-place upgrades on machines"""
 
     @property
-    def unit_state(self) -> typing.Optional[str]:
+    def unit_state(self) -> typing.Optional[upgrade.UnitState]:
         """Unit upgrade state"""
         if (
             self._unit_workload_container_version is not None
             and self._unit_workload_container_version != self._app_workload_container_version
         ):
             logger.debug("Unit upgrade state: outdated")
-            return "outdated"
+            return upgrade.UnitState.OUTDATED
         return super().unit_state
 
     @unit_state.setter
-    def unit_state(self, value: str) -> None:
+    def unit_state(self, value: upgrade.UnitState) -> None:
         # Super call
         upgrade.Upgrade.unit_state.fset(self, value)
 
@@ -134,10 +134,13 @@ class Upgrade(upgrade.Upgrade):
                     logger.debug(f"Second unit authorized to upgrade if {self.upgrade_resumed=}")
                     return self.upgrade_resumed
                 return True
+            state = self._peer_relation.data[unit].get("state")
+            if state:
+                state = upgrade.UnitState(state)
             if (
                 self._unit_workload_container_versions.get(unit.name)
                 != self._app_workload_container_version
-                or self._peer_relation.data[unit].get("state") != "healthy"
+                or state is not upgrade.UnitState.HEALTHY
             ):
                 # Waiting for higher number units to upgrade
                 return False
@@ -149,7 +152,7 @@ class Upgrade(upgrade.Upgrade):
         Only applies to machine charm
         """
         logger.debug(f"Upgrading {self.authorized=}")
-        self.unit_state = "upgrading"
+        self.unit_state = upgrade.UnitState.UPGRADING
         snap.install()
         self._unit_workload_container_version = _SNAP_REVISION
         self._unit_workload_version = self._current_versions["workload"]

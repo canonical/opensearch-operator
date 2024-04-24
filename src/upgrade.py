@@ -9,6 +9,7 @@ Based off specification: DA058 - In-Place Upgrades - Kubernetes v2
 
 import abc
 import copy
+import enum
 import json
 import logging
 import pathlib
@@ -33,6 +34,15 @@ class PeerRelationNotReady(Exception):
     """Upgrade peer relation not available (to this unit)"""
 
 
+class UnitState(str, enum.Enum):
+    """Unit upgrade state"""
+
+    HEALTHY = "healthy"
+    RESTARTING = "restarting"  # Kubernetes only
+    UPGRADING = "upgrading"  # Machines only
+    OUTDATED = "outdated"  # Machines only
+
+
 class Upgrade(abc.ABC):
     """In-place upgrades"""
 
@@ -54,13 +64,14 @@ class Upgrade(abc.ABC):
             self._current_versions[version] = pathlib.Path(file_name).read_text().strip()
 
     @property
-    def unit_state(self) -> typing.Optional[str]:
+    def unit_state(self) -> typing.Optional[UnitState]:
         """Unit upgrade state"""
-        return self._unit_databag.get("state")
+        if state := self._unit_databag.get("state"):
+            return UnitState(state)
 
     @unit_state.setter
-    def unit_state(self, value: str) -> None:
-        self._unit_databag["state"] = value
+    def unit_state(self, value: UnitState) -> None:
+        self._unit_databag["state"] = value.value
 
     @property
     def is_compatible(self) -> bool:
