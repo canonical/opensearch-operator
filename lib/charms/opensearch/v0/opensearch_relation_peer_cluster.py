@@ -347,7 +347,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         elif deployment_desc.typ == DeploymentType.OTHER:
             should_sever_relation = True
             blocked_msg = "Related to non 'main/failover'-orchestrator cluster."
-        elif orchestrators.main_app != self.charm.app.name and orchestrator.failover_app and orchestrators.failover_app != self.charm.app.name:
+        elif (
+            orchestrators.main_app != self.charm.app.name and orchestrator.failover_app
+            and orchestrators.failover_app != self.charm.app.name
+        ):
             should_sever_relation = True
             blocked_msg = (
                 "Cannot have 2 'failover'-orchestrators. Relate to the existing failover."
