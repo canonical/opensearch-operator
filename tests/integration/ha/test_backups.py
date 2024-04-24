@@ -304,7 +304,7 @@ async def test_large_deployment_build_and_deploy(
         ops_test.model.deploy(
             my_charm,
             application_name="main",
-            num_units=2,
+            num_units=1,
             series=SERIES,
             config=main_orchestrator_conf,
         ),
@@ -368,7 +368,6 @@ async def test_large_setups_relations_with_misconfiguration(
         "access-key": "error",
         "secret-key": "error",
     }
-
     logger.info(f"Syncing credentials for {cloud_name}")
     # Not using _configure_s3 as this method will cause opensearch to block
     await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
