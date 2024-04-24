@@ -42,12 +42,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
-from ops.charm import (
-    CharmBase,
-    RelationBrokenEvent,
-    RelationChangedEvent,
-    RelationDepartedEvent,
-)
+from ops.charm import RelationBrokenEvent, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
 
