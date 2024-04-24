@@ -98,7 +98,7 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.plugin_manager._opensearch_config.add_plugin = MagicMock()
         self.charm.status = MagicMock()
         mock_is_node_up.return_value = True
-        self.charm._get_nodes = MagicMock(return_value=[1])
+        self.charm._get_nodes = MagicMock(return_value=[f"{self.charm.app.name}-0"])
         self.charm.planned_units = MagicMock(return_value=1)
         mock_lock_acquired.return_value = False
 
