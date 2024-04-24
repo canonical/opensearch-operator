@@ -105,7 +105,7 @@ class TestOpenSearchKNN(unittest.TestCase):
                     name=f"{self.charm.app.name}-0",
                     roles=["cluster_manager"],
                     ip="1.1.1.1",
-                    app_name=self.charm.app.name
+                    app_name=self.charm.app.name,
                 ),
             ]
         )
