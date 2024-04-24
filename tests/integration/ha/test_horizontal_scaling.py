@@ -22,7 +22,6 @@ from ..ha.helpers import (
 from ..helpers import (
     APP_NAME,
     IDLE_PERIOD,
-    MODEL_CONFIG_FAST_UPDATE,
     SERIES,
     app_name,
     check_cluster_formation_successful,
@@ -31,6 +30,7 @@ from ..helpers import (
     get_application_unit_names,
     get_leader_unit_id,
     get_leader_unit_ip,
+    model_conf_with_short_update_schedule,
 )
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -51,7 +51,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         return
 
     my_charm = await ops_test.build_charm(".")
-    await ops_test.model.set_config(MODEL_CONFIG_FAST_UPDATE())
+    await ops_test.model.set_config(model_conf_with_short_update_schedule())
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(

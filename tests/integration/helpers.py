@@ -50,7 +50,7 @@ MODEL_CONFIG = {
 logger = logging.getLogger(__name__)
 
 
-def MODEL_CONFIG_FAST_UPDATE():
+def model_conf_with_short_update_schedule():
     model_conf = MODEL_CONFIG.copy()
     model_conf["update-status-hook-interval"] = "2m"
     return model_conf
