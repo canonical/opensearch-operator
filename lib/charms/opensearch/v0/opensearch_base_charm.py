@@ -821,6 +821,8 @@ class OpenSearchBaseCharm(CharmBase):
         # clear waiting to start status
         self.status.clear(WaitingToStart)
 
+        self.unit.open_port("tcp", 9200)
+
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
             if self.opensearch_peer_cm.is_peer_cluster_orchestrator_relation_set():
