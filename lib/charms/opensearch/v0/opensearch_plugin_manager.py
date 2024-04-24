@@ -139,7 +139,10 @@ class OpenSearchPluginManager:
         return (
             self._charm.opensearch.is_node_up()
             and len(
-                [x for x in self._charm._get_nodes(True) if x.startswith(self._charm.app.name)]
+                [
+                    x for x in self._charm._get_nodes(True)
+                    if x.name.startswith(self._charm.app.name)
+                ]
             )
             == self._charm.app.planned_units()
             and self._charm.health.apply()
