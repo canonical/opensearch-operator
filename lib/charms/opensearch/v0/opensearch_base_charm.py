@@ -157,7 +157,11 @@ class _RestartOpenSearch(EventBase):
 
 
 class _UpgradeOpenSearch(_StartOpenSearch):
-    """TODO"""
+    """Attempt to acquire lock & upgrade OpenSearch.
+
+    This event will be deferred until OpenSearch stops. Then, the snap will be upgraded and
+    `_StartOpenSearch` will be emitted.
+    """
 
 
 class OpenSearchBaseCharm(CharmBase, abc.ABC):
