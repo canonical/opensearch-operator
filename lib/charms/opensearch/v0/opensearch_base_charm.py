@@ -242,6 +242,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _upgrade(self) -> typing.Optional[upgrade.Upgrade]:
         pass
 
+    @property
+    def upgrade_in_progress(self):
+        """Whether upgrade is in progress"""
+        return self._upgrade.in_progress
+
     @abc.abstractmethod
     def _reconcile_upgrade(self, _=None):
         pass
@@ -352,6 +357,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_created(self, event: RelationCreatedEvent):
         """Event received by the new node joining the cluster."""
+        if self._upgrade.in_progress:
+            logger.warning(
+                "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
         # In the case of the first units before TLS is initialized
@@ -371,6 +380,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units when a new node joins the cluster."""
+        if self._upgrade.in_progress:
+            logger.warning(
+                "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         if not self.unit.is_leader():
             return
 
@@ -440,6 +453,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
+        if self._upgrade.in_progress:
+            logger.warning(
+                "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         if not (self.unit.is_leader() and self.opensearch.is_node_up()):
             return
 
@@ -456,6 +473,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
+        if self._upgrade.in_progress:
+            logger.warning(
+                "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         # acquire lock to ensure only 1 unit removed at a time
         if not self.node_lock.acquired:
             # Raise uncaught exception to prevent Juju from removing unit
@@ -538,7 +559,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
-        self.user_manager.remove_users_and_roles()
+        if self._upgrade.in_progress:
+            logger.debug("Skipping `remove_users_and_roles()` because upgrade is in-progress")
+        else:
+            self.user_manager.remove_users_and_roles()
 
         # If relation not broken - leave
         if self.model.get_relation("certificates") is not None:
@@ -579,6 +603,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
             if self.plugin_manager.run():
+                if self._upgrade.in_progress:
+                    logger.warning(
+                        "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+                    )
+                    event.defer()
+                    return
                 self._restart_opensearch_event.emit()
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
@@ -597,6 +627,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
+        if self._upgrade.in_progress:
+            event.fail("Setting password not supported while upgrade in-progress")
+            return
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
             event.fail("The action can be run only on the leader unit of the main cluster.")
             return
@@ -736,6 +769,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             and self.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
         )
         if not cluster_changed_to_main_cm:
+            return
+        if self._upgrade.in_progress:
+            logger.warning(
+                "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
+            event.defer()
             return
 
         # we check if we need to create the admin user

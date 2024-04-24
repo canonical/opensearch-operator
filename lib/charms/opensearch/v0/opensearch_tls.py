@@ -17,6 +17,7 @@ import base64
 import logging
 import re
 import socket
+import typing
 from typing import Dict, List, Optional, Tuple
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
@@ -34,6 +35,9 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import Object
 
+if typing.TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+
 # The unique Charmhub library identifier, never change it
 LIBID = "8bcf275287ad486db5f25a1dbb26f920"
 
@@ -50,7 +54,7 @@ logger = logging.getLogger(__name__)
 class OpenSearchTLS(Object):
     """Class that Manages OpenSearch relation with TLS Certificates Operator."""
 
-    def __init__(self, charm, peer_relation: str):
+    def __init__(self, charm: "OpenSearchBaseCharm", peer_relation: str):
         super().__init__(charm, "tls-component")
 
         self.charm = charm
@@ -73,6 +77,9 @@ class OpenSearchTLS(Object):
 
     def _on_set_tls_private_key(self, event: ActionEvent) -> None:
         """Set the TLS private key, which will be used for requesting the certificate."""
+        if self.charm.upgrade_in_progress:
+            event.fail("Setting private key not supported while upgrade in-progress")
+            return
         cert_type = CertType(event.params["category"])  # type
         scope = Scope.APP if cert_type == CertType.APP_ADMIN else Scope.UNIT
 
@@ -110,6 +117,12 @@ class OpenSearchTLS(Object):
 
     def _on_tls_relation_created(self, event: RelationCreatedEvent) -> None:
         """Request certificate when TLS relation created."""
+        if self.charm.upgrade_in_progress:
+            logger.warning(
+                "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
+            event.defer()
+            return
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             event.defer()
             return
@@ -126,6 +139,10 @@ class OpenSearchTLS(Object):
 
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Notify the charm that the relation is broken."""
+        if self.charm.upgrade_in_progress:
+            logger.warning(
+                "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         self.charm.on_tls_relation_broken(event)
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:

@@ -18,6 +18,7 @@ https://opensearch.org/docs/latest/security/access-control/index/.
 
 """
 import logging
+import typing
 from enum import Enum
 from typing import Dict, Optional, Set
 
@@ -49,6 +50,9 @@ from ops.charm import (
 )
 from ops.framework import Object
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
+
+if typing.TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 # The unique Charmhub library identifier, never change it
 LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
@@ -128,7 +132,7 @@ class OpenSearchProvider(Object):
         - relation-broken
     """
 
-    def __init__(self, charm: CharmBase) -> None:
+    def __init__(self, charm: "OpenSearchBaseCharm") -> None:
         """Constructor for OpenSearchProvider object.
 
         Args:
@@ -177,6 +181,12 @@ class OpenSearchProvider(Object):
             OpenSearchIndexError if the index name is invalid
             OpenSearchHttpError if we can't create the required index
         """
+        if self.charm.upgrade_in_progress:
+            logger.warning(
+                "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
+            event.defer()
+            return
         if not self.unit.is_leader():
             return
         if not self.opensearch.is_node_up() or not event.index:
@@ -367,7 +377,10 @@ class OpenSearchProvider(Object):
             # This unit is being removed.
             self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
             return
-
+        if self.charm.upgrade_in_progress:
+            logger.warning(
+                "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         self.user_manager.remove_users_and_roles(event.relation.id)
 
     def update_endpoints(self, relation: Relation, omit_endpoints: Optional[Set[str]] = None):
