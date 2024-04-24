@@ -140,7 +140,8 @@ class OpenSearchPluginManager:
             self._charm.opensearch.is_node_up()
             and len(
                 [
-                    x for x in self._charm._get_nodes(True)
+                    x
+                    for x in self._charm._get_nodes(True)
                     if x.name.startswith(self._charm.app.name)
                 ]
             )
