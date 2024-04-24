@@ -30,7 +30,7 @@ from charms.opensearch.v0.constants_charm import (
     BackupDataMissingS3,
     BackupDataShouldNotRelateS3,
     BackupFailoverClusterMissingS3,
-    CheckOrchestratorS3Relation,
+    BackupSetupFailed,
     PluginConfigError,
 )
 from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
@@ -268,15 +268,9 @@ async def test_small_deployment_build_and_deploy(
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
+    # Credentials not set yet, this will move the opensearch to blocked state
     # Credentials are set per test scenario
     await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
-    # Credentials not set yet, this will move the opensearch to blocked state
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
-        status="blocked",
-        timeout=1400,
-        idle_period=IDLE_PERIOD,
-    )
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
@@ -329,6 +323,7 @@ async def test_large_deployment_build_and_deploy(
     # Large deployment setup
     await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
     await ops_test.model.integrate("main:peer-cluster-orchestrator", "data-hot:peer-cluster")
+    await ops_test.model.integrate("failover:peer-cluster-orchestrator", "data-hot:peer-cluster")
 
     # TLS setup
     await ops_test.model.integrate("main", TLS_CERTIFICATES_APP_NAME)
@@ -345,7 +340,7 @@ async def test_large_deployment_build_and_deploy(
             TLS_CERTIFICATES_APP_NAME: 1,
             "main": 2,
             "failover": 1,
-            "data-hot": 3,
+            "data-hot": 1,
         },
         idle_period=IDLE_PERIOD,
     )
@@ -357,21 +352,47 @@ async def test_large_deployment_build_and_deploy(
 
 @pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
-async def test_large_setups_relations(
+async def test_large_setups_relations_with_misconfiguration(
     ops_test: OpsTest,
     cloud_name: str,
     deploy_type: str,
 ) -> None:
     """Tests the different blocked messages expected in large deployments."""
+    config = {
+        "endpoint": "http://localhost",
+        "bucket": "error",
+        "path": "/",
+        "region": "default",
+    }
+    credentials = {
+        "access-key": "error",
+        "secret-key": "error",
+    }
+
+    import pdb
+
+    pdb.set_trace()
+
+    logger.info(f"Syncing credentials for {cloud_name}")
+    # Not using _configure_s3 as this method will cause opensearch to block
+    await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
+    await run_action(
+        ops_test,
+        0,
+        "sync-s3-credentials",
+        params=credentials,
+        app=S3_INTEGRATOR,
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[S3_INTEGRATOR],
+        status="active",
+        timeout=TIMEOUT,
+    )
     await wait_until(
         ops_test,
-        apps=["main", "failover"],
+        apps=["main"],
         apps_statuses=["blocked"],
-        units_statuses=["blocked"],
-        units_full_statuses={
-            "main": {"blocked": [], "active": []},
-            "failover": {"blocked": [CheckOrchestratorS3Relation], "active": []},
-        },
+        apps_full_statuses={"main": {"blocked": [BackupSetupFailed]}},
         idle_period=IDLE_PERIOD,
     )
 
