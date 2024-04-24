@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
+from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn, PluginState
 from ops.testing import Harness
@@ -98,7 +99,16 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.plugin_manager._opensearch_config.add_plugin = MagicMock()
         self.charm.status = MagicMock()
         mock_is_node_up.return_value = True
-        self.charm._get_nodes = MagicMock(return_value=[f"{self.charm.app.name}-0"])
+        self.charm._get_nodes = MagicMock(
+            return_value=[
+                Node(
+                    name=f"{self.charm.app.name}-0",
+                    roles=["cluster_manager"],
+                    ip="1.1.1.1",
+                    app_name=self.charm.app.name
+                ),
+            ]
+        )
         self.charm.planned_units = MagicMock(return_value=1)
         mock_lock_acquired.return_value = False
 
