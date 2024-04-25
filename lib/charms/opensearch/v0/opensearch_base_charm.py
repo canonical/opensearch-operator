@@ -138,16 +138,18 @@ class _StartOpenSearch(EventBase):
     This event will be deferred until OpenSearch starts.
     """
 
-    def __init__(self, handle, *, ignore_lock=False):
+    def __init__(self, handle, *, ignore_lock=False, after_upgrade=False):
         super().__init__(handle)
         # Only used for force upgrade
         self.ignore_lock = ignore_lock
+        self.after_upgrade = after_upgrade
 
     def snapshot(self) -> Dict[str, Any]:
-        return {"ignore_lock": self.ignore_lock}
+        return {"ignore_lock": self.ignore_lock, "after_upgrade": self.after_upgrade}
 
     def restore(self, snapshot: Dict[str, Any]):
         self.ignore_lock = snapshot["ignore_lock"]
+        self.after_upgrade = snapshot["after_upgrade"]
 
 
 class _RestartOpenSearch(EventBase):
@@ -163,6 +165,9 @@ class _UpgradeOpenSearch(_StartOpenSearch):
     This event will be deferred until OpenSearch stops. Then, the snap will be upgraded and
     `_StartOpenSearch` will be emitted.
     """
+
+    def __init__(self, handle, *, ignore_lock=False):
+        super().__init__(handle, ignore_lock=ignore_lock)
 
 
 class OpenSearchBaseCharm(CharmBase, abc.ABC):
@@ -876,7 +881,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
 
-    def _post_start_init(self, event: EventBase):
+    def _post_start_init(self, event: _StartOpenSearch):
         """Initialization post OpenSearch start."""
         # initialize the security index if needed (and certs written on disk etc.)
         if self.unit.is_leader() and not self.peers_data.get(
@@ -932,16 +937,22 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # clear waiting to start status
         self.status.clear(WaitingToStart)
 
-        # apply cluster health
-        # TODO upgrade: apply on unit
-        # TODO upgrade: don't wait for green on non-upgrade start?
-        health = self.health.apply(wait_for_green_first=True)
-
-        # TODO upgrade: warning on step 9 https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#rolling-upgrades
-        if health != HealthColors.GREEN:
-            # TODO upgrade: log
-            event.defer()
-            return
+        if event.after_upgrade:
+            health = self.health.apply(wait_for_green_first=True, app=False)
+            if health == HealthColors.RED:
+                # TODO: set unit status
+                pass
+            elif health == HealthColors.YELLOW:
+                # TODO: set unit status
+                pass
+            # TODO upgrade: warning on step 9 https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#rolling-upgrades
+            if health != HealthColors.GREEN:
+                # TODO upgrade: log
+                event.defer()
+                return
+        else:
+            # apply cluster health
+            self.health.apply()
 
         self._upgrade.unit_state = upgrade.UnitState.HEALTHY
         self._reconcile_upgrade()
@@ -1036,7 +1047,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self._upgrade.upgrade_unit(snap=self.opensearch)
 
         logger.debug("Starting OpenSearch after upgrade")
-        self._start_opensearch_event.emit(ignore_lock=event.ignore_lock)
+        self._start_opensearch_event.emit(ignore_lock=event.ignore_lock, after_upgrade=True)
 
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""
