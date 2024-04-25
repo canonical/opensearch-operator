@@ -7,7 +7,9 @@ from typing import Dict, Optional
 
 from charms.opensearch.v0.constants_charm import (
     ClusterHealthRed,
+    ClusterHealthRedUpgrade,
     ClusterHealthYellow,
+    ClusterHealthYellowUpgrade,
     WaitingForBusyShards,
     WaitingForSpecificBusyShards,
 )
@@ -16,7 +18,7 @@ from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.models import StartMode
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from ops.model import BlockedStatus, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "93d2c27f38974a59b3bbe39fb27ac98d"
@@ -105,10 +107,31 @@ class OpenSearchHealth:
             self._charm.status.set(BlockedStatus(ClusterHealthRed), app=True)
         elif status == HealthColors.YELLOW_TEMP:
             # health is yellow but temporarily (shards are relocating or initializing)
-            self._charm.status.set(WaitingStatus(WaitingForBusyShards), app=True)
+            self._charm.status.set(MaintenanceStatus(WaitingForBusyShards), app=True)
         else:
             # health is yellow permanently (some replica shards are unassigned)
             self._charm.status.set(BlockedStatus(ClusterHealthYellow), app=True)
+
+    def apply_for_unit_during_upgrade(self, status: str) -> None:
+        """Set cluster wide status on unit during upgrade
+
+        During upgrade, app status is used to show upgrade progress
+        And, unit checking cluster wide status may not be leader
+        """
+        if status == HealthColors.GREEN:
+            # health green: cluster healthy
+            self._charm.status.clear(ClusterHealthRedUpgrade)
+            self._charm.status.clear(ClusterHealthYellowUpgrade)
+            self._charm.status.clear(WaitingForBusyShards)
+        elif status == HealthColors.RED:
+            # health RED: some primary shards are unassigned
+            self._charm.status.set(BlockedStatus(ClusterHealthRedUpgrade))
+        elif status == HealthColors.YELLOW_TEMP:
+            # health is yellow but temporarily (shards are relocating or initializing)
+            self._charm.status.set(MaintenanceStatus(WaitingForBusyShards))
+        elif status == HealthColors.YELLOW:
+            # health is yellow permanently (some replica shards are unassigned)
+            self._charm.status.set(BlockedStatus(ClusterHealthYellowUpgrade))
 
     def apply_for_unit(self, status: str, host: Optional[str] = None):
         """Apply the health status on the current unit."""
