@@ -73,38 +73,43 @@ class OpenSearchSecrets(Object, RelationDataStore):
         system_user_hash_keys = [
             self._charm.secrets.hash_key(user) for user in OpenSearchSystemUsers
         ]
-        keys = system_user_hash_keys + [
+        keys_to_process = system_user_hash_keys + [
             CertType.APP_ADMIN.val,
             self._charm.secrets.password_key(KibanaserverUser),
         ]
+
+        # Variables for better readability
+        label_key = label_parts["key"]
+        is_leader = self._charm.unit.is_leader()
+
         if (
             label_parts["application_name"] != self._charm.app.name
             or label_parts["scope"] != Scope.APP
-            or label_parts["key"] not in keys
+            or label_key not in keys_to_process
         ):
             logger.info("Secret %s was not relevant for us.", event.secret.label)
             return
 
-        logger.debug("Secret change for %s", str(label_parts["key"]))
+        logger.debug("Secret change for %s", str(label_key))
 
         # Leader has to maintain TLS and COS
-        if not self._charm.unit.is_leader() and label_parts["key"] == CertType.APP_ADMIN.val:
+        if not is_leader and label_key == CertType.APP_ADMIN.val:
             self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
 
-        elif self._charm.unit.is_leader() and label_parts["key"] == self._charm.secrets.password_key(
-            KibanaserverUser
-        ):
+        elif is_leader and label_key == self._charm.secrets.password_key(KibanaserverUser):
             self._charm.opensearch_provider.update_dashboards_password()
 
         # Non-leader units need to maintain local users in internal_users.yml
-        elif not self._charm.unit.is_leader() and label_parts["key"] in system_user_hash_keys:
-            for user in OpenSearchSystemUsers:
-                if label_parts["key"] == self._charm.secrets.hash_key(user):
-                    sys_user = user
-                    break
-            password = event.secret.get_content()[label_parts["key"]]
-            if sys_user:
+        elif not is_leader and label_key in system_user_hash_keys:
+            password = event.secret.get_content()[label_key]
+            if sys_user := self._user_from_hash_key(label_key):
                 self._charm.user_manager.put_intenal_user(sys_user, password)
+
+    def _user_from_hash_key(self, key):
+        """Which user is referred to by key?"""
+        for user in OpenSearchSystemUsers:
+            if key == self._charm.secrets.hash_key(user):
+                return user
 
     @property
     def implements_secrets(self):

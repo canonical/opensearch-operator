@@ -56,9 +56,7 @@ PROTECTED_INDICES = [
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_create_relation(
-    ops_test: OpsTest, application_charm, opensearch_charm, opensearch_dashboards_charm
-):
+async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_charm):
     """Test basic functionality of relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
@@ -75,8 +73,9 @@ async def test_create_relation(
             application_name=CLIENT_APP_NAME,
         ),
         ops_test.model.deploy(
-            opensearch_dashboards_charm,
+            DASHBOARDS_APP_NAME,
             application_name=DASHBOARDS_APP_NAME,
+            channel="2/edge",
             series=SERIES,
         ),
         ops_test.model.deploy(
@@ -97,9 +96,13 @@ async def test_create_relation(
 
     # This test shouldn't take so long
     await ops_test.model.wait_for_idle(
-        apps=ALL_APPS,
+        apps=[OPENSEARCH_APP_NAME, CLIENT_APP_NAME],
         timeout=1600,
         status="active",
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[DASHBOARDS_APP_NAME],
+        timeout=1600,
     )
 
 

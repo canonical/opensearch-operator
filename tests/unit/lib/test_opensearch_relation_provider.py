@@ -12,7 +12,6 @@ from charms.opensearch.v0.constants_charm import (
     PeerRelationName,
 )
 from charms.opensearch.v0.helper_security import generate_password
-from charms.opensearch.v0.opensearch_base_charm import SERVICE_MANAGER
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.model import ActiveStatus, BlockedStatus

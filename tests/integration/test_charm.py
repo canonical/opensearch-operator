@@ -20,7 +20,6 @@ from .helpers import (
     SERIES,
     get_application_unit_ids,
     get_conf_as_dict,
-    get_file_contents,
     get_leader_unit_id,
     get_leader_unit_ip,
     get_secrets,
@@ -193,32 +192,32 @@ async def test_actions_rotate_system_user_password(ops_test: OpsTest, user) -> N
     assert http_resp_code == 401
 
 
-# @pytest.mark.group(1)
-# @pytest.mark.abort_on_fail
-# async def test_check_pinned_revision(ops_test: OpsTest) -> None:
-#     """Test check the pinned revision."""
-#     leader_id = await get_leader_unit_id(ops_test)
-#
-#     installed_info = yaml.safe_load(
-#         subprocess.check_output(
-#             [
-#                 "juju",
-#                 "ssh",
-#                 f"opensearch/{leader_id}",
-#                 "--",
-#                 "sudo",
-#                 "snap",
-#                 "info",
-#                 "opensearch",
-#                 "--color=never",
-#                 "--unicode=always",
-#             ],
-#             text=True,
-#         ).replace("\r\n", "\n")
-#     )["installed"].split()
-#     logger.info(f"Installed snap: {installed_info}")
-#     assert installed_info[1] == f"({OPENSEARCH_SNAP_REVISION})"
-#     assert installed_info[3] == "held"
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_check_pinned_revision(ops_test: OpsTest) -> None:
+    """Test check the pinned revision."""
+    leader_id = await get_leader_unit_id(ops_test)
+
+    installed_info = yaml.safe_load(
+        subprocess.check_output(
+            [
+                "juju",
+                "ssh",
+                f"opensearch/{leader_id}",
+                "--",
+                "sudo",
+                "snap",
+                "info",
+                "opensearch",
+                "--color=never",
+                "--unicode=always",
+            ],
+            text=True,
+        ).replace("\r\n", "\n")
+    )["installed"].split()
+    logger.info(f"Installed snap: {installed_info}")
+    assert installed_info[1] == f"({OPENSEARCH_SNAP_REVISION})"
+    assert installed_info[3] == "held"
 
 
 @pytest.mark.group(1)
