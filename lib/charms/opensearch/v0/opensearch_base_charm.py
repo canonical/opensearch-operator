@@ -967,6 +967,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 """
                 if health_ == HealthColors.GREEN:
                     return True
+                # Units that are on an upgraded version
+                # (It is not sufficient to check if this unit is first to upgrade. For example, in
+                # a 3 unit deployment, units 2 and 1 were upgraded. Then, the user does
+                # `juju refresh` to rollback. Units 0 and 2 are on version A and unit 1 is on
+                # version B. The cluster health could be yellow & we should proceed with rollback.)
                 upgraded_units = [
                     unit
                     for unit in self._upgrade._sorted_units
