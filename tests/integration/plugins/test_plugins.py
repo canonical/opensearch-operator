@@ -137,11 +137,10 @@ async def test_large_deployment_build_and_deploy(
         "init_hold": True,
         "roles": "cluster_manager",
     }
-    data_hot_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data.hot"}
+    data_hot_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data.hot,ml"}
 
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
-        ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
         ops_test.model.deploy(
             my_charm,
             application_name="main",
