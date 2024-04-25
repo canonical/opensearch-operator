@@ -193,8 +193,6 @@ class OpenSearchHealth:
 
         # we differentiate between a temp yellow (moving shards) and a permanent
         # one (such as: missing replicas)
-        shards_by_state = ClusterState.shards_by_state(
-            self._opensearch, host=host, alt_hosts=self._charm.alt_hosts
-        )
-        busy_shards = shards_by_state.get("INITIALIZING", 0) + shards_by_state.get("RELOCATING", 0)
-        return HealthColors.YELLOW_TEMP if busy_shards > 0 else HealthColors.YELLOW
+        if response["initializing_shards"] > 0 or response["relocating_shards"] > 0:
+            return HealthColors.YELLOW_TEMP
+        return HealthColors.YELLOW

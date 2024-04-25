@@ -940,8 +940,47 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if event.after_upgrade:
             health = self.health.apply(wait_for_green_first=True, app=False)
             self.health.apply_for_unit_during_upgrade(health)
-            # TODO upgrade: warning on step 9 https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#rolling-upgrades
-            if health != HealthColors.GREEN:
+
+            def cluster_is_healthy(health_) -> bool:
+                """Whether cluster is healthy & upgrade can proceed
+
+                If cluster is green, it is healthy
+                Otherwise, if only 1 unit has upgraded, cluster is yellow, and no shards are
+                initializing or relocating, cluster is healthy
+
+                "During a rolling upgrade, primary shards assigned to a node running the new
+                version cannot have their replicas assigned to a node with the old version. The new
+                version might have a different data format that is not understood by the old
+                version.
+
+                "If it is not possible to assign the replica shards to another node (there is only
+                one upgraded node in the cluster), the replica shards remain unassigned and status
+                stays `yellow`.
+
+                "In this case, you can proceed once there are no initializing or relocating shards
+                (check the `init` and `relo` columns).
+
+                "As soon as another node is upgraded, the replicas can be assigned and the status
+                will change to `green`."
+
+                from https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#upgrading-elasticsearch
+                """
+                if health_ == HealthColors.GREEN:
+                    return True
+                upgraded_units = [
+                    unit
+                    for unit in self._upgrade._sorted_units
+                    if self._upgrade._unit_workload_container_versions.get(unit.name)
+                    != self._upgrade._app_workload_container_version
+                ]
+                if len(upgraded_units) > 1:
+                    # More than 1 unit is upgraded
+                    return False
+                # If `health_ == HealthColors.YELLOW`, no shards are initializing or relocating
+                # (otherwise `health_` would be `HealthColors.YELLOW_TEMP`)
+                return health_ == HealthColors.YELLOW
+
+            if not cluster_is_healthy(health):
                 # TODO upgrade: log
                 event.defer()
                 return
