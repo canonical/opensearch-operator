@@ -265,6 +265,10 @@ async def test_small_deployment_build_and_deploy(
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
+
+    import pdb
+
+    pdb.set_trace()
     # Credentials not set yet, this will move the opensearch to blocked state
     # Credentials are set per test scenario
     await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
@@ -389,8 +393,8 @@ async def test_large_setups_relations_with_misconfiguration(
     )
 
     # Now, relate failover cluster to s3-integrator and review the status
-    await ops_test.model.integrate("failover", S3_INTEGRATOR)
-    await ops_test.model.integrate("data-hot", S3_INTEGRATOR)
+    await ops_test.model.integrate("failover:s3-credentials", S3_INTEGRATOR)
+    await ops_test.model.integrate("data-hot:s3-credentials", S3_INTEGRATOR)
     await wait_until(
         ops_test,
         apps=["main", "failover", "data-hot"],
@@ -405,13 +409,23 @@ async def test_large_setups_relations_with_misconfiguration(
     )
 
     # Reverting should return it to normal
-    await ops_test.model.applications["data-hot"].destroy_relation("data-hot", S3_INTEGRATOR)
-    await ops_test.model.applications["failover"].destroy_relation("failover", S3_INTEGRATOR)
+    await ops_test.model.applications["data-hot"].destroy_relation(
+        "data-hot:s3-credentials", S3_INTEGRATOR
+    )
+    await ops_test.model.applications["failover"].destroy_relation(
+        "failover:s3-credentials", S3_INTEGRATOR
+    )
     await wait_until(
         ops_test,
         apps=["main"],
         apps_statuses=["blocked"],
         apps_full_statuses={"main": {"blocked": [BackupSetupFailed]}},
+        idle_period=IDLE_PERIOD,
+    )
+    await wait_until(
+        ops_test,
+        apps=["failover", "data-hot"],
+        apps_statuses=["active"],
         idle_period=IDLE_PERIOD,
     )
 

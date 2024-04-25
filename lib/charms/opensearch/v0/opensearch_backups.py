@@ -179,7 +179,7 @@ class PeerClusterCredentialsChangedEvent(CredentialsChangedEvent):
         if not self.relation.app:
             return None
 
-        return self._load_relation_data().get("access-key")
+        return self._load_relation_data.get("access-key")
 
     @property
     def secret_key(self) -> str | None:
@@ -187,7 +187,7 @@ class PeerClusterCredentialsChangedEvent(CredentialsChangedEvent):
         if not self.relation.app:
             return None
 
-        return self._load_relation_data().get("access-key")
+        return self._load_relation_data.get("access-key")
 
     @property
     def _load_relation_data(self) -> dict[str, str]:
@@ -262,9 +262,11 @@ class PeerClusterDataS3Requirer(S3Requirer):
     def _load_relation_data(self, raw_relation_data: RelationDataContent) -> dict[str, str]:
         """Loads the relation data from the peer-cluster relation from a sub-key."""
         connection_data = {}
-        relation_data = json.loads(raw_relation_data.get("data", {})).get(
-            PEER_CLUSTER_S3_CONFIG_KEY, {}
-        )
+        relation_data = (
+            raw_relation_data.get("data", {})
+            if isinstance(raw_relation_data, dict)
+            else json.loads(raw_relation_data.get("data", {}))
+        ).get(PEER_CLUSTER_S3_CONFIG_KEY, {})
         for key in relation_data:
             try:
                 connection_data[key.replace("_", "-")] = (

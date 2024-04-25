@@ -45,6 +45,21 @@ class Keystore(ABC):
         self._keystore = ""
         self._password = None
 
+        # if not os.path.exists(
+        #     os.path.join(f"{self._opensearch.paths.home}", "opensearch-keystore")
+        # ):
+        #     try:
+        #         # Not using OPENSEARCH_BIN path
+        #         self._opensearch._run_cmd(
+        #             self._keytool,
+        #             f"-import -alias {key} "
+        #             f"-file {filename} -storetype JKS "
+        #             f"-storepass {self.password} "
+        #             f"-keystore {self._keystore} -noprompt",
+        #         )
+        #     except OpenSearchCmdError as e:
+        #         raise OpenSearchKeystoreError(str(e))
+
     @property
     def password(self) -> str:
         """Returns the password for the store."""
