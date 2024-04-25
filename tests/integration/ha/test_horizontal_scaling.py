@@ -70,7 +70,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_horizontal_scale_up(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Tests that new added units to the cluster are discoverable."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -118,7 +118,7 @@ async def test_horizontal_scale_up(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_shards_realloc(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Tests the shutdown of a node, and re-allocation of shards to a newly joined unit.
 
@@ -227,7 +227,7 @@ async def test_safe_scale_down_shards_realloc(
 
 @pytest.mark.group(1)
 async def test_safe_scale_down_remove_leaders(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Tests the removal of specific units (elected cm, juju leader, node with prim shard).
 

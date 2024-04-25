@@ -2,14 +2,22 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import logging
 import socket
 from typing import Optional
 
 import yaml
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_fixed,
+)
+
+from ..helpers import run_action
 
 
 async def get_application_relation_data(
@@ -122,17 +130,7 @@ def new_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str)
     return False
 
 
-async def run_action(
-    ops_test, action_name: str, unit_name: str, timeout: int = 30, **action_kwargs
-):
-    """Runs the given action on the given unit."""
-    client_unit = ops_test.model.units.get(unit_name)
-    action = await client_unit.run_action(action_name, **action_kwargs)
-    result = await asyncio.wait_for(action.wait(), timeout)
-    logging.info(f"request results: {result.results}")
-    return result.results
-
-
+@retry(wait=wait_fixed(wait=15), stop=stop_after_attempt(15))
 async def run_request(
     ops_test,
     unit_name: str,
@@ -144,17 +142,27 @@ async def run_request(
 ):
     # python can't have variable names with a hyphen, and Juju can't have action variables with an
     # underscore, so this is a compromise.
-    kwargs = {"relation-id": relation_id, "relation-name": relation_name}
+    params = {
+        "relation-id": relation_id,
+        "relation-name": relation_name,
+        "method": method,
+        "endpoint": endpoint,
+    }
     if payload:
-        kwargs["payload"] = payload
-    return await run_action(
+        params["payload"] = payload
+    result = await run_action(
         ops_test,
+        unit_id=int(unit_name.split("/")[-1]),
         action_name="run-request",
-        unit_name=unit_name,
-        method=method,
-        endpoint=endpoint,
-        **kwargs,
+        params=params,
+        app=unit_name.split("/")[0],
     )
+    logging.info(f"request results: {result.results}")
+
+    if result.status != "completed":
+        raise Exception(result.results)
+
+    return result.results
 
 
 def ip_to_url(ip_str: str) -> str:

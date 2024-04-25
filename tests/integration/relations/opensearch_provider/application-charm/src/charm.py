@@ -126,6 +126,10 @@ class ApplicationCharm(CharmBase):
         password = requires.fetch_relation_field(relation_id, "password")
         hosts = requires.fetch_relation_field(relation_id, "endpoints")
 
+        if not username or not password:
+            event.fail("Secrets not accessible yet.")
+            return
+
         host = None
         if not hosts:
             return
