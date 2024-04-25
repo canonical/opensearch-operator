@@ -149,7 +149,17 @@ class Upgrade(upgrade.Upgrade):
         for index, unit in enumerate(self._sorted_units):
             if unit.name == self._unit.name:
                 # Higher number units have already upgraded
-                if index == 1:
+                if index == 0:
+                    # Run pre-upgrade check
+                    # (in case user forgot to run pre-upgrade-check action)
+                    try:
+                        self.pre_upgrade_check()
+                    except upgrade.PrecheckFailed as exception:
+                        # TODO upgrade: ensure status can be cleared
+                        self._unit.status = exception.status
+                        # TODO upgrade: add log
+                        return False
+                elif index == 1:
                     # User confirmation needed to resume upgrade (i.e. upgrade second unit)
                     logger.debug(f"Second unit authorized to upgrade if {self.upgrade_resumed=}")
                     return self.upgrade_resumed
