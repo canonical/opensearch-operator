@@ -279,7 +279,7 @@ async def test_small_deployment_build_and_deploy(
 async def test_large_deployment_build_and_deploy(
     ops_test: OpsTest, cloud_name: str, deploy_type: str
 ) -> None:
-    """Build and deploy one unit of OpenSearch."""
+    """Build and deploy a large deployment for OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     tls_config = {"ca-common-name": "CN_CA"}
@@ -338,7 +338,7 @@ async def test_large_deployment_build_and_deploy(
         units_statuses=["active"],
         wait_for_exact_units={
             TLS_CERTIFICATES_APP_NAME: 1,
-            "main": 2,
+            "main": 1,
             "failover": 1,
             "data-hot": 1,
         },
@@ -368,7 +368,7 @@ async def test_large_setups_relations_with_misconfiguration(
         "access-key": "error",
         "secret-key": "error",
     }
-    logger.info(f"Syncing credentials for {cloud_name}")
+
     # Not using _configure_s3 as this method will cause opensearch to block
     await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
     await run_action(
