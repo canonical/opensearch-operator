@@ -449,7 +449,7 @@ async def test_create_backup_and_restore(
     deploy_type: str,
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
-    app = (await app_name(ops_test)) or (APP_NAME if deploy_type == "small" else "main")
+    app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     leader_id = await get_leader_unit_id(ops_test)
     unit_ip = await get_leader_unit_ip(ops_test)
     config = cloud_configs[cloud_name]
@@ -464,6 +464,7 @@ async def test_create_backup_and_restore(
                 ops_test,
                 leader_id,
                 unit_ip=unit_ip,
+                app=app,
             ),
             OPENSEARCH_BACKUP_ID_FORMAT,
         )
@@ -496,7 +497,7 @@ async def test_remove_and_readd_s3_relation(
     deploy_type: str,
 ) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
-    app = (await app_name(ops_test)) or (APP_NAME if deploy_type == "small" else "main")
+    app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     leader_id: str = await get_leader_unit_id(ops_test)
     unit_ip: str = await get_leader_unit_ip(ops_test)
     config: Dict[str, str] = cloud_configs[cloud_name]
@@ -532,6 +533,7 @@ async def test_remove_and_readd_s3_relation(
                 ops_test,
                 leader_id,
                 unit_ip=unit_ip,
+                app=app,
             ),
             OPENSEARCH_BACKUP_ID_FORMAT,
         )
@@ -570,7 +572,7 @@ async def test_restore_to_new_cluster(
     1) At each backup restored, check our track of doc count vs. current index count
     2) Try to write to that new index.
     """
-    app = (await app_name(ops_test)) or (APP_NAME if deploy_type == "small" else "main")
+    app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     logging.info("Destroying the application")
     await asyncio.gather(
         ops_test.model.remove_application(S3_INTEGRATOR, block_until_done=True),
@@ -616,7 +618,7 @@ async def test_restore_to_new_cluster(
     assert len(cwrites_backup_doc_count) == 2
     count = 0
     for backup_id in backups.keys():
-        assert await restore(ops_test, backup_id, unit_ip, leader_id)
+        assert await restore(ops_test, backup_id, unit_ip, leader_id, app=app)
         count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
 
         # Ensure we have the same doc count as we had on the original cluster
@@ -642,6 +644,7 @@ async def test_restore_to_new_cluster(
                 ops_test,
                 leader_id,
                 unit_ip=unit_ip,
+                app=app,
             ),
             OPENSEARCH_BACKUP_ID_FORMAT,
         )
