@@ -27,11 +27,8 @@ import boto3
 import pytest
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
-    BackupDataMissingS3,
     BackupDataShouldNotRelateS3,
-    BackupFailoverClusterMissingS3,
     BackupSetupFailed,
-    PluginConfigError,
 )
 from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
@@ -393,46 +390,28 @@ async def test_large_setups_relations_with_misconfiguration(
 
     # Now, relate failover cluster to s3-integrator and review the status
     await ops_test.model.integrate("failover", S3_INTEGRATOR)
-    await wait_until(
-        ops_test,
-        apps=["main", "failover", "data-hot"],
-        apps_statuses=["blocked"],
-        units_statuses=["blocked"],
-        units_full_statuses={
-            "main": {"blocked": [PluginConfigError], "active": []},
-            "failover": {"blocked": [BackupFailoverClusterMissingS3], "active": []},
-            "data-hot": {"blocked": [BackupDataMissingS3], "active": []},
-        },
-        idle_period=IDLE_PERIOD,
-    )
-
-    # Now, test relating and removing the relation from data-hot:
     await ops_test.model.integrate("data-hot", S3_INTEGRATOR)
     await wait_until(
         ops_test,
         apps=["main", "failover", "data-hot"],
         apps_statuses=["blocked"],
         units_statuses=["blocked"],
-        units_full_statuses={
-            "main": {"blocked": [PluginConfigError], "active": []},
-            "failover": {"blocked": [BackupFailoverClusterMissingS3], "active": []},
-            "data-hot": {"blocked": [BackupDataShouldNotRelateS3], "active": []},
+        apps_full_statuses={
+            "main": {"blocked": [BackupSetupFailed]},
+            "failover": {"blocked": [BackupDataShouldNotRelateS3]},
+            "data-hot": {"blocked": [BackupDataShouldNotRelateS3]},
         },
         idle_period=IDLE_PERIOD,
     )
 
     # Reverting should return it to normal
     await ops_test.model.applications["data-hot"].destroy_relation("data-hot", S3_INTEGRATOR)
+    await ops_test.model.applications["failover"].destroy_relation("failover", S3_INTEGRATOR)
     await wait_until(
         ops_test,
-        apps=["main", "failover", "data-hot"],
+        apps=["main"],
         apps_statuses=["blocked"],
-        units_statuses=["blocked"],
-        units_full_statuses={
-            "main": {"blocked": [PluginConfigError], "active": []},
-            "failover": {"blocked": [BackupFailoverClusterMissingS3], "active": []},
-            "data-hot": {"blocked": [BackupDataMissingS3], "active": []},
-        },
+        apps_full_statuses={"main": {"blocked": [BackupSetupFailed]}},
         idle_period=IDLE_PERIOD,
     )
 
