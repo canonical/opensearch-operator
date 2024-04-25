@@ -940,10 +940,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if event.after_upgrade:
             health = self.health.apply(wait_for_green_first=True, app=False)
             if health == HealthColors.RED:
-                # TODO: set unit status
+                # TODO upgrade: set unit status
                 pass
             elif health == HealthColors.YELLOW:
-                # TODO: set unit status
+                # TODO upgrade: set unit status
                 pass
             # TODO upgrade: warning on step 9 https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#rolling-upgrades
             if health != HealthColors.GREEN:
