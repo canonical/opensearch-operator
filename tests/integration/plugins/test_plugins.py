@@ -40,10 +40,46 @@ COS_APP_NAME = "grafana-agent"
 COS_RELATION_NAME = "cos-agent"
 
 
-@pytest.mark.group(1)
+DEPLOY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            deploy_type,
+            id=f"{deploy_type}",
+            marks=pytest.mark.group(f"{deploy_type}"),
+        )
+    )
+    for deploy_type in ["large_deployment", "small_deployment"]
+]
+
+
+DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            deploy_type,
+            id=f"{deploy_type}",
+            marks=pytest.mark.group(f"{deploy_type}"),
+        )
+    )
+    for deploy_type in ["small_deployment"]
+]
+
+
+DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            deploy_type,
+            id=f"{deploy_type}",
+            marks=pytest.mark.group(f"{deploy_type}"),
+        )
+    )
+    for deploy_type in ["large_deployment"]
+]
+
+
+@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type: str) -> None:
     """Build and deploy an OpenSearch cluster."""
     if await app_name(ops_test):
         return
@@ -78,9 +114,82 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.parametrize("deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
-@pytest.mark.group(1)
-async def test_prometheus_exporter_enabled_by_default(ops_test):
+@pytest.mark.skip_if_deployed
+async def test_large_deployment_build_and_deploy(
+    ops_test: OpsTest, deploy_type: str
+) -> None:
+    """Build and deploy a large deployment for OpenSearch."""
+    await ops_test.model.set_config(MODEL_CONFIG)
+    # Deploy TLS Certificates operator.
+    tls_config = {"ca-common-name": "CN_CA"}
+
+    my_charm = await ops_test.build_charm(".")
+
+    main_orchestrator_conf = {
+        "cluster_name": "backup-test",
+        "init_hold": False,
+        "roles": "cluster_manager",
+    }
+    failover_orchestrator_conf = {
+        "cluster_name": "backup-test",
+        "init_hold": True,
+        "roles": "cluster_manager",
+    }
+    data_hot_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data.hot"}
+
+    await asyncio.gather(
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
+        ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
+        ops_test.model.deploy(
+            my_charm,
+            application_name="main",
+            num_units=1,
+            series=SERIES,
+            config=main_orchestrator_conf,
+        ),
+        ops_test.model.deploy(
+            my_charm,
+            application_name="failover",
+            num_units=1,
+            series=SERIES,
+            config=failover_orchestrator_conf,
+        ),
+        ops_test.model.deploy(
+            my_charm, application_name=APP_NAME, num_units=1, series=SERIES, config=data_hot_conf
+        ),
+    )
+
+    # Large deployment setup
+    await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
+    await ops_test.model.integrate("main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
+    await ops_test.model.integrate("failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
+
+    # TLS setup
+    await ops_test.model.integrate("main", TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate("failover", TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+
+    # Charms except s3-integrator should be active
+    await wait_until(
+        ops_test,
+        apps=[TLS_CERTIFICATES_APP_NAME, "main", "failover", APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units={
+            TLS_CERTIFICATES_APP_NAME: 1,
+            "main": 1,
+            "failover": 1,
+            APP_NAME: 1,
+        },
+        idle_period=IDLE_PERIOD,
+    )
+
+
+@pytest.mark.group("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.abort_on_fail
+async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str):
     """Test that Prometheus Exporter is running before the relation is there."""
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
     endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
@@ -91,9 +200,9 @@ async def test_prometheus_exporter_enabled_by_default(ops_test):
     assert len(response_str.split("\n")) > 500
 
 
+@pytest.mark.group("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
-@pytest.mark.group(1)
-async def test_prometheus_exporter_cos_relation(ops_test):
+async def test_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
     await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
     await ops_test.model.wait_for_idle(
@@ -122,9 +231,9 @@ async def test_prometheus_exporter_cos_relation(ops_test):
     assert relation_data["scheme"] == "https"
 
 
+@pytest.mark.group("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
-@pytest.mark.group(1)
-async def test_monitoring_user_fetch_prometheus_data(ops_test):
+async def test_monitoring_user_fetch_prometheus_data(ops_test, deploy_type: str):
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
     endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
 
@@ -144,9 +253,9 @@ async def test_monitoring_user_fetch_prometheus_data(ops_test):
     assert len(response_str.split("\n")) > 500
 
 
+@pytest.mark.group("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
-@pytest.mark.group(1)
-async def test_prometheus_monitor_user_password_change(ops_test):
+async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: str):
     # Password change applied as expected
     leader_id = await get_leader_unit_id(ops_test, APP_NAME)
     result1 = await run_action(ops_test, leader_id, "set-password", {"username": "monitor"})
@@ -168,9 +277,9 @@ async def test_prometheus_monitor_user_password_change(ops_test):
     assert relation_data["password"] == new_password
 
 
+@pytest.mark.group("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
-@pytest.mark.group(1)
-async def test_knn_enabled_disabled(ops_test):
+async def test_knn_enabled_disabled(ops_test, deploy_type: str):
     config = await ops_test.model.applications[APP_NAME].get_config()
     assert config["plugin_opensearch_knn"]["default"] is True
     assert config["plugin_opensearch_knn"]["value"] is True
@@ -189,9 +298,9 @@ async def test_knn_enabled_disabled(ops_test):
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=45)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
-async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
+async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
     app = (await app_name(ops_test)) or APP_NAME
 
@@ -233,9 +342,9 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
     assert len(docs) == 2
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
-async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
+async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the NMSLIB KNNEngine."""
     app = (await app_name(ops_test)) or APP_NAME
 
@@ -277,9 +386,9 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest) -> None:
     assert len(docs) == 2
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
-async def test_knn_training_search(ops_test: OpsTest) -> None:
+async def test_knn_training_search(ops_test: OpsTest, deploy_type: str) -> None:
     """Tests the entire cycle of KNN plugin.
 
     1) Enters data and trains a model in "test_end_to_end_with_ivf_faiss_training"
