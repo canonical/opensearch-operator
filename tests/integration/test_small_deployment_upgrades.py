@@ -7,10 +7,10 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
-from tests.integration.ha.helpers import app_name, assert_continuous_writes_consistency
-from tests.integration.helpers import APP_NAME, MODEL_CONFIG, SERIES, UNIT_IDS
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .ha.continuous_writes import ContinuousWrites
+from .ha.helpers import app_name, assert_continuous_writes_consistency
+from .helpers import APP_NAME, MODEL_CONFIG, SERIES, UNIT_IDS
+from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
 
