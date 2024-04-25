@@ -118,9 +118,7 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
 @pytest.mark.parametrize("deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_large_deployment_build_and_deploy(
-    ops_test: OpsTest, deploy_type: str
-) -> None:
+async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type: str) -> None:
     """Build and deploy a large deployment for OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
@@ -164,7 +162,9 @@ async def test_large_deployment_build_and_deploy(
     # Large deployment setup
     await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
     await ops_test.model.integrate("main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
-    await ops_test.model.integrate("failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
+    await ops_test.model.integrate(
+        "failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
+    )
 
     # TLS setup
     await ops_test.model.integrate("main", TLS_CERTIFICATES_APP_NAME)
