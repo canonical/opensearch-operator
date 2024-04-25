@@ -12,6 +12,7 @@ from tenacity import RetryError
 from ..ha.helpers import app_name
 from ..ha.helpers_data import bulk_insert, create_index, search
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
+from ..helpers_deployments import wait_until
 from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
