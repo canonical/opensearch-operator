@@ -892,6 +892,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.opensearch.is_node_up():
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
+        # TODO upgrade: catch http errors
+        for node in self._get_nodes(use_localhost=True):
+            if node.name == self.unit_name:
+                break
+        else:
+            # TODO: raise different exception?
+            raise OpenSearchNotFullyReadyError("Node online but not in cluster.")
+
         # cleanup bootstrap conf in the node
         if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
             self._cleanup_bootstrap_conf_if_applies()
@@ -901,25 +909,42 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.node_lock.release()
 
-        self._upgrade.unit_state = upgrade.UnitState.HEALTHY
-        self._reconcile_upgrade()
+        # TODO upgrade: catch http errors
+        self.opensearch.request(
+            "PUT",
+            "/_all/_settings",
+            # Reset to default value
+            payload={"settings": {"index.unassigned.node_left.delayed_timeout": None}},
+        )
+        self.opensearch.request("POST", "/_ml/set_upgrade_mode?enabled=false")
 
         self.peers_data.put(Scope.UNIT, "started", True)
 
         # apply post_start fixes to resolve start related upstream bugs
         self.opensearch_fixes.apply_on_start()
 
-        # apply cluster health
-        self.health.apply()
-
         if self.unit.is_leader():
             # Creating the monitoring user
             self._put_or_update_internal_user_leader(COSUser)
 
+        self.unit.open_port("tcp", 9200)
+
         # clear waiting to start status
         self.status.clear(WaitingToStart)
 
-        self.unit.open_port("tcp", 9200)
+        # apply cluster health
+        # TODO upgrade: apply on app or unit? override upgrade app status?
+        # TODO upgrade: don't wait for green on non-upgrade start?
+        health = self.health.apply(wait_for_green_first=True)
+
+        # TODO upgrade: warning on step 9 https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#rolling-upgrades
+        if health != HealthColors.GREEN:
+            # TODO upgrade: log
+            event.defer()
+            return
+
+        self._upgrade.unit_state = upgrade.UnitState.HEALTHY
+        self._reconcile_upgrade()
 
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
@@ -932,6 +957,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         if self.opensearch.is_node_up():
             # 1. Add current node to the voting + alloc exclusions
+            # TODO upgrade: disable on upgrade?
             self.opensearch_exclusions.add_current()
 
         # TODO: should block until all shards move addressed in PR DPE-2234
@@ -941,6 +967,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.set(WaitingStatus(ServiceStopped))
 
         # 3. Remove the exclusions
+        # TODO upgrade: disable on upgrade?
         self.opensearch_exclusions.delete_current()
 
     def _restart_opensearch(self, event: _RestartOpenSearch) -> None:
@@ -973,6 +1000,27 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 event.defer()
                 return
         logger.debug("Acquired lock for upgrade")
+
+        # TODO upgrade: catch http errors
+
+        # TODO upgrade: does this affect user set values?
+        # TODO look at `preserve_existing` https://www.elastic.co/guide/en/elasticsearch/reference/8.13/indices-update-settings.html
+        # Increase timeout before shard allocation replicates shards on offline (e.g. upgrading)
+        # node to other nodes
+        # Used instead of disabling shard allocation entirely
+        # (Less dangerous if this unit fails to upgrade & reset the timeout—it's safer to have
+        # increased timeout than shard allocation disabled entirely, especially for long-running
+        # upgrades)
+        # Replaces "Disable shard allocation" step from
+        # https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#rolling-upgrades
+        self.opensearch.request(
+            "PUT",
+            "/_all/_settings",
+            payload={"settings": {"index.unassigned.node_left.delayed_timeout": "5m"}},
+        )
+
+        self.opensearch.request("POST", "/_flush", retries=3)
+        self.opensearch.request("POST", "/_ml/set_upgrade_mode?enabled=true")
 
         logger.debug("Stopping OpenSearch before upgrade")
         try:
