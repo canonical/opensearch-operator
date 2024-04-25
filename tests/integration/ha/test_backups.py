@@ -265,10 +265,6 @@ async def test_small_deployment_build_and_deploy(
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
-
-    import pdb
-
-    pdb.set_trace()
     # Credentials not set yet, this will move the opensearch to blocked state
     # Credentials are set per test scenario
     await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
@@ -280,7 +276,16 @@ async def test_small_deployment_build_and_deploy(
 async def test_large_deployment_build_and_deploy(
     ops_test: OpsTest, cloud_name: str, deploy_type: str
 ) -> None:
-    """Build and deploy a large deployment for OpenSearch."""
+    """Build and deploy a large deployment for OpenSearch.
+
+    The following apps will be deployed:
+    * main: the main orchestrator
+    * failover: the failover orchestrator
+    * opensearch (or APP_NAME): the data.hot node
+
+    The data node is selected to adopt the "APP_NAME" value because it is the node which
+    ContinuousWrites will later target its writes to.
+    """
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     tls_config = {"ca-common-name": "CN_CA"}
@@ -317,31 +322,33 @@ async def test_large_deployment_build_and_deploy(
             config=failover_orchestrator_conf,
         ),
         ops_test.model.deploy(
-            my_charm, application_name="data-hot", num_units=1, series=SERIES, config=data_hot_conf
+            my_charm, application_name=APP_NAME, num_units=1, series=SERIES, config=data_hot_conf
         ),
     )
 
     # Large deployment setup
     await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
-    await ops_test.model.integrate("main:peer-cluster-orchestrator", "data-hot:peer-cluster")
-    await ops_test.model.integrate("failover:peer-cluster-orchestrator", "data-hot:peer-cluster")
+    await ops_test.model.integrate("main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
+    await ops_test.model.integrate(
+        "failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
+    )
 
     # TLS setup
     await ops_test.model.integrate("main", TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.integrate("failover", TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.integrate("data-hot", TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
     # Charms except s3-integrator should be active
     await wait_until(
         ops_test,
-        apps=[TLS_CERTIFICATES_APP_NAME, "main", "failover", "data-hot"],
+        apps=[TLS_CERTIFICATES_APP_NAME, "main", "failover", APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units={
             TLS_CERTIFICATES_APP_NAME: 1,
             "main": 1,
             "failover": 1,
-            "data-hot": 1,
+            APP_NAME: 1,
         },
         idle_period=IDLE_PERIOD,
     )
@@ -394,23 +401,23 @@ async def test_large_setups_relations_with_misconfiguration(
 
     # Now, relate failover cluster to s3-integrator and review the status
     await ops_test.model.integrate("failover:s3-credentials", S3_INTEGRATOR)
-    await ops_test.model.integrate("data-hot:s3-credentials", S3_INTEGRATOR)
+    await ops_test.model.integrate(f"{APP_NAME}:s3-credentials", S3_INTEGRATOR)
     await wait_until(
         ops_test,
-        apps=["main", "failover", "data-hot"],
+        apps=["main", "failover", APP_NAME],
         apps_statuses=["blocked"],
         units_statuses=["blocked"],
         apps_full_statuses={
             "main": {"blocked": [BackupSetupFailed]},
             "failover": {"blocked": [BackupDataShouldNotRelateS3]},
-            "data-hot": {"blocked": [BackupDataShouldNotRelateS3]},
+            APP_NAME: {"blocked": [BackupDataShouldNotRelateS3]},
         },
         idle_period=IDLE_PERIOD,
     )
 
     # Reverting should return it to normal
-    await ops_test.model.applications["data-hot"].destroy_relation(
-        "data-hot:s3-credentials", S3_INTEGRATOR
+    await ops_test.model.applications[APP_NAME].destroy_relation(
+        f"{APP_NAME}:s3-credentials", S3_INTEGRATOR
     )
     await ops_test.model.applications["failover"].destroy_relation(
         "failover:s3-credentials", S3_INTEGRATOR
@@ -424,7 +431,7 @@ async def test_large_setups_relations_with_misconfiguration(
     )
     await wait_until(
         ops_test,
-        apps=["failover", "data-hot"],
+        apps=["failover", APP_NAME],
         apps_statuses=["active"],
         idle_period=IDLE_PERIOD,
     )

@@ -264,7 +264,7 @@ class PeerClusterDataS3Requirer(S3Requirer):
         connection_data = {}
         relation_data = (
             raw_relation_data.get("data", {})
-            if isinstance(raw_relation_data, dict)
+            if isinstance(raw_relation_data.get("data", {}), dict)
             else json.loads(raw_relation_data.get("data", {}))
         ).get(PEER_CLUSTER_S3_CONFIG_KEY, {})
         for key in relation_data:
