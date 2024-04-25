@@ -3,8 +3,14 @@
 
 """OpenSearch Backup.
 
-This file holds the implementation of the OpenSearchBackup class, as well as the state enum
-and configuration.
+This library holds the implementation of the OpenSearchBackup class, as well as the state enum
+and configuration. It contains all the components for both small and large deployments.
+
+###########################################################################################
+#
+# Small deployments
+#
+###########################################################################################
 
 The OpenSearchBackup class listens to both relation changes from S3_RELATION and API calls
 and responses. The OpenSearchBackupPlugin holds the configuration info. The classes together
@@ -41,7 +47,33 @@ from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
 class OpenSearchBaseCharm(CharmBase):
     def __init__(...):
         ...
-        self.backup = OpenSearchBackup(self)
+        self.backup = OpenSearchBackupFactory(self)
+
+###########################################################################################
+#
+# Large deployments
+#
+###########################################################################################
+
+For developers, there is no meaningful difference between small and large deployments.
+They both use the same OpenSearchBackupFactory to return the correct object for their case.
+
+The large deployments expands the original concept of OpenSearchBackup to include other
+juju applications that are not cluster_manager. This means a cluster may be a data-only or
+even a failover cluster-manager and still interacts with s3-integrator at a certain level.
+
+The baseline is that every unit in the cluster must import the S3 credentials. The main
+orchestrator will share these credentials via the peer-cluster relation. Failover and data
+clusters will import that information from the peer-cluster relation.
+
+To implement the points above without causing too much disruption to the existing code,
+a factory pattern has been adopted, where the main charm receives a OpenSearchBackupBase
+object that corresponds to its own case (cluster-manager, failover, data, etc).
+
+Overloading S3Requirer
+
+The S3Requirer is replaced by PeerClusterDataS3Requirer for non-orchestrated clusters.
+This allows to detail the behavior of the cluster depending on its type.
 """
 
 import json
