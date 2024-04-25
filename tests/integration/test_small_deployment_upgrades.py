@@ -14,8 +14,6 @@ from tests.integration.helpers import (
     MODEL_CONFIG,
     SERIES,
     UNIT_IDS,
-    get_leader_unit_id,
-    run_action,
 )
 from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
