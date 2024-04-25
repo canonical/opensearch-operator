@@ -933,7 +933,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.clear(WaitingToStart)
 
         # apply cluster health
-        # TODO upgrade: apply on app or unit? override upgrade app status?
+        # TODO upgrade: apply on unit
         # TODO upgrade: don't wait for green on non-upgrade start?
         health = self.health.apply(wait_for_green_first=True)
 
