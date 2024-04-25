@@ -198,5 +198,5 @@ async def test_check_workload_version(ops_test: OpsTest) -> None:
 
     workload_version = None
     with open("./workload_version") as f:
-        workload_version = f.read().split("\n")[0]
+        workload_version = f.read().rstrip("\n")
     assert installed_info[0] == workload_version
