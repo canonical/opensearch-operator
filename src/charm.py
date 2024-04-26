@@ -171,8 +171,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             logger.debug(f"Pre-upgrade check event failed: {message}")
             event.fail(message)
             return
-        event.set_results({"result": "Charm is ready for upgrade"})
-        logger.debug("Pre-upgrade check event succeeded")
+        message = "Charm is ready for upgrade"
+        event.set_results({"result": message})
+        logger.debug(f"Pre-upgrade check event succeeded: {message}")
 
     def _on_resume_upgrade_action(self, event: ops.ActionEvent) -> None:
         if not self._unit_lifecycle.authorized_leader:
