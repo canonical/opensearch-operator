@@ -251,6 +251,8 @@ class Upgrade(abc.ABC):
         On machines, this runs before any units are upgraded (after `juju refresh`)
         On machines & Kubernetes, this also runs during pre-upgrade-check action
 
+        Can run on leader or non-leader unit
+
         Raises:
             PrecheckFailed: App is not ready to upgrade
 
