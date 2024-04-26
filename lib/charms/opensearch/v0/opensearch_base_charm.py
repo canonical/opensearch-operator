@@ -881,7 +881,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
 
-    def _post_start_init(self, event: _StartOpenSearch):
+    def _post_start_init(self, event: _StartOpenSearch):  # noqa: C901
         """Initialization post OpenSearch start."""
         # initialize the security index if needed (and certs written on disk etc.)
         if self.unit.is_leader() and not self.peers_data.get(
@@ -963,7 +963,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "As soon as another node is upgraded, the replicas can be assigned and the status
                 will change to `green`."
 
-                from https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#upgrading-elasticsearch
+                from
+                https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#upgrading-elasticsearch
                 """
                 if health_ == HealthColors.GREEN:
                     return True
@@ -1054,7 +1055,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # TODO upgrade: catch http errors
 
         # TODO upgrade: does this affect user set values?
-        # TODO look at `preserve_existing` https://www.elastic.co/guide/en/elasticsearch/reference/8.13/indices-update-settings.html
+        # TODO look at `preserve_existing`
+        # https://www.elastic.co/guide/en/elasticsearch/reference/8.13/indices-update-settings.html
+
         # Increase timeout before shard allocation replicates shards on offline (e.g. upgrading)
         # node to other nodes
         # Used instead of disabling shard allocation entirely
