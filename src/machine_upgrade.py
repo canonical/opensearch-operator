@@ -149,14 +149,21 @@ class Upgrade(upgrade.Upgrade):
             PrecheckFailed: App is not ready to upgrade
         """
         assert self._unit_workload_container_version != self._app_workload_container_version
+        assert self.versions_set
         for index, unit in enumerate(self._sorted_units):
             if unit.name == self._unit.name:
                 # Higher number units have already upgraded
                 if index == 0:
-                    # TODO: don't run on rollback
-                    # Run pre-upgrade check
-                    # (in case user forgot to run pre-upgrade-check action)
-                    self.pre_upgrade_check()
+                    if (
+                        json.loads(self._app_databag["versions"])["charm"]
+                        == self._current_versions["charm"]
+                    ):
+                        # Assumes charm version uniquely identifies charm revision
+                        logger.debug("Rollback detected. Skipping pre-upgrade check")
+                    else:
+                        # Run pre-upgrade check
+                        # (in case user forgot to run pre-upgrade-check action)
+                        self.pre_upgrade_check()
                 elif index == 1:
                     # User confirmation needed to resume upgrade (i.e. upgrade second unit)
                     logger.debug(f"Second unit authorized to upgrade if {self.upgrade_resumed=}")
