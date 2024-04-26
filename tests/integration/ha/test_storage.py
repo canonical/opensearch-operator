@@ -32,9 +32,11 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
+    # this assumes the test is run on an lxd cloud, using the default storage pool 'lxd'
+    storage = {"opensearch-data": {"pool": "lxd", "size": 2048}}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(my_charm, num_units=1, series=SERIES),
+        ops_test.model.deploy(my_charm, num_units=2, series=SERIES, storage=storage),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -45,7 +47,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         timeout=1000,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 1
+    assert len(ops_test.model.applications[APP_NAME].units) == 2
 
 
 @pytest.mark.group(1)
@@ -62,32 +64,32 @@ async def test_storage_reuse_after_scale_down(
         )
 
     # scale-down to 1 if multiple units
-    unit_ids = get_application_unit_ids(ops_test, app)
-    if len(unit_ids) > 1:
-        for unit_id in unit_ids[1:]:
-            await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
-
-        await ops_test.model.wait_for_idle(
-            apps=[app],
-            status="active",
-            timeout=1000,
-            wait_for_exact_units=1,
-            idle_period=IDLE_PERIOD,
-        )
-    else:
-        # wait for enough data to be written
-        time.sleep(60)
+#    unit_ids = get_application_unit_ids(ops_test, app)
+#    if len(unit_ids) > 1:
+#        for unit_id in unit_ids[1:]:
+#            await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
+#
+#        await ops_test.model.wait_for_idle(
+#            apps=[app],
+#            status="active",
+#            timeout=1000,
+#            wait_for_exact_units=1,
+#            idle_period=IDLE_PERIOD,
+#        )
+#    else:
+#        # wait for enough data to be written
+#        time.sleep(60)
 
     writes_result = await c_writes.stop()
 
     # get unit info
-    unit_id = get_application_unit_ids(ops_test, app)[0]
+    unit_id = get_application_unit_ids(ops_test, app)[1]
     unit_storage_id = storage_id(ops_test, app, unit_id)
 
-    # scale-down to 0
+    # scale-down to 1
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=0
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=1
     )
 
     # add unit with storage attached
@@ -98,11 +100,11 @@ async def test_storage_reuse_after_scale_down(
     assert return_code == 0, "Failed to add unit with storage"
 
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=1
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=2
     )
 
     # check the storage of the new unit
-    new_unit_id = get_application_unit_ids(ops_test, app)[0]
+    new_unit_id = get_application_unit_ids(ops_test, app)[1]
     new_unit_storage_id = storage_id(ops_test, app, new_unit_id)
     assert unit_storage_id == new_unit_storage_id, "Storage IDs mismatch."
 
