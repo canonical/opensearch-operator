@@ -103,8 +103,8 @@ class Upgrade(upgrade.Upgrade):
             if state:
                 state = upgrade.UnitState(state)
             outdated = (
-                    self._unit_workload_container_versions.get(unit.name)
-                    != self._app_workload_container_version
+                self._unit_workload_container_versions.get(unit.name)
+                != self._app_workload_container_version
             )
             unhealthy = state is not upgrade.UnitState.HEALTHY
             if outdated or unhealthy:
