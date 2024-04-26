@@ -104,9 +104,8 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             except upgrade.PrecheckFailed as exception:
                 self._set_upgrade_status()
                 self.unit.status = exception.status
-                logger.error(
-                    f"Rollback with `juju refresh`. Pre-upgrade check failed: {exception.status.message}"
-                )
+                logger.debug(f"Set unit status to {self.unit.status}")
+                logger.error(exception.status.message)
                 return
             if authorized:
                 self._set_upgrade_status()
