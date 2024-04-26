@@ -261,6 +261,7 @@ class Upgrade(abc.ABC):
         need to be modified).
         See https://chat.canonical.com/canonical/pl/cmf6uhm1rp8b7k8gkjkdsj4mya
         """
+        logger.debug("Running pre-upgrade checks")
         # TODO: implement checks
         # e.g.
         # if health != green:
