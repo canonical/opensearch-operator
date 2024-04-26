@@ -64,7 +64,7 @@ class OpenSearchPeerClustersManager:
         self._charm = charm
         self._opensearch = charm.opensearch
 
-    def run(self) -> None:
+    def run(self, event=None) -> None:
         """Init, or updates / recomputes current peer cluster related config if applies."""
         user_config = self._user_config()
         if not (current_deployment_desc := self.deployment_desc()):
@@ -90,9 +90,7 @@ class OpenSearchPeerClustersManager:
 
             if deployment_desc.start == StartMode.WITH_GENERATED_ROLES:
                 # role generation logic
-                self._charm.on[PeerRelationName].relation_changed.emit(
-                    self._charm.model.get_relation(PeerRelationName)
-                )
+                self._charm.peer_relation_changed(event)
 
         self.apply_status_if_needed(deployment_desc)
 
