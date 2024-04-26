@@ -77,13 +77,7 @@ class Upgrade(abc.ABC):
     def is_compatible(self) -> bool:
         """Whether upgrade is supported from previous versions"""
         assert self.versions_set
-        try:
-            previous_version_strs: typing.Dict[str, str] = json.loads(
-                self._app_databag["versions"]
-            )
-        except KeyError as exception:
-            logger.debug("`versions` missing from peer relation", exc_info=exception)
-            return False
+        previous_version_strs: typing.Dict[str, str] = json.loads(self._app_databag["versions"])
         # TODO charm versioning: remove `.split("+")` (which removes git hash before comparing)
         previous_version_strs["charm"] = previous_version_strs["charm"].split("+")[0]
         previous_versions: typing.Dict[str, poetry_version.Version] = {
