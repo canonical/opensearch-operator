@@ -46,7 +46,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.framework.observe(
             self.on[upgrade.RESUME_ACTION_NAME].action, self._on_resume_upgrade_action
         )
-        self.framework.observe(self.on["force-upgrade"].action, self._on_force_upgrade_action)
+        self.framework.observe(
+            self.on[machine_upgrade.FORCE_ACTION_NAME].action, self._on_force_upgrade_action
+        )
 
     @property
     def _upgrade(self) -> typing.Optional[machine_upgrade.Upgrade]:

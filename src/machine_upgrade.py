@@ -19,6 +19,7 @@ from opensearch import OpenSearchSnap
 
 logger = logging.getLogger(__name__)
 
+FORCE_ACTION_NAME = "force-upgrade"
 _SNAP_REVISION = str(constants_charm.OPENSEARCH_SNAP_REVISION)
 
 
