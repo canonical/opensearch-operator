@@ -98,6 +98,23 @@ class Upgrade(upgrade.Upgrade):
     def reconcile_partition(self, *, action_event: ops.ActionEvent = None) -> None:
         """Handle Juju action to confirm first upgraded unit is healthy and resume upgrade."""
         if action_event:
+            unit = self._sorted_units[0]  # First unit to upgrade
+            state = self._peer_relation.data[unit].get("state")
+            if state:
+                state = upgrade.UnitState(state)
+            outdated = (
+                    self._unit_workload_container_versions.get(unit.name)
+                    != self._app_workload_container_version
+            )
+            unhealthy = state is not upgrade.UnitState.HEALTHY
+            if outdated or unhealthy:
+                if outdated:
+                    message = "Highest number unit has not upgraded yet. Upgrade will not resume."
+                else:
+                    message = "Highest number unit is unhealthy. Upgrade will not resume."
+                logger.debug(f"Resume upgrade event failed: {message}")
+                action_event.fail(message)
+                return
             self.upgrade_resumed = True
             message = "Upgrade resumed."
             action_event.set_results({"result": message})
