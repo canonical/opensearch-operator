@@ -238,6 +238,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
+        # There is an explosion of peer_relation_changed calls at the startup.
+        # As this corresponds to a local peer relation (not the peer-cluster), we can safely
+        # abandon repeated events.
+        self._local_peer_relation_changed_has_deferred = False
+
     @property
     @abc.abstractmethod
     def _upgrade(self) -> typing.Optional[upgrade.Upgrade]:
@@ -429,8 +434,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             and self.opensearch.is_node_up()
             and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
         ):
+            if self._local_peer_relation_changed_has_deferred:
+                # We had already tried this event before and deferred. Retry on the next
+                # hook call.
+                return
             # we defer because we want the temporary status to be updated
             event.defer()
+            # From now on, we will abandon the event if we need to defer it
+            self._local_peer_relation_changed_has_deferred = True
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -600,9 +611,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.unit.is_leader():
             # run peer cluster manager processing
-            self.opensearch_peer_cm.run(event)
-            if event.deferred:
-                return
+            self.opensearch_peer_cm.run()
 
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
             self._handle_change_to_main_orchestrator_if_needed(event, previous_deployment_desc)
