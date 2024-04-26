@@ -84,6 +84,13 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if self._unit_lifecycle.authorized_leader and not self._upgrade.in_progress:
             # Run before checking `self._upgrade.is_compatible` in case incompatible upgrade was
             # forced & completed on all units.
+            # Side effect: on machines, if charm was upgraded to a charm with the same snap
+            # revision, compatability checks will be skipped.
+            # (The only real use case for this would be upgrading the charm code to an incompatible
+            # version without upgrading the snap. In that situation, the upgrade may appear
+            # successful and the user will not be notified of the charm incompatibility. This case
+            # is much less likely than the forced incompatible upgrade & the impact is not as bad
+            # as the impact if we did not handle the forced incompatible upgrade case.)
             self._upgrade.set_versions_in_app_databag()
         if not self._upgrade.is_compatible:
             self._set_upgrade_status()
