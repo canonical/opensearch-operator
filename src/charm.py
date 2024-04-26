@@ -99,7 +99,16 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self._set_upgrade_status()
             return
         if self._upgrade.unit_state is upgrade.UnitState.OUTDATED:
-            if self._upgrade.authorized:
+            try:
+                authorized = self._upgrade.authorized
+            except upgrade.PrecheckFailed as exception:
+                self._set_upgrade_status()
+                self.unit.status = exception.status
+                logger.error(
+                    f"Rollback with `juju refresh`. Pre-upgrade check failed: {exception.status.message}"
+                )
+                return
+            if authorized:
                 self._set_upgrade_status()
                 self._upgrade_opensearch_event.emit()
             else:
@@ -110,7 +119,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _set_upgrade_status(self):
         # Set/clear upgrade unit status if no other unit status
-        if isinstance(self.unit.status, ops.ActiveStatus):
+        if isinstance(self.unit.status, ops.ActiveStatus) or (
+            isinstance(self.unit.status, ops.BlockedStatus)
+            and self.unit.status.message.startswith(
+                "Rollback with `juju refresh`. Pre-upgrade check failed:"
+            )
+        ):
             self.status.set(self._upgrade.get_unit_juju_status() or ops.ActiveStatus())
             logger.debug(f"Set unit status to {self.unit.status}")
         if not self.unit.is_leader():
@@ -151,7 +165,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         try:
             self._upgrade.pre_upgrade_check()
         except upgrade.PrecheckFailed as exception:
-            message = exception.status.message
+            message = (
+                f"Charm is *not* ready for upgrade. Pre-upgrade check failed: {exception.message}"
+            )
             logger.debug(f"Pre-upgrade check event failed: {message}")
             event.fail(message)
             return
