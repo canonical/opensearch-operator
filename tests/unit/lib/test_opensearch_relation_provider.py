@@ -217,10 +217,9 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider._unit_departing")
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
-    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
-    @patch("charm.OpenSearchOperatorCharm._put_kibanaserver_user")
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_relation_broken(self, _, __, ___, _is_node_up, _remove_users, _unit_departing):
+    def test_on_relation_broken(self, _, __, _is_node_up, _remove_users, _unit_departing):
         event = MagicMock()
         event.relation.id = 0
         depart_flag = self.opensearch_provider._depart_flag(event.relation)
@@ -249,10 +248,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         return_value=True,
     )
     @patch("charm.OpenSearchOperatorCharm._get_nodes")
-    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
-    @patch("charm.OpenSearchOperatorCharm._put_kibanaserver_user")
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_update_endpoints(self, _, __, ___, _nodes, _is_node_up, _set_endpoints):
+    def test_update_endpoints(self, _, __, _nodes, _is_node_up, _set_endpoints):
         self.harness.set_leader(True)
         node = MagicMock()
         node.ip = "4.4.4.4"
@@ -290,14 +288,12 @@ class TestOpenSearchProvider(unittest.TestCase):
         return_value=True,
     )
     @patch("charm.OpenSearchOperatorCharm._get_nodes")
-    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
-    @patch("charm.OpenSearchOperatorCharm._put_kibanaserver_user")
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
     def test_update_dashboards_password(
         self,
         _,
         __,
-        ___,
         _nodes,
         _is_node_up,
         ____,  # ______
