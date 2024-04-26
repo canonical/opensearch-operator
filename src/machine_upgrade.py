@@ -144,21 +144,19 @@ class Upgrade(upgrade.Upgrade):
         """Whether this unit is authorized to upgrade
 
         Only applies to machine charm
+
+        Raises:
+            PrecheckFailed: App is not ready to upgrade
         """
         assert self._unit_workload_container_version != self._app_workload_container_version
         for index, unit in enumerate(self._sorted_units):
             if unit.name == self._unit.name:
                 # Higher number units have already upgraded
                 if index == 0:
+                    # TODO: don't run on rollback
                     # Run pre-upgrade check
                     # (in case user forgot to run pre-upgrade-check action)
-                    try:
-                        self.pre_upgrade_check()
-                    except upgrade.PrecheckFailed as exception:
-                        # TODO upgrade: ensure status can be cleared
-                        self._unit.status = exception.status
-                        # TODO upgrade: add log
-                        return False
+                    self.pre_upgrade_check()
                 elif index == 1:
                     # User confirmation needed to resume upgrade (i.e. upgrade second unit)
                     logger.debug(f"Second unit authorized to upgrade if {self.upgrade_resumed=}")
@@ -181,7 +179,7 @@ class Upgrade(upgrade.Upgrade):
 
         Only applies to machine charm
         """
-        logger.debug(f"Upgrading {self.authorized=}")
+        logger.debug("Upgrading unit")
         self.unit_state = upgrade.UnitState.UPGRADING
         snap.install()
         self._unit_workload_container_version = _SNAP_REVISION

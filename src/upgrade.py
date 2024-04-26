@@ -40,6 +40,14 @@ class PeerRelationNotReady(Exception):
 class PrecheckFailed(status_exception.StatusException):
     """App is not ready to upgrade"""
 
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(
+            ops.BlockedStatus(
+                f"Rollback with `juju refresh`. Pre-upgrade check failed: {self.message}"
+            )
+        )
+
 
 class UnitState(str, enum.Enum):
     """Unit upgrade state"""
@@ -254,4 +262,4 @@ class Upgrade(abc.ABC):
         # TODO: implement checks
         # e.g.
         # if health != green:
-        #     raise PrecheckFailed(ops.BlockedStatus("Cluster is not healthy"))
+        #     raise PrecheckFailed("Cluster is not healthy")
