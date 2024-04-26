@@ -944,6 +944,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:
         """Upgrade OpenSearch."""
+        logger.debug("Attempting to acquire lock for upgrade")
         if not self.node_lock.acquired:
             # (Attempt to acquire lock even if `event.ignore_lock`)
             if event.ignore_lock:
@@ -952,7 +953,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 logger.debug("Lock to upgrade opensearch not acquired. Will retry next event")
                 event.defer()
                 return
+        logger.debug("Acquired lock for upgrade")
 
+        logger.debug("Stopping OpenSearch before upgrade")
         try:
             self._stop_opensearch()
         except OpenSearchStopError as e:
@@ -961,9 +964,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             self.status.set(WaitingStatus(ServiceIsStopping))
             return
+        logger.debug("Stopped OpenSearch before upgrade")
 
         self._upgrade.upgrade_unit(snap=self.opensearch)
 
+        logger.debug("Starting OpenSearch after upgrade")
         self._start_opensearch_event.emit(ignore_lock=event.ignore_lock)
 
     def _can_service_start(self) -> bool:

@@ -109,11 +109,13 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         # Set/clear upgrade unit status if no other unit status
         if isinstance(self.unit.status, ops.ActiveStatus):
             self.status.set(self._upgrade.get_unit_juju_status() or ops.ActiveStatus())
+            logger.debug(f"Set unit status to {self.unit.status}")
         if not self.unit.is_leader():
             return
         # Set upgrade app status
         if status := self._upgrade.app_status:
             self.status.set(status, app=True)
+            logger.debug(f"Set app status to {self.app.status}")
         else:
             # Clear upgrade app status
             if (
@@ -121,6 +123,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 or isinstance(self.app.status, ops.MaintenanceStatus)
             ) and self.app.status.message.startswith("Upgrad"):
                 self.status.set(ops.ActiveStatus(), app=True)
+                logger.debug(f"Set app status to {self.app.status}")
 
     def _on_upgrade_charm(self, _):
         if self._unit_lifecycle.authorized_leader:
