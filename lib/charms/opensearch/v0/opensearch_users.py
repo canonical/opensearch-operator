@@ -271,10 +271,10 @@ class OpenSearchUserManager:
         if resp.get("status") != "OK":
             raise OpenSearchError(f"{resp}")
 
-    def put_intenal_user(self, user: str, hashed_pwd: str):
+    def put_internal_user(self, user: str, hashed_pwd: str):
         """User creation for specific system users."""
         if user not in OpenSearchUsers:
-            OpenSearchError(f"User {user} is not an internal user.")
+            raise OpenSearchError(f"User {user} is not an internal user.")
 
         if user == AdminUser:
             # reserved: False, prevents this resource from being update-protected from:

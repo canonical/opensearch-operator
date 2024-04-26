@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
+    AdminUser,
     AdminUserInitProgress,
     AdminUserNotConfigured,
     CertsExpirationError,
@@ -968,23 +969,30 @@ class OpenSearchBaseCharm(CharmBase):
         # Leader is to set new password and hash, others populate existing hash locally
         if not self.unit.is_leader():
             logger.error("Credential change can be only performed by the leader unit.")
+            return
 
         hashed_pwd, pwd = generate_hashed_password(pwd)
 
-        # Update user credentials via API
+        # Updating security index
+        # We need to do this for all credential changes
         if secret := self.secrets.get(Scope.APP, self.secrets.password_key(user)):
             self.user_manager.update_user_password(user, hashed_pwd)
 
-        # New user or system user requires (local re)-initialization
+        # In case it's a new user, OR it's a system user (that has an entry in internal_users.yml)
+        # we either need to initialize or update (local) credentials as well
         if not secret or user in OpenSearchSystemUsers:
-            self.user_manager.put_intenal_user(user, hashed_pwd)
+            self.user_manager.put_internal_user(user, hashed_pwd)
 
+        # Secrets need to be maintained
+        # For System Users we also save the hash key
+        # (so all units can fetch it for local users (internal_users.yml) updates.
         self.secrets.put(Scope.APP, self.secrets.password_key(user), pwd)
 
         if user in OpenSearchSystemUsers:
             self.secrets.put(Scope.APP, self.secrets.hash_key(user), hashed_pwd)
 
-        self.peers_data.put(Scope.APP, "admin_user_initialized", True)
+        if user == AdminUser:
+            self.peers_data.put(Scope.APP, "admin_user_initialized", True)
 
     def _put_or_update_internal_user_unit(self, user: str, pwd: Optional[str] = None) -> None:
         """Create system user or update it with a new password."""
@@ -993,7 +1001,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         # System users have to be saved locally in internal_users.yml
         if user in OpenSearchSystemUsers:
-            self.user_manager.put_intenal_user(user, hashed_pwd)
+            self.user_manager.put_internal_user(user, hashed_pwd)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.

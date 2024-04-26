@@ -70,6 +70,15 @@ class OpenSearchSecrets(Object, RelationDataStore):
             logging.info(f"Label {event.secret.label} was meaningless for us, returning")
             return
 
+        # We need to take action on 3 secret types
+        # 1. TLS credentials change
+        #     - Action: update credentials files
+        # 2. 'kibanaserver' user credentials change
+        #     - Action: Dashboard relation (secret) needs to be updated
+        # 3. System user hash secret update
+        #     - Action: Every unit needs to update local internal_users.yml
+        #     - Note: Leader is updated already
+
         system_user_hash_keys = [
             self._charm.secrets.hash_key(user) for user in OpenSearchSystemUsers
         ]
@@ -82,6 +91,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         label_key = label_parts["key"]
         is_leader = self._charm.unit.is_leader()
 
+        # Matching secrets by label
         if (
             label_parts["application_name"] != self._charm.app.name
             or label_parts["scope"] != Scope.APP
@@ -92,7 +102,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         logger.debug("Secret change for %s", str(label_key))
 
-        # Leader has to maintain TLS and COS
+        # Leader has to maintain TLS and Dashboards relation credentials
         if not is_leader and label_key == CertType.APP_ADMIN.val:
             self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
 
@@ -103,7 +113,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         elif not is_leader and label_key in system_user_hash_keys:
             password = event.secret.get_content()[label_key]
             if sys_user := self._user_from_hash_key(label_key):
-                self._charm.user_manager.put_intenal_user(sys_user, password)
+                self._charm.user_manager.put_internal_user(sys_user, password)
 
     def _user_from_hash_key(self, key):
         """Which user is referred to by key?"""
