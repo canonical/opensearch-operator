@@ -5,7 +5,7 @@ import asyncio
 import logging
 import os
 import time
-from multiprocessing import Event, Process, Queue
+from multiprocessing import Event, Process, Queue, log_to_stderr
 from types import SimpleNamespace
 from typing import Optional
 
@@ -183,6 +183,7 @@ class ContinuousWrites:
         self._event.set()
         self._process.join()
         self._queue.close()
+        self._process.terminate()
         self._is_stopped = True
 
     async def _secrets(self) -> str:
@@ -211,6 +212,8 @@ class ContinuousWrites:
         event: Event, data_queue: Queue, starting_number: int, is_bulk: bool
     ) -> None:
         """Continuous writing."""
+        run_logger = log_to_stderr()
+        run_logger.setLevel(logging.INFO)
 
         def _client(_data) -> OpenSearch:
             return opensearch_client(
@@ -218,6 +221,8 @@ class ContinuousWrites:
             )
 
         write_value = starting_number
+
+        run_logger.info(f"Starting continuous writes from {write_value}...")
 
         data = data_queue.get(True)
         client = _client(data)
@@ -237,6 +242,7 @@ class ContinuousWrites:
                 # todo: remove when we get bigger runners (to reduce data transfer time)
                 time.sleep(0.75)
             except BulkIndexError:
+                run_logger.warning(f"Bulk failed for {write_value}")
                 continue
             except (TransportError, ConnectionRefusedError):
                 client.close()
@@ -245,6 +251,7 @@ class ContinuousWrites:
                 except (TransportError, ConnectionRefusedError):
                     pass
 
+                run_logger.warning(f"Transport or Conn Refused error for {write_value}")
                 continue
             finally:
                 # process termination requested
