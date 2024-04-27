@@ -48,7 +48,7 @@ class ContinuousWrites:
         wait=wait_fixed(wait=5) + wait_random(0, 5),
         stop=stop_after_attempt(5),
     )
-    async def start(self, repl_on_all_nodes: bool = False) -> None:
+    async def start(self, repl_on_all_nodes: bool = False, is_bulk: bool = True) -> None:
         """Run continuous writes in the background."""
         if not self._is_stopped:
             await self.clear()
@@ -58,7 +58,7 @@ class ContinuousWrites:
             await self._create_fully_replicated_index()
 
         # create process
-        self._create_process()
+        self._create_process(is_bulk=is_bulk)
 
         # put data (hosts, password) in the process queue
         await self.update()
@@ -169,14 +169,14 @@ class ContinuousWrites:
 
         return result
 
-    def _create_process(self):
+    def _create_process(self, is_bulk: bool = True):
         self._is_stopped = False
         self._event = Event()
         self._queue = Queue()
         self._process = Process(
             target=ContinuousWrites._run_async,
             name="continuous_writes",
-            args=(self._event, self._queue, self._initial_count, True),
+            args=(self._event, self._queue, self._initial_count, is_bulk),
         )
 
     def _stop_process(self):
@@ -242,7 +242,7 @@ class ContinuousWrites:
                 # todo: remove when we get bigger runners (to reduce data transfer time)
                 time.sleep(0.75)
             except BulkIndexError:
-                run_logger.warning(f"Bulk failed for {write_value}")
+                run_logger.info(f"Bulk failed for {write_value}")
                 continue
             except (TransportError, ConnectionRefusedError):
                 client.close()
@@ -251,7 +251,7 @@ class ContinuousWrites:
                 except (TransportError, ConnectionRefusedError):
                     pass
 
-                run_logger.warning(f"Transport or Conn Refused error for {write_value}")
+                run_logger.info(f"Transport or Conn Refused error for {write_value}")
                 continue
             finally:
                 # process termination requested
