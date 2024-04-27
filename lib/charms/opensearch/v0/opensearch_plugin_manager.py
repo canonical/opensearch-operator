@@ -142,7 +142,7 @@ class OpenSearchPluginManager:
                 [
                     x
                     for x in self._charm._get_nodes(True)
-                    if x.name.startswith(self._charm.app.name)
+                    if "-".join(x.name.split("-")[:-1]) == self._charm.app.name
                 ]
             )
             == self._charm.app.planned_units()
