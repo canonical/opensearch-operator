@@ -504,7 +504,9 @@ async def delete_backup(ops_test: OpsTest, backup_id: int) -> None:
     )
 
 
-async def start_and_check_continuous_writes(ops_test: OpsTest, unit_ip: str, app: str) -> bool:
+async def assert_start_and_check_continuous_writes(
+    ops_test: OpsTest, unit_ip: str, app: str
+) -> None:
     """Start continuous writes and check that documents are increasing after some time.
 
     Given we are restoring an index, we need to make sure ContinuousWrites restart at

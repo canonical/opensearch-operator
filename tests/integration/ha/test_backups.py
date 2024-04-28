@@ -51,10 +51,10 @@ from .helpers import (
     assert_continuous_writes_consistency,
     assert_continuous_writes_increasing,
     assert_restore_indices_and_compare_consistency,
+    assert_start_and_check_continuous_writes,
     create_backup,
     list_backups,
     restore,
-    start_and_check_continuous_writes,
 )
 from .helpers_data import index_docs_count
 
@@ -574,6 +574,10 @@ async def test_restore_to_new_cluster(
     """
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     logging.info("Destroying the application")
+    for machine in ops_test.model.state.machines.values():
+        # Needed due to canonical/opensearch-operator#243
+        await machine.destroy(force=True)
+    # Now, remove the applications
     await asyncio.gather(
         ops_test.model.remove_application(S3_INTEGRATOR, block_until_done=True),
         ops_test.model.remove_application(app, block_until_done=True),
@@ -625,7 +629,7 @@ async def test_restore_to_new_cluster(
         assert count == cwrites_backup_doc_count[backup_id]
 
         # restart the continuous writes and check the cluster is still accessible post restore
-        assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
+        await assert_start_and_check_continuous_writes(ops_test, unit_ip, app)
 
     # Now, try a backup & restore with continuous writes
     logger.info("Final stage of DR test: try a backup & restore with continuous writes")
