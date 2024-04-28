@@ -176,6 +176,26 @@ class OpenSearchRestoreIndexClosingError(OpenSearchRestoreError):
     """Exception thrown when restore fails to close indices."""
 
 
+def _load_s3_credentials_data(raw_relation_data: RelationDataContent) -> dict[str, str]:
+    """Loads the relation data from the peer-cluster relation from a sub-key."""
+    connection_data = {}
+    relation_data = (
+        raw_relation_data.get("data", {})
+        if isinstance(raw_relation_data.get("data", {}), dict)
+        else json.loads(raw_relation_data.get("data", {}))
+    ).get(PEER_CLUSTER_S3_CONFIG_KEY, {})
+    for key in relation_data:
+        try:
+            connection_data[key.replace("_", "-")] = (
+                relation_data[key]
+                if isinstance(relation_data[key], dict)
+                else json.loads(relation_data[key])
+            )
+        except (json.decoder.JSONDecodeError, TypeError):
+            connection_data[key.replace("_", "-")] = relation_data[key]
+    return connection_data
+
+
 class BackupServiceState(BaseStrEnum):
     """Enum for the states possible once plugin is enabled."""
 
@@ -219,25 +239,12 @@ class PeerClusterCredentialsChangedEvent(CredentialsChangedEvent):
         if not self.relation.app:
             return None
 
-        return self._load_relation_data.get("access-key")
+        return self._load_relation_data.get("secret-key")
 
     @property
     def _load_relation_data(self) -> dict[str, str]:
         """Loads the relation data from the peer-cluster relation from a sub-key."""
-        connection_data = {}
-        relation_data = json.loads(self.relation.data[self.relation.app].get("data", {})).get(
-            PEER_CLUSTER_S3_CONFIG_KEY, {}
-        )
-        for key in relation_data:
-            try:
-                connection_data[key] = (
-                    relation_data[key]
-                    if isinstance(relation_data[key], dict)
-                    else json.loads(relation_data[key])
-                )
-            except (json.decoder.JSONDecodeError, TypeError):
-                connection_data[key] = relation_data[key]
-        return connection_data
+        return _load_s3_credentials_data(self.relation.data[self.relation.app])
 
 
 class S3CredentialRequiresEvents(ObjectEvents):
@@ -293,22 +300,7 @@ class PeerClusterDataS3Requirer(S3Requirer):
 
     def _load_relation_data(self, raw_relation_data: RelationDataContent) -> dict[str, str]:
         """Loads the relation data from the peer-cluster relation from a sub-key."""
-        connection_data = {}
-        relation_data = (
-            raw_relation_data.get("data", {})
-            if isinstance(raw_relation_data.get("data", {}), dict)
-            else json.loads(raw_relation_data.get("data", {}))
-        ).get(PEER_CLUSTER_S3_CONFIG_KEY, {})
-        for key in relation_data:
-            try:
-                connection_data[key.replace("_", "-")] = (
-                    relation_data[key]
-                    if isinstance(relation_data[key], dict)
-                    else json.loads(relation_data[key])
-                )
-            except (json.decoder.JSONDecodeError, TypeError):
-                connection_data[key.replace("_", "-")] = relation_data[key]
-        return connection_data
+        return _load_s3_credentials_data(raw_relation_data)
 
 
 class OpenSearchBackupBase(Object):
@@ -412,6 +404,7 @@ class OpenSearchDataClusterBackup(OpenSearchBackupBase):
                     "s3.client.default.secret_key": event.secret_key,
                 },
             )
+            self.charm.plugin_manager.apply_config(plugin)
         except OpenSearchError as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
                 logger.warning("s3-changed: cluster not ready yet")
