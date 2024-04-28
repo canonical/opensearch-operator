@@ -562,10 +562,7 @@ async def list_backups(ops_test: OpsTest, leader_id: int, app: str = APP_NAME) -
 async def assert_restore_indices_and_compare_consistency(
     ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: int
 ) -> None:
-    """Ensures that continuous writes index has at least the value below.
-
-    assert new_count >= <current-doc-count> * (1 - loss) documents.
-    """
+    """Ensures that continuous writes index has at least the value below."""
     original_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
     # As stated on: https://discuss.elastic.co/t/how-to-parse-snapshot-dat-file/218888,
     # the only way to discover the documents in a backup is to recover it and check

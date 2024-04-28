@@ -263,7 +263,7 @@ class ContinuousWrites:
         # write last expected written value on disk
         with open(ContinuousWrites.LAST_WRITTEN_VAL_PATH, "w") as f:
             if is_bulk:
-                write_value = (100 * write_value) + 99
+                write_value += 99
 
             f.write(str(write_value))
             os.fsync(f)
@@ -276,7 +276,7 @@ class ContinuousWrites:
         """Bulk Index group of docs."""
         data = []
         for i in range(100):
-            val = (100 * write_value) + i
+            val = write_value + i
             data.append(
                 {
                     "_index": ContinuousWrites.INDEX_NAME,
