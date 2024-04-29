@@ -1043,6 +1043,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
         logger.debug("Acquired lock for upgrade")
 
+        # https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html
         try:
             self.opensearch.request(
                 "PUT",
