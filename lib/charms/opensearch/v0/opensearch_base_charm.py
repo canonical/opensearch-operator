@@ -984,13 +984,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.opensearch_peer_cm.is_peer_cluster_orchestrator_relation_set():
                 self.peer_cluster_provider.refresh_relation_data(event)
 
-    def _stop_opensearch(self) -> None:
+    def _stop_opensearch(self, *, restart=False) -> None:
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
-        if self.opensearch.is_node_up():
+        if self.opensearch.is_node_up() and not restart:
             # 1. Add current node to the voting + alloc exclusions
-            # TODO upgrade: disable on upgrade?
             self.opensearch_exclusions.add_current()
 
         # TODO: should block until all shards move addressed in PR DPE-2234
@@ -1000,8 +999,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.set(WaitingStatus(ServiceStopped))
 
         # 3. Remove the exclusions
-        # TODO upgrade: disable on upgrade?
-        self.opensearch_exclusions.delete_current()
+        if not restart:
+            self.opensearch_exclusions.delete_current()
 
     def _restart_opensearch(self, event: _RestartOpenSearch) -> None:
         """Restart OpenSearch if possible."""
@@ -1011,7 +1010,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         try:
-            self._stop_opensearch()
+            self._stop_opensearch(restart=True)
         except OpenSearchStopError as e:
             logger.exception(e)
             self.node_lock.release()
@@ -1045,7 +1044,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         logger.debug("Stopping OpenSearch before upgrade")
         try:
-            self._stop_opensearch()
+            self._stop_opensearch(restart=True)
         except OpenSearchStopError as e:
             logger.exception(e)
             self.node_lock.release()
