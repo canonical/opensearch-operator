@@ -224,7 +224,7 @@ class PeerClusterRelData(Model):
     cluster_name: str
     cm_nodes: List[Node]
     credentials: PeerClusterRelDataCredentials
-    s3_credentials: S3RelDataCredentials
+    s3_credentials: Optional[S3RelDataCredentials]
     deployment_desc: Optional[DeploymentDescription]
 
 
