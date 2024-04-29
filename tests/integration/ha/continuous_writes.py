@@ -212,7 +212,7 @@ class ContinuousWrites:
         event: Event, data_queue: Queue, starting_number: int, is_bulk: bool
     ) -> None:
         """Continuous writing."""
-        run_logger = log_to_stderr()
+        proc_logger = log_to_stderr()
         run_logger.setLevel(logging.INFO)
 
         def _client(_data) -> OpenSearch:
