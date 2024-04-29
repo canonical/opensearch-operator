@@ -1006,7 +1006,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
-        if self.opensearch.is_node_up() and not restart:
+        if self.opensearch.is_node_up():
+            # TODO: we should probably NOT have any exclusion on restart
             # 1. Add current node to the voting + alloc exclusions
             self.opensearch_exclusions.add_current()
 
@@ -1017,8 +1018,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.set(WaitingStatus(ServiceStopped))
 
         # 3. Remove the exclusions
-        if not restart:
-            self.opensearch_exclusions.delete_current()
+        # TODO: we should probably NOT have any exclusion on restart
+        self.opensearch_exclusions.delete_current()
 
     def _restart_opensearch(self, event: _RestartOpenSearch) -> None:
         """Restart OpenSearch if possible."""
