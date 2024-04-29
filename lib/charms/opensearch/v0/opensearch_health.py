@@ -9,7 +9,6 @@ from charms.opensearch.v0.constants_charm import (
     ClusterHealthRed,
     ClusterHealthRedUpgrade,
     ClusterHealthYellow,
-    ClusterHealthYellowUpgrade,
     WaitingForBusyShards,
     WaitingForSpecificBusyShards,
 )
@@ -118,10 +117,11 @@ class OpenSearchHealth:
         During upgrade, app status is used to show upgrade progress
         And, unit checking cluster wide status may not be leader
         """
-        if status == HealthColors.GREEN:
-            # health green: cluster healthy
+        if status in (HealthColors.GREEN, HealthColors.YELLOW):
+            # health green or yellow: cluster healthy
+            # TODO future improvement:
+            # https://github.com/canonical/opensearch-operator/issues/268
             self._charm.status.clear(ClusterHealthRedUpgrade)
-            self._charm.status.clear(ClusterHealthYellowUpgrade)
             self._charm.status.clear(WaitingForBusyShards)
         elif status == HealthColors.RED:
             # health RED: some primary shards are unassigned
@@ -129,9 +129,6 @@ class OpenSearchHealth:
         elif status == HealthColors.YELLOW_TEMP:
             # health is yellow but temporarily (shards are relocating or initializing)
             self._charm.status.set(MaintenanceStatus(WaitingForBusyShards))
-        elif status == HealthColors.YELLOW:
-            # health is yellow permanently (some replica shards are unassigned)
-            self._charm.status.set(BlockedStatus(ClusterHealthYellowUpgrade))
 
     def apply_for_unit(self, status: str, host: Optional[str] = None):
         """Apply the health status on the current unit."""
