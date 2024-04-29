@@ -5,7 +5,7 @@ name: Release to latest/edge
 on:
   push:
     branches:
-      - main
+      - experimental-upgrade-release
 
 jobs:
   ci-tests:
@@ -40,7 +40,7 @@ jobs:
       - build
     uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v13.1.1
     with:
-      channel: 2/edge
+      channel: experimental/upgrade/edge
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
