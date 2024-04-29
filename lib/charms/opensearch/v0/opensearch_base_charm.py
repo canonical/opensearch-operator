@@ -941,52 +941,34 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             health = self.health.apply(wait_for_green_first=True, app=False)
             self.health.apply_for_unit_during_upgrade(health)
 
-            def cluster_is_healthy(health_) -> bool:
-                """Whether cluster is healthy & upgrade can proceed
-
-                If cluster is green, it is healthy
-                Otherwise, if only 1 unit has upgraded, cluster is yellow, and no shards are
-                initializing or relocating, cluster is healthy
-
-                "During a rolling upgrade, primary shards assigned to a node running the new
-                version cannot have their replicas assigned to a node with the old version. The new
-                version might have a different data format that is not understood by the old
-                version.
-
-                "If it is not possible to assign the replica shards to another node (there is only
-                one upgraded node in the cluster), the replica shards remain unassigned and status
-                stays `yellow`.
-
-                "In this case, you can proceed once there are no initializing or relocating shards
-                (check the `init` and `relo` columns).
-
-                "As soon as another node is upgraded, the replicas can be assigned and the status
-                will change to `green`."
-
-                from
-                https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#upgrading-elasticsearch
-                """
-                if health_ == HealthColors.GREEN:
-                    return True
-                # Units that are on an upgraded version
-                # (It is not sufficient to check if this unit is first to upgrade. For example, in
-                # a 3 unit deployment, units 2 and 1 were upgraded. Then, the user does
-                # `juju refresh` to rollback. Units 0 and 2 are on version A and unit 1 is on
-                # version B. The cluster health could be yellow & we should proceed with rollback.)
-                upgraded_units = [
-                    unit
-                    for unit in self._upgrade._sorted_units
-                    if self._upgrade._unit_workload_container_versions.get(unit.name)
-                    != self._upgrade._app_workload_container_version
-                ]
-                if len(upgraded_units) > 1:
-                    # More than 1 unit is upgraded
-                    return False
-                # If `health_ == HealthColors.YELLOW`, no shards are initializing or relocating
-                # (otherwise `health_` would be `HealthColors.YELLOW_TEMP`)
-                return health_ == HealthColors.YELLOW
-
-            if not cluster_is_healthy(health):
+            # Cluster is considered healthy if green or yellow
+            # TODO future improvement: try to narrow scope to just green or green + yellow in
+            # specific cases
+            # https://github.com/canonical/opensearch-operator/issues/268
+            # See https://chat.canonical.com/canonical/pl/s5j64ekxwi8epq53kzhd8fhrco and
+            # https://chat.canonical.com/canonical/pl/zaizx3bu3j8ftfcw67qozw9dbo
+            # For now, we need to allow yellow because
+            # "During a rolling upgrade, primary shards assigned to a node running the new
+            # version cannot have their replicas assigned to a node with the old version. The new
+            # version might have a different data format that is not understood by the old
+            # version.
+            #
+            # "If it is not possible to assign the replica shards to another node (there is only
+            # one upgraded node in the cluster), the replica shards remain unassigned and status
+            # stays `yellow`.
+            #
+            # "In this case, you can proceed once there are no initializing or relocating shards
+            # (check the `init` and `relo` columns).
+            #
+            # "As soon as another node is upgraded, the replicas can be assigned and the status
+            # will change to `green`."
+            #
+            # from
+            # https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#upgrading-elasticsearch
+            #
+            # If `health_ == HealthColors.YELLOW`, no shards are initializing or relocating
+            # (otherwise `health_` would be `HealthColors.YELLOW_TEMP`)
+            if health not in (HealthColors.GREEN, HealthColors.YELLOW):
                 # TODO upgrade: log
                 event.defer()
                 return
