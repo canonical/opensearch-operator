@@ -255,7 +255,7 @@ class S3CredentialRequiresEvents(ObjectEvents):
 
 
 class PeerClusterDataS3Requirer(S3Requirer):
-    """Reimplements some of the key methods in S3Requirer for non-orchestrated clusters.
+    """Reimplements some of the key methods in S3Requirer for non-orchestrator clusters.
 
     This class loads the information from peer-cluster relations instead of s3-relation and
     replaces _load_relation_data to read from a particular key within the peer-relation instead
