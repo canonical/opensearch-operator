@@ -18,6 +18,10 @@ import typing
 import ops
 import poetry.core.constraints.version as poetry_version
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.helper_cluster import ClusterTopology
+from charms.opensearch.v0.opensearch_health import HealthColors
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
+
 
 import status_exception
 
@@ -253,16 +257,38 @@ class Upgrade(abc.ABC):
 
         Can run on leader or non-leader unit
 
+        This method runs the environment independent checks, such as API checks.
+
         Raises:
             PrecheckFailed: App is not ready to upgrade
-
-        TODO Kubernetes: Run (some) checks after `juju refresh` (in case user forgets to run
-        pre-upgrade-check action). Note: 1 unit will upgrade before we can run checks (checks may
-        need to be modified).
-        See https://chat.canonical.com/canonical/pl/cmf6uhm1rp8b7k8gkjkdsj4mya
         """
         logger.debug("Running pre-upgrade checks")
-        # TODO: implement checks
-        # e.g.
-        # if health != green:
-        #     raise PrecheckFailed("Cluster is not healthy")
+        cause = None
+        resolution = None
+
+        try:
+            online_nodes = ClusterTopology.nodes(self.charm.opensearch, True, self.charm.alt_hosts)
+            if self.charm.health.apply() != HealthColors.GREEN:
+                cause=f"Cluster not healthy: expected 'green', but '{self.health.apply()}' found instead",
+                resolution="Ensure cluster is healthy before upgrading",
+
+            if len(online_nodes) < self.charm.app.planned_units():
+                cause="Not all units are online",
+                resolution="Ensure all units are online in the cluster",
+
+            if self.charm.check_if_starting():
+                cause="Cluster is starting",
+                resolution="Ensure cluster has finished its (re)start cycle before proceeding",
+
+            if not self.charm.backup.is_idle():
+                cause="Backup is in progress",
+                resolution="Ensure backup is completed before upgrading",
+
+        except OpenSearchHttpError:
+            cause="Cluster is unreachable",
+            resolution="Fix the current unit before upgrading",
+        if cause:
+            message = f"Pre-upgrade check failed. Cannot upgrade.\ncause={cause}"
+            if resolution:
+                message += f"\nresolution={resolution}"
+            raise PrecheckFailed(message)
