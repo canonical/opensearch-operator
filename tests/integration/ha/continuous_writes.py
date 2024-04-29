@@ -213,7 +213,7 @@ class ContinuousWrites:
     ) -> None:
         """Continuous writing."""
         proc_logger = log_to_stderr()
-        run_logger.setLevel(logging.INFO)
+        proc_logger.setLevel(logging.INFO)
 
         def _client(_data) -> OpenSearch:
             return opensearch_client(
@@ -222,7 +222,7 @@ class ContinuousWrites:
 
         write_value = starting_number
 
-        run_logger.info(f"Starting continuous writes from {write_value} with is_bulk={is_bulk}...")
+        proc_logger.info(f"Starting continuous writes from {write_value} with is_bulk={is_bulk}...")
 
         data = data_queue.get(True)
         client = _client(data)
@@ -242,7 +242,7 @@ class ContinuousWrites:
                 # todo: remove when we get bigger runners (to reduce data transfer time)
                 time.sleep(0.75)
             except BulkIndexError:
-                run_logger.info(f"Bulk failed for {write_value}")
+                proc_logger.info(f"Bulk failed for {write_value}")
                 continue
             except (TransportError, ConnectionRefusedError):
                 client.close()
@@ -251,7 +251,7 @@ class ContinuousWrites:
                 except (TransportError, ConnectionRefusedError):
                     pass
 
-                run_logger.info(f"Transport or Conn Refused error for {write_value}")
+                proc_logger.info(f"Transport or Conn Refused error for {write_value}")
                 continue
             finally:
                 # process termination requested
