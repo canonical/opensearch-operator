@@ -17,15 +17,15 @@ import typing
 
 import ops
 import poetry.core.constraints.version as poetry_version
-from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.helper_cluster import ClusterTopology
-from charms.opensearch.v0.opensearch_health import HealthColors
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
-
+from charms.opensearch.v0.opensearch_health import HealthColors
 
 import status_exception
 
 logger = logging.getLogger(__name__)
+
 
 PEER_RELATION_ENDPOINT_NAME = "upgrade-version-a"
 PRECHECK_ACTION_NAME = "pre-upgrade-check"
@@ -267,26 +267,31 @@ class Upgrade(abc.ABC):
         resolution = None
 
         try:
-            online_nodes = ClusterTopology.nodes(self.charm.opensearch, True, self.charm.alt_hosts)
             if self.charm.health.apply() != HealthColors.GREEN:
-                cause=f"Cluster not healthy: expected 'green', but '{self.health.apply()}' found instead",
-                resolution="Ensure cluster is healthy before upgrading",
+                cause = f"Cluster not healthy: expected 'green', but '{self.health.apply()}' found instead"
+                resolution = "Ensure cluster is healthy before upgrading"
 
-            if len(online_nodes) < self.charm.app.planned_units():
-                cause="Not all units are online",
-                resolution="Ensure all units are online in the cluster",
+            online_nodes = ClusterTopology.nodes(
+                self.charm.opensearch,
+                True,
+                hosts=self.charm.alt_hosts,
+                only_this_juju_app=self.charm.app.name,
+            )
+            if len(online_nodes) != self.charm.app.planned_units():
+                cause = "Not all units are online"
+                resolution = "Ensure all units are online in the cluster"
 
             if self.charm.check_if_starting():
-                cause="Cluster is starting",
-                resolution="Ensure cluster has finished its (re)start cycle before proceeding",
+                cause = "Cluster is starting"
+                resolution = "Ensure cluster has finished its (re)start cycle before proceeding"
 
             if not self.charm.backup.is_idle():
-                cause="Backup is in progress",
-                resolution="Ensure backup is completed before upgrading",
+                cause = "Backup is in progress"
+                resolution = "Ensure backup is completed before upgrading"
 
         except OpenSearchHttpError:
-            cause="Cluster is unreachable",
-            resolution="Fix the current unit before upgrading",
+            cause = "Cluster is unreachable"
+            resolution = "Fix the current unit before upgrading"
         if cause:
             message = f"Pre-upgrade check failed. Cannot upgrade.\ncause={cause}"
             if resolution:

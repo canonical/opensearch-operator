@@ -165,7 +165,7 @@ class ClusterTopology:
         For small deployments, behavior is the same independent of
         the value of only_this_juju_app. But for large deployments,
         it will toggle between grabbing all the nodes or just the nodes
-        that belong to the same juju application.        
+        that belong to the same juju application.
         """
         host: Optional[str] = None  # defaults to current unit ip
         alt_hosts: Optional[List[str]] = hosts
