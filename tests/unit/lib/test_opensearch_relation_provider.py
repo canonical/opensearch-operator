@@ -252,14 +252,16 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charm.OpenSearchOperatorCharm._purge_users")
     def test_update_endpoints(self, _, __, _nodes, _is_node_up, _set_endpoints):
         self.harness.set_leader(True)
-        node = MagicMock()
-        node.ip = "4.4.4.4"
-        _nodes.return_value = [node]
+        node1 = MagicMock()
+        node1.ip = "4.4.4.4"
+        node2 = MagicMock()
+        node2.ip = "5.5.5.5"
+        _nodes.return_value = [node2, node1]  # out of order
         relation = MagicMock()
         relation.id = 1
         endpoints = [f"{node.ip}:{self.charm.opensearch.port}" for node in _nodes.return_value]
         self.opensearch_provider.update_endpoints(relation)
-        _set_endpoints.assert_called_with(relation.id, ",".join(endpoints))
+        _set_endpoints.assert_called_with(relation.id, ",".join(sorted(endpoints)))
 
     def add_dashboard_relation(self):
         opensearch_relation = self.harness.add_relation(

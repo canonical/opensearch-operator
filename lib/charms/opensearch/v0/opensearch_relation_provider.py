@@ -59,7 +59,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 
@@ -418,7 +418,7 @@ class OpenSearchProvider(Object):
             ips = set()
 
         port = self.opensearch.port
-        endpoints = ",".join([f"{ip}:{port}" for ip in ips - omit_endpoints])
+        endpoints = ",".join(sorted([f"{ip}:{port}" for ip in ips - omit_endpoints]))
         databag_endpoints = relation.data[relation.app].get("endpoints")
 
         if endpoints != databag_endpoints:
