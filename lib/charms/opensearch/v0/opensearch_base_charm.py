@@ -917,9 +917,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # TODO upgrade: catch http errors
         self.opensearch.request(
             "PUT",
-            "/_all/_settings",
+            "/_cluster/settings",
             # Reset to default value
-            payload={"settings": {"index.unassigned.node_left.delayed_timeout": None}},
+            payload={"persistent": {"cluster.routing.allocation.enable": None}},
         )
         self.opensearch.request("POST", "/_ml/set_upgrade_mode?enabled=false")
 
@@ -1035,25 +1035,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         logger.debug("Acquired lock for upgrade")
 
         # TODO upgrade: catch http errors
-
-        # TODO upgrade: does this affect user set values?
-        # TODO look at `preserve_existing`
-        # https://www.elastic.co/guide/en/elasticsearch/reference/8.13/indices-update-settings.html
-
-        # Increase timeout before shard allocation replicates shards on offline (e.g. upgrading)
-        # node to other nodes
-        # Used instead of disabling shard allocation entirely
-        # (Less dangerous if this unit fails to upgrade & reset the timeout—it's safer to have
-        # increased timeout than shard allocation disabled entirely, especially for long-running
-        # upgrades)
-        # Replaces "Disable shard allocation" step from
-        # https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#rolling-upgrades
         self.opensearch.request(
             "PUT",
-            "/_all/_settings",
-            payload={"settings": {"index.unassigned.node_left.delayed_timeout": "5m"}},
+            "/_cluster/settings",
+            payload={"persistent": {"cluster.routing.allocation.enable": "primaries"}},
         )
-
         self.opensearch.request("POST", "/_flush", retries=3)
         self.opensearch.request("POST", "/_ml/set_upgrade_mode?enabled=true")
 
