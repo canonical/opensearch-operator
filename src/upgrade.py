@@ -70,6 +70,7 @@ class Upgrade(abc.ABC):
         if not relations:
             raise PeerRelationNotReady
         assert len(relations) == 1
+        self._charm = charm_
         self._peer_relation = relations[0]
         self._unit: ops.Unit = charm_.unit
         self._unit_databag = self._peer_relation.data[self._unit]
@@ -267,25 +268,25 @@ class Upgrade(abc.ABC):
         resolution = None
 
         try:
-            if self.charm.health.apply() != HealthColors.GREEN:
+            if self._charm.health.apply() != HealthColors.GREEN:
                 cause = f"Cluster not healthy: expected 'green', but '{self.health.apply()}' found instead"
                 resolution = "Ensure cluster is healthy before upgrading"
 
             online_nodes = ClusterTopology.nodes(
-                self.charm.opensearch,
+                self._charm.opensearch,
                 True,
-                hosts=self.charm.alt_hosts,
-                only_this_juju_app=self.charm.app.name,
+                hosts=self._charm.alt_hosts,
+                only_this_juju_app=self._charm.app.name,
             )
-            if len(online_nodes) != self.charm.app.planned_units():
+            if len(online_nodes) != self._charm.app.planned_units():
                 cause = "Not all units are online"
                 resolution = "Ensure all units are online in the cluster"
 
-            if self.charm.check_if_starting():
+            if self._charm.check_if_starting():
                 cause = "Cluster is starting"
                 resolution = "Ensure cluster has finished its (re)start cycle before proceeding"
 
-            if not self.charm.backup.is_idle():
+            if not self._charm.backup.is_idle():
                 cause = "Backup is in progress"
                 resolution = "Ensure backup is completed before upgrading"
 
