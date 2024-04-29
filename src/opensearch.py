@@ -58,7 +58,7 @@ class OpenSearchSnap(OpenSearchDistribution):
     )
     @override
     def install(self):
-        """Install opensearch from the snapcraft store."""
+        """Install/upgrade opensearch from the snapcraft store."""
         try:
             self._opensearch.ensure(snap.SnapState.Latest, revision=OPENSEARCH_SNAP_REVISION)
             self._opensearch.connect("process-control")
@@ -67,7 +67,7 @@ class OpenSearchSnap(OpenSearchDistribution):
                 self._opensearch.hold()
 
         except SnapError as e:
-            logger.error(f"Failed to install opensearch. \n{e}")
+            logger.error(f"Failed to install/upgrade opensearch. \n{e}")
             raise OpenSearchInstallError()
 
     @override

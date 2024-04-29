@@ -46,6 +46,7 @@ class OpenSearchBaseCharm(CharmBase):
 
 import json
 import logging
+import typing
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -73,6 +74,9 @@ from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+
+if typing.TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 # The unique Charmhub library identifier, never change it
 LIBID = "d301deee4d2c4c1b8e30cd3df8034be2"
@@ -152,12 +156,13 @@ class BackupServiceState(BaseStrEnum):
 class OpenSearchBackup(Object):
     """Implements backup relation and API management."""
 
-    def __init__(self, charm: Object):
+    def __init__(self, charm: "OpenSearchBaseCharm"):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, S3_RELATION)
         self.charm = charm
         # s3 relation handles the config options for s3 backups
         self.s3_client = S3Requirer(self.charm, S3_RELATION)
+        self.framework.observe(self.charm.on[S3_RELATION].relation_created, self._on_s3_created)
         self.framework.observe(self.charm.on[S3_RELATION].relation_broken, self._on_s3_broken)
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credentials_changed
@@ -329,6 +334,9 @@ class OpenSearchBackup(Object):
 
     def _on_restore_backup_action(self, event: ActionEvent) -> None:  # noqa #C901
         """Restores a backup to the current cluster."""
+        if self.charm.upgrade_in_progress:
+            event.fail("Restore not supported while upgrade in-progress")
+            return
         if not self._can_unit_perform_backup(event):
             event.fail("Failed: backup service is not configured yet")
             return
@@ -393,6 +401,9 @@ class OpenSearchBackup(Object):
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:  # noqa: C901
         """Creates a backup from the current cluster."""
+        if self.charm.upgrade_in_progress:
+            event.fail("Backup not supported while upgrade in-progress")
+            return
         if not self._can_unit_perform_backup(event):
             event.fail("Failed: backup service is not configured or busy")
             return
@@ -565,6 +576,12 @@ class OpenSearchBackup(Object):
         self.charm.status.clear(BackupSetupFailed, app=True)
         self.charm.status.clear(BackupConfigureStart)
 
+    def _on_s3_created(self, _):
+        if self.charm.upgrade_in_progress:
+            logger.warning(
+                "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
+
     def _on_s3_broken(self, event: EventBase) -> None:  # noqa: C901
         """Processes the broken s3 relation.
 
@@ -573,6 +590,11 @@ class OpenSearchBackup(Object):
            and defer this event.
         2) If leader, run API calls to signal disable is needed
         """
+        if self.charm.upgrade_in_progress:
+            logger.warning(
+                "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
+
         if (
             self.charm.model.get_relation(S3_RELATION)
             and self.charm.model.get_relation(S3_RELATION).units

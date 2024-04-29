@@ -2,11 +2,13 @@
 # See LICENSE file for licensing details.
 
 """Base class for the OpenSearch Operators."""
+import abc
 import logging
 import random
+import typing
 from abc import abstractmethod
 from datetime import datetime
-from typing import Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
@@ -109,6 +111,9 @@ from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
+import lifecycle
+import upgrade
+
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
 
@@ -133,6 +138,17 @@ class _StartOpenSearch(EventBase):
     This event will be deferred until OpenSearch starts.
     """
 
+    def __init__(self, handle, *, ignore_lock=False):
+        super().__init__(handle)
+        # Only used for force upgrade
+        self.ignore_lock = ignore_lock
+
+    def snapshot(self) -> Dict[str, Any]:
+        return {"ignore_lock": self.ignore_lock}
+
+    def restore(self, snapshot: Dict[str, Any]):
+        self.ignore_lock = snapshot["ignore_lock"]
+
 
 class _RestartOpenSearch(EventBase):
     """Attempt to acquire lock & restart OpenSearch.
@@ -141,14 +157,25 @@ class _RestartOpenSearch(EventBase):
     """
 
 
-class OpenSearchBaseCharm(CharmBase):
+class _UpgradeOpenSearch(_StartOpenSearch):
+    """Attempt to acquire lock & upgrade OpenSearch.
+
+    This event will be deferred until OpenSearch stops. Then, the snap will be upgraded and
+    `_StartOpenSearch` will be emitted.
+    """
+
+
+class OpenSearchBaseCharm(CharmBase, abc.ABC):
     """Base class for OpenSearch charms."""
 
     _start_opensearch_event = EventSource(_StartOpenSearch)
     _restart_opensearch_event = EventSource(_RestartOpenSearch)
+    _upgrade_opensearch_event = EventSource(_UpgradeOpenSearch)
 
     def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
         super().__init__(*args)
+        # Instantiate before registering other event observers
+        self._unit_lifecycle = lifecycle.Unit(self, subordinated_relation_endpoint_names=None)
 
         if distro is None:
             raise ValueError("The type of the opensearch distro must be specified.")
@@ -185,6 +212,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.framework.observe(self._start_opensearch_event, self._start_opensearch)
         self.framework.observe(self._restart_opensearch_event, self._restart_opensearch)
+        self.framework.observe(self._upgrade_opensearch_event, self._upgrade_opensearch)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
@@ -209,6 +237,22 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
+
+    @property
+    @abc.abstractmethod
+    def _upgrade(self) -> typing.Optional[upgrade.Upgrade]:
+        pass
+
+    @property
+    def upgrade_in_progress(self):
+        """Whether upgrade is in progress"""
+        if not self._upgrade:
+            return False
+        return self._upgrade.in_progress
+
+    @abc.abstractmethod
+    def _reconcile_upgrade(self, _=None):
+        pass
 
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
@@ -325,6 +369,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_peer_relation_created(self, event: RelationCreatedEvent):
         """Event received by the new node joining the cluster."""
+        if self.upgrade_in_progress:
+            logger.warning(
+                "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
         # In the case of the first units before TLS is initialized
@@ -344,6 +392,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units when a new node joins the cluster."""
+        if self.upgrade_in_progress:
+            logger.warning(
+                "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         if not self.unit.is_leader():
             return
 
@@ -413,6 +465,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
+        if self.upgrade_in_progress:
+            logger.warning(
+                "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         if not (self.unit.is_leader() and self.opensearch.is_node_up()):
             return
 
@@ -429,6 +485,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
+        if self.upgrade_in_progress:
+            logger.warning(
+                "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         # acquire lock to ensure only 1 unit removed at a time
         if not self.node_lock.acquired:
             # Raise uncaught exception to prevent Juju from removing unit
@@ -511,7 +571,10 @@ class OpenSearchBaseCharm(CharmBase):
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
-        self.user_manager.remove_users_and_roles()
+        if self.upgrade_in_progress:
+            logger.debug("Skipping `remove_users_and_roles()` because upgrade is in-progress")
+        else:
+            self.user_manager.remove_users_and_roles()
 
         # If relation not broken - leave
         if self.model.get_relation("certificates") is not None:
@@ -552,6 +615,12 @@ class OpenSearchBaseCharm(CharmBase):
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
             if self.plugin_manager.run():
+                if self.upgrade_in_progress:
+                    logger.warning(
+                        "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+                    )
+                    event.defer()
+                    return
                 self._restart_opensearch_event.emit()
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
@@ -570,6 +639,9 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
+        if self.upgrade_in_progress:
+            event.fail("Setting password not supported while upgrade in-progress")
+            return
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
             event.fail("The action can be run only on the leader unit of the main cluster.")
             return
@@ -709,6 +781,12 @@ class OpenSearchBaseCharm(CharmBase):
         )
         if not cluster_changed_to_main_cm:
             return
+        if self.upgrade_in_progress:
+            logger.warning(
+                "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
+            event.defer()
+            return
 
         # we check if we need to create the admin user
         if not self.is_admin_user_configured():
@@ -725,9 +803,14 @@ class OpenSearchBaseCharm(CharmBase):
     def _start_opensearch(self, event: _StartOpenSearch) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if not self.node_lock.acquired:
-            logger.debug("Lock to start opensearch not acquired. Will retry next event")
-            event.defer()
-            return
+            # (Attempt to acquire lock even if `event.ignore_lock`)
+            if event.ignore_lock:
+                # Only used for force upgrades
+                logger.debug("Starting without lock")
+            else:
+                logger.debug("Lock to start opensearch not acquired. Will retry next event")
+                event.defer()
+                return
         self.peers_data.delete(Scope.UNIT, "started")
         if self.opensearch.is_started():
             try:
@@ -810,6 +893,9 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.node_lock.release()
 
+        self._upgrade.unit_state = upgrade.UnitState.HEALTHY
+        self._reconcile_upgrade()
+
         self.peers_data.put(Scope.UNIT, "started", True)
 
         # apply post_start fixes to resolve start related upstream bugs
@@ -866,6 +952,35 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         self._start_opensearch_event.emit()
+
+    def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:
+        """Upgrade OpenSearch."""
+        logger.debug("Attempting to acquire lock for upgrade")
+        if not self.node_lock.acquired:
+            # (Attempt to acquire lock even if `event.ignore_lock`)
+            if event.ignore_lock:
+                logger.debug("Upgrading without lock")
+            else:
+                logger.debug("Lock to upgrade opensearch not acquired. Will retry next event")
+                event.defer()
+                return
+        logger.debug("Acquired lock for upgrade")
+
+        logger.debug("Stopping OpenSearch before upgrade")
+        try:
+            self._stop_opensearch()
+        except OpenSearchStopError as e:
+            logger.exception(e)
+            self.node_lock.release()
+            event.defer()
+            self.status.set(WaitingStatus(ServiceIsStopping))
+            return
+        logger.debug("Stopped OpenSearch before upgrade")
+
+        self._upgrade.upgrade_unit(snap=self.opensearch)
+
+        logger.debug("Starting OpenSearch after upgrade")
+        self._start_opensearch_event.emit(ignore_lock=event.ignore_lock)
 
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""
