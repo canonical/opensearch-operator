@@ -897,8 +897,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.opensearch.is_node_up():
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
-        # TODO upgrade: catch http errors
-        for node in self._get_nodes(use_localhost=True):
+        try:
+            nodes = self._get_nodes(use_localhost=True)
+        except OpenSearchHttpError:
+            logger.exception("Failed to get online nodes")
+            event.defer()
+            return
+        for node in nodes:
             if node.name == self.unit_name:
                 break
         else:
@@ -914,14 +919,19 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.node_lock.release()
 
-        # TODO upgrade: catch http errors
-        self.opensearch.request(
-            "PUT",
-            "/_cluster/settings",
-            # Reset to default value
-            payload={"persistent": {"cluster.routing.allocation.enable": None}},
-        )
-        self.opensearch.request("POST", "/_ml/set_upgrade_mode?enabled=false")
+        if event.after_upgrade:
+            try:
+                self.opensearch.request(
+                    "PUT",
+                    "/_cluster/settings",
+                    # Reset to default value
+                    payload={"persistent": {"cluster.routing.allocation.enable": None}},
+                )
+                self.opensearch.request("POST", "/_ml/set_upgrade_mode?enabled=false")
+            except OpenSearchHttpError:
+                logger.exception("Failed to re-enable allocation or ML tasks after upgrade")
+                event.defer()
+                return
 
         self.peers_data.put(Scope.UNIT, "started", True)
 
@@ -1033,14 +1043,28 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
         logger.debug("Acquired lock for upgrade")
 
-        # TODO upgrade: catch http errors
-        self.opensearch.request(
-            "PUT",
-            "/_cluster/settings",
-            payload={"persistent": {"cluster.routing.allocation.enable": "primaries"}},
-        )
-        self.opensearch.request("POST", "/_flush", retries=3)
-        self.opensearch.request("POST", "/_ml/set_upgrade_mode?enabled=true")
+        try:
+            self.opensearch.request(
+                "PUT",
+                "/_cluster/settings",
+                payload={"persistent": {"cluster.routing.allocation.enable": "primaries"}},
+            )
+        except OpenSearchHttpError:
+            logger.exception("Failed to disable shard allocation before upgrade")
+            self.node_lock.release()
+            event.defer()
+            return
+        try:
+            self.opensearch.request("POST", "/_flush", retries=3)
+        except OpenSearchHttpError as e:
+            logger.debug("Failed to flush before upgrade", exc_info=e)
+        try:
+            self.opensearch.request("POST", "/_ml/set_upgrade_mode?enabled=true")
+        except OpenSearchHttpError:
+            logger.exception("Failed to enable ML upgrade mode before upgrade")
+            self.node_lock.release()
+            event.defer()
+            return
 
         logger.debug("Stopping OpenSearch before upgrade")
         try:
