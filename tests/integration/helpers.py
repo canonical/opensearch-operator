@@ -106,8 +106,8 @@ async def run_action(
     return SimpleNamespace(status=action.status or "completed", response=action.results)
 
 
-async def get_admin_secrets(
-    ops_test: OpsTest, unit_id: Optional[int] = None, app: str = APP_NAME
+async def get_secrets(
+    ops_test: OpsTest, unit_id: Optional[int] = None, username: str = "admin", app: str = APP_NAME
 ) -> Dict[str, str]:
     """Use the charm action to retrieve the admin password and chain.
 
@@ -115,7 +115,9 @@ async def get_admin_secrets(
         Dict with the admin and cert chain stored on the peer relation databag.
     """
     # can retrieve from any unit running unit, so we pick the first
-    return (await run_action(ops_test, unit_id, "get-password", app=app)).response
+    return (
+        await run_action(ops_test, unit_id, "get-password", {"username": username}, app=app)
+    ).response
 
 
 def get_application_unit_names(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
@@ -303,7 +305,7 @@ async def http_request(
     Returns:
         A json object.
     """
-    admin_secrets = await get_admin_secrets(ops_test, app=app)
+    admin_secrets = await get_secrets(ops_test, app=app)
 
     # fetch the cluster info from the endpoint of this unit
     with requests.Session() as session, tempfile.NamedTemporaryFile(mode="w+") as chain:
@@ -507,3 +509,16 @@ async def get_secret_by_label(ops_test, label: str) -> Dict[str, str]:
 
         if label == secret_data[secret_id].get("label"):
             return secret_data[secret_id]["content"]["Data"]
+
+
+def get_file_contents(ops_test: OpsTest, unit: str, filename: str) -> str:
+    output = subprocess.check_output(
+        ["bash", "-c", f"JUJU_MODEL={ops_test.model.name} juju ssh {unit} sudo cat {filename}"]
+    )
+    return output
+
+
+def get_conf_as_dict(ops_test: OpsTest, unit: str, filename: str) -> dict[str, str]:
+    """Convert a yml config file to a dict."""
+    config = get_file_contents(ops_test, unit, filename)
+    return yaml.safe_load(str(config.decode("utf-8")).replace("ll", ""))

@@ -57,8 +57,8 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
         PatchedUnit(name="opensearch/4"),
     ]
 
-    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
-    def setUp(self, _put_admin_user) -> None:
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
+    def setUp(self, _) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()

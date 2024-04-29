@@ -93,8 +93,12 @@ COSPort = "9200"
 
 
 # Opensearch Users
-OpenSearchUsers = {"admin", "monitor"}
+OpenSearchSystemUsers = {"admin", "kibanaserver"}
+OpenSearchUsers = OpenSearchSystemUsers | {"monitor"}
 OpenSearchRoles = set()
+AdminUser = "admin"
+KibanaserverUser = "kibanaserver"
+KibanaserverRole = "kibana_server"
 
 # Opensearch Snap revision
 OPENSEARCH_SNAP_REVISION = 40

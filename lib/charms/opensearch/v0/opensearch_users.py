@@ -9,8 +9,15 @@ These functions wrap around some API calls used for user management.
 import logging
 from typing import Dict, List, Optional, Set
 
-from charms.opensearch.v0.constants_charm import ClientRelationName, OpenSearchUsers
-from charms.opensearch.v0.opensearch_distro import OpenSearchHttpError
+from charms.opensearch.v0.constants_charm import (
+    AdminUser,
+    ClientRelationName,
+    COSRole,
+    COSUser,
+    KibanaserverUser,
+    OpenSearchUsers,
+)
+from charms.opensearch.v0.opensearch_distro import OpenSearchError, OpenSearchHttpError
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +260,57 @@ class OpenSearchUserManager:
         )
         self._remove_lingering_users(relation_users)
         self._remove_lingering_roles(relation_users)
+
+    def update_user_password(self, username: str, hashed_pwd: str = None):
+        """Change user hashed password."""
+        resp = self.opensearch.request(
+            "PATCH",
+            f"/_plugins/_security/api/internalusers/{username}",
+            [{"op": "replace", "path": "/hash", "value": hashed_pwd}],
+        )
+        if resp.get("status") != "OK":
+            raise OpenSearchError(f"{resp}")
+
+    def put_internal_user(self, user: str, hashed_pwd: str):
+        """User creation for specific system users."""
+        if user not in OpenSearchUsers:
+            raise OpenSearchError(f"User {user} is not an internal user.")
+
+        if user == AdminUser:
+            # reserved: False, prevents this resource from being update-protected from:
+            # updates made on the dashboard or the rest api.
+            # we grant the admin user all opensearch access + security_rest_api_access
+            self.opensearch.config.put(
+                "opensearch-security/internal_users.yml",
+                "admin",
+                {
+                    "hash": hashed_pwd,
+                    "reserved": False,
+                    "backend_roles": [AdminUser],
+                    "opendistro_security_roles": [
+                        "security_rest_api_access",
+                        "all_access",
+                    ],
+                    "description": "Admin user",
+                },
+            )
+        elif user == KibanaserverUser:
+            self.opensearch.config.put(
+                "opensearch-security/internal_users.yml",
+                f"{KibanaserverUser}",
+                {
+                    "hash": hashed_pwd,
+                    "reserved": False,
+                    "description": "Kibanaserver user",
+                },
+            )
+        elif user == COSUser:
+            roles = [COSRole]
+            self.create_user(COSUser, roles, hashed_pwd)
+            self.patch_user(
+                COSUser,
+                [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
+            )
 
     def _remove_lingering_users(self, relation_users: Set[str]):
         app_users = relation_users | OpenSearchUsers

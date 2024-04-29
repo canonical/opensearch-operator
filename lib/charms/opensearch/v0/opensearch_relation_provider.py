@@ -28,6 +28,8 @@ from charms.data_platform_libs.v0.data_interfaces import (
 from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
     IndexCreationFailed,
+    KibanaserverRole,
+    KibanaserverUser,
     NewIndexRequested,
     PeerRelationName,
     UserCreationFailed,
@@ -141,6 +143,7 @@ class OpenSearchProvider(Object):
         self.app = self.charm.app
         self.opensearch = self.charm.opensearch
         self.user_manager = self.charm.user_manager
+        self.secrets = self.charm.secrets
 
         self.relation_name = ClientRelationName
         self.opensearch_provides = OpenSearchProvides(self.charm, relation_name=self.relation_name)
@@ -155,6 +158,20 @@ class OpenSearchProvider(Object):
         self.framework.observe(
             charm.on[self.relation_name].relation_broken, self._on_relation_broken
         )
+
+    @property
+    def dashboards_relations(self):
+        """Return the dashboard relations out of all."""
+        result = []
+        for relation in self.opensearch_provides.relations:
+            if (
+                roles := self.opensearch_provides.fetch_relation_field(
+                    relation.id, "extra-user-roles"
+                )
+            ) and KibanaserverRole in roles:
+                # if any(key.name == "opensearch-dashboards" for key in relation.data.keys()):
+                result.append(relation)
+        return result
 
     def _relation_username(self, relation: Relation) -> str:
         return f"{self.relation_name}_{relation.id}"
@@ -200,19 +217,25 @@ class OpenSearchProvider(Object):
                 event.defer()
                 return
 
-        username = self._relation_username(event.relation)
-        hashed_pwd, pwd = generate_hashed_password()
         extra_user_roles = event.extra_user_roles.lower() if event.extra_user_roles else "default"
-        try:
-            self.create_opensearch_users(username, hashed_pwd, event.index, extra_user_roles)
-        except OpenSearchUserMgmtError as err:
-            logger.error(err)
-            self.charm.status.set(
-                BlockedStatus(
-                    UserCreationFailed.format(rel_name=ClientRelationName, id=event.relation.id)
+        if extra_user_roles == KibanaserverRole:
+            username = KibanaserverUser
+            pwd = self.secrets.get(Scope.APP, self.secrets.password_key(username))
+        else:
+            username = self._relation_username(event.relation)
+            hashed_pwd, pwd = generate_hashed_password()
+            try:
+                self.create_opensearch_users(username, hashed_pwd, event.index, extra_user_roles)
+            except OpenSearchUserMgmtError as err:
+                logger.error(err)
+                self.charm.status.set(
+                    BlockedStatus(
+                        UserCreationFailed.format(
+                            rel_name=ClientRelationName, id=event.relation.id
+                        )
+                    )
                 )
-            )
-            return
+                return
 
         rel_id = event.relation.id
 
@@ -392,3 +415,9 @@ class OpenSearchProvider(Object):
 
         if endpoints != databag_endpoints:
             self.opensearch_provides.set_endpoints(relation.id, endpoints)
+
+    def update_dashboards_password(self):
+        """Update each Opensearch Dashboards relation with the latest kibanaserver."""
+        pwd = self.secrets.get(Scope.APP, self.secrets.password_key(KibanaserverUser))
+        for relation in self.dashboards_relations:
+            self.opensearch_provides.set_credentials(relation.id, KibanaserverUser, pwd)

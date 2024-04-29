@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
+    AdminUser,
     AdminUserInitProgress,
     AdminUserNotConfigured,
     CertsExpirationError,
@@ -18,8 +19,9 @@ from charms.opensearch.v0.constants_charm import (
     ClusterHealthUnknown,
     COSPort,
     COSRelationName,
-    COSRole,
     COSUser,
+    OpenSearchSystemUsers,
+    OpenSearchUsers,
     PeerRelationName,
     PluginConfigChangeError,
     PluginConfigCheck,
@@ -34,7 +36,6 @@ from charms.opensearch.v0.constants_charm import (
     TLSRelationMissing,
     WaitingToStart,
 )
-from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
@@ -239,8 +240,10 @@ class OpenSearchBaseCharm(CharmBase):
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             self.status.set(MaintenanceStatus(AdminUserInitProgress))
 
-        # this is in case we're coming from 0 to N units, we don't want to use the rest api
-        self._put_admin_user()
+        # Restore purged system users in local `internal_users.yml`
+        # with corresponding credentials
+        for user in OpenSearchSystemUsers:
+            self._put_or_update_internal_user_leader(user)
 
         self.status.clear(AdminUserInitProgress)
 
@@ -279,6 +282,13 @@ class OpenSearchBaseCharm(CharmBase):
         self.status.clear(AdminUserNotConfigured)
         self.status.clear(TLSNotFullyConfigured)
         self.status.clear(TLSRelationMissing)
+
+        # Since system users are initialized, we should take them to local internal_users.yml
+        # Leader should be done already
+        if not self.unit.is_leader():
+            self._purge_users()
+            for user in OpenSearchSystemUsers:
+                self._put_or_update_internal_user_unit(user)
 
         self.peers_data.put(Scope.UNIT, "tls_configured", True)
 
@@ -569,15 +579,14 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         user_name = event.params.get("username")
-        if user_name not in ["admin", COSUser]:
-            event.fail(f"Only the 'admin' and {COSUser} username is allowed for this action.")
+        if user_name not in OpenSearchUsers:
+            event.fail(f"Only the {OpenSearchUsers} usernames are allowed for this action.")
             return
 
         password = event.params.get("password") or generate_password()
         try:
+            self._put_or_update_internal_user_leader(user_name, password)
             label = self.secrets.password_key(user_name)
-            self._put_admin_user(password)
-            password = self.secrets.get(Scope.APP, label)
             event.set_results({label: password})
         except OpenSearchError as e:
             event.fail(f"Failed changing the password: {e}")
@@ -585,8 +594,8 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
         user_name = event.params.get("username")
-        if user_name not in ["admin", COSUser]:
-            event.fail(f"Only the 'admin' and {COSUser} username is allowed for this action.")
+        if user_name not in OpenSearchUsers:
+            event.fail(f"Only the {OpenSearchUsers} username is allowed for this action.")
             return
 
         if not self.is_admin_user_configured():
@@ -811,7 +820,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         if self.unit.is_leader():
             # Creating the monitoring user
-            self._put_monitoring_user()
+            self._put_or_update_internal_user_leader(COSUser)
 
         # clear waiting to start status
         self.status.clear(WaitingToStart)
@@ -955,60 +964,44 @@ class OpenSearchBaseCharm(CharmBase):
             if user != "_meta":
                 self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
 
-    def _put_admin_user(self, pwd: Optional[str] = None):
-        """Change password of Admin user."""
-        # update
-        if pwd is not None:
-            hashed_pwd, pwd = generate_hashed_password(pwd)
-            resp = self.opensearch.request(
-                "PATCH",
-                "/_plugins/_security/api/internalusers/admin",
-                [{"op": "replace", "path": "/hash", "value": hashed_pwd}],
-            )
-            if resp.get("status") != "OK":
-                raise OpenSearchError(f"{resp}")
-        else:
-            hashed_pwd = self.secrets.get(Scope.APP, ADMIN_PW_HASH)
-            if not hashed_pwd:
-                hashed_pwd, pwd = generate_hashed_password()
-
-            # reserved: False, prevents this resource from being update-protected from:
-            # updates made on the dashboard or the rest api.
-            # we grant the admin user all opensearch access + security_rest_api_access
-            self.opensearch.config.put(
-                "opensearch-security/internal_users.yml",
-                "admin",
-                {
-                    "hash": hashed_pwd,
-                    "reserved": False,
-                    "backend_roles": ["admin"],
-                    "opendistro_security_roles": [
-                        "security_rest_api_access",
-                        "all_access",
-                    ],
-                    "description": "Admin user",
-                },
-            )
-
-        self.secrets.put(Scope.APP, ADMIN_PW, pwd)
-        self.secrets.put(Scope.APP, ADMIN_PW_HASH, hashed_pwd)
-        self.peers_data.put(Scope.APP, "admin_user_initialized", True)
-
-    def _put_monitoring_user(self):
-        """Create the monitoring user, with the right security role."""
-        users = self.user_manager.get_users()
-
-        if users and COSUser in users:
+    def _put_or_update_internal_user_leader(self, user: str, pwd: Optional[str] = None) -> None:
+        """Create system user or update it with a new password."""
+        # Leader is to set new password and hash, others populate existing hash locally
+        if not self.unit.is_leader():
+            logger.error("Credential change can be only performed by the leader unit.")
             return
 
-        hashed_pwd, pwd = generate_hashed_password()
-        roles = [COSRole]
-        self.user_manager.create_user(COSUser, roles, hashed_pwd)
-        self.user_manager.patch_user(
-            COSUser,
-            [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
-        )
-        self.secrets.put(Scope.APP, self.secrets.password_key(COSUser), pwd)
+        hashed_pwd, pwd = generate_hashed_password(pwd)
+
+        # Updating security index
+        # We need to do this for all credential changes
+        if secret := self.secrets.get(Scope.APP, self.secrets.password_key(user)):
+            self.user_manager.update_user_password(user, hashed_pwd)
+
+        # In case it's a new user, OR it's a system user (that has an entry in internal_users.yml)
+        # we either need to initialize or update (local) credentials as well
+        if not secret or user in OpenSearchSystemUsers:
+            self.user_manager.put_internal_user(user, hashed_pwd)
+
+        # Secrets need to be maintained
+        # For System Users we also save the hash key
+        # (so all units can fetch it for local users (internal_users.yml) updates.
+        self.secrets.put(Scope.APP, self.secrets.password_key(user), pwd)
+
+        if user in OpenSearchSystemUsers:
+            self.secrets.put(Scope.APP, self.secrets.hash_key(user), hashed_pwd)
+
+        if user == AdminUser:
+            self.peers_data.put(Scope.APP, "admin_user_initialized", True)
+
+    def _put_or_update_internal_user_unit(self, user: str, pwd: Optional[str] = None) -> None:
+        """Create system user or update it with a new password."""
+        # Leader is to set new password and hash, others populate existing hash locally
+        hashed_pwd = self.secrets.get(Scope.APP, self.secrets.hash_key(user))
+
+        # System users have to be saved locally in internal_users.yml
+        if user in OpenSearchSystemUsers:
+            self.user_manager.put_internal_user(user, hashed_pwd)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.

@@ -14,7 +14,8 @@ information for the Opensearch charm.
 import logging
 from typing import Dict, Optional, Union
 
-from charms.opensearch.v0.constants_secrets import PW_POSTFIX
+from charms.opensearch.v0.constants_charm import KibanaserverUser, OpenSearchSystemUsers
+from charms.opensearch.v0.constants_secrets import HASH_POSTFIX, PW_POSTFIX
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchSecretInsertionError
 from charms.opensearch.v0.opensearch_internal_data import (
@@ -69,17 +70,56 @@ class OpenSearchSecrets(Object, RelationDataStore):
             logging.info(f"Label {event.secret.label} was meaningless for us, returning")
             return
 
+        # We need to take action on 3 secret types
+        # 1. TLS credentials change
+        #     - Action: update credentials files
+        # 2. 'kibanaserver' user credentials change
+        #     - Action: Dashboard relation (secret) needs to be updated
+        # 3. System user hash secret update
+        #     - Action: Every unit needs to update local internal_users.yml
+        #     - Note: Leader is updated already
+
+        system_user_hash_keys = [
+            self._charm.secrets.hash_key(user) for user in OpenSearchSystemUsers
+        ]
+        keys_to_process = system_user_hash_keys + [
+            CertType.APP_ADMIN.val,
+            self._charm.secrets.password_key(KibanaserverUser),
+        ]
+
+        # Variables for better readability
+        label_key = label_parts["key"]
+        is_leader = self._charm.unit.is_leader()
+
+        # Matching secrets by label
         if (
             label_parts["application_name"] != self._charm.app.name
             or label_parts["scope"] != Scope.APP
-            or label_parts["key"] != CertType.APP_ADMIN.val
+            or label_key not in keys_to_process
         ):
             logger.info("Secret %s was not relevant for us.", event.secret.label)
             return
 
-        logger.debug("Secret change for %s", str(label_parts["key"]))
-        if not self._charm.unit.is_leader():
+        logger.debug("Secret change for %s", str(label_key))
+
+        # Leader has to maintain TLS and Dashboards relation credentials
+        if not is_leader and label_key == CertType.APP_ADMIN.val:
             self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
+
+        elif is_leader and label_key == self._charm.secrets.password_key(KibanaserverUser):
+            self._charm.opensearch_provider.update_dashboards_password()
+
+        # Non-leader units need to maintain local users in internal_users.yml
+        elif not is_leader and label_key in system_user_hash_keys:
+            password = event.secret.get_content()[label_key]
+            if sys_user := self._user_from_hash_key(label_key):
+                self._charm.user_manager.put_internal_user(sys_user, password)
+
+    def _user_from_hash_key(self, key):
+        """Which user is referred to by key?"""
+        for user in OpenSearchSystemUsers:
+            if key == self._charm.secrets.hash_key(user):
+                return user
 
     @property
     def implements_secrets(self):
@@ -89,6 +129,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
     def password_key(self, username: str) -> str:
         """Unified key to store password secrets specific to a user."""
         return f"{username}-{PW_POSTFIX}"
+
+    def hash_key(self, username: str) -> str:
+        """Unified key to store password secrets specific to a user."""
+        return f"{username}-{HASH_POSTFIX}"
 
     def label(self, scope: Scope, key: str) -> str:
         """Generated keys to be used within relation data to refer to secret IDs."""
