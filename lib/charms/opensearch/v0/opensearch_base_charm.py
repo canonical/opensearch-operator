@@ -984,6 +984,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 )
                 event.defer()
                 return
+            elif health == HealthColors.YELLOW:
+                # TODO future improvement:
+                # https://github.com/canonical/opensearch-operator/issues/268
+                logger.warning(
+                    "Cluster is yellow. Upgrade may cause data loss if cluster is yellow for reason other than primary shards on upgraded unit & not enough upgraded units available for replica shards"
+                )
         else:
             # apply cluster health
             self.health.apply()
