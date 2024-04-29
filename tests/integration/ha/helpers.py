@@ -519,7 +519,7 @@ async def assert_start_and_check_continuous_writes(
         f"Index {ContinuousWrites.INDEX_NAME} has {initial_count} documents, starting there"
     )
     writer = ContinuousWrites(ops_test, app, initial_count=initial_count)
-    await writer.start(is_bulk=True)
+    await writer.start()
     time.sleep(10)
     # Ensure we have writes happening and the index is consistent at the end
     await assert_continuous_writes_increasing(writer)
