@@ -18,6 +18,7 @@ https://opensearch.org/docs/latest/security/access-control/index/.
 
 """
 import logging
+import typing
 from enum import Enum
 from typing import Dict, Optional, Set
 
@@ -28,6 +29,8 @@ from charms.data_platform_libs.v0.data_interfaces import (
 from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
     IndexCreationFailed,
+    KibanaserverRole,
+    KibanaserverUser,
     NewIndexRequested,
     PeerRelationName,
     UserCreationFailed,
@@ -41,14 +44,12 @@ from charms.opensearch.v0.opensearch_exceptions import (
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
-from ops.charm import (
-    CharmBase,
-    RelationBrokenEvent,
-    RelationChangedEvent,
-    RelationDepartedEvent,
-)
+from ops.charm import RelationBrokenEvent, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
+
+if typing.TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 # The unique Charmhub library identifier, never change it
 LIBID = "c0f1d8f94bdd41a781fe2871e1922480"
@@ -58,7 +59,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +129,7 @@ class OpenSearchProvider(Object):
         - relation-broken
     """
 
-    def __init__(self, charm: CharmBase) -> None:
+    def __init__(self, charm: "OpenSearchBaseCharm") -> None:
         """Constructor for OpenSearchProvider object.
 
         Args:
@@ -141,6 +142,7 @@ class OpenSearchProvider(Object):
         self.app = self.charm.app
         self.opensearch = self.charm.opensearch
         self.user_manager = self.charm.user_manager
+        self.secrets = self.charm.secrets
 
         self.relation_name = ClientRelationName
         self.opensearch_provides = OpenSearchProvides(self.charm, relation_name=self.relation_name)
@@ -155,6 +157,20 @@ class OpenSearchProvider(Object):
         self.framework.observe(
             charm.on[self.relation_name].relation_broken, self._on_relation_broken
         )
+
+    @property
+    def dashboards_relations(self):
+        """Return the dashboard relations out of all."""
+        result = []
+        for relation in self.opensearch_provides.relations:
+            if (
+                roles := self.opensearch_provides.fetch_relation_field(
+                    relation.id, "extra-user-roles"
+                )
+            ) and KibanaserverRole in roles:
+                # if any(key.name == "opensearch-dashboards" for key in relation.data.keys()):
+                result.append(relation)
+        return result
 
     def _relation_username(self, relation: Relation) -> str:
         return f"{self.relation_name}_{relation.id}"
@@ -177,6 +193,12 @@ class OpenSearchProvider(Object):
             OpenSearchIndexError if the index name is invalid
             OpenSearchHttpError if we can't create the required index
         """
+        if self.charm.upgrade_in_progress:
+            logger.warning(
+                "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
+            event.defer()
+            return
         if not self.unit.is_leader():
             return
         if not self.opensearch.is_node_up() or not event.index:
@@ -200,19 +222,25 @@ class OpenSearchProvider(Object):
                 event.defer()
                 return
 
-        username = self._relation_username(event.relation)
-        hashed_pwd, pwd = generate_hashed_password()
         extra_user_roles = event.extra_user_roles.lower() if event.extra_user_roles else "default"
-        try:
-            self.create_opensearch_users(username, hashed_pwd, event.index, extra_user_roles)
-        except OpenSearchUserMgmtError as err:
-            logger.error(err)
-            self.charm.status.set(
-                BlockedStatus(
-                    UserCreationFailed.format(rel_name=ClientRelationName, id=event.relation.id)
+        if extra_user_roles == KibanaserverRole:
+            username = KibanaserverUser
+            pwd = self.secrets.get(Scope.APP, self.secrets.password_key(username))
+        else:
+            username = self._relation_username(event.relation)
+            hashed_pwd, pwd = generate_hashed_password()
+            try:
+                self.create_opensearch_users(username, hashed_pwd, event.index, extra_user_roles)
+            except OpenSearchUserMgmtError as err:
+                logger.error(err)
+                self.charm.status.set(
+                    BlockedStatus(
+                        UserCreationFailed.format(
+                            rel_name=ClientRelationName, id=event.relation.id
+                        )
+                    )
                 )
-            )
-            return
+                return
 
         rel_id = event.relation.id
 
@@ -367,7 +395,10 @@ class OpenSearchProvider(Object):
             # This unit is being removed.
             self.charm.peers_data.delete(Scope.UNIT, self._depart_flag(event.relation))
             return
-
+        if self.charm.upgrade_in_progress:
+            logger.warning(
+                "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         self.user_manager.remove_users_and_roles(event.relation.id)
 
     def update_endpoints(self, relation: Relation, omit_endpoints: Optional[Set[str]] = None):
@@ -387,8 +418,14 @@ class OpenSearchProvider(Object):
             ips = set()
 
         port = self.opensearch.port
-        endpoints = ",".join([f"{ip}:{port}" for ip in ips - omit_endpoints])
+        endpoints = ",".join(sorted([f"{ip}:{port}" for ip in ips - omit_endpoints]))
         databag_endpoints = relation.data[relation.app].get("endpoints")
 
         if endpoints != databag_endpoints:
             self.opensearch_provides.set_endpoints(relation.id, endpoints)
+
+    def update_dashboards_password(self):
+        """Update each Opensearch Dashboards relation with the latest kibanaserver."""
+        pwd = self.secrets.get(Scope.APP, self.secrets.password_key(KibanaserverUser))
+        for relation in self.dashboards_relations:
+            self.opensearch_provides.set_credentials(relation.id, KibanaserverUser, pwd)

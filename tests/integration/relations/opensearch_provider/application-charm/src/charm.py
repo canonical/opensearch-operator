@@ -89,7 +89,7 @@ class ApplicationCharm(CharmBase):
         return connected
 
     def _get_requires(self, relation_name):
-        for requires in [self.admin_opensearch, self.first_opensearch, self.second_opensearch]:
+        for requires in self.relations.values():
             if requires.relation_name == relation_name:
                 return requires
 
@@ -97,7 +97,7 @@ class ApplicationCharm(CharmBase):
         if not hasattr(event, "relation"):
             return
 
-        requires = self._get_requires(event.relation.name)
+        requires = self.relations.get(event.relation.name)
         tls_ca = requires.fetch_relation_field(event.relation.id, "tls-ca")
 
         if not tls_ca:

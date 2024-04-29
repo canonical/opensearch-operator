@@ -29,8 +29,8 @@ class TestOpenSearchTLS(unittest.TestCase):
     BASE_LIB_PATH = "charms.opensearch.v0"
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
 
-    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
-    def setUp(self, _put_admin_user) -> None:
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
+    def setUp(self, _) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.add_network("1.1.1.1", endpoint=PeerRelationName)
@@ -102,11 +102,9 @@ class TestOpenSearchTLS(unittest.TestCase):
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
-    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_relation_created_admin(
-        self, _, _put_admin_user, _request_certificate, deployment_desc
-    ):
+    def test_on_relation_joined_admin(self, _, __, _request_certificate, deployment_desc):
         """Test on certificate relation created event."""
         deployment_desc.return_value = DeploymentDescription(
             config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
@@ -133,11 +131,9 @@ class TestOpenSearchTLS(unittest.TestCase):
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
-    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_relation_created_non_admin(
-        self, _, _put_admin_user, _request_certificate, deployment_desc
-    ):
+    def test_on_relation_joined_non_admin(self, _, __, _request_certificate, deployment_desc):
         """Test on certificate relation created event."""
         deployment_desc.return_value = DeploymentDescription(
             config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
@@ -168,9 +164,9 @@ class TestOpenSearchTLS(unittest.TestCase):
         on_tls_relation_broken.assert_called_once()
 
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
-    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_set_tls_private_key(self, _, _put_admin_user, _request_certificate):
+    def test_on_set_tls_private_key(self, _, __, _request_certificate):
         """Test _on_set_tls private key event."""
         event_mock = MagicMock(params={"category": "app-admin"})
 
@@ -189,10 +185,8 @@ class TestOpenSearchTLS(unittest.TestCase):
 
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm.on_tls_conf_set")
-    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
-    def test_on_certificate_available(
-        self, _put_admin_user, on_tls_conf_set, _request_certificate
-    ):
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
+    def test_on_certificate_available(self, _, on_tls_conf_set, _request_certificate):
         """Test _on_certificate_available event."""
         csr = "csr_12345"
         cert = "cert_12345"
@@ -220,10 +214,8 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
-    @patch("charm.OpenSearchOperatorCharm._put_admin_user")
-    def test_on_certificate_expiring(
-        self, _put_admin_user, deployment_desc, request_certificate_creation
-    ):
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
+    def test_on_certificate_expiring(self, _, deployment_desc, request_certificate_creation):
         """Test _on_certificate_available event."""
         csr = "csr_12345"
         cert = "cert_12345"

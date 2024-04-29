@@ -5,7 +5,7 @@
 
 import unittest
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import charms.opensearch.v0.opensearch_locking as opensearch_locking
 from charms.opensearch.v0.constants_tls import CertType
@@ -104,31 +104,37 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
-    @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
-    def test_on_leader_elected(self, _put_admin_user, _purge_users, deployment_desc):
+    @patch(f"{BASE_CHARM_CLASS}._put_or_update_internal_user_leader")
+    def test_on_leader_elected(
+        self, _put_or_update_internal_user_leader, _purge_users, deployment_desc
+    ):
         """Test on leader elected event."""
         deployment_desc.return_value = self.deployment_descriptions["ok"]
         self.harness.set_leader(True)
 
         _purge_users.assert_called_once()
-        _put_admin_user.assert_called_once()
+        _put_or_update_internal_user_leader.assert_has_calls(
+            [call("admin"), call("kibanaserver")], any_order=True
+        )
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
         _purge_users.reset_mock()
-        _put_admin_user.reset_mock()
+        _put_or_update_internal_user_leader.reset_mock()
 
         self.peers_data.put(Scope.APP, "admin_user_initialized", True)
         self.charm.on.leader_elected.emit()
         _purge_users.assert_called_once()
-        _put_admin_user.assert_called_once()
+        _put_or_update_internal_user_leader.assert_has_calls(
+            [call("admin"), call("kibanaserver")], any_order=True
+        )
 
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
-    @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
+    @patch(f"{BASE_CHARM_CLASS}._put_or_update_internal_user_leader")
     def test_on_leader_elected_index_initialised(
-        self, _put_admin_user, _purge_users, deployment_desc
+        self, _put_or_update_internal_user_leader, _purge_users, deployment_desc
     ):
         # security_index_initialised
         self.peers_data.put(Scope.APP, "security_index_initialised", True)
@@ -136,14 +142,16 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.harness.set_leader(True)
 
         self.charm.on.leader_elected.emit()
-        _put_admin_user.assert_not_called()
+        _put_or_update_internal_user_leader.assert_not_called()
         _purge_users.assert_not_called()
 
         # admin_user_initialized
         self.peers_data.delete(Scope.APP, "security_index_initialised")
         self.peers_data.put(Scope.APP, "admin_user_initialized", True)
         self.charm.on.leader_elected.emit()
-        _put_admin_user.assert_called_once()
+        _put_or_update_internal_user_leader.assert_has_calls(
+            [call("admin"), call("kibanaserver")], any_order=True
+        )
         _purge_users.assert_called_once()
 
     @patch(
@@ -161,12 +169,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._can_service_start")
     @patch(f"{BASE_CHARM_CLASS}._initialize_security_index")
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
-    @patch(f"{BASE_CHARM_CLASS}._put_admin_user")
+    @patch(f"{BASE_CHARM_CLASS}._put_or_update_internal_user_unit")
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
     def test_on_start(
         self,
         request,
-        _put_admin_user,
+        _put_or_update_internal_user_unit,
         _purge_users,
         _initialize_security_index,
         _can_service_start,
