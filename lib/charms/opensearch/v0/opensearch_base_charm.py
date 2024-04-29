@@ -1008,6 +1008,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         if self.opensearch.is_node_up():
             # TODO: we should probably NOT have any exclusion on restart
+            # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
             # 1. Add current node to the voting + alloc exclusions
             self.opensearch_exclusions.add_current()
 
@@ -1019,6 +1020,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # 3. Remove the exclusions
         # TODO: we should probably NOT have any exclusion on restart
+        # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
         self.opensearch_exclusions.delete_current()
 
     def _restart_opensearch(self, event: _RestartOpenSearch) -> None:
