@@ -225,7 +225,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.on[PeerRelationName].relation_joined, self._on_peer_relation_joined
         )
         self.framework.observe(
-            self.on[PeerRelationName].relation_changed, self._on_peer_relation_changed
+            self.on[PeerRelationName].relation_changed, self.peer_relation_changed
         )
         self.framework.observe(
             self.on[PeerRelationName].relation_departed, self._on_peer_relation_departed
@@ -236,6 +236,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
+        # There is an explosion of peer_relation_changed calls at the startup.
+        # As this corresponds to a local peer relation (not the peer-cluster), we can safely
+        # abandon repeated events.
+        self._local_peer_relation_changed_has_deferred = False
 
     @property
     @abc.abstractmethod
@@ -420,15 +424,21 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             event.defer()
 
-    def _on_peer_relation_changed(self, event: RelationChangedEvent):
+    def peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
         if (
             self.unit.is_leader()
             and self.opensearch.is_node_up()
             and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
         ):
+            if self._local_peer_relation_changed_has_deferred:
+                # We had already tried this event before and deferred. Retry on the next
+                # hook call.
+                return
             # we defer because we want the temporary status to be updated
             event.defer()
+            # From now on, we will abandon the event if we need to defer it
+            self._local_peer_relation_changed_has_deferred = True
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -591,9 +601,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # since when an IP change happens, "_on_peer_relation_joined" won't be called,
             # we need to alert the leader that it must recompute the node roles for any unit whose
             # roles were changed while the current unit was cut-off from the rest of the network
-            self.on[PeerRelationName].relation_joined.emit(
-                self.model.get_relation(PeerRelationName)
-            )
+            self._on_peer_relation_joined(event)
+            if event.deferred:
+                return
 
         previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.unit.is_leader():

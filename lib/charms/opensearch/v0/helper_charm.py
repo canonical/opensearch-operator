@@ -6,8 +6,6 @@ import re
 import typing
 from datetime import datetime
 
-from charms.data_platform_libs.v0.data_interfaces import Scope
-from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from ops import CharmBase
 from ops.model import ActiveStatus, StatusBase
@@ -118,12 +116,3 @@ def relation_departure_reason(charm: CharmBase, relation_name: str) -> RelDepart
         return RelDepartureReason.SCALE_DOWN
 
     return RelDepartureReason.REL_BROKEN
-
-
-def trigger_leader_peer_rel_changed(charm: CharmBase) -> None:
-    """Force trigger a peer rel changed event by leader."""
-    if not charm.unit.is_leader():
-        return
-
-    charm.peers_data.put(Scope.APP, "triggered", datetime.now().timestamp())
-    charm.on[PeerRelationName].relation_changed.emit(charm.model.get_relation(PeerRelationName))
