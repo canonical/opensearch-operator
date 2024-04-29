@@ -187,9 +187,11 @@ class ClusterTopology:
                         unit_number=int(obj["name"].split("-")[-1]),
                         temperature=obj.get("attributes", {}).get("temp"),
                     )
-                    if "-".join(obj["name"].split("-")[:-1]) == only_this_juju_app:
+                    if (
+                        not only_this_juju_app
+                        or "-".join(obj["name"].split("-")[:-1]) == only_this_juju_app
+                    ):
                         nodes.append(node)
-
         return nodes
 
 
