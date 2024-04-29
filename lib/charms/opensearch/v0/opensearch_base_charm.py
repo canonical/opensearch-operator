@@ -1032,7 +1032,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self._start_opensearch_event.emit()
 
-    def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:
+    def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:  # noqa: C901
         """Upgrade OpenSearch."""
         logger.debug("Attempting to acquire lock for upgrade")
         if not self.node_lock.acquired:
