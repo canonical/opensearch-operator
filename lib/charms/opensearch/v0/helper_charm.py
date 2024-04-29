@@ -5,17 +5,12 @@
 import re
 from time import time_ns
 from typing import TYPE_CHECKING
-import typing
-from datetime import datetime
 
 from charms.data_platform_libs.v0.data_interfaces import Scope
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from ops import CharmBase
 from ops.model import ActiveStatus, StatusBase
-
-if TYPE_CHECKING:
-    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 # The unique Charmhub library identifier, never change it
 LIBID = "293db55a2d8949f8aa5906d04cd541ba"
