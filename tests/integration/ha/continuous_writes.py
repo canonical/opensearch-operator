@@ -222,7 +222,9 @@ class ContinuousWrites:
 
         write_value = starting_number
 
-        proc_logger.info(f"Starting continuous writes from {write_value} with is_bulk={is_bulk}...")
+        proc_logger.info(
+            f"Starting continuous writes from {write_value} with is_bulk={is_bulk}..."
+        )
 
         data = data_queue.get(True)
         client = _client(data)

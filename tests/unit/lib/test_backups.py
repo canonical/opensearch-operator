@@ -106,6 +106,8 @@ def harness():
     # Replace some unused methods that will be called as part of set_leader with mock
     charm._put_admin_user = MagicMock()
     charm._put_kibanaserver_user = MagicMock()
+    charm._put_or_update_internal_user_leader = MagicMock()
+
     harness_obj.add_relation(PeerRelationName, "opensearch")
     harness_obj.set_leader(is_leader=True)
 
@@ -510,6 +512,7 @@ class TestBackups(unittest.TestCase):
         # Replace some unused methods that will be called as part of set_leader with mock
         self.charm._put_admin_user = MagicMock()
         self.charm._put_kibanaserver_user = MagicMock()
+        self.charm._put_or_update_internal_user_leader = MagicMock()
         self.peer_id = self.harness.add_relation(PeerRelationName, "opensearch")
         self.harness.set_leader(is_leader=True)
 

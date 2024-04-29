@@ -78,7 +78,6 @@ This allows to detail the behavior of the cluster depending on its type.
 
 import json
 import logging
-import typing
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -90,8 +89,6 @@ from charms.data_platform_libs.v0.s3 import (
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
     BackupConfigureStart,
-    BackupDataMissingS3,
-    BackupDataShouldNotRelateS3,
     BackupDeferRelBrokenAsInProgress,
     BackupInDisabling,
     BackupSetupFailed,
@@ -99,6 +96,8 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterRelationName,
     PluginConfigError,
     RestoreInProgress,
+    S3RelMissing,
+    S3RelShouldNotExist,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -123,9 +122,6 @@ from ops.model import (
     WaitingStatus,
 )
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
-
-if typing.TYPE_CHECKING:
-    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 # The unique Charmhub library identifier, never change it
 LIBID = "d301deee4d2c4c1b8e30cd3df8034be2"
@@ -378,7 +374,7 @@ class OpenSearchDataClusterBackup(OpenSearchBackupBase):
             if not self.charm.plugin_manager.check_plugin_manager_ready():
                 logger.warning("s3-changed: cluster not ready yet")
         except OpenSearchError as e:
-            self.charm.status.set(BlockedStatus(BackupDataMissingS3))
+            self.charm.status.set(BlockedStatus(S3RelMissing))
             # There was an unexpected error, log it and block the unit
             logger.error(e)
             event.defer()
@@ -413,22 +409,22 @@ class OpenSearchDataClusterBackup(OpenSearchBackupBase):
             if isinstance(e, OpenSearchNotFullyReadyError):
                 logger.warning("s3-changed: cluster not ready yet")
             else:
-                self.charm.status.set(BlockedStatus(BackupDataMissingS3))
+                self.charm.status.set(BlockedStatus(S3RelMissing))
                 # There was an unexpected error, log it and block the unit
                 logger.error(e)
             event.defer()
-        self.charm.status.clear(BackupDataMissingS3)
+        self.charm.status.clear(S3RelMissing)
 
     def _on_s3_relation_event(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
-        self.charm.status.set(BlockedStatus(BackupDataShouldNotRelateS3), app=True)
+        self.charm.status.set(BlockedStatus(S3RelShouldNotExist), app=True)
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
         return
 
     def _on_s3_relation_broken(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
-        self.charm.status.clear(BackupDataMissingS3)
-        self.charm.status.clear(BackupDataShouldNotRelateS3, app=True)
+        self.charm.status.clear(S3RelMissing)
+        self.charm.status.clear(S3RelShouldNotExist, app=True)
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
         return
 
