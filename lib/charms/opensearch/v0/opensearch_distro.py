@@ -17,7 +17,6 @@ from typing import Dict, List, Optional, Set, Union
 
 import requests
 import urllib3.exceptions
-from charms.opensearch.v0.constants_secrets import ADMIN_PW
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_http import error_http_retry_log
@@ -230,7 +229,8 @@ class OpenSearchDistribution(ABC):
                 reraise=True,
             ):
                 with attempt, requests.Session() as s:
-                    s.auth = ("admin", self._charm.secrets.get(Scope.APP, ADMIN_PW))
+                    admin_field = self._charm.secrets.password_key("admin")
+                    s.auth = ("admin", self._charm.secrets.get(Scope.APP, admin_field))
 
                     request_kwargs = {
                         "method": method.upper(),

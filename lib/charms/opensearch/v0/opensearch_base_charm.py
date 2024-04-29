@@ -2,14 +2,17 @@
 # See LICENSE file for licensing details.
 
 """Base class for the OpenSearch Operators."""
+import abc
 import logging
 import random
+import typing
 from abc import abstractmethod
 from datetime import datetime
-from typing import Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
+    AdminUser,
     AdminUserInitProgress,
     AdminUserNotConfigured,
     CertsExpirationError,
@@ -18,8 +21,9 @@ from charms.opensearch.v0.constants_charm import (
     ClusterHealthUnknown,
     COSPort,
     COSRelationName,
-    COSRole,
     COSUser,
+    OpenSearchSystemUsers,
+    OpenSearchUsers,
     PeerRelationName,
     PluginConfigChangeError,
     PluginConfigCheck,
@@ -34,7 +38,6 @@ from charms.opensearch.v0.constants_charm import (
     TLSRelationMissing,
     WaitingToStart,
 )
-from charms.opensearch.v0.constants_secrets import ADMIN_PW, ADMIN_PW_HASH
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
@@ -108,6 +111,9 @@ from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
+import lifecycle
+import upgrade
+
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
 
@@ -132,6 +138,17 @@ class _StartOpenSearch(EventBase):
     This event will be deferred until OpenSearch starts.
     """
 
+    def __init__(self, handle, *, ignore_lock=False):
+        super().__init__(handle)
+        # Only used for force upgrade
+        self.ignore_lock = ignore_lock
+
+    def snapshot(self) -> Dict[str, Any]:
+        return {"ignore_lock": self.ignore_lock}
+
+    def restore(self, snapshot: Dict[str, Any]):
+        self.ignore_lock = snapshot["ignore_lock"]
+
 
 class _RestartOpenSearch(EventBase):
     """Attempt to acquire lock & restart OpenSearch.
@@ -140,14 +157,25 @@ class _RestartOpenSearch(EventBase):
     """
 
 
-class OpenSearchBaseCharm(CharmBase):
+class _UpgradeOpenSearch(_StartOpenSearch):
+    """Attempt to acquire lock & upgrade OpenSearch.
+
+    This event will be deferred until OpenSearch stops. Then, the snap will be upgraded and
+    `_StartOpenSearch` will be emitted.
+    """
+
+
+class OpenSearchBaseCharm(CharmBase, abc.ABC):
     """Base class for OpenSearch charms."""
 
     _start_opensearch_event = EventSource(_StartOpenSearch)
     _restart_opensearch_event = EventSource(_RestartOpenSearch)
+    _upgrade_opensearch_event = EventSource(_UpgradeOpenSearch)
 
     def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
         super().__init__(*args)
+        # Instantiate before registering other event observers
+        self._unit_lifecycle = lifecycle.Unit(self, subordinated_relation_endpoint_names=None)
 
         if distro is None:
             raise ValueError("The type of the opensearch distro must be specified.")
@@ -184,6 +212,7 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.framework.observe(self._start_opensearch_event, self._start_opensearch)
         self.framework.observe(self._restart_opensearch_event, self._restart_opensearch)
+        self.framework.observe(self._upgrade_opensearch_event, self._upgrade_opensearch)
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
@@ -208,6 +237,22 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
+
+    @property
+    @abc.abstractmethod
+    def _upgrade(self) -> typing.Optional[upgrade.Upgrade]:
+        pass
+
+    @property
+    def upgrade_in_progress(self):
+        """Whether upgrade is in progress"""
+        if not self._upgrade:
+            return False
+        return self._upgrade.in_progress
+
+    @abc.abstractmethod
+    def _reconcile_upgrade(self, _=None):
+        pass
 
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
@@ -239,8 +284,10 @@ class OpenSearchBaseCharm(CharmBase):
         if not self.peers_data.get(Scope.APP, "admin_user_initialized"):
             self.status.set(MaintenanceStatus(AdminUserInitProgress))
 
-        # this is in case we're coming from 0 to N units, we don't want to use the rest api
-        self._put_admin_user()
+        # Restore purged system users in local `internal_users.yml`
+        # with corresponding credentials
+        for user in OpenSearchSystemUsers:
+            self._put_or_update_internal_user_leader(user)
 
         self.status.clear(AdminUserInitProgress)
 
@@ -280,6 +327,13 @@ class OpenSearchBaseCharm(CharmBase):
         self.status.clear(TLSNotFullyConfigured)
         self.status.clear(TLSRelationMissing)
 
+        # Since system users are initialized, we should take them to local internal_users.yml
+        # Leader should be done already
+        if not self.unit.is_leader():
+            self._purge_users()
+            for user in OpenSearchSystemUsers:
+                self._put_or_update_internal_user_unit(user)
+
         self.peers_data.put(Scope.UNIT, "tls_configured", True)
 
         # configure clients auth
@@ -315,6 +369,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_peer_relation_created(self, event: RelationCreatedEvent):
         """Event received by the new node joining the cluster."""
+        if self.upgrade_in_progress:
+            logger.warning(
+                "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
         # In the case of the first units before TLS is initialized
@@ -334,6 +392,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units when a new node joins the cluster."""
+        if self.upgrade_in_progress:
+            logger.warning(
+                "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         if not self.unit.is_leader():
             return
 
@@ -403,6 +465,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
+        if self.upgrade_in_progress:
+            logger.warning(
+                "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         if not (self.unit.is_leader() and self.opensearch.is_node_up()):
             return
 
@@ -419,6 +485,10 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
+        if self.upgrade_in_progress:
+            logger.warning(
+                "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
         # acquire lock to ensure only 1 unit removed at a time
         if not self.node_lock.acquired:
             # Raise uncaught exception to prevent Juju from removing unit
@@ -501,7 +571,10 @@ class OpenSearchBaseCharm(CharmBase):
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
-        self.user_manager.remove_users_and_roles()
+        if self.upgrade_in_progress:
+            logger.debug("Skipping `remove_users_and_roles()` because upgrade is in-progress")
+        else:
+            self.user_manager.remove_users_and_roles()
 
         # If relation not broken - leave
         if self.model.get_relation("certificates") is not None:
@@ -542,6 +615,12 @@ class OpenSearchBaseCharm(CharmBase):
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
             if self.plugin_manager.run():
+                if self.upgrade_in_progress:
+                    logger.warning(
+                        "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+                    )
+                    event.defer()
+                    return
                 self._restart_opensearch_event.emit()
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
@@ -560,6 +639,9 @@ class OpenSearchBaseCharm(CharmBase):
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
+        if self.upgrade_in_progress:
+            event.fail("Setting password not supported while upgrade in-progress")
+            return
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
             event.fail("The action can be run only on the leader unit of the main cluster.")
             return
@@ -569,15 +651,14 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         user_name = event.params.get("username")
-        if user_name not in ["admin", COSUser]:
-            event.fail(f"Only the 'admin' and {COSUser} username is allowed for this action.")
+        if user_name not in OpenSearchUsers:
+            event.fail(f"Only the {OpenSearchUsers} usernames are allowed for this action.")
             return
 
         password = event.params.get("password") or generate_password()
         try:
+            self._put_or_update_internal_user_leader(user_name, password)
             label = self.secrets.password_key(user_name)
-            self._put_admin_user(password)
-            password = self.secrets.get(Scope.APP, label)
             event.set_results({label: password})
         except OpenSearchError as e:
             event.fail(f"Failed changing the password: {e}")
@@ -585,8 +666,8 @@ class OpenSearchBaseCharm(CharmBase):
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
         user_name = event.params.get("username")
-        if user_name not in ["admin", COSUser]:
-            event.fail(f"Only the 'admin' and {COSUser} username is allowed for this action.")
+        if user_name not in OpenSearchUsers:
+            event.fail(f"Only the {OpenSearchUsers} username is allowed for this action.")
             return
 
         if not self.is_admin_user_configured():
@@ -700,6 +781,12 @@ class OpenSearchBaseCharm(CharmBase):
         )
         if not cluster_changed_to_main_cm:
             return
+        if self.upgrade_in_progress:
+            logger.warning(
+                "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
+            event.defer()
+            return
 
         # we check if we need to create the admin user
         if not self.is_admin_user_configured():
@@ -716,9 +803,14 @@ class OpenSearchBaseCharm(CharmBase):
     def _start_opensearch(self, event: _StartOpenSearch) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
         if not self.node_lock.acquired:
-            logger.debug("Lock to start opensearch not acquired. Will retry next event")
-            event.defer()
-            return
+            # (Attempt to acquire lock even if `event.ignore_lock`)
+            if event.ignore_lock:
+                # Only used for force upgrades
+                logger.debug("Starting without lock")
+            else:
+                logger.debug("Lock to start opensearch not acquired. Will retry next event")
+                event.defer()
+                return
         self.peers_data.delete(Scope.UNIT, "started")
         if self.opensearch.is_started():
             try:
@@ -801,6 +893,9 @@ class OpenSearchBaseCharm(CharmBase):
 
         self.node_lock.release()
 
+        self._upgrade.unit_state = upgrade.UnitState.HEALTHY
+        self._reconcile_upgrade()
+
         self.peers_data.put(Scope.UNIT, "started", True)
 
         # apply post_start fixes to resolve start related upstream bugs
@@ -811,10 +906,12 @@ class OpenSearchBaseCharm(CharmBase):
 
         if self.unit.is_leader():
             # Creating the monitoring user
-            self._put_monitoring_user()
+            self._put_or_update_internal_user_leader(COSUser)
 
         # clear waiting to start status
         self.status.clear(WaitingToStart)
+
+        self.unit.open_port("tcp", 9200)
 
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
@@ -855,6 +952,35 @@ class OpenSearchBaseCharm(CharmBase):
             return
 
         self._start_opensearch_event.emit()
+
+    def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:
+        """Upgrade OpenSearch."""
+        logger.debug("Attempting to acquire lock for upgrade")
+        if not self.node_lock.acquired:
+            # (Attempt to acquire lock even if `event.ignore_lock`)
+            if event.ignore_lock:
+                logger.debug("Upgrading without lock")
+            else:
+                logger.debug("Lock to upgrade opensearch not acquired. Will retry next event")
+                event.defer()
+                return
+        logger.debug("Acquired lock for upgrade")
+
+        logger.debug("Stopping OpenSearch before upgrade")
+        try:
+            self._stop_opensearch()
+        except OpenSearchStopError as e:
+            logger.exception(e)
+            self.node_lock.release()
+            event.defer()
+            self.status.set(WaitingStatus(ServiceIsStopping))
+            return
+        logger.debug("Stopped OpenSearch before upgrade")
+
+        self._upgrade.upgrade_unit(snap=self.opensearch)
+
+        logger.debug("Starting OpenSearch after upgrade")
+        self._start_opensearch_event.emit(ignore_lock=event.ignore_lock)
 
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""
@@ -953,60 +1079,44 @@ class OpenSearchBaseCharm(CharmBase):
             if user != "_meta":
                 self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
 
-    def _put_admin_user(self, pwd: Optional[str] = None):
-        """Change password of Admin user."""
-        # update
-        if pwd is not None:
-            hashed_pwd, pwd = generate_hashed_password(pwd)
-            resp = self.opensearch.request(
-                "PATCH",
-                "/_plugins/_security/api/internalusers/admin",
-                [{"op": "replace", "path": "/hash", "value": hashed_pwd}],
-            )
-            if resp.get("status") != "OK":
-                raise OpenSearchError(f"{resp}")
-        else:
-            hashed_pwd = self.secrets.get(Scope.APP, ADMIN_PW_HASH)
-            if not hashed_pwd:
-                hashed_pwd, pwd = generate_hashed_password()
-
-            # reserved: False, prevents this resource from being update-protected from:
-            # updates made on the dashboard or the rest api.
-            # we grant the admin user all opensearch access + security_rest_api_access
-            self.opensearch.config.put(
-                "opensearch-security/internal_users.yml",
-                "admin",
-                {
-                    "hash": hashed_pwd,
-                    "reserved": False,
-                    "backend_roles": ["admin"],
-                    "opendistro_security_roles": [
-                        "security_rest_api_access",
-                        "all_access",
-                    ],
-                    "description": "Admin user",
-                },
-            )
-
-        self.secrets.put(Scope.APP, ADMIN_PW, pwd)
-        self.secrets.put(Scope.APP, ADMIN_PW_HASH, hashed_pwd)
-        self.peers_data.put(Scope.APP, "admin_user_initialized", True)
-
-    def _put_monitoring_user(self):
-        """Create the monitoring user, with the right security role."""
-        users = self.user_manager.get_users()
-
-        if users and COSUser in users:
+    def _put_or_update_internal_user_leader(self, user: str, pwd: Optional[str] = None) -> None:
+        """Create system user or update it with a new password."""
+        # Leader is to set new password and hash, others populate existing hash locally
+        if not self.unit.is_leader():
+            logger.error("Credential change can be only performed by the leader unit.")
             return
 
-        hashed_pwd, pwd = generate_hashed_password()
-        roles = [COSRole]
-        self.user_manager.create_user(COSUser, roles, hashed_pwd)
-        self.user_manager.patch_user(
-            COSUser,
-            [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
-        )
-        self.secrets.put(Scope.APP, self.secrets.password_key(COSUser), pwd)
+        hashed_pwd, pwd = generate_hashed_password(pwd)
+
+        # Updating security index
+        # We need to do this for all credential changes
+        if secret := self.secrets.get(Scope.APP, self.secrets.password_key(user)):
+            self.user_manager.update_user_password(user, hashed_pwd)
+
+        # In case it's a new user, OR it's a system user (that has an entry in internal_users.yml)
+        # we either need to initialize or update (local) credentials as well
+        if not secret or user in OpenSearchSystemUsers:
+            self.user_manager.put_internal_user(user, hashed_pwd)
+
+        # Secrets need to be maintained
+        # For System Users we also save the hash key
+        # (so all units can fetch it for local users (internal_users.yml) updates.
+        self.secrets.put(Scope.APP, self.secrets.password_key(user), pwd)
+
+        if user in OpenSearchSystemUsers:
+            self.secrets.put(Scope.APP, self.secrets.hash_key(user), hashed_pwd)
+
+        if user == AdminUser:
+            self.peers_data.put(Scope.APP, "admin_user_initialized", True)
+
+    def _put_or_update_internal_user_unit(self, user: str, pwd: Optional[str] = None) -> None:
+        """Create system user or update it with a new password."""
+        # Leader is to set new password and hash, others populate existing hash locally
+        hashed_pwd = self.secrets.get(Scope.APP, self.secrets.hash_key(user))
+
+        # System users have to be saved locally in internal_users.yml
+        if user in OpenSearchSystemUsers:
+            self.user_manager.put_internal_user(user, hashed_pwd)
 
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.
