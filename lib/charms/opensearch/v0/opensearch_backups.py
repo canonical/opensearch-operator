@@ -72,7 +72,7 @@ object that corresponds to its own case (cluster-manager, failover, data, etc).
 
 Overloading S3Requirer
 
-The S3Requirer is replaced by PeerClusterDataS3Requirer for non-orchestrated clusters.
+The S3Requirer is replaced by PeerClusterDataS3Requirer for non-orchestrator clusters.
 This allows to detail the behavior of the cluster depending on its type.
 """
 
