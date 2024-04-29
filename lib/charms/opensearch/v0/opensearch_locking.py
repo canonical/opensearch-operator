@@ -261,9 +261,9 @@ class OpenSearchNodeLock(ops.Object):
                         return False
                 # Attempt to create document id 0
                 try:
-                    self._opensearch.request(
+                    response = self._opensearch.request(
                         "PUT",
-                        endpoint=f"/{self.OPENSEARCH_INDEX}/_create/0?refresh=true",
+                        endpoint=f"/{self.OPENSEARCH_INDEX}/_create/0?refresh=true&wait_for_active_shards=all",
                         host=host,
                         alt_hosts=alt_hosts,
                         retries=3,
@@ -277,6 +277,21 @@ class OpenSearchNodeLock(ops.Object):
                         pass
                     else:
                         logger.exception("Error creating OpenSearch lock document")
+                        return False
+                else:
+                    # Ensure write was successful on all nodes
+                    # "It is important to note that this setting [`wait_for_active_shards`] greatly
+                    # reduces the chances of the write operation not writing to the requisite
+                    # number of shard copies, but it does not completely eliminate the possibility,
+                    # because this check occurs before the write operation commences. Once the
+                    # write operation is underway, it is still possible for replication to fail on
+                    # any number of shard copies but still succeed on the primary. The `_shards`
+                    # section of the write operation’s response reveals the number of shard copies
+                    # on which replication succeeded/failed."
+                    # from
+                    # https://www.elastic.co/guide/en/elasticsearch/reference/8.13/docs-index_.html#index-wait-for-active-shards
+                    if response["_shards"]["failed"] > 0:
+                        logger.error("Failed to write OpenSearch lock document to all nodes")
                         return False
             try:
                 unit = self._unit_with_lock(host)
