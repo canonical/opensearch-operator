@@ -565,6 +565,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             if (health := self.health.apply(wait_for_green_first=True)) not in [
                 HealthColors.GREEN,
+                HealthColors.YELLOW,
                 HealthColors.IGNORE,
             ]:
                 event.defer()

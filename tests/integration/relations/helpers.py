@@ -160,7 +160,7 @@ async def run_request(
     logging.info(f"request results: {result.results}")
 
     if result.status != "completed":
-        raise Exception(result.results)
+        raise Exception(result.response)
 
     return result.results
 
