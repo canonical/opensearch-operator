@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-
+import json
 import logging
 import socket
 from typing import Optional
@@ -162,7 +162,7 @@ async def run_request(
     if result.status != "completed":
         raise Exception(result.response)
 
-    return result.results
+    return json.loads(result.response.results)
 
 
 def ip_to_url(ip_str: str) -> str:
