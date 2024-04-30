@@ -898,7 +898,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
         try:
-            nodes = self._get_nodes(use_localhost=True)
+            nodes = self._get_nodes(use_localhost=not self.alt_hosts)
         except OpenSearchHttpError:
             logger.exception("Failed to get online nodes")
             event.defer()
