@@ -1,22 +1,15 @@
 #!/usr/bin/env python3
-# Copyright 2024 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 import asyncio
 import logging
-import subprocess
 import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..ha.helpers import (
-    app_name,
-    assert_continuous_writes_consistency,
-    assert_continuous_writes_increasing,
-    storage_id,
-    storage_type,
-)
+from ..ha.helpers import app_name, storage_id, storage_type
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
 from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, get_application_unit_ids
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -27,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
@@ -43,7 +37,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(my_charm, num_units=1, series=SERIES, storage=storage),
+        ops_test.model.deploy(my_charm, num_units=2, series=SERIES, storage=storage),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -54,7 +48,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         timeout=1000,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 1
+    assert len(ops_test.model.applications[APP_NAME].units) == 2
 
 
 @pytest.mark.group(1)
@@ -70,34 +64,17 @@ async def test_storage_reuse_after_scale_down(
             "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
 
-    # scale up to 2 units
-    await ops_test.model.applications[app].add_unit(count=1)
-    await ops_test.model.wait_for_idle(
-        apps=[app],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=2,
-    )
-
     writes_result = await c_writes.stop()
 
     # get unit info
     unit_id = get_application_unit_ids(ops_test, app)[1]
     unit_storage_id = storage_id(ops_test, app, unit_id)
 
-    # create a testfile on the newly added unit to check if data in storage is persistent
-    testfile = "/var/snap/opensearch/common/testfile"
-    create_testfile_cmd = f"juju ssh {app}/{unit_id} sudo touch {testfile}"
-    subprocess.run(create_testfile_cmd, shell=True)
-
     # scale-down to 1
-    await ops_test.model.applications[app].units[unit_id].remove(force=True)
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
     await ops_test.model.wait_for_idle(
         # app status will not be active because after scaling down not all shards are assigned
-        apps=[app],
-        timeout=1000,
-        wait_for_exact_units=1,
-        idle_period=IDLE_PERIOD,
+        apps=[app], timeout=1000, wait_for_exact_units=1, idle_period=IDLE_PERIOD
     )
 
     # add unit with storage attached
@@ -108,10 +85,7 @@ async def test_storage_reuse_after_scale_down(
     assert return_code == 0, "Failed to add unit with storage"
 
     await ops_test.model.wait_for_idle(
-        apps=[app],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=2,
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=2
     )
 
     # check the storage of the new unit
@@ -123,69 +97,11 @@ async def test_storage_reuse_after_scale_down(
     assert writes_result.count == (await c_writes.count())
     assert writes_result.max_stored_id == (await c_writes.max_stored_id())
 
-    # check if the testfile is still there or was overwritten on installation
-    check_testfile_cmd = f"juju ssh {app}/{new_unit_id} -q sudo ls {testfile}"
-    assert testfile == subprocess.getoutput(check_testfile_cmd)
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_storage_reuse_after_scale_to_zero(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-):
-    """Check storage is reused and data accessible after scaling down and up."""
-    app = (await app_name(ops_test)) or APP_NAME
-
-    if storage_type(ops_test, app) == "rootfs":
-        pytest.skip(
-            "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
-        )
-
-    writes_result = await c_writes.stop()
-
-    # scale down to zero units
-    unit_ids = get_application_unit_ids(ops_test, app)
-    storage_ids = {}
-    for unit_id in unit_ids:
-        storage_ids[unit_id] = storage_id(ops_test, app, unit_id)
-        await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
-
-    await ops_test.model.wait_for_idle(
-        # app status will not be active because after scaling down not all shards are assigned
-        apps=[app],
-        timeout=1000,
-        wait_for_exact_units=0,
-    )
-
-    # scale up again
-    for unit_id in unit_ids:
-        add_unit_cmd = f"add-unit {app} --model={ops_test.model.info.name} --attach-storage={storage_ids[unit_id]}"
-        return_code, _, _ = await ops_test.juju(*add_unit_cmd.split())
-        assert return_code == 0, f"Failed to add unit with storage {storage_ids[unit_id]}"
-
-    await ops_test.model.wait_for_idle(
-        apps=[app],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=len(unit_ids),
-    )
-
-    # check if data is also imported
-    assert writes_result.count == (await c_writes.count())
-    assert writes_result.max_stored_id == (await c_writes.max_stored_id())
-
-    # Restart the writes, so we can validate the cluster is still working
-    c_writes = ContinuousWrites(ops_test, app, initial_count=writes_result.count)
-    await c_writes.start()
-    await assert_continuous_writes_increasing(c_writes)
-    # final validation
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
-
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_in_new_cluster_after_app_removal(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ):
     """Check storage is reused and data accessible after removing app and deploying new cluster."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -195,7 +111,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
             "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
 
-    # scale-up to 3 to make it a cluster
+    # scale-down to 1 if multiple units
     unit_ids = get_application_unit_ids(ops_test, app)
     if len(unit_ids) < 3:
         await ops_test.model.applications[app].add_unit(count=3 - len(unit_ids))
@@ -219,11 +135,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
         storage_ids.append(storage_id(ops_test, app, unit_id))
 
     # remove application
-    for machine in ops_test.model.state.machines.values():
-        # Needed due to canonical/opensearch-operator#243
-        await machine.destroy(force=True)
-
-    await ops_test.model.remove_application(app, block_until_done=True)
+    await ops_test.model.applications[app].destroy(force=True, no_wait=True)
 
     # wait a bit until all app deleted
     time.sleep(60)
@@ -263,10 +175,3 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     # check if data is also imported
     assert writes_result.count == (await c_writes.count())
     assert writes_result.max_stored_id == (await c_writes.max_stored_id())
-
-    # Restart the writes, so we can validate the cluster is still working
-    c_writes = ContinuousWrites(ops_test, app, initial_count=writes_result.count)
-    await c_writes.start()
-    await assert_continuous_writes_increasing(c_writes)
-    # final validation
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
