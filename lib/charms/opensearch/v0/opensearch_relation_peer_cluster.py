@@ -10,7 +10,7 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
 )
-from charms.opensearch.v0.constants_tls import CertType
+from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import (
     RelDepartureReason,
     relation_departure_reason,
@@ -29,6 +29,7 @@ from charms.opensearch.v0.models import (
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import (
+    ActiveStatus,
     BlockedStatus,
     EventBase,
     Object,
@@ -130,6 +131,14 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             charm.on[self.relation_name].relation_departed,
             self._on_peer_cluster_relation_departed,
         )
+        self.framework.observe(
+            self.charm.on[TLS_RELATION].relation_changed,
+            self._on_certificate_changed,
+        )
+
+    def _on_certificate_changed(self, event: EventBase):
+        """Processes an event change, which does not trigger a peer-cluster change."""
+        self.refresh_relation_data(event)
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Received by all units in main/failover clusters when new sub-cluster joins the rel."""
@@ -168,6 +177,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         if not (candidate_failover_app := data.get("candidate_failover_orchestrator_app")):
             self.refresh_relation_data(event)
+            event.defer()
             return
 
         orchestrators = PeerClusterOrchestrators.from_dict(
@@ -176,6 +186,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if orchestrators.failover_app and orchestrators.failover_rel_id in target_relation_ids:
             logger.info("A failover cluster orchestrator is already registered.")
             self.refresh_relation_data(event)
+            event.defer()
             return
 
         # register the new failover in the current main peer relation data
@@ -264,6 +275,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             )
 
         if should_defer:
+            logger.debug(f"Deferring event {event}.\nrel_data={json.dumps(rel_data.to_dict())}")
             event.defer()
 
     def _notify_if_wrong_integration(
@@ -436,6 +448,37 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             charm.on[self.relation_name].relation_departed,
             self._on_peer_cluster_relation_departed,
         )
+        self.framework.observe(
+            self.charm.on[TLS_RELATION].relation_changed,
+            self._on_certificate_changed,
+        )
+
+    def _get_rel_per_cluster_type(self, type: DeploymentType) -> Optional[Relation]:
+        if self.relation_name not in self.charm.model.relations:
+            return None
+
+        for rel in self.charm.model.relations[self.relation_name]:
+            if not (data := self.get_obj_from_rel("data", rel_id=rel.id)):
+                continue
+            if data.get("deployment_desc", {}).get("typ") == type:
+                return rel
+        return None
+
+    def _on_certificate_changed(self, event: RelationChangedEvent):
+        """Processes an event change, which does not trigger a peer-cluster change."""
+        if not (
+            (rel := self._get_rel_per_cluster_type(DeploymentType.MAIN_ORCHESTRATOR))
+            and (data := rel.data.get(event.app))
+        ):
+            # No peer relation or no meaningful relation published yet
+            logger.info("Abandoning certificate change event as no data available yet.")
+            return
+
+        # fetch the success data
+        data = PeerClusterRelData.from_str(data["data"])
+
+        # process the peer cluster data
+        self._process_peer_cluster_data(event, data)
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Event received when a new main-failover cluster unit joins the fleet."""
@@ -447,6 +490,24 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
+        # check if current cluster ready
+        if not self.charm.opensearch_peer_cm.deployment_desc():
+            event.defer()
+            return
+
+        if not (data := event.relation.data.get(event.app)) or not data.get("data"):
+            return
+
+        # fetch the success data
+        data = PeerClusterRelData.from_str(data["data"])
+
+        # process the peer cluster data
+        self._process_peer_cluster_data(event, data)
+
+    def _process_peer_cluster_data(self, event: RelationChangedEvent, data) -> None:
+        if not self.charm.unit.is_leader():
+            return
+
         # register in the 'main/failover'-CMs / save the number of planned units of the current app
         self._put_planned_units(event)
 
@@ -455,18 +516,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
-        if not (data := event.relation.data.get(event.app)):
-            return
-
         # fetch main and failover clusters relations ids if any
         orchestrators = self._orchestrators(event, data, deployment_desc)
 
         # check errors sent by providers
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
             return
-
-        # fetch the success data
-        data = PeerClusterRelData.from_str(data["data"])
 
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
@@ -495,11 +550,21 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
+        # No errors, we should move back to active/idle status
+        self.charm.status.set(ActiveStatus(), app=True)
+
         # aggregate all CMs (main + failover if any)
         data.cm_nodes = self._cm_nodes(orchestrators)
 
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
+
+        if deployment_desc.typ in [
+            DeploymentType.FAILOVER_ORCHESTRATOR,
+            DeploymentType.MAIN_ORCHESTRATOR,
+        ]:
+            # We need to propagate any new updates to the peer-cluster-orchestrator
+            self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _set_security_conf(self, data: PeerClusterRelData) -> None:
         """Store security related config."""

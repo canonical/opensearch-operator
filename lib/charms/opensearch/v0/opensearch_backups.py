@@ -56,7 +56,7 @@ class OpenSearchBaseCharm(CharmBase):
 ###########################################################################################
 
 For developers, there is no meaningful difference between small and large deployments.
-They both use the same OpenSearchBackupFactory to return the correct object for their case.
+They both use the same backup_factory() to return the correct object for their case.
 
 The large deployments expands the original concept of OpenSearchBackup to include other
 juju applications that are not cluster_manager. This means a cluster may be a data-only or
@@ -69,23 +69,15 @@ clusters will import that information from the peer-cluster relation.
 To implement the points above without causing too much disruption to the existing code,
 a factory pattern has been adopted, where the main charm receives a OpenSearchBackupBase
 object that corresponds to its own case (cluster-manager, failover, data, etc).
-
-Overloading S3Requirer
-
-The S3Requirer is replaced by PeerClusterDataS3Requirer for non-orchestrator clusters.
-This allows to detail the behavior of the cluster depending on its type.
 """
 
+import abc
 import json
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from charms.data_platform_libs.v0.s3 import (
-    CredentialsChangedEvent,
-    CredentialsGoneEvent,
-    S3Requirer,
-)
+from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
     BackupConfigureStart,
@@ -101,7 +93,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import DeploymentType
+from charms.opensearch.v0.models import DeploymentType, PeerClusterRelData
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
@@ -114,7 +106,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     PluginState,
 )
 from ops.charm import ActionEvent, CharmBase
-from ops.framework import EventBase, EventSource, Object, ObjectEvents
+from ops.framework import EventBase, Object
 from ops.model import (
     BlockedStatus,
     MaintenanceStatus,
@@ -219,91 +211,7 @@ class BackupServiceState(BaseStrEnum):
     SNAPSHOT_FAILED_UNKNOWN = "snapshot failed for unknown reason"
 
 
-class PeerClusterCredentialsChangedEvent(CredentialsChangedEvent):
-    """Updated S3Event to the peer-cluster case.
-
-    Only credentials will come from the peer-cluster relation.
-    """
-
-    @property
-    def access_key(self) -> str | None:
-        """Returns the access key."""
-        if not self.relation.app:
-            return None
-
-        return self._load_relation_data.get("access-key")
-
-    @property
-    def secret_key(self) -> str | None:
-        """Returns the secret key."""
-        if not self.relation.app:
-            return None
-
-        return self._load_relation_data.get("secret-key")
-
-    @property
-    def _load_relation_data(self) -> dict[str, str]:
-        """Loads the relation data from the peer-cluster relation from a sub-key."""
-        return _load_s3_credentials_data(self.relation.data[self.relation.app])
-
-
-class S3CredentialRequiresEvents(ObjectEvents):
-    """Event descriptor for events raised by the S3Provider."""
-
-    credentials_changed = EventSource(PeerClusterCredentialsChangedEvent)
-    credentials_gone = EventSource(CredentialsGoneEvent)
-
-
-class PeerClusterDataS3Requirer(S3Requirer):
-    """Reimplements some of the key methods in S3Requirer for non-orchestrator clusters.
-
-    This class loads the information from peer-cluster relations instead of s3-relation and
-    replaces _load_relation_data to read from a particular key within the peer-relation instead
-    of the raw s3-relation's databag.
-    """
-
-    on = S3CredentialRequiresEvents()  # pyright: ignore [reportGeneralTypeIssues]
-
-    S3_REQUIRED_OPTIONS = ["access-key", "secret-key"]
-
-    def _on_relation_joined(self, _) -> None:
-        """Reimplements the relation joined event to defer it."""
-        # We do not need this method, so we just overload it
-        pass
-
-    def _on_relation_changed(self, event) -> None:
-        """Reimplements the relation changed, only process the credentials.
-
-        This class is not interested on every S3 parameter, e.g. bucket or path. We want
-        only the credentials. Therefore, we reimplement this method to overload the
-        S3_REQUIRED_OPTIONS and guarantee it is dedicated only to these settings.
-        """
-        # check if the mandatory options are in the relation data
-        contains_required_options = True
-        # get current credentials data
-        credentials = self.get_s3_connection_info()
-        # records missing options
-        missing_options = []
-        for configuration_option in self.S3_REQUIRED_OPTIONS:
-            if configuration_option not in credentials:
-                contains_required_options = False
-                missing_options.append(configuration_option)
-        # emit credential change event only if all mandatory fields are present
-        if contains_required_options:
-            getattr(self.on, "credentials_changed").emit(
-                event.relation, app=event.app, unit=event.unit
-            )
-        else:
-            logger.warning(
-                f"Some mandatory fields: {missing_options} are not present, do not emit credential change event!"
-            )
-
-    def _load_relation_data(self, raw_relation_data: RelationDataContent) -> dict[str, str]:
-        """Loads the relation data from the peer-cluster relation from a sub-key."""
-        return _load_s3_credentials_data(raw_relation_data)
-
-
-class OpenSearchBackupBase(Object):
+class OpenSearchBackupBase(Object, abc.ABC):
     """Works as parent for all backup classes.
 
     This class does a smooth transition between orchestrator and non-orchestrator clusters.
@@ -326,6 +234,22 @@ class OpenSearchBackupBase(Object):
             self.charm.on[S3_RELATION].relation_broken,
         ]:
             self.framework.observe(event, self._on_s3_relation_event)
+
+    @abc.abstractmethod
+    def _on_s3_relation_event(self, event: EventBase) -> None:
+        pass
+
+
+class OpenSearchWaitingDeploymentDescBackup(OpenSearchBackupBase):
+    """Works as the class to defer / fail actions until deployment description is available."""
+
+    def __init__(self, charm: Object, relation_name: str = PeerClusterRelationName):
+        """Initializes the opensearch backup whilst waiting for the deployment description.
+
+        This class will not hold a s3_client object, as it is not intended to really
+        manage the relation besides waiting for the deployment description.
+        """
+        super().__init__(charm, relation_name)
         for event in [
             self.charm.on.create_backup_action,
             self.charm.on.list_backups_action,
@@ -344,7 +268,7 @@ class OpenSearchBackupBase(Object):
         event.fail("Failed: deployment description not yet available")
 
 
-class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
+class OpenSearchNonOrchestratorClusterBackup(OpenSearchWaitingDeploymentDescBackup):
     """Simpler implementation of backup relation for non-orchestrator clusters.
 
     In a nutshell, non-orchstrator clusters should receive the backup information via
@@ -354,24 +278,28 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     def __init__(self, charm: Object, relation_name: str = PeerClusterRelationName):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
-        self.s3_client = PeerClusterDataS3Requirer(self.charm, PeerClusterRelationName)
         self.framework.observe(
-            self.s3_client.on.credentials_changed, self._on_s3_credentials_changed
+            self.charm.on[PeerClusterRelationName].relation_changed,
+            self._on_peer_relation_changed,
         )
         self.framework.observe(
             self.charm.on[S3_RELATION].relation_broken, self._on_s3_relation_broken
         )
 
-    def peer_s3_data_exists(self) -> bool:
-        """Returns True if all the data for s3 from peer relation is present."""
-        return self.s3_client.get_s3_connection_info().get(
-            "access-key"
-        ) and self.s3_client.get_s3_connection_info().get("secret-key")
-
-    def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
+    def _on_peer_relation_changed(self, event) -> None:
         """Processes the non-orchestrator cluster events."""
         if not self.charm.plugin_manager.check_plugin_manager_ready():
             logger.warning("s3-changed: cluster not ready yet")
+            event.defer()
+            return
+
+        if not (data := event.relation.data.get(event.app)):
+            return
+        data = PeerClusterRelData.from_str(data["data"])
+        s3_credentials = data.s3_credentials
+        if not s3_credentials or not s3_credentials.access_key or not s3_credentials.secret_key:
+            # Just abandon this event, as the relation is not fully ready yet
+            return
 
         # https://github.com/canonical/opensearch-operator/issues/252
         # We need the repository-s3 to support two main relations: s3 OR peer-cluster
@@ -393,19 +321,17 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         try:
             plugin = OpenSearchPluginConfig(
                 secret_entries_to_add={
-                    "s3.client.default.access_key": event.access_key,
-                    "s3.client.default.secret_key": event.secret_key,
+                    "s3.client.default.access_key": s3_credentials.access_key,
+                    "s3.client.default.secret_key": s3_credentials.secret_key,
                 },
             )
             self.charm.plugin_manager.apply_config(plugin)
         except OpenSearchError as e:
-            if isinstance(e, OpenSearchNotFullyReadyError):
-                logger.warning("s3-changed: cluster not ready yet")
-            else:
-                self.charm.status.set(BlockedStatus(S3RelMissing))
-                # There was an unexpected error, log it and block the unit
-                logger.error(e)
+            self.charm.status.set(BlockedStatus(S3RelMissing))
+            # There was an unexpected error, log it and block the unit
+            logger.error(e)
             event.defer()
+            return
         self.charm.status.clear(S3RelMissing)
 
     def _on_s3_relation_event(self, event: EventBase) -> None:
@@ -450,10 +376,6 @@ class OpenSearchBackup(OpenSearchBackupBase):
         We run the peer cluster orchestrator's refresh on every new s3 information.
         """
         self.charm.peer_cluster_provider.refresh_relation_data(event)
-
-    def _on_s3_relation_action(self, _: EventBase) -> None:
-        """Overrides the parent method to process the s3 relation events, as we use its own."""
-        pass
 
     @property
     def _plugin_status(self):
@@ -1123,7 +1045,7 @@ def backup_factory(charm: CharmBase) -> OpenSearchBackupBase:
     if not charm.opensearch_peer_cm.deployment_desc():
         # Temporary condition: we are waiting for CM to show up and define which type
         # of cluster are we. Once we have that defined, then we will process.
-        return OpenSearchBackupBase(charm)
+        return OpenSearchWaitingDeploymentDescBackup(charm)
     elif charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
         return OpenSearchBackup(charm)
     return OpenSearchNonOrchestratorClusterBackup(charm)
