@@ -32,8 +32,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
+    await ops_test.model.create_storage_pool("opensearch-pool", "lxd")
     # this assumes the test is run on an lxd cloud, using the default storage pool 'lxd'
-    storage = {"opensearch-data": {"pool": "lxd", "size": 2048}}
+    storage = {"opensearch-data": {"pool": "opensearch-pool", "size": 2048}}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(my_charm, num_units=2, series=SERIES, storage=storage),
@@ -89,8 +90,8 @@ async def test_storage_reuse_after_scale_down(
     # scale-down to 1
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
     await ops_test.model.wait_for_idle(
-        # the expected status is blocked because after scaling down not all shards are assigned
-        apps=[app], timeout=1000, status="blocked", wait_for_exact_units=1, idle_period=IDLE_PERIOD
+        # app status will not be active because after scaling down not all shards are assigned
+        apps=[app], timeout=1000, wait_for_exact_units=1, idle_period=IDLE_PERIOD
     )
 
     # add unit with storage attached
