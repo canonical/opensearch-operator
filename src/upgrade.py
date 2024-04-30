@@ -305,7 +305,7 @@ class Upgrade(abc.ABC):
                     resolution="Ensure all units are online in the cluster",
                 )
 
-            if self._charm.check_if_starting():
+            if self.check_if_starting():
                 _log_and_raise(
                     cause="Cluster is starting",
                     resolution="Ensure cluster has finished its (re)start cycle before proceeding",
