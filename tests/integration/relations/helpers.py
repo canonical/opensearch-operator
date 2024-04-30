@@ -155,9 +155,9 @@ async def run_request(
         unit_id=int(unit_name.split("/")[-1]),
         action_name="run-request",
         params=params,
-        app=unit_name.split("/")[0],
+        app="/".join(unit_name.split("/")[:-1]),
     )
-    logging.info(f"request results: {result.results}")
+    logging.info(f"request results: {result}")
 
     if result.status != "completed":
         raise Exception(result.response)
