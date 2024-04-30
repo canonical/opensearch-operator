@@ -61,7 +61,6 @@ class OpenSearchSnap(OpenSearchDistribution):
         """Install opensearch from the snapcraft store."""
         try:
             self._opensearch.ensure(snap.SnapState.Latest, revision=OPENSEARCH_SNAP_REVISION)
-            # self._opensearch.ensure(snap.SnapState.Latest, channel="2/edge/dpe-2119")
             self._opensearch.connect("process-control")
             if not self._opensearch.held:
                 # hold the snap in charm determined revision
