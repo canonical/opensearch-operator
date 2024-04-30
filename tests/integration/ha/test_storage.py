@@ -127,7 +127,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
             "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
 
-    # scale-down to 1 if multiple units
+    # scale-up to 3 to make it a cluster
     unit_ids = get_application_unit_ids(ops_test, app)
     if len(unit_ids) < 3:
         await ops_test.model.applications[app].add_unit(count=3 - len(unit_ids))
@@ -151,7 +151,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
         storage_ids.append(storage_id(ops_test, app, unit_id))
 
     # remove application
-    await ops_test.model.applications[app].destroy()
+    await ops_test.model.applications[app].destroy(force=True, no_wait=True)
 
     # wait a bit until all app deleted
     time.sleep(60)
