@@ -36,7 +36,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(my_charm, num_units=2, series=SERIES, storage=storage),
+        ops_test.model.deploy(my_charm, num_units=1, series=SERIES, storage=storage),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -47,7 +47,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         timeout=1000,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 2
+    assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
 @pytest.mark.group(1)
@@ -65,12 +65,27 @@ async def test_storage_reuse_after_scale_down(
 
     writes_result = await c_writes.stop()
 
+    # scale up to 2 units
+    await ops_test.model.applications[app].add_unit(count=1)
+    await ops_test.model.wait_for_idle(
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=2,
+    )
+
     # get unit info
     unit_id = get_application_unit_ids(ops_test, app)[1]
     unit_storage_id = storage_id(ops_test, app, unit_id)
 
     # scale-down to 1
-    await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
+    # await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
+    remove_unit_cmd = (
+        f"remove-unit {app}/{unit_id} --force"
+    )
+    return_code, _, _ = await ops_test.juju(*remove_unit_cmd.split())
+    assert return_code == 0, "Failed to remove unit from application"
+
     await ops_test.model.wait_for_idle(
         # app status will not be active because after scaling down not all shards are assigned
         apps=[app],
