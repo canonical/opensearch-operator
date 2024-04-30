@@ -4,7 +4,6 @@
 """Utility functions for charms related operations."""
 import re
 import typing
-from datetime import datetime
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from ops import CharmBase
