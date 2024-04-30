@@ -74,7 +74,10 @@ async def test_storage_reuse_after_scale_down(
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
     await ops_test.model.wait_for_idle(
         # app status will not be active because after scaling down not all shards are assigned
-        apps=[app], timeout=1000, wait_for_exact_units=1, idle_period=IDLE_PERIOD
+        apps=[app],
+        timeout=1000,
+        wait_for_exact_units=1,
+        idle_period=IDLE_PERIOD,
     )
 
     # add unit with storage attached
