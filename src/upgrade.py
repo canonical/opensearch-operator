@@ -250,7 +250,7 @@ class Upgrade(abc.ABC):
     def check_if_starting(self) -> bool:
         """Check if the service is starting."""
         rel = self._charm.model.get_relation(PeerRelationName)
-        for unit in rel.units.union({self.unit}):
+        for unit in rel.units.union({self._charm.unit}):
             if rel.data[unit].get("starting") == "True":
                 return True
         return False
