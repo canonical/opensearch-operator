@@ -259,14 +259,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _reconcile_upgrade(self, _=None):
         pass
 
-    def check_if_starting(self) -> bool:
-        """Check if the service is starting."""
-        rel = self.model.get_relation(PeerRelationName)
-        for unit in rel.units.union({self.unit}):
-            if rel.data[unit].get("starting") == "True":
-                return True
-        return False
-
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
         if self.peers_data.get(Scope.APP, "security_index_initialised", False):

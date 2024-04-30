@@ -17,6 +17,7 @@ import typing
 
 import ops
 import poetry.core.constraints.version as poetry_version
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
@@ -246,6 +247,14 @@ class Upgrade(abc.ABC):
         Only applies to machine charm
         """
 
+    def check_if_starting(self) -> bool:
+        """Check if the service is starting."""
+        rel = self._charm.model.get_relation(PeerRelationName)
+        for unit in rel.units.union({self.unit}):
+            if rel.data[unit].get("starting") == "True":
+                return True
+        return False
+
     def pre_upgrade_check(self) -> None:
         """Check if this app is ready to upgrade
 
@@ -262,15 +271,27 @@ class Upgrade(abc.ABC):
 
         Raises:
             PrecheckFailed: App is not ready to upgrade
+
+        TODO Kubernetes: Run (some) checks after `juju refresh` (in case user forgets to run
+        pre-upgrade-check action). Note: 1 unit will upgrade before we can run checks (checks may
+        need to be modified).
+        See https://chat.canonical.com/canonical/pl/cmf6uhm1rp8b7k8gkjkdsj4mya
         """
         logger.debug("Running pre-upgrade checks")
-        cause = None
-        resolution = None
+
+        def _log_and_raise(cause, resolution):
+            message = f"cause={cause}"
+            if resolution:
+                message += f"\nresolution={resolution}"
+            logger.warning(message)
+            raise PrecheckFailed(message)
 
         try:
             if self._charm.health.apply() != HealthColors.GREEN:
-                cause = f"Cluster not healthy: expected 'green', but '{self.health.apply()}' found instead"
-                resolution = "Ensure cluster is healthy before upgrading"
+                _log_and_raise(
+                    cause=f"Cluster not healthy: expected 'green', but '{self.health.apply()}' found instead",
+                    resolution="Ensure cluster is healthy before upgrading",
+                )
 
             online_nodes = ClusterTopology.nodes(
                 self._charm.opensearch,
@@ -279,22 +300,22 @@ class Upgrade(abc.ABC):
                 only_this_juju_app=self._charm.app.name,
             )
             if len(online_nodes) != self._charm.app.planned_units():
-                cause = "Not all units are online"
-                resolution = "Ensure all units are online in the cluster"
+                _log_and_raise(
+                    cause="Not all units are online",
+                    resolution="Ensure all units are online in the cluster",
+                )
 
             if self._charm.check_if_starting():
-                cause = "Cluster is starting"
-                resolution = "Ensure cluster has finished its (re)start cycle before proceeding"
+                _log_and_raise(
+                    cause="Cluster is starting",
+                    resolution="Ensure cluster has finished its (re)start cycle before proceeding",
+                )
 
-            if not self._charm.backup.is_idle():
-                cause = "Backup is in progress"
-                resolution = "Ensure backup is completed before upgrading"
+            if not self._charm.backup.is_idle_or_not_set():
+                _log_and_raise(
+                    cause="Backup or restore is in progress",
+                    resolution="Ensure it is completed before proceed",
+                )
 
         except OpenSearchHttpError:
-            cause = "Cluster is unreachable"
-            resolution = "Fix the current unit before upgrading"
-        if cause:
-            message = f"Pre-upgrade check failed. Cannot upgrade.\ncause={cause}"
-            if resolution:
-                message += f"\nresolution={resolution}"
-            raise PrecheckFailed(message)
+            _log_and_raise(cause="Cluster is unreachable", resolution="Fix current unit's network")

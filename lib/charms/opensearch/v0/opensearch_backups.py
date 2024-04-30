@@ -305,21 +305,20 @@ class OpenSearchBackup(Object):
 
         return output["snapshot"]
 
-    def is_idle(self) -> bool:
-        """Checks if the backup system is idle.
+    def is_idle_or_not_set(self) -> bool:
+        """Checks if the backup system is idle or not yet configured.
 
-        The backup system is idle if it is configured and there are no backups in
-        progress and no restore in progress.
+        `idle`: configured but there are no backups nor restores in progress.
+        `not_set`: the `get_service_status` returns REPO_NOT_CREATED or REPO_MISSING.
+
+        Raises:
+            OpenSearchHttpError: cluster is unreachable
         """
-        try:
-            output = self._request("GET", f"_snapshot/{S3_REPOSITORY}")
-            return self.get_service_status(output) in [
-                BackupServiceState.REPO_NOT_CREATED,
-                BackupServiceState.REPO_MISSING,
-            ] or not (self.is_backup_in_progress() or self._is_restore_complete())
-        except OpenSearchHttpError:
-            # It means we've failed to retrieve the information about repository
-            return True
+        output = self._request("GET", f"_snapshot/{S3_REPOSITORY}")
+        return self.get_service_status(output) in [
+            BackupServiceState.REPO_NOT_CREATED,
+            BackupServiceState.REPO_MISSING,
+        ] or not (self.is_backup_in_progress() or self._is_restore_complete())
 
     def _is_restore_complete(self) -> bool:
         """Checks if the restore is finished.
