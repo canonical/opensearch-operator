@@ -30,11 +30,14 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
+    # this assumes the test is run on a lxd cloud
+    await ops_test.model.create_storage_pool("opensearch-pool", "lxd")
+    storage = {"opensearch-data": {"pool": "opensearch-pool", "size": 2048}}
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(my_charm, num_units=1, series=SERIES),
+        ops_test.model.deploy(my_charm, num_units=1, series=SERIES, storage=storage),
     )
 
     # Relate it to OpenSearch to set up TLS.
