@@ -907,7 +907,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if node.name == self.unit_name:
                 break
         else:
-            # TODO upgrade: raise different exception?
             raise OpenSearchNotFullyReadyError("Node online but not in cluster.")
 
         # cleanup bootstrap conf in the node
