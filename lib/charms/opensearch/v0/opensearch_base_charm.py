@@ -897,18 +897,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.opensearch.is_node_up():
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
-        try:
-            nodes = self._get_nodes(use_localhost=True)
-        except OpenSearchHttpError:
-            logger.exception("Failed to get online nodes")
-            event.defer()
-            return
-        for node in nodes:
-            if node.name == self.unit_name:
-                break
-        else:
-            raise OpenSearchNotFullyReadyError("Node online but not in cluster.")
-
         # cleanup bootstrap conf in the node
         if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
             self._cleanup_bootstrap_conf_if_applies()
