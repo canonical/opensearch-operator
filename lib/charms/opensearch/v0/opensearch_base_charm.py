@@ -226,7 +226,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.on[PeerRelationName].relation_joined, self._on_peer_relation_joined
         )
         self.framework.observe(
-            self.on[PeerRelationName].relation_changed, self.peer_relation_changed
+            self.on[PeerRelationName].relation_changed, self._on_peer_relation_changed
         )
         self.framework.observe(
             self.on[PeerRelationName].relation_departed, self._on_peer_relation_departed
@@ -238,7 +238,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
-        # There is an explosion of peer_relation_changed calls at the startup.
+        # There is an explosion of _on_peer_relation_changed calls at the startup.
         # As this corresponds to a local peer relation (not the peer-cluster), we can safely
         # abandon repeated events.
         self._local_peer_relation_changed_has_deferred = False
@@ -427,7 +427,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             event.defer()
 
-    def peer_relation_changed(self, event: RelationChangedEvent):
+    def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
         if (
             self.unit.is_leader()
@@ -605,8 +605,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # we need to alert the leader that it must recompute the node roles for any unit whose
             # roles were changed while the current unit was cut-off from the rest of the network
             self._on_peer_relation_joined(event)
-            if event.deferred:
-                return
 
         previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.unit.is_leader():
