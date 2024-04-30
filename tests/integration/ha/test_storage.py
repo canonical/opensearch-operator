@@ -79,10 +79,7 @@ async def test_storage_reuse_after_scale_down(
     unit_storage_id = storage_id(ops_test, app, unit_id)
 
     # scale-down to 1
-    remove_unit_cmd = f"remove-unit {app}/{unit_id} --force"
-    return_code, _, _ = await ops_test.juju(*remove_unit_cmd.split())
-    assert return_code == 0, "Failed to remove unit from application"
-
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
     await ops_test.model.wait_for_idle(
         # app status will not be active because after scaling down not all shards are assigned
         apps=[app],
