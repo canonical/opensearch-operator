@@ -926,9 +926,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     # Reset to default value
                     payload={"persistent": {"cluster.routing.allocation.enable": None}},
                 )
-                self.opensearch.request("POST", "/_ml/set_upgrade_mode?enabled=false")
             except OpenSearchHttpError:
-                logger.exception("Failed to re-enable allocation or ML tasks after upgrade")
+                logger.exception("Failed to re-enable allocation after upgrade")
                 event.defer()
                 return
 
@@ -1069,13 +1068,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.opensearch.request("POST", "/_flush", retries=3)
         except OpenSearchHttpError as e:
             logger.debug("Failed to flush before upgrade", exc_info=e)
-        try:
-            self.opensearch.request("POST", "/_ml/set_upgrade_mode?enabled=true")
-        except OpenSearchHttpError:
-            logger.exception("Failed to enable ML upgrade mode before upgrade")
-            self.node_lock.release()
-            event.defer()
-            return
 
         logger.debug("Stopping OpenSearch before upgrade")
         try:
