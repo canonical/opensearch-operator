@@ -238,6 +238,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
+        # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
+        # in the deferred event queue
+        self._is_peer_rel_changed_deferred = False
+
     @property
     @abc.abstractmethod
     def _upgrade(self) -> typing.Optional[upgrade.Upgrade]:
@@ -429,8 +433,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             and self.opensearch.is_node_up()
             and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
         ):
+            if self._is_peer_rel_changed_deferred:
+                # We already deferred this event during this Juju event. Retry on the next
+                # Juju event.
+                return
             # we defer because we want the temporary status to be updated
             event.defer()
+            # If the handler is called again within this Juju hook, we will abandon the event
+            self._is_peer_rel_changed_deferred = True
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -593,9 +603,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # since when an IP change happens, "_on_peer_relation_joined" won't be called,
             # we need to alert the leader that it must recompute the node roles for any unit whose
             # roles were changed while the current unit was cut-off from the rest of the network
-            self.on[PeerRelationName].relation_joined.emit(
-                self.model.get_relation(PeerRelationName)
-            )
+            self._on_peer_relation_joined(event)
 
         previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.unit.is_leader():
