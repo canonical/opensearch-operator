@@ -823,7 +823,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 OpenSearchNotFullyReadyError,
             ):
                 event.defer()
-            except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
+            except OpenSearchUserMgmtError as e:
                 # Either generic start failure or cluster is not read to create the internal users
                 logger.exception(e)
                 self.node_lock.release()
