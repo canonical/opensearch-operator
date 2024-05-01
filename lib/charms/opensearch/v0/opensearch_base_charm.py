@@ -238,7 +238,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
-        # Ensure that only one instance of the `_on_peer_relation_changed` handler exists in the deferred event queue
+        # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
+        # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
 
     @property
