@@ -137,9 +137,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         self.refresh_relation_data(event)
 
-        # TODO: is the below still needed
-        # self.charm.trigger_leader_peer_rel_changed()
-
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
         if not self.charm.unit.is_leader():
@@ -415,7 +412,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Event received when a new main-failover cluster unit joins the fleet."""
-        # self.charm.trigger_leader_peer_rel_changed()
         pass
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
