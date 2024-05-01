@@ -440,7 +440,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
             # we defer because we want the temporary status to be updated
             event.defer()
-            # From now on, we will abandon the event if we need to defer it
+            # If the handler is called again within this Juju hook, we will abandon the event
             self._is_peer_rel_changed_deferred = True
 
         for relation in self.model.relations.get(ClientRelationName, []):
