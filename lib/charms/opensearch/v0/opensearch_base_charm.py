@@ -39,7 +39,7 @@ from charms.opensearch.v0.constants_charm import (
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_charm import Status, trigger_peer_rel_changed
+from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
@@ -608,7 +608,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # since when an IP change happens, "_on_peer_relation_joined" won't be called,
             # we need to alert the leader that it must recompute the node roles for any unit whose
             # roles were changed while the current unit was cut-off from the rest of the network
-            self._on_peer_relation_joined(event)
+            self._on_peer_relation_joined(
+                RelationJoinedEvent(event.handle, PeerRelationName, self.app, self.unit)
+            )
 
         previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.unit.is_leader():
@@ -803,7 +805,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # we check if we need to create the admin user
         if not self.is_admin_user_configured():
-            self._put_admin_user()
+            self._put_or_update_internal_user_leader(AdminUser)
 
         # we check if we need to generate the admin certificate if missing
         if not self.is_tls_fully_configured():

@@ -88,6 +88,13 @@ class OpenSearchPeerClustersManager:
                 Scope.APP, "deployment-description", deployment_desc.to_dict()
             )
 
+        if deployment_desc.start == StartMode.WITH_GENERATED_ROLES:
+            # trigger roles change on the leader, other units will have their peer-rel-changed
+            # event triggered
+            self._charm.on[PeerRelationName].relation_changed.emit(
+                self._charm.model.get_relation(PeerRelationName)
+            )
+
         self.apply_status_if_needed(deployment_desc)
 
         # TODO: once peer clusters relation implemented, we should apply all directives
