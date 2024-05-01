@@ -89,7 +89,10 @@ from charms.opensearch.v0.opensearch_relation_peer_cluster import (
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
-from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
+from charms.opensearch.v0.opensearch_users import (
+    OpenSearchUserManager,
+    OpenSearchUserMgmtError,
+)
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
@@ -824,7 +827,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch.is_started():
             try:
                 self._post_start_init(event)
-            except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
+            except (
+                OpenSearchHttpError,
+                OpenSearchStartTimeoutError,
+                OpenSearchNotFullyReadyError,
+            ):
+                event.defer()
+            except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
+                # Either generic start failure or cluster is not read to create the internal users
+                logger.exception(e)
+                self.node_lock.release()
+                self.status.set(BlockedStatus(ServiceStartError))
                 event.defer()
             return
 
@@ -869,9 +882,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 )
             )
             self._post_start_init(event)
-        except (OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
+        except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
-        except OpenSearchStartError as e:
+        except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
+            # Either generic start failure or cluster is not read to create the internal users
             logger.exception(e)
             self.node_lock.release()
             self.status.set(BlockedStatus(ServiceStartError))

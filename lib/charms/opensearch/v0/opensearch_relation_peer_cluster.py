@@ -29,7 +29,6 @@ from charms.opensearch.v0.models import (
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import (
-    ActiveStatus,
     BlockedStatus,
     EventBase,
     Object,
@@ -546,21 +545,11 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
-        # No errors, we should move back to active/idle status
-        self.charm.status.set(ActiveStatus(), app=True)
-
         # aggregate all CMs (main + failover if any)
         data.cm_nodes = self._cm_nodes(orchestrators)
 
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
-
-        if deployment_desc.typ in [
-            DeploymentType.FAILOVER_ORCHESTRATOR,
-            DeploymentType.MAIN_ORCHESTRATOR,
-        ]:
-            # We need to propagate any new updates to the peer-cluster-orchestrator
-            self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _set_security_conf(self, data: PeerClusterRelData) -> None:
         """Store security related config."""
