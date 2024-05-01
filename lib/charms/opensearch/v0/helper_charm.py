@@ -120,13 +120,20 @@ def relation_departure_reason(charm: CharmBase, relation_name: str) -> RelDepart
     return RelDepartureReason.REL_BROKEN
 
 
-def trigger_peer_rel_changed(charm: "OpenSearchBaseCharm", only_by_leader: bool = False) -> None:
+def trigger_peer_rel_changed(
+    charm: "OpenSearchBaseCharm",
+    only_by_leader: bool = False,
+    on_other_units: bool = True,
+    on_current_unit: bool = False,
+) -> None:
     """Force trigger a peer rel changed event."""
     if only_by_leader and not charm.unit.is_leader():
         return
 
-    charm.peers_data.put(Scope.UNIT, "update-ts", time_ns())
-    if only_by_leader:
+    if on_other_units or not on_current_unit:
+        charm.peers_data.put(Scope.APP if only_by_leader else Scope.UNIT, "update-ts", time_ns())
+
+    if on_current_unit:
         charm.on[PeerRelationName].relation_changed.emit(
             charm.model.get_relation(PeerRelationName)
         )

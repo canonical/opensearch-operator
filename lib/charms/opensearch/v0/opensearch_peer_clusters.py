@@ -18,6 +18,7 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerRelationName,
 )
+from charms.opensearch.v0.helper_charm import trigger_peer_rel_changed
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
     DeploymentDescription,
@@ -91,9 +92,7 @@ class OpenSearchPeerClustersManager:
         if deployment_desc.start == StartMode.WITH_GENERATED_ROLES:
             # trigger roles change on the leader, other units will have their peer-rel-changed
             # event triggered
-            self._charm.on[PeerRelationName].relation_changed.emit(
-                self._charm.model.get_relation(PeerRelationName)
-            )
+            trigger_peer_rel_changed(self._charm, on_other_units=False, on_current_unit=True)
 
         self.apply_status_if_needed(deployment_desc)
 

@@ -141,7 +141,7 @@ class OpenSearchHealth:
     def _apply_for_app(self, status: str) -> None:
         """Cluster wide / app status."""
         if not self._charm.unit.is_leader():
-            trigger_peer_rel_changed(self._charm)
+            trigger_peer_rel_changed(self._charm, on_other_units=True)
             return
 
         if status == HealthColors.GREEN:
