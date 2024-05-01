@@ -820,7 +820,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self._post_start_init(event)
             except (
                 OpenSearchHttpError,
-                OpenSearchStartTimeoutError,
                 OpenSearchNotFullyReadyError,
             ):
                 event.defer()
