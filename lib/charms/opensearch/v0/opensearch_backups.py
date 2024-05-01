@@ -254,7 +254,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         if not (data := event.relation.data.get(event.app)):
             return
         data = PeerClusterRelData.from_str(data["data"])
-        s3_credentials = data.s3_credentials
+        s3_credentials = data.credentials.s3
         if not s3_credentials or not s3_credentials.access_key or not s3_credentials.secret_key:
             # Just abandon this event, as the relation is not fully ready yet
             return

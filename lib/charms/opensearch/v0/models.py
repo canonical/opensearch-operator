@@ -202,6 +202,13 @@ class DeploymentDescription(Model):
         return values
 
 
+class S3RelDataCredentials(Model):
+    """Model class for credentials passed on the PCluster relation."""
+
+    access_key: str
+    secret_key: str
+
+
 class PeerClusterRelDataCredentials(Model):
     """Model class for credentials passed on the PCluster relation."""
 
@@ -209,13 +216,7 @@ class PeerClusterRelDataCredentials(Model):
     admin_password: str
     admin_password_hash: str
     admin_tls: Dict[str, Optional[str]]
-
-
-class S3RelDataCredentials(Model):
-    """Model class for credentials passed on the PCluster relation."""
-
-    access_key: str
-    secret_key: str
+    s3: Optional[S3RelDataCredentials]
 
 
 class PeerClusterRelData(Model):
@@ -224,7 +225,6 @@ class PeerClusterRelData(Model):
     cluster_name: str
     cm_nodes: List[Node]
     credentials: PeerClusterRelDataCredentials
-    s3_credentials: Optional[S3RelDataCredentials]
     deployment_desc: Optional[DeploymentDescription]
 
 

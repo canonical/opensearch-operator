@@ -353,8 +353,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                     admin_password=secrets.get(Scope.APP, secrets.password_key("admin")),
                     admin_password_hash=secrets.get(Scope.APP, secrets.hash_key("admin")),
                     admin_tls=secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
+                    s3=s3_credentials,
                 ),
-                s3_credentials=s3_credentials,
                 deployment_desc=deployment_desc,
             )
         except OpenSearchHttpError:
@@ -566,8 +566,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
         self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
 
-        self.charm.secrets.put(Scope.APP, "access-key", data.s3_credentials.access_key)
-        self.charm.secrets.put(Scope.APP, "secret-key", data.s3_credentials.secret_key)
+        s3_creds = data.credentials.s3
+        self.charm.secrets.put(Scope.APP, "access-key", s3_creds.access_key)
+        self.charm.secrets.put(Scope.APP, "secret-key", s3_creds.secret_key)
 
     def _orchestrators(
         self,
