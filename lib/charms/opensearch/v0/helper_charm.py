@@ -127,4 +127,7 @@ def trigger_peer_rel_changed(charm: "OpenSearchBaseCharm", only_by_leader: bool 
         return
 
     charm.peers_data.put(Scope.UNIT, "update-ts", time_ns())
-    charm.on[PeerRelationName].relation_changed.emit(charm.model.get_relation(PeerRelationName))
+    if only_by_leader:
+        charm.on[PeerRelationName].relation_changed.emit(
+            charm.model.get_relation(PeerRelationName)
+        )
