@@ -810,6 +810,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _start_opensearch(self, event: _StartOpenSearch) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
+        if not self._can_service_start():
+            self.node_lock.release()
+            event.defer()
+            return
         if not self.node_lock.acquired:
             # (Attempt to acquire lock even if `event.ignore_lock`)
             if event.ignore_lock:
@@ -825,11 +829,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self._post_start_init(event)
             except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
                 event.defer()
-            return
-
-        if not self._can_service_start():
-            self.node_lock.release()
-            event.defer()
             return
 
         if self.opensearch.is_failed():
