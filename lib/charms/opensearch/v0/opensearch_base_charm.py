@@ -825,9 +825,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 event.defer()
             except OpenSearchUserMgmtError as e:
                 # Either generic start failure or cluster is not read to create the internal users
-                logger.exception(e)
+                logger.warning(e)
                 self.node_lock.release()
-                self.status.set(BlockedStatus(ServiceStartError))
                 event.defer()
             return
 
@@ -873,12 +872,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
             self._post_start_init(event)
         except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
+            self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
         except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
             # Either generic start failure or cluster is not read to create the internal users
-            logger.exception(e)
+            logger.warning(e)
             self.node_lock.release()
-            self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
 
     def _post_start_init(self, event: EventBase):
