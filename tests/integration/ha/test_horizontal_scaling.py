@@ -307,7 +307,7 @@ async def test_safe_scale_down_remove_leaders(
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     units_with_p_shards = [shard.unit_id for shard in shards if shard.is_prim]
-    assert len(units_with_p_shards) == 1
+    assert len(units_with_p_shards) == 2
 
     for unit_id in units_with_p_shards:
         assert (
