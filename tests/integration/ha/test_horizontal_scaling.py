@@ -70,7 +70,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_horizontal_scale_up(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Tests that new added units to the cluster are discoverable."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -118,7 +118,7 @@ async def test_horizontal_scale_up(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_shards_realloc(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Tests the shutdown of a node, and re-allocation of shards to a newly joined unit.
 
@@ -227,7 +227,7 @@ async def test_safe_scale_down_shards_realloc(
 
 @pytest.mark.group(1)
 async def test_safe_scale_down_remove_leaders(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ) -> None:
     """Tests the removal of specific units (elected cm, juju leader, node with prim shard).
 
@@ -241,17 +241,22 @@ async def test_safe_scale_down_remove_leaders(
     app = (await app_name(ops_test)) or APP_NAME
     init_units_count = len(ops_test.model.applications[app].units)
 
-    # scale up by 2 units
-    await ops_test.model.applications[app].add_unit(count=1)
-    await wait_until(
-        ops_test,
-        apps=[app],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units=init_units_count + 1,
-        idle_period=IDLE_PERIOD,
-        timeout=1800,
-    )
+    if init_units_count < 5:
+        # scale up by 5 - init units
+        added_units = 5 - init_units_count
+        await ops_test.model.applications[app].add_unit(count=added_units)
+
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=init_units_count + added_units,
+            idle_period=IDLE_PERIOD,
+            timeout=1800,
+        )
+
+        init_units_count += added_units
 
     # scale down: remove the juju leader
     leader_unit_id = await get_leader_unit_id(ops_test, app=app)
@@ -262,7 +267,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units=init_units_count,
+        wait_for_exact_units=init_units_count - 1,
         idle_period=IDLE_PERIOD,
         timeout=1800,
     )
@@ -278,7 +283,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units=init_units_count - 1,
+        wait_for_exact_units=init_units_count - 2,
         idle_period=IDLE_PERIOD,
         timeout=1800,
     )
@@ -297,9 +302,15 @@ async def test_safe_scale_down_remove_leaders(
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_with_primary_shard}")
-
-    # sleep for a couple of minutes for the model to stabilise
-    time.sleep(IDLE_PERIOD + 60)
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=init_units_count - 3,
+        idle_period=IDLE_PERIOD,
+        timeout=1800,
+    )
 
     writes = await c_writes.count()
 

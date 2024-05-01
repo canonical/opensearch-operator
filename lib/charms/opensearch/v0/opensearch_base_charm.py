@@ -621,9 +621,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
             self._handle_change_to_main_orchestrator_if_needed(event, previous_deployment_desc)
 
-        if not self.peers_data.get(Scope.APP, "security_index_initialised", False):
-            return
-
         try:
             if not self.plugin_manager.check_plugin_manager_ready():
                 raise OpenSearchNotFullyReadyError()
@@ -648,6 +645,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.unit.is_leader():
                 self.status.clear(PluginConfigCheck, app=True)
             return
+
         if self.unit.is_leader():
             self.status.clear(PluginConfigCheck, app=True)
             self.status.clear(PluginConfigChangeError, app=True)
