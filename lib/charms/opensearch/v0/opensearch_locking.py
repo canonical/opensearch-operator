@@ -5,11 +5,12 @@
 import json
 import logging
 import os
+import random
 import typing
 
 import ops
-from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_cluster import ClusterTopology
+from charms.opensearch.v0.helper_networking import units_ips
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 
 if typing.TYPE_CHECKING:
@@ -224,7 +225,7 @@ class OpenSearchNodeLock(ops.Object):
             host = None
         if (
             self._charm.app.planned_units() > 1
-            and (relation := self._charm.model.get_relation(PeerRelationName))
+            and (relation := self._charm.model.get_relation(_PeerRelationLock._ENDPOINT_NAME))
             and not relation.units
         ):
             # On initial startup (e.g. scaling up, on the new unit), `self._charm.alt_hosts` will
@@ -242,7 +243,12 @@ class OpenSearchNodeLock(ops.Object):
             # nodes were online.
             logger.debug("[Node lock] Waiting for peer units before acquiring lock")
             return False
-        alt_hosts = [host for host in self._charm.alt_hosts if self._opensearch.is_node_up(host)]
+        alt_hosts = [
+            host
+            for host in units_ips(self._charm, _PeerRelationLock._ENDPOINT_NAME)
+            if self._opensearch.is_node_up(host)
+        ]
+        random.shuffle(alt_hosts)
         if host or alt_hosts:
             logger.debug("[Node lock] 1+ opensearch nodes online")
             try:
