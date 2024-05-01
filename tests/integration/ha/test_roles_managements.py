@@ -6,7 +6,6 @@ import asyncio
 import logging
 
 import pytest
-from charms.opensearch.v0.constants_charm import PClusterWrongNodesCountForQuorum
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
@@ -16,7 +15,6 @@ from ..helpers import (
     check_cluster_formation_successful,
     cluster_health,
     get_application_unit_names,
-    get_application_unit_status,
     get_leader_unit_ip,
 )
 from ..helpers_deployments import wait_until
@@ -109,32 +107,50 @@ async def test_set_roles_manually(
         assert sorted(node.roles) == ["cluster_manager", "data"], "roles unchanged"
         assert node.temperature == "cold", "Temperature unchanged."
 
-    # scale up cluster by 1 unit, this should break the quorum and put the charm in a blocked state
+    # scale up cluster by 1 unit, this should give the new node the same roles
     await ops_test.model.applications[app].add_unit(count=1)
     await wait_until(
         ops_test,
         apps=[app],
-        apps_full_statuses={
-            app: {
-                "blocked": [PClusterWrongNodesCountForQuorum],
-                "active": [],
-            },
-        },
-        units_full_statuses={
-            app: {
-                "units": {
-                    "blocked": [PClusterWrongNodesCountForQuorum],
-                    "active": [],
-                },
-            },
-        },
+        apps_statuses=["active"],
+        units_statuses=["active"],
         wait_for_exact_units=len(nodes) + 1,
         idle_period=IDLE_PERIOD,
     )
-    # new_unit_id = max(
-    #     [int(unit.name.split("/")[1]) for unit in ops_test.model.applications[app].units]
-    # )
+    new_nodes = await all_nodes(ops_test, leader_unit_ip)
+    assert len(new_nodes) == len(nodes) + 1
+    for node in new_nodes:
+        assert sorted(node.roles) == ["cluster_manager", "data"], "roles unchanged"
+        assert node.temperature == "cold", "Temperature unchanged."
 
-    app_unit_status = await get_application_unit_status(ops_test, app=app)
-    assert any(unit.value == "active" for unit in app_unit_status.values())
-    # assert app_unit_status[new_unit_id].message == PClusterWrongNodesCountForQuorum
+
+async def test_switch_back_to_auto_generated_roles(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
+    """Check roles changes in all nodes."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    nodes = await all_nodes(ops_test, leader_unit_ip)
+
+    await ops_test.model.applications[app].set_config({"roles": ""})
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=len(nodes),
+        idle_period=IDLE_PERIOD,
+    )
+
+    # check that nodes' roles have indeed changed
+    nodes = await all_nodes(ops_test, leader_unit_ip)
+    for node in nodes:
+        assert sorted(node.roles) == [
+            "cluster_manager",
+            "coordinating_only",
+            "data",
+            "ingest",
+            "ml",
+        ]
+        assert node.temperature is None, "Node temperature was erroneously set."

@@ -719,6 +719,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             blocked_msg = (
                 "A cluster can only be related to 1 main and 1 failover-clusters at most."
             )
+        elif peer_cluster_rel_data.cluster_name != deployment_desc.config.cluster_name:
+            blocked_msg = "Cannot relate 2 clusters with different 'cluster_name' values."
 
         if not blocked_msg:
             self._clear_errors(f"error_from_requirer-{event_rel_id}")
