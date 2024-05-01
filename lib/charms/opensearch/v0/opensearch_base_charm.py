@@ -874,7 +874,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
-        except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
+        except OpenSearchUserMgmtError as e:
             # Either generic start failure or cluster is not read to create the internal users
             logger.warning(e)
             self.node_lock.release()
