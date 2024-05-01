@@ -44,6 +44,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self.on[upgrade.PEER_RELATION_ENDPOINT_NAME].relation_changed, self._reconcile_upgrade
         )
         self.framework.observe(
+            self.on[upgrade.PRECHECK_ACTION_NAME].action, self._on_pre_upgrade_check_action
+        )
+        self.framework.observe(
             self.on[upgrade.RESUME_ACTION_NAME].action, self._on_resume_upgrade_action
         )
         self.framework.observe(
@@ -96,7 +99,15 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self._set_upgrade_status()
             return
         if self._upgrade.unit_state is upgrade.UnitState.OUTDATED:
-            if self._upgrade.authorized:
+            try:
+                authorized = self._upgrade.authorized
+            except upgrade.PrecheckFailed as exception:
+                self._set_upgrade_status()
+                self.unit.status = exception.status
+                logger.debug(f"Set unit status to {self.unit.status}")
+                logger.error(exception.status.message)
+                return
+            if authorized:
                 self._set_upgrade_status()
                 self._upgrade_opensearch_event.emit()
             else:
@@ -107,7 +118,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _set_upgrade_status(self):
         # Set/clear upgrade unit status if no other unit status
-        if isinstance(self.unit.status, ops.ActiveStatus):
+        if isinstance(self.unit.status, ops.ActiveStatus) or (
+            isinstance(self.unit.status, ops.BlockedStatus)
+            and self.unit.status.message.startswith(
+                "Rollback with `juju refresh`. Pre-upgrade check failed:"
+            )
+        ):
             self.status.set(self._upgrade.get_unit_juju_status() or ops.ActiveStatus())
             logger.debug(f"Set unit status to {self.unit.status}")
         if not self.unit.is_leader():
@@ -133,6 +149,30 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             # Only call `_reconcile_upgrade` on leader unit to avoid race conditions with
             # `upgrade_resumed`
             self._reconcile_upgrade()
+
+    def _on_pre_upgrade_check_action(self, event: ops.ActionEvent) -> None:
+        if not self._unit_lifecycle.authorized_leader:
+            message = f"Must run action on leader unit. (e.g. `juju run {self.app.name}/leader {upgrade.PRECHECK_ACTION_NAME}`)"
+            logger.debug(f"Pre-upgrade check event failed: {message}")
+            event.fail(message)
+            return
+        if not self._upgrade or self._upgrade.in_progress:
+            message = "Upgrade already in progress"
+            logger.debug(f"Pre-upgrade check event failed: {message}")
+            event.fail(message)
+            return
+        try:
+            self._upgrade.pre_upgrade_check()
+        except upgrade.PrecheckFailed as exception:
+            message = (
+                f"Charm is *not* ready for upgrade. Pre-upgrade check failed: {exception.message}"
+            )
+            logger.debug(f"Pre-upgrade check event failed: {message}")
+            event.fail(message)
+            return
+        message = "Charm is ready for upgrade"
+        event.set_results({"result": message})
+        logger.debug(f"Pre-upgrade check event succeeded: {message}")
 
     def _on_resume_upgrade_action(self, event: ops.ActionEvent) -> None:
         if not self._unit_lifecycle.authorized_leader:
