@@ -241,9 +241,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
-        # There is an explosion of _on_peer_relation_changed calls at the startup.
-        # As this corresponds to a local peer relation (not the peer-cluster), we can safely
-        # abandon repeated events.
+        # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
+        # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
 
     @property
@@ -438,12 +437,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
         ):
             if self._is_peer_rel_changed_deferred:
-                # We had already tried this event before and deferred. Retry on the next
-                # hook call.
+                # We already deferred this event during this Juju event. Retry on the next
+                # Juju event.
                 return
             # we defer because we want the temporary status to be updated
             event.defer()
-            # From now on, we will abandon the event if we need to defer it
+            # If the handler is called again within this Juju hook, we will abandon the event
             self._is_peer_rel_changed_deferred = True
 
         for relation in self.model.relations.get(ClientRelationName, []):
