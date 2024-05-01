@@ -1018,7 +1018,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # overloading the cluster, units must be started one at a time. So we defer starting
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
         try:
-            if self.health.get(use_localhost=False) == HealthColors.YELLOW_TEMP:
+            if (
+                self.health.apply(wait_for_green_first=True, use_localhost=False)
+                == HealthColors.YELLOW_TEMP
+            ):
                 return False
         except OpenSearchHttpError:
             # this means that the leader unit is not reachable (not started yet),
