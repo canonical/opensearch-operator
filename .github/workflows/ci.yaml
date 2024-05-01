@@ -70,7 +70,7 @@ jobs:
       cache: true
 
   integration-test:
-    name: Integration test charm | ${{ JUJU_VERSION }}
+    name: Integration test charm | ${{ env.JUJU_VERSION }}
     needs:
       - lint
       - unit-test
@@ -79,7 +79,7 @@ jobs:
     with:
       artifact-prefix: packed-charm-cache-true
       cloud: lxd
-      juju-agent-version: ${{ JUJU_VERSION }}
+      juju-agent-version: ${{ env.JUJU_VERSION }}
     secrets:
       # GitHub appears to redact each line of a multi-line secret
       # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
