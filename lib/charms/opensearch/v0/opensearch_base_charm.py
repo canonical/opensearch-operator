@@ -488,6 +488,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if node.name != event.departing_unit.name.replace("/", "-")
         ]
 
+        self.health.apply(wait_for_green_first=True)
+
         if len(remaining_nodes) == self.app.planned_units():
             self._compute_and_broadcast_updated_topology(remaining_nodes)
         else:
@@ -524,7 +526,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
             try:
-                self.opensearch.request("POST", "/_flush?wait_for_ongoing")
+                self.opensearch.request("POST", "/_flush?wait_if_ongoing=true")
             except OpenSearchHttpError:
                 # if it's a failed attempt we move on
                 pass
@@ -535,9 +537,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.app.planned_units() > 0:
                 # check cluster status
                 if self.alt_hosts:
-                    health_color = self.health.apply(
-                        wait_for_green_first=True, use_localhost=False
-                    )
+                    health_color = self.health.get(wait_for_green_first=True, use_localhost=False)
                     if health_color == HealthColors.RED:
                         raise OpenSearchHAError(ClusterHealthRed)
                 else:
@@ -571,8 +571,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
 
-            health = self.health.apply()
-            if health not in [HealthColors.GREEN, HealthColors.IGNORE]:
+            if (health := self.health.apply(wait_for_green_first=True)) not in [
+                HealthColors.GREEN,
+                HealthColors.IGNORE,
+            ]:
                 event.defer()
 
             if health == HealthColors.UNKNOWN:
@@ -595,7 +597,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
+        restart_requested = False
         if self.opensearch_config.update_host_if_needed():
+            restart_requested = True
+
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
             self._delete_stored_tls_resources()
             self.tls.request_new_unit_certificates()
@@ -603,18 +608,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # since when an IP change happens, "_on_peer_relation_joined" won't be called,
             # we need to alert the leader that it must recompute the node roles for any unit whose
             # roles were changed while the current unit was cut-off from the rest of the network
-            self._on_peer_relation_joined(event)
+            self._on_peer_relation_joined(
+                RelationJoinedEvent(event.handle, PeerRelationName, self.app, self.unit)
+            )
 
         previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.unit.is_leader():
             # run peer cluster manager processing
+            # todo add check here if the diff can be known from now on already
             self.opensearch_peer_cm.run()
 
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
             self._handle_change_to_main_orchestrator_if_needed(event, previous_deployment_desc)
-        elif not previous_deployment_desc:
-            # deployment desc not initialized yet by leader
-            event.defer()
+
+        if not self.peers_data.get(Scope.APP, "security_index_initialised", False):
             return
 
         try:
@@ -622,7 +629,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 raise OpenSearchNotFullyReadyError()
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
-            if self.plugin_manager.run():
+            if self.plugin_manager.run() and not restart_requested:
                 if self.upgrade_in_progress:
                     logger.warning(
                         "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
@@ -798,7 +805,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # we check if we need to create the admin user
         if not self.is_admin_user_configured():
-            self._put_admin_user()
+            self._put_or_update_internal_user_leader(AdminUser)
 
         # we check if we need to generate the admin certificate if missing
         if not self.is_tls_fully_configured():
@@ -910,7 +917,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_fixes.apply_on_start()
 
         # apply cluster health
-        self.health.apply()
+        self.health.apply(wait_for_green_first=True, app=self.unit.is_leader())
 
         if self.unit.is_leader():
             # Creating the monitoring user
@@ -1011,7 +1018,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # overloading the cluster, units must be started one at a time. So we defer starting
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
         try:
-            if self.health.apply(use_localhost=False, app=False) == HealthColors.YELLOW_TEMP:
+            if self.health.get(use_localhost=False) == HealthColors.YELLOW_TEMP:
                 return False
         except OpenSearchHttpError:
             # this means that the leader unit is not reachable (not started yet),
@@ -1170,14 +1177,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
-        # retrieve the updated conf if exists
-        update_conf = (self.peers_data.get_object(Scope.APP, "nodes_config") or {}).get(
-            self.unit_name
-        )
-        if update_conf:
-            update_conf = Node.from_dict(update_conf)
-
-        # set default generated roles, or the ones passed in the updated conf
+        # set user provided roles if any, else generate base roles
         if (
             deployment_desc := self.opensearch_peer_cm.deployment_desc()
         ).start == StartMode.WITH_PROVIDED_ROLES:
@@ -1186,6 +1186,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # This is the case where the 1st and main orchestrator to be deployed with no
             # "data" role in the provided roles, we need to add the role to be able to create
             # and store the security index
+            # todo: rework: delay sec index init until 1st data node / handle red health
             if (
                 self.unit.is_leader()
                 and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
@@ -1195,11 +1196,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 computed_roles.append("data")
                 self.peers_data.put(Scope.UNIT, "remove-data-role", True)
         else:
-            computed_roles = (
-                update_conf.roles
-                if update_conf
-                else ClusterTopology.suggest_roles(nodes, self.app.planned_units())
-            )
+            computed_roles = ClusterTopology.generated_roles()
 
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)

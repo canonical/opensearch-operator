@@ -3,13 +3,16 @@
 
 """Utility functions for charms related operations."""
 import re
-import typing
+from time import time_ns
+from typing import TYPE_CHECKING
 
+from charms.data_platform_libs.v0.data_interfaces import Scope
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from ops import CharmBase
 from ops.model import ActiveStatus, StatusBase
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 # The unique Charmhub library identifier, never change it
@@ -115,3 +118,22 @@ def relation_departure_reason(charm: CharmBase, relation_name: str) -> RelDepart
         return RelDepartureReason.SCALE_DOWN
 
     return RelDepartureReason.REL_BROKEN
+
+
+def trigger_peer_rel_changed(
+    charm: "OpenSearchBaseCharm",
+    only_by_leader: bool = False,
+    on_other_units: bool = True,
+    on_current_unit: bool = False,
+) -> None:
+    """Force trigger a peer rel changed event."""
+    if only_by_leader and not charm.unit.is_leader():
+        return
+
+    if on_other_units or not on_current_unit:
+        charm.peers_data.put(Scope.APP if only_by_leader else Scope.UNIT, "update-ts", time_ns())
+
+    if on_current_unit:
+        charm.on[PeerRelationName].relation_changed.emit(
+            charm.model.get_relation(PeerRelationName)
+        )

@@ -3,7 +3,7 @@
 name: Tests
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: "${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: true
 
 on:
@@ -16,7 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v13.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v13.1.2
 
   unit-test:
     name: Unit test charm
@@ -61,22 +61,22 @@ jobs:
         path:
         - .
         - ./tests/integration/relations/opensearch_provider/application-charm/
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v13.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v13.1.2
     with:
       path-to-charm-directory: ${{ matrix.path }}
       cache: true
 
   integration-test:
-    name: Integration test charm
+    name: Integration test charm | 3.1.7
     needs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v13.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v13.1.2
     with:
       artifact-prefix: packed-charm-cache-true
       cloud: lxd
-      juju-snap-channel: 3.3/stable
+      juju-agent-version: 3.1.7
     secrets:
       # GitHub appears to redact each line of a multi-line secret
       # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs

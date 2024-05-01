@@ -5,13 +5,13 @@
 import json
 import logging
 import os
-import typing
+from typing import TYPE_CHECKING, List, Optional
 
 import ops
-from charms.opensearch.v0.helper_cluster import ClusterTopology
+from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     import charms.opensearch.v0.opensearch_base_charm as opensearch_base_charm
 
 # The unique Charmhub library identifier, never change it
@@ -127,9 +127,9 @@ class _PeerRelationLock(ops.Object):
             # the lock.
             # `JUJU_CONTEXT_ID` is unique for each Juju event
             # (https://matrix.to/#/!xdClnUGkurzjxqiQcN:ubuntu.com/$yEGjGlDaIPBtCi8uB3fH6ZaXUjN7GF-Y2s9YwvtPM-o?via=ubuntu.com&via=matrix.org&via=cutefunny.art)
-            self._relation.data[self._charm.app][
-                "leader-acquired-lock-after-juju-event-id"
-            ] = os.environ["JUJU_CONTEXT_ID"]
+            self._relation.data[self._charm.app]["leader-acquired-lock-after-juju-event-id"] = (
+                os.environ["JUJU_CONTEXT_ID"]
+            )
         self._relation.data[self._charm.app]["unit-with-lock"] = value
 
     @_unit_with_lock.deleter
@@ -239,26 +239,9 @@ class OpenSearchNodeLock(ops.Object):
                 logger.debug("[Node lock] Attempting to acquire opensearch lock")
                 # Acquire opensearch lock
                 # Create index if it doesn't exist
-                try:
-                    self._opensearch.request(
-                        "PUT",
-                        endpoint=f"/{self.OPENSEARCH_INDEX}",
-                        host=host,
-                        alt_hosts=alt_hosts,
-                        retries=3,
-                        payload={"settings": {"index": {"auto_expand_replicas": "0-all"}}},
-                    )
-                except OpenSearchHttpError as e:
-                    if (
-                        e.response_code == 400
-                        and e.response_body.get("error", {}).get("type")
-                        == "resource_already_exists_exception"
-                    ):
-                        # Index already created
-                        pass
-                    else:
-                        logger.exception("Error creating OpenSearch lock index")
-                        return False
+                if not self._create_lock_index_if_needed(host, alt_hosts):
+                    return False
+
                 # Attempt to create document id 0
                 try:
                     response = self._opensearch.request(
@@ -266,7 +249,7 @@ class OpenSearchNodeLock(ops.Object):
                         endpoint=f"/{self.OPENSEARCH_INDEX}/_create/0?refresh=true&wait_for_active_shards=all",
                         host=host,
                         alt_hosts=alt_hosts,
-                        retries=3,
+                        retries=0,
                         payload={"unit-name": self._charm.unit.name},
                     )
                 except OpenSearchHttpError as e:
@@ -361,3 +344,40 @@ class OpenSearchNodeLock(ops.Object):
         self._peer.release()
         logger.debug("[Node lock] Released peer lock (if held)")
         logger.debug("[Node lock] Released lock")
+
+    def _create_lock_index_if_needed(self, host: str, alt_hosts: Optional[List[str]]) -> bool:
+        """Attempts the creation of the lock index if it doesn't exist."""
+        # we do this, to circumvent opensearch raising a 429 error,
+        # complaining about spamming the index creation endpoint
+        try:
+            if self.OPENSEARCH_INDEX in ClusterState.indices(self._opensearch, host, alt_hosts):
+                logger.debug(
+                    f"{self.OPENSEARCH_INDEX} already created. Skipping creation attempt. List:"
+                    f"{ClusterState.indices(self._opensearch, host, alt_hosts)}"
+                )
+                return True
+        except OpenSearchHttpError:
+            pass
+
+        # Create index if it doesn't exist
+        try:
+            self._opensearch.request(
+                "PUT",
+                endpoint=f"/{self.OPENSEARCH_INDEX}",
+                host=host,
+                alt_hosts=alt_hosts,
+                retries=3,
+                payload={"settings": {"index": {"auto_expand_replicas": "0-all"}}},
+            )
+            return True
+        except OpenSearchHttpError as e:
+            if (
+                e.response_code == 400
+                and e.response_body.get("error", {}).get("type")
+                == "resource_already_exists_exception"
+            ):
+                # Index already created
+                return True
+            else:
+                logger.exception("Error creating OpenSearch lock index")
+                return False

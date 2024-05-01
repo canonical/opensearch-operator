@@ -35,18 +35,8 @@ class ClusterTopology:
     """Class for creating the best possible configuration for a Node."""
 
     @staticmethod
-    def suggest_roles(nodes: List[Node], planned_units: int) -> List[str]:
-        """Get roles for a Node.
-
-        This method should be read in the context of a "rolling" start -
-        only 1 unit at a time will call this.
-
-        For now, we don't allow to end-user control roles.
-        The logic here is, if number of planned units is:
-            — odd: "all" the nodes are cm_eligible nodes.
-            — even: "all - 1" are cm_eligible and 1 data node.
-        """
-        # TODO: remove in https://github.com/canonical/opensearch-operator/issues/230
+    def generated_roles() -> List[str]:
+        """Get generated roles for a Node."""
         return ["data", "ingest", "ml", "coordinating_only", "cluster_manager"]
 
     @staticmethod
@@ -68,7 +58,6 @@ class ClusterTopology:
 
     @staticmethod
     def recompute_nodes_conf(app_name: str, nodes: List[Node]) -> Dict[str, Node]:
-        # TODO: remove in https://github.com/canonical/opensearch-operator/issues/230
         """Recompute the configuration of all the nodes (cluster set to auto-generate roles)."""
         if not nodes:
             return {}
@@ -85,7 +74,7 @@ class ClusterTopology:
             nodes_by_name[node.name] = Node(
                 name=node.name,
                 # we do this in order to remove any non-default role / add any missing default role
-                roles=["data", "ingest", "ml", "coordinating_only", "cluster_manager"],
+                roles=ClusterTopology.generated_roles(),
                 ip=node.ip,
                 app_name=node.app_name,
                 unit_number=node.unit_number,
