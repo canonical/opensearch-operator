@@ -62,7 +62,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHAError,
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
-    OpenSearchStartError,
     OpenSearchStartTimeoutError,
     OpenSearchStopError,
 )
