@@ -624,8 +624,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         try:
             if not self.plugin_manager.check_plugin_manager_ready():
                 raise OpenSearchNotFullyReadyError()
+
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
+
             if self.plugin_manager.run() and not restart_requested:
                 if self.upgrade_in_progress:
                     logger.warning(
@@ -633,6 +635,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     )
                     event.defer()
                     return
+
                 self._restart_opensearch_event.emit()
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
