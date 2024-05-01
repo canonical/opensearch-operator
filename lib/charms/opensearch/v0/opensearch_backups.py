@@ -71,7 +71,6 @@ a factory pattern has been adopted, where the main charm receives a OpenSearchBa
 object that corresponds to its own case (cluster-manager, failover, data, etc).
 """
 
-import abc
 import json
 import logging
 from datetime import datetime
@@ -107,12 +106,7 @@ from charms.opensearch.v0.opensearch_plugins import (
 )
 from ops.charm import ActionEvent, CharmBase
 from ops.framework import EventBase, Object
-from ops.model import (
-    BlockedStatus,
-    MaintenanceStatus,
-    RelationDataContent,
-    WaitingStatus,
-)
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
@@ -168,26 +162,6 @@ class OpenSearchRestoreIndexClosingError(OpenSearchRestoreError):
     """Exception thrown when restore fails to close indices."""
 
 
-def _load_s3_credentials_data(raw_relation_data: RelationDataContent) -> dict[str, str]:
-    """Loads the relation data from the peer-cluster relation from a sub-key."""
-    connection_data = {}
-    relation_data = (
-        raw_relation_data.get("data", {})
-        if isinstance(raw_relation_data.get("data", {}), dict)
-        else json.loads(raw_relation_data.get("data", {}))
-    ).get(PEER_CLUSTER_S3_CONFIG_KEY, {})
-    for key in relation_data:
-        try:
-            connection_data[key.replace("_", "-")] = (
-                relation_data[key]
-                if isinstance(relation_data[key], dict)
-                else json.loads(relation_data[key])
-            )
-        except (json.decoder.JSONDecodeError, TypeError):
-            connection_data[key.replace("_", "-")] = relation_data[key]
-    return connection_data
-
-
 class BackupServiceState(BaseStrEnum):
     """Enum for the states possible once plugin is enabled."""
 
@@ -211,7 +185,7 @@ class BackupServiceState(BaseStrEnum):
     SNAPSHOT_FAILED_UNKNOWN = "snapshot failed for unknown reason"
 
 
-class OpenSearchBackupBase(Object, abc.ABC):
+class OpenSearchBackupBase(Object):
     """Works as parent for all backup classes.
 
     This class does a smooth transition between orchestrator and non-orchestrator clusters.
@@ -234,22 +208,6 @@ class OpenSearchBackupBase(Object, abc.ABC):
             self.charm.on[S3_RELATION].relation_broken,
         ]:
             self.framework.observe(event, self._on_s3_relation_event)
-
-    @abc.abstractmethod
-    def _on_s3_relation_event(self, event: EventBase) -> None:
-        pass
-
-
-class OpenSearchWaitingDeploymentDescBackup(OpenSearchBackupBase):
-    """Works as the class to defer / fail actions until deployment description is available."""
-
-    def __init__(self, charm: Object, relation_name: str = PeerClusterRelationName):
-        """Initializes the opensearch backup whilst waiting for the deployment description.
-
-        This class will not hold a s3_client object, as it is not intended to really
-        manage the relation besides waiting for the deployment description.
-        """
-        super().__init__(charm, relation_name)
         for event in [
             self.charm.on.create_backup_action,
             self.charm.on.list_backups_action,
@@ -268,7 +226,7 @@ class OpenSearchWaitingDeploymentDescBackup(OpenSearchBackupBase):
         event.fail("Failed: deployment description not yet available")
 
 
-class OpenSearchNonOrchestratorClusterBackup(OpenSearchWaitingDeploymentDescBackup):
+class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     """Simpler implementation of backup relation for non-orchestrator clusters.
 
     In a nutshell, non-orchstrator clusters should receive the backup information via
@@ -376,6 +334,10 @@ class OpenSearchBackup(OpenSearchBackupBase):
         We run the peer cluster orchestrator's refresh on every new s3 information.
         """
         self.charm.peer_cluster_provider.refresh_relation_data(event)
+
+    def _on_s3_relation_action(self, event: EventBase) -> None:
+        """Just overloads the base method, as we process each action in this class."""
+        pass
 
     @property
     def _plugin_status(self):
@@ -1030,7 +992,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         return BackupServiceState.SUCCESS
 
 
-def backup_factory(charm: CharmBase) -> OpenSearchBackupBase:
+def backup(charm: CharmBase) -> OpenSearchBackupBase:
     """Implements the logic that returns the correct class according to the cluster type.
 
     This class is solely responsible for the creation of the correct S3 client manager.
@@ -1045,7 +1007,7 @@ def backup_factory(charm: CharmBase) -> OpenSearchBackupBase:
     if not charm.opensearch_peer_cm.deployment_desc():
         # Temporary condition: we are waiting for CM to show up and define which type
         # of cluster are we. Once we have that defined, then we will process.
-        return OpenSearchWaitingDeploymentDescBackup(charm)
+        return OpenSearchBackupBase(charm)
     elif charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
         return OpenSearchBackup(charm)
     return OpenSearchNonOrchestratorClusterBackup(charm)

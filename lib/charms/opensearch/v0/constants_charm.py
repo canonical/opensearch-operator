@@ -63,7 +63,6 @@ PluginConfigError = "Unexpected error during plugin configuration, check the log
 BackupSetupFailed = "Backup setup failed, check logs for details"
 S3RelMissing = "Backup failover cluster missing S3 relation."
 S3RelShouldNotExist = "This unit should not be related to S3"
-S3RelMismatch = "S3 relation mismatch between {} and clusters"
 S3RelDataIncomplete = "S3 relation data missing or incomplete."
 S3RelUneligible = "Only orchestrator clusters should relate to S3."
 

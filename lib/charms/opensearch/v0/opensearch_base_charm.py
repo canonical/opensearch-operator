@@ -54,7 +54,7 @@ from charms.opensearch.v0.helper_security import (
     generate_password,
 )
 from charms.opensearch.v0.models import DeploymentDescription, DeploymentType
-from charms.opensearch.v0.opensearch_backups import backup_factory
+from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -206,7 +206,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         )
 
         self.plugin_manager = OpenSearchPluginManager(self)
-        self.backup = backup_factory(self)
+        self.backup = backup(self)
 
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
