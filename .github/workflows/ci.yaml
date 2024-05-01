@@ -13,6 +13,9 @@ on:
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
 
+env:
+  JUJU_VERSION: 3.1.7
+
 jobs:
   lint:
     name: Lint
@@ -67,7 +70,7 @@ jobs:
       cache: true
 
   integration-test:
-    name: Integration test charm
+    name: Integration test charm | ${{ JUJU_VERSION }}
     needs:
       - lint
       - unit-test
@@ -76,7 +79,7 @@ jobs:
     with:
       artifact-prefix: packed-charm-cache-true
       cloud: lxd
-      juju-snap-channel: 3.3/stable
+      juju-agent-version: ${{ JUJU_VERSION }}
     secrets:
       # GitHub appears to redact each line of a multi-line secret
       # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
