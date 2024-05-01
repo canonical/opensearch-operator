@@ -15,7 +15,6 @@ import functools
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Type
 
-from charms.data_platform_libs.v0.data_interfaces import Scope
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_health import HealthColors
@@ -139,8 +138,7 @@ class OpenSearchPluginManager:
     def check_plugin_manager_ready(self) -> bool:
         """Checks if the plugin manager is ready to run."""
         return (
-            self._charm.peers_data.get(Scope.APP, "security_index_initialised", False)
-            and self._charm.opensearch.is_node_up()
+            self._charm.opensearch.is_node_up()
             and len(self._charm._get_nodes(True)) == self._charm.app.planned_units()
             and self._charm.health.get() in [HealthColors.GREEN, HealthColors.YELLOW]
         )
