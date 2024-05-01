@@ -445,24 +445,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
-        # check if current cluster ready
-        if not self.charm.opensearch_peer_cm.deployment_desc():
-            event.defer()
-            return
-
-        if not (data := event.relation.data.get(event.app)) or not data.get("data"):
-            return
-
-        # fetch the success data
-        data = PeerClusterRelData.from_str(data["data"])
-
-        # process the peer cluster data
-        self._process_peer_cluster_data(event, data)
-
-    def _process_peer_cluster_data(self, event: RelationChangedEvent, data) -> None:
-        if not self.charm.unit.is_leader():
-            return
-
         # register in the 'main/failover'-CMs / save the number of planned units of the current app
         self._put_planned_units(event)
 
@@ -471,12 +453,18 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
+        if not (data := event.relation.data.get(event.app)):
+            return
+
         # fetch main and failover clusters relations ids if any
         orchestrators = self._orchestrators(event, data, deployment_desc)
 
         # check errors sent by providers
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
             return
+
+        # fetch the success data
+        data = PeerClusterRelData.from_str(data["data"])
 
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
