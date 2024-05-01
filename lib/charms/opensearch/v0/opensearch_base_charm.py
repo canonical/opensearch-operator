@@ -527,9 +527,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.app.planned_units() > 0:
                 # check cluster status
                 if self.alt_hosts:
-                    health_color = self.health.get(
-                        wait_for_green_first=True, use_localhost=False
-                    )
+                    health_color = self.health.get(wait_for_green_first=True, use_localhost=False)
                     if health_color == HealthColors.RED:
                         raise OpenSearchHAError(ClusterHealthRed)
                 else:
