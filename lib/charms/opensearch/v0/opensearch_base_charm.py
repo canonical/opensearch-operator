@@ -238,9 +238,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
-        # There is an explosion of _on_peer_relation_changed calls at the startup.
-        # As this corresponds to a local peer relation (not the peer-cluster), we can safely
-        # abandon repeated events.
+        # Ensure that only one instance of the `_on_peer_relation_changed` handler exists in the deferred event queue
         self._is_peer_rel_changed_deferred = False
 
     @property
