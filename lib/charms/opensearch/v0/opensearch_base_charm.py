@@ -527,7 +527,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.app.planned_units() > 0:
                 # check cluster status
                 if self.alt_hosts:
-                    health_color = self.health.apply(
+                    health_color = self.health.get(
                         wait_for_green_first=True, use_localhost=False
                     )
                     if health_color == HealthColors.RED:
@@ -565,7 +565,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             if (health := self.health.apply(wait_for_green_first=True)) not in [
                 HealthColors.GREEN,
-                HealthColors.YELLOW,
                 HealthColors.IGNORE,
             ]:
                 event.defer()
@@ -908,7 +907,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_fixes.apply_on_start()
 
         # apply cluster health
-        self.health.apply()
+        self.health.apply(wait_for_green_first=True, app=self.unit.is_leader())
 
         if self.unit.is_leader():
             # Creating the monitoring user
