@@ -10,7 +10,7 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
 )
-from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
+from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import (
     RelDepartureReason,
     relation_departure_reason,
@@ -130,14 +130,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             charm.on[self.relation_name].relation_departed,
             self._on_peer_cluster_relation_departed,
         )
-        self.framework.observe(
-            self.charm.on[TLS_RELATION].relation_changed,
-            self._on_certificate_changed,
-        )
-
-    def _on_certificate_changed(self, event: EventBase):
-        """Processes an event change, which does not trigger a peer-cluster change."""
-        self.refresh_relation_data(event)
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Received by all units in main/failover clusters when new sub-cluster joins the rel."""
@@ -271,7 +263,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             )
 
         if should_defer:
-            logger.debug(f"Deferring event {event}.\nrel_data={json.dumps(rel_data.to_dict())}")
             event.defer()
 
     def _notify_if_wrong_integration(
@@ -444,37 +435,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             charm.on[self.relation_name].relation_departed,
             self._on_peer_cluster_relation_departed,
         )
-        self.framework.observe(
-            self.charm.on[TLS_RELATION].relation_changed,
-            self._on_certificate_changed,
-        )
-
-    def _get_rel_per_cluster_type(self, type: DeploymentType) -> Optional[Relation]:
-        if self.relation_name not in self.charm.model.relations:
-            return None
-
-        for rel in self.charm.model.relations[self.relation_name]:
-            if not (data := self.get_obj_from_rel("data", rel_id=rel.id)):
-                continue
-            if data.get("deployment_desc", {}).get("typ") == type:
-                return rel
-        return None
-
-    def _on_certificate_changed(self, event: RelationChangedEvent):
-        """Processes an event change, which does not trigger a peer-cluster change."""
-        if not (
-            (rel := self._get_rel_per_cluster_type(DeploymentType.MAIN_ORCHESTRATOR))
-            and (data := rel.data.get(event.app))
-        ):
-            # No peer relation or no meaningful relation published yet
-            logger.info("Abandoning certificate change event as no data available yet.")
-            return
-
-        # fetch the success data
-        data = PeerClusterRelData.from_str(data["data"])
-
-        # process the peer cluster data
-        self._process_peer_cluster_data(event, data)
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Event received when a new main-failover cluster unit joins the fleet."""
