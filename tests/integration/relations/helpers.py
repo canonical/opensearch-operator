@@ -162,7 +162,7 @@ async def run_request(
     if result.status != "completed":
         raise Exception(result.response)
 
-    return json.loads(result.response)
+    return result.response
 
 
 def ip_to_url(ip_str: str) -> str:
