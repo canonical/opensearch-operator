@@ -435,8 +435,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
         ):
             if self._is_peer_rel_changed_deferred:
-                # We had already tried this event before and deferred. Retry on the next
-                # hook call.
+                # We already deferred this event during this Juju event. Retry on the next
+                # Juju event.
                 return
             # we defer because we want the temporary status to be updated
             event.defer()
