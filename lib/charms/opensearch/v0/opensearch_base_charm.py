@@ -537,7 +537,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.app.planned_units() > 0:
                 # check cluster status
                 if self.alt_hosts:
-                    health_color = self.health.get(wait_for_green_first=True, use_localhost=False)
+                    health_color = self.health.apply(
+                        wait_for_green_first=True, use_localhost=False
+                    )
                     if health_color == HealthColors.RED:
                         raise OpenSearchHAError(ClusterHealthRed)
                 else:
@@ -588,13 +590,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             self.user_manager.remove_users_and_roles()
 
-        if (
-            self.plugin_manager.check_plugin_manager_ready()
-            and self.plugin_manager.run()
-            and not self.upgrade_in_progress
-        ):
-            self._restart_opensearch_event.emit()
-
         # If relation not broken - leave
         if self.model.get_relation("certificates") is not None:
             return
@@ -627,9 +622,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
             self._handle_change_to_main_orchestrator_if_needed(event, previous_deployment_desc)
-
-        if not self.peers_data.get(Scope.APP, "security_index_initialised", False):
-            return
 
         try:
             if not self.plugin_manager.check_plugin_manager_ready():
@@ -1030,7 +1022,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
         try:
             if (
-                self.health.apply(wait_for_green_first=True, use_localhost=False)
+                self.health.apply(wait_for_green_first=True, use_localhost=False, app=False)
                 == HealthColors.YELLOW_TEMP
             ):
                 return False

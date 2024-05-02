@@ -38,8 +38,8 @@ class OpenSearchFixes:
             try:
                 self._charm.opensearch.request(
                     method="PUT",
-                    endpoint=f"/{index}/_settings",
-                    payload={"index": {"auto_expand_replicas": "0-all"}},
+                    endpoint=f"/{index}?wait_for_active_shards=all",
+                    payload={"settings": {"index": {"auto_expand_replicas": "0-all"}}},
                 )
             except OpenSearchHttpError as e:
                 if e.response_code != 404:

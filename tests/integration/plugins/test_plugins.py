@@ -75,6 +75,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
+        wait_for_exact_units={TLS_CERTIFICATES_APP_NAME: 1, APP_NAME: 3},
         timeout=3400,
         idle_period=IDLE_PERIOD,
     )
@@ -104,6 +105,7 @@ async def test_prometheus_exporter_cos_relation(ops_test):
         apps=[APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
+        wait_for_exact_units=3,
         idle_period=IDLE_PERIOD,
     )
 
