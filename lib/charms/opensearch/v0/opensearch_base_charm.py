@@ -631,6 +631,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
             self._handle_change_to_main_orchestrator_if_needed(event, previous_deployment_desc)
 
+        # todo: handle gracefully configuration setting at start of the charm
+        if not self.plugin_manager.check_plugin_manager_ready():
+            return
+
         try:
             if not self.plugin_manager.check_plugin_manager_ready():
                 raise OpenSearchNotFullyReadyError()
