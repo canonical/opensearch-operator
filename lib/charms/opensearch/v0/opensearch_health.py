@@ -129,6 +129,10 @@ class OpenSearchHealth:
         elif status == HealthColors.YELLOW_TEMP:
             # health is yellow but temporarily (shards are relocating or initializing)
             self._charm.status.set(MaintenanceStatus(WaitingForBusyShards))
+        elif status == HealthColors.IGNORE:
+            # this is a large deployments, fetch the health from the ClusterState
+            # and apply that state instead
+            self.apply_for_unit_during_upgrade(self.fetch_status())
 
     def apply_for_unit(self, status: str, host: Optional[str] = None):
         """Apply the health status on the current unit."""
@@ -151,7 +155,7 @@ class OpenSearchHealth:
         message = WaitingForSpecificBusyShards.format(" - ".join(message))
         self._charm.status.set(WaitingStatus(message))
 
-    def _fetch_status(self, host: Optional[str] = None, wait_for_green_first: bool = False):
+    def fetch_status(self, host: Optional[str] = None, wait_for_green_first: bool = False):
         """Fetch the current cluster status."""
         response: Optional[Dict[str, any]] = None
         if wait_for_green_first:
