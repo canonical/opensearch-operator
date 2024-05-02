@@ -54,11 +54,14 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
         self.harness.add_relation_unit(self.client_rel_id, "application/0")
 
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_unit")
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     @patch(
         "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.update_dashboards_password"
     )
     @patch("charm.OpenSearchOperatorCharm.store_tls_resources")
-    def test_on_secret_changed_app(self, mock_store_tls_resources, mock_update_dashboard_pw, _):
+    def test_on_secret_changed_app(
+        self, mock_store_tls_resources, mock_update_dashboard_pw, _, __
+    ):
         event = MagicMock()
         event.secret = MagicMock()
 

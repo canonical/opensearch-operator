@@ -25,7 +25,11 @@ from typing import Dict
 
 import boto3
 import pytest
-from charms.opensearch.v0.constants_charm import OPENSEARCH_BACKUP_ID_FORMAT
+from charms.opensearch.v0.constants_charm import (
+    OPENSEARCH_BACKUP_ID_FORMAT,
+    BackupSetupFailed,
+    S3RelMissing,
+)
 from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
 
@@ -47,10 +51,10 @@ from .helpers import (
     assert_continuous_writes_consistency,
     assert_continuous_writes_increasing,
     assert_restore_indices_and_compare_consistency,
+    assert_start_and_check_continuous_writes,
     create_backup,
     list_backups,
     restore,
-    start_and_check_continuous_writes,
 )
 from .helpers_data import index_docs_count
 
@@ -190,16 +194,54 @@ S3_INTEGRATOR_CHANNEL = "latest/edge"
 TIMEOUT = 10 * 60
 
 
-@pytest.mark.parametrize(
-    "cloud_name",
-    [
-        (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
-        (pytest.param("aws", marks=pytest.mark.group("aws"))),
-    ],
-)
+DEPLOY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            cloud_name,
+            deploy_type,
+            id=f"{cloud_name}-{deploy_type}",
+            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
+        )
+    )
+    for cloud_name in ["microceph", "aws"]
+    for deploy_type in ["large", "small"]
+]
+
+
+DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            cloud_name,
+            deploy_type,
+            id=f"{cloud_name}-{deploy_type}",
+            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
+        )
+    )
+    for cloud_name in ["microceph", "aws"]
+    for deploy_type in ["small"]
+]
+
+
+DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            cloud_name,
+            deploy_type,
+            id=f"{cloud_name}-{deploy_type}",
+            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
+        )
+    )
+    for cloud_name in ["microceph", "aws"]
+    for deploy_type in ["large"]
+]
+
+
+@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, cloud_name: Dict[str, Dict[str, str]]) -> None:
+async def test_small_deployment_build_and_deploy(
+    ops_test: OpsTest, cloud_name: str, deploy_type: str
+) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
     if await app_name(ops_test):
         return
@@ -228,13 +270,174 @@ async def test_build_and_deploy(ops_test: OpsTest, cloud_name: Dict[str, Dict[st
     await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
 
 
-@pytest.mark.parametrize(
-    "cloud_name",
-    [
-        (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
-        (pytest.param("aws", marks=pytest.mark.group("aws"))),
-    ],
-)
+@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_large_deployment_build_and_deploy(
+    ops_test: OpsTest, cloud_name: str, deploy_type: str
+) -> None:
+    """Build and deploy a large deployment for OpenSearch.
+
+    The following apps will be deployed:
+    * main: the main orchestrator
+    * failover: the failover orchestrator
+    * opensearch (or APP_NAME): the data.hot node
+
+    The data node is selected to adopt the "APP_NAME" value because it is the node which
+    ContinuousWrites will later target its writes to.
+    """
+    await ops_test.model.set_config(MODEL_CONFIG)
+    # Deploy TLS Certificates operator.
+    tls_config = {"ca-common-name": "CN_CA"}
+
+    my_charm = await ops_test.build_charm(".")
+
+    main_orchestrator_conf = {
+        "cluster_name": "backup-test",
+        "init_hold": False,
+        "roles": "cluster_manager",
+    }
+    failover_orchestrator_conf = {
+        "cluster_name": "backup-test",
+        "init_hold": True,
+        "roles": "cluster_manager",
+    }
+    data_hot_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data.hot"}
+
+    await asyncio.gather(
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
+        ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
+        ops_test.model.deploy(
+            my_charm,
+            application_name="main",
+            num_units=1,
+            series=SERIES,
+            config=main_orchestrator_conf,
+        ),
+        ops_test.model.deploy(
+            my_charm,
+            application_name="failover",
+            num_units=1,
+            series=SERIES,
+            config=failover_orchestrator_conf,
+        ),
+        ops_test.model.deploy(
+            my_charm, application_name=APP_NAME, num_units=1, series=SERIES, config=data_hot_conf
+        ),
+    )
+
+    # Large deployment setup
+    await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
+    await ops_test.model.integrate("main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
+    await ops_test.model.integrate(
+        "failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
+    )
+
+    # TLS setup
+    await ops_test.model.integrate("main", TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate("failover", TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+
+    # Charms except s3-integrator should be active
+    await wait_until(
+        ops_test,
+        apps=[TLS_CERTIFICATES_APP_NAME, "main", "failover", APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units={
+            TLS_CERTIFICATES_APP_NAME: 1,
+            "main": 1,
+            "failover": 1,
+            APP_NAME: 1,
+        },
+        idle_period=IDLE_PERIOD,
+    )
+
+    # Credentials not set yet, this will move the opensearch to blocked state
+    # Credentials are set per test scenario
+    await ops_test.model.integrate("main", S3_INTEGRATOR)
+
+
+@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.abort_on_fail
+async def test_large_setups_relations_with_misconfiguration(
+    ops_test: OpsTest,
+    cloud_name: str,
+    deploy_type: str,
+) -> None:
+    """Tests the different blocked messages expected in large deployments."""
+    config = {
+        "endpoint": "http://localhost",
+        "bucket": "error",
+        "path": "/",
+        "region": "default",
+    }
+    credentials = {
+        "access-key": "error",
+        "secret-key": "error",
+    }
+
+    # Not using _configure_s3 as this method will cause opensearch to block
+    await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
+    await run_action(
+        ops_test,
+        0,
+        "sync-s3-credentials",
+        params=credentials,
+        app=S3_INTEGRATOR,
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[S3_INTEGRATOR],
+        status="active",
+        timeout=TIMEOUT,
+    )
+    await wait_until(
+        ops_test,
+        apps=["main"],
+        apps_statuses=["blocked"],
+        apps_full_statuses={"main": {"blocked": [BackupSetupFailed]}},
+        idle_period=IDLE_PERIOD,
+    )
+
+    # Now, relate failover cluster to s3-integrator and review the status
+    await ops_test.model.integrate("failover:s3-credentials", S3_INTEGRATOR)
+    await ops_test.model.integrate(f"{APP_NAME}:s3-credentials", S3_INTEGRATOR)
+    await wait_until(
+        ops_test,
+        apps=["main", "failover", APP_NAME],
+        apps_statuses=["blocked"],
+        units_statuses=["blocked"],
+        apps_full_statuses={
+            "main": {"blocked": [BackupSetupFailed]},
+            "failover": {"blocked": [S3RelMissing]},
+            APP_NAME: {"blocked": [S3RelMissing]},
+        },
+        idle_period=IDLE_PERIOD,
+    )
+
+    # Reverting should return it to normal
+    await ops_test.model.applications[APP_NAME].destroy_relation(
+        f"{APP_NAME}:s3-credentials", S3_INTEGRATOR
+    )
+    await ops_test.model.applications["failover"].destroy_relation(
+        "failover:s3-credentials", S3_INTEGRATOR
+    )
+    await wait_until(
+        ops_test,
+        apps=["main"],
+        apps_statuses=["blocked"],
+        apps_full_statuses={"main": {"blocked": [BackupSetupFailed]}},
+        idle_period=IDLE_PERIOD,
+    )
+    await wait_until(
+        ops_test,
+        apps=["failover", APP_NAME],
+        apps_statuses=["active"],
+        idle_period=IDLE_PERIOD,
+    )
+
+
+@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_create_backup_and_restore(
     ops_test: OpsTest,
@@ -243,9 +446,10 @@ async def test_create_backup_and_restore(
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
     cloud_name: str,
+    deploy_type: str,
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
-    app = (await app_name(ops_test)) or APP_NAME
+    app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     leader_id = await get_leader_unit_id(ops_test)
     unit_ip = await get_leader_unit_ip(ops_test)
     config = cloud_configs[cloud_name]
@@ -260,6 +464,7 @@ async def test_create_backup_and_restore(
                 ops_test,
                 leader_id,
                 unit_ip=unit_ip,
+                app=app,
             ),
             OPENSEARCH_BACKUP_ID_FORMAT,
         )
@@ -280,13 +485,7 @@ async def test_create_backup_and_restore(
     )
 
 
-@pytest.mark.parametrize(
-    "cloud_name",
-    [
-        (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
-        (pytest.param("aws", marks=pytest.mark.group("aws"))),
-    ],
-)
+@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_remove_and_readd_s3_relation(
     ops_test: OpsTest,
@@ -295,9 +494,10 @@ async def test_remove_and_readd_s3_relation(
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
     cloud_name: str,
+    deploy_type: str,
 ) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
-    app: str = (await app_name(ops_test)) or APP_NAME
+    app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     leader_id: str = await get_leader_unit_id(ops_test)
     unit_ip: str = await get_leader_unit_ip(ops_test)
     config: Dict[str, str] = cloud_configs[cloud_name]
@@ -315,7 +515,7 @@ async def test_remove_and_readd_s3_relation(
     )
 
     logger.info("Re-add s3-credentials relation")
-    await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
+    await ops_test.model.integrate(app, S3_INTEGRATOR)
     await ops_test.model.wait_for_idle(
         apps=[app],
         status="active",
@@ -333,6 +533,7 @@ async def test_remove_and_readd_s3_relation(
                 ops_test,
                 leader_id,
                 unit_ip=unit_ip,
+                app=app,
             ),
             OPENSEARCH_BACKUP_ID_FORMAT,
         )
@@ -354,19 +555,14 @@ async def test_remove_and_readd_s3_relation(
     )
 
 
-@pytest.mark.parametrize(
-    "cloud_name",
-    [
-        (pytest.param("microceph", marks=pytest.mark.group("microceph"))),
-        (pytest.param("aws", marks=pytest.mark.group("aws"))),
-    ],
-)
+@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_restore_to_new_cluster(
     ops_test: OpsTest,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
     cloud_name: str,
+    deploy_type: str,
     force_clear_cwrites_index,
 ) -> None:
     """Deletes the entire OpenSearch cluster and redeploys from scratch.
@@ -376,9 +572,12 @@ async def test_restore_to_new_cluster(
     1) At each backup restored, check our track of doc count vs. current index count
     2) Try to write to that new index.
     """
-    if app := await app_name(ops_test):
-        return
+    app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     logging.info("Destroying the application")
+    for machine in ops_test.model.state.machines.values():
+        # Needed due to canonical/opensearch-operator#243
+        await machine.destroy(force=True)
+    # Now, remove the applications
     await asyncio.gather(
         ops_test.model.remove_application(S3_INTEGRATOR, block_until_done=True),
         ops_test.model.remove_application(app, block_until_done=True),
@@ -398,16 +597,16 @@ async def test_restore_to_new_cluster(
     )
 
     # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
+        apps=[TLS_CERTIFICATES_APP_NAME, app],
         status="active",
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
     # Credentials not set yet, this will move the opensearch to blocked state
     # Credentials are set per test scenario
-    await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
+    await ops_test.model.integrate(app, S3_INTEGRATOR)
 
     leader_id = await get_leader_unit_id(ops_test)
     unit_ip = await get_leader_unit_ip(ops_test)
@@ -423,14 +622,14 @@ async def test_restore_to_new_cluster(
     assert len(cwrites_backup_doc_count) == 2
     count = 0
     for backup_id in backups.keys():
-        assert await restore(ops_test, backup_id, unit_ip, leader_id)
+        assert await restore(ops_test, backup_id, unit_ip, leader_id, app=app)
         count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
 
         # Ensure we have the same doc count as we had on the original cluster
         assert count == cwrites_backup_doc_count[backup_id]
 
         # restart the continuous writes and check the cluster is still accessible post restore
-        assert await start_and_check_continuous_writes(ops_test, unit_ip, app)
+        await assert_start_and_check_continuous_writes(ops_test, unit_ip, app)
 
     # Now, try a backup & restore with continuous writes
     logger.info("Final stage of DR test: try a backup & restore with continuous writes")
@@ -449,6 +648,7 @@ async def test_restore_to_new_cluster(
                 ops_test,
                 leader_id,
                 unit_ip=unit_ip,
+                app=app,
             ),
             OPENSEARCH_BACKUP_ID_FORMAT,
         )

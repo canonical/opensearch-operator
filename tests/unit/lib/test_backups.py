@@ -3,6 +3,7 @@
 
 """Unit test for the opensearch_plugins library."""
 import unittest
+from collections import namedtuple
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
@@ -15,6 +16,8 @@ from charms.opensearch.v0.constants_charm import (
     RestoreInProgress,
 )
 from charms.opensearch.v0.helper_cluster import IndexStateEnum
+
+# from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_backups import (
     S3_RELATION,
     S3_REPOSITORY,
@@ -37,6 +40,14 @@ from ops.model import MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
+from lib.charms.opensearch.v0.models import (
+    DeploymentDescription,
+    DeploymentState,
+    DeploymentType,
+    PeerClusterConfig,
+    StartMode,
+    State,
+)
 from tests.helpers import patch_network_get
 
 TEST_BUCKET_NAME = "s3://bucket-test"
@@ -50,9 +61,28 @@ LIST_BACKUPS_TRIAL = """ backup-id           | backup-status
 2023-01-01T00:20:00Z | snapshot in progress"""
 
 
-@pytest.fixture(scope="session")
+deployment_desc = namedtuple("deployment_desc", ["typ"])
+
+
+def create_deployment_desc():
+    return DeploymentDescription(
+        config=PeerClusterConfig(
+            cluster_name="logs", init_hold=False, roles=["cluster_manager", "data"]
+        ),
+        start=StartMode.WITH_PROVIDED_ROLES,
+        pending_directives=[],
+        app="opensearch",
+        typ=DeploymentType.MAIN_ORCHESTRATOR,
+        state=DeploymentState(value=State.ACTIVE),
+    )
+
+
+@pytest.fixture(scope="function")
 def harness():
     harness_obj = Harness(OpenSearchOperatorCharm)
+    charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc = (
+        MagicMock(return_value=create_deployment_desc())
+    )
     harness_obj.begin()
     charm = harness_obj.charm
     # Override the config to simulate the TestPlugin
@@ -76,15 +106,12 @@ def harness():
     # Replace some unused methods that will be called as part of set_leader with mock
     charm._put_admin_user = MagicMock()
     charm._put_kibanaserver_user = MagicMock()
+    charm._put_or_update_internal_user_leader = MagicMock()
+
     harness_obj.add_relation(PeerRelationName, "opensearch")
     harness_obj.set_leader(is_leader=True)
+
     return harness_obj
-
-
-@pytest.fixture(scope="session", autouse=True)
-def cleanup_harnes(harness):
-    yield
-    harness.cleanup()
 
 
 @pytest.fixture(scope="function")
@@ -456,7 +483,11 @@ class TestBackups(unittest.TestCase):
     def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
+        charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc = MagicMock(
+            return_value=create_deployment_desc()
+        )
         self.harness.begin()
+
         self.charm = self.harness.charm
         # Override the config to simulate the TestPlugin
         # As config.yaml does not exist, the setup below simulates it
@@ -481,6 +512,7 @@ class TestBackups(unittest.TestCase):
         # Replace some unused methods that will be called as part of set_leader with mock
         self.charm._put_admin_user = MagicMock()
         self.charm._put_kibanaserver_user = MagicMock()
+        self.charm._put_or_update_internal_user_leader = MagicMock()
         self.peer_id = self.harness.add_relation(PeerRelationName, "opensearch")
         self.harness.set_leader(is_leader=True)
 

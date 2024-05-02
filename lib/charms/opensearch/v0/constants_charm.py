@@ -42,6 +42,9 @@ ClusterHealthUnknown = "No unit online, cannot determine if it's safe to scale-d
 ClusterHealthYellow = (
     "1 or more 'replica' shards are not assigned, please scale your application up."
 )
+ClusterHealthRedUpgrade = (
+    "1 or more 'primary' shards are not assigned in the cluster. Fix unhealthy units"
+)
 IndexCreationFailed = "failed to create {index} index - deferring index-requested event..."
 UserCreationFailed = "failed to create users for {rel_name} relation {id}"
 PluginConfigChangeError = "Failed to apply config changes on the plugin."
@@ -61,6 +64,10 @@ PClusterWrongNodesCountForQuorum = (
 )
 PluginConfigError = "Unexpected error during plugin configuration, check the logs"
 BackupSetupFailed = "Backup setup failed, check logs for details"
+S3RelMissing = "Backup failover cluster missing S3 relation."
+S3RelShouldNotExist = "This unit should not be related to S3"
+S3RelDataIncomplete = "S3 relation data missing or incomplete."
+S3RelUneligible = "Only orchestrator clusters should relate to S3."
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
