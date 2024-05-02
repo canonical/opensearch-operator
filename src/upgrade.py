@@ -287,7 +287,6 @@ class Upgrade(abc.ABC):
                 self._charm.opensearch,
                 True,
                 hosts=self._charm.alt_hosts,
-                only_this_juju_app=self._charm.app.name,
             )
             if (
                 len([node for node in online_nodes if node.app_name == self._charm.app.name])
