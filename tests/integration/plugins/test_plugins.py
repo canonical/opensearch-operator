@@ -25,6 +25,7 @@ from ..helpers import (
     http_request,
     run_action,
 )
+from ..helpers_deployments import wait_until
 from ..plugins.helpers import (
     create_index_and_bulk_insert,
     generate_bulk_training_data,
@@ -96,10 +97,11 @@ async def test_prometheus_exporter_enabled_by_default(ops_test):
 async def test_prometheus_exporter_cos_relation(ops_test):
     await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[APP_NAME],
-        status="active",
-        timeout=1400,
+        apps_statuses=["active"],
+        units_statuses=["active"],
         idle_period=IDLE_PERIOD,
     )
 
