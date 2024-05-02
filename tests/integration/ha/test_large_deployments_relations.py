@@ -7,6 +7,7 @@ import logging
 
 import pytest
 from charms.opensearch.v0.constants_charm import (
+    PClusterNoRelation,
     TLSNotFullyConfigured,
     TLSRelationMissing,
 )
@@ -91,9 +92,17 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await wait_until(
         ops_test,
         apps=list(apps_units.keys()),
-        apps_full_statuses={app: {"blocked": [TLSRelationMissing]} for app in apps_units.keys()},
+        apps_full_statuses={
+            MAIN_APP: {"blocked": [TLSRelationMissing]},
+            FAILOVER_APP: {"blocked": [PClusterNoRelation]},
+            DATA_APP: {"blocked": [PClusterNoRelation]},
+            INVALID_APP: {"blocked": [PClusterNoRelation]},
+        },
         units_full_statuses={
-            app: {"units": {"blocked": [TLSRelationMissing]}} for app in apps_units.keys()
+            MAIN_APP: {"units": {"blocked": [TLSRelationMissing]}},
+            FAILOVER_APP: {"units": {"active": []}},
+            DATA_APP: {"units": {"active": []}},
+            INVALID_APP: {"units": {"active": []}},
         },
         wait_for_exact_units={app: units for app, units in apps_units.items()},
         idle_period=IDLE_PERIOD,
