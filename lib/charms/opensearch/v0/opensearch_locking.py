@@ -245,7 +245,7 @@ class OpenSearchNodeLock(ops.Object):
             # to release the OpenSearch lock. For example, when scaling to 0.
             # Then, when 1+ OpenSearch nodes are online, a unit that no longer exists could hold
             # the lock.
-            if not unit and online_nodes >= 2:
+            if not unit and online_nodes > 0:
                 logger.debug("[Node lock] Attempting to acquire opensearch lock")
                 # Acquire opensearch lock
                 # Create index if it doesn't exist
