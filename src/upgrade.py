@@ -267,8 +267,6 @@ class Upgrade(abc.ABC):
 
         Can run on leader or non-leader unit
 
-        This method runs the environment independent checks, such as API checks.
-
         Raises:
             PrecheckFailed: App is not ready to upgrade
 
@@ -279,18 +277,10 @@ class Upgrade(abc.ABC):
         """
         logger.debug("Running pre-upgrade checks")
 
-        def _log_and_raise(cause, resolution):
-            message = f"cause={cause}"
-            if resolution:
-                message += f"\nresolution={resolution}"
-            logger.warning(message)
-            raise PrecheckFailed(message)
-
         try:
             if self._charm.health.apply() != HealthColors.GREEN:
-                _log_and_raise(
-                    cause=f"Cluster not healthy: expected 'green', but '{self.health.apply()}' found instead",
-                    resolution="Ensure cluster is healthy before upgrading",
+                PrecheckFailed(
+                    f"Cluster not healthy: expected 'green', but '{self.health.apply()}' found instead"
                 )
 
             online_nodes = ClusterTopology.nodes(
@@ -299,23 +289,17 @@ class Upgrade(abc.ABC):
                 hosts=self._charm.alt_hosts,
                 only_this_juju_app=self._charm.app.name,
             )
-            if len(online_nodes) != self._charm.app.planned_units():
-                _log_and_raise(
-                    cause="Not all units are online",
-                    resolution="Ensure all units are online in the cluster",
-                )
+            if (
+                len([node for node in online_nodes if node.app_name == self._charm.app.name])
+                != self._charm.app.planned_units()
+            ):
+                PrecheckFailed("Not all units are online for this juju application")
 
             if self.check_if_starting():
-                _log_and_raise(
-                    cause="Cluster is starting",
-                    resolution="Ensure cluster has finished its (re)start cycle before proceeding",
-                )
+                PrecheckFailed("Cluster is starting")
 
             if not self._charm.backup.is_idle_or_not_set():
-                _log_and_raise(
-                    cause="Backup or restore is in progress",
-                    resolution="Ensure it is completed before proceed",
-                )
+                PrecheckFailed("Backup or restore is in progress")
 
         except OpenSearchHttpError:
-            _log_and_raise(cause="Cluster is unreachable", resolution="Fix current unit's network")
+            PrecheckFailed("Cluster is unreachable")

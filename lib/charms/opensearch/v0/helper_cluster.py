@@ -155,7 +155,6 @@ class ClusterTopology:
         opensearch: OpenSearchDistribution,
         use_localhost: bool,
         hosts: Optional[List[str]] = None,
-        only_this_juju_app: str = None,
     ) -> List[Node]:
         """Get the list of nodes in a cluster.
 
@@ -187,11 +186,7 @@ class ClusterTopology:
                         unit_number=int(obj["name"].split("-")[-1]),
                         temperature=obj.get("attributes", {}).get("temp"),
                     )
-                    if (
-                        not only_this_juju_app
-                        or "-".join(obj["name"].split("-")[:-1]) == only_this_juju_app
-                    ):
-                        nodes.append(node)
+                    nodes.append(node)
         return nodes
 
 

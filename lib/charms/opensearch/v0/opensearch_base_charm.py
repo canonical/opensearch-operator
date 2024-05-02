@@ -605,8 +605,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # we need to alert the leader that it must recompute the node roles for any unit whose
             # roles were changed while the current unit was cut-off from the rest of the network
             self._on_peer_relation_joined(event)
-            if event.deferred:
-                return
 
         previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.unit.is_leader():
