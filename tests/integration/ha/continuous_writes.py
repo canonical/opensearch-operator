@@ -133,10 +133,11 @@ class ContinuousWrites:
         try:
             # create index with a replica shard on every node
             client.indices.create(
-                index=f"{ContinuousWrites.INDEX_NAME}?wait_for_active_shards=all",
+                index=ContinuousWrites.INDEX_NAME,
                 body={
                     "settings": {"index": {"number_of_shards": 2, "auto_expand_replicas": "1-all"}}
                 },
+                wait_for_active_shards="all"
             )
         finally:
             client.close()
