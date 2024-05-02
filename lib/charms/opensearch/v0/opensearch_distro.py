@@ -108,7 +108,7 @@ class OpenSearchDistribution(ABC):
         self._start_service()
 
         start = datetime.now()
-        while not _is_connected() and (datetime.now() - start).seconds < 75:
+        while not _is_connected() and (datetime.now() - start).seconds < 180:
             time.sleep(3)
         else:
             raise OpenSearchStartTimeoutError()

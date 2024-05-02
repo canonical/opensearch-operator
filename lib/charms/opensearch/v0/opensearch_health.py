@@ -74,7 +74,12 @@ class OpenSearchHealth:
 
         return status
 
-    def get(self, wait_for_green_first: bool = False, use_localhost: bool = True) -> str:  # noqa
+    def get(  # noqa: C901
+        self,
+        wait_for_green_first: bool = False,
+        use_localhost: bool = True,
+        local_app_only: bool = True,
+    ) -> str:
         """Fetch the current cluster status."""
         if not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc()):
             return HealthColors.UNKNOWN
@@ -87,6 +92,7 @@ class OpenSearchHealth:
         compute_health = (
             deployment_desc.start == StartMode.WITH_GENERATED_ROLES
             or "data" in deployment_desc.config.roles
+            or not local_app_only
         )
         if not compute_health:
             return HealthColors.IGNORE

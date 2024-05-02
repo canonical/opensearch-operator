@@ -245,12 +245,12 @@ class OpenSearchNodeLock(ops.Object):
             # to release the OpenSearch lock. For example, when scaling to 0.
             # Then, when 1+ OpenSearch nodes are online, a unit that no longer exists could hold
             # the lock.
-            if not unit and online_nodes >= 2:
+            if not unit and online_nodes > 0:
                 logger.debug("[Node lock] Attempting to acquire opensearch lock")
                 # Acquire opensearch lock
                 # Create index if it doesn't exist
-                # if not self._create_lock_index_if_needed(host, alt_hosts):
-                #    return False
+                if not self._create_lock_index_if_needed(host, alt_hosts):
+                    return False
 
                 # Attempt to create document id 0
                 try:
@@ -305,6 +305,7 @@ class OpenSearchNodeLock(ops.Object):
                         return False
                     # This unit has OpenSearch lock
                     unit = self._charm.unit.name
+
             if unit == self._charm.unit.name:
                 # Lock acquired
                 # Release peer databag lock, if any
@@ -312,10 +313,12 @@ class OpenSearchNodeLock(ops.Object):
                 self._peer.release()
                 logger.debug("[Node lock] Released redundant peer lock (if held)")
                 return True
+
             if unit:
                 # Another unit has lock
                 logger.debug(f"[Node lock] Not acquired. Unit with opensearch lock: {unit}")
                 return False
+
             assert online_nodes == 1
             logger.debug("[Node lock] No unit has opensearch lock")
         logger.debug("[Node lock] Using peer databag for lock")

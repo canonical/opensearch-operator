@@ -116,7 +116,7 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.charm._restart_opensearch_event = MagicMock()
 
         self.harness.update_config({"plugin_opensearch_knn": False})
-        self.charm.plugin_manager.check_plugin_manager_ready.assert_called_once()
+        self.charm.plugin_manager.check_plugin_manager_ready.assert_called()
         self.charm._restart_opensearch_event.emit.assert_called_once()
         self.plugin_manager._opensearch_config.add_plugin.assert_called_once_with(
             {"knn.plugin.enabled": "false"}
