@@ -22,6 +22,7 @@ from ..ha.helpers import (
 from ..helpers import (
     APP_NAME,
     IDLE_PERIOD,
+    MODEL_CONFIG,
     SERIES,
     app_name,
     check_cluster_formation_successful,
@@ -30,7 +31,6 @@ from ..helpers import (
     get_application_unit_names,
     get_leader_unit_id,
     get_leader_unit_ip,
-    model_conf_with_short_update_schedule,
 )
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -52,7 +52,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         return
 
     my_charm = await ops_test.build_charm(".")
-    await ops_test.model.set_config(model_conf_with_short_update_schedule())
+    await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
@@ -72,7 +72,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_horizontal_scale_up(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Tests that new added units to the cluster are discoverable."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -121,7 +121,7 @@ async def test_horizontal_scale_up(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_shards_realloc(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Tests the shutdown of a node, and re-allocation of shards to a newly joined unit.
 
@@ -231,7 +231,7 @@ async def test_safe_scale_down_shards_realloc(
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 async def test_safe_scale_down_remove_leaders(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Tests the removal of specific units (elected cm, juju leader, node with prim shard).
 

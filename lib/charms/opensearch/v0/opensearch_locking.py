@@ -249,8 +249,8 @@ class OpenSearchNodeLock(ops.Object):
                 logger.debug("[Node lock] Attempting to acquire opensearch lock")
                 # Acquire opensearch lock
                 # Create index if it doesn't exist
-                if not self._create_lock_index_if_needed(host, alt_hosts):
-                    return False
+                # if not self._create_lock_index_if_needed(host, alt_hosts):
+                #    return False
 
                 # Attempt to create document id 0
                 try:
@@ -364,11 +364,17 @@ class OpenSearchNodeLock(ops.Object):
         # we do this, to circumvent opensearch raising a 429 error,
         # complaining about spamming the index creation endpoint
         try:
-            if self.OPENSEARCH_INDEX in ClusterState.indices(self._opensearch, host, alt_hosts):
+            indices = ClusterState.indices(self._opensearch, host, alt_hosts)
+            if self.OPENSEARCH_INDEX in indices:
                 logger.debug(
-                    f"{self.OPENSEARCH_INDEX} already created. Skipping creation attempt. List:"
-                    f"{ClusterState.indices(self._opensearch, host, alt_hosts)}"
+                    f"{self.OPENSEARCH_INDEX} already created. Skipping creation attempt. List:{indices}"
                 )
+                if self._charm.app.planned_units() > 1:
+                    self._opensearch.request(
+                        "GET",
+                        endpoint=f"/_cluster/health/{self.OPENSEARCH_INDEX}?wait_for_status=green",
+                        resp_status_code=True,
+                    )
                 return True
         except OpenSearchHttpError:
             pass
@@ -377,7 +383,7 @@ class OpenSearchNodeLock(ops.Object):
         try:
             self._opensearch.request(
                 "PUT",
-                endpoint=f"/{self.OPENSEARCH_INDEX}",
+                endpoint=f"/{self.OPENSEARCH_INDEX}?wait_for_active_shards=all",
                 host=host,
                 alt_hosts=alt_hosts,
                 retries=3,
