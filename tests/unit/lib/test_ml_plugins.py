@@ -6,7 +6,6 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
-from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn, PluginState
