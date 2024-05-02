@@ -137,7 +137,7 @@ class ContinuousWrites:
                 body={
                     "settings": {"index": {"number_of_shards": 2, "auto_expand_replicas": "1-all"}}
                 },
-                wait_for_active_shards="all"
+                wait_for_active_shards="all",
             )
         finally:
             client.close()
