@@ -8,6 +8,7 @@ import os
 import typing
 
 import ops
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 
@@ -221,6 +222,26 @@ class OpenSearchNodeLock(ops.Object):
             host = self._charm.unit_ip
         else:
             host = None
+        if (
+            self._charm.app.planned_units() > 1
+            and (relation := self._charm.model.get_relation(PeerRelationName))
+            and not relation.units
+        ):
+            # On initial startup (e.g. scaling up, on the new unit), `self._charm.alt_hosts` will
+            # be empty since it uses `Relation.units` on the `PeerRelationName`.
+            # Initial startup event sequence (some events omitted for brevity):
+            # - install
+            # - peer-relation-created
+            # - start
+            # - peer-relation-joined (e.g. for unit 2)
+            # - peer-relation-changed
+            # - peer-relation-joined (e.g. for unit 0)
+            # Until the peer relation joined event, `Relation.units` will be empty
+            # Therefore, before the first peer relation joined event, we should avoid acquiring the
+            # lock since otherwise we would fall back to the peer databag lock even if OpenSearch
+            # nodes were online.
+            logger.debug("[Node lock] Waiting for peer units before acquiring lock")
+            return False
         alt_hosts = [host for host in self._charm.alt_hosts if self._opensearch.is_node_up(host)]
         if host or alt_hosts:
             logger.debug("[Node lock] 1+ opensearch nodes online")

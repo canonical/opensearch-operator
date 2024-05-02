@@ -436,6 +436,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
+        logger.warning(f"FOO: {event.relation.data=}")
         if (
             self.unit.is_leader()
             and self.opensearch.is_node_up()
@@ -818,6 +819,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _start_opensearch(self, event: _StartOpenSearch) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
+        if not self._can_service_start():
+            self.node_lock.release()
+            event.defer()
+            return
         if not self.node_lock.acquired:
             # (Attempt to acquire lock even if `event.ignore_lock`)
             if event.ignore_lock:
@@ -842,11 +847,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.node_lock.release()
                 self.status.set(BlockedStatus(ServiceStartError))
                 event.defer()
-            return
-
-        if not self._can_service_start():
-            self.node_lock.release()
-            event.defer()
             return
 
         if self.opensearch.is_failed():
