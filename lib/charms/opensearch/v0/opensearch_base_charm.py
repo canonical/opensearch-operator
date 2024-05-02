@@ -1287,7 +1287,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         try:
             nodes = self._get_nodes(self.opensearch.is_node_up())
             if len(nodes) < self.app.planned_units():
+                if self._is_peer_rel_changed_deferred:
+                    # We already deferred this event during this Juju event. Retry on the next
+                    # Juju event.
+                    return
                 event.defer()
+                # If the handler is called again within this Juju hook, we will abandon the event
+                self._is_peer_rel_changed_deferred = True
                 return
 
             self._compute_and_broadcast_updated_topology(nodes)
