@@ -60,7 +60,7 @@ class OpenSearchHealth:
         """Fetch cluster health and set it on the app status."""
         try:
             host = self._charm.unit_ip if use_localhost else None
-            status = self._fetch_status(host, wait_for_green_first)
+            status = self.fetch_status(host, wait_for_green_first)
             if not status:
                 return HealthColors.UNKNOWN
 
