@@ -428,6 +428,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
+        logger.warning(f"FOO: {event.relation.data=}")
         if (
             self.unit.is_leader()
             and self.opensearch.is_node_up()
