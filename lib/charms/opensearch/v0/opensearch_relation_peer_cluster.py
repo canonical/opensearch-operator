@@ -24,6 +24,7 @@ from charms.opensearch.v0.models import (
     PeerClusterRelData,
     PeerClusterRelDataCredentials,
     PeerClusterRelErrorData,
+    S3RelDataCredentials,
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
@@ -299,6 +300,26 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             Scope.APP, "cluster_fleet_planned_units", cluster_fleet_planned_units
         )
 
+    def _s3_credentials(self, deployment_desc: DeploymentDescription) -> S3RelDataCredentials:
+        secrets = self.charm.secrets
+        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            # As the main orchestrator, this application must set the S3 information.
+            s3_credentials = S3RelDataCredentials(
+                access_key=self.charm.backup.s3_client.get_s3_connection_info().get(
+                    "access-key", ""
+                ),
+                secret_key=self.charm.backup.s3_client.get_s3_connection_info().get(
+                    "secret-key", ""
+                ),
+            )
+        else:
+            # Return what we have received from the peer relation
+            s3_credentials = S3RelDataCredentials(
+                access_key=secrets.get(Scope.APP, "access-key", default=""),
+                secret_key=secrets.get(Scope.APP, "secret-key", default=""),
+            )
+        return s3_credentials
+
     def _rel_data(
         self, deployment_desc: DeploymentDescription, orchestrators: PeerClusterOrchestrators
     ) -> Union[PeerClusterRelData, PeerClusterRelErrorData]:
@@ -311,6 +332,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # ready (will receive a subsequent
         try:
             secrets = self.charm.secrets
+
+            s3_credentials = self._s3_credentials(deployment_desc)
             return PeerClusterRelData(
                 cluster_name=deployment_desc.config.cluster_name,
                 cm_nodes=self._fetch_local_cm_nodes(),
@@ -319,6 +342,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                     admin_password=secrets.get(Scope.APP, secrets.password_key("admin")),
                     admin_password_hash=secrets.get(Scope.APP, secrets.hash_key("admin")),
                     admin_tls=secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
+                    s3=s3_credentials,
                 ),
                 deployment_desc=deployment_desc,
             )
@@ -487,6 +511,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # set user and security_index initialized flags
         self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
         self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
+
+        s3_creds = data.credentials.s3
+        self.charm.secrets.put(Scope.APP, "access-key", s3_creds.access_key)
+        self.charm.secrets.put(Scope.APP, "secret-key", s3_creds.secret_key)
 
     def _orchestrators(
         self,

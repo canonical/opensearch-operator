@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_health import HealthColors
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
@@ -138,9 +139,18 @@ class OpenSearchPluginManager:
     def check_plugin_manager_ready(self) -> bool:
         """Checks if the plugin manager is ready to run."""
         return (
-            self._charm.opensearch.is_node_up()
-            and len(self._charm._get_nodes(True)) == self._charm.app.planned_units()
-            and self._charm.health.get() in [HealthColors.GREEN, HealthColors.YELLOW]
+            self._charm.peers_data.get(Scope.APP, "security_index_initialised", False)
+            and self._charm.opensearch.is_node_up()
+            and len(
+                [x for x in self._charm._get_nodes(True) if x.app_name == self._charm.app.name]
+            )
+            == self._charm.app.planned_units()
+            and self._charm.health.apply()
+            in [
+                HealthColors.GREEN,
+                HealthColors.YELLOW,
+                HealthColors.IGNORE,
+            ]
         )
 
     def run(self) -> bool:

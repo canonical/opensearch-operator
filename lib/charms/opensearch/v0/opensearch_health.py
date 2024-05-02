@@ -7,6 +7,7 @@ from typing import Dict, Optional
 
 from charms.opensearch.v0.constants_charm import (
     ClusterHealthRed,
+    ClusterHealthRedUpgrade,
     ClusterHealthYellow,
     WaitingForBusyShards,
     WaitingForSpecificBusyShards,
@@ -18,7 +19,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHAError,
     OpenSearchHttpError,
 )
-from ops.model import BlockedStatus, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
@@ -115,18 +116,11 @@ class OpenSearchHealth:
         except OpenSearchHttpError:
             pass
 
-        try:
-            # we differentiate between a temp yellow (moving shards) and a permanent
-            # one (such as: missing replicas)
-            shards_by_state = ClusterState.shards_by_state(
-                self._opensearch, host=host, alt_hosts=self._charm.alt_hosts
-            )
-            busy_shards = shards_by_state.get("INITIALIZING", 0) + shards_by_state.get(
-                "RELOCATING", 0
-            )
-            return HealthColors.YELLOW_TEMP if busy_shards > 0 else HealthColors.YELLOW
-        except OpenSearchHttpError:
-            return HealthColors.UNKNOWN
+        # we differentiate between a temp yellow (moving shards) and a permanent
+        # one (such as: missing replicas)
+        if response["initializing_shards"] > 0 or response["relocating_shards"] > 0:
+            return HealthColors.YELLOW_TEMP
+        return HealthColors.YELLOW
 
     @retry(stop=stop_after_attempt(15), wait=wait_fixed(5), reraise=True)
     def wait_for_shards_relocation(self) -> None:
@@ -154,7 +148,7 @@ class OpenSearchHealth:
             self._charm.status.set(BlockedStatus(ClusterHealthRed), app=True)
         elif status == HealthColors.YELLOW_TEMP:
             # health is yellow but temporarily (shards are relocating or initializing)
-            self._charm.status.set(WaitingStatus(WaitingForBusyShards), app=True)
+            self._charm.status.set(MaintenanceStatus(WaitingForBusyShards), app=True)
         elif status == HealthColors.YELLOW:
             # health is yellow permanently (some replica shards are unassigned)
             self._charm.status.set(BlockedStatus(ClusterHealthYellow), app=True)
@@ -179,6 +173,25 @@ class OpenSearchHealth:
         message = sorted([f"{key}/{','.join(val)}" for key, val in busy_shards.items()])
         message = WaitingForSpecificBusyShards.format(" - ".join(message))
         self._charm.status.set(WaitingStatus(message))
+
+    def apply_for_unit_during_upgrade(self, status: str) -> None:
+        """Set cluster wide status on unit during upgrade
+
+        During upgrade, app status is used to show upgrade progress
+        And, unit checking cluster wide status may not be leader
+        """
+        if status in (HealthColors.GREEN, HealthColors.YELLOW):
+            # health green or yellow: cluster healthy
+            # TODO future improvement:
+            # https://github.com/canonical/opensearch-operator/issues/268
+            self._charm.status.clear(ClusterHealthRedUpgrade)
+            self._charm.status.clear(WaitingForBusyShards)
+        elif status == HealthColors.RED:
+            # health RED: some primary shards are unassigned
+            self._charm.status.set(BlockedStatus(ClusterHealthRedUpgrade))
+        elif status == HealthColors.YELLOW_TEMP:
+            # health is yellow but temporarily (shards are relocating or initializing)
+            self._charm.status.set(MaintenanceStatus(WaitingForBusyShards))
 
     def _health(self, host: str, wait_for_green: bool) -> Optional[Dict[str, any]]:
         """Fetch the cluster health."""

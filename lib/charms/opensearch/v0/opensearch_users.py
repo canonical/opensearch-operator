@@ -175,7 +175,9 @@ class OpenSearchUserManager:
             logger.error(f"Couldn't create user {str(e)}")
             raise OpenSearchUserMgmtError(e)
 
-        if resp.get("status") != "CREATED":
+        if resp.get("status") != "CREATED" and not (
+            resp.get("status") == "OK" and "updated" in resp.get("message")
+        ):
             raise OpenSearchUserMgmtError(f"creating user {user_name} failed")
 
         return resp
