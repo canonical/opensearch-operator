@@ -5,6 +5,7 @@
 import asyncio
 import logging
 import time
+import subprocess
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -78,6 +79,11 @@ async def test_storage_reuse_after_scale_down(
     unit_id = get_application_unit_ids(ops_test, app)[1]
     unit_storage_id = storage_id(ops_test, app, unit_id)
 
+    # create a testfile on the newly added unit to check if data in storage is persistent
+    testfile = "/var/snap/opensearch/common/testfile"
+    create_testfile_cmd = f"juju ssh {app}/{unit_id} sudo touch {testfile}"
+    subprocess.run(create_testfile_cmd, shell=True)
+
     # scale-down to 1
     await ops_test.model.applications[app].units[unit_id].remove(force=True)
     await ops_test.model.wait_for_idle(
@@ -108,6 +114,9 @@ async def test_storage_reuse_after_scale_down(
     assert writes_result.count == (await c_writes.count())
     assert writes_result.max_stored_id == (await c_writes.max_stored_id())
 
+    # check if the testfile is still there or was overwritten on installation
+    check_testfile_cmd = f"juju ssh {app}/{new_unit_id} -q sudo ls {testfile}"
+    assert testfile == subprocess.getoutput(check_testfile_cmd)
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
