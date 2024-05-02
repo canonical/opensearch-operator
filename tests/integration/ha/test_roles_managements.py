@@ -124,6 +124,8 @@ async def test_set_roles_manually(
         assert node.temperature == "cold", "Temperature unchanged."
 
 
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_switch_back_to_auto_generated_roles(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
