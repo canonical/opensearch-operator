@@ -140,7 +140,7 @@ class OpenSearchPluginManager:
         return (
             self._charm.opensearch.is_node_up()
             and len(self._charm._get_nodes(True)) == self._charm.app.planned_units()
-            and self._charm.health.get() in [HealthColors.GREEN, HealthColors.YELLOW]
+            and self._charm.health.apply() in [HealthColors.GREEN, HealthColors.YELLOW]
         )
 
     def run(self) -> bool:
