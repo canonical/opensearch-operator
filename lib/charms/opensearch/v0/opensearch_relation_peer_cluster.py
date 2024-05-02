@@ -165,7 +165,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         if not (candidate_failover_app := data.get("candidate_failover_orchestrator_app")):
             self.refresh_relation_data(event)
-            event.defer()
             return
 
         orchestrators = PeerClusterOrchestrators.from_dict(
@@ -174,7 +173,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if orchestrators.failover_app and orchestrators.failover_rel_id in target_relation_ids:
             logger.info("A failover cluster orchestrator is already registered.")
             self.refresh_relation_data(event)
-            event.defer()
             return
 
         # register the new failover in the current main peer relation data

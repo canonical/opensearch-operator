@@ -141,11 +141,7 @@ class OpenSearchPluginManager:
             self._charm.peers_data.get(Scope.APP, "security_index_initialised", False)
             and self._charm.opensearch.is_node_up()
             and len(
-                [
-                    x
-                    for x in self._charm._get_nodes(True)
-                    if "-".join(x.name.split("-")[:-1]) == self._charm.app.name
-                ]
+                [x for x in self._charm._get_nodes(True) if x.app_name == self._charm.app.name]
             )
             == self._charm.app.planned_units()
             and self._charm.health.apply()
