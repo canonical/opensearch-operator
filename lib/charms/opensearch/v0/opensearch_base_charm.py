@@ -138,16 +138,18 @@ class _StartOpenSearch(EventBase):
     This event will be deferred until OpenSearch starts.
     """
 
-    def __init__(self, handle, *, ignore_lock=False):
+    def __init__(self, handle, *, ignore_lock=False, after_upgrade=False):
         super().__init__(handle)
         # Only used for force upgrade
         self.ignore_lock = ignore_lock
+        self.after_upgrade = after_upgrade
 
     def snapshot(self) -> Dict[str, Any]:
-        return {"ignore_lock": self.ignore_lock}
+        return {"ignore_lock": self.ignore_lock, "after_upgrade": self.after_upgrade}
 
     def restore(self, snapshot: Dict[str, Any]):
         self.ignore_lock = snapshot["ignore_lock"]
+        self.after_upgrade = snapshot["after_upgrade"]
 
 
 class _RestartOpenSearch(EventBase):
@@ -163,6 +165,9 @@ class _UpgradeOpenSearch(_StartOpenSearch):
     This event will be deferred until OpenSearch stops. Then, the snap will be upgraded and
     `_StartOpenSearch` will be emitted.
     """
+
+    def __init__(self, handle, *, ignore_lock=False):
+        super().__init__(handle, ignore_lock=ignore_lock)
 
 
 class OpenSearchBaseCharm(CharmBase, abc.ABC):
@@ -526,7 +531,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
             try:
-                self.opensearch.request("POST", "/_flush?wait_if_ongoing=true")
+                self.opensearch.request("POST", "/_flush")
             except OpenSearchHttpError:
                 # if it's a failed attempt we move on
                 pass
@@ -886,7 +891,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
 
-    def _post_start_init(self, event: EventBase):
+    def _post_start_init(self, event: _StartOpenSearch):  # noqa: C901
         """Initialization post OpenSearch start."""
         # initialize the security index if needed (and certs written on disk etc.)
         if self.unit.is_leader() and not self.peers_data.get(
@@ -902,6 +907,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.opensearch.is_node_up():
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
+        try:
+            nodes = self._get_nodes(use_localhost=not self.alt_hosts)
+        except OpenSearchHttpError:
+            logger.exception("Failed to get online nodes")
+            event.defer()
+            return
+        for node in nodes:
+            if node.name == self.unit_name:
+                break
+        else:
+            raise OpenSearchNotFullyReadyError("Node online but not in cluster.")
+
         # cleanup bootstrap conf in the node
         if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
             self._cleanup_bootstrap_conf_if_applies()
@@ -911,8 +928,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.node_lock.release()
 
-        self._upgrade.unit_state = upgrade.UnitState.HEALTHY
-        self._reconcile_upgrade()
+        if event.after_upgrade:
+            try:
+                self.opensearch.request(
+                    "PUT",
+                    "/_cluster/settings",
+                    # Reset to default value
+                    payload={"persistent": {"cluster.routing.allocation.enable": None}},
+                )
+            except OpenSearchHttpError:
+                logger.exception("Failed to re-enable allocation after upgrade")
+                event.defer()
+                return
 
         self.peers_data.put(Scope.UNIT, "started", True)
 
@@ -926,21 +953,73 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # Creating the monitoring user
             self._put_or_update_internal_user_leader(COSUser)
 
+        self.unit.open_port("tcp", 9200)
+
         # clear waiting to start status
         self.status.clear(WaitingToStart)
 
-        self.unit.open_port("tcp", 9200)
+        if event.after_upgrade:
+            health = self.health.apply(wait_for_green_first=True, app=False)
+            self.health.apply_for_unit_during_upgrade(health)
+
+            # Cluster is considered healthy if green or yellow
+            # TODO future improvement: try to narrow scope to just green or green + yellow in
+            # specific cases
+            # https://github.com/canonical/opensearch-operator/issues/268
+            # See https://chat.canonical.com/canonical/pl/s5j64ekxwi8epq53kzhd8fhrco and
+            # https://chat.canonical.com/canonical/pl/zaizx3bu3j8ftfcw67qozw9dbo
+            # For now, we need to allow yellow because
+            # "During a rolling upgrade, primary shards assigned to a node running the new
+            # version cannot have their replicas assigned to a node with the old version. The new
+            # version might have a different data format that is not understood by the old
+            # version.
+            #
+            # "If it is not possible to assign the replica shards to another node (there is only
+            # one upgraded node in the cluster), the replica shards remain unassigned and status
+            # stays `yellow`.
+            #
+            # "In this case, you can proceed once there are no initializing or relocating shards
+            # (check the `init` and `relo` columns).
+            #
+            # "As soon as another node is upgraded, the replicas can be assigned and the status
+            # will change to `green`."
+            #
+            # from
+            # https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html#upgrading-elasticsearch
+            #
+            # If `health_ == HealthColors.YELLOW`, no shards are initializing or relocating
+            # (otherwise `health_` would be `HealthColors.YELLOW_TEMP`)
+            if health not in (HealthColors.GREEN, HealthColors.YELLOW):
+                logger.error(
+                    "Cluster is not healthy after upgrade. Manual intervention required. To rollback, `juju refresh` to the previous revision"
+                )
+                event.defer()
+                return
+            elif health == HealthColors.YELLOW:
+                # TODO future improvement:
+                # https://github.com/canonical/opensearch-operator/issues/268
+                logger.warning(
+                    "Cluster is yellow. Upgrade may cause data loss if cluster is yellow for reason other than primary shards on upgraded unit & not enough upgraded units available for replica shards"
+                )
+        else:
+            # apply cluster health
+            self.health.apply()
+
+        self._upgrade.unit_state = upgrade.UnitState.HEALTHY
+        self._reconcile_upgrade()
 
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
             if self.opensearch_peer_cm.is_peer_cluster_orchestrator_relation_set():
                 self.peer_cluster_provider.refresh_relation_data(event)
 
-    def _stop_opensearch(self) -> None:
+    def _stop_opensearch(self, *, restart=False) -> None:
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
         if self.opensearch.is_node_up():
+            # TODO: we should probably NOT have any exclusion on restart
+            # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
             # 1. Add current node to the voting + alloc exclusions
             self.opensearch_exclusions.add_current()
 
@@ -951,6 +1030,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.set(WaitingStatus(ServiceStopped))
 
         # 3. Remove the exclusions
+        # TODO: we should probably NOT have any exclusion on restart
+        # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
         self.opensearch_exclusions.delete_current()
 
     def _restart_opensearch(self, event: _RestartOpenSearch) -> None:
@@ -961,7 +1042,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         try:
-            self._stop_opensearch()
+            self._stop_opensearch(restart=True)
         except OpenSearchStopError as e:
             logger.exception(e)
             self.node_lock.release()
@@ -971,7 +1052,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self._start_opensearch_event.emit()
 
-    def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:
+    def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:  # noqa: C901
         """Upgrade OpenSearch."""
         logger.debug("Attempting to acquire lock for upgrade")
         if not self.node_lock.acquired:
@@ -984,9 +1065,26 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
         logger.debug("Acquired lock for upgrade")
 
+        # https://www.elastic.co/guide/en/elastic-stack/8.13/upgrading-elasticsearch.html
+        try:
+            self.opensearch.request(
+                "PUT",
+                "/_cluster/settings",
+                payload={"persistent": {"cluster.routing.allocation.enable": "primaries"}},
+            )
+        except OpenSearchHttpError:
+            logger.exception("Failed to disable shard allocation before upgrade")
+            self.node_lock.release()
+            event.defer()
+            return
+        try:
+            self.opensearch.request("POST", "/_flush", retries=3)
+        except OpenSearchHttpError as e:
+            logger.debug("Failed to flush before upgrade", exc_info=e)
+
         logger.debug("Stopping OpenSearch before upgrade")
         try:
-            self._stop_opensearch()
+            self._stop_opensearch(restart=True)
         except OpenSearchStopError as e:
             logger.exception(e)
             self.node_lock.release()
@@ -998,7 +1096,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self._upgrade.upgrade_unit(snap=self.opensearch)
 
         logger.debug("Starting OpenSearch after upgrade")
-        self._start_opensearch_event.emit(ignore_lock=event.ignore_lock)
+        self._start_opensearch_event.emit(ignore_lock=event.ignore_lock, after_upgrade=True)
 
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""

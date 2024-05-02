@@ -42,6 +42,9 @@ ClusterHealthUnknown = "No unit online, cannot determine if it's safe to scale-d
 ClusterHealthYellow = (
     "1 or more 'replica' shards are not assigned, please scale your application up."
 )
+ClusterHealthRedUpgrade = (
+    "1 or more 'primary' shards are not assigned in the cluster. Fix unhealthy units"
+)
 IndexCreationFailed = "failed to create {index} index - deferring index-requested event..."
 UserCreationFailed = "failed to create users for {rel_name} relation {id}"
 PluginConfigChangeError = "Failed to apply config changes on the plugin."
