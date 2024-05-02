@@ -15,8 +15,9 @@ from ..helpers import (
     SERIES,
     check_cluster_formation_successful,
     cluster_health,
+    get_application_unit_ids,
     get_application_unit_names,
-    get_leader_unit_ip, get_application_unit_ids,
+    get_leader_unit_ip,
 )
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
