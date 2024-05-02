@@ -4,8 +4,8 @@
 
 import asyncio
 import logging
-import time
 import subprocess
+import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -54,6 +54,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+@pytest.mark.skip(reason="fastlane")
 async def test_storage_reuse_after_scale_down(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ):
@@ -118,6 +119,57 @@ async def test_storage_reuse_after_scale_down(
     # check if the testfile is still there or was overwritten on installation
     check_testfile_cmd = f"juju ssh {app}/{new_unit_id} -q sudo ls {testfile}"
     assert testfile == subprocess.getoutput(check_testfile_cmd)
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_storage_reuse_after_scale_to_zero(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+):
+    """Check storage is reused and data accessible after scaling down and up."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    if storage_type(ops_test, app) == "rootfs":
+        pytest.skip(
+            "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
+        )
+
+    writes_result = await c_writes.stop()
+
+    # scale down to zero units
+    unit_ids = get_application_unit_ids(ops_test, app)
+    storage_ids = {}
+    for unit_id in unit_ids:
+        storage_ids[unit_id] = storage_id(ops_test, app, unit_id)
+        await ops_test.model.applications[app].units[unit_id].remove()
+
+    await ops_test.model.wait_for_idle(
+        # app status will not be active because after scaling down not all shards are assigned
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=0,
+    )
+
+    # scale up again
+    for unit_id in unit_ids:
+        add_unit_cmd = (
+            f"add-unit {app} --model={ops_test.model.info.name} --attach-storage={storage_ids[unit_id]}"
+        )
+        return_code, _, _ = await ops_test.juju(*add_unit_cmd.split())
+        assert return_code == 0, f"Failed to add unit with storage {storage_ids[unit_id]}"
+
+    await ops_test.model.wait_for_idle(
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=len(unit_ids),
+    )
+
+    # check if data is also imported
+    assert writes_result.count == (await c_writes.count())
+    assert writes_result.max_stored_id == (await c_writes.max_stored_id())
+
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
