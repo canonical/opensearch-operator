@@ -235,7 +235,17 @@ class OpenSearchNodeLock(ops.Object):
                 return False
             logger.debug(f"[Node lock] Opensearch {online_nodes=}")
             assert online_nodes > 0
-            if online_nodes >= 2:
+            try:
+                unit = self._unit_with_lock(host)
+            except OpenSearchHttpError:
+                logger.exception("Error checking which unit has OpenSearch lock")
+                return False
+            # If online_nodes == 1, we should acquire the lock via the peer databag.
+            # If we acquired the lock via OpenSearch and this unit was stopping, we would be unable
+            # to release the OpenSearch lock. For example, when scaling to 0.
+            # Then, when 1+ OpenSearch nodes are online, a unit that no longer exists could hold
+            # the lock.
+            if not unit and online_nodes >= 2:
                 logger.debug("[Node lock] Attempting to acquire opensearch lock")
                 # Acquire opensearch lock
                 # Create index if it doesn't exist
@@ -274,7 +284,10 @@ class OpenSearchNodeLock(ops.Object):
                         "error", {}
                     ).get("reason", ""):
                         # Document already created
-                        pass
+                        logger.debug(
+                            "[Node lock] Another unit acquired OpenSearch lock while this unit attempted to acquire lock"
+                        )
+                        return False
                     else:
                         logger.exception("Error creating OpenSearch lock document")
                         return False
@@ -291,13 +304,24 @@ class OpenSearchNodeLock(ops.Object):
                     # from
                     # https://www.elastic.co/guide/en/elasticsearch/reference/8.13/docs-index_.html#index-wait-for-active-shards
                     if response["_shards"]["failed"] > 0:
-                        logger.error("Failed to write OpenSearch lock document to all nodes")
+                        logger.error("Failed to write OpenSearch lock document to all nodes.")
+                        logger.debug(
+                            "[Node lock] Deleting OpenSearch lock after failing to write to all nodes"
+                        )
+                        # Delete document id 0
+                        self._opensearch.request(
+                            "DELETE",
+                            endpoint=f"/{self.OPENSEARCH_INDEX}/_doc/0?refresh=true",
+                            host=host,
+                            alt_hosts=alt_hosts,
+                            retries=10,
+                        )
+                        logger.debug(
+                            "[Node lock] Deleted OpenSearch lock after failing to write to all nodes"
+                        )
                         return False
-            try:
-                unit = self._unit_with_lock(host)
-            except OpenSearchHttpError:
-                logger.exception("Error checking which unit has OpenSearch lock")
-                return False
+                    # This unit has OpenSearch lock
+                    unit = self._charm.unit.name
             if unit == self._charm.unit.name:
                 # Lock acquired
                 # Release peer databag lock, if any
@@ -305,21 +329,11 @@ class OpenSearchNodeLock(ops.Object):
                 self._peer.release()
                 logger.debug("[Node lock] Released redundant peer lock (if held)")
                 return True
-            if unit or online_nodes >= 2:
+            if unit:
                 # Another unit has lock
-                # (Or document deleted after request to create document & before request in
-                # `self._unit_with_lock()`)
                 logger.debug(f"[Node lock] Not acquired. Unit with opensearch lock: {unit}")
                 return False
-            # If online_nodes == 1, we should acquire the lock via the peer databag.
-            # If we acquired the lock via OpenSearch and this unit was stopping, we would be unable
-            # to release the OpenSearch lock. For example, when scaling to 0.
-            # Then, when 1+ OpenSearch nodes are online, a unit that no longer exists could hold
-            # the lock.
-            # Note: if online_nodes > 1, this situation is still possible (e.g. if this unit was
-            # stopping and another unit went offline simultaneously)—but it's an edge case we don't
-            # support (to reduce complexity & improve robustness in other cases).
-            # If online_nodes > 1, we should re-attempt to acquire the OpenSearch lock.
+            assert online_nodes == 1
             logger.debug("[Node lock] No unit has opensearch lock")
         logger.debug("[Node lock] Using peer databag for lock")
         # Request peer databag lock
