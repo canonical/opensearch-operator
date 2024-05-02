@@ -64,8 +64,6 @@ async def test_storage_reuse_after_scale_down(
             "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
 
-    writes_result = await c_writes.stop()
-
     # scale up to 2 units
     await ops_test.model.applications[app].add_unit(count=1)
     await ops_test.model.wait_for_idle(
@@ -74,6 +72,8 @@ async def test_storage_reuse_after_scale_down(
         timeout=1000,
         wait_for_exact_units=2,
     )
+
+    writes_result = await c_writes.stop()
 
     # get unit info
     unit_id = get_application_unit_ids(ops_test, app)[1]
