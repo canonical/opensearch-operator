@@ -54,7 +54,7 @@ from charms.opensearch.v0.helper_security import (
     generate_password,
 )
 from charms.opensearch.v0.models import DeploymentDescription, DeploymentType
-from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
+from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -89,7 +89,10 @@ from charms.opensearch.v0.opensearch_relation_peer_cluster import (
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
-from charms.opensearch.v0.opensearch_users import OpenSearchUserManager
+from charms.opensearch.v0.opensearch_users import (
+    OpenSearchUserManager,
+    OpenSearchUserMgmtError,
+)
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
@@ -208,7 +211,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         )
 
         self.plugin_manager = OpenSearchPluginManager(self)
-        self.backup = OpenSearchBackup(self)
+        self.backup = backup(self)
 
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
@@ -838,7 +841,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch.is_started():
             try:
                 self._post_start_init(event)
-            except (OpenSearchHttpError, OpenSearchNotFullyReadyError):
+            except (
+                OpenSearchHttpError,
+                OpenSearchNotFullyReadyError,
+            ):
+                event.defer()
+            except OpenSearchUserMgmtError as e:
+                # Either generic start failure or cluster is not read to create the internal users
+                logger.warning(e)
+                self.node_lock.release()
+                self.status.set(BlockedStatus(ServiceStartError))
                 event.defer()
             return
 
@@ -883,10 +895,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 )
             )
             self._post_start_init(event)
-        except (OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
+        except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
-        except OpenSearchStartError as e:
-            logger.exception(e)
+        except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
+            logger.warning(e)
             self.node_lock.release()
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
@@ -1388,7 +1400,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         try:
             nodes = self._get_nodes(self.opensearch.is_node_up())
             if len(nodes) < self.app.planned_units():
+                if self._is_peer_rel_changed_deferred:
+                    # We already deferred this event during this Juju event. Retry on the next
+                    # Juju event.
+                    return
                 event.defer()
+                # If the handler is called again within this Juju hook, we will abandon the event
+                self._is_peer_rel_changed_deferred = True
                 return
 
             self._compute_and_broadcast_updated_topology(nodes)

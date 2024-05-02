@@ -36,7 +36,6 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.harness.add_network("1.1.1.1", endpoint=PeerRelationName)
         self.harness.add_network("1.1.1.1", endpoint=TLS_RELATION)
         self.harness.begin()
-
         self.charm = self.harness.charm
         self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.harness.add_relation(TLS_RELATION, self.charm.app.name)

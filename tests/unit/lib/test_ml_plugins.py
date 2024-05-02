@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
 from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.models import Node
 from charms.opensearch.v0.opensearch_health import HealthColors
-from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn, PluginState
 from ops.testing import Harness
 
@@ -42,10 +42,6 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.charm = self.harness.charm
-
-        self.peers_data = self.charm.peers_data
-        self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
-
         self.charm.opensearch.paths.plugins = "tests/unit/resources"
         self.plugin_manager = self.charm.plugin_manager
         self.plugin_manager._plugins_path = self.charm.opensearch.paths.plugins
@@ -64,7 +60,6 @@ class TestOpenSearchKNN(unittest.TestCase):
             return_value={}
         )
 
-    @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.update_host_if_needed")
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.is_node_up")
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
@@ -93,16 +88,9 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_lock_acquired,
         ___,
         mock_is_node_up,
-        mock_update_host_if_needed,
     ) -> None:
         """Tests entire config_changed event with KNN plugin."""
-        self.harness.set_leader(True)
-        self.peers_data.put(Scope.APP, "security_index_initialised", True)
-        self.harness.set_leader(False)
-
         mock_status.return_value = PluginState.ENABLED
-        mock_update_host_if_needed.return_value = False
-        self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
         mock_is_enabled.return_value = False
         mock_is_started.return_value = True
         mock_version.return_value = "2.9.0"
@@ -112,12 +100,25 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.plugin_manager._opensearch_config.add_plugin = MagicMock()
         self.charm.status = MagicMock()
         mock_is_node_up.return_value = True
+        self.charm._get_nodes = MagicMock(
+            return_value=[
+                Node(
+                    name=f"{self.charm.app.name}-0",
+                    roles=["cluster_manager"],
+                    ip="1.1.1.1",
+                    app_name=self.charm.app.name,
+                    unit_number=0,
+                ),
+            ]
+        )
         self.charm._get_nodes = MagicMock(return_value=[1])
         self.charm.planned_units = MagicMock(return_value=1)
-        mock_lock_acquired.return_value = False
+        self.charm.plugin_manager.check_plugin_manager_ready = MagicMock()
+        self.charm._restart_opensearch_event = MagicMock()
 
         self.harness.update_config({"plugin_opensearch_knn": False})
-        # mock_lock_acquired.assert_called_once()
-        # self.plugin_manager._opensearch_config.add_plugin.assert_called_once_with(
-        #     {"knn.plugin.enabled": "false"}
-        # )
+        self.charm.plugin_manager.check_plugin_manager_ready.assert_called_once()
+        self.charm._restart_opensearch_event.emit.assert_called_once()
+        self.plugin_manager._opensearch_config.add_plugin.assert_called_once_with(
+            {"knn.plugin.enabled": "false"}
+        )

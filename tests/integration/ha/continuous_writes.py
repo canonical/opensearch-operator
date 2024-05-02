@@ -5,7 +5,7 @@ import asyncio
 import logging
 import os
 import time
-from multiprocessing import Event, Process, Queue
+from multiprocessing import Event, Process, Queue, log_to_stderr
 from types import SimpleNamespace
 from typing import Optional
 
@@ -48,7 +48,7 @@ class ContinuousWrites:
         wait=wait_fixed(wait=5) + wait_random(0, 5),
         stop=stop_after_attempt(5),
     )
-    async def start(self, repl_on_all_nodes: bool = False) -> None:
+    async def start(self, repl_on_all_nodes: bool = False, is_bulk: bool = True) -> None:
         """Run continuous writes in the background."""
         if not self._is_stopped:
             await self.clear()
@@ -58,7 +58,7 @@ class ContinuousWrites:
             await self._create_fully_replicated_index()
 
         # create process
-        self._create_process()
+        self._create_process(is_bulk=is_bulk)
 
         # put data (hosts, password) in the process queue
         await self.update()
@@ -169,20 +169,21 @@ class ContinuousWrites:
 
         return result
 
-    def _create_process(self):
+    def _create_process(self, is_bulk: bool = True):
         self._is_stopped = False
         self._event = Event()
         self._queue = Queue()
         self._process = Process(
             target=ContinuousWrites._run_async,
             name="continuous_writes",
-            args=(self._event, self._queue, self._initial_count, True),
+            args=(self._event, self._queue, self._initial_count, is_bulk),
         )
 
     def _stop_process(self):
         self._event.set()
         self._process.join()
         self._queue.close()
+        self._process.terminate()
         self._is_stopped = True
 
     async def _secrets(self) -> str:
@@ -211,6 +212,8 @@ class ContinuousWrites:
         event: Event, data_queue: Queue, starting_number: int, is_bulk: bool
     ) -> None:
         """Continuous writing."""
+        proc_logger = log_to_stderr()
+        proc_logger.setLevel(logging.INFO)
 
         def _client(_data) -> OpenSearch:
             return opensearch_client(
@@ -218,6 +221,10 @@ class ContinuousWrites:
             )
 
         write_value = starting_number
+
+        proc_logger.info(
+            f"Starting continuous writes from {write_value} with is_bulk={is_bulk}..."
+        )
 
         data = data_queue.get(True)
         client = _client(data)
@@ -237,6 +244,7 @@ class ContinuousWrites:
                 # todo: remove when we get bigger runners (to reduce data transfer time)
                 time.sleep(1)
             except BulkIndexError:
+                proc_logger.info(f"Bulk failed for {write_value}")
                 continue
             except (TransportError, ConnectionRefusedError):
                 client.close()
@@ -245,6 +253,7 @@ class ContinuousWrites:
                 except (TransportError, ConnectionRefusedError):
                     pass
 
+                proc_logger.info(f"Transport or Conn Refused error for {write_value}")
                 continue
             finally:
                 # process termination requested
@@ -256,7 +265,7 @@ class ContinuousWrites:
         # write last expected written value on disk
         with open(ContinuousWrites.LAST_WRITTEN_VAL_PATH, "w") as f:
             if is_bulk:
-                write_value = (50 * write_value) + 49
+                write_value += 99
 
             f.write(str(write_value))
             os.fsync(f)
@@ -268,8 +277,8 @@ class ContinuousWrites:
     def _bulk(client: OpenSearch, write_value: int) -> None:
         """Bulk Index group of docs."""
         data = []
-        for i in range(50):
-            val = (50 * write_value) + i
+        for i in range(100):
+            val = write_value + i
             data.append(
                 {
                     "_index": ContinuousWrites.INDEX_NAME,
