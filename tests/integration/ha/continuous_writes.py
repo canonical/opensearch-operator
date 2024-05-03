@@ -181,6 +181,10 @@ class ContinuousWrites:
         )
 
     def _stop_process(self):
+        if self._is_stopped or not self._process.is_alive():
+            self._is_stopped = True
+            return
+
         self._event.set()
         self._process.join()
         self._queue.close()

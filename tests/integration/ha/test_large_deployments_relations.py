@@ -114,107 +114,115 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_invalid_conditions(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
+async def test_invalid_conditions(ops_test: OpsTest) -> None:
     """Check invalid conditions under different states."""
-    # integrate an app with the main-orchestrator when TLS is not related to the provider
-    await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{FAILOVER_APP}:{REL_PEER}")
-    await wait_until(
-        ops_test,
-        apps=[MAIN_APP, FAILOVER_APP],
-        apps_full_statuses={
-            MAIN_APP: {"blocked": [TLSRelationMissing]},
-            FAILOVER_APP: {
-                "blocked": ["TLS not fully configured in related 'main-orchestrator'."]
+    c_writes = ContinuousWrites(ops_test, MAIN_APP)
+    await c_writes.start()
+
+    try:
+        # integrate an app with the main-orchestrator when TLS is not related to the provider
+        await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{FAILOVER_APP}:{REL_PEER}")
+        await wait_until(
+            ops_test,
+            apps=[MAIN_APP, FAILOVER_APP],
+            apps_full_statuses={
+                MAIN_APP: {"blocked": [TLSRelationMissing]},
+                FAILOVER_APP: {
+                    "blocked": ["TLS not fully configured in related 'main-orchestrator'."]
+                },
             },
-        },
-        idle_period=IDLE_PERIOD,
-    )
+            idle_period=IDLE_PERIOD,
+        )
 
-    # integrate TLS to all applications
-    for app in [MAIN_APP, FAILOVER_APP, DATA_APP, INVALID_APP]:
-        await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
+        # integrate TLS to all applications
+        for app in [MAIN_APP, FAILOVER_APP, DATA_APP, INVALID_APP]:
+            await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
 
-    await wait_until(
-        ops_test,
-        apps=[MAIN_APP, FAILOVER_APP, DATA_APP, INVALID_APP],
-        apps_full_statuses={
-            MAIN_APP: {"active": []},
-            FAILOVER_APP: {"active": []},
-            DATA_APP: {"blocked": [TLSNotFullyConfigured]},
-            INVALID_APP: {"blocked": [TLSNotFullyConfigured]},
-        },
-        idle_period=IDLE_PERIOD,
-    )
-
-    # fetch nodes, we should have 6 nodes (main + failover)-orchestrators
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=MAIN_APP)
-    nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert len(nodes) == 6
-
-    # integrate cluster with different name
-    await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{INVALID_APP}:{REL_PEER}")
-    await wait_until(
-        ops_test,
-        apps=[INVALID_APP],
-        apps_full_statuses={
-            INVALID_APP: {
-                "blocked": ["Cannot relate 2 clusters with different 'cluster_name' values."]
+        await wait_until(
+            ops_test,
+            apps=[MAIN_APP, FAILOVER_APP, DATA_APP, INVALID_APP],
+            apps_full_statuses={
+                MAIN_APP: {"active": []},
+                FAILOVER_APP: {"active": []},
+                DATA_APP: {"blocked": [TLSNotFullyConfigured]},
+                INVALID_APP: {"blocked": [TLSNotFullyConfigured]},
             },
-        },
-        idle_period=IDLE_PERIOD,
-    )
+            idle_period=IDLE_PERIOD,
+        )
 
-    # delete the invalid app name
-    await ops_test.model.remove_application(
-        INVALID_APP, block_until_done=True, force=True, destroy_storage=True, no_wait=True
-    )
+        # fetch nodes, we should have 6 nodes (main + failover)-orchestrators
+        leader_unit_ip = await get_leader_unit_ip(ops_test, app=MAIN_APP)
+        nodes = await all_nodes(ops_test, leader_unit_ip)
+        assert len(nodes) == 6
+
+        # integrate cluster with different name
+        await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{INVALID_APP}:{REL_PEER}")
+        await wait_until(
+            ops_test,
+            apps=[INVALID_APP],
+            apps_full_statuses={
+                INVALID_APP: {
+                    "blocked": ["Cannot relate 2 clusters with different 'cluster_name' values."]
+                },
+            },
+            idle_period=IDLE_PERIOD,
+        )
+
+        # delete the invalid app name
+        await ops_test.model.remove_application(
+            INVALID_APP, block_until_done=True, force=True, destroy_storage=True, no_wait=True
+        )
+    finally:
+        await c_writes.clear()
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_large_deployment_fully_formed(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
+async def test_large_deployment_fully_formed(ops_test: OpsTest) -> None:
     """Test that under optimal conditions all the nodes form the same big cluster."""
-    await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{DATA_APP}:{REL_PEER}")
-    await ops_test.model.integrate(f"{FAILOVER_APP}:{REL_ORCHESTRATOR}", f"{DATA_APP}:{REL_PEER}")
+    c_writes = ContinuousWrites(ops_test, MAIN_APP)
+    await c_writes.start()
 
-    await wait_until(
-        ops_test,
-        apps=[MAIN_APP, FAILOVER_APP, DATA_APP],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        idle_period=IDLE_PERIOD,
-    )
+    try:
+        await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{DATA_APP}:{REL_PEER}")
+        await ops_test.model.integrate(f"{FAILOVER_APP}:{REL_ORCHESTRATOR}", f"{DATA_APP}:{REL_PEER}")
 
-    # fetch nodes, we should have 6 nodes (main + failover)-orchestrators
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=MAIN_APP)
-    nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert len(nodes) == 8, f"Wrong node count: {len(nodes)}"
+        await wait_until(
+            ops_test,
+            apps=[MAIN_APP, FAILOVER_APP, DATA_APP],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            idle_period=IDLE_PERIOD,
+        )
 
-    # check the roles
-    auto_gen_roles = ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
-    data_roles = ["data", "ml"]
-    for app, node_count in [(MAIN_APP, 3), (FAILOVER_APP, 3), (DATA_APP, 2)]:
-        current_app_nodes = [node for node in nodes if node.app_name == app]
-        assert (
-            len(current_app_nodes) == node_count
-        ), f"Wrong count for {app}:{len(current_app_nodes)} - expected:{node_count}"
+        # fetch nodes, we should have 6 nodes (main + failover)-orchestrators
+        leader_unit_ip = await get_leader_unit_ip(ops_test, app=MAIN_APP)
+        nodes = await all_nodes(ops_test, leader_unit_ip)
+        assert len(nodes) == 8, f"Wrong node count: {len(nodes)}"
 
-        roles = current_app_nodes[0].roles
-        temperature = current_app_nodes[0].temperature
-        if app in [MAIN_APP, FAILOVER_APP]:
-            assert sorted(roles) == sorted(
-                [auto_gen_roles]
-            ), f"Wrong roles for {app}:{roles} - expected:{auto_gen_roles}"
-            assert temperature is None, f"Wrong temperature for {app}:{roles} - expected:None"
-        else:
-            assert sorted(roles) == sorted(
-                [data_roles]
-            ), f"Wrong roles for {app}:{roles} - expected:{data_roles}"
+        # check the roles
+        auto_gen_roles = ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
+        data_roles = ["data", "ml"]
+        for app, node_count in [(MAIN_APP, 3), (FAILOVER_APP, 3), (DATA_APP, 2)]:
+            current_app_nodes = [node for node in nodes if node.app_name == app]
             assert (
-                temperature == "cold"
-            ), f"Wrong temperature for {app}:{temperature} - expected:cold"
+                len(current_app_nodes) == node_count
+            ), f"Wrong count for {app}:{len(current_app_nodes)} - expected:{node_count}"
+
+            roles = current_app_nodes[0].roles
+            temperature = current_app_nodes[0].temperature
+            if app in [MAIN_APP, FAILOVER_APP]:
+                assert sorted(roles) == sorted(
+                    [auto_gen_roles]
+                ), f"Wrong roles for {app}:{roles} - expected:{auto_gen_roles}"
+                assert temperature is None, f"Wrong temperature for {app}:{roles} - expected:None"
+            else:
+                assert sorted(roles) == sorted(
+                    [data_roles]
+                ), f"Wrong roles for {app}:{roles} - expected:{data_roles}"
+                assert (
+                    temperature == "cold"
+                ), f"Wrong temperature for {app}:{temperature} - expected:cold"
+    finally:
+        await c_writes.clear()
