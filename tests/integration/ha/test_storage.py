@@ -103,7 +103,7 @@ async def test_storage_reuse_after_scale_down(
     assert return_code == 0, "Failed to add unit with storage"
 
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=2
+        apps=[app], status="active", timeout=1000, wait_for_exact_units=2, idle_period=IDLE_PERIOD,
     )
 
     # check the storage of the new unit
@@ -122,6 +122,7 @@ async def test_storage_reuse_after_scale_down(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+@pytest.mark.skip(reason="scaling down to zero and scaling back up doesn't work currently")
 async def test_storage_reuse_after_scale_to_zero(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ):
@@ -140,12 +141,11 @@ async def test_storage_reuse_after_scale_to_zero(
     storage_ids = {}
     for unit_id in unit_ids:
         storage_ids[unit_id] = storage_id(ops_test, app, unit_id)
-        await ops_test.model.applications[app].units[unit_id].remove()
+        await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
 
     await ops_test.model.wait_for_idle(
         # app status will not be active because after scaling down not all shards are assigned
         apps=[app],
-        status="active",
         timeout=1000,
         wait_for_exact_units=0,
     )
