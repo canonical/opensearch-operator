@@ -1224,6 +1224,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.error("Credential change can be only performed by the leader unit.")
             return
 
+        if user in self.user_manager.get_users() and not pwd:
+            logger.debug(
+                f"_put_or_update_internal_user_leader: user {user} already exists and no password to be updated. Continue."
+            )
+            return
+
         hashed_pwd, pwd = generate_hashed_password(pwd)
 
         # Updating security index
