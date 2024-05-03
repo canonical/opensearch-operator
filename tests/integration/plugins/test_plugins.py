@@ -182,17 +182,21 @@ async def test_knn_enabled_disabled(ops_test):
     assert config["plugin_opensearch_knn"]["value"] is True
 
     await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "False"})
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=50)
+
+    await asyncio.sleep(60)
 
     config = await ops_test.model.applications[APP_NAME].get_config()
     assert config["plugin_opensearch_knn"]["value"] is False
 
     await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "True"})
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=50)
+
+    await asyncio.sleep(60)
 
     config = await ops_test.model.applications[APP_NAME].get_config()
     assert config["plugin_opensearch_knn"]["value"] is True
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=45)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=50)
 
 
 @pytest.mark.group(1)
