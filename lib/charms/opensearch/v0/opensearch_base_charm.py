@@ -841,7 +841,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 logger.debug("Lock to start opensearch not acquired. Will retry next event")
                 event.defer()
                 return
-        self.peers_data.delete(Scope.UNIT, "started")
+
         if self.opensearch.is_started():
             try:
                 self._post_start_init(event)
@@ -857,6 +857,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.status.set(BlockedStatus(ServiceStartError))
                 event.defer()
             return
+
+        self.peers_data.delete(Scope.UNIT, "started")
 
         if not self._can_service_start():
             self.node_lock.release()
@@ -1043,6 +1045,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # 2. stop the service
         self.opensearch.stop()
+        self.peers_data.delete(Scope.UNIT, "started")
         self.status.set(WaitingStatus(ServiceStopped))
 
         # 3. Remove the exclusions
