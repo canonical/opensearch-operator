@@ -221,6 +221,7 @@ async def test_knn_enabled_disabled(ops_test):
         idle_period=IDLE_PERIOD,
     )
 
+
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
