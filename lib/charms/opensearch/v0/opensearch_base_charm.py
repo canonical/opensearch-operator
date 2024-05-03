@@ -299,7 +299,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Restore purged system users in local `internal_users.yml`
         # with corresponding credentials
         for user in OpenSearchSystemUsers:
-            self._put_or_update_internal_user_leader(user)
+            try:
+                self._put_or_update_internal_user_leader(user)
+            except OpenSearchUserMgmtError as e:
+                event.defer()
+                return
 
         self.status.clear(AdminUserInitProgress)
 
