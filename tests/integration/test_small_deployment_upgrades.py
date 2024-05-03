@@ -103,12 +103,8 @@ async def test_upgrade_rollback(
         await wait_until(
             ops_test,
             apps=[app],
-            apps_full_statuses={
-                "blocked": [
-                    "Upgrading. Verify highest unit is healthy & run `resume-upgrade` "
-                    "action. To rollback, `juju refresh` to last revision"
-                ]
-            },
+            apps_statuses=["blocked"],
+            units_statuses=["active"],
             idle_period=50,
         )
 
@@ -165,14 +161,11 @@ async def test_upgrade_to_local(
         await wait_until(
             ops_test,
             apps=[app],
-            apps_full_statuses={
-                "blocked": [
-                    "Upgrading. Verify highest unit is healthy & run `resume-upgrade` "
-                    "action. To rollback, `juju refresh` to last revision"
-                ]
-            },
+            apps_statuses=["blocked"],
+            units_statuses=["active"],
             idle_period=50,
         )
+
         logger.info("Upgrade finished")
         # Wait for the upgrade to converge and update its own state
         for attempt in Retrying(stop=stop_after_delay(3 * 60), wait=wait_fixed(30)):
@@ -187,14 +180,14 @@ async def test_upgrade_to_local(
                 assert action.status == "completed"
 
     logger.info("Refresh is over, waiting for the charm to settle")
-    await wait_until(
-        ops_test,
-        apps=[app],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        idle_period=50,
-    )
-
+    async with ops_test.fast_forward():
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            idle_period=50,
+        )
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
@@ -228,114 +221,11 @@ async def test_accidental_downgrade_status(ops_test: OpsTest) -> None:
         "--channel latest/edge".split(),
     )
 
-    await wait_until(
-        ops_test,
-        apps=[app],
-        apps_full_statuses={
-            "blocked": ["Upgrade incompatible. Rollback to previous revision with `juju refresh`"]
-        },
-        idle_period=50,
-    )
-
-
-# @pytest.mark.group("failed_upgrade")
-# @pytest.mark.abort_on_fail
-# @pytest.mark.skip_if_deployed
-# async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
-#     """Deploy OpenSearch."""
-#     await ops_test.model.set_config(MODEL_CONFIG)
-
-#     await ops_test.model.deploy(
-#         OPENSEARCH_ORIGINAL_CHARM_NAME,
-#         application_name=APP_NAME,
-#         num_units=3,
-#         channel=OPENSEARCH_INITIAL_CHANNEL,
-#         series=SERIES,
-#     )
-
-#     # We want opensearch to be nodes 0-2
-#     await asyncio.sleep(15)
-
-#     # Deploy TLS Certificates operator.
-#     config = {"ca-common-name": "CN_CA"}
-#     await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
-
-#     # Relate it to OpenSearch to set up TLS.
-#     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-#     await ops_test.model.wait_for_idle(
-#         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
-#         status="active",
-#         timeout=1400,
-#         idle_period=50,
-#     )
-#     assert len(ops_test.model.applications[APP_NAME].units) == 3
-
-
-# @pytest.mark.group("failed_upgrade")
-# @pytest.mark.abort_on_fail
-# async def test_upgrade_and_fail_unit(
-#     ops_test: OpsTest
-# ) -> None:
-#     """Test upgrade from usptream to currently locally built version."""
-#     app = (await app_name(ops_test)) or APP_NAME
-#     units = await get_application_units(ops_test, app)
-#     leader_id = [u.id for u in units if u.is_leader][0]
-
-#     application = ops_test.model.applications[APP_NAME]
-#     action = await run_action(
-#         ops_test,
-#         leader_id,
-#         "pre-upgrade-check",
-#         app=app,
-#     )
-#     assert action.status == "completed"
-
-#     logger.info("Build charm locally")
-#     global charm
-#     if not charm:
-#         charm = await ops_test.build_charm(".")
-
-#     async with ops_test.fast_forward():
-#         logger.info("Refresh the charm")
-#         await application.refresh(path=charm)
-
-#         await wait_until(
-#             ops_test,
-#             apps=[app],
-#             apps_full_statuses={
-#                 "blocked": [
-#                     "Upgrading. Verify highest unit is healthy & run `resume-upgrade` "
-#                     "action. To rollback, `juju refresh` to last revision"
-#                 ]
-#             },
-#             idle_period=50,
-#         )
-
-#     logger.info(f"Now, power down unit services in machine {MACHINE_ID}")
-#     for system_file in ["snap.opensearch.daemon", f"jujud-machine-{MACHINE_ID}"]:
-#         subprocess.check_output(
-#             f"juju exec {MACHINE_ID} -- sudo systemctl stop {system_file}".split()
-#         )
-
-#     async with ops_test.fast_forward():
-#         logger.info("Resume upgrade")
-#         # Wait for the upgrade to converge and update its own state
-#         for attempt in Retrying(stop=stop_after_delay(3 * 60), wait=wait_fixed(30)):
-#             with attempt:
-#                 # Resume the upgrade
-#                 action = await run_action(
-#                     ops_test,
-#                     leader_id,
-#                     "resume-upgrade",
-#                     app=app,
-#                 )
-#                 assert action.status == "completed"
-
-#     logger.info("Refresh is over, waiting for the charm to settle")
-#     await wait_until(
-#         ops_test,
-#         apps=[app],
-#         apps_statuses=["active"],
-#         units_statuses=["active"],
-#         idle_period=50,
-#     )
+    async with ops_test.fast_forward():
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            idle_period=50,
+        )
