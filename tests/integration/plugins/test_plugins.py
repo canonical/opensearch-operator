@@ -174,27 +174,6 @@ async def test_prometheus_monitor_user_password_change(ops_test):
     assert relation_data["password"] == new_password
 
 
-@pytest.mark.abort_on_fail
-@pytest.mark.group(1)
-async def test_knn_enabled_disabled(ops_test):
-    config = await ops_test.model.applications[APP_NAME].get_config()
-    assert config["plugin_opensearch_knn"]["default"] is True
-    assert config["plugin_opensearch_knn"]["value"] is True
-
-    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "False"})
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
-
-    config = await ops_test.model.applications[APP_NAME].get_config()
-    assert config["plugin_opensearch_knn"]["value"] is False
-
-    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "True"})
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
-
-    config = await ops_test.model.applications[APP_NAME].get_config()
-    assert config["plugin_opensearch_knn"]["value"] is True
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=45)
-
-
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest) -> None:
@@ -373,3 +352,28 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
         except RetryError:
             # The search should fail if knn_enabled is false
             assert not knn_enabled
+
+
+@pytest.mark.abort_on_fail
+@pytest.mark.group(1)
+async def test_knn_enabled_disabled(ops_test):
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert config["plugin_opensearch_knn"]["default"] is True
+    assert config["plugin_opensearch_knn"]["value"] is True
+
+    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "False"})
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=50)
+
+    await asyncio.sleep(60)
+
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert config["plugin_opensearch_knn"]["value"] is False
+
+    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "True"})
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=50)
+
+    await asyncio.sleep(60)
+
+    config = await ops_test.model.applications[APP_NAME].get_config()
+    assert config["plugin_opensearch_knn"]["value"] is True
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=50)
