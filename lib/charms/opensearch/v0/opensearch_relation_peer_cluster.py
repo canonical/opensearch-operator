@@ -187,7 +187,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             )
             orchestrators.failover_app = candidate_failover_app
             self.put_in_rel(
-                data={"orchestrators": json.dumps(orchestrators.to_dict())}, rel_id=rel_id
+                data={"orchestrators": json.dumps(orchestrators.to_dict(), sort_keys=True)},
+                rel_id=rel_id,
             )
 
     def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent) -> None:
@@ -249,7 +250,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                     f"{cluster_type}_rel_id": rel_id,
                 }
             )
-            self.put_in_rel(data={"orchestrators": json.dumps(orchestrators)}, rel_id=rel_id)
+            self.put_in_rel(
+                data={"orchestrators": json.dumps(orchestrators, sort_keys=True)}, rel_id=rel_id
+            )
 
             # there is no error to broadcast - we clear any previously broadcasted error
             if isinstance(rel_data, PeerClusterRelData):
@@ -257,7 +260,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
             # are we potentially overriding stuff here?
             self.put_in_rel(
-                data={peer_rel_data_key: json.dumps(rel_data.to_dict())}, rel_id=rel_id
+                data={peer_rel_data_key: json.dumps(rel_data.to_dict(), sort_keys=True)},
+                rel_id=rel_id,
             )
 
         if should_defer:
@@ -276,7 +280,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return False
 
         for rel_id in target_relation_ids:
-            self.put_in_rel(data={"error_data": json.dumps(rel_data.to_dict())}, rel_id=rel_id)
+            self.put_in_rel(
+                data={"error_data": json.dumps(rel_data.to_dict(), sort_keys=True)}, rel_id=rel_id
+            )
 
         return True
 
@@ -292,7 +298,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         for rel_id in target_relation_ids:
             self.put_in_rel(
-                data={"cluster_fleet_planned_units": json.dumps(cluster_fleet_planned_units)},
+                data={
+                    "cluster_fleet_planned_units": json.dumps(
+                        cluster_fleet_planned_units, sort_keys=True
+                    )
+                },
                 rel_id=rel_id,
             )
 
@@ -519,7 +529,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         """Report self planned units and store the fleet's on the peer data bag."""
         # register the number of planned units in the current app, to notify the orchestrators
         self.put_in_rel(
-            data={"planned_units": json.dumps(self.charm.app.planned_units())},
+            data={"planned_units": json.dumps(self.charm.app.planned_units(), sort_keys=True)},
             rel_id=event.relation.id,
         )
 
@@ -606,7 +616,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 rel_orchestrators.promote_failover()
 
             self.put_in_rel(
-                data={"orchestrators": json.dumps(rel_orchestrators.to_dict())}, rel_id=rel_id
+                data={"orchestrators": json.dumps(rel_orchestrators.to_dict(), sort_keys=True)},
+                rel_id=rel_id,
             )
 
     def _promote_failover(self, orchestrators: PeerClusterOrchestrators, cms: List[Node]) -> None:
