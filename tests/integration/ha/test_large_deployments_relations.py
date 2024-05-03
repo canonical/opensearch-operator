@@ -116,13 +116,12 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_invalid_conditions(ops_test: OpsTest) -> None:
     """Check invalid conditions under different states."""
+    logger.info("\n\n\ntest_invalid_conditions")
     c_writes = ContinuousWrites(ops_test, MAIN_APP)
-    await c_writes.start()
-
     try:
         # integrate an app with the main-orchestrator when TLS is not related to the provider
         await ops_test.model.integrate(
-            f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{FAILOVER_APP}:{REL_PEER}"
+            f"{FAILOVER_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}"
         )
         await wait_until(
             ops_test,
@@ -152,6 +151,9 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
             idle_period=IDLE_PERIOD,
         )
 
+        # start continuous writes
+        await c_writes.start()
+
         # fetch nodes, we should have 6 nodes (main + failover)-orchestrators
         leader_unit_ip = await get_leader_unit_ip(ops_test, app=MAIN_APP)
         nodes = await all_nodes(ops_test, leader_unit_ip)
@@ -159,7 +161,7 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
 
         # integrate cluster with different name
         await ops_test.model.integrate(
-            f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{INVALID_APP}:{REL_PEER}"
+            f"{INVALID_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}"
         )
         await wait_until(
             ops_test,
@@ -189,9 +191,9 @@ async def test_large_deployment_fully_formed(ops_test: OpsTest) -> None:
     await c_writes.start()
 
     try:
-        await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{DATA_APP}:{REL_PEER}")
+        await ops_test.model.integrate(f"{DATA_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}")
         await ops_test.model.integrate(
-            f"{FAILOVER_APP}:{REL_ORCHESTRATOR}", f"{DATA_APP}:{REL_PEER}"
+            f"{DATA_APP}:{REL_PEER}", f"{FAILOVER_APP}:{REL_ORCHESTRATOR}"
         )
 
         await wait_until(
