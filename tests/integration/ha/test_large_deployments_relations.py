@@ -121,7 +121,9 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
 
     try:
         # integrate an app with the main-orchestrator when TLS is not related to the provider
-        await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{FAILOVER_APP}:{REL_PEER}")
+        await ops_test.model.integrate(
+            f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{FAILOVER_APP}:{REL_PEER}"
+        )
         await wait_until(
             ops_test,
             apps=[MAIN_APP, FAILOVER_APP],
@@ -156,7 +158,9 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
         assert len(nodes) == 6
 
         # integrate cluster with different name
-        await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{INVALID_APP}:{REL_PEER}")
+        await ops_test.model.integrate(
+            f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{INVALID_APP}:{REL_PEER}"
+        )
         await wait_until(
             ops_test,
             apps=[INVALID_APP],
@@ -186,7 +190,9 @@ async def test_large_deployment_fully_formed(ops_test: OpsTest) -> None:
 
     try:
         await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{DATA_APP}:{REL_PEER}")
-        await ops_test.model.integrate(f"{FAILOVER_APP}:{REL_ORCHESTRATOR}", f"{DATA_APP}:{REL_PEER}")
+        await ops_test.model.integrate(
+            f"{FAILOVER_APP}:{REL_ORCHESTRATOR}", f"{DATA_APP}:{REL_PEER}"
+        )
 
         await wait_until(
             ops_test,
