@@ -18,6 +18,7 @@ from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
 logger = logging.getLogger(__name__)
 
 
+OPENSEARCH_ORIGINAL_CHARM_NAME = "pguimaraes-opensearch-upgrade-test"
 OPENSEARCH_INITIAL_CHANNEL = "latest/edge"
 MACHINE_ID = 0
 
@@ -49,7 +50,7 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
-        "pguimaraes-opensearch-upgrade-test",
+        OPENSEARCH_ORIGINAL_CHARM_NAME,
         application_name=APP_NAME,
         num_units=3,
         channel=OPENSEARCH_INITIAL_CHANNEL,
@@ -120,8 +121,8 @@ async def test_upgrade_rollback(
     #     channel=OPENSEARCH_INITIAL_CHANNEL,
     # )
     subprocess.check_output(
-        f"juju refresh {app} --switch "
-        "pguimaraes-opensearch-upgrade-test --channel latest/edge".split(),
+        f"juju refresh {app} --switch {OPENSEARCH_ORIGINAL_CHARM_NAME} "
+        "--channel latest/edge".split(),
     )
     async with ops_test.fast_forward():
         await wait_until(
@@ -223,8 +224,8 @@ async def test_accidental_downgrade_status(ops_test: OpsTest) -> None:
     #     channel=OPENSEARCH_INITIAL_CHANNEL,
     # )
     subprocess.check_output(
-        f"juju refresh {app} --switch "
-        "pguimaraes-opensearch-upgrade-test --channel latest/edge".split(),
+        f"juju refresh {app} --switch {OPENSEARCH_ORIGINAL_CHARM_NAME} "
+        "--channel latest/edge".split(),
     )
 
     await wait_until(
@@ -245,7 +246,7 @@ async def test_accidental_downgrade_status(ops_test: OpsTest) -> None:
 #     await ops_test.model.set_config(MODEL_CONFIG)
 
 #     await ops_test.model.deploy(
-#         "pguimaraes-opensearch-upgrade-test",
+#         OPENSEARCH_ORIGINAL_CHARM_NAME,
 #         application_name=APP_NAME,
 #         num_units=3,
 #         channel=OPENSEARCH_INITIAL_CHANNEL,
