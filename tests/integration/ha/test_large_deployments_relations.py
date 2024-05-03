@@ -129,7 +129,7 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
             apps_full_statuses={
                 MAIN_APP: {"blocked": [TLSRelationMissing]},
                 FAILOVER_APP: {
-                    "blocked": ["TLS not fully configured in related 'main-orchestrator'."]
+                    "waiting": ["TLS not fully configured in related 'main-orchestrator'."]
                 },
             },
             idle_period=IDLE_PERIOD,
