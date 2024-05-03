@@ -255,7 +255,7 @@ class OpenSearchPeerClustersManager:
             ),
             start=start_mode,
             state=deployment_state,
-            typ=self._deployment_type(config, start_mode),
+            typ=deployment_type,
             app=self._charm.app.name,
             pending_directives=list(set(directives)),
             promotion_time=(
