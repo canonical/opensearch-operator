@@ -245,6 +245,7 @@ class OpenSearchPeerClustersManager:
             directives.append(Directive.SHOW_STATUS)
             directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
 
+        deployment_type = self._deployment_type(config, start_mode)
         return DeploymentDescription(
             config=PeerClusterConfig(
                 cluster_name=prev_deployment.config.cluster_name,
@@ -254,9 +255,14 @@ class OpenSearchPeerClustersManager:
             ),
             start=start_mode,
             state=deployment_state,
-            typ=self._deployment_type(config, start_mode),
+            typ=deployment_type,
             app=self._charm.app.name,
             pending_directives=list(set(directives)),
+            promotion_time=(
+                prev_deployment.promotion_time
+                if deployment_type == DeploymentType.MAIN_ORCHESTRATOR
+                else None
+            ),
         )
 
     def can_start(self, deployment_desc: Optional[DeploymentDescription] = None) -> bool:
