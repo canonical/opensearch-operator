@@ -137,6 +137,7 @@ class ContinuousWrites:
                 body={
                     "settings": {"index": {"number_of_shards": 2, "auto_expand_replicas": "1-all"}}
                 },
+                wait_for_active_shards="all",
             )
         finally:
             client.close()
@@ -242,7 +243,7 @@ class ContinuousWrites:
                     ContinuousWrites._index(client, write_value)
 
                 # todo: remove when we get bigger runners (to reduce data transfer time)
-                time.sleep(0.75)
+                time.sleep(1)
             except BulkIndexError:
                 proc_logger.info(f"Bulk failed for {write_value}")
                 continue

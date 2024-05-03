@@ -13,7 +13,7 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import copy
 import functools
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
@@ -106,14 +106,15 @@ class OpenSearchPluginManager:
             plugins_list.append(new_plugin)
         return plugins_list
 
-    def get_plugin(self, plugin_class: OpenSearchPlugin) -> OpenSearchPlugin:
+    def get_plugin(self, plugin_class: Type[OpenSearchPlugin]) -> OpenSearchPlugin:
         """Returns a given plugin based on its class."""
         for plugin in self.plugins:
             if isinstance(plugin, plugin_class):
                 return plugin
+
         raise KeyError(f"Plugin manager did not find plugin: {plugin_class}")
 
-    def get_plugin_status(self, plugin_class: OpenSearchPlugin) -> OpenSearchPlugin:
+    def get_plugin_status(self, plugin_class: Type[OpenSearchPlugin]) -> PluginState:
         """Returns a given plugin based on its class."""
         for plugin in self.plugins:
             if isinstance(plugin, plugin_class):
@@ -252,7 +253,7 @@ class OpenSearchPluginManager:
                 return False
             return self.apply_config(plugin.config())
         except KeyError as e:
-            raise OpenSearchPluginMissingConfigError(plugin.name, configs=[f"{e}"])
+            raise OpenSearchPluginMissingConfigError(e)
 
     def _disable_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""
@@ -267,7 +268,7 @@ class OpenSearchPluginManager:
                 return False
             return self.apply_config(plugin.disable())
         except KeyError as e:
-            raise OpenSearchPluginMissingConfigError(plugin.name, configs=[f"{e}"])
+            raise OpenSearchPluginMissingConfigError(e)
 
     def _compute_settings(
         self, config: OpenSearchPluginConfig

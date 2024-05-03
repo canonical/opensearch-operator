@@ -43,4 +43,4 @@ class OpenSearchFixes:
                 )
             except OpenSearchHttpError as e:
                 if e.response_code != 404:
-                    raise
+                    continue
