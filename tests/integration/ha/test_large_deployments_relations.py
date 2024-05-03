@@ -6,11 +6,7 @@ import asyncio
 import logging
 
 import pytest
-from charms.opensearch.v0.constants_charm import (
-    PClusterNoRelation,
-    TLSNotFullyConfigured,
-    TLSRelationMissing,
-)
+from charms.opensearch.v0.constants_charm import PClusterNoRelation, TLSRelationMissing
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import MODEL_CONFIG, SERIES, get_leader_unit_ip
@@ -145,8 +141,8 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
             apps_full_statuses={
                 MAIN_APP: {"active": []},
                 FAILOVER_APP: {"active": []},
-                DATA_APP: {"blocked": [TLSNotFullyConfigured]},
-                INVALID_APP: {"blocked": [TLSNotFullyConfigured]},
+                DATA_APP: {"blocked": [PClusterNoRelation]},
+                INVALID_APP: {"blocked": [PClusterNoRelation]},
             },
             idle_period=IDLE_PERIOD,
         )
