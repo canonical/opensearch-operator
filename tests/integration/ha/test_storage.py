@@ -103,7 +103,10 @@ async def test_storage_reuse_after_scale_down(
     assert return_code == 0, "Failed to add unit with storage"
 
     await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1000, wait_for_exact_units=2, idle_period=IDLE_PERIOD,
+        apps=[app],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=2,
     )
 
     # check the storage of the new unit
