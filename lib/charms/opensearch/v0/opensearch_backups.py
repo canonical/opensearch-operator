@@ -473,6 +473,36 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
         return output["snapshot"]
 
+    def is_idle_or_not_set(self) -> bool:
+        """Checks if the backup system is idle or not yet configured.
+
+        "idle": configured but there are no backups nor restores in progress.
+        "not_set": the `get_service_status` returns REPO_NOT_CREATED or REPO_MISSING.
+
+        Raises:
+            OpenSearchHttpError: cluster is unreachable
+        """
+        output = self._request("GET", f"_snapshot/{S3_REPOSITORY}")
+        return self.get_service_status(output) in [
+            BackupServiceState.REPO_NOT_CREATED,
+            BackupServiceState.REPO_MISSING,
+        ] or not (self.is_backup_in_progress() or self._is_restore_in_progress())
+
+    def _is_restore_in_progress(self) -> bool:
+        """Checks if the restore is currently in progress.
+
+        Two options:
+         1) no restore requested: return False
+         2) check for each index shard: for all type=SNAPSHOT and stage=DONE, return False.
+        """
+        indices_status = self._request("GET", "/_recovery?human") or {}
+        for info in indices_status.values():
+            # Now, check the status of each shard
+            for shard in info["shards"]:
+                if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
+                    return True
+        return False
+
     def _is_restore_complete(self) -> bool:
         """Checks if the restore is finished.
 
@@ -480,13 +510,9 @@ class OpenSearchBackup(OpenSearchBackupBase):
         """
         indices_status = self._request("GET", "/_recovery?human")
         if not indices_status:
+            # No restore has happened. Raise an exception
             raise OpenSearchRestoreCheckError("_is_restore_complete: failed to get indices status")
-        for info in indices_status.values():
-            # Now, check the status of each shard
-            for shard in info["shards"]:
-                if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
-                    return False
-        return True
+        return not self._is_restore_in_progress()
 
     def _is_backup_available_for_restore(self, backup_id: int) -> bool:
         """Checks if the backup_id exists and is ready for a restore."""

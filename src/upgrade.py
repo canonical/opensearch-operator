@@ -17,11 +17,16 @@ import typing
 
 import ops
 import poetry.core.constraints.version as poetry_version
+from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
+from charms.opensearch.v0.opensearch_health import HealthColors
 
 import status_exception
 
 logger = logging.getLogger(__name__)
+
 
 PEER_RELATION_ENDPOINT_NAME = "upgrade-version-a"
 PRECHECK_ACTION_NAME = "pre-upgrade-check"
@@ -66,6 +71,7 @@ class Upgrade(abc.ABC):
         if not relations:
             raise PeerRelationNotReady
         assert len(relations) == 1
+        self._charm = charm_
         self._peer_relation = relations[0]
         self._unit: ops.Unit = charm_.unit
         self._unit_databag = self._peer_relation.data[self._unit]
@@ -241,6 +247,14 @@ class Upgrade(abc.ABC):
         Only applies to machine charm
         """
 
+    def check_if_starting(self) -> bool:
+        """Check if the service is starting."""
+        rel = self._charm.model.get_relation(PeerRelationName)
+        for unit in rel.units.union({self._charm.unit}):
+            if rel.data[unit].get("starting") == "True":
+                return True
+        return False
+
     def pre_upgrade_check(self) -> None:
         """Check if this app is ready to upgrade
 
@@ -262,7 +276,29 @@ class Upgrade(abc.ABC):
         See https://chat.canonical.com/canonical/pl/cmf6uhm1rp8b7k8gkjkdsj4mya
         """
         logger.debug("Running pre-upgrade checks")
-        # TODO: implement checks
-        # e.g.
-        # if health != green:
-        #     raise PrecheckFailed("Cluster is not healthy")
+
+        try:
+            if self._charm.health.apply() != HealthColors.GREEN:
+                PrecheckFailed(
+                    f"Cluster not healthy: expected 'green', but '{self.health.apply()}' found instead"
+                )
+
+            online_nodes = ClusterTopology.nodes(
+                self._charm.opensearch,
+                True,
+                hosts=self._charm.alt_hosts,
+            )
+            if (
+                len([node for node in online_nodes if node.app_name == self._charm.app.name])
+                != self._charm.app.planned_units()
+            ):
+                PrecheckFailed("Not all units are online for this juju application")
+
+            if self.check_if_starting():
+                PrecheckFailed("Cluster is starting")
+
+            if not self._charm.backup.is_idle_or_not_set():
+                PrecheckFailed("Backup or restore is in progress")
+
+        except OpenSearchHttpError:
+            PrecheckFailed("Cluster is unreachable")

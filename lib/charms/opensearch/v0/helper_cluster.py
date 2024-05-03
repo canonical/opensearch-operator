@@ -145,7 +145,16 @@ class ClusterTopology:
         use_localhost: bool,
         hosts: Optional[List[str]] = None,
     ) -> List[Node]:
-        """Get the list of nodes in a cluster."""
+        """Get the list of nodes in a cluster.
+
+        If only_this_juju_app, only return nodes that are
+        part of the provided Juju application within the cluster.
+
+        For small deployments, behavior is the same independent of
+        the value of only_this_juju_app. But for large deployments,
+        it will toggle between grabbing all the nodes or just the nodes
+        that belong to the same juju application.
+        """
         host: Optional[str] = None  # defaults to current unit ip
         alt_hosts: Optional[List[str]] = hosts
         if not use_localhost and hosts:
@@ -167,7 +176,6 @@ class ClusterTopology:
                         temperature=obj.get("attributes", {}).get("temp"),
                     )
                     nodes.append(node)
-
         return nodes
 
 
