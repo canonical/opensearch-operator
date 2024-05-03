@@ -234,7 +234,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.on[PeerRelationName].relation_joined, self._on_peer_relation_joined
         )
         self.framework.observe(
-            self.on[PeerRelationName].relation_changed, self.peer_relation_changed
+            self.on[PeerRelationName].relation_changed, self._on_peer_relation_changed
         )
         self.framework.observe(
             self.on[PeerRelationName].relation_departed, self._on_peer_relation_departed
@@ -434,7 +434,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             event.defer()
 
-    def peer_relation_changed(self, event: RelationChangedEvent):
+    def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
         if (
             self.unit.is_leader()

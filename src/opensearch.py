@@ -35,61 +35,21 @@ from utils import extract_tarball
 logger = logging.getLogger(__name__)
 
 
-BASE_SNAP_DIR = "/var/snap/opensearch"
-SNAP_DATA = f"{BASE_SNAP_DIR}/current"
-SNAP_COMMON = f"{BASE_SNAP_DIR}/common"
-SNAP = "/snap/opensearch/current"
-
-
-OPENSEARCH_SNAP_METADATA = {
-    40: {
-        "paths": Paths(
-            home=f"{SNAP_DATA}/usr/share/opensearch",
-            conf=f"{SNAP_DATA}/etc/opensearch",
-            data=f"{SNAP_COMMON}/var/lib/opensearch",
-            logs=f"{SNAP_COMMON}/var/log/opensearch",
-            jdk=f"{SNAP}/usr/lib/jvm/java-21-openjdk-amd64",
-            tmp=f"{SNAP_COMMON}/usr/share/tmp",
-            bin=f"{SNAP}/usr/share/opensearch/bin",
-        ),
-    },
-    0: {
-        "paths": Paths(
-            home=f"{SNAP_DATA}/usr/share/opensearch",
-            conf=f"{SNAP_DATA}/etc/opensearch",
-            data=f"{SNAP_COMMON}/var/lib/opensearch",
-            logs=f"{SNAP_COMMON}/var/log/opensearch",
-            jdk=f"{SNAP}/usr/lib/jvm/java-17-openjdk-amd64",
-            tmp=f"{SNAP_COMMON}/usr/share/tmp",
-            bin=f"{SNAP}/usr/share/opensearch/bin",
-        ),
-    },
-}
-
-
 class OpenSearchSnap(OpenSearchDistribution):
     """Snap distribution of opensearch, only overrides properties and logic proper to the snap."""
 
-    _BASE_SNAP_DIR = BASE_SNAP_DIR
-    _SNAP_DATA = SNAP_DATA
-    _SNAP_COMMON = SNAP_COMMON
-    _SNAP = SNAP
+    _BASE_SNAP_DIR = "/var/snap/opensearch"
+    _SNAP_DATA = f"{_BASE_SNAP_DIR}/current"
+    _SNAP_COMMON = f"{_BASE_SNAP_DIR}/common"
+    _SNAP = "/snap/opensearch/current"
 
     def __init__(self, charm, peer_relation: str):
-        for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=5)):
-            with attempt:
-                cache = snap.SnapCache()
-                self._opensearch = cache["opensearch"]
         super().__init__(charm, peer_relation)
 
-    def _update_snap_metadata(self):
-        """Updates information related to the version, e.g. Paths and Snap."""
         for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=5)):
             with attempt:
                 cache = snap.SnapCache()
                 self._opensearch = cache["opensearch"]
-                self.paths = self._build_paths()
-                self._set_env_variables()
 
     @retry(
         stop=stop_after_attempt(3),
@@ -106,8 +66,6 @@ class OpenSearchSnap(OpenSearchDistribution):
                 # hold the snap in charm determined revision
                 self._opensearch.hold()
 
-            # Reload the snap
-            self._update_snap_metadata()
         except SnapError as e:
             logger.error(f"Failed to install/upgrade opensearch. \n{e}")
             raise OpenSearchInstallError()
@@ -123,9 +81,6 @@ class OpenSearchSnap(OpenSearchDistribution):
             return
 
         try:
-            # Reload the snap
-            self._update_snap_metadata()
-
             self._opensearch.start([self.SERVICE_NAME])
         except SnapError as e:
             logger.error(f"Failed to start the opensearch.{self.SERVICE_NAME} service. \n{e}")
@@ -139,9 +94,6 @@ class OpenSearchSnap(OpenSearchDistribution):
 
         try:
             self._opensearch.stop([self.SERVICE_NAME])
-
-            # Reload the snap
-            self._update_snap_metadata()
         except SnapError as e:
             logger.error(f"Failed to stop the opensearch.{self.SERVICE_NAME} service. \n{e}")
             raise OpenSearchStopError()
@@ -177,17 +129,15 @@ class OpenSearchSnap(OpenSearchDistribution):
           - OPENSEARCH_HOME: read-only path ($SNAP/..), where the opensearch binaries are
           - OPENSEARCH_CONF: writeable by root or snap_daemon ($SNAP_COMMON) where config files are
         """
-        # Default values: corresponding to this charm's workload revision
-        paths = None
-
-        for rev, metadata in OPENSEARCH_SNAP_METADATA.items():
-            paths = metadata["paths"]
-            if rev <= int(self._opensearch.revision):
-                # Running current or more recent revision, stay with it
-                break
-            # Running on an older snap version for now, update paths
-
-        return paths
+        return Paths(
+            home=f"{self._SNAP_DATA}/usr/share/opensearch",
+            conf=f"{self._SNAP_DATA}/etc/opensearch",
+            data=f"{self._SNAP_COMMON}/var/lib/opensearch",
+            logs=f"{self._SNAP_COMMON}/var/log/opensearch",
+            jdk=f"{self._SNAP}/usr/lib/jvm/java-21-openjdk-amd64",
+            tmp=f"{self._SNAP_COMMON}/usr/share/tmp",
+            bin=f"{self._SNAP}/usr/share/opensearch/bin",
+        )
 
     def write_file(self, path: str, data: str, override: bool = True):
         """Snap implementation of the write_file."""
