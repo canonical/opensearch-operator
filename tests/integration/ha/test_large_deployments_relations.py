@@ -4,7 +4,6 @@
 
 import asyncio
 import logging
-import time
 
 import pytest
 from charms.opensearch.v0.constants_charm import PClusterNoRelation, TLSRelationMissing
@@ -142,11 +141,6 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
         },
         idle_period=IDLE_PERIOD,
     )
-
-    c_writes = ContinuousWrites(ops_test, app=MAIN_APP)
-    await c_writes.start()
-    time.sleep(120)
-    await c_writes.stop()
 
     # fetch nodes, we should have 6 nodes (main + failover)-orchestrators
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=MAIN_APP)
