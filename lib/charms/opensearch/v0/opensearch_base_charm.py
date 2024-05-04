@@ -556,7 +556,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # release lock
             self.node_lock.release()
 
-    def _on_update_status(self, event: UpdateStatusEvent):
+    def _on_update_status(self, event: UpdateStatusEvent):  # noqa: C901
         """On update status event.
 
         We want to periodically check for the following:
@@ -586,6 +586,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 HealthColors.IGNORE,
             ]:
                 event.defer()
+            else:
+                deployment_desc = self.opensearch_peer_cm.deployment_desc()
+                # check if peer status needs to be cleaned
+                self.opensearch_peer_cm.apply_status_if_needed(deployment_desc)
 
             if health == HealthColors.UNKNOWN:
                 return
