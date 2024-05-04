@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import time
 
 import pytest
 from charms.opensearch.v0.constants_charm import PClusterNoRelation, TLSRelationMissing
@@ -28,6 +29,8 @@ INVALID_APP = "opensearch-invalid"
 
 CLUSTER_NAME = "log-app"
 INVALID_CLUSTER_NAME = "timeseries"
+
+APP_UNITS = {MAIN_APP: 3, FAILOVER_APP: 3, DATA_APP: 2, INVALID_APP: 1}
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
@@ -86,10 +89,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     )
 
     # confirm all apps are blocked because NO TLS relation established
-    apps_units = {MAIN_APP: 3, FAILOVER_APP: 3, DATA_APP: 2, INVALID_APP: 1}
     await wait_until(
         ops_test,
-        apps=list(apps_units.keys()),
+        apps=list(APP_UNITS.keys()),
         apps_full_statuses={
             MAIN_APP: {"blocked": [TLSRelationMissing]},
             FAILOVER_APP: {"blocked": [PClusterNoRelation]},
@@ -102,7 +104,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             DATA_APP: {"units": {"active": []}},
             INVALID_APP: {"units": {"active": []}},
         },
-        wait_for_exact_units={app: units for app, units in apps_units.items()},
+        wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
         idle_period=IDLE_PERIOD,
     )
 
@@ -123,6 +125,14 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
                 "waiting": ["TLS not fully configured in related 'main-orchestrator'."]
             },
         },
+        units_full_statuses={
+            MAIN_APP: {"units": {"blocked": [TLSRelationMissing]}},
+            FAILOVER_APP: {"units": {"active": []}},
+        },
+        wait_for_exact_units={
+            MAIN_APP: APP_UNITS[MAIN_APP],
+            FAILOVER_APP: APP_UNITS[FAILOVER_APP],
+        },
         idle_period=IDLE_PERIOD,
     )
 
@@ -139,24 +149,34 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
             DATA_APP: {"blocked": [PClusterNoRelation]},
             INVALID_APP: {"blocked": [PClusterNoRelation]},
         },
+        units_statuses=["active"],
+        wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
         idle_period=IDLE_PERIOD,
     )
 
+    c_writes = ContinuousWrites(ops_test, app=MAIN_APP)
+    await c_writes.start()
+    time.sleep(120)
+    await c_writes.stop()
+
     # fetch nodes, we should have 6 nodes (main + failover)-orchestrators
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=MAIN_APP)
-    nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert len(nodes) == 6
+    nodes = await all_nodes(ops_test, leader_unit_ip, app=MAIN_APP)
+    assert len(nodes) == 6, f"Wrong node count. Expecting 6 online nodes, found: {len(nodes)}."
 
     # integrate cluster with different name
     await ops_test.model.integrate(f"{INVALID_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}")
     await wait_until(
         ops_test,
-        apps=[INVALID_APP],
+        apps=[MAIN_APP, INVALID_APP],
         apps_full_statuses={
+            MAIN_APP: {"active": []},
             INVALID_APP: {
                 "blocked": ["Cannot relate 2 clusters with different 'cluster_name' values."]
             },
         },
+        units_statuses=["active"],
+        wait_for_exact_units={MAIN_APP: APP_UNITS[MAIN_APP], INVALID_APP: APP_UNITS[INVALID_APP]},
         idle_period=IDLE_PERIOD,
     )
 
@@ -181,13 +201,16 @@ async def test_large_deployment_fully_formed(
         apps=[MAIN_APP, FAILOVER_APP, DATA_APP],
         apps_statuses=["active"],
         units_statuses=["active"],
+        wait_for_exact_units={
+            app: units for app, units in APP_UNITS.items() if app != INVALID_APP
+        },
         idle_period=IDLE_PERIOD,
     )
 
     # fetch nodes, we should have 6 nodes (main + failover)-orchestrators
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=MAIN_APP)
-    nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert len(nodes) == 8, f"Wrong node count: {len(nodes)}"
+    nodes = await all_nodes(ops_test, leader_unit_ip, app=MAIN_APP)
+    assert len(nodes) == 8, f"Wrong node count. Expecting 8 online nodes, found: {len(nodes)}."
 
     # check the roles
     auto_gen_roles = ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
