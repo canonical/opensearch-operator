@@ -233,5 +233,5 @@ async def test_large_deployment_fully_formed(
                 data_roles
             ), f"Wrong roles for {app}:{roles} - expected:{data_roles}"
             assert (
-                temperature == "cold"
-            ), f"Wrong temperature for {app}:{temperature} - expected:cold"
+                temperature == "hot"
+            ), f"Wrong temperature for {app}:{temperature} - expected:hot"
