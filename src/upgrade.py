@@ -278,9 +278,9 @@ class Upgrade(abc.ABC):
         logger.debug("Running pre-upgrade checks")
 
         try:
-            if self._charm.health.apply() != HealthColors.GREEN:
+            if (health := self._charm.health.get(local_app_only=False)) != HealthColors.GREEN:
                 PrecheckFailed(
-                    f"Cluster not healthy: expected 'green', but '{self.health.apply()}' found instead"
+                    f"Cluster not healthy: expected 'green', but '{health}' found instead"
                 )
 
             online_nodes = ClusterTopology.nodes(
