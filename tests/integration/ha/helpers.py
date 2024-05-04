@@ -61,12 +61,20 @@ async def app_name(ops_test: OpsTest) -> Optional[str]:
     application name "opensearch".
     Note: if multiple clusters are running OpenSearch this will return the one first found.
     """
-    status = await ops_test.model.get_status()
-    for app in ops_test.model.applications:
-        if "opensearch" in status["applications"][app]["charm"]:
-            return app
+    apps = json.loads(
+        subprocess.check_output(
+            f"juju status --model {ops_test.model.info.name} --format=json".split()
+        )
+    )["applications"]
 
-    return None
+    opensearch_apps = {
+        name: desc for name, desc in apps.items() if desc["charm-name"] == "opensearch"
+    }
+    for name, desc in opensearch_apps.items():
+        if name == "opensearch-main":
+            return name
+
+    return list(opensearch_apps.keys())[0] if opensearch_apps else None
 
 
 @retry(
@@ -579,4 +587,4 @@ async def assert_restore_indices_and_compare_consistency(
     )
     # We expect that new_count has a loss of documents and the numbers are different.
     # Check if we have data but not all of it.
-    assert new_count > 0 and new_count < original_count
+    assert 0 < new_count < original_count
