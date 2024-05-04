@@ -304,7 +304,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.clear(AdminUserInitProgress)
 
     def _on_start(self, event: StartEvent):
-        """Triggered when on start. Set the right node role."""
+        """Triggered when on start. Set the right node role.
+
+        Start event has to:
+        1. Check the cluster manager directives for both small and large deployments
+        2. If this unit is the leader, then we bring the service up
+        3. Run several checks, and start the service if all checks pas
+
+        Defer and retry later if at least one of the checks do not pass.
+        """
         if self.opensearch.is_node_up():
             if self.peers_data.get(Scope.APP, "security_index_initialised"):
                 # in the case where it was on WaitingToStart status, event got deferred
@@ -322,6 +330,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
+        is_main_leader = (
+            self.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
+            and self.unit.is_leader()
+        )
+        if is_main_leader:
+            # request the start of OpenSearch
+            self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
+            self._start_opensearch_event.emit()
+
+        # TODO: this is a post-start check, remove from here and simplify _on_start logic
         if not self.is_admin_user_configured() or not self.is_tls_fully_configured():
             if not self.model.get_relation("certificates"):
                 status = BlockedStatus(TLSRelationMissing)
@@ -351,9 +369,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # configure clients auth
         self.opensearch_config.set_client_auth()
 
-        # request the start of OpenSearch
-        self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
-        self._start_opensearch_event.emit()
+        if not is_main_leader:
+            # request the start of OpenSearch
+            self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
+            self._start_opensearch_event.emit()
 
     def _apply_peer_cm_directives_and_check_if_can_start(self) -> bool:
         """Apply the directives computed by the opensearch peer cluster manager."""
