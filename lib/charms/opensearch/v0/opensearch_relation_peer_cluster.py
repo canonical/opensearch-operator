@@ -311,6 +311,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
 
+            if not self.charm.backup.s3_client.get_s3_connection_info().get("access-key"):
+                return None
+
             # As the main orchestrator, this application must set the S3 information.
             return S3RelDataCredentials(
                 access_key=self.charm.backup.s3_client.get_s3_connection_info().get("access-key"),
