@@ -200,12 +200,13 @@ async def get_number_of_shards_by_node(ops_test: OpsTest, unit_ip: str) -> Dict[
     wait=wait_fixed(wait=15) + wait_random(0, 5),
     stop=stop_after_attempt(25),
 )
-async def all_nodes(ops_test: OpsTest, unit_ip: str) -> List[Node]:
+async def all_nodes(ops_test: OpsTest, unit_ip: str, app: str = APP_NAME) -> List[Node]:
     """Fetch all cluster nodes."""
     response = await http_request(
         ops_test,
         "GET",
         f"https://{unit_ip}:9200/_nodes",
+        app=app,
     )
     nodes = response.get("nodes", {})
 
