@@ -87,7 +87,7 @@ class ContinuousWrites:
 
         client = await self._client()
         try:
-            client.indices.delete(index=ContinuousWrites.INDEX_NAME)
+            client.indices.delete(index=ContinuousWrites.INDEX_NAME, ignore_unavailable=True)
         finally:
             client.close()
 

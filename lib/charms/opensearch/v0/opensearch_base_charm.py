@@ -832,16 +832,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _start_opensearch(self, event: _StartOpenSearch) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
-        if not self.node_lock.acquired:
-            # (Attempt to acquire lock even if `event.ignore_lock`)
-            if event.ignore_lock:
-                # Only used for force upgrades
-                logger.debug("Starting without lock")
-            else:
-                logger.debug("Lock to start opensearch not acquired. Will retry next event")
-                event.defer()
-                return
-
         if self.opensearch.is_started():
             try:
                 self._post_start_init(event)
@@ -859,6 +849,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         self.peers_data.delete(Scope.UNIT, "started")
+
+        if not self.node_lock.acquired:
+            # (Attempt to acquire lock even if `event.ignore_lock`)
+            if event.ignore_lock:
+                # Only used for force upgrades
+                logger.debug("Starting without lock")
+            else:
+                logger.debug("Lock to start opensearch not acquired. Will retry next event")
+                event.defer()
+                return
 
         if not self._can_service_start():
             self.node_lock.release()
@@ -967,9 +967,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # apply cluster health
         self.health.apply(wait_for_green_first=True, app=self.unit.is_leader())
 
-        if self.unit.is_leader():
+        if (
+            self.unit.is_leader()
+            and self.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
+        ):
             # Creating the monitoring user
-            self._put_or_update_internal_user_leader(COSUser)
+            self._put_or_update_internal_user_leader(COSUser, update=False)
 
         self.unit.open_port("tcp", 9200)
 
@@ -1217,18 +1220,25 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if user != "_meta":
                 self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
 
-    def _put_or_update_internal_user_leader(self, user: str, pwd: Optional[str] = None) -> None:
+    def _put_or_update_internal_user_leader(
+        self, user: str, pwd: Optional[str] = None, update: bool = True
+    ) -> None:
         """Create system user or update it with a new password."""
         # Leader is to set new password and hash, others populate existing hash locally
         if not self.unit.is_leader():
             logger.error("Credential change can be only performed by the leader unit.")
             return
 
+        secret = self.secrets.get(Scope.APP, self.secrets.password_key(user))
+        if secret and not update:
+            self._put_or_update_internal_user_unit(user)
+            return
+
         hashed_pwd, pwd = generate_hashed_password(pwd)
 
         # Updating security index
         # We need to do this for all credential changes
-        if secret := self.secrets.get(Scope.APP, self.secrets.password_key(user)):
+        if secret:
             self.user_manager.update_user_password(user, hashed_pwd)
 
         # In case it's a new user, OR it's a system user (that has an entry in internal_users.yml)
@@ -1247,7 +1257,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if user == AdminUser:
             self.peers_data.put(Scope.APP, "admin_user_initialized", True)
 
-    def _put_or_update_internal_user_unit(self, user: str, pwd: Optional[str] = None) -> None:
+    def _put_or_update_internal_user_unit(self, user: str) -> None:
         """Create system user or update it with a new password."""
         # Leader is to set new password and hash, others populate existing hash locally
         hashed_pwd = self.secrets.get(Scope.APP, self.secrets.hash_key(user))
