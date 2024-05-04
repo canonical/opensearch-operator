@@ -309,6 +309,47 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         """Deployment description available, non-orchestrator, fail any actions."""
         event.fail("Failed: execute the action on the orchestrator cluster instead.")
 
+    def is_idle_or_not_set(self) -> bool:
+        """Checks if the backup system is idle or not yet configured.
+
+        "idle": configured but there are no backups nor restores in progress.
+        "not_set": set by the children classes
+        """
+        return not (self.is_backup_in_progress() or self._is_restore_in_progress())
+
+    def _is_restore_in_progress(self) -> bool:
+        """Checks if the restore is currently in progress.
+
+        Two options:
+         1) no restore requested: return False
+         2) check for each index shard: for all type=SNAPSHOT and stage=DONE, return False.
+        """
+        try:
+            indices_status = self.charm.opensearch.request("GET", "/_recovery?human") or {}
+        except OpenSearchHttpError:
+            return False
+
+        for info in indices_status.values():
+            # Now, check the status of each shard
+            for shard in info["shards"]:
+                if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
+                    return True
+        return False
+
+    def is_backup_in_progress(self) -> bool:
+        """Returns True if backup is in progress, False otherwise.
+
+        We filter the _query_backup_status() and seek for the following states:
+        - SNAPSHOT_IN_PROGRESS
+        """
+        try:
+            output = self.charm.opensearch.request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
+            # Simpler check, as we are not interested if a backup is in progress only
+            if BackupServiceState.SNAPSHOT_IN_PROGRESS in str(output):
+                return True
+        except OpenSearchHttpError:
+            return False
+
 
 class OpenSearchBackup(OpenSearchBackupBase):
     """Implements backup relation and API management."""
