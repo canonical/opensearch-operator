@@ -161,9 +161,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # get list of relations with this orchestrator
         target_relation_ids = [
-            rel.id
-            for rel in self.charm.model.relations[self.relation_name]
-            if len(rel.units) > 0
+            rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
         ]
 
         # fetch emitting app planned units and broadcast
@@ -218,9 +216,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # all relations with the current orchestrator
         all_relation_ids = [
-            rel.id
-            for rel in self.charm.model.relations[self.relation_name]
-            if len(rel.units) > 0
+            rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
         ]
 
         # get deployment descriptor of current app
