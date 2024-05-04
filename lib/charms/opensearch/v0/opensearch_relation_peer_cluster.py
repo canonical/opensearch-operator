@@ -200,7 +200,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return
 
         # we need to update the fleet planned units
-        target_relation_ids = [rel.id for rel in self.charm.model.relations[self.relation_name]]
+        target_relation_ids = [
+            rel.id
+            for rel in self.charm.model.relations[self.relation_name]
+            if rel.id != event.relation.id
+        ]
         self._put_planned_units(event.app.name, 0, target_relation_ids)
 
     def refresh_relation_data(self, event: EventBase) -> None:
