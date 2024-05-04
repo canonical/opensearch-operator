@@ -11,6 +11,7 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from .ha.continuous_writes import ContinuousWrites
 from .ha.helpers import app_name, assert_continuous_writes_consistency
+from .ha.test_horizontal_scaling import IDLE_PERIOD
 from .helpers import APP_NAME, MODEL_CONFIG, SERIES, run_action
 from .helpers_deployments import get_application_units, wait_until
 from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -105,28 +106,34 @@ async def test_upgrade_rollback(
             apps=[app],
             apps_statuses=["blocked"],
             units_statuses=["active"],
-            idle_period=50,
+            wait_for_exact_units={
+                APP_NAME: 3,
+            },
+            idle_period=IDLE_PERIOD,
         )
 
-    logger.info("Rolling back")
-    # Facing the same issue as descripted in:
-    # https://github.com/juju/python-libjuju/issues/924
-    # application = ops_test.model.applications[APP_NAME]
-    # await application.refresh(
-    #     switch="ch:pguimaraes-opensearch-upgrade-test",
-    #     channel=OPENSEARCH_INITIAL_CHANNEL,
-    # )
-    subprocess.check_output(
-        f"juju refresh {app} --switch {OPENSEARCH_ORIGINAL_CHARM_NAME} "
-        "--channel latest/edge".split(),
-    )
-    async with ops_test.fast_forward():
+        logger.info("Rolling back")
+        # Facing the same issue as descripted in:
+        # https://github.com/juju/python-libjuju/issues/924
+        # application = ops_test.model.applications[APP_NAME]
+        # await application.refresh(
+        #     switch="ch:pguimaraes-opensearch-upgrade-test",
+        #     channel=OPENSEARCH_INITIAL_CHANNEL,
+        # )
+        subprocess.check_output(
+            f"juju refresh {app} --switch {OPENSEARCH_ORIGINAL_CHARM_NAME} "
+            "--channel latest/edge".split(),
+        )
+
         await wait_until(
             ops_test,
             apps=[app],
             apps_statuses=["active"],
             units_statuses=["active"],
-            idle_period=50,
+            wait_for_exact_units={
+                APP_NAME: 3,
+            },
+            idle_period=IDLE_PERIOD,
         )
 
 
@@ -163,8 +170,12 @@ async def test_upgrade_to_local(
             apps=[app],
             apps_statuses=["blocked"],
             units_statuses=["active"],
-            idle_period=50,
+            wait_for_exact_units={
+                APP_NAME: 3,
+            },
+            idle_period=IDLE_PERIOD,
         )
+
 
         logger.info("Upgrade finished")
         # Wait for the upgrade to converge and update its own state
@@ -179,53 +190,62 @@ async def test_upgrade_to_local(
                 )
                 assert action.status == "completed"
 
-    logger.info("Refresh is over, waiting for the charm to settle")
-    async with ops_test.fast_forward():
+        logger.info("Refresh is over, waiting for the charm to settle")
         await wait_until(
             ops_test,
             apps=[app],
             apps_statuses=["active"],
             units_statuses=["active"],
-            idle_period=50,
+            wait_for_exact_units={
+                APP_NAME: 3,
+            },
+            idle_period=IDLE_PERIOD,
         )
+
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_accidental_downgrade_status(ops_test: OpsTest) -> None:
-    """Test if we rollback the change above, by accident."""
-    app = (await app_name(ops_test)) or APP_NAME
-    units = await get_application_units(ops_test, app)
-    leader_id = [u.id for u in units if u.is_leader][0]
+# TODO: this test must be added after we return to using the same charm
+#      for the upgrade tests, instead of pguimaraes-opensearch-upgrade-test.
 
-    action = await run_action(
-        ops_test,
-        leader_id,
-        "pre-upgrade-check",
-        app=app,
-    )
-    assert action.status == "completed"
+# @pytest.mark.group(1)
+# @pytest.mark.abort_on_fail
+# async def test_accidental_downgrade(ops_test: OpsTest) -> None:
+#     """Test if we downgrade the change above, by accident."""
+#     app = (await app_name(ops_test)) or APP_NAME
+#     units = await get_application_units(ops_test, app)
+#     leader_id = [u.id for u in units if u.is_leader][0]
 
-    logger.info("Refresh the charm back to the original version")
-    # Facing the same issue as descripted in:
-    # https://github.com/juju/python-libjuju/issues/924
-    # application = ops_test.model.applications[APP_NAME]
-    # await application.refresh(
-    #     switch="ch:pguimaraes-opensearch-upgrade-test",
-    #     channel=OPENSEARCH_INITIAL_CHANNEL,
-    # )
-    subprocess.check_output(
-        f"juju refresh {app} --switch {OPENSEARCH_ORIGINAL_CHARM_NAME} "
-        "--channel latest/edge".split(),
-    )
+#     action = await run_action(
+#         ops_test,
+#         leader_id,
+#         "pre-upgrade-check",
+#         app=app,
+#     )
+#     assert action.status == "completed"
 
-    async with ops_test.fast_forward():
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            idle_period=50,
-        )
+#     logger.info("Refresh the charm back to the original version")
+#     # Facing the same issue as descripted in:
+#     # https://github.com/juju/python-libjuju/issues/924
+#     # application = ops_test.model.applications[APP_NAME]
+#     # await application.refresh(
+#     #     switch="ch:pguimaraes-opensearch-upgrade-test",
+#     #     channel=OPENSEARCH_INITIAL_CHANNEL,
+#     # )
+#     subprocess.check_output(
+#         f"juju refresh {app} --switch {OPENSEARCH_ORIGINAL_CHARM_NAME} "
+#         "--channel latest/edge".split(),
+#     )
+
+#     async with ops_test.fast_forward():
+#         await wait_until(
+#             ops_test,
+#             apps=[app],
+#             apps_statuses=["blocked"],
+#             units_statuses=["active"],
+#             wait_for_exact_units={
+#                 APP_NAME: 3,
+#             },
+#             idle_period=IDLE_PERIOD,
+#         )
