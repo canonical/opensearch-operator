@@ -87,7 +87,7 @@ class ContinuousWrites:
 
         client = await self._client()
         try:
-            client.indices.delete(index=ContinuousWrites.INDEX_NAME)
+            client.indices.delete(index=ContinuousWrites.INDEX_NAME, ignore_unavailable=True)
         finally:
             client.close()
 
@@ -181,6 +181,10 @@ class ContinuousWrites:
         )
 
     def _stop_process(self):
+        if self._is_stopped or not self._process.is_alive():
+            self._is_stopped = True
+            return
+
         self._event.set()
         self._process.join()
         self._queue.close()
@@ -189,7 +193,7 @@ class ContinuousWrites:
 
     async def _secrets(self) -> str:
         """Fetch secrets and return the password."""
-        secrets = await get_secrets(self._ops_test)
+        secrets = await get_secrets(self._ops_test, app=self._app)
         with open(ContinuousWrites.CERT_PATH, "w") as chain:
             chain.write(secrets["ca-chain"])
 
