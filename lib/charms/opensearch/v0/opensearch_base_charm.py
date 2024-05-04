@@ -586,6 +586,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 HealthColors.IGNORE,
             ]:
                 event.defer()
+            else:
+                deployment_desc = self.opensearch_peer_cm.deployment_desc()
+                # check if peer status needs to be cleaned
+                self.opensearch_peer_cm.apply_status_if_needed(deployment_desc)
 
             if health == HealthColors.UNKNOWN:
                 return

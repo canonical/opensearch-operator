@@ -181,45 +181,49 @@ async def test_knn_enabled_disabled(ops_test):
     assert config["plugin_opensearch_knn"]["default"] is True
     assert config["plugin_opensearch_knn"]["value"] is True
 
-    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "False"})
-    await wait_until(
-        ops_test,
-        apps=[APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units={APP_NAME: 3},
-        timeout=3400,
-        idle_period=IDLE_PERIOD,
-    )
+    async with ops_test.fast_forward():
+        await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "False"})
+        await wait_until(
+            ops_test,
+            apps=[APP_NAME],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units={APP_NAME: 3},
+            timeout=3600,
+            idle_period=120,
+        )
 
-    await asyncio.sleep(60)
+        await asyncio.sleep(120)
 
-    config = await ops_test.model.applications[APP_NAME].get_config()
-    assert config["plugin_opensearch_knn"]["value"] is False
+        config = await ops_test.model.applications[APP_NAME].get_config()
+        assert config["plugin_opensearch_knn"]["value"] is False
 
-    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "True"})
-    await wait_until(
-        ops_test,
-        apps=[APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units={APP_NAME: 3},
-        timeout=3400,
-        idle_period=IDLE_PERIOD,
-    )
-    await asyncio.sleep(60)
+        await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "True"})
+        await wait_until(
+            ops_test,
+            apps=[APP_NAME],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units={APP_NAME: 3},
+            timeout=3600,
+            idle_period=120,
+        )
 
-    config = await ops_test.model.applications[APP_NAME].get_config()
-    assert config["plugin_opensearch_knn"]["value"] is True
-    await wait_until(
-        ops_test,
-        apps=[APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units={APP_NAME: 3},
-        timeout=3400,
-        idle_period=IDLE_PERIOD,
-    )
+        config = await ops_test.model.applications[APP_NAME].get_config()
+        assert config["plugin_opensearch_knn"]["value"] is True
+
+        # Wait 5 minutes to have the restart really kicking in...
+        await asyncio.sleep(120)
+
+        await wait_until(
+            ops_test,
+            apps=[APP_NAME],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units={APP_NAME: 3},
+            timeout=3600,
+            idle_period=120,
+        )
 
 
 @pytest.mark.group(1)
