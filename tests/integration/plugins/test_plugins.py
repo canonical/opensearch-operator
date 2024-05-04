@@ -192,12 +192,12 @@ async def test_knn_enabled_disabled(ops_test):
             timeout=3400,
             idle_period=IDLE_PERIOD,
         )
-    
+
         await asyncio.sleep(60)
-    
+
         config = await ops_test.model.applications[APP_NAME].get_config()
         assert config["plugin_opensearch_knn"]["value"] is False
-    
+
         await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "True"})
         await wait_until(
             ops_test,
