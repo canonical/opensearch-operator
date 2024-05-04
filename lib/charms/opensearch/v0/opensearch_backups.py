@@ -345,8 +345,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         try:
             output = self.charm.opensearch.request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
             # Simpler check, as we are not interested if a backup is in progress only
-            if BackupServiceState.SNAPSHOT_IN_PROGRESS in str(output):
-                return True
+            return BackupServiceState.SNAPSHOT_IN_PROGRESS in str(output)
         except OpenSearchHttpError:
             return False
 
