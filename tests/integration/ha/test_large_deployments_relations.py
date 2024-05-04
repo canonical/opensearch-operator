@@ -225,12 +225,12 @@ async def test_large_deployment_fully_formed(
         temperature = current_app_nodes[0].temperature
         if app in [MAIN_APP, FAILOVER_APP]:
             assert sorted(roles) == sorted(
-                [auto_gen_roles]
+                auto_gen_roles
             ), f"Wrong roles for {app}:{roles} - expected:{auto_gen_roles}"
             assert temperature is None, f"Wrong temperature for {app}:{roles} - expected:None"
         else:
             assert sorted(roles) == sorted(
-                [data_roles]
+                data_roles
             ), f"Wrong roles for {app}:{roles} - expected:{data_roles}"
             assert (
                 temperature == "cold"
