@@ -278,7 +278,7 @@ class Upgrade(abc.ABC):
         logger.debug("Running pre-upgrade checks")
 
         try:
-            health := self._charm.health.get(
+            health = self._charm.health.get(
                 local_app_only=False,
                 wait_for_green_first=True,
             )
