@@ -7,6 +7,9 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, List, MutableMapping, Optional, Union
 
 from charms.opensearch.v0.constants_charm import (
+    AdminUser,
+    COSUser,
+    KibanaserverUser,
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
 )
@@ -26,6 +29,7 @@ from charms.opensearch.v0.models import (
     PeerClusterRelErrorData,
     S3RelDataCredentials,
 )
+from charms.opensearch.v0.opensearch_backups import S3_RELATION
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import (
@@ -156,7 +160,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return
 
         # get list of relations with this orchestrator
-        target_relation_ids = [rel.id for rel in self.charm.model.relations[self.relation_name]]
+        target_relation_ids = [
+            rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
+        ]
 
         # fetch emitting app planned units and broadcast
         self._put_planned_units(
@@ -196,7 +202,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return
 
         # we need to update the fleet planned units
-        target_relation_ids = [rel.id for rel in self.charm.model.relations[self.relation_name]]
+        target_relation_ids = [
+            rel.id
+            for rel in self.charm.model.relations[self.relation_name]
+            if rel.id != event.relation.id and len(rel.units) > 0
+        ]
         self._put_planned_units(event.app.name, 0, target_relation_ids)
 
     def refresh_relation_data(self, event: EventBase) -> None:
@@ -205,7 +215,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return
 
         # all relations with the current orchestrator
-        all_relation_ids = [rel.id for rel in self.charm.model.relations[self.relation_name]]
+        all_relation_ids = [
+            rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
+        ]
 
         # get deployment descriptor of current app
         deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
@@ -300,25 +312,30 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             Scope.APP, "cluster_fleet_planned_units", cluster_fleet_planned_units
         )
 
-    def _s3_credentials(self, deployment_desc: DeploymentDescription) -> S3RelDataCredentials:
-        secrets = self.charm.secrets
+    def _s3_credentials(
+        self, deployment_desc: DeploymentDescription
+    ) -> Optional[S3RelDataCredentials]:
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            if not self.charm.model.get_relation(S3_RELATION):
+                return None
+
+            if not self.charm.backup.s3_client.get_s3_connection_info().get("access-key"):
+                return None
+
             # As the main orchestrator, this application must set the S3 information.
-            s3_credentials = S3RelDataCredentials(
-                access_key=self.charm.backup.s3_client.get_s3_connection_info().get(
-                    "access-key", ""
-                ),
-                secret_key=self.charm.backup.s3_client.get_s3_connection_info().get(
-                    "secret-key", ""
-                ),
+            return S3RelDataCredentials(
+                access_key=self.charm.backup.s3_client.get_s3_connection_info().get("access-key"),
+                secret_key=self.charm.backup.s3_client.get_s3_connection_info().get("secret-key"),
             )
-        else:
-            # Return what we have received from the peer relation
-            s3_credentials = S3RelDataCredentials(
-                access_key=secrets.get(Scope.APP, "access-key", default=""),
-                secret_key=secrets.get(Scope.APP, "secret-key", default=""),
-            )
-        return s3_credentials
+
+        if not self.charm.secrets.get(Scope.APP, "access-key"):
+            return None
+
+        # Return what we have received from the peer relation
+        return S3RelDataCredentials(
+            access_key=self.charm.secrets.get(Scope.APP, "access-key"),
+            secret_key=self.charm.secrets.get(Scope.APP, "secret-key"),
+        )
 
     def _rel_data(
         self, deployment_desc: DeploymentDescription, orchestrators: PeerClusterOrchestrators
@@ -332,17 +349,20 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # ready (will receive a subsequent
         try:
             secrets = self.charm.secrets
-
-            s3_credentials = self._s3_credentials(deployment_desc)
             return PeerClusterRelData(
                 cluster_name=deployment_desc.config.cluster_name,
                 cm_nodes=self._fetch_local_cm_nodes(),
                 credentials=PeerClusterRelDataCredentials(
-                    admin_username="admin",
-                    admin_password=secrets.get(Scope.APP, secrets.password_key("admin")),
-                    admin_password_hash=secrets.get(Scope.APP, secrets.hash_key("admin")),
+                    admin_username=AdminUser,
+                    admin_password=secrets.get(Scope.APP, secrets.password_key(AdminUser)),
+                    admin_password_hash=secrets.get(Scope.APP, secrets.hash_key(AdminUser)),
+                    kibana_password=secrets.get(Scope.APP, secrets.password_key(KibanaserverUser)),
+                    kibana_password_hash=secrets.get(
+                        Scope.APP, secrets.hash_key(KibanaserverUser)
+                    ),
+                    monitor_password=secrets.get(Scope.APP, secrets.password_key(COSUser)),
                     admin_tls=secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
-                    s3=s3_credentials,
+                    s3=self._s3_credentials(deployment_desc),
                 ),
                 deployment_desc=deployment_desc,
             )
@@ -384,6 +404,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             blocked_msg = f"Security index not initialized {message_suffix}."
         elif not self.charm.is_every_unit_marked_as_started():
             blocked_msg = f"Waiting for every unit {message_suffix} to start."
+        elif not self.charm.secrets.get(Scope.APP, self.charm.secrets.password_key(COSUser)):
+            blocked_msg = f"'{COSUser}' user not created yet."
         else:
             try:
                 if not self._fetch_local_cm_nodes():
@@ -501,8 +523,16 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         """Store security related config."""
         # set admin secrets
         secrets = self.charm.secrets
-        secrets.put(Scope.APP, secrets.password_key("admin"), data.credentials.admin_password)
-        secrets.put(Scope.APP, secrets.hash_key("admin"), data.credentials.admin_password_hash)
+        secrets.put(Scope.APP, secrets.password_key(AdminUser), data.credentials.admin_password)
+        secrets.put(Scope.APP, secrets.hash_key(AdminUser), data.credentials.admin_password_hash)
+        secrets.put(
+            Scope.APP, secrets.password_key(KibanaserverUser), data.credentials.kibana_password
+        )
+        secrets.put(
+            Scope.APP, secrets.hash_key(KibanaserverUser), data.credentials.kibana_password_hash
+        )
+        secrets.put(Scope.APP, secrets.password_key(COSUser), data.credentials.monitor_password)
+
         secrets.put_object(Scope.APP, CertType.APP_ADMIN.val, data.credentials.admin_tls)
 
         # store the app admin TLS resources if not stored
@@ -512,9 +542,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
         self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
 
-        s3_creds = data.credentials.s3
-        self.charm.secrets.put(Scope.APP, "access-key", s3_creds.access_key)
-        self.charm.secrets.put(Scope.APP, "secret-key", s3_creds.secret_key)
+        if s3_creds := data.credentials.s3:
+            self.charm.secrets.put(Scope.APP, "access-key", s3_creds.access_key)
+            self.charm.secrets.put(Scope.APP, "secret-key", s3_creds.secret_key)
 
     def _orchestrators(
         self,
@@ -747,6 +777,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             blocked_msg = (
                 "A cluster can only be related to 1 main and 1 failover-clusters at most."
             )
+        elif peer_cluster_rel_data.cluster_name != deployment_desc.config.cluster_name:
+            blocked_msg = "Cannot relate 2 clusters with different 'cluster_name' values."
 
         if not blocked_msg:
             self._clear_errors(f"error_from_requirer-{event_rel_id}")
@@ -807,5 +839,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     def _clear_errors(self, *error_labels: str):
         """Clear previously set Peer clusters related statuses."""
         for error_label in error_labels:
-            self.charm.status.clear(error_label)
+            error = self.charm.peers_data.get(Scope.APP, error_label, "")
+            self.charm.status.clear(error, app=True)
             self.charm.peers_data.delete(Scope.APP, error_label)
