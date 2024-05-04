@@ -196,7 +196,7 @@ class DeploymentDescription(Model):
     @root_validator
     def set_promotion_time(cls, values):  # noqa: N805
         """Set promotion time of a failover to a main CM."""
-        if values["typ"] == DeploymentType.MAIN_ORCHESTRATOR:
+        if not values["promotion_time"] and values["typ"] == DeploymentType.MAIN_ORCHESTRATOR:
             values["promotion_time"] = datetime.now().timestamp()
 
         return values
@@ -215,6 +215,9 @@ class PeerClusterRelDataCredentials(Model):
     admin_username: str
     admin_password: str
     admin_password_hash: str
+    kibana_password: str
+    kibana_password_hash: str
+    monitor_password: str
     admin_tls: Dict[str, Optional[str]]
     s3: Optional[S3RelDataCredentials]
 

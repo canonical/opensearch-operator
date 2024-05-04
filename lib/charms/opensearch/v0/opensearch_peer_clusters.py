@@ -18,6 +18,7 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerRelationName,
 )
+from charms.opensearch.v0.helper_charm import trigger_peer_rel_changed
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
     DeploymentDescription,
@@ -87,6 +88,11 @@ class OpenSearchPeerClustersManager:
             self._charm.peers_data.put_object(
                 Scope.APP, "deployment-description", deployment_desc.to_dict()
             )
+
+        if deployment_desc.start == StartMode.WITH_GENERATED_ROLES:
+            # trigger roles change on the leader, other units will have their peer-rel-changed
+            # event triggered
+            trigger_peer_rel_changed(self._charm, on_other_units=False, on_current_unit=True)
 
         self.apply_status_if_needed(deployment_desc)
 
@@ -239,6 +245,7 @@ class OpenSearchPeerClustersManager:
             directives.append(Directive.SHOW_STATUS)
             directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
 
+        deployment_type = self._deployment_type(config, start_mode)
         return DeploymentDescription(
             config=PeerClusterConfig(
                 cluster_name=prev_deployment.config.cluster_name,
@@ -248,9 +255,14 @@ class OpenSearchPeerClustersManager:
             ),
             start=start_mode,
             state=deployment_state,
-            typ=self._deployment_type(config, start_mode),
+            typ=deployment_type,
             app=self._charm.app.name,
             pending_directives=list(set(directives)),
+            promotion_time=(
+                prev_deployment.promotion_time
+                if deployment_type == DeploymentType.MAIN_ORCHESTRATOR
+                else None
+            ),
         )
 
     def can_start(self, deployment_desc: Optional[DeploymentDescription] = None) -> bool:
@@ -436,7 +448,7 @@ class OpenSearchPeerClustersManager:
 
         # if prev_roles None, means auto-generated roles, and will therefore include the cm role
         # for all the units up to the latest if even number of units, which will be voting_only
-        prev_roles = set(prev_roles or ["cluster_manager", "data"])
+        prev_roles = set(prev_roles or ClusterTopology.generated_roles())
         new_roles = set(new_roles)
 
         if "cluster_manager" in new_roles and "voting_only" in new_roles:

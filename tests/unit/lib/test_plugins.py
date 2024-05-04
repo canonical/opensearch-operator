@@ -6,9 +6,11 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import charms
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.opensearch_backups import OpenSearchBackupPlugin
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_health import HealthColors
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPlugin,
     OpenSearchPluginConfig,
@@ -103,6 +105,10 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.charm = self.harness.charm
+
+        self.peers_data = self.charm.peers_data
+        self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
+
         # Override the config to simulate the TestPlugin
         # As config.yaml does not exist, the setup below simulates it
         self.harness.model._config = {"plugin_test": True, "plugin_test_already_installed": False}
@@ -205,6 +211,10 @@ class TestOpenSearchPlugin(unittest.TestCase):
     )
     def test_check_plugin_called_on_config_changed(self, mock_version, deployment_desc) -> None:
         """Triggers a config change and should call plugin manager."""
+        self.harness.set_leader(True)
+        self.peers_data.put(Scope.APP, "security_index_initialised", True)
+        self.harness.set_leader(False)
+
         deployment_desc.return_value = "something"
         self.plugin_manager.run = MagicMock(return_value=False)
         self.charm.opensearch_config.update_host_if_needed = MagicMock(return_value=False)

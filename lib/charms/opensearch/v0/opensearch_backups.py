@@ -251,7 +251,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             event.defer()
             return
 
-        if not (data := event.relation.data.get(event.app)):
+        if not (data := event.relation.data.get(event.app)) or not data.get("data"):
             return
         data = PeerClusterRelData.from_str(data["data"])
         s3_credentials = data.credentials.s3

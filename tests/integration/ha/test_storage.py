@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
@@ -114,7 +113,7 @@ async def test_storage_reuse_after_scale_down(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_in_new_cluster_after_app_removal(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ):
     """Check storage is reused and data accessible after removing app and deploying new cluster."""
     app = (await app_name(ops_test)) or APP_NAME

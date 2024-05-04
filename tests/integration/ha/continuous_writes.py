@@ -87,7 +87,7 @@ class ContinuousWrites:
 
         client = await self._client()
         try:
-            client.indices.delete(index=ContinuousWrites.INDEX_NAME)
+            client.indices.delete(index=ContinuousWrites.INDEX_NAME, ignore_unavailable=True)
         finally:
             client.close()
 
@@ -137,6 +137,7 @@ class ContinuousWrites:
                 body={
                     "settings": {"index": {"number_of_shards": 2, "auto_expand_replicas": "1-all"}}
                 },
+                wait_for_active_shards="all",
             )
         finally:
             client.close()
@@ -180,6 +181,10 @@ class ContinuousWrites:
         )
 
     def _stop_process(self):
+        if self._is_stopped or not self._process.is_alive():
+            self._is_stopped = True
+            return
+
         self._event.set()
         self._process.join()
         self._queue.close()
@@ -188,7 +193,7 @@ class ContinuousWrites:
 
     async def _secrets(self) -> str:
         """Fetch secrets and return the password."""
-        secrets = await get_secrets(self._ops_test)
+        secrets = await get_secrets(self._ops_test, app=self._app)
         with open(ContinuousWrites.CERT_PATH, "w") as chain:
             chain.write(secrets["ca-chain"])
 
@@ -242,7 +247,7 @@ class ContinuousWrites:
                     ContinuousWrites._index(client, write_value)
 
                 # todo: remove when we get bigger runners (to reduce data transfer time)
-                time.sleep(0.75)
+                time.sleep(1)
             except BulkIndexError:
                 proc_logger.info(f"Bulk failed for {write_value}")
                 continue

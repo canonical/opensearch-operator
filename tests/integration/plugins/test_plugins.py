@@ -25,6 +25,7 @@ from ..helpers import (
     http_request,
     run_action,
 )
+from ..helpers_deployments import wait_until
 from ..plugins.helpers import (
     create_index_and_bulk_insert,
     generate_bulk_training_data,
@@ -69,9 +70,12 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
-        status="active",
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units={TLS_CERTIFICATES_APP_NAME: 1, APP_NAME: 3},
         timeout=3400,
         idle_period=IDLE_PERIOD,
     )
@@ -96,10 +100,12 @@ async def test_prometheus_exporter_enabled_by_default(ops_test):
 async def test_prometheus_exporter_cos_relation(ops_test):
     await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[APP_NAME],
-        status="active",
-        timeout=1400,
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=3,
         idle_period=IDLE_PERIOD,
     )
 
@@ -176,17 +182,44 @@ async def test_knn_enabled_disabled(ops_test):
     assert config["plugin_opensearch_knn"]["value"] is True
 
     await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "False"})
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units={APP_NAME: 3},
+        timeout=3400,
+        idle_period=IDLE_PERIOD,
+    )
+
+    await asyncio.sleep(60)
 
     config = await ops_test.model.applications[APP_NAME].get_config()
     assert config["plugin_opensearch_knn"]["value"] is False
 
     await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "True"})
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=15)
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units={APP_NAME: 3},
+        timeout=3400,
+        idle_period=IDLE_PERIOD,
+    )
+    await asyncio.sleep(60)
 
     config = await ops_test.model.applications[APP_NAME].get_config()
     assert config["plugin_opensearch_knn"]["value"] is True
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=45)
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units={APP_NAME: 3},
+        timeout=3400,
+        idle_period=IDLE_PERIOD,
+    )
 
 
 @pytest.mark.group(1)

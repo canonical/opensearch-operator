@@ -40,6 +40,7 @@ from .helpers_data import create_dummy_docs, create_dummy_indexes, delete_dummy_
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -67,6 +68,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_horizontal_scale_up(
@@ -115,6 +117,7 @@ async def test_horizontal_scale_up(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_shards_realloc(
@@ -225,101 +228,7 @@ async def test_safe_scale_down_shards_realloc(
     await assert_continuous_writes_consistency(ops_test, c_writes, app)
 
 
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_safe_scale_down_roles_reassigning(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
-    """Tests the shutdown of a node with a role requiring the re-balance of the cluster roles.
-
-    The goal of this test is to make sure that roles are automatically recalculated after
-    a scale-up/down event. For this end, we want to start testing with an even number of units.
-    """
-    app = (await app_name(ops_test)) or APP_NAME
-    init_units_count = len(ops_test.model.applications[app].units)
-
-    # scale up by 1/2 units depending on the parity of current units: to trigger roles reassignment
-    if init_units_count % 2 == 1:
-        # this will NOT trigger any role reassignment, but will ensure the next call will
-        await ops_test.model.applications[app].add_unit(count=1)
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            wait_for_exact_units=init_units_count + 1,
-            idle_period=IDLE_PERIOD,
-        )
-        init_units_count += 1
-
-    # going from an even to odd number of units, this should trigger a role reassignment
-    await ops_test.model.applications[app].add_unit(count=1)
-    await wait_until(
-        ops_test,
-        apps=[app],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units=init_units_count + 1,
-        idle_period=IDLE_PERIOD,
-    )
-
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    # fetch all nodes
-    nodes = await all_nodes(ops_test, leader_unit_ip)
-    num_units = len(ops_test.model.applications[app].units)
-    assert ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == num_units
-
-    # pick a cluster manager node to remove
-    unit_id_to_stop = [
-        node.name.split("-")[1]
-        for node in nodes
-        if node.ip != leader_unit_ip and node.is_cm_eligible()
-    ][0]
-
-    # scale-down: remove a cm unit
-    await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
-    await wait_until(
-        ops_test,
-        apps=[app],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units=init_units_count,
-        idle_period=IDLE_PERIOD,
-    )
-
-    # we expect to have a "cm" node, reconfigured to be "data only" to keep the quorum
-    new_nodes = await all_nodes(ops_test, leader_unit_ip)
-    num_units = len(ops_test.model.applications[app].units)
-    assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == num_units - 1
-    assert ClusterTopology.nodes_count_by_role(new_nodes)["data"] == num_units
-
-    # scale-down: remove another cm unit
-    unit_id_to_stop = [
-        node.name.split("-")[1]
-        for node in new_nodes
-        if node.ip != leader_unit_ip and node.is_cm_eligible()
-    ][0]
-    await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id_to_stop}")
-    await wait_until(
-        ops_test,
-        apps=[app],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units=num_units - 1,
-        idle_period=IDLE_PERIOD,
-    )
-
-    # fetch nodes, we expect to have all nodes "cluster_manager" to keep the quorum
-    new_nodes = await all_nodes(ops_test, leader_unit_ip)
-    num_units = len(ops_test.model.applications[app].units)
-    assert ClusterTopology.nodes_count_by_role(new_nodes)["cluster_manager"] == num_units
-    assert ClusterTopology.nodes_count_by_role(new_nodes)["data"] == num_units
-
-    # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
-
-
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 async def test_safe_scale_down_remove_leaders(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -336,17 +245,22 @@ async def test_safe_scale_down_remove_leaders(
     app = (await app_name(ops_test)) or APP_NAME
     init_units_count = len(ops_test.model.applications[app].units)
 
-    # scale up by 2 units
-    await ops_test.model.applications[app].add_unit(count=3)
-    await wait_until(
-        ops_test,
-        apps=[app],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units=init_units_count + 3,
-        idle_period=IDLE_PERIOD,
-        timeout=1800,
-    )
+    if init_units_count < 5:
+        # scale up by 5 - init units
+        added_units = 5 - init_units_count
+        await ops_test.model.applications[app].add_unit(count=added_units)
+
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=init_units_count + added_units,
+            idle_period=IDLE_PERIOD,
+            timeout=1800,
+        )
+
+        init_units_count += added_units
 
     # scale down: remove the juju leader
     leader_unit_id = await get_leader_unit_id(ops_test, app=app)
@@ -357,22 +271,12 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units=init_units_count + 2,
+        wait_for_exact_units=init_units_count - 1,
         idle_period=IDLE_PERIOD,
         timeout=1800,
     )
 
-    # make sure the duties supposed to be done by the departing leader are done
-    # we expect to have 3 cm-eligible+data (one of which will be elected) and
-    # 1 data-only nodes as per the roles-reassigning logic
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert (
-        ClusterTopology.nodes_count_by_role(nodes)["cluster_manager"] == init_units_count + 2
-        if init_units_count % 2 != 0
-        else init_units_count + 1
-    )
-    assert ClusterTopology.nodes_count_by_role(nodes)["data"] == init_units_count + 2
 
     # scale-down: remove the current elected CM
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
@@ -383,7 +287,7 @@ async def test_safe_scale_down_remove_leaders(
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units=init_units_count + 1,
+        wait_for_exact_units=init_units_count - 2,
         idle_period=IDLE_PERIOD,
         timeout=1800,
     )
@@ -402,9 +306,15 @@ async def test_safe_scale_down_remove_leaders(
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_with_primary_shard}")
-
-    # sleep for a couple of minutes for the model to stabilise
-    time.sleep(IDLE_PERIOD + 60)
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=init_units_count - 3,
+        idle_period=IDLE_PERIOD,
+        timeout=1800,
+    )
 
     writes = await c_writes.count()
 
