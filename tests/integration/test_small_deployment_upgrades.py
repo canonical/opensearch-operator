@@ -176,7 +176,6 @@ async def test_upgrade_to_local(
             idle_period=IDLE_PERIOD,
         )
 
-
         logger.info("Upgrade finished")
         # Wait for the upgrade to converge and update its own state
         for attempt in Retrying(stop=stop_after_delay(3 * 60), wait=wait_fixed(30)):
