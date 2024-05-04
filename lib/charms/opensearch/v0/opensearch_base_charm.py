@@ -598,12 +598,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             self.user_manager.remove_users_and_roles()
 
+        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
+            # the deployment description hasn't finished being computed by the leader
+            return
+        
         # If relation not broken - leave
         if self.model.get_relation("certificates") is not None:
             return
 
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
+
+        # check if peer status needs to be cleaned
+        if self.unit.is_leader():
+            self.opensearch_peer_cm.apply_status_if_needed(deployment_desc)
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
