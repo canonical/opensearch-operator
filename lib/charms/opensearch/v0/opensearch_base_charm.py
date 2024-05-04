@@ -303,7 +303,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.status.clear(AdminUserInitProgress)
 
-    def _on_start(self, event: StartEvent):
+    def _on_start(self, event: StartEvent):  # noqa: C901
         """Triggered when on start. Set the right node role.
 
         Start event has to:
