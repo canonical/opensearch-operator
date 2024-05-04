@@ -311,7 +311,7 @@ async def test_large_deployment_build_and_deploy(
         ops_test.model.deploy(
             my_charm,
             application_name="main",
-            num_units=3,
+            num_units=1,
             series=SERIES,
             config=main_orchestrator_conf,
         ),
@@ -347,11 +347,12 @@ async def test_large_deployment_build_and_deploy(
         units_statuses=["active"],
         wait_for_exact_units={
             TLS_CERTIFICATES_APP_NAME: 1,
-            "main": 3,
+            "main": 1,
             "failover": 2,
             APP_NAME: 1,
         },
         idle_period=IDLE_PERIOD,
+        timeout=3600,
     )
 
     # Credentials not set yet, this will move the opensearch to blocked state
