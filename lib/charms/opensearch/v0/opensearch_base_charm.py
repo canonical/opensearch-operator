@@ -597,7 +597,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.debug("Skipping `remove_users_and_roles()` because upgrade is in-progress")
         else:
             self.user_manager.remove_users_and_roles()
-        
+
         # If relation not broken - leave
         if self.model.get_relation("certificates") is not None:
             return
