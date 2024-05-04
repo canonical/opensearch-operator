@@ -586,6 +586,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 HealthColors.IGNORE,
             ]:
                 event.defer()
+            else:
+                deployment_desc = self.opensearch_peer_cm.deployment_desc()
+                # check if peer status needs to be cleaned
+                self.opensearch_peer_cm.apply_status_if_needed(deployment_desc)
 
             if health == HealthColors.UNKNOWN:
                 return
@@ -604,14 +608,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
-
-        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
-            # the deployment description hasn't finished being computed by the leader
-            return
-
-        # check if peer status needs to be cleaned
-        if self.unit.is_leader():
-            self.opensearch_peer_cm.apply_status_if_needed(deployment_desc)
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
