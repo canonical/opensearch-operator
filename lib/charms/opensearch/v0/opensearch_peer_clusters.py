@@ -127,6 +127,7 @@ class OpenSearchPeerClustersManager:
             config.cluster_name = data.cluster_name
             pending_directives.remove(Directive.INHERIT_CLUSTER_NAME)
 
+        pending_directives.append(Directive.SHOW_STATUS)
         new_deployment_desc = DeploymentDescription(
             config=config,
             pending_directives=pending_directives,
@@ -138,6 +139,8 @@ class OpenSearchPeerClustersManager:
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", new_deployment_desc.to_dict()
         )
+
+        self.apply_status_if_needed(new_deployment_desc)
 
     def _user_config(self):
         """Build a user provided config object."""
@@ -160,6 +163,7 @@ class OpenSearchPeerClustersManager:
                 deployment_state = DeploymentState(
                     value=State.BLOCKED_WAITING_FOR_RELATION, message=PClusterNoRelation
                 )
+
                 directives.append(Directive.SHOW_STATUS)
 
             directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
@@ -283,7 +287,9 @@ class OpenSearchPeerClustersManager:
         return True
 
     def apply_status_if_needed(
-        self, deployment_desc: Optional[DeploymentDescription] = None
+        self,
+        deployment_desc: Optional[DeploymentDescription] = None,
+        show_status_only_once: bool = True,
     ) -> None:
         """Resolve and applies corresponding status from the deployment state."""
         if not (deployment_desc := deployment_desc or self.deployment_desc()):
@@ -293,7 +299,8 @@ class OpenSearchPeerClustersManager:
             return
 
         # remove show_status directive which is applied below
-        self.clear_directive(Directive.SHOW_STATUS)
+        if show_status_only_once:
+            self.clear_directive(Directive.SHOW_STATUS)
 
         blocked_status_messages = [
             CMRoleRemovalForbidden,
@@ -306,7 +313,7 @@ class OpenSearchPeerClustersManager:
         ]
         if deployment_desc.state.message not in blocked_status_messages:
             for message in blocked_status_messages:
-                self._charm.status.clear(message)
+                self._charm.status.clear(message, app=True)
             return
 
         self._charm.app.status = BlockedStatus(deployment_desc.state.message)
