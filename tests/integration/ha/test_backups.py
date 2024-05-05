@@ -304,59 +304,66 @@ async def test_large_deployment_build_and_deploy(
     }
     data_hot_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data.hot"}
 
-    await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
-        ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
-        ops_test.model.deploy(
-            my_charm,
-            application_name="main",
-            num_units=3,
-            series=SERIES,
-            config=main_orchestrator_conf,
-        ),
-        ops_test.model.deploy(
-            my_charm,
-            application_name="failover",
-            num_units=2,
-            series=SERIES,
-            config=failover_orchestrator_conf,
-        ),
-        ops_test.model.deploy(
-            my_charm, application_name=APP_NAME, num_units=1, series=SERIES, config=data_hot_conf
-        ),
-    )
+    with ops_test.fast_forward():
+        await asyncio.gather(
+            ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
+            ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
+            ops_test.model.deploy(
+                my_charm,
+                application_name="main",
+                num_units=1,
+                series=SERIES,
+                config=main_orchestrator_conf,
+            ),
+            ops_test.model.deploy(
+                my_charm,
+                application_name="failover",
+                num_units=2,
+                series=SERIES,
+                config=failover_orchestrator_conf,
+            ),
+            ops_test.model.deploy(
+                my_charm,
+                application_name=APP_NAME,
+                num_units=1,
+                series=SERIES,
+                config=data_hot_conf,
+            ),
+        )
 
-    # Large deployment setup
-    await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
-    await ops_test.model.integrate("main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
-    await ops_test.model.integrate(
-        "failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
-    )
+        # Large deployment setup
+        await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
+        await ops_test.model.integrate(
+            "main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
+        )
+        await ops_test.model.integrate(
+            "failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
+        )
 
-    # TLS setup
-    await ops_test.model.integrate("main", TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.integrate("failover", TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+        # TLS setup
+        await ops_test.model.integrate("main", TLS_CERTIFICATES_APP_NAME)
+        await ops_test.model.integrate("failover", TLS_CERTIFICATES_APP_NAME)
+        await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
-    # Charms except s3-integrator should be active
-    await wait_until(
-        ops_test,
-        apps=[TLS_CERTIFICATES_APP_NAME, "main", "failover", APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units={
-            TLS_CERTIFICATES_APP_NAME: 1,
-            "main": 3,
-            "failover": 2,
-            APP_NAME: 1,
-        },
-        idle_period=IDLE_PERIOD,
-        timeout=3600,
-    )
+        # Charms except s3-integrator should be active
+        await wait_until(
+            ops_test,
+            apps=[TLS_CERTIFICATES_APP_NAME, "main", "failover", APP_NAME],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units={
+                TLS_CERTIFICATES_APP_NAME: 1,
+                "main": 1,
+                "failover": 2,
+                APP_NAME: 1,
+            },
+            idle_period=IDLE_PERIOD,
+            timeout=3600,
+        )
 
-    # Credentials not set yet, this will move the opensearch to blocked state
-    # Credentials are set per test scenario
-    await ops_test.model.integrate("main", S3_INTEGRATOR)
+        # Credentials not set yet, this will move the opensearch to blocked state
+        # Credentials are set per test scenario
+        await ops_test.model.integrate("main", S3_INTEGRATOR)
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
