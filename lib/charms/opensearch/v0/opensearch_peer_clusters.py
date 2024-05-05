@@ -313,7 +313,7 @@ class OpenSearchPeerClustersManager:
         ]
         if deployment_desc.state.message not in blocked_status_messages:
             for message in blocked_status_messages:
-                self._charm.status.clear(message)
+                self._charm.status.clear(message, app=True)
             return
 
         self._charm.app.status = BlockedStatus(deployment_desc.state.message)
