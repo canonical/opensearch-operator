@@ -132,6 +132,7 @@ class OpenSearchPeerClustersManager:
             config.cluster_name = data.cluster_name
             pending_directives.remove(Directive.INHERIT_CLUSTER_NAME)
 
+        pending_directives.append(Directive.SHOW_STATUS)
         new_deployment_desc = DeploymentDescription(
             config=config,
             pending_directives=pending_directives,
