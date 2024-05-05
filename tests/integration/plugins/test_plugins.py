@@ -384,7 +384,19 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
         await ops_test.model.applications[APP_NAME].set_config(
             {"plugin_opensearch_knn": str(knn_enabled)}
         )
-        await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=180)
+
+        # Wait to have the restart kicking in...
+        await asyncio.sleep(120)
+        await wait_until(
+            ops_test,
+            apps=[APP_NAME],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units={APP_NAME: 3},
+            timeout=3600,
+            idle_period=180,
+        )
+
         # Now use it to compare with the restart
         assert await is_each_unit_restarted(ops_test, APP_NAME, ts)
         assert await check_cluster_formation_successful(
