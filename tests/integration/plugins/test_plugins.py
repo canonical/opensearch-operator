@@ -4,6 +4,7 @@
 
 import asyncio
 import json
+import logging
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -39,6 +40,9 @@ from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 COS_APP_NAME = "grafana-agent"
 COS_RELATION_NAME = "cos-agent"
+
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.group(1)
