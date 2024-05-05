@@ -373,6 +373,8 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
 
     # Set the config to false, then to true
     for knn_enabled in [False, True]:
+        logger.info(f"KNN test starting with {knn_enabled}")
+
         # get current timestamp, to compare with restarts later
         ts = await get_application_unit_ids_start_time(ops_test, APP_NAME)
         await ops_test.model.applications[APP_NAME].set_config(
@@ -384,6 +386,8 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
         assert await check_cluster_formation_successful(
             ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=APP_NAME)
         ), "Restart happened but cluster did not start correctly"
+        logger.info("Restart finished and was successful")
+
         query = {
             "size": 2,
             "query": {"knn": {"target-field": {"vector": payload_list[0], "k": 2}}},
