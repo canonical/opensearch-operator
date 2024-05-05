@@ -346,8 +346,8 @@ async def test_large_deployment_build_and_deploy(
         units_statuses=["active"],
         wait_for_exact_units={
             TLS_CERTIFICATES_APP_NAME: 1,
-            "main": 3,
-            "failover": 2,
+            "main": 4,
+            "failover": 3,
             APP_NAME: 1,
         },
         idle_period=IDLE_PERIOD,
