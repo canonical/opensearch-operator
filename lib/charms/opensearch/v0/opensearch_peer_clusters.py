@@ -172,6 +172,7 @@ class OpenSearchPeerClustersManager:
                 deployment_state = DeploymentState(
                     value=State.BLOCKED_WAITING_FOR_RELATION, message=PClusterNoRelation
                 )
+
                 directives.append(Directive.SHOW_STATUS)
 
             directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
@@ -295,7 +296,9 @@ class OpenSearchPeerClustersManager:
         return True
 
     def apply_status_if_needed(
-        self, deployment_desc: Optional[DeploymentDescription] = None
+        self,
+        deployment_desc: Optional[DeploymentDescription] = None,
+        show_status_only_once: bool = True,
     ) -> None:
         """Resolve and applies corresponding status from the deployment state."""
         if not (deployment_desc := deployment_desc or self.deployment_desc()):
@@ -305,7 +308,8 @@ class OpenSearchPeerClustersManager:
             return
 
         # remove show_status directive which is applied below
-        self.clear_directive(Directive.SHOW_STATUS)
+        if show_status_only_once:
+            self.clear_directive(Directive.SHOW_STATUS)
 
         blocked_status_messages = [
             CMRoleRemovalForbidden,
