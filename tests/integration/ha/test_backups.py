@@ -322,7 +322,7 @@ async def test_large_deployment_build_and_deploy(
             config=failover_orchestrator_conf,
         ),
         ops_test.model.deploy(
-            my_charm, application_name=APP_NAME, num_units=1, series=SERIES, config=data_hot_conf
+            my_charm, application_name=APP_NAME, num_units=2, series=SERIES, config=data_hot_conf
         ),
     )
 
