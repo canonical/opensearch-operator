@@ -194,10 +194,10 @@ async def test_knn_enabled_disabled(ops_test):
             units_statuses=["active"],
             wait_for_exact_units={APP_NAME: 3},
             timeout=3600,
-            idle_period=180,
+            idle_period=IDLE_PERIOD,
         )
 
-        await asyncio.sleep(120)
+        # await asyncio.sleep(120)
 
         config = await ops_test.model.applications[APP_NAME].get_config()
         assert config["plugin_opensearch_knn"]["value"] is False
@@ -210,7 +210,7 @@ async def test_knn_enabled_disabled(ops_test):
             units_statuses=["active"],
             wait_for_exact_units={APP_NAME: 3},
             timeout=3600,
-            idle_period=180,
+            idle_period=IDLE_PERIOD,
         )
 
         config = await ops_test.model.applications[APP_NAME].get_config()
@@ -226,7 +226,7 @@ async def test_knn_enabled_disabled(ops_test):
             units_statuses=["active"],
             wait_for_exact_units={APP_NAME: 3},
             timeout=3600,
-            idle_period=180,
+            idle_period=IDLE_PERIOD,
         )
 
 
@@ -386,7 +386,7 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
         )
 
         # Wait to have the restart kicking in...
-        await asyncio.sleep(120)
+        await asyncio.sleep(180)
         await wait_until(
             ops_test,
             apps=[APP_NAME],
@@ -394,7 +394,7 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
             units_statuses=["active"],
             wait_for_exact_units={APP_NAME: 3},
             timeout=3600,
-            idle_period=180,
+            idle_period=IDLE_PERIOD,
         )
 
         # Now use it to compare with the restart
