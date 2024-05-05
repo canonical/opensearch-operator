@@ -127,6 +127,8 @@ class OpenSearchPeerClustersManager:
             config.cluster_name = data.cluster_name
             pending_directives.remove(Directive.INHERIT_CLUSTER_NAME)
 
+        pending_directives.append(Directive.SHOW_STATUS)
+
         new_deployment_desc = DeploymentDescription(
             config=config,
             pending_directives=pending_directives,
@@ -162,6 +164,7 @@ class OpenSearchPeerClustersManager:
                 deployment_state = DeploymentState(
                     value=State.BLOCKED_WAITING_FOR_RELATION, message=PClusterNoRelation
                 )
+
                 directives.append(Directive.SHOW_STATUS)
 
             directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
