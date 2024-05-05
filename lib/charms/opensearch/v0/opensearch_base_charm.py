@@ -375,7 +375,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return True
 
         if self.unit.is_leader():
-            self.opensearch_peer_cm.apply_status_if_needed(deployment_desc)
+            self.opensearch_peer_cm.apply_status_if_needed(
+                deployment_desc, show_status_only_once=False
+            )
 
         return False
 

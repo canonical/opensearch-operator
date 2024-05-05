@@ -127,8 +127,6 @@ class OpenSearchPeerClustersManager:
             config.cluster_name = data.cluster_name
             pending_directives.remove(Directive.INHERIT_CLUSTER_NAME)
 
-        pending_directives.append(Directive.SHOW_STATUS)
-
         new_deployment_desc = DeploymentDescription(
             config=config,
             pending_directives=pending_directives,
@@ -288,7 +286,9 @@ class OpenSearchPeerClustersManager:
         return True
 
     def apply_status_if_needed(
-        self, deployment_desc: Optional[DeploymentDescription] = None
+        self,
+        deployment_desc: Optional[DeploymentDescription] = None,
+        show_status_only_once: bool = True,
     ) -> None:
         """Resolve and applies corresponding status from the deployment state."""
         if not (deployment_desc := deployment_desc or self.deployment_desc()):
@@ -298,7 +298,8 @@ class OpenSearchPeerClustersManager:
             return
 
         # remove show_status directive which is applied below
-        self.clear_directive(Directive.SHOW_STATUS)
+        if show_status_only_once:
+            self.clear_directive(Directive.SHOW_STATUS)
 
         blocked_status_messages = [
             CMRoleRemovalForbidden,
