@@ -104,6 +104,11 @@ class OpenSearchPeerClustersManager:
     ) -> None:
         """Update current peer cluster related config based on peer_cluster rel_data."""
         current_deployment_desc = self.deployment_desc()
+        logger.debug(
+            f"\n\n\n{self._charm.unit_name}\nrun_with_relation_data: "
+            f"deployment_desc LOCALLY Fetched: {current_deployment_desc.to_dict()}\n\n\n"
+            f"\n\tdata {data.to_dict()}\n\n\n"
+        )
 
         config = current_deployment_desc.config
         deployment_state = current_deployment_desc.state
@@ -138,6 +143,13 @@ class OpenSearchPeerClustersManager:
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", new_deployment_desc.to_dict()
         )
+
+        logger.debug(
+            f"\n\n\n{self._charm.unit_name}\nrun_with_relation_data: "
+            f"NEW deployment_desc: {new_deployment_desc.to_dict()}^=\napply_status_if_needed...\n\n\n"
+        )
+
+        self.apply_status_if_needed(new_deployment_desc)
 
     def _user_config(self):
         """Build a user provided config object."""

@@ -458,7 +458,20 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Event received when a new main-failover cluster unit joins the fleet."""
-        pass
+        if not self.charm.unit.is_leader():
+            return
+
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            logger.debug(
+                f"\n\n\n{self.charm.unit_name}\n_on_peer_cluster_relation_joined: "
+                f"{event.relation.id}\n\tdeployment_desc: not ready\n\n\n"
+            )
+            return
+
+        logger.debug(
+            f"\n\n\n{self.charm.unit_name}\n_on_peer_cluster_relation_joined: "
+            f"{event.relation.id}\n\tdeployment_desc: {deployment_desc.to_dict()}"
+        )
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
         """Peer cluster relation change hook. Crucial to capture changes from the provider side."""
@@ -471,9 +484,17 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # check if current cluster ready
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             event.defer()
+            logger.debug(
+                f"\n\n\n{self.charm.unit_name}\n_on_peer_cluster_relation_changed: "
+                f"{event.relation.id}\n\tLeaving because deployment_desc: not ready"
+            )
             return
 
         if not (data := event.relation.data.get(event.app)):
+            logger.debug(
+                f"\n\n\n{self.charm.unit_name}\n_on_peer_cluster_relation_changed: "
+                f"{event.relation.id}\n\tLeaving because data: not ready"
+            )
             return
 
         # fetch main and failover clusters relations ids if any
@@ -481,6 +502,11 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # check errors sent by providers
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
+            logger.debug(
+                f"\n\n\n{self.charm.unit_name}\n_on_peer_cluster_relation_changed: "
+                f"{event.relation.id}\n\tdeployment_desc: {deployment_desc.to_dict()}\n\n\n"
+                f"\n\tLeaving because error set from provider: \n\n\n"
+            )
             return
 
         # fetch the success data
@@ -488,6 +514,11 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
+            logger.debug(
+                f"\n\n\n{self.charm.unit_name}\n_on_peer_cluster_relation_changed: "
+                f"{event.relation.id}\n\tdeployment_desc: {deployment_desc.to_dict()}\n\n\n"
+                f"\n\tLeaving because error set from requirer\n\n\n"
+            )
             return
 
         # this means it's a previous "main orchestrator" that was unrelated then re-related
@@ -511,10 +542,21 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # check if there are any security misconfigurations / violations
         if self._error_set_from_tls(data):
             event.defer()
+            logger.debug(
+                f"\n\n\n{self.charm.unit_name}\n_on_peer_cluster_relation_changed: "
+                f"{event.relation.id}\n\tdeployment_desc: {deployment_desc.to_dict()}\n\n\n"
+                f"\n\tLeaving because error set from TLS\n\n\n"
+            )
             return
 
         # aggregate all CMs (main + failover if any)
         data.cm_nodes = self._cm_nodes(orchestrators)
+
+        logger.debug(
+            f"\n\n\n{self.charm.unit_name}\n_on_peer_cluster_relation_changed: "
+            f"{event.relation.id}\n\tdeployment_desc: {deployment_desc.to_dict()}\n\n\n"
+            f"\n\trun_with_relation_data with data {data.to_dict()}\n\n\n"
+        )
 
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
@@ -832,6 +874,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             WaitingStatus(err_message) if error.should_wait else BlockedStatus(err_message),
             app=True,
         )
+
+        logger.debug(f"\n{self.charm.unit_name}\n- _set_error: {label} -- {err_message}")
 
         # we should keep track of set messages for targeted deletion later
         self.charm.peers_data.put(Scope.APP, label, err_message)
