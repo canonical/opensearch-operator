@@ -139,6 +139,8 @@ class OpenSearchPeerClustersManager:
             Scope.APP, "deployment-description", new_deployment_desc.to_dict()
         )
 
+        self.apply_status_if_needed(new_deployment_desc)
+
     def _user_config(self):
         """Build a user provided config object."""
         return PeerClusterConfig(
