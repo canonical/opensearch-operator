@@ -310,7 +310,7 @@ async def test_large_deployment_build_and_deploy(
         ops_test.model.deploy(
             my_charm,
             application_name="main",
-            num_units=1,
+            num_units=2,
             series=SERIES,
             config=main_orchestrator_conf,
         ),
@@ -346,7 +346,7 @@ async def test_large_deployment_build_and_deploy(
         units_statuses=["active"],
         wait_for_exact_units={
             TLS_CERTIFICATES_APP_NAME: 1,
-            "main": 1,
+            "main": 2,
             "failover": 1,
             APP_NAME: 1,
         },
