@@ -270,7 +270,6 @@ async def test_small_deployment_build_and_deploy(
     await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -360,7 +359,6 @@ async def test_large_deployment_build_and_deploy(
     await ops_test.model.integrate("main", S3_INTEGRATOR)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_large_setups_relations_with_misconfiguration(
