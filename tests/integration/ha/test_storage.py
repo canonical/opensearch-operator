@@ -91,7 +91,7 @@ async def test_storage_reuse_after_scale_down(
     subprocess.run(create_testfile_cmd, shell=True)
 
     # scale-down to 1
-    await ops_test.model.applications[app].units[unit_id].remove(force=True)
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
     await ops_test.model.wait_for_idle(
         # app status will not be active because after scaling down not all shards are assigned
         apps=[app],
@@ -149,6 +149,8 @@ async def test_storage_reuse_after_scale_to_zero(
     for unit_id in unit_ids:
         storage_ids[unit_id] = storage_id(ops_test, app, unit_id)
         await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
+        # give some time for removing each unit
+        time.sleep(60)
 
     await ops_test.model.wait_for_idle(
         # app status will not be active because after scaling down not all shards are assigned
