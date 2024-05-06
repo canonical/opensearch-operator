@@ -140,7 +140,7 @@ async def test_manually_upgrade_to_local(ops_test: OpsTest) -> None:
         async with ops_test.fast_forward():
             logger.info("Refresh the charm")
             application = ops_test.model.applications[app]
-            units = await get_application_units(ops_test, OPENSEARCH_MAIN_APP_NAME)
+            units = await get_application_units(ops_test, app)
             leader_id = [u.id for u in units if u.is_leader][0]
 
             await application.refresh(path=charm)
