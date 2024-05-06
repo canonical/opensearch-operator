@@ -296,7 +296,7 @@ class Upgrade(abc.ABC):
                 len([node for node in online_nodes if node.app_name == self._charm.app.name])
                 != self._charm.app.planned_units()
             ):
-                raise PrecheckFailed("Not all units are online for this juju application")
+                raise PrecheckFailed("Not all units are online (for this app)")
 
             if self.check_if_starting():
                 raise PrecheckFailed("Cluster is starting")
