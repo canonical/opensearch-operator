@@ -246,8 +246,23 @@ async def test_small_deployment_build_and_deploy(
     if await app_name(ops_test):
         return
 
+    subprocess.run("juju model-defaults --reset http-proxy,https-proxy,no-proxy".split())
+
+    logger.info(f"Current NO_PROXY={os.environ['NO_PROXY']}")
+    no_proxy = "localhost,127.0.0.0/8,::1"
+    if (no_proxy := os.environ['NO_PROXY']):
+        no_proxy = f"localhost,127.0.0.0/8,::1,{os.environ['NO_PROXY']}"
+
+    extra_model_config = {}
+    if os.environ["HTTP_PROXY"] or os.environ["HTTPS_PROXY"]:
+        extra_model_config = {
+            "juju-http-proxy": os.environ["HTTP_PROXY"],
+            "juju-https-proxy": os.environ["HTTPS_PROXY"],
+            "juju-no-proxy": os.environ["NO_PROXY"],
+        }
+
     my_charm = await ops_test.build_charm(".")
-    await ops_test.model.set_config(MODEL_CONFIG)
+    await ops_test.model.set_config(MODEL_CONFIG | extra_model_config)
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
 
