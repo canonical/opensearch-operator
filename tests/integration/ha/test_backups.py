@@ -300,7 +300,7 @@ async def test_large_deployment_build_and_deploy(
         extra_model_config = {
             "juju-http-proxy": os.environ["HTTP_PROXY"],
             "juju-https-proxy": os.environ["HTTPS_PROXY"],
-            "juju-no-proxy": os.environ["NO_PROXY"],
+            "juju-no-proxy": no_proxy,
         }
 
     await ops_test.model.set_config(MODEL_CONFIG | extra_model_config)
