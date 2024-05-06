@@ -571,7 +571,7 @@ async def list_backups(ops_test: OpsTest, leader_id: int, app: str = APP_NAME) -
 
 
 async def assert_restore_indices_and_compare_consistency(
-    ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: int
+    ops_test: OpsTest, app: str, leader_id: int, unit_ip: str, backup_id: str
 ) -> None:
     """Ensures that continuous writes index has at least the value below."""
     original_count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
