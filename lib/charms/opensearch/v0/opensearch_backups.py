@@ -327,7 +327,13 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         try:
             indices_status = self.charm.opensearch.request("GET", "/_recovery?human") or {}
         except OpenSearchHttpError:
-            return False
+            # Defaults to True if we have a failure, to avoid any actions due to
+            # intermittent connection issues.
+            logger.warning(
+                "_is_restore_in_progress: failed to get indices status"
+                " - assuming restore is in progress"
+            )
+            return True
 
         for info in indices_status.values():
             # Now, check the status of each shard
@@ -347,7 +353,13 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             # Simpler check, as we are not interested if a backup is in progress only
             return BackupServiceState.SNAPSHOT_IN_PROGRESS in str(output)
         except OpenSearchHttpError:
-            return False
+            # Defaults to True if we have a failure, to avoid any actions due to
+            # intermittent connection issues.
+            logger.warning(
+                "is_backup_in_progress: failed to get snapshots status"
+                " - assuming backup is in progress"
+            )
+            return True
 
 
 class OpenSearchBackup(OpenSearchBackupBase):
