@@ -197,8 +197,6 @@ async def test_knn_enabled_disabled(ops_test):
             idle_period=IDLE_PERIOD,
         )
 
-        # await asyncio.sleep(120)
-
         config = await ops_test.model.applications[APP_NAME].get_config()
         assert config["plugin_opensearch_knn"]["value"] is False
 
@@ -215,9 +213,6 @@ async def test_knn_enabled_disabled(ops_test):
 
         config = await ops_test.model.applications[APP_NAME].get_config()
         assert config["plugin_opensearch_knn"]["value"] is True
-
-        # Wait 5 minutes to have the restart really kicking in...
-        await asyncio.sleep(300)
 
         await wait_until(
             ops_test,
@@ -385,8 +380,6 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
             {"plugin_opensearch_knn": str(knn_enabled)}
         )
 
-        # Wait to have the restart kicking in...
-        await asyncio.sleep(180)
         await wait_until(
             ops_test,
             apps=[APP_NAME],
