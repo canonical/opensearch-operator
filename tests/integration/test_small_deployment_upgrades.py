@@ -7,7 +7,6 @@ import subprocess
 
 import pytest
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from .ha.continuous_writes import ContinuousWrites
 from .ha.helpers import app_name, assert_continuous_writes_consistency
