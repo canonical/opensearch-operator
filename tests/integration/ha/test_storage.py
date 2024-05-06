@@ -186,7 +186,6 @@ async def test_storage_reuse_after_scale_to_zero(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.skip(reason="This test does not work currently, need to clarify the functionality.")
 async def test_storage_reuse_in_new_cluster_after_app_removal(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
 ):
@@ -222,7 +221,11 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
         storage_ids.append(storage_id(ops_test, app, unit_id))
 
     # remove application
-    await ops_test.model.applications[app].destroy(force=True, no_wait=True)
+    for machine in ops_test.model.state.machines.values():
+        # Needed due to canonical/opensearch-operator#243
+        await machine.destroy(force=True)
+
+    await ops_test.model.remove_application(app, block_until_done=True)
 
     # wait a bit until all app deleted
     time.sleep(60)
