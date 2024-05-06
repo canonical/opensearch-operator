@@ -175,21 +175,20 @@ async def test_upgrade_to_local(
             wait_for_exact_units={
                 APP_NAME: 3,
             },
-            idle_period=IDLE_PERIOD,
+            idle_period=120,
         )
 
         logger.info("Upgrade finished")
-        # Wait for the upgrade to converge and update its own state
-        for attempt in Retrying(stop=stop_after_delay(3 * 60), wait=wait_fixed(30)):
-            with attempt:
-                # Resume the upgrade
-                action = await run_action(
-                    ops_test,
-                    leader_id,
-                    "resume-upgrade",
-                    app=app,
-                )
-                assert action.status == "completed"
+        logger.info(subprocess.check_output("juju status".split()))
+        # Resume the upgrade
+        action = await run_action(
+            ops_test,
+            leader_id,
+            "resume-upgrade",
+            app=app,
+        )
+        logger.info(action)
+        assert action.status == "completed"
 
         logger.info("Refresh is over, waiting for the charm to settle")
         await wait_until(
