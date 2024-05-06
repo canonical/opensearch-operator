@@ -282,8 +282,8 @@ class Upgrade(abc.ABC):
                 hosts=self._charm.alt_hosts,
             )
             if (
-                not self._charm.is_every_unit_marked_as_started() or
-                len([node for node in online_nodes if node.app_name == self._charm.app.name])
+                not self._charm.is_every_unit_marked_as_started()
+                or len([node for node in online_nodes if node.app_name == self._charm.app.name])
                 != self._charm.app.planned_units()
             ):
                 raise PrecheckFailed("Not all units are online (for this app)")
