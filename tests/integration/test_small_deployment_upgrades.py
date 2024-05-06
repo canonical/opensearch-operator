@@ -79,7 +79,7 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
 async def test_upgrade_rollback(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
-    """Test upgrade from usptream to currently locally built version."""
+    """Test upgrade from upstream to currently locally built version."""
     app = (await app_name(ops_test)) or APP_NAME
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
