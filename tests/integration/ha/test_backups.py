@@ -292,7 +292,7 @@ async def test_large_deployment_build_and_deploy(
 
     logger.info(f"Current NO_PROXY={os.environ['NO_PROXY']}")
     no_proxy = "localhost,127.0.0.0/8,::1"
-    if (no_proxy := os.environ['NO_PROXY']):
+    if no_proxy := os.environ['NO_PROXY']:
         no_proxy = f"localhost,127.0.0.0/8,::1,{os.environ['NO_PROXY']}"
 
     extra_model_config = {}
