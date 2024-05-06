@@ -283,9 +283,7 @@ class Upgrade(abc.ABC):
                 wait_for_green_first=True,
             )
             if health != HealthColors.GREEN:
-                raise PrecheckFailed(
-                    f"Cluster health is {health} instead of green"
-                )
+                raise PrecheckFailed(f"Cluster health is {health} instead of green")
 
             online_nodes = ClusterTopology.nodes(
                 self._charm.opensearch,
