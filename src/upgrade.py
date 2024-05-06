@@ -288,9 +288,6 @@ class Upgrade(abc.ABC):
             ):
                 raise PrecheckFailed("Not all units are online (for this app)")
 
-            if self.check_if_starting():
-                raise PrecheckFailed("Cluster is starting")
-
             if not self._charm.backup.is_idle_or_not_set():
                 raise PrecheckFailed("Backup or restore is in progress")
 
