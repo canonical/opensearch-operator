@@ -17,7 +17,6 @@ import typing
 
 import ops
 import poetry.core.constraints.version as poetry_version
-from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
