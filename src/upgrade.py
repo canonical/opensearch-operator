@@ -284,7 +284,7 @@ class Upgrade(abc.ABC):
             )
             if health != HealthColors.GREEN:
                 raise PrecheckFailed(
-                    f"Cluster not healthy: expected 'green', but '{health}' found instead"
+                    f"Cluster health is {health} instead of green"
                 )
 
             online_nodes = ClusterTopology.nodes(
