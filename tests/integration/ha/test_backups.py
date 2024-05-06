@@ -270,6 +270,7 @@ async def test_small_deployment_build_and_deploy(
     await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -325,7 +326,7 @@ async def test_large_deployment_build_and_deploy(
             ops_test.model.deploy(
                 my_charm,
                 application_name=APP_NAME,
-                num_units=2,
+                num_units=3,
                 series=SERIES,
                 config=data_hot_conf,
             ),
@@ -355,7 +356,7 @@ async def test_large_deployment_build_and_deploy(
                 TLS_CERTIFICATES_APP_NAME: 1,
                 "main": 1,
                 "failover": 2,
-                APP_NAME: 2,
+                APP_NAME: 3,
             },
             idle_period=IDLE_PERIOD,
             timeout=3600,
@@ -366,6 +367,7 @@ async def test_large_deployment_build_and_deploy(
         await ops_test.model.integrate("main", S3_INTEGRATOR)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_large_setups_relations_with_misconfiguration(
