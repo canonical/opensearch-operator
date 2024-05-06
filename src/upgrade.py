@@ -247,14 +247,6 @@ class Upgrade(abc.ABC):
         Only applies to machine charm
         """
 
-    def check_if_starting(self) -> bool:
-        """Check if the service is starting."""
-        rel = self._charm.model.get_relation(PeerRelationName)
-        for unit in rel.units.union({self._charm.unit}):
-            if rel.data[unit].get("started", "false").lower() != "true":
-                return True
-        return False
-
     def pre_upgrade_check(self) -> None:
         """Check if this app is ready to upgrade
 
@@ -291,6 +283,7 @@ class Upgrade(abc.ABC):
                 hosts=self._charm.alt_hosts,
             )
             if (
+                not self._charm.is_every_unit_marked_as_started() or
                 len([node for node in online_nodes if node.app_name == self._charm.app.name])
                 != self._charm.app.planned_units()
             ):
