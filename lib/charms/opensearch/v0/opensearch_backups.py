@@ -432,20 +432,74 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
 
     def _on_s3_relation_event(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
-        self.charm.status.set(BlockedStatus(S3RelShouldNotExist), app=True)
+        if self.charm.unit.is_leader():
+            self.charm.status.set(BlockedStatus(S3RelShouldNotExist), app=True)
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
         return
 
     def _on_s3_relation_broken(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
         self.charm.status.clear(S3RelMissing)
-        self.charm.status.clear(S3RelShouldNotExist, app=True)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(S3RelShouldNotExist, app=True)
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
         return
 
     def _on_s3_relation_action(self, event: EventBase) -> None:
         """Deployment description available, non-orchestrator, fail any actions."""
         event.fail("Failed: execute the action on the orchestrator cluster instead.")
+
+    def is_idle_or_not_set(self) -> bool:
+        """Checks if the backup system is idle or not yet configured.
+
+        "idle": configured but there are no backups nor restores in progress.
+        "not_set": set by the children classes
+        """
+        return not (self.is_backup_in_progress() or self._is_restore_in_progress())
+
+    def _is_restore_in_progress(self) -> bool:
+        """Checks if the restore is currently in progress.
+
+        Two options:
+         1) no restore requested: return False
+         2) check for each index shard: for all type=SNAPSHOT and stage=DONE, return False.
+        """
+        try:
+            indices_status = self.charm.opensearch.request("GET", "/_recovery?human") or {}
+        except OpenSearchHttpError:
+            # Defaults to True if we have a failure, to avoid any actions due to
+            # intermittent connection issues.
+            logger.warning(
+                "_is_restore_in_progress: failed to get indices status"
+                " - assuming restore is in progress"
+            )
+            return True
+
+        for info in indices_status.values():
+            # Now, check the status of each shard
+            for shard in info["shards"]:
+                if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
+                    return True
+        return False
+
+    def is_backup_in_progress(self) -> bool:
+        """Returns True if backup is in progress, False otherwise.
+
+        We filter the _query_backup_status() and seek for the following states:
+        - SNAPSHOT_IN_PROGRESS
+        """
+        try:
+            output = self.charm.opensearch.request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
+            # Simpler check, as we are not interested if a backup is in progress only
+            return BackupServiceState.SNAPSHOT_IN_PROGRESS in str(output)
+        except OpenSearchHttpError:
+            # Defaults to True if we have a failure, to avoid any actions due to
+            # intermittent connection issues.
+            logger.warning(
+                "is_backup_in_progress: failed to get snapshots status"
+                " - assuming backup is in progress"
+            )
+            return True
 
 
 class OpenSearchBackup(OpenSearchBackupBase):
@@ -859,10 +913,12 @@ class OpenSearchBackup(OpenSearchBackupBase):
         #     (3) based on the response, set the message status
         if state != BackupServiceState.SUCCESS:
             logger.error(f"Failed to setup backup service with state {state}")
-            self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
             self.charm.status.clear(BackupConfigureStart)
             return
-        self.charm.status.clear(BackupSetupFailed, app=True)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupSetupFailed, app=True)
         self.charm.status.clear(BackupConfigureStart)
 
     def _on_s3_created(self, _):
