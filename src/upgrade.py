@@ -284,9 +284,9 @@ class Upgrade(abc.ABC):
             if (
                 not self._charm.is_every_unit_marked_as_started()
                 or len([node for node in online_nodes if node.app_name == self._charm.app.name])
-                != self._charm.app.planned_units()
+                < self._charm.app.planned_units()
             ):
-                raise PrecheckFailed("Not all units are online (for this app)")
+                raise PrecheckFailed("Not all units are online for the current app.")
 
             if not self._charm.backup.is_idle_or_not_set():
                 raise PrecheckFailed("Backup or restore is in progress")
