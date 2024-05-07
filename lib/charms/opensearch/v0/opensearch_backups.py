@@ -1076,6 +1076,8 @@ class OpenSearchBackup(OpenSearchBackupBase):
         self, response: dict[str, Any] | None
     ) -> BackupServiceState:
         """Returns the response status in a Enum."""
+        if (status := super().get_service_status(response)) == BackupServiceState.SUCCESS:
+            return BackupServiceState.SUCCESS
         if (
             "bucket" in self.s3_client.get_s3_connection_info()
             and S3_REPOSITORY in response
@@ -1084,7 +1086,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             == response[S3_REPOSITORY]["settings"]["bucket"]
         ):
             return BackupServiceState.REPO_NOT_CREATED_ALREADY_EXISTS
-        return super().get_service_status(response)
+        return status
 
 
 def backup(charm: CharmBase) -> OpenSearchBackupBase:
