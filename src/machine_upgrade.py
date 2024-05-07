@@ -108,7 +108,7 @@ class Upgrade(upgrade.Upgrade):
                 self._unit_workload_container_versions.get(unit.name)
                 != self._app_workload_container_version
             )
-            unhealthy = state is not upgrade.UnitState.HEALTHY
+            unhealthy = state not in [upgrade.UnitState.HEALTHY, upgrade.UnitState.UPGRADING]
             if outdated or unhealthy:
                 if outdated:
                     message = "Highest number unit has not upgraded yet. Upgrade will not resume."

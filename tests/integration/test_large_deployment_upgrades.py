@@ -145,6 +145,7 @@ async def test_manually_upgrade_to_local(ops_test: OpsTest) -> None:
             leader_id = [u.id for u in units if u.is_leader][0]
 
             await application.refresh(path=charm)
+            logger.info("Refresh is over, waiting for the charm to settle")
 
             await wait_until(
                 ops_test,
@@ -155,9 +156,8 @@ async def test_manually_upgrade_to_local(ops_test: OpsTest) -> None:
                     app: unit_count,
                 },
                 idle_period=120,
+                timeout=3600,
             )
-
-            logger.info("Upgrade finished")
             # Resume the upgrade
             action = await run_action(
                 ops_test,
@@ -166,12 +166,13 @@ async def test_manually_upgrade_to_local(ops_test: OpsTest) -> None:
                 app=app,
             )
             assert action.status == "completed"
+            logger.info("Upgrade finished")
 
-        logger.info("Refresh is over, waiting for the charm to settle")
         await wait_until(
             ops_test,
             apps=[app],
             apps_statuses=["active"],
             units_statuses=["active"],
             idle_period=IDLE_PERIOD,
+            timeout=3600,
         )

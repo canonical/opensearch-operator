@@ -482,25 +482,6 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
                     return True
         return False
 
-    def is_backup_in_progress(self) -> bool:
-        """Returns True if backup is in progress, False otherwise.
-
-        We filter the _query_backup_status() and seek for the following states:
-        - SNAPSHOT_IN_PROGRESS
-        """
-        try:
-            output = self.charm.opensearch.request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
-            # Simpler check, as we are not interested if a backup is in progress only
-            return BackupServiceState.SNAPSHOT_IN_PROGRESS in str(output)
-        except OpenSearchHttpError:
-            # Defaults to True if we have a failure, to avoid any actions due to
-            # intermittent connection issues.
-            logger.warning(
-                "is_backup_in_progress: failed to get snapshots status"
-                " - assuming backup is in progress"
-            )
-            return True
-
 
 class OpenSearchBackup(OpenSearchBackupBase):
     """Implements backup relation and API management."""
