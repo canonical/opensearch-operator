@@ -170,7 +170,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
     ), "Unit did NOT join the rest of the cluster."
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.group(1)
@@ -288,7 +288,7 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     ), "Unit did NOT join the rest of the cluster."
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.group(1)
@@ -376,7 +376,7 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
     ), "Unit did NOT join the rest of the cluster."
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.group(1)
@@ -479,4 +479,4 @@ async def test_full_network_cut_without_ip_change_node_with_primary_shard(
     ), "Unit did NOT join the rest of the cluster."
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])

@@ -114,7 +114,7 @@ async def test_horizontal_scale_up(
     )
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
@@ -225,7 +225,7 @@ async def test_safe_scale_down_shards_realloc(
     await delete_dummy_indexes(ops_test, app, leader_unit_ip)
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
@@ -335,4 +335,4 @@ async def test_safe_scale_down_remove_leaders(
     assert new_writes > writes
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])

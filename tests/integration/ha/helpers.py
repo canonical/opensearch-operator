@@ -46,12 +46,13 @@ logger = logging.getLogger(__name__)
 class Shard:
     """Class for holding a shard."""
 
-    def __init__(self, index: str, num: int, is_prim: bool, node_id: str, unit_id: int):
+    def __init__(self, index: str, num: int, is_prim: bool, node_id: str, unit_id: int, app: str):
         self.index = index
         self.num = num
         self.is_prim = is_prim
         self.node_id = node_id
         self.unit_id = unit_id
+        self.app = app
 
 
 async def app_name(ops_test: OpsTest) -> Optional[str]:
@@ -155,14 +156,15 @@ async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) 
     result = []
     for shards_collection in response["shards"]:
         for shard in shards_collection:
-            unit_id = int(nodes[shard["node"]]["name"].split("-")[1])
+            node_name_split = nodes[shard["node"]]["name"].split("-")
             result.append(
                 Shard(
                     index=index_name,
                     num=shard["shard"],
                     is_prim=shard["primary"],
                     node_id=shard["node"],
-                    unit_id=unit_id,
+                    unit_id=int(node_name_split[-1]),
+                    app="-".join(node_name_split[:-1]),
                 )
             )
 
@@ -236,7 +238,7 @@ async def assert_continuous_writes_increasing(
 
 
 async def assert_continuous_writes_consistency(
-    ops_test: OpsTest, c_writes: ContinuousWrites, app: str
+    ops_test: OpsTest, c_writes: ContinuousWrites, apps: List[str]
 ) -> None:
     """Continuous writes checks."""
     result = await c_writes.stop()
@@ -244,24 +246,26 @@ async def assert_continuous_writes_consistency(
     assert result.max_stored_id == result.count - 1
     assert result.max_stored_id == result.last_expected_id
 
-    # investigate the data in each shard, primaries and their respective replicas
-    units_ips = await get_application_unit_ids_ips(ops_test, app)
-    shards = await get_shards_by_index(
-        ops_test, list(units_ips.values())[0], ContinuousWrites.INDEX_NAME
-    )
+    unit_ip = await get_leader_unit_ip(ops_test, apps[0])
 
+    # fetch unit ips by unit id by application
+    apps_units_ips = {app: await get_application_unit_ids_ips(ops_test, app) for app in apps}
+
+    # investigate the data in each shard, primaries and their respective replicas
+    shards = await get_shards_by_index(ops_test, unit_ip, ContinuousWrites.INDEX_NAME)
     shards_by_id = {}
     for shard in shards:
         shards_by_id.setdefault(shard.num, []).append(shard)
 
-    # count data on each shard. For the continuous writes index, we have 2 primary shards
-    # and replica shards of each on all the nodes. In other words: prim1 and its replicas
-    # will have a different "num" than prim2 and its replicas.
+    # count data on each shard. For the **balanced** continuous writes index, we have 2
+    # primary shards and replica shards of each on all the nodes. In other words: prim1 and
+    # its replicas will have a different "num" than prim2 and its replicas.
     count_from_shards = 0
     for shard_num, shards_list in shards_by_id.items():
         count_by_shard = [
             await c_writes.count(
-                units_ips[shard.unit_id], preference=f"_shards:{shard_num}|_only_local"
+                unit_ip=apps_units_ips[shard.app][shard.unit_id],
+                preference=f"_shards:{shard_num}|_only_local",
             )
             for shard in shards_list
         ]
@@ -532,7 +536,7 @@ async def assert_start_and_check_continuous_writes(
     time.sleep(10)
     # Ensure we have writes happening and the index is consistent at the end
     await assert_continuous_writes_increasing(writer)
-    await assert_continuous_writes_consistency(ops_test, writer, app)
+    await assert_continuous_writes_consistency(ops_test, writer, [app])
     # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
     await writer.clear()
 

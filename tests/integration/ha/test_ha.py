@@ -113,7 +113,7 @@ async def test_replication_across_members(
     await delete_index(ops_test, app, leader_unit_ip, index_name)
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.group(1)
@@ -175,7 +175,7 @@ async def test_kill_db_process_node_with_primary_shard(
     )
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.group(1)
@@ -227,7 +227,7 @@ async def test_kill_db_process_node_with_elected_cm(
     )
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.group(1)
@@ -312,7 +312,7 @@ async def test_freeze_db_process_node_with_primary_shard(
     )
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.group(1)
@@ -386,7 +386,7 @@ async def test_freeze_db_process_node_with_elected_cm(
     )
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.group(1)
@@ -437,7 +437,7 @@ async def test_restart_db_process_node_with_elected_cm(
         ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
     )
 
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.group(1)
@@ -498,7 +498,7 @@ async def test_restart_db_process_node_with_primary_shard(
         ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=app)
     )
 
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.group(1)
@@ -550,7 +550,7 @@ async def test_full_cluster_crash(
     assert health_resp["status"] == "green", f"Cluster {health_resp['status']} - expected green."
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 @pytest.mark.group(1)
@@ -603,4 +603,4 @@ async def test_full_cluster_restart(
     assert health_resp["status"] == "green", f"Cluster {health_resp['status']} - expected green."
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])

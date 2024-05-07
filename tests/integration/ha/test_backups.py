@@ -60,6 +60,47 @@ from .helpers_data import index_docs_count
 
 logger = logging.getLogger(__name__)
 
+DEPLOY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            cloud_name,
+            deploy_type,
+            id=f"{cloud_name}-{deploy_type}",
+            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
+        )
+    )
+    for cloud_name in ["microceph", "aws"]
+    for deploy_type in ["large", "small"]
+]
+
+
+DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            cloud_name,
+            deploy_type,
+            id=f"{cloud_name}-{deploy_type}",
+            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
+        )
+    )
+    for cloud_name in ["microceph", "aws"]
+    for deploy_type in ["small"]
+]
+
+
+DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            cloud_name,
+            deploy_type,
+            id=f"{cloud_name}-{deploy_type}",
+            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
+        )
+    )
+    for cloud_name in ["microceph", "aws"]
+    for deploy_type in ["large"]
+]
+
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "latest/edge"
 TIMEOUT = 10 * 60
@@ -187,53 +228,6 @@ async def _configure_s3(
         status="active",
         timeout=TIMEOUT,
     )
-
-
-S3_INTEGRATOR = "s3-integrator"
-S3_INTEGRATOR_CHANNEL = "latest/edge"
-TIMEOUT = 10 * 60
-
-
-DEPLOY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            cloud_name,
-            deploy_type,
-            id=f"{cloud_name}-{deploy_type}",
-            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
-        )
-    )
-    for cloud_name in ["microceph", "aws"]
-    for deploy_type in ["large", "small"]
-]
-
-
-DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            cloud_name,
-            deploy_type,
-            id=f"{cloud_name}-{deploy_type}",
-            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
-        )
-    )
-    for cloud_name in ["microceph", "aws"]
-    for deploy_type in ["small"]
-]
-
-
-DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            cloud_name,
-            deploy_type,
-            id=f"{cloud_name}-{deploy_type}",
-            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
-        )
-    )
-    for cloud_name in ["microceph", "aws"]
-    for deploy_type in ["large"]
-]
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
@@ -475,7 +469,7 @@ async def test_create_backup_and_restore(
     )
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
     await assert_restore_indices_and_compare_consistency(
         ops_test, app, leader_id, unit_ip, backup_id
     )
@@ -545,7 +539,7 @@ async def test_remove_and_readd_s3_relation(
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
     await assert_restore_indices_and_compare_consistency(
         ops_test, app, leader_id, unit_ip, backup_id
     )
@@ -660,7 +654,7 @@ async def test_restore_to_new_cluster(
 
     # continuous writes checks
     await assert_continuous_writes_increasing(writer)
-    await assert_continuous_writes_consistency(ops_test, writer, app)
+    await assert_continuous_writes_consistency(ops_test, writer, [app])
     # This assert assures we have taken a new backup, after the last restore from the original
     # cluster. That means the index is writable.
     await assert_restore_indices_and_compare_consistency(
@@ -829,7 +823,7 @@ async def test_change_config_and_backup_restore(
 
         # continuous writes checks
         await assert_continuous_writes_increasing(writer)
-        await assert_continuous_writes_consistency(ops_test, writer, app)
+        await assert_continuous_writes_consistency(ops_test, writer, [app])
         await assert_restore_indices_and_compare_consistency(
             ops_test, app, leader_id, unit_ip, backup_id
         )
