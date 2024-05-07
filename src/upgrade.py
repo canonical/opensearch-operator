@@ -17,11 +17,15 @@ import typing
 
 import ops
 import poetry.core.constraints.version as poetry_version
+from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
+from charms.opensearch.v0.opensearch_health import HealthColors
 
 import status_exception
 
 logger = logging.getLogger(__name__)
+
 
 PEER_RELATION_ENDPOINT_NAME = "upgrade-version-a"
 PRECHECK_ACTION_NAME = "pre-upgrade-check"
@@ -66,6 +70,7 @@ class Upgrade(abc.ABC):
         if not relations:
             raise PeerRelationNotReady
         assert len(relations) == 1
+        self._charm = charm_
         self._peer_relation = relations[0]
         self._unit: ops.Unit = charm_.unit
         self._unit_databag = self._peer_relation.data[self._unit]
@@ -262,7 +267,29 @@ class Upgrade(abc.ABC):
         See https://chat.canonical.com/canonical/pl/cmf6uhm1rp8b7k8gkjkdsj4mya
         """
         logger.debug("Running pre-upgrade checks")
-        # TODO: implement checks
-        # e.g.
-        # if health != green:
-        #     raise PrecheckFailed("Cluster is not healthy")
+
+        try:
+            health = self._charm.health.get(
+                local_app_only=False,
+                wait_for_green_first=True,
+            )
+            if health != HealthColors.GREEN:
+                raise PrecheckFailed(f"Cluster health is {health} instead of green")
+
+            online_nodes = ClusterTopology.nodes(
+                self._charm.opensearch,
+                True,
+                hosts=self._charm.alt_hosts,
+            )
+            if (
+                not self._charm.is_every_unit_marked_as_started()
+                or len([node for node in online_nodes if node.app_name == self._charm.app.name])
+                < self._charm.app.planned_units()
+            ):
+                raise PrecheckFailed("Not all units are online for the current app.")
+
+            if not self._charm.backup.is_idle_or_not_set():
+                raise PrecheckFailed("Backup or restore is in progress")
+
+        except OpenSearchHttpError:
+            raise PrecheckFailed("Cluster is unreachable")

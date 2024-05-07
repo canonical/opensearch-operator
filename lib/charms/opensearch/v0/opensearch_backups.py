@@ -311,6 +311,58 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         """Deployment description available, non-orchestrator, fail any actions."""
         event.fail("Failed: execute the action on the orchestrator cluster instead.")
 
+    def is_idle_or_not_set(self) -> bool:
+        """Checks if the backup system is idle or not yet configured.
+
+        "idle": configured but there are no backups nor restores in progress.
+        "not_set": set by the children classes
+        """
+        return not (self.is_backup_in_progress() or self._is_restore_in_progress())
+
+    def _is_restore_in_progress(self) -> bool:
+        """Checks if the restore is currently in progress.
+
+        Two options:
+         1) no restore requested: return False
+         2) check for each index shard: for all type=SNAPSHOT and stage=DONE, return False.
+        """
+        try:
+            indices_status = self.charm.opensearch.request("GET", "/_recovery?human") or {}
+        except OpenSearchHttpError:
+            # Defaults to True if we have a failure, to avoid any actions due to
+            # intermittent connection issues.
+            logger.warning(
+                "_is_restore_in_progress: failed to get indices status"
+                " - assuming restore is in progress"
+            )
+            return True
+
+        for info in indices_status.values():
+            # Now, check the status of each shard
+            for shard in info["shards"]:
+                if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
+                    return True
+        return False
+
+    def is_backup_in_progress(self) -> bool:
+        """Returns True if backup is in progress, False otherwise.
+
+        We filter the _query_backup_status() and seek for the following states:
+        - SNAPSHOT_IN_PROGRESS
+        """
+        try:
+            output = self.charm.opensearch.request("GET", f"_snapshot/{S3_REPOSITORY}/_all")
+            # Simpler check, as we are not interested if a backup is in progress only
+            return BackupServiceState.SNAPSHOT_IN_PROGRESS in str(output)
+        except OpenSearchHttpError:
+            # Defaults to True if we have a failure, to avoid any actions due to
+            # intermittent connection issues.
+            logger.warning(
+                "is_backup_in_progress: failed to get snapshots status"
+                " - assuming backup is in progress"
+            )
+            return True
+
 
 class OpenSearchBackup(OpenSearchBackupBase):
     """Implements backup relation and API management."""
@@ -475,6 +527,36 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
         return output["snapshot"]
 
+    def is_idle_or_not_set(self) -> bool:
+        """Checks if the backup system is idle or not yet configured.
+
+        "idle": configured but there are no backups nor restores in progress.
+        "not_set": the `get_service_status` returns REPO_NOT_CREATED or REPO_MISSING.
+
+        Raises:
+            OpenSearchHttpError: cluster is unreachable
+        """
+        output = self._request("GET", f"_snapshot/{S3_REPOSITORY}")
+        return self.get_service_status(output) in [
+            BackupServiceState.REPO_NOT_CREATED,
+            BackupServiceState.REPO_MISSING,
+        ] or not (self.is_backup_in_progress() or self._is_restore_in_progress())
+
+    def _is_restore_in_progress(self) -> bool:
+        """Checks if the restore is currently in progress.
+
+        Two options:
+         1) no restore requested: return False
+         2) check for each index shard: for all type=SNAPSHOT and stage=DONE, return False.
+        """
+        indices_status = self._request("GET", "/_recovery?human") or {}
+        for info in indices_status.values():
+            # Now, check the status of each shard
+            for shard in info["shards"]:
+                if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
+                    return True
+        return False
+
     def _is_restore_complete(self) -> bool:
         """Checks if the restore is finished.
 
@@ -482,13 +564,9 @@ class OpenSearchBackup(OpenSearchBackupBase):
         """
         indices_status = self._request("GET", "/_recovery?human")
         if not indices_status:
+            # No restore has happened. Raise an exception
             raise OpenSearchRestoreCheckError("_is_restore_complete: failed to get indices status")
-        for info in indices_status.values():
-            # Now, check the status of each shard
-            for shard in info["shards"]:
-                if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
-                    return False
-        return True
+        return not self._is_restore_in_progress()
 
     def _is_backup_available_for_restore(self, backup_id: int) -> bool:
         """Checks if the backup_id exists and is ready for a restore."""

@@ -167,7 +167,6 @@ class ClusterTopology:
                         temperature=obj.get("attributes", {}).get("temp"),
                     )
                     nodes.append(node)
-
         return nodes
 
 
