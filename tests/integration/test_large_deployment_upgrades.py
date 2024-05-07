@@ -112,6 +112,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None
             APP_NAME: WORKLOAD[APP_NAME],
         },
         idle_period=IDLE_PERIOD,
+        timeout=3600,
     )
 
 
