@@ -447,6 +447,7 @@ async def test_create_backup_and_restore(
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
+    app_list = [app] if deploy_type == "small" else [app, APP_NAME]
     leader_id = await get_leader_unit_id(ops_test, app=app)
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
     config = cloud_configs[cloud_name]
@@ -469,7 +470,7 @@ async def test_create_backup_and_restore(
     )
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
-    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
+    await assert_continuous_writes_consistency(ops_test, c_writes, app_list)
     await assert_restore_indices_and_compare_consistency(
         ops_test, app, leader_id, unit_ip, backup_id
     )
@@ -495,6 +496,8 @@ async def test_remove_and_readd_s3_relation(
 ) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
+    app_list = [app] if deploy_type == "small" else [app, APP_NAME]
+
     leader_id: int = await get_leader_unit_id(ops_test, app=app)
     unit_ip: str = await get_leader_unit_ip(ops_test, app=app)
     config: Dict[str, str] = cloud_configs[cloud_name]
@@ -539,7 +542,7 @@ async def test_remove_and_readd_s3_relation(
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
-    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
+    await assert_continuous_writes_consistency(ops_test, c_writes, app_list)
     await assert_restore_indices_and_compare_consistency(
         ops_test, app, leader_id, unit_ip, backup_id
     )
