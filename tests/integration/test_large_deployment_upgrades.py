@@ -139,10 +139,11 @@ async def test_manually_upgrade_to_local(ops_test: OpsTest) -> None:
 
     for app, unit_count in WORKLOAD.items():
         async with ops_test.fast_forward():
-            logger.info("Refresh the charm")
             application = ops_test.model.applications[app]
             units = await get_application_units(ops_test, app)
             leader_id = [u.id for u in units if u.is_leader][0]
+
+            logger.info(f"Refresh app {app}, leader {leader_id}")
 
             await application.refresh(path=charm)
             logger.info("Refresh is over, waiting for the charm to settle")
@@ -166,13 +167,14 @@ async def test_manually_upgrade_to_local(ops_test: OpsTest) -> None:
                 app=app,
             )
             assert action.status == "completed"
-            logger.info("Upgrade finished")
+            logger.info(f"resume-upgrade: {action}")
 
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            idle_period=IDLE_PERIOD,
-            timeout=3600,
-        )
+            await wait_until(
+                ops_test,
+                apps=[app],
+                apps_statuses=["active"],
+                units_statuses=["active"],
+                idle_period=IDLE_PERIOD,
+                timeout=3600,
+            )
+            logger.info(f"Upgrade of app {app} finished")
