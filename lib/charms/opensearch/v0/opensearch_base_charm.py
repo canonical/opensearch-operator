@@ -982,7 +982,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.clear(WaitingToStart)
 
         if event.after_upgrade:
-            health = self._charm.health.get(local_app_only=False, wait_for_green_first=True)
+            health = self.health.get(local_app_only=False, wait_for_green_first=True)
             self.health.apply_for_unit_during_upgrade(health)
 
             # Cluster is considered healthy if green or yellow
