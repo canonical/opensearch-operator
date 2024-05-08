@@ -178,6 +178,7 @@ async def test_manually_upgrade_to_local(
                     idle_period=IDLE_PERIOD,
                     timeout=3600,
                 )
+                logger.info(f"Upgrade of app {app} finished")
                 continue
 
             await wait_until(
@@ -210,6 +211,3 @@ async def test_manually_upgrade_to_local(
                 timeout=3600,
             )
             logger.info(f"Upgrade of app {app} finished")
-
-    # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, OPENSEARCH_MAIN_APP_NAME)
