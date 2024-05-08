@@ -148,7 +148,7 @@ async def test_upgrade_to_local(
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
 
-    application = ops_test.model.applications[APP_NAME]
+    application = ops_test.model.applications[app]
     action = await run_action(
         ops_test,
         leader_id,
@@ -202,4 +202,4 @@ async def test_upgrade_to_local(
         )
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
