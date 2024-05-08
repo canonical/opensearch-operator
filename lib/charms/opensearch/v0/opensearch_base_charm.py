@@ -1029,8 +1029,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.health.apply()
 
         self._upgrade.unit_state = upgrade.UnitState.HEALTHY
+        logger.debug("Set upgrade unit state to healthy")
         self._reconcile_upgrade()
-        logger.info(f"_reconcile_upgrade returned and unit_state={self._upgrade.unit_state}")
 
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
