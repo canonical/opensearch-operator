@@ -449,14 +449,6 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         """Deployment description available, non-orchestrator, fail any actions."""
         event.fail("Failed: execute the action on the orchestrator cluster instead.")
 
-    def is_idle_or_not_set(self) -> bool:
-        """Checks if the backup system is idle or not yet configured.
-
-        "idle": configured but there are no backups nor restores in progress.
-        "not_set": set by the children classes
-        """
-        return not (self.is_backup_in_progress() or self._is_restore_in_progress())
-
     def _is_restore_in_progress(self) -> bool:
         """Checks if the restore is currently in progress.
 
