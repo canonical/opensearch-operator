@@ -109,9 +109,7 @@ class Upgrade(upgrade.Upgrade):
                 != self._app_workload_container_version
             )
             logger.info(f"reconcile_partition called, state={state}")
-            unhealthy = (
-                state is not upgrade.UnitState.HEALTHY
-            )  # not in [upgrade.UnitState.HEALTHY, upgrade.UnitState.UPGRADING]
+            unhealthy = state is not upgrade.UnitState.HEALTHY
             if outdated or unhealthy:
                 if outdated:
                     message = "Highest number unit has not upgraded yet. Upgrade will not resume."
@@ -182,10 +180,6 @@ class Upgrade(upgrade.Upgrade):
                 != self._app_workload_container_version
                 or state is not upgrade.UnitState.HEALTHY
             ):
-                #  or state not in [
-                # upgrade.UnitState.HEALTHY,
-                # upgrade.UnitState.UPGRADING,
-                # ]:
                 # Waiting for higher number units to upgrade
                 return False
         return False
