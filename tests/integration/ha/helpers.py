@@ -251,15 +251,11 @@ async def assert_continuous_writes_consistency(
     # fetch unit ips by unit id by application
     apps_units_ips = {app: await get_application_unit_ids_ips(ops_test, app) for app in apps}
 
-    logger.info(f"\n\n\napps_units_ips: {apps_units_ips}")
-
     # investigate the data in each shard, primaries and their respective replicas
     shards = await get_shards_by_index(ops_test, unit_ip, ContinuousWrites.INDEX_NAME)
     shards_by_id = {}
     for shard in shards:
         shards_by_id.setdefault(shard.num, []).append(shard)
-
-    logger.info(f"\n\n\napps_units_ips: {[vars(s) for s in shards]}")
 
     # count data on each shard. For the **balanced** continuous writes index, we have 2
     # primary shards and replica shards of each on all the nodes. In other words: prim1 and
