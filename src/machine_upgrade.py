@@ -176,7 +176,10 @@ class Upgrade(upgrade.Upgrade):
             if (
                 self._unit_workload_container_versions.get(unit.name)
                 != self._app_workload_container_version
-                or state not in [upgrade.UnitState.HEALTHY, upgrade.UnitState.UPGRADING]
+                or state not in [
+                    upgrade.UnitState.HEALTHY,
+                    upgrade.UnitState.UPGRADING,
+                ]
             ):
                 # Waiting for higher number units to upgrade
                 return False
