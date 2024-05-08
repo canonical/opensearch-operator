@@ -148,6 +148,18 @@ async def test_manually_upgrade_to_local(ops_test: OpsTest) -> None:
             await application.refresh(path=charm)
             logger.info("Refresh is over, waiting for the charm to settle")
 
+            if unit_count == 1:
+                # Upgrade already happened for this unit, wait for idle and continue
+                await wait_until(
+                    ops_test,
+                    apps=[app],
+                    apps_statuses=["active"],
+                    units_statuses=["active"],
+                    idle_period=IDLE_PERIOD,
+                    timeout=3600,
+                )
+                continue
+
             await wait_until(
                 ops_test,
                 apps=[app],
