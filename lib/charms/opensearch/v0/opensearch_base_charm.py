@@ -982,7 +982,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.clear(WaitingToStart)
 
         if event.after_upgrade:
-            health = self.health.apply(wait_for_green_first=True, app=False)
+            health = self._charm.health.get(local_app_only=False, wait_for_green_first=True)
             self.health.apply_for_unit_during_upgrade(health)
 
             # Cluster is considered healthy if green or yellow
@@ -1030,6 +1030,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self._upgrade.unit_state = upgrade.UnitState.HEALTHY
         self._reconcile_upgrade()
+        logger.info(f"_reconcile_upgrade returned and unit_state={self._upgrade.unit_state}")
 
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:

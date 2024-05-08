@@ -108,7 +108,10 @@ class Upgrade(upgrade.Upgrade):
                 self._unit_workload_container_versions.get(unit.name)
                 != self._app_workload_container_version
             )
-            unhealthy = state not in [upgrade.UnitState.HEALTHY, upgrade.UnitState.UPGRADING]
+            logger.info(f"reconcile_partition called, state={state}")
+            unhealthy = (
+                state is not upgrade.UnitState.HEALTHY
+            )  # not in [upgrade.UnitState.HEALTHY, upgrade.UnitState.UPGRADING]
             if outdated or unhealthy:
                 if outdated:
                     message = "Highest number unit has not upgraded yet. Upgrade will not resume."
@@ -171,14 +174,18 @@ class Upgrade(upgrade.Upgrade):
                     return self.upgrade_resumed
                 return True
             state = self._peer_relation.data[unit].get("state")
+            logger.info(f"Checking {unit.name=} {state=}")
             if state:
                 state = upgrade.UnitState(state)
-            if self._unit_workload_container_versions.get(
-                unit.name
-            ) != self._app_workload_container_version or state not in [
-                upgrade.UnitState.HEALTHY,
-                upgrade.UnitState.UPGRADING,
-            ]:
+            if (
+                self._unit_workload_container_versions.get(unit.name)
+                != self._app_workload_container_version
+                or state is not upgrade.UnitState.HEALTHY
+            ):
+                #  or state not in [
+                # upgrade.UnitState.HEALTHY,
+                # upgrade.UnitState.UPGRADING,
+                # ]:
                 # Waiting for higher number units to upgrade
                 return False
         return False
