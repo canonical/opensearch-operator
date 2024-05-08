@@ -4,7 +4,6 @@
 
 import asyncio
 import logging
-# import subprocess
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -133,116 +132,6 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None
         idle_period=IDLE_PERIOD,
         timeout=3600,
     )
-
-
-# @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-# @pytest.mark.group(1)
-# @pytest.mark.abort_on_fail
-# async def test_manually_upgrade_and_rollback(
-#     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-# ) -> None:
-#     """Test upgrade from usptream to currently locally built version."""
-#     units = await get_application_units(ops_test, OPENSEARCH_MAIN_APP_NAME)
-#     leader_id = [u.id for u in units if u.is_leader][0]
-
-#     action = await run_action(
-#         ops_test,
-#         leader_id,
-#         "pre-upgrade-check",
-#         app=OPENSEARCH_MAIN_APP_NAME,
-#     )
-#     assert action.status == "completed"
-
-#     logger.info("Build charm locally")
-#     global charm
-#     if not charm:
-#         charm = await ops_test.build_charm(".")
-
-
-#     logger.info("NOW, ROLLING BACK")
-#     async with ops_test.fast_forward():
-#         app = ops_test.model.applications[APP_NAME]
-#         units = await get_application_units(ops_test, app)
-#         leader_id = [u.id for u in units if u.is_leader][0]
-
-#         logger.info("Rolling back")
-#         # Facing the same issue as descripted in:
-#         # https://github.com/juju/python-libjuju/issues/924
-#         # application = ops_test.model.applications[APP_NAME]
-#         # await application.refresh(
-#         #     switch="ch:pguimaraes-opensearch-upgrade-test",
-#         #     channel=OPENSEARCH_INITIAL_CHANNEL,
-#         # )
-#         subprocess.check_output(
-#             f"juju refresh {app} --switch {OPENSEARCH_ORIGINAL_CHARM_NAME} "
-#             f"--channel {OPENSEARCH_INITIAL_CHANNEL}".split(),
-#         )
-#         logger.info("Refresh is over, waiting for the charm to settle")
-
-#         await wait_until(
-#             ops_test,
-#             apps=[APP_NAME],
-#             apps_statuses=["active"],
-#             units_statuses=["active"],
-#             idle_period=IDLE_PERIOD,
-#             timeout=3600,
-#         )
-
-
-#             application = ops_test.model.applications[app]
-#             units = await get_application_units(ops_test, app)
-#             leader_id = [u.id for u in units if u.is_leader][0]
-
-#             logger.info(f"Refresh app {app}, leader {leader_id}")
-
-#             await application.refresh(path=charm)
-#             logger.info("Refresh is over, waiting for the charm to settle")
-
-#             if unit_count == 1:
-#                 # Upgrade already happened for this unit, wait for idle and continue
-#                 await wait_until(
-#                     ops_test,
-#                     apps=[app],
-#                     apps_statuses=["active"],
-#                     units_statuses=["active"],
-#                     idle_period=IDLE_PERIOD,
-#                     timeout=3600,
-#                 )
-#                 continue
-
-#             await wait_until(
-#                 ops_test,
-#                 apps=[app],
-#                 apps_statuses=["blocked"],
-#                 units_statuses=["active"],
-#                 wait_for_exact_units={
-#                     app: unit_count,
-#                 },
-#                 idle_period=120,
-#                 timeout=3600,
-#             )
-#             # Resume the upgrade
-#             action = await run_action(
-#                 ops_test,
-#                 leader_id,
-#                 "resume-upgrade",
-#                 app=app,
-#             )
-#             assert action.status == "completed"
-#             logger.info(f"resume-upgrade: {action}")
-
-#             await wait_until(
-#                 ops_test,
-#                 apps=[app],
-#                 apps_statuses=["active"],
-#                 units_statuses=["active"],
-#                 idle_period=IDLE_PERIOD,
-#                 timeout=3600,
-#             )
-#             logger.info(f"Upgrade of app {app} finished")
-
-#     # continuous writes checks
-#     await assert_continuous_writes_consistency(ops_test, c_writes, OPENSEARCH_MAIN_APP_NAME)
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
