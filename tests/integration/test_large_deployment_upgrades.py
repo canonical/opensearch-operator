@@ -137,8 +137,8 @@ async def test_manually_upgrade_to_local(ops_test: OpsTest) -> None:
     if not charm:
         charm = await ops_test.build_charm(".")
 
-    for app, unit_count in WORKLOAD.items():
-        async with ops_test.fast_forward():
+    async with ops_test.fast_forward():
+        for app, unit_count in WORKLOAD.items():
             application = ops_test.model.applications[app]
             units = await get_application_units(ops_test, app)
             leader_id = [u.id for u in units if u.is_leader][0]
