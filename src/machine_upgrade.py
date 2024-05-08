@@ -171,7 +171,6 @@ class Upgrade(upgrade.Upgrade):
                     return self.upgrade_resumed
                 return True
             state = self._peer_relation.data[unit].get("state")
-            logger.info(f"Checking {unit.name=} {state=}")
             if state:
                 state = upgrade.UnitState(state)
             if (
@@ -180,7 +179,9 @@ class Upgrade(upgrade.Upgrade):
                 or state is not upgrade.UnitState.HEALTHY
             ):
                 # Waiting for higher number units to upgrade
+                logger.debug(f"Upgrade not authorized. Waiting for {unit.name=} to upgrade")
                 return False
+        logger.debug(f"Upgrade not authorized. Waiting for {unit.name=} to upgrade")
         return False
 
     def upgrade_unit(self, *, snap: OpenSearchSnap) -> None:
