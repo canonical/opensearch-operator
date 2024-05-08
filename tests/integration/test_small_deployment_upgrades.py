@@ -202,4 +202,4 @@ async def test_upgrade_to_local(
         )
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
