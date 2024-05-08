@@ -108,7 +108,6 @@ class Upgrade(upgrade.Upgrade):
                 self._unit_workload_container_versions.get(unit.name)
                 != self._app_workload_container_version
             )
-            logger.info(f"reconcile_partition called, state={state}")
             unhealthy = state is not upgrade.UnitState.HEALTHY
             if outdated or unhealthy:
                 if outdated:
