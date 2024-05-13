@@ -32,6 +32,7 @@ from charms.opensearch.v0.constants_charm import (
     ServiceIsStopping,
     ServiceStartError,
     ServiceStopped,
+    SystemConfigInvalid,
     TLSNewCertsRequested,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
@@ -369,7 +370,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             except OpenSearchHttpError:
                 return False
             except OpenSearchProvidedRolesException as e:
-                self.unit.status = BlockedStatus(str(e))
+                self.status.set(BlockedStatus(str(e)))
                 return False
 
             return True
@@ -570,10 +571,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
         # if there are missing system requirements defer
-        missing_sys_reqs = self.opensearch.missing_sys_requirements()
-        if len(missing_sys_reqs) > 0:
-            self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
+        if missing_sys_reqs := self.opensearch.missing_sys_requirements():
+            self.status.set(
+                BlockedStatus(SystemConfigInvalid.format(" - ".join(missing_sys_reqs)))
+            )
             return
+
+        self.status.clear(SystemConfigInvalid, pattern=Status.CheckPattern.Start)
 
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
@@ -751,6 +755,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
+        if self.app.planned_units() == 0:
+            return
+
         if self.is_tls_fully_configured():
             return
 
@@ -873,7 +880,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        self.unit.status = WaitingStatus(WaitingToStart)
+        self.status.set(WaitingStatus(WaitingToStart))
 
         try:
             # Retrieve the nodes of the cluster, needed to configure this node
@@ -892,7 +899,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.exception(e)
             self.node_lock.release()
             event.defer()
-            self.unit.status = BlockedStatus(str(e))
+            self.status.set(BlockedStatus(str(e)))
             return
 
         try:
@@ -1126,10 +1133,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""
         # if there are any missing system requirements leave
-        missing_sys_reqs = self.opensearch.missing_sys_requirements()
-        if len(missing_sys_reqs) > 0:
-            self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
+        if missing_sys_reqs := self.opensearch.missing_sys_requirements():
+            self.status.set(
+                BlockedStatus(SystemConfigInvalid.format(" - ".join(missing_sys_reqs)))
+            )
             return False
+        self.status.clear(SystemConfigInvalid, pattern=Status.CheckPattern.Start)
 
         if self.unit.is_leader():
             return True
@@ -1480,7 +1489,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.opensearch_peer_cm.validate_roles(current_nodes, on_new_unit=False)
             except OpenSearchProvidedRolesException as e:
                 logger.exception(e)
-                self.app.status = BlockedStatus(str(e))
+                self.status.set(BlockedStatus(str(e)), app=True)
 
         if current_reported_nodes == updated_nodes:
             return

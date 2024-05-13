@@ -15,6 +15,7 @@ LIBPATCH = 1
 
 
 # Blocked statuses
+SystemConfigInvalid = "Set the following system settings as follows: {}"
 WaitingToStart = "Waiting for OpenSearch to start..."
 InstallError = "Could not install OpenSearch."
 CertsExpirationError = "The certificates: {} need to be refreshed."

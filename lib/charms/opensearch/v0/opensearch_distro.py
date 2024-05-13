@@ -427,19 +427,14 @@ class OpenSearchDistribution(ABC):
         """Checks the system requirements."""
         missing_requirements = []
 
-        max_map_count = int(subprocess.getoutput("sysctl vm.max_map_count").split("=")[-1].strip())
-        if max_map_count < 262144:
-            missing_requirements.append("vm.max_map_count should be at least 262144")
+        if int(subprocess.getoutput("sysctl -n vm.max_map_count").strip()) < 262144:
+            missing_requirements.append("vm.max_map_count >= 262144")
 
-        swappiness = int(subprocess.getoutput("sysctl vm.swappiness").split("=")[-1].strip())
-        if swappiness > 0:
-            missing_requirements.append("vm.swappiness should be 0")
+        if int(subprocess.getoutput("sysctl -n vm.swappiness").strip()) > 0:
+            missing_requirements.append("vm.swappiness == 0")
 
-        tcp_retries = int(
-            subprocess.getoutput("sysctl net.ipv4.tcp_retries2").split("=")[-1].strip()
-        )
-        if tcp_retries > 5:
-            missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
+        if int(subprocess.getoutput("sysctl -n net.ipv4.tcp_retries2").strip()) > 5:
+            missing_requirements.append("net.ipv4.tcp_retries2 == 5")
 
         return missing_requirements
 

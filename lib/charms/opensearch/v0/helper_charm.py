@@ -4,7 +4,7 @@
 """Utility functions for charms related operations."""
 import re
 from time import time_ns
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
 
 from charms.data_platform_libs.v0.data_interfaces import Scope
 from charms.opensearch.v0.constants_charm import PeerRelationName
@@ -95,6 +95,11 @@ class RelDepartureReason(BaseStrEnum):
     APP_REMOVAL = "app-removal"
     SCALE_DOWN = "scale-down"
     REL_BROKEN = "rel-broken"
+
+
+def dying_units(charm: CharmBase) -> Dict[str, Any]:
+    """Fetch relations info with goal-state."""
+    pass
 
 
 def relation_departure_reason(charm: CharmBase, relation_name: str) -> RelDepartureReason:

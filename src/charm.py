@@ -62,12 +62,12 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
-        self.unit.status = MaintenanceStatus(InstallProgress)
+        self.status.set(MaintenanceStatus(InstallProgress))
         try:
             self.opensearch.install()
             self.status.clear(InstallProgress)
         except OpenSearchInstallError:
-            self.unit.status = BlockedStatus(InstallError)
+            self.status.set(BlockedStatus(InstallError))
 
     def _on_upgrade_peer_relation_created(self, _) -> None:
         self._upgrade.save_snap_revision_after_first_install()
