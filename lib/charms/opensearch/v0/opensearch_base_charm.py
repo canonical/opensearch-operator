@@ -754,15 +754,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._restart_opensearch_event.emit()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
-        """As long as all certificates are produced, we don't do anything."""
+        """Handle when the TLS relation is broken."""
         if self.app.planned_units() == 0:
             return
 
-        if self.is_tls_fully_configured():
-            return
-
-        # Otherwise, we block.
-        self.status.set(BlockedStatus(TLSRelationBrokenError))
+        # Otherwise we block
+        error = TLSRelationMissing if self.is_tls_fully_configured() else TLSRelationBrokenError
+        self.status.set(BlockedStatus(error))
 
     def is_tls_fully_configured(self) -> bool:
         """Check if TLS fully configured meaning the 3 certificates are present."""
