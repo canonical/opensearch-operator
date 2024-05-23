@@ -148,7 +148,7 @@ async def test_storage_reuse_after_scale_to_zero(
     # scale down to zero units in reverse order
     unit_ids = get_application_unit_ids(ops_test, app)
     storage_ids = {}
-    for unit_id in unit_ids[len(unit_ids) - 1::-1]:
+    for unit_id in unit_ids[len(unit_ids) - 1 :: -1]:
         storage_ids[unit_id] = storage_id(ops_test, app, unit_id)
         await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
         # give some time for removing each unit
