@@ -4,6 +4,7 @@
 
 import asyncio
 import json
+import logging
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -39,6 +40,9 @@ from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 COS_APP_NAME = "grafana-agent"
 COS_RELATION_NAME = "cos-agent"
+
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.group(1)
@@ -190,10 +194,8 @@ async def test_knn_enabled_disabled(ops_test):
             units_statuses=["active"],
             wait_for_exact_units={APP_NAME: 3},
             timeout=3600,
-            idle_period=120,
+            idle_period=IDLE_PERIOD,
         )
-
-        await asyncio.sleep(120)
 
         config = await ops_test.model.applications[APP_NAME].get_config()
         assert config["plugin_opensearch_knn"]["value"] is False
@@ -206,14 +208,11 @@ async def test_knn_enabled_disabled(ops_test):
             units_statuses=["active"],
             wait_for_exact_units={APP_NAME: 3},
             timeout=3600,
-            idle_period=120,
+            idle_period=IDLE_PERIOD,
         )
 
         config = await ops_test.model.applications[APP_NAME].get_config()
         assert config["plugin_opensearch_knn"]["value"] is True
-
-        # Wait 5 minutes to have the restart really kicking in...
-        await asyncio.sleep(120)
 
         await wait_until(
             ops_test,
@@ -222,7 +221,7 @@ async def test_knn_enabled_disabled(ops_test):
             units_statuses=["active"],
             wait_for_exact_units={APP_NAME: 3},
             timeout=3600,
-            idle_period=120,
+            idle_period=IDLE_PERIOD,
         )
 
 
@@ -373,17 +372,31 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
 
     # Set the config to false, then to true
     for knn_enabled in [False, True]:
+        logger.info(f"KNN test starting with {knn_enabled}")
+
         # get current timestamp, to compare with restarts later
         ts = await get_application_unit_ids_start_time(ops_test, APP_NAME)
         await ops_test.model.applications[APP_NAME].set_config(
             {"plugin_opensearch_knn": str(knn_enabled)}
         )
-        await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=60)
+
+        await wait_until(
+            ops_test,
+            apps=[APP_NAME],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units={APP_NAME: 3},
+            timeout=3600,
+            idle_period=IDLE_PERIOD,
+        )
+
         # Now use it to compare with the restart
         assert await is_each_unit_restarted(ops_test, APP_NAME, ts)
         assert await check_cluster_formation_successful(
             ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=APP_NAME)
         ), "Restart happened but cluster did not start correctly"
+        logger.info("Restart finished and was successful")
+
         query = {
             "size": 2,
             "query": {"knn": {"target-field": {"vector": payload_list[0], "k": 2}}},

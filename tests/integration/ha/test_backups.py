@@ -60,6 +60,47 @@ from .helpers_data import index_docs_count
 
 logger = logging.getLogger(__name__)
 
+DEPLOY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            cloud_name,
+            deploy_type,
+            id=f"{cloud_name}-{deploy_type}",
+            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
+        )
+    )
+    for cloud_name in ["microceph", "aws"]
+    for deploy_type in ["large", "small"]
+]
+
+
+DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            cloud_name,
+            deploy_type,
+            id=f"{cloud_name}-{deploy_type}",
+            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
+        )
+    )
+    for cloud_name in ["microceph", "aws"]
+    for deploy_type in ["small"]
+]
+
+
+DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS = [
+    (
+        pytest.param(
+            cloud_name,
+            deploy_type,
+            id=f"{cloud_name}-{deploy_type}",
+            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
+        )
+    )
+    for cloud_name in ["microceph", "aws"]
+    for deploy_type in ["large"]
+]
+
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "latest/edge"
 TIMEOUT = 10 * 60
@@ -187,53 +228,6 @@ async def _configure_s3(
         status="active",
         timeout=TIMEOUT,
     )
-
-
-S3_INTEGRATOR = "s3-integrator"
-S3_INTEGRATOR_CHANNEL = "latest/edge"
-TIMEOUT = 10 * 60
-
-
-DEPLOY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            cloud_name,
-            deploy_type,
-            id=f"{cloud_name}-{deploy_type}",
-            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
-        )
-    )
-    for cloud_name in ["microceph", "aws"]
-    for deploy_type in ["large", "small"]
-]
-
-
-DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            cloud_name,
-            deploy_type,
-            id=f"{cloud_name}-{deploy_type}",
-            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
-        )
-    )
-    for cloud_name in ["microceph", "aws"]
-    for deploy_type in ["small"]
-]
-
-
-DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            cloud_name,
-            deploy_type,
-            id=f"{cloud_name}-{deploy_type}",
-            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
-        )
-    )
-    for cloud_name in ["microceph", "aws"]
-    for deploy_type in ["large"]
-]
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
@@ -453,8 +447,9 @@ async def test_create_backup_and_restore(
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
-    leader_id = await get_leader_unit_id(ops_test)
-    unit_ip = await get_leader_unit_ip(ops_test)
+    apps = [app] if deploy_type == "small" else [app, APP_NAME]
+    leader_id = await get_leader_unit_id(ops_test, app=app)
+    unit_ip = await get_leader_unit_ip(ops_test, app=app)
     config = cloud_configs[cloud_name]
 
     logger.info(f"Syncing credentials for {cloud_name}")
@@ -475,7 +470,7 @@ async def test_create_backup_and_restore(
     )
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, apps)
     await assert_restore_indices_and_compare_consistency(
         ops_test, app, leader_id, unit_ip, backup_id
     )
@@ -501,8 +496,10 @@ async def test_remove_and_readd_s3_relation(
 ) -> None:
     """Removes and re-adds the s3-credentials relation to test backup and restore."""
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
-    leader_id: str = await get_leader_unit_id(ops_test)
-    unit_ip: str = await get_leader_unit_ip(ops_test)
+    apps = [app] if deploy_type == "small" else [app, APP_NAME]
+
+    leader_id: int = await get_leader_unit_id(ops_test, app=app)
+    unit_ip: str = await get_leader_unit_ip(ops_test, app=app)
     config: Dict[str, str] = cloud_configs[cloud_name]
 
     logger.info("Remove s3-credentials relation")
@@ -545,7 +542,7 @@ async def test_remove_and_readd_s3_relation(
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, apps)
     await assert_restore_indices_and_compare_consistency(
         ops_test, app, leader_id, unit_ip, backup_id
     )
@@ -611,13 +608,13 @@ async def test_restore_to_new_cluster(
     # Credentials are set per test scenario
     await ops_test.model.integrate(app, S3_INTEGRATOR)
 
-    leader_id = await get_leader_unit_id(ops_test)
-    unit_ip = await get_leader_unit_ip(ops_test)
+    leader_id = await get_leader_unit_id(ops_test, app=app)
+    unit_ip = await get_leader_unit_ip(ops_test, app=app)
     config: Dict[str, str] = cloud_configs[cloud_name]
 
     logger.info(f"Syncing credentials for {cloud_name}")
     await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
-    backups = await list_backups(ops_test, leader_id)
+    backups = await list_backups(ops_test, leader_id, app=app)
 
     global cwrites_backup_doc_count
     # We are expecting 2x backups available
@@ -660,7 +657,7 @@ async def test_restore_to_new_cluster(
 
     # continuous writes checks
     await assert_continuous_writes_increasing(writer)
-    await assert_continuous_writes_consistency(ops_test, writer, app)
+    await assert_continuous_writes_consistency(ops_test, writer, [app])
     # This assert assures we have taken a new backup, after the last restore from the original
     # cluster. That means the index is writable.
     await assert_restore_indices_and_compare_consistency(
@@ -721,7 +718,8 @@ async def test_repo_missing_message(ops_test: OpsTest) -> None:
     We use the message format to monitor the cluster status. We need to know if this
     message pattern changed between releases of OpenSearch.
     """
-    unit_ip = await get_leader_unit_ip(ops_test)
+    app: str = (await app_name(ops_test)) or APP_NAME
+    unit_ip = await get_leader_unit_ip(ops_test, app=app)
     resp = await http_request(
         ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}", json_resp=True
     )
@@ -734,8 +732,8 @@ async def test_repo_missing_message(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
     """Check the repo is misconfigured."""
-    unit_ip = await get_leader_unit_ip(ops_test)
     app = (await app_name(ops_test)) or APP_NAME
+    unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     config = {
         "endpoint": "http://localhost",
@@ -789,9 +787,9 @@ async def test_change_config_and_backup_restore(
     force_clear_cwrites_index,
 ) -> None:
     """Run for each cloud and update the cluster config."""
-    unit_ip: str = await get_leader_unit_ip(ops_test)
     app: str = (await app_name(ops_test)) or APP_NAME
-    leader_id: str = await get_leader_unit_id(ops_test)
+    unit_ip: str = await get_leader_unit_ip(ops_test, app=app)
+    leader_id: int = await get_leader_unit_id(ops_test, app=app)
 
     initial_count: int = 0
     for cloud_name in cloud_configs.keys():
@@ -828,7 +826,7 @@ async def test_change_config_and_backup_restore(
 
         # continuous writes checks
         await assert_continuous_writes_increasing(writer)
-        await assert_continuous_writes_consistency(ops_test, writer, app)
+        await assert_continuous_writes_consistency(ops_test, writer, [app])
         await assert_restore_indices_and_compare_consistency(
             ops_test, app, leader_id, unit_ip, backup_id
         )

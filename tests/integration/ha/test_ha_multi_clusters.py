@@ -109,4 +109,4 @@ async def test_multi_clusters_db_isolation(
     await ops_test.model.remove_application(SECOND_APP_NAME)
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
