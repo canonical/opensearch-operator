@@ -122,7 +122,7 @@ async def test_upgrade_rollback(
         # )
         subprocess.check_output(
             f"juju refresh {app} --switch {OPENSEARCH_ORIGINAL_CHARM_NAME} "
-            "--channel latest/edge".split(),
+            f"--channel {OPENSEARCH_INITIAL_CHANNEL}".split(),
         )
 
         await wait_until(
