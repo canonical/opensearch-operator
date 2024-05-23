@@ -179,7 +179,9 @@ class Upgrade(upgrade.Upgrade):
                 or state is not upgrade.UnitState.HEALTHY
             ):
                 # Waiting for higher number units to upgrade
+                logger.debug(f"Upgrade not authorized. Waiting for {unit.name=} to upgrade")
                 return False
+        logger.debug(f"Upgrade not authorized. Waiting for {unit.name=} to upgrade")
         return False
 
     def upgrade_unit(self, *, snap: OpenSearchSnap) -> None:
