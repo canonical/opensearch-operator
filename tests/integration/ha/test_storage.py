@@ -87,7 +87,7 @@ async def test_storage_reuse_after_scale_down(
 
     # create a testfile on the newly added unit to check if data in storage is persistent
     testfile = "/var/snap/opensearch/common/testfile"
-    create_testfile_cmd = f"juju ssh {app}/{unit_id} sudo touch {testfile}"
+    create_testfile_cmd = f"juju ssh {app}/{unit_id} -q sudo touch {testfile}"
     subprocess.run(create_testfile_cmd, shell=True)
 
     # scale-down to 1
@@ -112,6 +112,7 @@ async def test_storage_reuse_after_scale_down(
         status="active",
         timeout=1000,
         wait_for_exact_units=2,
+        idle_period=IDLE_PERIOD,
     )
 
     # check the storage of the new unit
@@ -143,10 +144,10 @@ async def test_storage_reuse_after_scale_to_zero(
 
     writes_result = await c_writes.stop()
 
-    # scale down to zero units
+    # scale down to zero units in reverse order
     unit_ids = get_application_unit_ids(ops_test, app)
     storage_ids = {}
-    for unit_id in unit_ids:
+    for unit_id in unit_ids[len(unit_ids) - 1::-1]:
         storage_ids[unit_id] = storage_id(ops_test, app, unit_id)
         await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
         # give some time for removing each unit
