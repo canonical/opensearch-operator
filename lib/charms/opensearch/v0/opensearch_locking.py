@@ -186,6 +186,7 @@ class OpenSearchNodeLock(ops.Object):
     """
 
     OPENSEARCH_INDEX = ".charm_node_lock"
+    _ENDPOINT_NAME = "node-lock-fallback"
 
     def __init__(self, charm: "opensearch_base_charm.OpenSearchBaseCharm"):
         super().__init__(charm, "opensearch-node-lock")
@@ -343,7 +344,12 @@ class OpenSearchNodeLock(ops.Object):
         if host or alt_hosts:
             logger.debug("[Node lock] Checking which unit has opensearch lock")
             # Check if this unit currently has lock
-            if self._unit_with_lock(host) == self._charm.unit.name:
+            # or if there is a stale lock from a unit no longer existing
+            if (
+                self._unit_with_lock(host) == self._charm.unit.name
+                or self._unit_with_lock(host)
+                not in self._charm.model.get_relation(self._ENDPOINT_NAME).units
+            ):
                 logger.debug("[Node lock] Releasing opensearch lock")
                 # Delete document id 0
                 try:
