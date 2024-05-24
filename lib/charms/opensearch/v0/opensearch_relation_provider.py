@@ -152,6 +152,9 @@ class OpenSearchProvider(Object):
             self.opensearch_provides.on.index_requested, self._on_index_requested
         )
         self.framework.observe(
+            charm.on[self.relation_name].relation_changed, self._on_relation_changed
+        )
+        self.framework.observe(
             charm.on[self.relation_name].relation_departed, self._on_relation_departed
         )
         self.framework.observe(
@@ -372,6 +375,7 @@ class OpenSearchProvider(Object):
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         if not self.unit.is_leader():
             return
+
         if self.opensearch.is_node_up():
             self.update_endpoints(event.relation)
         else:
