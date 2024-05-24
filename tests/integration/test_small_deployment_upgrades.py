@@ -18,8 +18,8 @@ from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
 logger = logging.getLogger(__name__)
 
 
-OPENSEARCH_ORIGINAL_CHARM_NAME = "pguimaraes-opensearch-upgrade-test"
-OPENSEARCH_INITIAL_CHANNEL = "latest/edge"
+OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
+OPENSEARCH_INITIAL_CHANNEL = "2/edge"
 MACHINE_ID = 0
 
 
@@ -122,7 +122,7 @@ async def test_upgrade_rollback(
         # )
         subprocess.check_output(
             f"juju refresh {app} --switch {OPENSEARCH_ORIGINAL_CHARM_NAME} "
-            "--channel latest/edge".split(),
+            f"--channel {OPENSEARCH_INITIAL_CHANNEL}".split(),
         )
 
         await wait_until(
