@@ -165,6 +165,7 @@ async def test_storage_reuse_after_scale_to_zero(
         add_unit_cmd = f"add-unit {app} --model={ops_test.model.info.name} --attach-storage={storage_ids[unit_id]}"
         return_code, _, _ = await ops_test.juju(*add_unit_cmd.split())
         assert return_code == 0, f"Failed to add unit with storage {storage_ids[unit_id]}"
+        await ops_test.model.wait_for_idle(apps=[app], timeout=1000,)
 
     await ops_test.model.wait_for_idle(
         apps=[app],
