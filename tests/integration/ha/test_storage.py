@@ -12,8 +12,8 @@ from pytest_operator.plugin import OpsTest
 
 from ..ha.helpers import (
     app_name,
-    assert_continuous_writes_consistency,
-    assert_continuous_writes_increasing,
+    #assert_continuous_writes_consistency,
+    #assert_continuous_writes_increasing,
     storage_id,
     storage_type,
 )
@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
