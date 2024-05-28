@@ -8,6 +8,7 @@ import os
 from typing import TYPE_CHECKING, List, Optional
 
 import ops
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 
@@ -345,10 +346,14 @@ class OpenSearchNodeLock(ops.Object):
             logger.debug("[Node lock] Checking which unit has opensearch lock")
             # Check if this unit currently has lock
             # or if there is a stale lock from a unit no longer existing
-            if (
-                self._unit_with_lock(host) == self._charm.unit.name
-                or self._unit_with_lock(host)
-                not in self._charm.model.get_relation(self._ENDPOINT_NAME).units
+            # TODO: for large deployments the MAIN/FAILOVER orchestrators should broadcast info
+            #  over non-online units in the relation. This info should be considered here as well.
+            unit_with_lock = self._unit_with_lock(host)
+            current_app_units = [
+                unit.name for unit in self._charm.model.get_relation(PeerRelationName).units
+            ]
+            if unit_with_lock and (
+                unit_with_lock == self._charm.unit.name or unit_with_lock not in current_app_units
             ):
                 logger.debug("[Node lock] Releasing opensearch lock")
                 # Delete document id 0
