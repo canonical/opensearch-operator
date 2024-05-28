@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """In this file we declare the constants and enums used by the charm."""
@@ -108,7 +108,7 @@ KibanaserverUser = "kibanaserver"
 KibanaserverRole = "kibana_server"
 
 # Opensearch Snap revision
-OPENSEARCH_SNAP_REVISION = 47  # Keep in sync with `workload_version` file
+OPENSEARCH_SNAP_REVISION = 50  # Keep in sync with `workload_version` file
 
 # User-face Backup ID format
 OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"

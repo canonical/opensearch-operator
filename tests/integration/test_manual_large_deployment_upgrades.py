@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2023 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 import asyncio
@@ -18,8 +18,8 @@ from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
 logger = logging.getLogger(__name__)
 
 
-OPENSEARCH_ORIGINAL_CHARM_NAME = "pguimaraes-opensearch-upgrade-test"
-OPENSEARCH_INITIAL_CHANNEL = "latest/edge"
+OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
+OPENSEARCH_INITIAL_CHANNEL = "2/edge"
 OPENSEARCH_MAIN_APP_NAME = "main"
 OPENSEARCH_FAILOVER_APP_NAME = "failover"
 
