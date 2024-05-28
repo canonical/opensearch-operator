@@ -12,8 +12,8 @@ from pytest_operator.plugin import OpsTest
 
 from ..ha.helpers import (
     app_name,
-    #assert_continuous_writes_consistency,
-    #assert_continuous_writes_increasing,
+    # assert_continuous_writes_consistency,
+    # assert_continuous_writes_increasing,
     storage_id,
     storage_type,
 )
