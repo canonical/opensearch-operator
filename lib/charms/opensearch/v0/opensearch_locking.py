@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Ensure that only one node (re)starts, joins the cluster, or leaves the cluster at a time."""
@@ -8,6 +8,7 @@ import os
 from typing import TYPE_CHECKING, List, Optional
 
 import ops
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 
@@ -343,7 +344,16 @@ class OpenSearchNodeLock(ops.Object):
         if host or alt_hosts:
             logger.debug("[Node lock] Checking which unit has opensearch lock")
             # Check if this unit currently has lock
-            if self._unit_with_lock(host) == self._charm.unit.name:
+            # or if there is a stale lock from a unit no longer existing
+            # TODO: for large deployments the MAIN/FAILOVER orchestrators should broadcast info
+            #  over non-online units in the relation. This info should be considered here as well.
+            unit_with_lock = self._unit_with_lock(host)
+            current_app_units = [
+                unit.name for unit in self._charm.model.get_relation(PeerRelationName).units
+            ]
+            if unit_with_lock and (
+                unit_with_lock == self._charm.unit.name or unit_with_lock not in current_app_units
+            ):
                 logger.debug("[Node lock] Releasing opensearch lock")
                 # Delete document id 0
                 try:
