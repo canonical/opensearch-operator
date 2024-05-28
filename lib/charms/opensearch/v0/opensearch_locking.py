@@ -187,7 +187,6 @@ class OpenSearchNodeLock(ops.Object):
     """
 
     OPENSEARCH_INDEX = ".charm_node_lock"
-    _ENDPOINT_NAME = "node-lock-fallback"
 
     def __init__(self, charm: "opensearch_base_charm.OpenSearchBaseCharm"):
         super().__init__(charm, "opensearch-node-lock")
