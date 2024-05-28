@@ -12,8 +12,6 @@ from pytest_operator.plugin import OpsTest
 
 from ..ha.helpers import (
     app_name,
-    # assert_continuous_writes_consistency,
-    # assert_continuous_writes_increasing,
     storage_id,
     storage_type,
 )
@@ -177,13 +175,6 @@ async def test_storage_reuse_after_scale_to_zero(
     assert writes_result.count == (await c_writes.count())
     assert writes_result.max_stored_id == (await c_writes.max_stored_id())
 
-    # Restart the writes, so we can validate the cluster is still working
-#    c_writes = ContinuousWrites(ops_test, app, initial_count=writes_result.count)
-#    await c_writes.start()
-#    await assert_continuous_writes_increasing(c_writes)
-    # final validation
-#    await assert_continuous_writes_consistency(ops_test, c_writes, app)
-
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -269,10 +260,3 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     # check if data is also imported
     assert writes_result.count == (await c_writes.count())
     assert writes_result.max_stored_id == (await c_writes.max_stored_id())
-
-    # Restart the writes, so we can validate the cluster is still working
-#    c_writes = ContinuousWrites(ops_test, app, initial_count=writes_result.count)
-#    await c_writes.start()
-#    await assert_continuous_writes_increasing(c_writes)
-    # final validation
-#    await assert_continuous_writes_consistency(ops_test, c_writes, app)
