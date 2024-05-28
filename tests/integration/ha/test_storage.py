@@ -10,11 +10,7 @@ import time
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..ha.helpers import (
-    app_name,
-    storage_id,
-    storage_type,
-)
+from ..ha.helpers import app_name, storage_id, storage_type
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
 from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, get_application_unit_ids
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
