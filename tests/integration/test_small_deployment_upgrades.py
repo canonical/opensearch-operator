@@ -20,13 +20,15 @@ logger = logging.getLogger(__name__)
 
 OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
 OPENSEARCH_CHANNEL = "2/edge"
+
 MACHINE_ID = 0
 
 
 VERSION_TO_REVISION = {
-    "2.12.0": 90,
     "2.13.0": 91,
 }
+FIRST_VERSION = "2.12.0"
+FIRST_REVISION = 90
 
 
 charm = None
@@ -56,13 +58,12 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
     """Deploy OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
-    first_revision = VERSION_TO_REVISION["2.12.0"]
     await ops_test.model.deploy(
         OPENSEARCH_ORIGINAL_CHARM_NAME,
         application_name=APP_NAME,
         num_units=3,
         channel=OPENSEARCH_CHANNEL,
-        revision=first_revision,
+        revision=FIRST_REVISION,
         series=SERIES,
     )
 
@@ -83,7 +84,7 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_upgrade_revisions(
+async def test_upgrade_between_versions(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Test upgrade from upstream to currently locally built version."""
@@ -105,7 +106,10 @@ async def test_upgrade_revisions(
 
         async with ops_test.fast_forward():
             logger.info("Refresh the charm")
-            await application.refresh(path=charm)
+            await application.refresh(
+                revision=rev,
+                # channel=OPENSEARCH_CHANNEL,
+            )
 
             await wait_until(
                 ops_test,
@@ -162,6 +166,8 @@ async def test_upgrade_rollback(
     )
     assert action.status == "completed"
 
+    current_rev = list(VERSION_TO_REVISION.values())[-1]
+
     logger.info("Build charm locally")
     global charm
     if not charm:
@@ -185,7 +191,7 @@ async def test_upgrade_rollback(
         logger.info("Rolling back")
         await application.refresh(
             channel=OPENSEARCH_CHANNEL,
-            switch="opensearch",
+            rev=current_rev,
         )
 
         await wait_until(
@@ -241,7 +247,6 @@ async def test_upgrade_to_local(
         )
 
         logger.info("Upgrade finished")
-        logger.info(subprocess.check_output("juju status".split()))
         # Resume the upgrade
         action = await run_action(
             ops_test,
