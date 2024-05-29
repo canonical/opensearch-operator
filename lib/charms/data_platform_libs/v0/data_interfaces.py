@@ -331,7 +331,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 35
+LIBPATCH = 36
 
 PYDEPS = ["ops>=2.0.0"]
 
@@ -642,8 +642,8 @@ class CachedSecret:
             return
 
         # Create a new secret with the new label
-        old_meta = self._secret_meta
         content = self._secret_meta.get_content()
+        self._secret_uri = None
 
         # I wish we could just check if we are the owners of the secret...
         try:
@@ -651,7 +651,7 @@ class CachedSecret:
         except ModelError as err:
             if "this unit is not the leader" not in str(err):
                 raise
-        old_meta.remove_all_revisions()
+        self.current_label = None
 
     def set_content(self, content: Dict[str, str]) -> None:
         """Setting cached secret content."""
@@ -1586,7 +1586,7 @@ class RequirerData(Data):
         """
         label = self._generate_secret_label(relation_name, relation_id, group)
 
-        # Fetchin the Secret's meta information ensuring that it's locally getting registered with
+        # Fetching the Secret's meta information ensuring that it's locally getting registered with
         CachedSecret(self._model, self.component, label, secret_id).meta
 
     def _register_secrets_to_relation(self, relation: Relation, params_name_list: List[str]):
@@ -2309,7 +2309,7 @@ class RelationEventWithSecret(RelationEvent):
         return self._cached_secrets
 
     def _get_secret(self, group) -> Optional[Dict[str, str]]:
-        """Retrieveing secrets."""
+        """Retrieving secrets."""
         if not self.app:
             return
         if not self._secrets.get(group):
