@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import subprocess
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -123,7 +122,6 @@ async def test_upgrade_between_versions(
             )
 
             logger.info("Upgrade finished")
-            logger.info(subprocess.check_output("juju status".split()))
             # Resume the upgrade
             action = await run_action(
                 ops_test,
