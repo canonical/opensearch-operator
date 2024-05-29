@@ -317,7 +317,7 @@ LIBAPI = 3
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 13
+LIBPATCH = 14
 
 PYDEPS = ["cryptography", "jsonschema"]
 
@@ -1874,6 +1874,9 @@ class TLSCertificatesRequiresV3(Object):
             if certificate.csr in requirer_csrs:
                 if certificate.revoked:
                     with suppress(SecretNotFoundError):
+                        logger.debug(
+                            "Removing secret with label %s", f"{LIBID}-{certificate.csr}"
+                        )
                         secret = self.model.get_secret(label=f"{LIBID}-{certificate.csr}")
                         secret.remove_all_revisions()
                     self.on.certificate_invalidated.emit(
@@ -1885,13 +1888,18 @@ class TLSCertificatesRequiresV3(Object):
                     )
                 else:
                     try:
+                        logger.debug(
+                            "Setting secret with label %s", f"{LIBID}-{certificate.csr}"
+                        )
                         secret = self.model.get_secret(label=f"{LIBID}-{certificate.csr}")
                         secret.set_content({"certificate": certificate.certificate})
                         secret.set_info(
                             expire=self._get_next_secret_expiry_time(certificate),
                         )
                     except SecretNotFoundError:
-                        logger.debug("Adding secret with label %s", f"{LIBID}-{certificate.csr}")
+                        logger.debug(
+                            "Creating new secret with label %s", f"{LIBID}-{certificate.csr}"
+                        )
                         secret = self.charm.unit.add_secret(
                             {"certificate": certificate.certificate},
                             label=f"{LIBID}-{certificate.csr}",
