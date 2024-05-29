@@ -209,10 +209,18 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     for unit_id in get_application_unit_ids(ops_test, app):
         storage_ids.append(storage_id(ops_test, app, unit_id))
 
-    # remove application
-    for machine in ops_test.model.state.machines.values():
-        # Needed due to canonical/opensearch-operator#243
-        await machine.destroy(force=True)
+    # Need to scale down carefully due to canonical/opensearch-operator#243
+    for unit_id in unit_ids[::-1]:
+        await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
+        # give some time for removing each unit
+        time.sleep(60)
+
+    await ops_test.model.wait_for_idle(
+        # app status will not be active because after scaling down not all shards are assigned
+        apps=[app],
+        timeout=1000,
+        wait_for_exact_units=0,
+    )
 
     await ops_test.model.remove_application(app, block_until_done=True)
 
@@ -234,9 +242,6 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
         )
         return_code, _, _ = await ops_test.juju(*add_unit_cmd.split())
         assert return_code == 0, f"Failed to add unit with storage {unit_storage_id}"
-
-    # workaround because TLS-app machine is destroyed as well
-    await ops_test.model.applications[TLS_CERTIFICATES_APP_NAME].add_unit(count=1)
 
     await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
