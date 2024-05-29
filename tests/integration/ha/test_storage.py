@@ -210,7 +210,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
         storage_ids.append(storage_id(ops_test, app, unit_id))
 
     # Need to scale down carefully due to canonical/opensearch-operator#243
-    for unit_id in unit_ids[::-1]:
+    for unit_id in get_application_unit_ids(ops_test, app):
         await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
         # give some time for removing each unit
         time.sleep(60)
