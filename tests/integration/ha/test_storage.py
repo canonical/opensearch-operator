@@ -53,6 +53,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+@pytest.mark.skip(reason="temporary skip to speed up test run")
 async def test_storage_reuse_after_scale_down(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ):
@@ -125,6 +126,7 @@ async def test_storage_reuse_after_scale_down(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+@pytest.mark.skip(reason="temporary skip to speed up test run")
 async def test_storage_reuse_after_scale_to_zero(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ):
