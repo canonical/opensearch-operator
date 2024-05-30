@@ -10,7 +10,13 @@ import time
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..ha.helpers import app_name, storage_id, storage_type
+from ..ha.helpers import (
+    app_name,
+    assert_continuous_writes_consistency,
+    assert_continuous_writes_increasing,
+    storage_id,
+    storage_type,
+)
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
 from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, get_application_unit_ids
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -264,3 +270,10 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     # check if data is also imported
     assert writes_result.count == (await c_writes.count())
     assert writes_result.max_stored_id == (await c_writes.max_stored_id())
+
+    # Restart it, so we can validate the cluster is still working
+    c_writes = ContinuousWrites(ops_test, app, initial_count=writes_result.count)
+    await c_writes.start()
+    await assert_continuous_writes_increasing(c_writes)
+    # final validation
+    await assert_continuous_writes_consistency(ops_test, c_writes, app)
