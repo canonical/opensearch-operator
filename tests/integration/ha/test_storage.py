@@ -58,7 +58,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.skip(reason="temporary skip to speed up test run")
 async def test_storage_reuse_after_scale_down(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ):
@@ -122,7 +121,6 @@ async def test_storage_reuse_after_scale_down(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.skip(reason="temporary skip to speed up test run")
 async def test_storage_reuse_after_scale_to_zero(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ):
@@ -169,6 +167,11 @@ async def test_storage_reuse_after_scale_to_zero(
     # check if data is also imported
     assert writes_result.count == (await c_writes.count())
     assert writes_result.max_stored_id == (await c_writes.max_stored_id())
+
+    # Restart it, so we can validate the cluster is still working
+    c_writes = ContinuousWrites(ops_test, app, initial_count=writes_result.count)
+    await c_writes.start()
+    await assert_continuous_writes_increasing(c_writes)
 
 
 @pytest.mark.group(1)
