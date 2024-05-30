@@ -83,6 +83,63 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+async def test_upgrade_rollback(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
+    """Test upgrade from upstream to currently locally built version."""
+    app = (await app_name(ops_test)) or APP_NAME
+    units = await get_application_units(ops_test, app)
+    leader_id = [u.id for u in units if u.is_leader][0]
+
+    application = ops_test.model.applications[APP_NAME]
+    action = await run_action(
+        ops_test,
+        leader_id,
+        "pre-upgrade-check",
+        app=app,
+    )
+    assert action.status == "completed"
+
+    new_rev = list(VERSION_TO_REVISION.values())[-1]
+
+    async with ops_test.fast_forward():
+        logger.info("Refresh the charm")
+        await application.refresh(revision=new_rev)
+
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["blocked"],
+            units_statuses=["active"],
+            wait_for_exact_units={
+                APP_NAME: 3,
+            },
+            idle_period=IDLE_PERIOD,
+        )
+
+        logger.info("Rolling back")
+        # due to: https://github.com/juju/python-libjuju/issues/1057
+        # await application.refresh(
+        #     revision=rev,
+        # )
+        subprocess.check_output(
+            f"juju refresh opensearch --revision={FIRST_REVISION}".split()
+        )
+
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units={
+                APP_NAME: 3,
+            },
+            idle_period=IDLE_PERIOD,
+        )
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_upgrade_between_versions(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
@@ -105,9 +162,12 @@ async def test_upgrade_between_versions(
 
         async with ops_test.fast_forward():
             logger.info("Refresh the charm")
-            await application.refresh(
-                revision=rev,
-                # channel=OPENSEARCH_CHANNEL,
+            # due to: https://github.com/juju/python-libjuju/issues/1057
+            # await application.refresh(
+            #     revision=rev,
+            # )
+            subprocess.check_output(
+                f"juju refresh opensearch --revision={rev}".split()
             )
 
             await wait_until(
@@ -143,65 +203,6 @@ async def test_upgrade_between_versions(
                 },
                 idle_period=IDLE_PERIOD,
             )
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_upgrade_rollback(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
-    """Test upgrade from upstream to currently locally built version."""
-    app = (await app_name(ops_test)) or APP_NAME
-    units = await get_application_units(ops_test, app)
-    leader_id = [u.id for u in units if u.is_leader][0]
-
-    application = ops_test.model.applications[APP_NAME]
-    action = await run_action(
-        ops_test,
-        leader_id,
-        "pre-upgrade-check",
-        app=app,
-    )
-    assert action.status == "completed"
-
-    current_rev = list(VERSION_TO_REVISION.values())[-1]
-
-    logger.info("Build charm locally")
-    global charm
-    if not charm:
-        charm = await ops_test.build_charm(".")
-
-    async with ops_test.fast_forward():
-        logger.info("Refresh the charm")
-        await application.refresh(path=charm)
-
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["blocked"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            idle_period=IDLE_PERIOD,
-        )
-
-        logger.info("Rolling back")
-        await application.refresh(
-            channel=OPENSEARCH_CHANNEL,
-            rev=current_rev,
-        )
-
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            idle_period=IDLE_PERIOD,
-        )
 
 
 # @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
