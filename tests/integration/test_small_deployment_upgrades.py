@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import subprocess
 
 import pytest
 from pytest_operator.plugin import OpsTest
