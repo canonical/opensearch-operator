@@ -92,7 +92,6 @@ async def test_upgrade_rollback(
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
 
-    application = ops_test.model.applications[APP_NAME]
     action = await run_action(
         ops_test,
         leader_id,
@@ -105,7 +104,12 @@ async def test_upgrade_rollback(
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
-        await application.refresh(revision=new_rev)
+        # due to: https://github.com/juju/python-libjuju/issues/1057
+        # application = ops_test.model.applications[APP_NAME]
+        # await application.refresh(
+        #     revision=new_rev,
+        # )
+        subprocess.check_output(f"juju refresh opensearch --revision={new_rev}".split())
 
         await wait_until(
             ops_test,
