@@ -181,6 +181,7 @@ async def test_storage_reuse_after_scale_to_zero(
     c_writes = ContinuousWrites(ops_test, app, initial_count=writes_result.count)
     await c_writes.start()
     await assert_continuous_writes_increasing(c_writes)
+    await c_writes.clear
 
 
 @pytest.mark.group(1)
@@ -277,3 +278,4 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     c_writes = ContinuousWrites(ops_test, app, initial_count=writes_result.count)
     await c_writes.start()
     await assert_continuous_writes_increasing(c_writes)
+    await c_writes.clear
