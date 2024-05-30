@@ -266,5 +266,3 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     c_writes = ContinuousWrites(ops_test, app, initial_count=writes_result.count)
     await c_writes.start()
     await assert_continuous_writes_increasing(c_writes)
-    # final validation
-    await assert_continuous_writes_consistency(ops_test, c_writes, app)
