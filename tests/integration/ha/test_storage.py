@@ -43,7 +43,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(my_charm, num_units=1, series=SERIES, storage=storage),
+        ops_test.model.deploy(my_charm, num_units=2, series=SERIES, storage=storage),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -54,7 +54,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         timeout=1000,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 1
+    assert len(ops_test.model.applications[APP_NAME].units) == 2
 
 
 @pytest.mark.group(1)
@@ -70,15 +70,6 @@ async def test_storage_reuse_after_scale_down(
         pytest.skip(
             "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
-
-    # scale up to 2 units
-    await ops_test.model.applications[app].add_unit(count=1)
-    await ops_test.model.wait_for_idle(
-        apps=[app],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=2,
-    )
 
     writes_result = await c_writes.stop()
 
