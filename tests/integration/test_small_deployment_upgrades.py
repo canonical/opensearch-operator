@@ -123,9 +123,7 @@ async def test_upgrade_rollback(
         # await application.refresh(
         #     revision=rev,
         # )
-        subprocess.check_output(
-            f"juju refresh opensearch --revision={FIRST_REVISION}".split()
-        )
+        subprocess.check_output(f"juju refresh opensearch --revision={FIRST_REVISION}".split())
 
         await wait_until(
             ops_test,
@@ -152,7 +150,6 @@ async def test_upgrade_between_versions(
     for version, rev in VERSION_TO_REVISION.items():
         logger.info(f"Upgrading to version {version}")
 
-        application = ops_test.model.applications[APP_NAME]
         action = await run_action(
             ops_test,
             leader_id,
@@ -164,12 +161,11 @@ async def test_upgrade_between_versions(
         async with ops_test.fast_forward():
             logger.info("Refresh the charm")
             # due to: https://github.com/juju/python-libjuju/issues/1057
+            # application = ops_test.model.applications[APP_NAME]
             # await application.refresh(
             #     revision=rev,
             # )
-            subprocess.check_output(
-                f"juju refresh opensearch --revision={rev}".split()
-            )
+            subprocess.check_output(f"juju refresh opensearch --revision={rev}".split())
 
             await wait_until(
                 ops_test,
