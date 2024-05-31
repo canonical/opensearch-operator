@@ -28,6 +28,7 @@ from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiringEvent,
+    CertificateInvalidatedEvent,
     TLSCertificatesRequiresV3,
     generate_csr,
     generate_private_key,
@@ -74,6 +75,9 @@ class OpenSearchTLS(Object):
 
         self.framework.observe(self.certs.on.certificate_available, self._on_certificate_available)
         self.framework.observe(self.certs.on.certificate_expiring, self._on_certificate_expiring)
+        self.framework.observe(
+            self.certs.on.certificate_invalidated, self._on_certificate_invalidated
+        )
 
     def _on_set_tls_private_key(self, event: ActionEvent) -> None:
         """Set the TLS private key, which will be used for requesting the certificate."""
@@ -197,6 +201,10 @@ class OpenSearchTLS(Object):
             return
 
         self._request_certificate_renewal(scope, cert_type, secrets)
+
+    def _on_certificate_invalidated(self, event: CertificateInvalidatedEvent) -> None:
+        """Handle a cert that was revoked or has expired"""
+        pass
 
     def _request_certificate(
         self,
