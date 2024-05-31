@@ -209,19 +209,6 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     for unit_id in get_application_unit_ids(ops_test, app):
         storage_ids.append(storage_id(ops_test, app, unit_id))
 
-    # Need to scale down carefully due to canonical/opensearch-operator#243
-    for unit_id in get_application_unit_ids(ops_test, app)[::-1]:
-        await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
-        # give some time for removing each unit
-        time.sleep(60)
-
-    await ops_test.model.wait_for_idle(
-        # app status will not be active because after scaling down not all shards are assigned
-        apps=[app],
-        timeout=1000,
-        wait_for_exact_units=0,
-    )
-
     await ops_test.model.remove_application(app, block_until_done=True)
 
     # wait a bit until all app deleted
