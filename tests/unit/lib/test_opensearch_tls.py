@@ -240,3 +240,37 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.charm.tls._on_certificate_expiring(event_mock)
 
         request_certificate_creation.assert_called_once()
+
+    @patch(
+        "charms.tls_certificates_interface.v3.tls_certificates.TLSCertificatesRequiresV3.request_certificate_renewal"
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
+    def test_on_certificate_invalidated(self, _, deployment_desc, request_certificate_renewal):
+        """Test _on_certificate_invalidated event."""
+        csr = "csr_12345"
+        cert = "cert_12345"
+        key = create_utf8_encoded_private_key()
+        secret_key = CertType.UNIT_TRANSPORT.val
+
+        self.secret_store.put_object(
+            Scope.UNIT,
+            secret_key,
+            {"csr": csr, "cert": cert, "key": key},
+        )
+
+        deployment_desc.return_value = DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            start=StartMode.WITH_GENERATED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            app=self.charm.app.name,
+            state=DeploymentState(value=State.ACTIVE),
+        )
+
+        event_mock = MagicMock(certificate=cert)
+        self.charm.tls._on_certificate_invalidated(event_mock)
+
+        request_certificate_renewal.assert_called_once()
