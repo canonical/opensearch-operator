@@ -18,7 +18,7 @@ import logging
 import re
 import socket
 import typing
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_networking import get_host_public_ip
@@ -190,7 +190,9 @@ class OpenSearchTLS(Object):
             logger.exception(e)
             event.defer()
 
-    def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
+    def _on_certificate_expiring(
+        self, event: Union[CertificateExpiringEvent, CertificateInvalidatedEvent]
+    ) -> None:
         """Request the new certificate when old certificate is expiring."""
         self.charm.peers_data.delete(Scope.UNIT, "tls_configured")
         try:
@@ -204,7 +206,8 @@ class OpenSearchTLS(Object):
 
     def _on_certificate_invalidated(self, event: CertificateInvalidatedEvent) -> None:
         """Handle a cert that was revoked or has expired"""
-        pass
+        logger.debug(f"Received certificate invalidation. Reason: {event.reason}")
+        self._on_certificate_expiring(event)
 
     def _request_certificate(
         self,
