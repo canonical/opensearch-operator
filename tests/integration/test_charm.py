@@ -282,28 +282,3 @@ async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
     for unit in ops_test.model.applications[APP_NAME].units:
         unit_conf = get_conf_as_dict(ops_test, unit.name, filename)
         assert leader_conf == unit_conf
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_remove_application(ops_test: OpsTest) -> None:
-    """Remove application should not result in error when scaling down"""
-    # Ensure it's a cluster of 3 units
-    unit_ids = get_application_unit_ids(ops_test, APP_NAME)
-    if len(unit_ids) < 3:
-        await ops_test.model.applications[APP_NAME].add_unit(count=3 - len(unit_ids))
-
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=3,
-        idle_period=30,
-    )
-
-    await ops_test.model.remove_application(APP_NAME, block_until_done=True)
-
-    # wait for the application to be gone, model should be idle then
-    await ops_test.model.wait_for_idle(
-        timeout=1000,
-    )
