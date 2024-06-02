@@ -1356,6 +1356,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
         self.opensearch_config.set_node(
+            app=deployment_desc.app,
             cluster_name=deployment_desc.config.cluster_name,
             unit_name=self.unit_name,
             roles=computed_roles,
@@ -1447,7 +1448,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             deployment_desc := self.opensearch_peer_cm.deployment_desc()
         ).start == StartMode.WITH_GENERATED_ROLES:
             updated_nodes = ClusterTopology.recompute_nodes_conf(
-                app_name=self.app.name, nodes=current_nodes
+                app_id=deployment_desc.app.id, nodes=current_nodes
             )
         else:
             first_dedicated_cm_node = None
@@ -1463,7 +1464,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 temperature = node.temperature
 
                 # only change the roles of the nodes of the current cluster
-                if node.app_name == self.app.name and node.name != first_dedicated_cm_node:
+                if node.app.id == deployment_desc.app.id and node.name != first_dedicated_cm_node:
                     roles = deployment_desc.config.roles
                     temperature = deployment_desc.config.data_temperature
 
@@ -1471,7 +1472,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     name=node.name,
                     roles=roles,
                     ip=node.ip,
-                    app_name=node.app_name,
+                    app=node.app,
                     unit_number=self.unit_id,
                     temperature=temperature,
                 )

@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, Mock, patch
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.models import (
+    App,
     DeploymentDescription,
     DeploymentState,
     DeploymentType,
@@ -110,7 +111,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
-            app=self.charm.app.name,
+            app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
         )
         event_mock = MagicMock()
@@ -139,7 +140,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
-            app=self.charm.app.name,
+            app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
         )
         event_mock = MagicMock()
@@ -232,7 +233,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
-            app=self.charm.app.name,
+            app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
         )
 

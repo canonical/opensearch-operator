@@ -6,7 +6,6 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-import shortuuid
 from charms.opensearch.v0.constants_charm import (
     CMRoleRemovalForbidden,
     CmVoRolesProvidedInvalid,
@@ -21,6 +20,7 @@ from charms.opensearch.v0.constants_charm import (
 from charms.opensearch.v0.helper_charm import trigger_peer_rel_changed
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
+    App,
     DeploymentDescription,
     DeploymentState,
     DeploymentType,
@@ -36,6 +36,7 @@ from charms.opensearch.v0.models import (
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import BlockedStatus
+from shortuuid import ShortUUID
 
 # The unique Charmhub library identifier, never change it
 LIBID = "35ccf1a7eac946ec8f962c21401598d6"
@@ -129,11 +130,11 @@ class OpenSearchPeerClustersManager:
 
         pending_directives.append(Directive.SHOW_STATUS)
         new_deployment_desc = DeploymentDescription(
+            app=current_deployment_desc.app,
             config=config,
             pending_directives=pending_directives,
             typ=current_deployment_desc.typ,
             state=deployment_state,
-            app=self._charm.app.name,
             start=current_deployment_desc.start,
         )
         self._charm.peers_data.put_object(
@@ -155,6 +156,7 @@ class OpenSearchPeerClustersManager:
         )
 
     def _new_cluster_setup(self, config: PeerClusterConfig) -> DeploymentDescription:
+        """Build deployment description of a new cluster."""
         directives = []
         deployment_state = DeploymentState(value=State.ACTIVE)
         if config.init_hold:
@@ -177,17 +179,17 @@ class OpenSearchPeerClustersManager:
                 StartMode.WITH_PROVIDED_ROLES if config.roles else StartMode.WITH_GENERATED_ROLES
             )
             return DeploymentDescription(
+                app=App(model_uuid=self._charm.model.uuid, name=self._charm.app.name),
                 config=config,
                 start=start_mode,
                 pending_directives=directives,
                 typ=self._deployment_type(config, start_mode),
-                app=self._charm.app.name,
                 state=deployment_state,
             )
 
         cluster_name = (
             config.cluster_name.strip()
-            or f"{self._charm.app.name}-{shortuuid.ShortUUID().random(length=4)}".lower()
+            or f"{self._charm.app.name}-{ShortUUID().random(length=4)}".lower()
         )
 
         if not config.roles:
@@ -203,6 +205,7 @@ class OpenSearchPeerClustersManager:
                 directives.append(Directive.SHOW_STATUS)
 
         return DeploymentDescription(
+            app=App(model_uuid=self._charm.model.uuid, name=self._charm.app.name),
             config=PeerClusterConfig(
                 cluster_name=cluster_name,
                 init_hold=config.init_hold,
@@ -212,7 +215,6 @@ class OpenSearchPeerClustersManager:
             start=start_mode,
             pending_directives=directives,
             typ=self._deployment_type(config, start_mode),
-            app=self._charm.app.name,
             state=deployment_state,
         )
 
@@ -251,6 +253,7 @@ class OpenSearchPeerClustersManager:
 
         deployment_type = self._deployment_type(config, start_mode)
         return DeploymentDescription(
+            app=prev_deployment.app,
             config=PeerClusterConfig(
                 cluster_name=prev_deployment.config.cluster_name,
                 init_hold=prev_deployment.config.init_hold,
@@ -260,7 +263,6 @@ class OpenSearchPeerClustersManager:
             start=start_mode,
             state=deployment_state,
             typ=deployment_type,
-            app=self._charm.app.name,
             pending_directives=list(set(directives)),
             promotion_time=(
                 prev_deployment.promotion_time

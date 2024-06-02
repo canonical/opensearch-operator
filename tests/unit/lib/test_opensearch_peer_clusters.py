@@ -13,6 +13,7 @@ from ops.testing import Harness
 from charm import OpenSearchOperatorCharm
 from lib.charms.opensearch.v0.constants_charm import PeerRelationName
 from lib.charms.opensearch.v0.models import (
+    App,
     DeploymentDescription,
     DeploymentState,
     DeploymentType,
@@ -89,7 +90,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                 ),
                 start=StartMode.WITH_PROVIDED_ROLES,
                 pending_directives=directives,
-                app=self.charm.app.name,
+                app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
                 typ=DeploymentType.MAIN_ORCHESTRATOR,
                 state=DeploymentState(value=State.ACTIVE),
             )
@@ -110,7 +111,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             config=self.user_configs["roles_ok"],
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
-            app=self.charm.app.name,
+            app=App(model_uuid=self.charm.model.uuid, name="logs"),
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             state=DeploymentState(value=State.ACTIVE),
         )
@@ -122,7 +123,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     name=node.name.replace("/", "-"),
                     roles=["cluster_manager", "data"],
                     ip="1.1.1.1",
-                    app_name="logs",
+                    app=App(model_uuid=self.charm.model.uuid, name="logs"),
                     unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units[0:3]
@@ -137,11 +138,19 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     name=node.name.replace("/", "-"),
                     roles=["cluster_manager", "data"],
                     ip="1.1.1.1",
-                    app_name="logs",
+                    app=App(model_uuid=self.charm.model.uuid, name="logs"),
                     unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units[0:4]
-            ] + [Node(name="node", roles=["ml"], ip="0.0.0.0", app_name="logs", unit_number=7)]
+            ] + [
+                Node(
+                    name="node",
+                    roles=["ml"],
+                    ip="0.0.0.0",
+                    app=App(model_uuid=self.charm.model.uuid, name="logs"),
+                    unit_number=7,
+                )
+            ]
             self.peer_cm.validate_roles(nodes=nodes, on_new_unit=False)
 
     @patch("ops.model.Model.get_relation")
@@ -168,11 +177,19 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     name=node.name.replace("/", "-"),
                     roles=["data"],
                     ip="1.1.1.1",
-                    app_name="logs",
+                    app=App(model_uuid=self.charm.model.uuid, name="logs"),
                     unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units
-            ] + [Node(name="node-5", roles=["data"], ip="2.2.2.2", app_name="logs", unit_number=5)]
+            ] + [
+                Node(
+                    name="node-5",
+                    roles=["data"],
+                    ip="2.2.2.2",
+                    app=App(model_uuid=self.charm.model.uuid, name="logs"),
+                    unit_number=5,
+                )
+            ]
             self.peer_cm._pre_validate_roles_change(new_roles=["ml"], prev_roles=["data", "ml"])
         except OpenSearchProvidedRolesException:
             self.fail("_pre_validate_roles_change() failed unexpectedly.")
@@ -196,7 +213,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     name=node.name.replace("/", "-"),
                     roles=["data"],
                     ip="1.1.1.1",
-                    app_name="logs",
+                    app=App(model_uuid=self.charm.model.uuid, name="logs"),
                     unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units

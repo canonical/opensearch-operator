@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, call, patch
 import charms.opensearch.v0.opensearch_locking as opensearch_locking
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.models import (
+    App,
     DeploymentDescription,
     DeploymentState,
     DeploymentType,
@@ -45,7 +46,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
-            app="opensearch",
+            app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.ACTIVE),
         ),
         "ko": DeploymentDescription(
@@ -53,7 +54,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
             typ=DeploymentType.OTHER,
-            app="opensearch",
+            app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
         ),
     }
@@ -70,7 +71,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             name="cm1",
             roles=["cluster_manager", "data"],
             ip="1.1.1.1",
-            app_name="opensearch-ff2z",
+            app=App(
+                id=f"{self.charm.model.uuid}/opensearch-ff2z",
+                short_id="f5673ab1",
+                name="opensearch-ff2z",
+                model_uuid=self.charm.model.uuid,
+            ),
             unit_number=3,
         )
         self.opensearch.is_failed = MagicMock()

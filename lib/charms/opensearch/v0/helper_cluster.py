@@ -6,7 +6,7 @@ import logging
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import Node
+from charms.opensearch.v0.models import App, Node
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -57,7 +57,7 @@ class ClusterTopology:
         return dict(settings["defaults"] | settings["persistent"] | settings["transient"])
 
     @staticmethod
-    def recompute_nodes_conf(app_name: str, nodes: List[Node]) -> Dict[str, Node]:
+    def recompute_nodes_conf(app_id: str, nodes: List[Node]) -> Dict[str, Node]:
         """Recompute the configuration of all the nodes (cluster set to auto-generate roles)."""
         if not nodes:
             return {}
@@ -65,7 +65,7 @@ class ClusterTopology:
         nodes_by_name = {}
         current_cluster_nodes = []
         for node in nodes:
-            if node.app_name == app_name:
+            if node.app.id == app_id:
                 current_cluster_nodes.append(node)
             else:
                 # Leave node unchanged
@@ -76,7 +76,7 @@ class ClusterTopology:
                 # we do this in order to remove any non-default role / add any missing default role
                 roles=ClusterTopology.generated_roles(),
                 ip=node.ip,
-                app_name=node.app_name,
+                app=node.app,
                 unit_number=node.unit_number,
                 temperature=node.temperature,
             )
@@ -162,7 +162,7 @@ class ClusterTopology:
                         name=obj["name"],
                         roles=obj["roles"],
                         ip=obj["ip"],
-                        app_name="-".join(obj["name"].split("-")[:-1]),
+                        app=App(id=obj["attributes"]["app_id"]),
                         unit_number=int(obj["name"].split("-")[-1]),
                         temperature=obj.get("attributes", {}).get("temp"),
                     )

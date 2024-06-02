@@ -276,6 +276,7 @@ class Upgrade(abc.ABC):
             if health != HealthColors.GREEN:
                 raise PrecheckFailed(f"Cluster health is {health} instead of green")
 
+            deployment_desc = self._charm.opensearch_peer_cm.deployment_desc()
             online_nodes = ClusterTopology.nodes(
                 self._charm.opensearch,
                 True,
@@ -283,7 +284,7 @@ class Upgrade(abc.ABC):
             )
             if (
                 not self._charm.is_every_unit_marked_as_started()
-                or len([node for node in online_nodes if node.app_name == self._charm.app.name])
+                or len([node for node in online_nodes if node.app.id == deployment_desc.app.id])
                 < self._charm.app.planned_units()
             ):
                 raise PrecheckFailed("Not all units are online for the current app.")

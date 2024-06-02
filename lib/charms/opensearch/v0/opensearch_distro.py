@@ -21,6 +21,7 @@ from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
+from charms.opensearch.v0.models import App
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
@@ -396,7 +397,7 @@ class OpenSearchDistribution(ABC):
                 name=current_node["name"],
                 roles=current_node["roles"],
                 ip=current_node["ip"],
-                app_name=self._charm.app.name,
+                app=App(id=current_node["attributes"]["app_id"]),
                 unit_number=self._charm.unit_id,
                 temperature=current_node.get("attributes", {}).get("temp"),
             )
@@ -407,7 +408,7 @@ class OpenSearchDistribution(ABC):
                 name=self._charm.unit_name,
                 roles=conf_on_disk["node.roles"],
                 ip=self._charm.unit_ip,
-                app_name=self._charm.app.name,
+                app=App(id=conf_on_disk.get("node.attr.app_id")),
                 unit_number=self._charm.unit_id,
                 temperature=conf_on_disk.get("node.attr.temp"),
             )
