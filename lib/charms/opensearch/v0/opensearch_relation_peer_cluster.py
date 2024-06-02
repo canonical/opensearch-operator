@@ -628,7 +628,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         cluster_fleet_apps = self.get_obj_from_rel("cluster_fleet_apps", rel_id=event.relation.id)
         cluster_fleet_apps.update({deployment_desc.app.id: current_app})
 
-        self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_app", cluster_fleet_apps)
+        self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)
 
     def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent):
         """Handle when 'main/failover'-CMs leave the relation (app or relation removal)."""

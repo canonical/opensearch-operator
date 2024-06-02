@@ -140,17 +140,14 @@ class OpenSearchPluginManager:
         """Checks if the plugin manager is ready to run."""
         deployment_desc = self._charm.opensearch_peer_cm.deployment_desc()
         current_cluster_nodes = [
-            node
-            for node in self._charm._get_nodes(True)
-            if node.app.id == deployment_desc.app.id
+            node for node in self._charm._get_nodes(True) if node.app.id == deployment_desc.app.id
         ]
         return (
             self._charm.peers_data.get(Scope.APP, "security_index_initialised", False)
             and self._charm.opensearch.is_node_up()
             and len(current_cluster_nodes) == self._charm.app.planned_units()
-            and self._charm.health.get() in [
-                HealthColors.GREEN, HealthColors.YELLOW, HealthColors.IGNORE
-            ]
+            and self._charm.health.get()
+            in [HealthColors.GREEN, HealthColors.YELLOW, HealthColors.IGNORE]
         )
 
     def run(self) -> bool:
