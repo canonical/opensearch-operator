@@ -1546,11 +1546,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             }
         ]
 
-    def format_unit_name(self, unit: Unit, app: Optional[App] = None) -> str:
+    def format_unit_name(self, unit: typing.Union[Unit, str], app: Optional[App] = None) -> str:
         """Format unit_name according the app."""
         if not app:
             app = self.opensearch_peer_cm.deployment_desc().app
-        return f"{unit.name.replace('/', '-')}_{app.short_id}"
+
+        if isinstance(unit, Unit):
+            unit = unit.name
+        return f"{unit.replace('/', '-')}_{app.short_id}"
 
     @abstractmethod
     def store_tls_resources(
