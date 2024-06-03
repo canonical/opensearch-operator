@@ -15,7 +15,7 @@ from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 
 if TYPE_CHECKING:
-    import charms.opensearch.v0.opensearch_base_charm as opensearch_base_charm
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 # The unique Charmhub library identifier, never change it
 LIBID = "0924c6d81c604a15873ad43498cd6895"
@@ -35,7 +35,7 @@ class _PeerRelationLock(ops.Object):
 
     _ENDPOINT_NAME = "node-lock-fallback"
 
-    def __init__(self, charm: "opensearch_base_charm.OpenSearchBaseCharm"):
+    def __init__(self, charm: "OpenSearchBaseCharm"):
         super().__init__(charm, self._ENDPOINT_NAME)
         self._charm = charm
         self.framework.observe(
@@ -206,7 +206,7 @@ class OpenSearchNodeLock(ops.Object):
 
     OPENSEARCH_INDEX = ".charm_node_lock"
 
-    def __init__(self, charm: "opensearch_base_charm.OpenSearchBaseCharm"):
+    def __init__(self, charm: "OpenSearchBaseCharm"):
         super().__init__(charm, "opensearch-node-lock")
         self._charm = charm
         self._opensearch = charm.opensearch

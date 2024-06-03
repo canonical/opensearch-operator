@@ -267,7 +267,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
-            app=self.charm.app.name,
+            app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
         )
 

@@ -27,6 +27,7 @@ from charms.opensearch.v0.models import (
     Directive,
     Node,
     PeerClusterConfig,
+    PeerClusterFleetApps,
     PeerClusterOrchestrators,
     PeerClusterRelData,
     PeerClusterRelErrorData,
@@ -385,21 +386,18 @@ class OpenSearchPeerClustersManager:
         # validate the full-cluster wide count of cm+voting_only nodes to keep the quorum
         full_cluster_planned_units = self._charm.app.planned_units()
         if self.is_peer_cluster_orchestrator_relation_set():
-            cluster_fleet_planned_units = self._charm.peers_data.get_object(
-                Scope.APP, "cluster_fleet_planned_units"
-            )
-            if cluster_fleet_planned_units:
-                full_cluster_planned_units = sum(
-                    [int(count) for count in cluster_fleet_planned_units.values()]
+            if apps_in_fleet := self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
+                apps_in_fleet = PeerClusterFleetApps.from_dict(apps_in_fleet)
+                full_cluster_planned_units += sum(
+                    [
+                        p_cluster_app.planned_units
+                        for p_cluster_app in apps_in_fleet.values()
+                        if p_cluster_app.app.id != deployment_desc.app.id
+                    ]
                 )
 
-        # current_cluster_planned_units = self._charm.app.planned_units()
-        current_cluster_units = [
-            unit.name.replace("/", "-")
-            for unit in self._charm.model.get_relation(PeerRelationName).units
-        ]
         current_cluster_online_nodes = [
-            node for node in nodes if node.name in current_cluster_units
+            node for node in nodes if node.app.id == deployment_desc.app.id
         ]
 
         if len(current_cluster_online_nodes) < full_cluster_planned_units - 1:

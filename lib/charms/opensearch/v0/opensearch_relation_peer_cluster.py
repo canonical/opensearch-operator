@@ -21,6 +21,7 @@ from charms.opensearch.v0.helper_charm import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
+    App,
     DeploymentDescription,
     DeploymentType,
     Node,
@@ -178,6 +179,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.refresh_relation_data(event)
             return
 
+        candidate_failover_app = App.from_str(candidate_failover_app)
+
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators")
         )
@@ -197,9 +200,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 self.get_obj_from_rel("orchestrators", rel_id, remote_app=False)
             )
             orchestrators.failover_app = candidate_failover_app
-            self.put_in_rel(
-                data={"orchestrators": json.dumps(orchestrators.to_dict())}, rel_id=rel_id
-            )
+            self.put_in_rel(data={"orchestrators": orchestrators.to_str()}, rel_id=rel_id)
 
     def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Event received by all units in sub-cluster when a sub-cluster leaves the relation."""
@@ -536,7 +537,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # broadcast that this cluster is a failover candidate, and let the main CM elect it or not
         if deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR:
             self.put_in_rel(
-                data={"candidate_failover_orchestrator_app": self.charm.app.name},
+                data={"candidate_failover_orchestrator_app": deployment_desc.app.to_str()},
                 rel_id=event.relation.id,
             )
 
@@ -594,10 +595,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         orchestrators = self.get_obj_from_rel(key="orchestrators", rel_id=event.relation.id)
 
         # fetch the (main/failover)-cluster-orchestrator relations
-        cm_relations = dict(
-            [(rel.id, rel.app.name) for rel in self.model.relations[self.relation_name]]
-        )
-        for rel_id, rel_app_name in cm_relations.items():
+        cm_relations = [rel.id for rel in self.model.relations[self.relation_name]]
+        for rel_id in cm_relations:
             orchestrators.update(self.get_obj_from_rel(key="orchestrators", rel_id=rel_id))
 
         if not orchestrators:
@@ -608,7 +607,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             local_orchestrators = PeerClusterOrchestrators.from_dict(
                 self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
             )
-            if local_orchestrators.failover_app.id == deployment_desc.app.id:
+            if (
+                local_orchestrators.failover_app
+                and local_orchestrators.failover_app.id == deployment_desc.app.id
+            ):
                 orchestrators["failover_app"] = local_orchestrators.failover_app
 
         return PeerClusterOrchestrators.from_dict(orchestrators)
@@ -676,7 +678,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                         "Main-cluster-orchestrator removed, and no failover cluster related."
                     )
                 )
-            elif orchestrators.failover_app.full_id == deployment_desc.app.full_id:
+            elif orchestrators.failover_app.id == deployment_desc.app.id:
                 self._promote_failover(orchestrators, cms)
                 failover_promoted = True
 
@@ -689,7 +691,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # we leave in case not an orchestrator
         if (
             self.charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.OTHER
-            or self.charm.app.name not in [orchestrators.main_app, orchestrators.failover_app]
+            or deployment_desc.app.id
+            not in [orchestrators.main_app.id, orchestrators.failover_app.id]
         ):
             return
 

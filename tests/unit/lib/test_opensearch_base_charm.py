@@ -65,18 +65,19 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.harness.begin()
 
         self.charm = self.harness.charm
+
+        for typ in ["ok", "ko"]:
+            self.deployment_descriptions[typ].app = App(
+                model_uuid=self.charm.model.uuid, name="opensearch"
+            )
+
         self.opensearch = self.charm.opensearch
         self.opensearch.current = MagicMock()
         self.opensearch.current.return_value = Node(
             name="cm1",
             roles=["cluster_manager", "data"],
             ip="1.1.1.1",
-            app=App(
-                id=f"{self.charm.model.uuid}/opensearch-ff2z",
-                short_id="f5673ab1",
-                name="opensearch-ff2z",
-                model_uuid=self.charm.model.uuid,
-            ),
+            app=self.deployment_descriptions["ok"].app,
             unit_number=3,
         )
         self.opensearch.is_failed = MagicMock()
@@ -160,6 +161,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         )
         _purge_users.assert_called_once()
 
+    @patch(f"{BASE_LIB_PATH}.opensearch_locking.OpenSearchNodeLock.acquired")
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.validate_roles"
     )
@@ -192,6 +194,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         can_start,
         deployment_desc,
         validate_roles,
+        lock_acquired,
     ):
         """Test on start event."""
         with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
@@ -230,16 +233,22 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         with patch(f"{self.OPENSEARCH_DISTRO}.start") as start:
             # initialisation of the security index
             _get_nodes.reset_mock()
+            _set_node_conf.reset_mock()
             self.peers_data.delete(Scope.APP, "security_index_initialised")
             _can_service_start.return_value = True
             self.harness.set_leader(True)
+            lock_acquired.return_value = True
+
             self.charm.on.start.emit()
 
             # peer cluster manager
             deployment_desc.return_value = self.deployment_descriptions["ok"]
             can_start.return_value = True
+
+            _get_nodes.side_effect = None
             _get_nodes.assert_called()
             validate_roles.side_effect = None
+            validate_roles.assert_called()
             start.assert_called_once()
             _set_node_conf.assert_called()
             _initialize_security_index.assert_called_once()

@@ -26,6 +26,9 @@ import status_exception
 
 logger = logging.getLogger(__name__)
 
+if typing.TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+
 
 PEER_RELATION_ENDPOINT_NAME = "upgrade-version-a"
 PRECHECK_ACTION_NAME = "pre-upgrade-check"
@@ -65,7 +68,7 @@ class UnitState(str, enum.Enum):
 class Upgrade(abc.ABC):
     """In-place upgrades"""
 
-    def __init__(self, charm_: ops.CharmBase) -> None:
+    def __init__(self, charm_: "OpenSearchBaseCharm") -> None:
         relations = charm_.model.relations[PEER_RELATION_ENDPOINT_NAME]
         if not relations:
             raise PeerRelationNotReady
@@ -75,7 +78,6 @@ class Upgrade(abc.ABC):
         self._unit: ops.Unit = charm_.unit
         self._unit_databag = self._peer_relation.data[self._unit]
         self._app_databag = self._peer_relation.data[charm_.app]
-        self._app_name = charm_.app.name
         self._current_versions = {}  # For this unit
         for version, file_name in {
             "charm": "charm_version",
