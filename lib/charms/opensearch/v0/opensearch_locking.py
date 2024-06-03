@@ -128,7 +128,7 @@ class _PeerRelationLock(ops.Object):
     def _unit_with_lock(self, value: str):
         assert self._relation
         assert self._unit_with_lock != value
-        if value == self._full_unit_id(self._charm.unit_name):
+        if value == self._full_unit_id(self._charm.unit.name):
             logger.debug("[Node lock] (leader) granted peer lock to own unit")
             # Prevent leader unit from using lock in the same Juju event that it was granted
             # If the charm code raises an uncaught exception later in the Juju event,
@@ -174,7 +174,7 @@ class _PeerRelationLock(ops.Object):
             return
 
         if self._unit_with_lock and self._unit_requested_lock(
-            self._charm.model.get_unit("-".join(self._unit_with_lock.split("-")[:-1]))
+            self._charm.model.get_unit(self._default_unit_name(self._unit_with_lock))
         ):
             # Lock still in use, do not release
             logger.debug("[Node lock] (leader) lock still in use")
@@ -185,7 +185,7 @@ class _PeerRelationLock(ops.Object):
         # Give priority to leader unit
         for unit in (self._charm.unit, *self._relation.units):
             if self._unit_requested_lock(unit):
-                self._unit_with_lock = self._full_unit_id(unit.name.replace("/", "-"))
+                self._unit_with_lock = self._full_unit_id(unit.name)
                 logger.debug(f"[Node lock] (leader) granted peer lock to {unit.name=}")
                 break
         else:
@@ -194,8 +194,16 @@ class _PeerRelationLock(ops.Object):
 
     def _full_unit_id(self, unit_name: str) -> str:
         """Build the full unit id for locking."""
+        unit_name = unit_name.replace("/", "-")
+
         current_app = self._charm.opensearch_peer_cm.deployment_desc().app
         return f"{unit_name}-{current_app.short_id}"
+
+    def _default_unit_name(self, full_unit_id: str) -> str:
+        """Build back the juju formatted unit name."""
+        # we first take out the app id suffix
+        full_unit_id_split = "-".join(full_unit_id.split("-")[:-1]).rsplit("-")
+        return "{}/{}".format("-".join(full_unit_id_split[:-1]), full_unit_id_split[-1])
 
 
 class OpenSearchNodeLock(ops.Object):
