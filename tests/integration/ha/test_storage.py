@@ -10,7 +10,12 @@ import time
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..ha.helpers import app_name, storage_id, storage_type
+from ..ha.helpers import (
+    app_name,
+    assert_continuous_writes_increasing,
+    storage_id,
+    storage_type,
+)
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
 from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, get_application_unit_ids
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
@@ -171,6 +176,11 @@ async def test_storage_reuse_after_scale_to_zero(
     # check if data is also imported
     assert writes_result.count == (await c_writes.count())
     assert writes_result.max_stored_id == (await c_writes.max_stored_id())
+
+    # restart continuous writes and check if they can be written
+    await c_writes.start()
+    time.sleep(30)
+    await assert_continuous_writes_increasing(c_writes)
 
 
 @pytest.mark.group(1)
