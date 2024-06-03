@@ -163,7 +163,7 @@ class ClusterTopology:
                         roles=obj["roles"],
                         ip=obj["ip"],
                         app=App(id=obj["attributes"]["app_id"]),
-                        unit_number=int(obj["name"].split("-")[-1]),
+                        unit_number=int("_".join(obj["name"].split("_")[:-1]).split("-")[-1]),
                         temperature=obj.get("attributes", {}).get("temp"),
                     )
                     nodes.append(node)
