@@ -174,7 +174,7 @@ class _PeerRelationLock(ops.Object):
             return
 
         if self._unit_with_lock and self._unit_requested_lock(
-            self._charm.model.get_unit(self._unit_with_lock)
+            self._charm.model.get_unit("-".join(self._unit_with_lock.split("-")[:-1]))
         ):
             # Lock still in use, do not release
             logger.debug("[Node lock] (leader) lock still in use")
