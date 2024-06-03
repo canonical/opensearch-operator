@@ -59,7 +59,7 @@ class _PeerRelationLock(ops.Object):
             # A separate relation-changed event won't get fired
             self._on_peer_relation_changed()
 
-        if self._unit_with_lock != self._charm.unit_name:
+        if self._unit_with_lock != self._full_unit_id(self._charm.unit.name):
             logger.debug(
                 f"[Node lock] Not acquired. Unit with peer databag lock: {self._unit_with_lock}"
             )
