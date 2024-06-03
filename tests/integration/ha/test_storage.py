@@ -259,3 +259,8 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     # check if data is also imported
     assert writes_result.count == (await c_writes.count())
     assert writes_result.max_stored_id == (await c_writes.max_stored_id())
+
+    # restart continuous writes and check if they can be written
+    await c_writes.start()
+    time.sleep(30)
+    await assert_continuous_writes_increasing(c_writes)
