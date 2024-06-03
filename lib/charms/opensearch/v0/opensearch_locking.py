@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, List, Optional
 import ops
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology
-from charms.opensearch.v0.models import App, PeerClusterApp
+from charms.opensearch.v0.models import PeerClusterApp
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 
@@ -59,7 +59,7 @@ class _PeerRelationLock(ops.Object):
             # A separate relation-changed event won't get fired
             self._on_peer_relation_changed()
 
-        if self._unit_with_lock != self._full_unit_id(self._charm.unit.name):
+        if self._unit_with_lock != self._charm.format_unit_name(self._charm.unit):
             logger.debug(
                 f"[Node lock] Not acquired. Unit with peer databag lock: {self._unit_with_lock}"
             )
@@ -128,7 +128,7 @@ class _PeerRelationLock(ops.Object):
     def _unit_with_lock(self, value: str):
         assert self._relation
         assert self._unit_with_lock != value
-        if value == self._full_unit_id(self._charm.unit.name):
+        if value == self._charm.format_unit_name(self._charm.unit):
             logger.debug("[Node lock] (leader) granted peer lock to own unit")
             # Prevent leader unit from using lock in the same Juju event that it was granted
             # If the charm code raises an uncaught exception later in the Juju event,
@@ -185,24 +185,18 @@ class _PeerRelationLock(ops.Object):
         # Give priority to leader unit
         for unit in (self._charm.unit, *self._relation.units):
             if self._unit_requested_lock(unit):
-                self._unit_with_lock = self._full_unit_id(unit.name)
+                self._unit_with_lock = self._charm.format_unit_name(unit)
                 logger.debug(f"[Node lock] (leader) granted peer lock to {unit.name=}")
                 break
         else:
             logger.debug("[Node lock] (leader) cleared peer lock")
             del self._unit_with_lock
 
-    def _full_unit_id(self, unit_name: str) -> str:
-        """Build the full unit id for locking."""
-        unit_name = unit_name.replace("/", "-")
-
-        current_app = self._charm.opensearch_peer_cm.deployment_desc().app
-        return f"{unit_name}-{current_app.short_id}"
-
-    def _default_unit_name(self, full_unit_id: str) -> str:
+    @staticmethod
+    def _default_unit_name(full_unit_id: str) -> str:
         """Build back the juju formatted unit name."""
         # we first take out the app id suffix
-        full_unit_id_split = "-".join(full_unit_id.split("-")[:-1]).rsplit("-")
+        full_unit_id_split = "-".join(full_unit_id.split("_")[:-1]).rsplit("-")
         return "{}/{}".format("-".join(full_unit_id_split[:-1]), full_unit_id_split[-1])
 
 
@@ -287,7 +281,7 @@ class OpenSearchNodeLock(ops.Object):
                         host=host,
                         alt_hosts=alt_hosts,
                         retries=0,
-                        payload={"unit-name": self._full_unit_id(self._charm.unit_name)},
+                        payload={"unit-name": self._charm.unit_name},
                     )
                 except OpenSearchHttpError as e:
                     if e.response_code == 409 and "document already exists" in e.response_body.get(
@@ -333,9 +327,9 @@ class OpenSearchNodeLock(ops.Object):
                         return False
 
                     # This unit has OpenSearch lock
-                    unit = self._full_unit_id(self._charm.unit_name)
+                    unit = self._charm.unit_name
 
-            if unit == self._full_unit_id(self._charm.unit_name):
+            if unit == self._charm.unit_name:
                 # Lock acquired
                 # Release peer databag lock, if any
                 logger.debug("[Node lock] Acquired via opensearch")
@@ -381,7 +375,7 @@ class OpenSearchNodeLock(ops.Object):
             # over non-online units in the relation. This info should be considered here as well.
             unit_with_lock = self._unit_with_lock(host)
             current_app_units = [
-                self._full_unit_id(unit.name.replace("/", "-"))
+                self._charm.format_unit_name(unit)
                 for unit in self._charm.model.get_relation(PeerRelationName).units
             ]
 
@@ -395,7 +389,7 @@ class OpenSearchNodeLock(ops.Object):
 
                     other_apps_units.extend(
                         [
-                            self._full_unit_id(unit.name.replace("/", "-"), app=p_cluster_app.app)
+                            self._charm.format_unit_name(unit, app=p_cluster_app.app)
                             for unit in p_cluster_app.units
                         ]
                     )
@@ -464,9 +458,3 @@ class OpenSearchNodeLock(ops.Object):
             else:
                 logger.exception("Error creating OpenSearch lock index")
                 return False
-
-    def _full_unit_id(self, unit_name: str, app: Optional[App] = None) -> str:
-        """Build the full unit id for locking."""
-        if not app:
-            app = self._charm.opensearch_peer_cm.deployment_desc().app
-        return f"{unit_name}-{app.short_id}"

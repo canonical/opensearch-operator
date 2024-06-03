@@ -53,7 +53,7 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
-from charms.opensearch.v0.models import DeploymentDescription, DeploymentType
+from charms.opensearch.v0.models import App, DeploymentDescription, DeploymentType
 from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -111,7 +111,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import EventBase, EventSource
-from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, Unit, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 import lifecycle
@@ -495,7 +495,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         remaining_nodes = [
             node
             for node in self._get_nodes(True)
-            if node.name != event.departing_unit.name.replace("/", "-")
+            if node.name != self.format_unit_name(event.departing_unit)
         ]
 
         self.health.apply(wait_for_green_first=True)
@@ -1455,7 +1455,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             rel = self.model.get_relation(PeerRelationName)
             for unit in rel.units.union({self.unit}):
                 if rel.data[unit].get("remove-data-role") == "True":
-                    first_dedicated_cm_node = unit.name.replace("/", "-")
+                    first_dedicated_cm_node = self.format_unit_name(unit)
                     break
 
             updated_nodes = {}
@@ -1546,6 +1546,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             }
         ]
 
+    def format_unit_name(self, unit: Unit, app: Optional[App] = None) -> str:
+        """Format unit_name according the app."""
+        if not app:
+            app = self.opensearch_peer_cm.deployment_desc().app
+        return f"{unit.name.replace('/', '-')}_{app.short_id}"
+
     @abstractmethod
     def store_tls_resources(
         self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
@@ -1571,7 +1577,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     @property
     def unit_name(self) -> str:
         """Name of the current unit."""
-        return self.unit.name.replace("/", "-")
+        return self.format_unit_name(self.unit)
 
     @property
     def unit_id(self) -> int:

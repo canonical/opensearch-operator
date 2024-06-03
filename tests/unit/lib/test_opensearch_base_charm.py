@@ -38,6 +38,9 @@ from tests.helpers import patch_network_get
 class TestOpenSearchBaseCharm(unittest.TestCase):
     BASE_LIB_PATH = "charms.opensearch.v0"
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
+    PEER_CLUSTERS_MANAGER = (
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager"
+    )
     OPENSEARCH_DISTRO = ""
 
     deployment_descriptions = {
@@ -303,9 +306,13 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         """Test current unit ip value."""
         self.assertEqual(self.charm.unit_ip, "1.1.1.1")
 
-    def test_unit_name(self):
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
+    def test_unit_name(self, deployment_desc):
         """Test current unit name."""
-        self.assertEqual(self.charm.unit_name, f"{self.charm.app.name}-0")
+        deployment_desc.return_value = self.deployment_descriptions["ok"]
+
+        app_short_id = deployment_desc().app.short_id
+        self.assertEqual(self.charm.unit_name, f"{self.charm.app.name}-0_{app_short_id}")
 
     def test_unit_id(self):
         """Test retrieving the integer id pf a unit."""

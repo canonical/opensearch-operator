@@ -89,7 +89,7 @@ class App(Model):
         else:
             values["id"] = f"{values['model_uuid']}/{values['name']}"
 
-        values["short_id"] = md5(values["id"].encode()).hexdigest()[:8]
+        values["short_id"] = md5(values["id"].encode()).hexdigest()[:3]
         return values
 
 

@@ -474,7 +474,7 @@ class OpenSearchPeerClustersManager:
 
             # todo guarantee unicity of unit names on peer_relation_joined
             current_cluster_units = [
-                unit.name.replace("/", "-")
+                self._charm.format_unit_name(unit)
                 for unit in self._charm.model.get_relation(PeerRelationName).units
             ]
             all_nodes = ClusterTopology.nodes(

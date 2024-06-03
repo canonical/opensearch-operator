@@ -131,8 +131,8 @@ class OpenSearchConfig:
         node_temperature: Optional[str] = None,
     ) -> None:
         """Set base config for each node in the cluster."""
-        self._opensearch.config.put(self.CONFIG_YML, "cluster.name", f"{cluster_name}")
-        self._opensearch.config.put(self.CONFIG_YML, "node.name", f"{unit_name}-{app.short_id}")
+        self._opensearch.config.put(self.CONFIG_YML, "cluster.name", cluster_name)
+        self._opensearch.config.put(self.CONFIG_YML, "node.name", unit_name)
         self._opensearch.config.put(
             self.CONFIG_YML, "network.host", ["_site_"] + self._opensearch.network_hosts
         )
