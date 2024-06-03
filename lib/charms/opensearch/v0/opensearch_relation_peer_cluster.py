@@ -274,7 +274,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             orchestrators = self.get_obj_from_rel("orchestrators", rel_id=rel_id)
             orchestrators.update(
                 {
-                    f"{cluster_type}_app": deployment_desc.app,
+                    f"{cluster_type}_app": deployment_desc.app.to_dict(),
                     f"{cluster_type}_rel_id": rel_id,
                 }
             )
@@ -626,7 +626,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # update content of fleet in the current app's peer databag
         cluster_fleet_apps = self.get_obj_from_rel("cluster_fleet_apps", rel_id=event.relation.id)
-        cluster_fleet_apps.update({deployment_desc.app.id: current_app})
+        cluster_fleet_apps.update({deployment_desc.app.id: current_app.to_dict()})
 
         self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)
 
