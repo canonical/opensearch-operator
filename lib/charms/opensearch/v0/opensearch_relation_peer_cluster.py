@@ -285,9 +285,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 self.delete_from_rel("error_data", rel_id=rel_id)
 
             # are we potentially overriding stuff here?
-            self.put_in_rel(
-                data={peer_rel_data_key: json.dumps(rel_data.to_dict())}, rel_id=rel_id
-            )
+            self.put_in_rel(data={peer_rel_data_key: rel_data.to_str()}, rel_id=rel_id)
 
         if should_defer:
             event.defer()
@@ -305,7 +303,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return False
 
         for rel_id in target_relation_ids:
-            self.put_in_rel(data={"error_data": json.dumps(rel_data.to_dict())}, rel_id=rel_id)
+            self.put_in_rel(data={"error_data": rel_data.to_str()}, rel_id=rel_id)
 
         return True
 
@@ -333,7 +331,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         for rel_id in target_relation_ids:
             self.put_in_rel(
-                data={"cluster_fleet_apps": cluster_fleet_apps},
+                data={"cluster_fleet_apps": json.dumps(cluster_fleet_apps)},
                 rel_id=rel_id,
             )
 
@@ -708,9 +706,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             if failover_promoted:
                 rel_orchestrators.promote_failover()
 
-            self.put_in_rel(
-                data={"orchestrators": json.dumps(rel_orchestrators.to_dict())}, rel_id=rel_id
-            )
+            self.put_in_rel(data={"orchestrators": rel_orchestrators.to_str()}, rel_id=rel_id)
 
     def _promote_failover(self, orchestrators: PeerClusterOrchestrators, cms: List[Node]) -> None:
         """Handle the departure of the main orchestrator."""
