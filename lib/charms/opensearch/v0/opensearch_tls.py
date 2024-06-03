@@ -18,7 +18,7 @@ import logging
 import re
 import socket
 import typing
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_networking import get_host_public_ip
@@ -28,6 +28,7 @@ from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiringEvent,
+    CertificateInvalidatedEvent,
     TLSCertificatesRequiresV3,
     generate_csr,
     generate_private_key,
@@ -74,6 +75,9 @@ class OpenSearchTLS(Object):
 
         self.framework.observe(self.certs.on.certificate_available, self._on_certificate_available)
         self.framework.observe(self.certs.on.certificate_expiring, self._on_certificate_expiring)
+        self.framework.observe(
+            self.certs.on.certificate_invalidated, self._on_certificate_invalidated
+        )
 
     def _on_set_tls_private_key(self, event: ActionEvent) -> None:
         """Set the TLS private key, which will be used for requesting the certificate."""
@@ -186,7 +190,9 @@ class OpenSearchTLS(Object):
             logger.exception(e)
             event.defer()
 
-    def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
+    def _on_certificate_expiring(
+        self, event: Union[CertificateExpiringEvent, CertificateInvalidatedEvent]
+    ) -> None:
         """Request the new certificate when old certificate is expiring."""
         self.charm.peers_data.delete(Scope.UNIT, "tls_configured")
         try:
@@ -197,6 +203,11 @@ class OpenSearchTLS(Object):
             return
 
         self._request_certificate_renewal(scope, cert_type, secrets)
+
+    def _on_certificate_invalidated(self, event: CertificateInvalidatedEvent) -> None:
+        """Handle a cert that was revoked or has expired"""
+        logger.debug(f"Received certificate invalidation. Reason: {event.reason}")
+        self._on_certificate_expiring(event)
 
     def _request_certificate(
         self,
