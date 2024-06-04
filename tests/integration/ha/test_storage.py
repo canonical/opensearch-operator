@@ -219,7 +219,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     for unit_id in get_application_unit_ids(ops_test, app):
         storage_ids.append(storage_id(ops_test, app, unit_id))
 
-    await ops_test.model.remove_application(app, block_until_done=True)
+    await ops_test.model.remove_application(app)
 
     # wait a bit until all app deleted
     time.sleep(60)
