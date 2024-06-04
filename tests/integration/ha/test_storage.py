@@ -219,6 +219,19 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     for unit_id in get_application_unit_ids(ops_test, app):
         storage_ids.append(storage_id(ops_test, app, unit_id))
 
+    # remove all units except for the last one (shut down safely)
+    for unit_id in sorted(get_application_unit_ids(ops_test, app))[1:]:
+        await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
+        # give some time for removing each unit
+        time.sleep(60)
+
+    await ops_test.model.wait_for_idle(
+        apps=[app],
+        timeout=1000,
+        wait_for_exact_units=1,
+    )
+
+    # remove the remaining application
     await ops_test.model.remove_application(app)
 
     # wait a bit until all app deleted
@@ -231,6 +244,14 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     )
     return_code, _, _ = await ops_test.juju(*deploy_cluster_with_storage_cmd.split())
     assert return_code == 0, f"Failed to deploy app with storage {storage_ids[0]}"
+    await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
+
+    # wait for cluster to settle down
+    await ops_test.model.wait_for_idle(
+        apps=[app],
+        timeout=1000,
+        wait_for_exact_units=1,
+    )
 
     # add unit with storage attached
     for unit_storage_id in storage_ids[1:]:
@@ -240,7 +261,6 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
         return_code, _, _ = await ops_test.juju(*add_unit_cmd.split())
         assert return_code == 0, f"Failed to add unit with storage {unit_storage_id}"
 
-    await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
@@ -262,5 +282,5 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
 
     # restart continuous writes and check if they can be written
     await c_writes.start()
-    time.sleep(30)
+    time.sleep(60)
     await assert_continuous_writes_increasing(c_writes)
