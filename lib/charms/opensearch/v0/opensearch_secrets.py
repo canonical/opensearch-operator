@@ -320,6 +320,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
         if not self.implements_secrets:
             return super().put(scope, key, value)
 
+        # todo: remove when secret-changed not triggered for same content update
+        if self.get(scope, key) == value:
+            return
+
         self._add_or_update_juju_secret(scope, key, {key: value})
 
     @override
@@ -330,6 +334,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
         logging.debug(f"Putting secret object {scope}:{key}")
         if not self.implements_secrets:
             return super().put_object(scope, key, value, merge)
+
+        # todo: remove when secret-changed not triggered for same content update
+        if self.get_object(scope, key) == self._safe_obj_data(value):
+            return
 
         self._add_or_update_juju_secret(scope, key, value, merge)
 

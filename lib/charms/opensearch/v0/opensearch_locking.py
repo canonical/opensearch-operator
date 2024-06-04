@@ -223,6 +223,7 @@ class OpenSearchNodeLock(ops.Object):
                 host=host,
                 alt_hosts=self._charm.alt_hosts,
                 retries=3,
+                ignore_retry_on=[404],
             )
         except OpenSearchHttpError as e:
             if e.response_code == 404:
@@ -407,6 +408,7 @@ class OpenSearchNodeLock(ops.Object):
                         host=host,
                         alt_hosts=alt_hosts,
                         retries=3,
+                        ignore_retry_on=[404],
                     )
                 except OpenSearchHttpError as e:
                     if e.response_code != 404:
@@ -444,6 +446,7 @@ class OpenSearchNodeLock(ops.Object):
                 host=host,
                 alt_hosts=alt_hosts,
                 retries=3,
+                ignore_retry_on=[400],
                 payload={"settings": {"index": {"auto_expand_replicas": "0-all"}}},
             )
             return True

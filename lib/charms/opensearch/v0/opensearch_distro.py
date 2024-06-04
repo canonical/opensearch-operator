@@ -199,6 +199,7 @@ class OpenSearchDistribution(ABC):
         check_hosts_reach: bool = True,
         resp_status_code: bool = False,
         retries: int = 0,
+        ignore_retry_on: Optional[List] = None,
         timeout: int = 5,
     ) -> Union[Dict[str, any], List[any], int]:
         """Make an HTTP request.
@@ -212,6 +213,7 @@ class OpenSearchDistribution(ABC):
             check_hosts_reach: if true, performs a ping for each host
             resp_status_code: whether to only return the HTTP code from the response.
             retries: number of retries
+            ignore_retry_on: don't retry for specific error codes
             timeout: number of seconds before a timeout happens
 
         Raises:
@@ -249,7 +251,16 @@ class OpenSearchDistribution(ABC):
                         )
 
                     response = s.request(**request_kwargs)
-                    response.raise_for_status()
+                    try:
+                        response.raise_for_status()
+                    except requests.RequestException as ex:
+                        if ex.response.status_code in (ignore_retry_on or []):
+                            raise OpenSearchHttpError(
+                                response_text=ex.response.text,
+                                response_code=ex.response.status_code,
+                            )
+                        raise
+
                     return response
 
         if None in [endpoint, method]:
@@ -275,6 +286,10 @@ class OpenSearchDistribution(ABC):
                 return resp.status_code
 
             return resp.json()
+        except OpenSearchHttpError as e:
+            if resp_status_code:
+                return e.response_code
+            raise
         except (requests.RequestException, urllib3.exceptions.HTTPError) as e:
             if not isinstance(e, requests.RequestException) or e.response is None:
                 raise OpenSearchHttpError(response_text=str(e))
