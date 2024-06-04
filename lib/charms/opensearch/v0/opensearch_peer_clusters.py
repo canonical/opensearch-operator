@@ -15,9 +15,12 @@ from charms.opensearch.v0.constants_charm import (
     PClusterWrongRelation,
     PClusterWrongRolesProvided,
     PeerClusterOrchestratorRelationName,
-    PeerRelationName,
 )
-from charms.opensearch.v0.helper_charm import trigger_peer_rel_changed
+from charms.opensearch.v0.helper_charm import (
+    all_units,
+    format_unit_name,
+    trigger_peer_rel_changed,
+)
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
     App,
@@ -474,8 +477,8 @@ class OpenSearchPeerClustersManager:
 
             # todo guarantee unicity of unit names on peer_relation_joined
             current_cluster_units = [
-                self._charm.format_unit_name(unit)
-                for unit in self._charm.model.get_relation(PeerRelationName).units
+                format_unit_name(unit, app=self.deployment_desc().app)
+                for unit in all_units(self._charm)
             ]
             all_nodes = ClusterTopology.nodes(
                 self._charm.opensearch, self._opensearch.is_node_up(), self._charm.alt_hosts

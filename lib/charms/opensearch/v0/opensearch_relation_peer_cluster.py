@@ -12,11 +12,12 @@ from charms.opensearch.v0.constants_charm import (
     KibanaserverUser,
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
-    PeerRelationName,
 )
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import (
     RelDepartureReason,
+    all_units,
+    format_unit_name,
     relation_departure_reason,
 )
 from charms.opensearch.v0.helper_cluster import ClusterTopology
@@ -213,8 +214,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             for rel in self.charm.model.relations[self.relation_name]
             if rel.id != event.relation.id and len(rel.units) > 0
         ]
-        trigger_app = self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps_rels") or {}
-        if not (trigger_app := trigger_app.get(event.relation.id)):
+        cluster_fleet_apps_rels = (
+            self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps_rels") or {}
+        )
+        if not (trigger_app := cluster_fleet_apps_rels.get(str(event.relation.id))):
             return
 
         # set the planned units to 0 given we're losing visibility over it from here on
@@ -322,7 +325,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         current_app = PeerClusterApp(
             app=deployment_desc.app,
             planned_units=self.charm.app.planned_units(),
-            units=[u.name for u in self.charm.model.get_relation(PeerRelationName).units],
+            units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
         )
         cluster_fleet_apps.update({current_app.app.id: current_app.to_dict()})
 
@@ -342,7 +345,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             cluster_fleet_apps_rels = (
                 self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps_rels") or {}
             )
-            cluster_fleet_apps_rels.update({trigger_rel_id: p_cluster_app.to_dict()})
+            cluster_fleet_apps_rels.update({str(trigger_rel_id): p_cluster_app.to_dict()})
 
             self.charm.peers_data.put_object(
                 Scope.APP, "cluster_fleet_apps_rels", cluster_fleet_apps_rels
@@ -620,7 +623,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         current_app = PeerClusterApp(
             app=deployment_desc.app,
             planned_units=self.charm.app.planned_units(),
-            units=[u.name for u in self.charm.model.get_relation(PeerRelationName).units],
+            units=[
+                format_unit_name(unit, app=deployment_desc.app) for unit in all_units(self.charm)
+            ],
         )
         self.put_in_rel(data={"app": current_app.to_str()}, rel_id=event.relation.id)
 

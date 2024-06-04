@@ -39,7 +39,7 @@ from charms.opensearch.v0.constants_charm import (
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_charm import Status
+from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
@@ -53,7 +53,7 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
-from charms.opensearch.v0.models import App, DeploymentDescription, DeploymentType
+from charms.opensearch.v0.models import DeploymentDescription, DeploymentType
 from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -111,7 +111,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import EventBase, EventSource
-from ops.model import BlockedStatus, MaintenanceStatus, Unit, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 import lifecycle
@@ -492,10 +492,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not (self.unit.is_leader() and self.opensearch.is_node_up()):
             return
 
+        current_app = self.opensearch_peer_cm.deployment_desc().app
         remaining_nodes = [
             node
             for node in self._get_nodes(True)
-            if node.name != self.format_unit_name(event.departing_unit)
+            if node.name != format_unit_name(event.departing_unit, app=current_app)
         ]
 
         self.health.apply(wait_for_green_first=True)
@@ -1453,9 +1454,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             first_dedicated_cm_node = None
             rel = self.model.get_relation(PeerRelationName)
-            for unit in rel.units.union({self.unit}):
+            for unit in all_units(self):
                 if rel.data[unit].get("remove-data-role") == "True":
-                    first_dedicated_cm_node = self.format_unit_name(unit)
+                    first_dedicated_cm_node = format_unit_name(unit, app=deployment_desc.app)
                     break
 
             updated_nodes = {}
@@ -1546,15 +1547,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             }
         ]
 
-    def format_unit_name(self, unit: typing.Union[Unit, str], app: Optional[App] = None) -> str:
-        """Format unit_name according the app."""
-        if not app:
-            app = self.opensearch_peer_cm.deployment_desc().app
-
-        if isinstance(unit, Unit):
-            unit = unit.name
-        return f"{unit.replace('/', '-')}_{app.short_id}"
-
     @abstractmethod
     def store_tls_resources(
         self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
@@ -1580,7 +1572,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     @property
     def unit_name(self) -> str:
         """Name of the current unit."""
-        return self.format_unit_name(self.unit)
+        return format_unit_name(self.unit, app=self.opensearch_peer_cm.deployment_desc().app)
 
     @property
     def unit_id(self) -> int:

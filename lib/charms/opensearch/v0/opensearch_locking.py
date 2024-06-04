@@ -8,7 +8,7 @@ import os
 from typing import TYPE_CHECKING, List, Optional
 
 import ops
-from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.helper_charm import all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology
 from charms.opensearch.v0.models import PeerClusterApp
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
@@ -59,7 +59,8 @@ class _PeerRelationLock(ops.Object):
             # A separate relation-changed event won't get fired
             self._on_peer_relation_changed()
 
-        if self._unit_with_lock != self._charm.format_unit_name(self._charm.unit):
+        current_app = self._charm.opensearch_peer_cm.deployment_desc().app
+        if self._unit_with_lock != format_unit_name(self._charm.unit, app=current_app):
             logger.debug(
                 f"[Node lock] Not acquired. Unit with peer databag lock: {self._unit_with_lock}"
             )
@@ -128,7 +129,9 @@ class _PeerRelationLock(ops.Object):
     def _unit_with_lock(self, value: str):
         assert self._relation
         assert self._unit_with_lock != value
-        if value == self._charm.format_unit_name(self._charm.unit):
+
+        current_app = self._charm.opensearch_peer_cm.deployment_desc().app
+        if value == format_unit_name(self._charm.unit, app=current_app):
             logger.debug("[Node lock] (leader) granted peer lock to own unit")
             # Prevent leader unit from using lock in the same Juju event that it was granted
             # If the charm code raises an uncaught exception later in the Juju event,
@@ -159,6 +162,10 @@ class _PeerRelationLock(ops.Object):
     def _on_peer_relation_changed(self, _=None):
         """Grant & release lock."""
         assert self._relation
+
+        # fetch current app description
+        current_app = self._charm.opensearch_peer_cm.deployment_desc().app
+
         if not self._charm.unit.is_leader():
             if self._relation.data[self._charm.app].get(
                 "leader-acquired-lock-after-juju-event-id"
@@ -185,7 +192,7 @@ class _PeerRelationLock(ops.Object):
         # Give priority to leader unit
         for unit in (self._charm.unit, *self._relation.units):
             if self._unit_requested_lock(unit):
-                self._unit_with_lock = self._charm.format_unit_name(unit)
+                self._unit_with_lock = format_unit_name(unit, app=current_app)
                 logger.debug(f"[Node lock] (leader) granted peer lock to {unit.name=}")
                 break
         else:
@@ -375,10 +382,7 @@ class OpenSearchNodeLock(ops.Object):
             # for large deployments the MAIN/FAILOVER orchestrators should broadcast info
             # over non-online units in the relation. This info should be considered here as well.
             unit_with_lock = self._unit_with_lock(host)
-            current_app_units = [
-                self._charm.format_unit_name(unit)
-                for unit in self._charm.model.get_relation(PeerRelationName).units
-            ]
+            current_app_units = [format_unit_name(unit) for unit in all_units(self._charm)]
 
             # handle case of large deployments
             other_apps_units = []
@@ -388,12 +392,11 @@ class OpenSearchNodeLock(ops.Object):
                     if p_cluster_app.app.id == current_app.id:
                         continue
 
-                    other_apps_units.extend(
-                        [
-                            self._charm.format_unit_name(unit, app=p_cluster_app.app)
-                            for unit in p_cluster_app.units
-                        ]
-                    )
+                    units = [
+                        format_unit_name(unit, app=p_cluster_app.app)
+                        for unit in p_cluster_app.units
+                    ]
+                    other_apps_units.extend(units)
 
             if unit_with_lock and (
                 unit_with_lock == self._charm.unit_name
