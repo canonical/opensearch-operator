@@ -25,10 +25,9 @@ MACHINE_ID = 0
 
 
 VERSION_TO_REVISION = {
+    "2.12.0": 90,
     "2.13.0": 91,
 }
-FIRST_VERSION = "2.12.0"
-FIRST_REVISION = 90
 
 
 charm = None
@@ -63,7 +62,7 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
         application_name=APP_NAME,
         num_units=3,
         channel=OPENSEARCH_CHANNEL,
-        revision=FIRST_REVISION,
+        revision=VERSION_TO_REVISION["2.12.0"],
         series=SERIES,
     )
 
@@ -128,7 +127,9 @@ async def test_upgrade_rollback(
         # await application.refresh(
         #     revision=rev,
         # )
-        subprocess.check_output(f"juju refresh opensearch --revision={FIRST_REVISION}".split())
+        subprocess.check_output(
+            f"juju refresh opensearch --revision={VERSION_TO_REVISION['2.12.0']}".split()
+        )
 
         await wait_until(
             ops_test,
