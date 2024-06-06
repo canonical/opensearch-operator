@@ -226,12 +226,15 @@ async def test_upgrade_to_local(
 ##################################################################################
 
 
+ROLLBACK_PREFIX = "rollback_v"
+
+
 ROLLBACK_TEST_TYPE = [
     (
         pytest.param(
             version,
-            id=f"rollback_v{version}",
-            marks=pytest.mark.group(f"rollback_v{version}"),
+            id=f"{ROLLBACK_PREFIX}{version}",
+            marks=pytest.mark.group(f"{ROLLBACK_PREFIX}{version}"),
         )
     )
     for version in VERSION_TO_REVISION.keys()
@@ -245,12 +248,15 @@ async def test_deploy_latest_from_channel_rollback(ops_test: OpsTest, version) -
     """Deploy OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
+    workload_version = version.split(ROLLBACK_PREFIX)[1]
+    logger.info(f"Starting with workload version: {workload_version}")
+
     await ops_test.model.deploy(
         OPENSEARCH_ORIGINAL_CHARM_NAME,
         application_name=APP_NAME,
         num_units=3,
         channel=OPENSEARCH_CHANNEL,
-        revision=VERSION_TO_REVISION[version],
+        revision=VERSION_TO_REVISION[workload_version],
         series=SERIES,
     )
 
@@ -278,6 +284,8 @@ async def test_upgrade_rollback_from_local(
     app = (await app_name(ops_test)) or APP_NAME
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
+
+    curr_workload_version = version.split(ROLLBACK_PREFIX)[1]
 
     action = await run_action(
         ops_test,
@@ -312,7 +320,7 @@ async def test_upgrade_rollback_from_local(
             idle_period=IDLE_PERIOD,
         )
 
-        logger.info("Rolling back")
+        logger.info(f"Rolling back to {curr_workload_version}")
         # due to: https://github.com/juju/python-libjuju/issues/1057
         # await application.refresh(
         #     revision=rev,
@@ -325,7 +333,7 @@ async def test_upgrade_rollback_from_local(
             f"juju refresh opensearch --switch={OPENSEARCH_ORIGINAL_CHARM_NAME}".split()
         )
         subprocess.check_output(
-            f"juju refresh opensearch --revision={VERSION_TO_REVISION['2.12.0']}".split()
+            f"juju refresh opensearch --revision={curr_workload_version}".split()
         )
 
         await wait_until(
