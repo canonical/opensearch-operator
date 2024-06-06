@@ -241,7 +241,7 @@ ROLLBACK_TEST_TYPE = [
 @pytest.mark.parametrize("version", ROLLBACK_TEST_TYPE)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_deploy_latest_from_channel(ops_test: OpsTest, version) -> None:
+async def test_deploy_latest_from_channel_rollback(ops_test: OpsTest, version) -> None:
     """Deploy OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
