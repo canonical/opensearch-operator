@@ -30,6 +30,19 @@ VERSION_TO_REVISION = {
 }
 
 
+TEST_TYPE = ["upgrade", "rollback"]
+DEPLOY_TEST_TYPE = [
+    (
+        pytest.param(
+            test_type,
+            id=f"{test_type}",
+            marks=pytest.mark.group(f"{test_type}"),
+        )
+    )
+    for test_type in TEST_TYPE
+]
+
+
 charm = None
 
 
@@ -50,10 +63,10 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
+@pytest.mark.parametrize("test_type", DEPLOY_TEST_TYPE)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
+async def test_deploy_latest_from_channel(ops_test: OpsTest, test_type) -> None:
     """Deploy OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
@@ -82,12 +95,12 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
+@pytest.mark.group("rollback")
 @pytest.mark.abort_on_fail
 async def test_upgrade_rollback(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
-    """Test upgrade from upstream to currently locally built version."""
+    """Test upgrade and rollback to each version available."""
     app = (await app_name(ops_test)) or APP_NAME
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
@@ -100,7 +113,7 @@ async def test_upgrade_rollback(
     )
     assert action.status == "completed"
 
-    new_rev = list(VERSION_TO_REVISION.values())[-1]
+    new_rev = VERSION_TO_REVISION["2.13.0"]
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
@@ -144,7 +157,7 @@ async def test_upgrade_rollback(
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
+@pytest.mark.group("upgrade")
 @pytest.mark.abort_on_fail
 async def test_upgrade_between_versions(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -210,7 +223,7 @@ async def test_upgrade_between_versions(
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
+@pytest.mark.group("upgrade")
 @pytest.mark.abort_on_fail
 async def test_upgrade_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
