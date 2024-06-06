@@ -382,7 +382,9 @@ class OpenSearchNodeLock(ops.Object):
             # for large deployments the MAIN/FAILOVER orchestrators should broadcast info
             # over non-online units in the relation. This info should be considered here as well.
             unit_with_lock = self._unit_with_lock(host)
-            current_app_units = [format_unit_name(unit) for unit in all_units(self._charm)]
+            current_app_units = [
+                format_unit_name(unit, app=current_app) for unit in all_units(self._charm)
+            ]
 
             # handle case of large deployments
             other_apps_units = []
