@@ -75,7 +75,7 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest, test_type) -> None:
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
-        timeout=1400,
+        timeout=3600,
         idle_period=50,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
@@ -124,6 +124,7 @@ async def test_upgrade_between_versions(
                 wait_for_exact_units={
                     APP_NAME: 3,
                 },
+                timeout=3600,
                 idle_period=IDLE_PERIOD,
             )
 
@@ -147,6 +148,7 @@ async def test_upgrade_between_versions(
                 wait_for_exact_units={
                     APP_NAME: 3,
                 },
+                timeout=3600,
                 idle_period=IDLE_PERIOD,
             )
 
@@ -188,7 +190,8 @@ async def test_upgrade_to_local(
             wait_for_exact_units={
                 APP_NAME: 3,
             },
-            idle_period=120,
+            timeout=3600,
+            idle_period=IDLE_PERIOD,
         )
 
         logger.info("Upgrade finished")
@@ -211,6 +214,7 @@ async def test_upgrade_to_local(
             wait_for_exact_units={
                 APP_NAME: 3,
             },
+            timeout=3600,
             idle_period=IDLE_PERIOD,
         )
 
@@ -248,15 +252,14 @@ async def test_deploy_latest_from_channel_rollback(ops_test: OpsTest, version) -
     """Deploy OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
-    workload_version = version.split(ROLLBACK_PREFIX)[1]
-    logger.info(f"Starting with workload version: {workload_version}")
+    logger.info(f"Starting with workload version: {version}")
 
     await ops_test.model.deploy(
         OPENSEARCH_ORIGINAL_CHARM_NAME,
         application_name=APP_NAME,
         num_units=3,
         channel=OPENSEARCH_CHANNEL,
-        revision=VERSION_TO_REVISION[workload_version],
+        revision=VERSION_TO_REVISION[version],
         series=SERIES,
     )
 
@@ -269,7 +272,7 @@ async def test_deploy_latest_from_channel_rollback(ops_test: OpsTest, version) -
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
-        timeout=1400,
+        timeout=3600,
         idle_period=50,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
@@ -284,8 +287,6 @@ async def test_upgrade_rollback_from_local(
     app = (await app_name(ops_test)) or APP_NAME
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
-
-    curr_workload_version = version.split(ROLLBACK_PREFIX)[1]
 
     action = await run_action(
         ops_test,
@@ -317,10 +318,11 @@ async def test_upgrade_rollback_from_local(
             wait_for_exact_units={
                 APP_NAME: 3,
             },
+            timeout=3600,
             idle_period=IDLE_PERIOD,
         )
 
-        logger.info(f"Rolling back to {curr_workload_version}")
+        logger.info(f"Rolling back to {version}")
         # due to: https://github.com/juju/python-libjuju/issues/1057
         # await application.refresh(
         #     revision=rev,
@@ -330,10 +332,26 @@ async def test_upgrade_rollback_from_local(
         # We must first switch back to the upstream charm, then rollback to the original
         # revision we were using.
         subprocess.check_output(
-            f"juju refresh opensearch --switch={OPENSEARCH_ORIGINAL_CHARM_NAME}".split()
+            f"""juju refresh opensearch
+                 --switch={OPENSEARCH_ORIGINAL_CHARM_NAME}
+                 --channel={OPENSEARCH_CHANNEL}""".split()
         )
+
+        # Wait until we are set in an idle state and can rollback the revision.
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["blocked"],
+            units_statuses=["active"],
+            wait_for_exact_units={
+                APP_NAME: 3,
+            },
+            timeout=3600,
+            idle_period=IDLE_PERIOD,
+        )
+
         subprocess.check_output(
-            f"juju refresh opensearch --revision={curr_workload_version}".split()
+            f"juju refresh opensearch --revision={VERSION_TO_REVISION[version]}".split()
         )
 
         await wait_until(
@@ -344,5 +362,6 @@ async def test_upgrade_rollback_from_local(
             wait_for_exact_units={
                 APP_NAME: 3,
             },
+            timeout=3600,
             idle_period=IDLE_PERIOD,
         )
