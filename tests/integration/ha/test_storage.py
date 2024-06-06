@@ -18,6 +18,7 @@ from ..ha.helpers import (
 )
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
 from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, get_application_unit_ids
+from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
 
@@ -219,23 +220,8 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     for unit_id in get_application_unit_ids(ops_test, app):
         storage_ids.append(storage_id(ops_test, app, unit_id))
 
-    # remove all units except for the last one (shut down safely)
-    for unit_id in sorted(get_application_unit_ids(ops_test, app))[1:]:
-        await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
-        # give some time for removing each unit
-        time.sleep(60)
-
-    await ops_test.model.wait_for_idle(
-        apps=[app],
-        timeout=1000,
-        wait_for_exact_units=1,
-    )
-
     # remove the remaining application
-    await ops_test.model.remove_application(app)
-
-    # wait a bit until all app deleted
-    time.sleep(60)
+    await ops_test.model.remove_application(app, block_until_done=True)
 
     # deploy new cluster
     my_charm = await ops_test.build_charm(".")
@@ -246,11 +232,15 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     assert return_code == 0, f"Failed to deploy app with storage {storage_ids[0]}"
     await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
 
-    # wait for cluster to settle down
-    await ops_test.model.wait_for_idle(
+    # wait for cluster to be deployed
+    await wait_until(
+        ops_test,
         apps=[app],
-        timeout=1000,
+        apps_statuses=["active", "blocked"],
+        units_statuses=["active"],
         wait_for_exact_units=1,
+        idle_period=IDLE_PERIOD,
+        timeout=2400,
     )
 
     # add unit with storage attached
@@ -261,11 +251,15 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
         return_code, _, _ = await ops_test.juju(*add_unit_cmd.split())
         assert return_code == 0, f"Failed to add unit with storage {unit_storage_id}"
 
-    await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
-        status="active",
-        timeout=1000,
+    # wait for new cluster to settle down
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=len(storage_ids),
         idle_period=IDLE_PERIOD,
+        timeout=2400,
     )
     assert len(ops_test.model.applications[app].units) == len(storage_ids)
 
