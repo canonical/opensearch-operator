@@ -1043,8 +1043,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         if self.opensearch.is_node_up():
             nodes = self._get_nodes(True)
-            # do not add exclusions if it's the last unit
-            # otherwise cluster manager election will be blocked when starting again re-using storage
+            # do not add exclusions if it's the last unit to stop
+            # otherwise cluster manager election will be blocked when starting up again
+            # and re-using storage
             if len(nodes) > 1:
                 # TODO: we should probably NOT have any exclusion on restart
                 # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
