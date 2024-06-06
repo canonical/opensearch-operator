@@ -277,7 +277,8 @@ class OpenSearchNodeLock(ops.Object):
                         return False
                     else:
                         logger.exception("Error creating OpenSearch lock document")
-                        return False
+                        # in this case, try to acquire peer databag lock as fallback
+                        return self._peer.acquired
                 else:
                     # Ensure write was successful on all nodes
                     # "It is important to note that this setting [`wait_for_active_shards`] greatly
