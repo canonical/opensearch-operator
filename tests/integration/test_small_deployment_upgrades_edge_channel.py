@@ -53,7 +53,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
 @pytest.mark.group("upgrade")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_deploy_latest_from_channel(ops_test: OpsTest, test_type) -> None:
+async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
     """Deploy OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
