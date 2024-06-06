@@ -30,19 +30,6 @@ VERSION_TO_REVISION = {
 }
 
 
-TEST_TYPE = ["upgrade", "rollback"]
-DEPLOY_TEST_TYPE = [
-    (
-        pytest.param(
-            test_type,
-            id=f"{test_type}",
-            marks=pytest.mark.group(f"{test_type}"),
-        )
-    )
-    for test_type in TEST_TYPE
-]
-
-
 charm = None
 
 
@@ -63,7 +50,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.parametrize("test_type", DEPLOY_TEST_TYPE)
+@pytest.mark.group("upgrade")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_deploy_latest_from_channel(ops_test: OpsTest, test_type) -> None:
@@ -95,68 +82,6 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest, test_type) -> None:
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group("rollback")
-@pytest.mark.abort_on_fail
-async def test_upgrade_rollback(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
-) -> None:
-    """Test upgrade and rollback to each version available."""
-    app = (await app_name(ops_test)) or APP_NAME
-    units = await get_application_units(ops_test, app)
-    leader_id = [u.id for u in units if u.is_leader][0]
-
-    action = await run_action(
-        ops_test,
-        leader_id,
-        "pre-upgrade-check",
-        app=app,
-    )
-    assert action.status == "completed"
-
-    new_rev = VERSION_TO_REVISION["2.13.0"]
-
-    async with ops_test.fast_forward():
-        logger.info("Refresh the charm")
-        # due to: https://github.com/juju/python-libjuju/issues/1057
-        # application = ops_test.model.applications[APP_NAME]
-        # await application.refresh(
-        #     revision=new_rev,
-        # )
-        subprocess.check_output(f"juju refresh opensearch --revision={new_rev}".split())
-
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["blocked"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            idle_period=IDLE_PERIOD,
-        )
-
-        logger.info("Rolling back")
-        # due to: https://github.com/juju/python-libjuju/issues/1057
-        # await application.refresh(
-        #     revision=rev,
-        # )
-        subprocess.check_output(
-            f"juju refresh opensearch --revision={VERSION_TO_REVISION['2.12.0']}".split()
-        )
-
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            idle_period=IDLE_PERIOD,
-        )
-
-
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group("upgrade")
 @pytest.mark.abort_on_fail
 async def test_upgrade_between_versions(
@@ -168,6 +93,10 @@ async def test_upgrade_between_versions(
     leader_id = [u.id for u in units if u.is_leader][0]
 
     for version, rev in VERSION_TO_REVISION.items():
+        if version == "2.12.0":
+            # We're starting in this version
+            continue
+
         logger.info(f"Upgrading to version {version}")
 
         action = await run_action(
@@ -287,3 +216,125 @@ async def test_upgrade_to_local(
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
+
+
+##################################################################################
+#
+#  ROLLBACK test scenarios:
+#    Start with each version, moving to local and then rolling back mid-upgrade
+#
+##################################################################################
+
+
+ROLLBACK_TEST_TYPE = [
+    (
+        pytest.param(
+            version,
+            id=f"rollback_v{version}",
+            marks=pytest.mark.group(f"rollback_v{version}"),
+        )
+    )
+    for version in VERSION_TO_REVISION.keys()
+]
+
+
+@pytest.mark.parametrize("version", ROLLBACK_TEST_TYPE)
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_deploy_latest_from_channel(ops_test: OpsTest, version) -> None:
+    """Deploy OpenSearch."""
+    await ops_test.model.set_config(MODEL_CONFIG)
+
+    await ops_test.model.deploy(
+        OPENSEARCH_ORIGINAL_CHARM_NAME,
+        application_name=APP_NAME,
+        num_units=3,
+        channel=OPENSEARCH_CHANNEL,
+        revision=VERSION_TO_REVISION[version],
+        series=SERIES,
+    )
+
+    # Deploy TLS Certificates operator.
+    config = {"ca-common-name": "CN_CA"}
+    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+
+    # Relate it to OpenSearch to set up TLS.
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
+        status="active",
+        timeout=1400,
+        idle_period=50,
+    )
+    assert len(ops_test.model.applications[APP_NAME].units) == 3
+
+
+@pytest.mark.parametrize("version", ROLLBACK_TEST_TYPE)
+@pytest.mark.abort_on_fail
+async def test_upgrade_rollback_from_local(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version
+) -> None:
+    """Test upgrade and rollback to each version available."""
+    app = (await app_name(ops_test)) or APP_NAME
+    units = await get_application_units(ops_test, app)
+    leader_id = [u.id for u in units if u.is_leader][0]
+
+    action = await run_action(
+        ops_test,
+        leader_id,
+        "pre-upgrade-check",
+        app=app,
+    )
+    assert action.status == "completed"
+
+    logger.info("Build charm locally")
+    global charm
+    if not charm:
+        charm = await ops_test.build_charm(".")
+
+    async with ops_test.fast_forward():
+        logger.info("Refresh the charm")
+        # due to: https://github.com/juju/python-libjuju/issues/1057
+        # application = ops_test.model.applications[APP_NAME]
+        # await application.refresh(
+        #     revision=new_rev,
+        # )
+        subprocess.check_output(f"juju refresh opensearch --path={charm}".split())
+
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["blocked"],
+            units_statuses=["active"],
+            wait_for_exact_units={
+                APP_NAME: 3,
+            },
+            idle_period=IDLE_PERIOD,
+        )
+
+        logger.info("Rolling back")
+        # due to: https://github.com/juju/python-libjuju/issues/1057
+        # await application.refresh(
+        #     revision=rev,
+        # )
+
+        # Rollback operation
+        # We must first switch back to the upstream charm, then rollback to the original
+        # revision we were using.
+        subprocess.check_output(
+            f"juju refresh opensearch --switch={OPENSEARCH_ORIGINAL_CHARM_NAME}".split()
+        )
+        subprocess.check_output(
+            f"juju refresh opensearch --revision={VERSION_TO_REVISION['2.12.0']}".split()
+        )
+
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units={
+                APP_NAME: 3,
+            },
+            idle_period=IDLE_PERIOD,
+        )
