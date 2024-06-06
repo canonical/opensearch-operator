@@ -304,8 +304,26 @@ class OpenSearchNodeLock(ops.Object):
                             "[Node lock] Deleted OpenSearch lock after failing to write to all nodes"
                         )
                         return False
-                    # This unit has OpenSearch lock
-                    unit = self._charm.unit.name
+
+                try:
+                    # This is a strongly consistent read:
+                    # If we got the lock, we want to be 100% sure everyone else can see it.
+                    # The only way is to run a flush on this index
+                    #     more info: https://aphyr.com/posts/317-jepsen-elasticsearch
+                    response = self._opensearch.request(
+                        "POST",
+                        endpoint=f"/{self.OPENSEARCH_INDEX}/_flush?wait_ongoing=true",
+                        host=host,
+                        alt_hosts=alt_hosts,
+                        retries=0,
+                        payload={"unit-name": self._charm.unit.name},
+                    )
+                except OpenSearchHttpError as e:
+                    logger.error("[Node lock] Flush to read latest data failed")
+                    return False
+                    
+                # This unit has OpenSearch lock
+                unit = self._charm.unit.name
 
             if unit == self._charm.unit.name:
                 # Lock acquired
