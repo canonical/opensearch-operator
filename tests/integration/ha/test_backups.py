@@ -574,9 +574,6 @@ async def test_restore_to_new_cluster(
     """
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     logging.info("Destroying the application")
-    for machine in ops_test.model.state.machines.values():
-        # Needed due to canonical/opensearch-operator#243
-        await machine.destroy(force=True)
     # Now, remove the applications
     await asyncio.gather(
         ops_test.model.remove_application(S3_INTEGRATOR, block_until_done=True),

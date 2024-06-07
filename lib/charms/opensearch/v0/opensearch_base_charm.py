@@ -1039,10 +1039,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.set(WaitingStatus(ServiceIsStopping))
 
         if self.opensearch.is_node_up():
-            # TODO: we should probably NOT have any exclusion on restart
-            # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
-            # 1. Add current node to the voting + alloc exclusions
-            self.opensearch_exclusions.add_current()
+            try:
+                nodes = self._get_nodes(True)
+                # do not add exclusions if it's the last unit to stop
+                # otherwise cluster manager election will be blocked when starting up again
+                # and re-using storage
+                if len(nodes) > 1:
+                    # TODO: we should probably NOT have any exclusion on restart
+                    # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
+                    # 1. Add current node to the voting + alloc exclusions
+                    self.opensearch_exclusions.add_current()
+            except OpenSearchHttpError:
+                logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
 
         # TODO: should block until all shards move addressed in PR DPE-2234
 
