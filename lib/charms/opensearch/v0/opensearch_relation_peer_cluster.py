@@ -176,7 +176,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             trigger_rel_id=event.relation.id,
         )
 
-        if not data.get("is_candidate_failover_orchestrator"):
+        if data.get("is_candidate_failover_orchestrator") != "true":
             self.refresh_relation_data(event)
             return
 

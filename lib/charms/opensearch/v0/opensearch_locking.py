@@ -59,8 +59,7 @@ class _PeerRelationLock(ops.Object):
             # A separate relation-changed event won't get fired
             self._on_peer_relation_changed()
 
-        current_app = self._charm.opensearch_peer_cm.deployment_desc().app
-        if self._unit_with_lock != format_unit_name(self._charm.unit, app=current_app):
+        if self._unit_with_lock != self._charm.unit_name:
             logger.debug(
                 f"[Node lock] Not acquired. Unit with peer databag lock: {self._unit_with_lock}"
             )
@@ -130,8 +129,7 @@ class _PeerRelationLock(ops.Object):
         assert self._relation
         assert self._unit_with_lock != value
 
-        current_app = self._charm.opensearch_peer_cm.deployment_desc().app
-        if value == format_unit_name(self._charm.unit, app=current_app):
+        if value == self._charm.unit_name:
             logger.debug("[Node lock] (leader) granted peer lock to own unit")
             # Prevent leader unit from using lock in the same Juju event that it was granted
             # If the charm code raises an uncaught exception later in the Juju event,
