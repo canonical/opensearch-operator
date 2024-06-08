@@ -19,8 +19,16 @@ logger = logging.getLogger(__name__)
 
 
 OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
-OPENSEARCH_INITIAL_CHANNEL = "2/edge"
+OPENSEARCH_CHANNEL = "2/edge"
+
 MACHINE_ID = 0
+
+
+VERSION_TO_REVISION = {
+    "2.13.0": 91,
+}
+FIRST_VERSION = "2.12.0"
+FIRST_REVISION = 90
 
 
 charm = None
@@ -54,7 +62,8 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
         OPENSEARCH_ORIGINAL_CHARM_NAME,
         application_name=APP_NAME,
         num_units=3,
-        channel=OPENSEARCH_INITIAL_CHANNEL,
+        channel=OPENSEARCH_CHANNEL,
+        revision=FIRST_REVISION,
         series=SERIES,
     )
 
@@ -73,6 +82,7 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_upgrade_rollback(
@@ -83,7 +93,6 @@ async def test_upgrade_rollback(
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
 
-    application = ops_test.model.applications[APP_NAME]
     action = await run_action(
         ops_test,
         leader_id,
@@ -92,14 +101,16 @@ async def test_upgrade_rollback(
     )
     assert action.status == "completed"
 
-    logger.info("Build charm locally")
-    global charm
-    if not charm:
-        charm = await ops_test.build_charm(".")
+    new_rev = list(VERSION_TO_REVISION.values())[-1]
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
-        await application.refresh(path=charm)
+        # due to: https://github.com/juju/python-libjuju/issues/1057
+        # application = ops_test.model.applications[APP_NAME]
+        # await application.refresh(
+        #     revision=new_rev,
+        # )
+        subprocess.check_output(f"juju refresh opensearch --revision={new_rev}".split())
 
         await wait_until(
             ops_test,
@@ -113,17 +124,11 @@ async def test_upgrade_rollback(
         )
 
         logger.info("Rolling back")
-        # Facing the same issue as descripted in:
-        # https://github.com/juju/python-libjuju/issues/924
-        # application = ops_test.model.applications[APP_NAME]
+        # due to: https://github.com/juju/python-libjuju/issues/1057
         # await application.refresh(
-        #     switch="ch:pguimaraes-opensearch-upgrade-test",
-        #     channel=OPENSEARCH_INITIAL_CHANNEL,
+        #     revision=rev,
         # )
-        subprocess.check_output(
-            f"juju refresh {app} --switch {OPENSEARCH_ORIGINAL_CHARM_NAME} "
-            f"--channel {OPENSEARCH_INITIAL_CHANNEL}".split(),
-        )
+        subprocess.check_output(f"juju refresh opensearch --revision={FIRST_REVISION}".split())
 
         await wait_until(
             ops_test,
@@ -135,6 +140,72 @@ async def test_upgrade_rollback(
             },
             idle_period=IDLE_PERIOD,
         )
+
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_upgrade_between_versions(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
+    """Test upgrade from upstream to currently locally built version."""
+    app = (await app_name(ops_test)) or APP_NAME
+    units = await get_application_units(ops_test, app)
+    leader_id = [u.id for u in units if u.is_leader][0]
+
+    for version, rev in VERSION_TO_REVISION.items():
+        logger.info(f"Upgrading to version {version}")
+
+        action = await run_action(
+            ops_test,
+            leader_id,
+            "pre-upgrade-check",
+            app=app,
+        )
+        assert action.status == "completed"
+
+        async with ops_test.fast_forward():
+            logger.info("Refresh the charm")
+            # due to: https://github.com/juju/python-libjuju/issues/1057
+            # application = ops_test.model.applications[APP_NAME]
+            # await application.refresh(
+            #     revision=rev,
+            # )
+            subprocess.check_output(f"juju refresh opensearch --revision={rev}".split())
+
+            await wait_until(
+                ops_test,
+                apps=[app],
+                apps_statuses=["blocked"],
+                units_statuses=["active"],
+                wait_for_exact_units={
+                    APP_NAME: 3,
+                },
+                idle_period=IDLE_PERIOD,
+            )
+
+            logger.info("Upgrade finished")
+            # Resume the upgrade
+            action = await run_action(
+                ops_test,
+                leader_id,
+                "resume-upgrade",
+                app=app,
+            )
+            logger.info(action)
+            assert action.status == "completed"
+
+            logger.info("Refresh is over, waiting for the charm to settle")
+            await wait_until(
+                ops_test,
+                apps=[app],
+                apps_statuses=["active"],
+                units_statuses=["active"],
+                wait_for_exact_units={
+                    APP_NAME: 3,
+                },
+                idle_period=IDLE_PERIOD,
+            )
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
@@ -178,7 +249,6 @@ async def test_upgrade_to_local(
         )
 
         logger.info("Upgrade finished")
-        logger.info(subprocess.check_output("juju status".split()))
         # Resume the upgrade
         action = await run_action(
             ops_test,
