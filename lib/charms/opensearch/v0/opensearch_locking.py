@@ -161,8 +161,8 @@ class _PeerRelationLock(ops.Object):
         """Grant & release lock."""
         assert self._relation
 
-        # fetch current app description
-        current_app = self._charm.opensearch_peer_cm.deployment_desc().app
+        if not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc()):
+            return
 
         if not self._charm.unit.is_leader():
             if self._relation.data[self._charm.app].get(
@@ -190,7 +190,7 @@ class _PeerRelationLock(ops.Object):
         # Give priority to leader unit
         for unit in (self._charm.unit, *self._relation.units):
             if self._unit_requested_lock(unit):
-                self._unit_with_lock = format_unit_name(unit, app=current_app)
+                self._unit_with_lock = format_unit_name(unit, app=deployment_desc.app)
                 logger.debug(f"[Node lock] (leader) granted peer lock to {unit.name=}")
                 break
         else:
