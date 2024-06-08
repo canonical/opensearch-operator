@@ -437,7 +437,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
             return False
 
-        if not (orchestrators := self.peers_data.get(Scope.APP, "orchestrators")):
+        if not (orchestrators := self.peers_data.get_object(Scope.APP, "orchestrators")):
             return False
 
         orchestrators = PeerClusterOrchestrators.from_dict(orchestrators)
