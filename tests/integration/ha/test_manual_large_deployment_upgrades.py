@@ -8,12 +8,12 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .ha.continuous_writes import ContinuousWrites
-from .ha.helpers import app_name, assert_continuous_writes_consistency
-from .ha.test_horizontal_scaling import IDLE_PERIOD
-from .helpers import APP_NAME, MODEL_CONFIG, SERIES, run_action
-from .helpers_deployments import get_application_units, wait_until
-from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, run_action
+from ..helpers_deployments import get_application_units, wait_until
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .continuous_writes import ContinuousWrites
+from .helpers import app_name, assert_continuous_writes_consistency
+from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
 
