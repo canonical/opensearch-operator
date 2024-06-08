@@ -22,7 +22,6 @@ from charms.opensearch.v0.helper_charm import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
-    App,
     DeploymentDescription,
     DeploymentType,
     Node,
@@ -169,18 +168,19 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ]
 
         # fetch emitting app planned units and broadcast
+        peer_cluster_app = PeerClusterApp.from_str(data.get("app"))
         self._put_fleet_apps(
             deployment_desc=deployment_desc,
             target_relation_ids=target_relation_ids,
-            p_cluster_app=PeerClusterApp.from_str(data.get("app")),
+            p_cluster_app=peer_cluster_app,
             trigger_rel_id=event.relation.id,
         )
 
-        if not (candidate_failover_app := data.get("candidate_failover_orchestrator_app")):
+        if not data.get("is_candidate_failover_orchestrator"):
             self.refresh_relation_data(event)
             return
 
-        candidate_failover_app = App.from_str(candidate_failover_app)
+        candidate_failover_app = peer_cluster_app.app
 
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators")
@@ -538,8 +538,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # broadcast that this cluster is a failover candidate, and let the main CM elect it or not
         if deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR:
             self.put_in_rel(
-                data={"candidate_failover_orchestrator_app": deployment_desc.app.to_str()},
+                data={"is_candidate_failover_orchestrator": "true"},
                 rel_id=event.relation.id,
+            )
+        else:
+            self.delete_from_rel(
+                key="is_candidate_failover_orchestrator", rel_id=event.relation.id
             )
 
         # register main and failover cm app names if any

@@ -1388,8 +1388,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _reconfigure_and_restart_unit_if_needed(self):
         """Reconfigure the current unit if a new config was computed for it, then restart."""
-        nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
-        if not nodes_config:
+        if not (nodes_config := self.peers_data.get_object(Scope.APP, "nodes_config")):
             return
 
         nodes_config = {name: Node.from_dict(node) for name, node in nodes_config.items()}
@@ -1399,8 +1398,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             [node.ip for node in list(nodes_config.values()) if node.is_cm_eligible()]
         )
 
-        new_node_conf = nodes_config.get(self.unit_name)
-        if not new_node_conf:
+        if not (new_node_conf := nodes_config.get(self.unit_name)):
             # the conf could not be computed / broadcast, because this node is
             # "starting" and is not online "yet" - either barely being configured (i.e. TLS)
             # or waiting to start.
