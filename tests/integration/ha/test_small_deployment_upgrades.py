@@ -8,7 +8,7 @@ import subprocess
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, run_action
+from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, run_action, set_watermark
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
@@ -82,6 +82,8 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
         idle_period=50,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
+
+    await set_watermark(ops_test, APP_NAME)
 
 
 @pytest.fixture()

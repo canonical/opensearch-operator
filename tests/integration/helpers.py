@@ -112,6 +112,26 @@ async def run_action(
     return SimpleNamespace(status=action.status or "completed", response=action.results)
 
 
+@retry(wait=wait_fixed(wait=30), stop=stop_after_attempt(15))
+async def set_watermark(
+    ops_test: OpsTest, app: str, low: float = 0.998, high: float = 0.999
+) -> None:
+    """Set watermark on the application."""
+    unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    await http_request(
+        ops_test,
+        "PUT",
+        f"https://{unit_ip}:9200/_cluster/settings",
+        {
+            "persistent": {
+                "cluster.routing.allocation.disk.watermark.low": low,
+                "cluster.routing.allocation.disk.watermark.high": high,
+            }
+        },
+        app=app,
+    )
+
+
 async def get_secrets(
     ops_test: OpsTest, unit_id: Optional[int] = None, username: str = "admin", app: str = APP_NAME
 ) -> Dict[str, str]:
