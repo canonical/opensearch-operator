@@ -119,6 +119,9 @@ class OpenSearchHealth:
             logger.debug(
                 f"\n\nHealth: {status} -- Shards: {ClusterState.shards(self._opensearch, host)}\n\n"
             )
+            logger.debug(
+                f"Allocation explanations: {ClusterState.allocation_explain(self._opensearch, host)}\n\n"
+            )
         except OpenSearchHttpError:
             pass
 

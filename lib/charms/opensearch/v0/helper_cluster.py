@@ -183,9 +183,39 @@ class ClusterState:
         opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
+        show_details: bool = False,
     ) -> List[Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
+        if show_details:
+            return opensearch.request(
+                "GET",
+                "/_cat/shards"
+                "?v=true"
+                "&h=index,shard,prirep,state,unassigned.reason"
+                "&s=state",
+                host=host,
+                alt_hosts=alt_hosts,
+            )
         return opensearch.request("GET", "/_cat/shards", host=host, alt_hosts=alt_hosts)
+
+    @staticmethod
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        reraise=True,
+    )
+    def allocation_explain(
+        opensearch: OpenSearchDistribution,
+        host: Optional[str] = None,
+        alt_hosts: Optional[List[str]] = None,
+    ) -> List[Dict[str, str]]:
+        """Get all shards of all indexes in the cluster."""
+        return opensearch.request(
+            "GET",
+            "/_cluster/allocation/explain" "?include_disk_info=true&include_yes_decisions=true",
+            host=host,
+            alt_hosts=alt_hosts,
+        )
 
     @staticmethod
     @retry(
