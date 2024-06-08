@@ -70,11 +70,7 @@ from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
-from charms.opensearch.v0.opensearch_nodes_exclusions import (
-    ALLOCS_TO_DELETE,
-    VOTING_TO_DELETE,
-    OpenSearchExclusions,
-)
+from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
     OpenSearchProvidedRolesException,
@@ -441,16 +437,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if (
             self.unit.is_leader()
             and self.opensearch.is_node_up()
-            and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
         ):
+            health = self.health.apply()
             if self._is_peer_rel_changed_deferred:
                 # We already deferred this event during this Juju event. Retry on the next
                 # Juju event.
                 return
-            # we defer because we want the temporary status to be updated
-            event.defer()
-            # If the handler is called again within this Juju hook, we will abandon the event
-            self._is_peer_rel_changed_deferred = True
+
+            if health in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
+                # we defer because we want the temporary status to be updated
+                event.defer()
+                # If the handler is called again within this Juju hook, we will abandon the event
+                self._is_peer_rel_changed_deferred = True
+
+            self.peer_cluster_provider.refresh_relation_data(event)
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -464,20 +464,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # if self._remove_data_role_from_dedicated_cm_if_needed(event):
         #    return
 
-        app_data = event.relation.data.get(event.app)
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
             self._recompute_roles_if_needed(event)
-        elif app_data:
+        elif event.relation.data.get(event.app):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
 
-        unit_data = event.relation.data.get(event.unit)
-        if not unit_data:
+        if not (unit_data := event.relation.data.get(event.unit)):
             return
 
-        if unit_data.get(VOTING_TO_DELETE) or unit_data.get(ALLOCS_TO_DELETE):
-            self.opensearch_exclusions.cleanup()
+        self.opensearch_exclusions.cleanup()
 
         if self.unit.is_leader() and unit_data.get("bootstrap_contributor"):
             contributor_count = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
