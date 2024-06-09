@@ -114,7 +114,8 @@ async def run_action(
 
 @retry(wait=wait_fixed(wait=30), stop=stop_after_attempt(15))
 async def set_watermark(
-    ops_test: OpsTest, app: str,
+    ops_test: OpsTest,
+    app: str,
 ) -> None:
     """Set watermark on the application."""
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
