@@ -34,16 +34,20 @@ class OpenSearchKeystoreError(OpenSearchError):
     """Exception thrown when an opensearch keystore is invalid."""
 
 
+class OpenSearchKeystoreNotReadyYetError(OpenSearchKeystoreError):
+    """Exception thrown when the keystore is not ready yet."""
+
+
 class Keystore(ABC):
     """Abstract class that represents the keystore."""
 
-    def __init__(self, charm):
+    def __init__(self, charm, password: str = None):
         """Creates the keystore manager class."""
         self._charm = charm
         self._opensearch = charm.opensearch
         self._keytool = charm.opensearch.paths.jdk + "/bin/keytool"
         self._keystore = ""
-        self._password = None
+        self._password = password
 
     @property
     def password(self) -> str:
@@ -62,7 +66,7 @@ class Keystore(ABC):
         if not os.path.exists(self._keystore):
             raise OpenSearchKeystoreError(f"{self._keystore} not found")
         try:
-            self._opensearch._run_cmd(
+            self._opensearch.run_bin(
                 self._keytool,
                 f"-storepasswd -new {pwd} -keystore {self._keystore} " f"-storepass {old_pwd}",
             )
@@ -73,7 +77,7 @@ class Keystore(ABC):
         """Lists the keys available in opensearch's keystore."""
         try:
             # Not using OPENSEARCH_BIN path
-            return self._opensearch._run_cmd(self._keytool, f"-v -list -keystore {self._keystore}")
+            return self._opensearch.run_bin(self._keytool, f"-v -list -keystore {self._keystore}")
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
@@ -93,7 +97,7 @@ class Keystore(ABC):
                 pass
             try:
                 # Not using OPENSEARCH_BIN path
-                self._opensearch._run_cmd(
+                self._opensearch.run_bin(
                     self._keytool,
                     f"-import -alias {key} "
                     f"-file {filename} -storetype JKS "
@@ -111,7 +115,7 @@ class Keystore(ABC):
         for key in entries:
             try:
                 # Not using OPENSEARCH_BIN path
-                self._opensearch._run_cmd(
+                self._opensearch.run_bin(
                     self._keytool,
                     f"-delete -alias {key} "
                     f"-keystore {self._keystore} "
@@ -133,9 +137,13 @@ class OpenSearchKeystore(Keystore):
         """Creates the keystore manager class."""
         super().__init__(charm)
         self._keytool = "opensearch-keystore"
+        self.keystore = charm.opensearch.paths.conf + "/opensearch.keystore"
 
     def add(self, entries: Dict[str, str]) -> None:
         """Adds a given key to the "opensearch" keystore."""
+        if not os.path.exists(self.keystore):
+            raise OpenSearchKeystoreNotReadyYetError()
+
         if not entries:
             return  # no key/value to add, no need to request reload of keystore either
         for key, value in entries.items():
@@ -143,6 +151,9 @@ class OpenSearchKeystore(Keystore):
 
     def delete(self, entries: List[str]) -> None:
         """Removes a given key from "opensearch" keystore."""
+        if not os.path.exists(self.keystore):
+            raise OpenSearchKeystoreNotReadyYetError()
+
         if not entries:
             return  # no key/value to remove, no need to request reload of keystore either
         for key in entries:
@@ -150,6 +161,9 @@ class OpenSearchKeystore(Keystore):
 
     def list(self, alias: str = None) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
+        if not os.path.exists(self.keystore):
+            raise OpenSearchKeystoreNotReadyYetError()
+
         try:
             return self._opensearch.run_bin(self._keytool, "list").split("\n")
         except OpenSearchCmdError as e:

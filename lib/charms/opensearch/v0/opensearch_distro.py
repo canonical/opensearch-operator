@@ -23,7 +23,6 @@ from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
-    OpenSearchError,
     OpenSearchHttpError,
     OpenSearchStartTimeoutError,
 )
@@ -450,10 +449,6 @@ class OpenSearchDistribution(ABC):
         Raises:
             OpenSearchError if the GET request fails.
         """
-        try:
-            return self.request("GET", "/").get("version").get("number")
-        except OpenSearchHttpError:
-            logger.error(
-                "failed to get root endpoint, implying that this node is offline. Retry once node is online."
-            )
-            raise OpenSearchError()
+        with open("workload_version") as f:
+            version = f.read().rstrip()
+        return version

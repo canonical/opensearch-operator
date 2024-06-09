@@ -5,6 +5,7 @@
 import asyncio
 import json
 import logging
+import subprocess
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -63,12 +64,52 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     model_conf["update-status-hook-interval"] = "1m"
     await ops_test.model.set_config(model_conf)
 
+    # Test deploying the charm with KNN disabled by default
+    await asyncio.gather(
+        ops_test.model.deploy(
+            my_charm, num_units=3, series=SERIES, config={"plugin_opensearch_knn": False}
+        ),
+    )
+
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        units_statuses=["blocked"],
+        wait_for_exact_units={APP_NAME: 3},
+        timeout=3400,
+        idle_period=IDLE_PERIOD,
+    )
+    assert len(ops_test.model.applications[APP_NAME].units) == 3
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_config_switch_before_cluster_ready(ops_test: OpsTest) -> None:
+    """Configuration change before cluster is ready.
+
+    We hold the cluster without starting its unit services by not relating to tls-operator.
+    """
+    cmd = (
+        f"juju ssh -m {ops_test.model.name} opensearch/0 -- "
+        "sudo grep -r 'knn.plugin.enabled' "
+        "/var/snap/opensearch/current/etc/opensearch/opensearch.yml"
+    ).split()
+    assert "false" in subprocess.check_output(cmd).decode()
+    # Now, enable knn and recheck:
+    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "true"})
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        units_statuses=["blocked"],
+        wait_for_exact_units={APP_NAME: 3},
+        timeout=3400,
+        idle_period=IDLE_PERIOD,
+    )
+    assert "true" in subprocess.check_output(cmd).decode()
+
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(
-            my_charm, num_units=3, series=SERIES, config={"plugin_opensearch_knn": True}
-        ),
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
     )
 
@@ -83,7 +124,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         timeout=3400,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
 @pytest.mark.abort_on_fail

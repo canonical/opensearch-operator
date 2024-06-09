@@ -16,12 +16,18 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from charms.opensearch.v0.helper_cluster import ClusterTopology
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
+    OpenSearchHttpError,
+)
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
+from charms.opensearch.v0.opensearch_keystore import (
+    OpenSearchKeystore,
+    OpenSearchKeystoreError,
+    OpenSearchKeystoreNotReadyYetError,
+)
 from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchBackupPlugin,
     OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
@@ -54,12 +60,11 @@ ConfigExposedPlugins = {
         "config": "plugin_opensearch_knn",
         "relation": None,
     },
-    "repository-s3": {
-        "class": OpenSearchBackupPlugin,
-        "config": None,
-        "relation": "s3-credentials",
-    },
 }
+
+
+class OpenSearchPluginManagerNotReadyYetError(OpenSearchPluginError):
+    """Exception when the plugin manager is not yet prepared."""
 
 
 class OpenSearchPluginManager:
@@ -136,28 +141,23 @@ class OpenSearchPluginManager:
             }
         return {**self._charm_config, "opensearch-version": self._opensearch.version}
 
-    def check_plugin_manager_ready(self) -> bool:
+    def check_plugin_manager_ready_for_api(self) -> bool:
         """Checks if the plugin manager is ready to run."""
-        return (
-            self._charm.peers_data.get(Scope.APP, "security_index_initialised", False)
-            and self._charm.opensearch.is_node_up()
-            and len(
-                [x for x in self._charm._get_nodes(True) if x.app_name == self._charm.app.name]
-            )
-            == self._charm.app.planned_units()
-            and self._charm.health.apply()
-            in [
-                HealthColors.GREEN,
-                HealthColors.YELLOW,
-                HealthColors.IGNORE,
-            ]
-        )
+        return self._charm.peers_data.get(
+            Scope.APP, "security_index_initialised", False
+        ) and self._charm.health.apply() in [
+            HealthColors.GREEN,
+            HealthColors.YELLOW,
+            HealthColors.YELLOW_TEMP,
+            HealthColors.IGNORE,
+        ]
 
     def run(self) -> bool:
         """Runs a check on each plugin: install, execute config changes or remove.
 
         This method should be called at config-changed event. Returns if needed restart.
         """
+        manager_not_ready = False
         err_msgs = []
         restart_needed = False
         for plugin in self.plugins:
@@ -187,9 +187,28 @@ class OpenSearchPluginManager:
                 # This is a more serious issue, as we are missing some input from
                 # the user. The charm should block.
                 err_msgs.append(str(e))
+
+            except OpenSearchKeystoreNotReadyYetError:
+                # Plugin manager must wait until the keystore is to finish its setup.
+                # This separated exception allows to separate this error and process
+                # it differently, once we have inserted all plugins' configs.
+                err_msgs.append("Keystore is not set yet, plugin manager not ready")
+
+                # Store the error and continue
+                # We want to apply all configuration changes to the cluster and then
+                # inform the caller this method needs to be reran later to update keystore.
+                # The keystore does not demand a restart, so we can process it later.
+                manager_not_ready = True
+
             logger.debug(f"Finished Plugin {plugin.name} status: {self.status(plugin)}")
         logger.info(f"Plugin check finished, restart needed: {restart_needed}")
 
+        if manager_not_ready:
+            # Raise a different exception, to message upper methods we still need to rerun
+            # the plugin manager later.
+            # At rerun, configurations above will not change, as they have been applied, and
+            # only the missing keystore will be set.
+            raise OpenSearchKeystoreNotReadyYetError()
         if err_msgs:
             raise OpenSearchPluginError("\n".join(err_msgs))
         return restart_needed
@@ -258,10 +277,7 @@ class OpenSearchPluginManager:
     def _disable_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""
         try:
-            if self._user_requested_to_enable(plugin) or self.status(plugin) not in [
-                PluginState.ENABLED,
-                PluginState.WAITING_FOR_UPGRADE,
-            ]:
+            if self._user_requested_to_enable(plugin):
                 # Only considering "INSTALLED" or "WAITING FOR UPGRADE" status as it
                 # represents a plugin that has been installed but either not yet configured
                 # or user explicitly disabled.
@@ -274,6 +290,9 @@ class OpenSearchPluginManager:
         self, config: OpenSearchPluginConfig
     ) -> Tuple[Dict[str, str], Dict[str, str]]:
         """Returns the current and the new configuration."""
+        if not self._charm.opensearch.is_node_up():
+            return None, None
+
         current_settings = self.cluster_config
         # We use current_settings and new_conf and check for any differences
         # therefore, we need to make a deepcopy here before editing new_conf
@@ -309,26 +328,69 @@ class OpenSearchPluginManager:
         For each: configuration and secret
         1) Remove the entries to be deleted
         2) Add entries, if available
+        Returns True if a configuration change was performed on opensearch.yml only
+        and a restart is needed.
 
-        Returns True if a configuration change was performed.
+        Executes the following steps:
+        1) Tries to manage the keystore
+        2) If settings API is available, tries to manage the configuration there
+        3) Inserts / removes the entries from opensearch.yml.
+
+        Given keystore + settings both use APIs to reload data, restart only happens
+        if the configuration files have been changed only.
+
+        Raises:
+            OpenSearchKeystoreNotReadyYetError: If the keystore is not yet ready.
         """
-        self._keystore.delete(config.secret_entries_to_del)
-        self._keystore.add(config.secret_entries_to_add)
-        if config.secret_entries_to_del or config.secret_entries_to_add:
-            self._keystore.reload_keystore()
+        keystore_ready = True
+        try:
+            # If security is not yet initialized, this code will throw an exception
+            self._keystore.delete(config.secret_entries_to_del)
+            self._keystore.add(config.secret_entries_to_add)
+            if config.secret_entries_to_del or config.secret_entries_to_add:
+                self._keystore.reload_keystore()
+        except (OpenSearchKeystoreNotReadyYetError, OpenSearchHttpError):
+            # We've failed to set the keystore, we need to rerun this method later
+            # Postpone the exception now and set the remaining config.
+            keystore_ready = False
 
         current_settings, new_conf = self._compute_settings(config)
-        if current_settings == new_conf:
-            # Nothing to do here
-            logger.info("apply_config: nothing to do, return")
-            return False
+        if current_settings and new_conf and current_settings != new_conf:
+            if config.config_entries_to_del:
+                # Clean to-be-deleted entries
+                self._opensearch.request(
+                    "PUT",
+                    "/_cluster/settings?flat_settings=true",
+                    payload={"persistent": {key: "null" for key in config.config_entries_to_del}},
+                )
+            if config.config_entries_to_add:
+                # Configuration changed detected, apply it
+                self._opensearch.request(
+                    "PUT",
+                    "/_cluster/settings?flat_settings=true",
+                    payload={"persistent": config.config_entries_to_add},
+                )
 
-        # Update the configuration
+        # Update the configuration files
         if config.config_entries_to_del:
             self._opensearch_config.delete_plugin(config.config_entries_to_del)
         if config.config_entries_to_add:
             self._opensearch_config.add_plugin(config.config_entries_to_add)
-        return True
+
+        if not keystore_ready:
+            # We need to rerun this method later
+            raise OpenSearchKeystoreNotReadyYetError()
+
+        # Final conclusion, we return a restart is needed if:
+        # (1) configuration changes are needed and applied in the files; and (2)
+        # the node is not up. For (2), we already checked if the node was up on
+        # _cluster_settings and, if not, received (None, None)
+        return all(
+            [
+                (config.secret_entries_to_add or config.secret_entries_to_del),
+                (not current_settings and not new_conf),
+            ]
+        )
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""
@@ -370,21 +432,39 @@ class OpenSearchPluginManager:
         from cluster settings. If yes, then we know that the service is enabled.
 
         Check if the configuration from enable() is present or not.
+
+        Raise:
+            OpenSearchKeystoreNotReadyYetError: If the keystore is not yet ready.
         """
         try:
             current_settings, new_conf = self._compute_settings(plugin.config())
-            if current_settings != new_conf:
+            if current_settings and new_conf and current_settings != new_conf:
                 return False
 
-            # Now, focus on the keystore part
-            keys_available = self._keystore.list()
-            keys_to_add = plugin.config().secret_entries_to_add
-            if any(k not in keys_available for k in keys_to_add):
+            # Avoid the keystore check as we may just be writing configuration in the files
+            # while the cluster is not up and running yet.
+            if plugin.config().secret_entries_to_add or plugin.config().secret_entries_to_del:
+                # Need to check keystore
+                # If the keystore is not yet set, then an exception will be raised here
+                keys_available = self._keystore.list()
+                keys_to_add = plugin.config().secret_entries_to_add
+                if any(k not in keys_available for k in keys_to_add):
+                    return False
+                keys_to_del = plugin.config().secret_entries_to_del
+                if any(k in keys_available for k in keys_to_del):
+                    return False
+
+            # Finally, check configuration files
+            if self._opensearch_config.get_plugin(plugin.config().config_entries_to_del):
+                # We should not have deleted entries in the configuration
                 return False
-            keys_to_del = plugin.config().secret_entries_to_del
-            if any(k in keys_available for k in keys_to_del):
+            config = self._opensearch_config.get_plugin(plugin.config().config_entries_to_add)
+            if plugin.config().config_entries_to_add and (not config or config != new_conf):
+                # Have configs that should be present but cannot find them OR they have
+                # different values than expected
                 return False
-        except (KeyError, OpenSearchPluginError) as e:
+
+        except (OpenSearchKeystoreError, KeyError, OpenSearchPluginError) as e:
             logger.warning(f"_is_enabled: error with {e}")
             return False
         return True

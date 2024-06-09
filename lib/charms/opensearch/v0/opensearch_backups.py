@@ -98,6 +98,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyYetError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
@@ -408,6 +409,10 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
                 ],
             )
             self.charm.plugin_manager.apply_config(plugin)
+        except OpenSearchKeystoreNotReadyYetError:
+            logger.warning("s3-changed: keystore not ready yet")
+            event.defer()
+            return
         except OpenSearchError as e:
             logger.warning(
                 f"s3-changed: failed disabling with {str(e)}\n"
@@ -835,7 +840,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
         try:
-            if not self.charm.plugin_manager.check_plugin_manager_ready():
+            if not self.charm.plugin_manager.check_plugin_manager_ready_for_api():
                 raise OpenSearchNotFullyReadyError()
 
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
@@ -845,13 +850,14 @@ class OpenSearchBackup(OpenSearchBackupBase):
                 # retrieve the key values and check if they changed.
                 self.charm.plugin_manager.apply_config(plugin.disable())
             self.charm.plugin_manager.apply_config(plugin.config())
+        except (OpenSearchKeystoreNotReadyYetError, OpenSearchNotFullyReadyError):
+            logger.warning("s3-changed: cluster not ready yet")
+            event.defer()
+            return
         except OpenSearchError as e:
-            if isinstance(e, OpenSearchNotFullyReadyError):
-                logger.warning("s3-changed: cluster not ready yet")
-            else:
-                self.charm.status.set(BlockedStatus(PluginConfigError))
-                # There was an unexpected error, log it and block the unit
-                logger.error(e)
+            self.charm.status.set(BlockedStatus(PluginConfigError))
+            # There was an unexpected error, log it and block the unit
+            logger.error(e)
             event.defer()
             return
 
@@ -955,13 +961,14 @@ class OpenSearchBackup(OpenSearchBackupBase):
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 self.charm.plugin_manager.apply_config(plugin.disable())
+        except OpenSearchKeystoreNotReadyYetError:
+            logger.warning("s3-changed: keystore not ready yet")
+            event.defer()
+            return
         except OpenSearchError as e:
-            if isinstance(e, OpenSearchNotFullyReadyError):
-                logger.warning("s3-changed: cluster not ready yet")
-            else:
-                self.charm.status.set(BlockedStatus(PluginConfigError))
-                # There was an unexpected error, log it and block the unit
-                logger.error(e)
+            self.charm.status.set(BlockedStatus(PluginConfigError))
+            # There was an unexpected error, log it and block the unit
+            logger.error(e)
             event.defer()
             return
         self.charm.status.clear(BackupInDisabling)
