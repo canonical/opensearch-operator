@@ -114,7 +114,7 @@ async def run_action(
 
 @retry(wait=wait_fixed(wait=30), stop=stop_after_attempt(15))
 async def set_watermark(
-    ops_test: OpsTest, app: str, low: float = 0.998, high: float = 0.999
+    ops_test: OpsTest, app: str,
 ) -> None:
     """Set watermark on the application."""
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -124,8 +124,7 @@ async def set_watermark(
         f"https://{unit_ip}:9200/_cluster/settings",
         {
             "persistent": {
-                "cluster.routing.allocation.disk.watermark.low": low,
-                "cluster.routing.allocation.disk.watermark.high": high,
+                "cluster.routing.allocation.disk.threshold_enabled": "false",
             }
         },
         app=app,
