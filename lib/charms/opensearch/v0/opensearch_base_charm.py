@@ -53,7 +53,7 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
-from charms.opensearch.v0.models import DeploymentDescription, DeploymentType, PeerClusterOrchestrators
+from charms.opensearch.v0.models import DeploymentDescription, DeploymentType
 from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -432,19 +432,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             event.defer()
 
-    def _is_orchestrator(self) -> bool:
-        """Check whether the current app is an orchestrator."""
-        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
-            return False
-
-        if not (orchestrators := self.peers_data.get_object(Scope.APP, "orchestrators")):
-            return False
-
-        orchestrators = PeerClusterOrchestrators.from_dict(orchestrators)
-        return deployment_desc.app.id in [
-            orchestrators.main_app.id, orchestrators.failover_app.id
-        ]
-
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
         if (
@@ -463,7 +450,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # If the handler is called again within this Juju hook, we will abandon the event
                 self._is_peer_rel_changed_deferred = True
 
-            if self._is_orchestrator():
+            if self.opensearch_peer_cm.is_provider_orchestrator():
                 self.peer_cluster_provider.refresh_relation_data(event)
 
         for relation in self.model.relations.get(ClientRelationName, []):

@@ -375,6 +375,27 @@ class OpenSearchPeerClustersManager:
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
 
+    def is_provider_orchestrator(self) -> bool:
+        """Check whether the current app is an active provider orchestrator."""
+        if not (deployment_desc := self.deployment_desc()):
+            return False
+
+        if deployment_desc.typ == DeploymentType.OTHER:
+            return False
+
+        if not self.is_peer_cluster_orchestrator_relation_set():
+            return False
+
+        if not (orchestrators := self._charm.peers_data.get_object(Scope.APP, "orchestrators")):
+            return False
+
+        orchestrators = PeerClusterOrchestrators.from_dict(orchestrators)
+        return (
+            (orchestrators.main_app and orchestrators.main_app.id == deployment_desc.app.id)
+            or
+            (orchestrators.failover_app and orchestrators.failover_app.id == deployment_desc.app.id)
+        )
+
     def validate_roles(self, nodes: List[Node], on_new_unit: bool = False) -> None:
         """Validate full-cluster wide the quorum for CM/voting_only nodes on services start."""
         deployment_desc = self.deployment_desc()
