@@ -1104,7 +1104,7 @@ class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
     def get_relation_data(self) -> Dict[str, Any]:
         """Returns the relation that the plugin manager should listen to."""
         relation = self._charm.model.get_relation(self._relation_name)
-        if self.is_relation_set():
+        if not self.is_relation_set():
             return {}
         return relation.data.get(relation.app)
 
