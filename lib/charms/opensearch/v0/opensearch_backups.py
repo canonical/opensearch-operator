@@ -103,11 +103,13 @@ from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
     OpenSearchPluginConfig,
+    OpenSearchPluginRelationsHandler,
     PluginState,
 )
 from ops.charm import ActionEvent, CharmBase
 from ops.framework import EventBase, Object
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from overrides import override
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
@@ -842,15 +844,8 @@ class OpenSearchBackup(OpenSearchBackupBase):
         try:
             if not self.charm.plugin_manager.check_plugin_manager_ready_for_api():
                 raise OpenSearchNotFullyReadyError()
-            relation = self.charm.model.get_relation(S3_RELATION)
-            plugin = OpenSearchBackupPlugin(
-                self.charm.opensearch.paths.plugins,
-                extra_config={
-                    **relation.data[relation.app],
-                    **self.charm.model.config,
-                    "opensearch-version": self.charm.opensearch.version,
-                },
-            )
+            plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
+
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 # We need to explicitly disable the plugin before reconfiguration
                 # That happens because, differently from the actual configs, we cannot
@@ -1076,22 +1071,68 @@ class OpenSearchBackup(OpenSearchBackupBase):
         return status
 
 
-def backup(charm: CharmBase) -> OpenSearchBackupBase:
-    """Implements the logic that returns the correct class according to the cluster type.
+class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
+    """Creates the correct backup class and populates the appropriate relation details."""
 
-    This class is solely responsible for the creation of the correct S3 client manager.
+    _singleton = None
+    _backup_obj = None
 
-    If this cluster is an orchestrator or failover cluster, then return the OpenSearchBackup.
-    Otherwise, return the OpenSearchNonOrchestratorBackup.
+    def __new__(cls, *args):
+        """Sets singleton class to be reused during this hook."""
+        if cls._singleton is None:
+            cls._singleton = super(OpenSearchBackupFactory, cls).__new__(cls)
+        return cls._singleton
 
-    There is also the condition where the deployment description does not exist yet. In this
-    case, return the base class OpenSearchBackupBase. This class solely defers all s3-related
-    events until the deployment description is available and the actual S3 object is allocated.
-    """
-    if not charm.opensearch_peer_cm.deployment_desc():
-        # Temporary condition: we are waiting for CM to show up and define which type
-        # of cluster are we. Once we have that defined, then we will process.
-        return OpenSearchBackupBase(charm)
-    elif charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
-        return OpenSearchBackup(charm)
-    return OpenSearchNonOrchestratorClusterBackup(charm)
+    def __init__(self, charm: CharmBase):
+        super().__init__()
+        self._charm = charm
+
+    @override
+    def is_relation_set(self) -> bool:
+        """Checks if the relation is set for the plugin handler."""
+        relation = self._charm.model.get_relation(self._relation_name)
+        return relation and relation.units
+
+    @property
+    def _relation_name(self) -> str:
+        rel_name = PeerClusterRelationName
+        if isinstance(self.backup(), OpenSearchBackup):
+            rel_name = S3_RELATION
+        return rel_name
+
+    @override
+    def get_relation_data(self) -> Dict[str, Any]:
+        """Returns the relation that the plugin manager should listen to."""
+        relation = self._charm.model.get_relation(self._relation_name)
+        if self.is_relation_set():
+            return {}
+        return relation.data.get(relation.app)
+
+    def backup(self) -> OpenSearchBackupBase:
+        """Implements the logic that returns the correct class according to the cluster type."""
+        if not OpenSearchBackupFactory._backup_obj:
+            OpenSearchBackupFactory._backup_obj = self._get_backup_obj()
+        return OpenSearchBackupFactory._backup_obj
+
+    def _get_backup_obj(self) -> OpenSearchBackupBase:
+        """Implements the logic that returns the correct class according to the cluster type.
+
+        This class is solely responsible for the creation of the correct S3 client manager.
+
+        If this cluster is an orchestrator or failover cluster, then return the OpenSearchBackup.
+        Otherwise, return the OpenSearchNonOrchestratorBackup.
+
+        There is also the condition where the deployment description does not exist yet. In this
+        case, return the base class OpenSearchBackupBase. This class solely defers all s3-related
+        events until the deployment description is available and the actual S3 object is allocated.
+        """
+        if not self._charm.opensearch_peer_cm.deployment_desc():
+            # Temporary condition: we are waiting for CM to show up and define which type
+            # of cluster are we. Once we have that defined, then we will process.
+            return OpenSearchBackupBase(self._charm)
+        elif (
+            self._charm.opensearch_peer_cm.deployment_desc().typ
+            == DeploymentType.MAIN_ORCHESTRATOR
+        ):
+            return OpenSearchBackup(self._charm)
+        return OpenSearchNonOrchestratorClusterBackup(self._charm)

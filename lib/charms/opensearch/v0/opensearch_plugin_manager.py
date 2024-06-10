@@ -16,6 +16,10 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from charms.opensearch.v0.helper_cluster import ClusterTopology
+from charms.opensearch.v0.opensearch_backups import (
+    OpenSearchBackupFactory,
+    OpenSearchBackupPlugin,
+)
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchHttpError,
@@ -58,7 +62,12 @@ ConfigExposedPlugins = {
     "opensearch-knn": {
         "class": OpenSearchKnn,
         "config": "plugin_opensearch_knn",
-        "relation": None,
+        "relation_handler": None,
+    },
+    "repository-s3": {
+        "class": OpenSearchBackupPlugin,
+        "config": None,
+        "relation_handler": OpenSearchBackupFactory,
     },
 }
 
@@ -128,18 +137,13 @@ class OpenSearchPluginManager:
 
     def _extra_conf(self, plugin_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Returns the config from the relation data of the target plugin if applies."""
-        relation_name = plugin_data.get("relation")
-        relation = self._charm.model.get_relation(relation_name) if relation_name else None
-        # If the plugin depends on the relation, it must have at least one unit to be considered
-        # for enabling. Otherwise, relation.units == 0 means that the plugin has no remote units
-        # and the relation may be going away.
-        if relation and relation.units:
-            return {
-                **relation.data[relation.app],
-                **self._charm_config,
-                "opensearch-version": self._opensearch.version,
-            }
-        return {**self._charm_config, "opensearch-version": self._opensearch.version}
+        relation_handler = plugin_data.get("relation_handler")
+        data = relation_handler(self._charm).get_relation_data() if relation_handler else {}
+        return {
+            **data,
+            **self._charm_config,
+            "opensearch-version": self._opensearch.version,
+        }
 
     def check_plugin_manager_ready_for_api(self) -> bool:
         """Checks if the plugin manager is ready to run."""
@@ -424,13 +428,10 @@ class OpenSearchPluginManager:
     def _user_requested_to_enable(self, plugin: OpenSearchPlugin) -> bool:
         """Returns True if user requested plugin to be enabled."""
         plugin_data = ConfigExposedPlugins[plugin.name]
-        if not (
-            self._charm.config.get(plugin_data["config"], False)
-            or self._is_plugin_relation_set(plugin_data["relation"])
-        ):
-            # User asked to disable this plugin
-            return False
-        return True
+        return self._charm.config.get(plugin_data["config"], False) or (
+            plugin_data["relation_handler"]
+            and plugin_data["relation_handler"](self._charm).is_relation_set()
+        )
 
     def _is_enabled(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is enabled.
@@ -482,15 +483,6 @@ class OpenSearchPluginManager:
         version = self._opensearch.version.split(".")
         num_points = min(len(plugin_version), len(version))
         return version[:num_points] != plugin_version[:num_points]
-
-    def _is_plugin_relation_set(self, relation_name: str) -> bool:
-        """Returns True if a relation is expected and it is set."""
-        if not relation_name:
-            return False
-        relation = self._charm.model.get_relation(relation_name)
-        if self._event_scope == OpenSearchPluginEventScope.RELATION_BROKEN_EVENT:
-            return relation is not None and relation.units
-        return relation is not None
 
     def _remove_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""

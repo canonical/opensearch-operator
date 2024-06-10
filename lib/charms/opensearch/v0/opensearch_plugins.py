@@ -271,7 +271,7 @@ class OpenSearchBaseCharm(CharmBase):
 """  # noqa: D405, D410, D411, D214, D412, D416
 
 import logging
-from abc import abstractmethod, abstractproperty
+from abc import ABC, abstractmethod, abstractproperty
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -330,6 +330,23 @@ class PluginState(BaseStrEnum):
     ENABLED = "enabled"
     DISABLED = "disabled"
     WAITING_FOR_UPGRADE = "waiting-for-upgrade"
+
+
+class OpenSearchPluginRelationsHandler(ABC):
+    """Implements the relation manager for each plugin.
+
+    Plugins may have one or more relations tied to them. This abstract class
+    enables different modules to implement a class that can specify which
+    relations should plugin manager listen to.
+    """
+
+    def is_relation_set(self) -> bool:
+        """Returns True if the relation is set, False otherwise."""
+        return False
+
+    def get_relation_data(self) -> Dict[str, Any]:
+        """Returns the relation that the plugin manager should listen to."""
+        raise NotImplementedError()
 
 
 class OpenSearchPluginConfig(BaseModel):

@@ -47,31 +47,6 @@ class Keystore(ABC):
         self._opensearch = charm.opensearch
         self._keytool = charm.opensearch.paths.jdk + "/bin/keytool"
         self._keystore = ""
-        self._password = password
-
-    @property
-    def password(self) -> str:
-        """Returns the password for the store."""
-        return self._password
-
-    @password.setter
-    def password(self, value: str) -> None:
-        """Sets the password for the store."""
-        self._password = value
-
-    def update_password(self, old_pwd: str, pwd: str) -> None:
-        """Updates the password for the store."""
-        if not pwd or not old_pwd:
-            raise OpenSearchKeystoreError("Missing password for store")
-        if not os.path.exists(self._keystore):
-            raise OpenSearchKeystoreError(f"{self._keystore} not found")
-        try:
-            self._opensearch.run_bin(
-                self._keytool,
-                f"-storepasswd -new {pwd} -keystore {self._keystore} " f"-storepass {old_pwd}",
-            )
-        except OpenSearchCmdError as e:
-            raise OpenSearchKeystoreError(str(e))
 
     def list(self, alias: str = None) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
