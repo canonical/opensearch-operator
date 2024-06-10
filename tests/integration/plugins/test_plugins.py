@@ -46,6 +46,28 @@ COS_RELATION_NAME = "cos-agent"
 logger = logging.getLogger(__name__)
 
 
+async def assert_knn_config_updated(
+    ops_test: OpsTest, knn_enabled: bool, check_api: bool = True
+) -> None:
+    """Check if the KNN plugin is enabled or disabled."""
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
+    cmd = (
+        f"juju ssh -m {ops_test.model.name} opensearch/0 -- "
+        "sudo grep -r 'knn.plugin.enabled' "
+        "/var/snap/opensearch/current/etc/opensearch/opensearch.yml"
+    ).split()
+    assert (knn_enabled and "true" in subprocess.check_output(cmd).decode()) or (
+        not knn_enabled and "false" in subprocess.check_output(cmd).decode()
+    )
+    if not check_api:
+        # We're finished
+        return
+
+    endpoint = f"https://{leader_unit_ip}:9200/_cluster/settings?flat_settings=true"
+    settings = await http_request(ops_test, "GET", endpoint, app=APP_NAME, json_resp=True)
+    assert settings.get("persistent").get("knn.plugin.enabled") == str(knn_enabled).lower()
+
+
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -89,12 +111,8 @@ async def test_config_switch_before_cluster_ready(ops_test: OpsTest) -> None:
 
     We hold the cluster without starting its unit services by not relating to tls-operator.
     """
-    cmd = (
-        f"juju ssh -m {ops_test.model.name} opensearch/0 -- "
-        "sudo grep -r 'knn.plugin.enabled' "
-        "/var/snap/opensearch/current/etc/opensearch/opensearch.yml"
-    ).split()
-    assert "false" in subprocess.check_output(cmd).decode()
+    await assert_knn_config_updated(ops_test, False, check_api=False)
+
     # Now, enable knn and recheck:
     await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "true"})
     await wait_until(
@@ -105,7 +123,7 @@ async def test_config_switch_before_cluster_ready(ops_test: OpsTest) -> None:
         timeout=3400,
         idle_period=IDLE_PERIOD,
     )
-    assert "true" in subprocess.check_output(cmd).decode()
+    await assert_knn_config_updated(ops_test, True, check_api=False)
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
@@ -431,7 +449,8 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
         )
 
         # Now use it to compare with the restart
-        assert await is_each_unit_restarted(ops_test, APP_NAME, ts)
+        assert not await is_each_unit_restarted(ops_test, APP_NAME, ts)
+        await assert_knn_config_updated(ops_test, knn_enabled, check_api=True)
         assert await check_cluster_formation_successful(
             ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=APP_NAME)
         ), "Restart happened but cluster did not start correctly"

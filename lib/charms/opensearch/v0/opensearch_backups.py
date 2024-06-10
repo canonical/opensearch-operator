@@ -842,8 +842,15 @@ class OpenSearchBackup(OpenSearchBackupBase):
         try:
             if not self.charm.plugin_manager.check_plugin_manager_ready_for_api():
                 raise OpenSearchNotFullyReadyError()
-
-            plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
+            relation = self.charm.model.get_relation(S3_RELATION)
+            plugin = OpenSearchBackupPlugin(
+                self.charm.opensearch.paths.plugins,
+                extra_config={
+                    **relation.data[relation.app],
+                    **self.charm.model.config,
+                    "opensearch-version": self.charm.opensearch.version,
+                },
+            )
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 # We need to explicitly disable the plugin before reconfiguration
                 # That happens because, differently from the actual configs, we cannot

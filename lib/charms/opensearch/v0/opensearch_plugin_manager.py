@@ -322,7 +322,7 @@ class OpenSearchPluginManager:
         )
         return current_settings, new_conf
 
-    def apply_config(self, config: OpenSearchPluginConfig) -> bool:
+    def apply_config(self, config: OpenSearchPluginConfig) -> bool:  # noqa: C901
         """Runs the configuration changes as passed via OpenSearchPluginConfig.
 
         For each: configuration and secret
@@ -343,6 +343,7 @@ class OpenSearchPluginManager:
             OpenSearchKeystoreNotReadyYetError: If the keystore is not yet ready.
         """
         keystore_ready = True
+        cluster_settings_changed = False
         try:
             # If security is not yet initialized, this code will throw an exception
             self._keystore.delete(config.secret_entries_to_del)
@@ -363,6 +364,7 @@ class OpenSearchPluginManager:
                     "/_cluster/settings?flat_settings=true",
                     payload={"persistent": {key: "null" for key in config.config_entries_to_del}},
                 )
+                cluster_settings_changed = True
             if config.config_entries_to_add:
                 # Configuration changed detected, apply it
                 self._opensearch.request(
@@ -370,12 +372,17 @@ class OpenSearchPluginManager:
                     "/_cluster/settings?flat_settings=true",
                     payload={"persistent": config.config_entries_to_add},
                 )
+                cluster_settings_changed = True
 
         # Update the configuration files
         if config.config_entries_to_del:
             self._opensearch_config.delete_plugin(config.config_entries_to_del)
         if config.config_entries_to_add:
             self._opensearch_config.add_plugin(config.config_entries_to_add)
+
+        if cluster_settings_changed:
+            # We have changed the cluster settings, clean up the cache
+            del self.cluster_config
 
         if not keystore_ready:
             # We need to rerun this method later
@@ -384,11 +391,11 @@ class OpenSearchPluginManager:
         # Final conclusion, we return a restart is needed if:
         # (1) configuration changes are needed and applied in the files; and (2)
         # the node is not up. For (2), we already checked if the node was up on
-        # _cluster_settings and, if not, received (None, None)
+        # _cluster_settings and, if not, cluster_settings_changed=True.
         return all(
             [
                 (config.secret_entries_to_add or config.secret_entries_to_del),
-                (not current_settings and not new_conf),
+                not cluster_settings_changed,
             ]
         )
 
