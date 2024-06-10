@@ -5,6 +5,7 @@
 
 This module manages OpenSearch keystore access and lifecycle.
 """
+import functools
 import logging
 import os
 from abc import ABC
@@ -13,7 +14,6 @@ from typing import Dict, List
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
-    OpenSearchHttpError,
 )
 
 # The unique Charmhub library identifier, never change it
@@ -134,11 +134,11 @@ class OpenSearchKeystore(Keystore):
         for key in entries:
             self._delete(key)
 
-    def list(self, alias: str = None) -> List[str]:
+    @functools.cached_property
+    def list(self) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
         if not os.path.exists(self.keystore):
             raise OpenSearchKeystoreNotReadyYetError()
-
         try:
             return self._opensearch.run_bin(self._keytool, "list").split("\n")
         except OpenSearchCmdError as e:
@@ -151,12 +151,16 @@ class OpenSearchKeystore(Keystore):
             # Add newline to the end of the key, if missing
             value += "" if value.endswith("\n") else "\n"
             self._opensearch.run_bin(self._keytool, f"add --force {key}", stdin=value)
+
+            self._clean_cache_if_needed()
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
     def _delete(self, key: str) -> None:
         try:
             self._opensearch.run_bin(self._keytool, f"remove {key}")
+
+            self._clean_cache_if_needed()
         except OpenSearchCmdError as e:
             if "does not exist in the keystore" in str(e):
                 logger.info(
@@ -166,13 +170,15 @@ class OpenSearchKeystore(Keystore):
                 return
             raise OpenSearchKeystoreError(str(e))
 
+    def _clean_cache_if_needed(self):
+        if self.list:
+            del self.list
+
     def reload_keystore(self) -> None:
-        """Updates the keystore value (adding or removing) and reload."""
-        try:
-            # Reload the security settings and return if opensearch needs restart
-            response = self._opensearch.request("POST", "_nodes/reload_secure_settings")
-            logger.debug(f"_update_keystore_and_reload: response received {response}")
-        except OpenSearchHttpError as e:
-            raise OpenSearchKeystoreError(
-                f"Failed to reload keystore: error code: {e.response_code}, error body: {e.response_body}"
-            )
+        """Updates the keystore value (adding or removing) and reload.
+
+        Raises:
+            OpenSearchHttpError: If the reload fails.
+        """
+        response = self._opensearch.request("POST", "_nodes/reload_secure_settings")
+        logger.debug(f"_update_keystore_and_reload: response received {response}")

@@ -109,7 +109,7 @@ class OpenSearchPluginManager:
         """Resets the event scope of the plugin manager to the default value."""
         self._event_scope = OpenSearchPluginEventScope.DEFAULT
 
-    @property
+    @functools.cached_property
     def plugins(self) -> List[OpenSearchPlugin]:
         """Returns List of installed plugins."""
         plugins_list = []
@@ -222,7 +222,7 @@ class OpenSearchPluginManager:
 
         Returns True if the plugin was installed.
         """
-        installed_plugins = self._installed_plugins()
+        installed_plugins = self._installed_plugins
         if plugin.dependencies:
             missing_deps = [dep for dep in plugin.dependencies if dep not in installed_plugins]
             if missing_deps:
@@ -242,6 +242,7 @@ class OpenSearchPluginManager:
                 raise OpenSearchPluginMissingDepsError(plugin.name, missing_deps)
 
             self._opensearch.run_bin("opensearch-plugin", f"install --batch {plugin.name}")
+            self._clean_cache_if_needed()
         except KeyError as e:
             raise OpenSearchPluginMissingConfigError(e)
         except OpenSearchCmdError as e:
@@ -423,7 +424,7 @@ class OpenSearchPluginManager:
 
     def _is_installed(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is installed."""
-        return plugin.name in self._installed_plugins()
+        return plugin.name in self._installed_plugins
 
     def _user_requested_to_enable(self, plugin: OpenSearchPlugin) -> bool:
         """Returns True if user requested plugin to be enabled."""
@@ -454,7 +455,7 @@ class OpenSearchPluginManager:
             if plugin.config().secret_entries_to_add or plugin.config().secret_entries_to_del:
                 # Need to check keystore
                 # If the keystore is not yet set, then an exception will be raised here
-                keys_available = self._keystore.list()
+                keys_available = self._keystore.list
                 keys_to_add = plugin.config().secret_entries_to_add
                 if any(k not in keys_available for k in keys_to_add):
                     return False
@@ -495,6 +496,8 @@ class OpenSearchPluginManager:
         """Remove a plugin without restarting the node."""
         try:
             self._opensearch.run_bin("opensearch-plugin", f"remove {plugin.name}")
+            self._clean_cache_if_needed()
+
         except OpenSearchCmdError as e:
             if "not found" in str(e):
                 logger.info(f"Plugin {plugin.name} to be deleted, not found. Continuing...")
@@ -502,6 +505,13 @@ class OpenSearchPluginManager:
             raise OpenSearchPluginRemoveError(plugin.name)
         return True
 
+    def _clean_cache_if_needed(self):
+        if self.plugins:
+            del self.plugins
+        if self._installed_plugins:
+            del self._installed_plugins
+
+    @functools.cached_property
     def _installed_plugins(self) -> List[str]:
         """List plugins."""
         try:
