@@ -454,7 +454,7 @@ async def test_knn_training_search(ops_test: OpsTest) -> None:
         assert await check_cluster_formation_successful(
             ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=APP_NAME)
         ), "Restart happened but cluster did not start correctly"
-        logger.info("Restart finished and was successful")
+        logger.info("Config updated and was successful")
 
         query = {
             "size": 2,

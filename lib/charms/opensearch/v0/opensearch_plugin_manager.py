@@ -271,7 +271,10 @@ class OpenSearchPluginManager:
     def _configure_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """Gathers all the configuration changes needed and applies them."""
         try:
-            if self.status(plugin) != PluginState.INSTALLED:
+            if self.status(plugin) not in [
+                PluginState.INSTALLED,
+                PluginState.DISABLED,
+            ] or not self._user_requested_to_enable(plugin):
                 # Leave this method if either user did not request to enable this plugin
                 # or plugin has been already enabled.
                 return False
@@ -283,9 +286,6 @@ class OpenSearchPluginManager:
         """If disabled, removes plugin configuration or sets it to other values."""
         try:
             if self._user_requested_to_enable(plugin):
-                # Only considering "INSTALLED" or "WAITING FOR UPGRADE" status as it
-                # represents a plugin that has been installed but either not yet configured
-                # or user explicitly disabled.
                 return False
             return self.apply_config(plugin.disable())
         except KeyError as e:
@@ -400,7 +400,10 @@ class OpenSearchPluginManager:
         return all(
             [
                 (config.secret_entries_to_add or config.secret_entries_to_del),
-                not cluster_settings_changed,
+                (
+                    (config.config_entries_to_add or config.config_entries_to_del)
+                    and not cluster_settings_changed
+                ),
             ]
         )
 
@@ -414,10 +417,9 @@ class OpenSearchPluginManager:
 
         # The _user_request_to_enable comes first, as it ensures there is a relation/config
         # set, which will be used by _is_enabled to determine if we are enabled or not.
-        if not self._user_requested_to_enable(plugin) and not self._is_enabled(plugin):
+        if not self._is_enabled(plugin):
             return PluginState.DISABLED
-
-        if self._is_enabled(plugin):
+        elif self._user_requested_to_enable(plugin):
             return PluginState.ENABLED
 
         return PluginState.INSTALLED
@@ -446,10 +448,6 @@ class OpenSearchPluginManager:
             OpenSearchKeystoreNotReadyYetError: If the keystore is not yet ready.
         """
         try:
-            current_settings, new_conf = self._compute_settings(plugin.config())
-            if current_settings and new_conf and current_settings != new_conf:
-                return False
-
             # Avoid the keystore check as we may just be writing configuration in the files
             # while the cluster is not up and running yet.
             if plugin.config().secret_entries_to_add or plugin.config().secret_entries_to_del:
@@ -463,20 +461,22 @@ class OpenSearchPluginManager:
                 if any(k in keys_available for k in keys_to_del):
                     return False
 
-            # Finally, check configuration files
-            if self._opensearch_config.get_plugin(plugin.config().config_entries_to_del):
-                # We should not have deleted entries in the configuration
-                return False
-            config = self._opensearch_config.get_plugin(plugin.config().config_entries_to_add)
-            if plugin.config().config_entries_to_add and (not config or config != new_conf):
-                # Have configs that should be present but cannot find them OR they have
-                # different values than expected
-                return False
+            # We always check the configuration files, as we always persist data there
+            config = {
+                k: None for k in plugin.config().config_entries_to_del
+            } | plugin.config().config_entries_to_add
+            existing_setup = self._opensearch_config.get_plugin(config)
+            return all(
+                [
+                    (k in existing_setup and config[k] == existing_setup[k])
+                    or (k not in existing_setup and config[k] is None)
+                    for k in config.keys()
+                ]
+            )
 
         except (OpenSearchKeystoreError, KeyError, OpenSearchPluginError) as e:
             logger.warning(f"_is_enabled: error with {e}")
             return False
-        return True
 
     def _needs_upgrade(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin needs upgrade."""

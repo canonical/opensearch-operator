@@ -1091,7 +1091,7 @@ class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
     def is_relation_set(self) -> bool:
         """Checks if the relation is set for the plugin handler."""
         relation = self._charm.model.get_relation(self._relation_name)
-        return relation and relation.units
+        return relation is not None and relation.units
 
     @property
     def _relation_name(self) -> str:
