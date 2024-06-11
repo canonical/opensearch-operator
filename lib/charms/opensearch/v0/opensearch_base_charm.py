@@ -530,9 +530,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
                 self.peers_data.delete(Scope.APP, "nodes_config")
 
-                # todo: remove this if snap storage reuse is solved.
-                self.peers_data.delete(Scope.APP, "security_index_initialised")
-
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
             try:
