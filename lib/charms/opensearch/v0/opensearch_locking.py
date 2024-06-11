@@ -231,8 +231,8 @@ class OpenSearchNodeLock(ops.Object):
                 ignore_retry_on=[404],
             )
         except OpenSearchHttpError as e:
-            if e.response_code == 404:
-                # No unit has lock
+            if e.response_code in [404, 503]:
+                # No unit has lock or index not available
                 return
             raise
         return document_data["unit-name"]
@@ -266,7 +266,13 @@ class OpenSearchNodeLock(ops.Object):
                 unit = self._unit_with_lock(host)
             except OpenSearchHttpError:
                 logger.exception("Error checking which unit has OpenSearch lock")
-                return False
+                # if the node lock cannot be acquired, fall back to peer databag lock
+                # this avoids hitting deadlock situations in cases where
+                # the .charm_node_lock index is not available
+                if online_nodes <= 1:
+                    return self._peer.acquired
+                else:
+                    return False
             # If online_nodes == 1, we should acquire the lock via the peer databag.
             # If we acquired the lock via OpenSearch and this unit was stopping, we would be unable
             # to release the OpenSearch lock. For example, when scaling to 0.
@@ -301,7 +307,8 @@ class OpenSearchNodeLock(ops.Object):
                         return False
                     else:
                         logger.exception("Error creating OpenSearch lock document")
-                        return False
+                        # in this case, try to acquire peer databag lock as fallback
+                        return self._peer.acquired
                 else:
                     # Ensure write was successful on all nodes
                     # "It is important to note that this setting [`wait_for_active_shards`] greatly
