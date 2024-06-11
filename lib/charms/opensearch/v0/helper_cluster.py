@@ -183,20 +183,13 @@ class ClusterState:
         opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
-        show_details: bool = False,
+        verbose: bool = False,
     ) -> List[Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
-        if show_details:
-            return opensearch.request(
-                "GET",
-                "/_cat/shards"
-                "?v=true"
-                "&h=index,shard,prirep,state,unassigned.reason"
-                "&s=state",
-                host=host,
-                alt_hosts=alt_hosts,
-            )
-        return opensearch.request("GET", "/_cat/shards", host=host, alt_hosts=alt_hosts)
+        params = ""
+        if verbose:
+            params = "?v=true&h=index,shard,prirep,state,unassigned.reason&s=state"
+        return opensearch.request("GET", f"/_cat/shards{params}", host=host, alt_hosts=alt_hosts)
 
     @staticmethod
     @retry(
@@ -212,7 +205,7 @@ class ClusterState:
         """Get all shards of all indexes in the cluster."""
         return opensearch.request(
             "GET",
-            "/_cluster/allocation/explain" "?include_disk_info=true&include_yes_decisions=true",
+            "/_cluster/allocation/explain?include_disk_info=true&include_yes_decisions=true",
             host=host,
             alt_hosts=alt_hosts,
         )

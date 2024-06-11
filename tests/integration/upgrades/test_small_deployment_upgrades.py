@@ -8,12 +8,18 @@ import subprocess
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, run_action, set_watermark
+from ..ha.continuous_writes import ContinuousWrites
+from ..ha.helpers import app_name, assert_upgrade_to_local
+from ..helpers import (
+    APP_NAME,
+    IDLE_PERIOD,
+    MODEL_CONFIG,
+    SERIES,
+    run_action,
+    set_watermark,
+)
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
-from .continuous_writes import ContinuousWrites
-from .helpers import app_name, assert_upgrade_to_local
-from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
 
@@ -22,24 +28,24 @@ OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
 OPENSEARCH_CHANNEL = "2/edge"
 
 
-FIRST_VERSION = "2.12.0"
+STARTING_VERSION = "2.12.0"
 
 
 VERSION_TO_REVISION = {
-    FIRST_VERSION: 90,
+    STARTING_VERSION: 90,
     "2.13.0": 91,
 }
 
 
-FROM_VERSION_PREFIX = "from_v"
+FROM_VERSION_PREFIX = "from_v{}_to_local"
 
 
 UPGRADE_INITIAL_VERSION = [
     (
         pytest.param(
             version,
-            id=f"{FROM_VERSION_PREFIX}{version}",
-            marks=pytest.mark.group(f"{FROM_VERSION_PREFIX}{version}"),
+            id=FROM_VERSION_PREFIX.format(version),
+            marks=pytest.mark.group(FROM_VERSION_PREFIX.format(version)),
         )
     )
     for version in VERSION_TO_REVISION.keys()
@@ -86,22 +92,6 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
     await set_watermark(ops_test, APP_NAME)
 
 
-@pytest.fixture()
-async def c_writes(ops_test: OpsTest):
-    """Creates instance of the ContinuousWrites."""
-    app = (await app_name(ops_test)) or APP_NAME
-    return ContinuousWrites(ops_test, app)
-
-
-@pytest.fixture()
-async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Starts continuous write operations and clears writes at the end of the test."""
-    await c_writes.start()
-    yield
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
-
-
 #######################################################################
 #
 #  Tests
@@ -115,7 +105,7 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
 @pytest.mark.skip_if_deployed
 async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
     """Deploy OpenSearch."""
-    await _build_env(ops_test, FIRST_VERSION)
+    await _build_env(ops_test, STARTING_VERSION)
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
@@ -130,7 +120,7 @@ async def test_upgrade_between_versions(
     leader_id = [u.id for u in units if u.is_leader][0]
 
     for version, rev in VERSION_TO_REVISION.items():
-        if version == FIRST_VERSION:
+        if version == STARTING_VERSION:
             # We're starting in this version
             continue
 
