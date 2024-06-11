@@ -176,6 +176,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             trigger_rel_id=event.relation.id,
         )
 
+        logger.debug(
+            f"\n\n\n_on_peer_cluster_relation_changed: {event.relation.id}\n{peer_cluster_app.to_dict()}\n\n"
+        )
+
         if data.get("is_candidate_failover_orchestrator") != "true":
             self.refresh_relation_data(event)
             return
@@ -251,6 +255,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # compute the data that needs to be broadcast to all related clusters (success or error)
         rel_data = self._rel_data(deployment_desc, orchestrators)
+        logger.debug(
+            f"\n\n\nrefresh-relation-data: {self.charm.unit_name} - \nData:{rel_data.to_dict()}\n\n"
+        )
 
         # exit if current cluster should not have been considered a provider
         if self._notify_if_wrong_integration(rel_data, all_relation_ids):
@@ -510,17 +517,24 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
-        # register in the 'main/failover'-CMs / save the number of planned units of the current app
-        self._put_current_app(event, deployment_desc)
-
         if not (data := event.relation.data.get(event.app)):
             return
+
+        logger.debug(
+            f"\n\n\n\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: \ndata: {data}"
+        )
+
+        # register in the 'main/failover'-CMs / save the number of planned units of the current app
+        self._put_current_app(event, deployment_desc)
 
         # fetch main and failover clusters relations ids if any
         orchestrators = self._orchestrators(event, data, deployment_desc)
 
         # check errors sent by providers
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
+            logger.debug(
+                f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: error_from_provider\n\n\n"
+            )
             return
 
         # fetch the success data
@@ -528,6 +542,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
+            logger.debug(
+                f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: error_from_requirer\n\n\n"
+            )
             return
 
         # this means it's a previous "main orchestrator" that was unrelated then re-related
@@ -554,6 +571,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # check if there are any security misconfigurations / violations
         if self._error_set_from_tls(data):
+            logger.debug(
+                f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: error_from_tls\n\n\n"
+            )
             event.defer()
             return
 
@@ -562,6 +582,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
+
+        logger.debug(
+            f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: success\n\n\n"
+        )
 
     def _set_security_conf(self, data: PeerClusterRelData) -> None:
         """Store security related config."""
@@ -587,8 +611,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
 
         if s3_creds := data.credentials.s3:
-            self.charm.secrets.put(Scope.APP, "access-key", s3_creds.access_key)
-            self.charm.secrets.put(Scope.APP, "secret-key", s3_creds.secret_key)
+            self.charm.secrets.put_object(Scope.APP, "s3-creds", s3_creds.to_dict())
 
     def _orchestrators(
         self,

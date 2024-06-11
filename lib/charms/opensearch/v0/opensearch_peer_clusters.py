@@ -145,6 +145,15 @@ class OpenSearchPeerClustersManager:
             Scope.APP, "deployment-description", new_deployment_desc.to_dict()
         )
 
+        # append in the current app the CM nodes reported from the relation
+        self._charm.peers_data.put_object(
+            scope=Scope.APP,
+            key="nodes_config",
+            value={node.name: node.to_dict() for node in data.cm_nodes},
+            merge=True,
+        )
+        self._charm.opensearch_config.add_seed_hosts([node.ip for node in data.cm_nodes])
+
         self.apply_status_if_needed(new_deployment_desc)
 
     def _user_config(self):
@@ -377,23 +386,26 @@ class OpenSearchPeerClustersManager:
 
     def is_provider_orchestrator(self) -> bool:
         """Check whether the current app is an active provider orchestrator."""
+        if not self._charm.unit.is_leader():
+            return False
+
         if not (deployment_desc := self.deployment_desc()):
             return False
 
         if deployment_desc.typ == DeploymentType.OTHER:
             return False
 
-        if not self.is_peer_cluster_orchestrator_relation_set():
+        if not (orchestrators := self._charm.peers_data.get_object(Scope.APP, "orchestrators")):
             return False
 
-        if not (orchestrators := self._charm.peers_data.get_object(Scope.APP, "orchestrators")):
+        if not self.is_peer_cluster_orchestrator_relation_set():
             return False
 
         orchestrators = PeerClusterOrchestrators.from_dict(orchestrators)
         return (
-            (orchestrators.main_app and orchestrators.main_app.id == deployment_desc.app.id)
-            or
-            (orchestrators.failover_app and orchestrators.failover_app.id == deployment_desc.app.id)
+            orchestrators.main_app and orchestrators.main_app.id == deployment_desc.app.id
+        ) or (
+            orchestrators.failover_app and orchestrators.failover_app.id == deployment_desc.app.id
         )
 
     def validate_roles(self, nodes: List[Node], on_new_unit: bool = False) -> None:

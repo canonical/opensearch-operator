@@ -434,10 +434,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
-        if (
-            self.unit.is_leader()
-            and self.opensearch.is_node_up()
-        ):
+        if self.unit.is_leader() and self.opensearch.is_node_up():
             health = self.health.apply()
             if self._is_peer_rel_changed_deferred:
                 # We already deferred this event during this Juju event. Retry on the next
@@ -450,8 +447,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # If the handler is called again within this Juju hook, we will abandon the event
                 self._is_peer_rel_changed_deferred = True
 
-            if self.opensearch_peer_cm.is_provider_orchestrator():
-                self.peer_cluster_provider.refresh_relation_data(event)
+        if self.opensearch_peer_cm.is_provider_orchestrator():
+            self.peer_cluster_provider.refresh_relation_data(event)
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -528,6 +525,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             elif self.app.planned_units() == 0:
                 self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
                 self.peers_data.delete(Scope.APP, "nodes_config")
+
+                # todo: remove this if snap storage reuse is solved.
+                self.peers_data.delete(Scope.APP, "security_index_initialised")
 
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
@@ -1029,9 +1029,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self._reconcile_upgrade()
 
         # update the peer cluster rel data with new IP in case of main cluster manager
-        if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
-            if self.opensearch_peer_cm.is_peer_cluster_orchestrator_relation_set():
-                self.peer_cluster_provider.refresh_relation_data(event)
+        if self.opensearch_peer_cm.is_provider_orchestrator():
+            self.peer_cluster_provider.refresh_relation_data(event)
 
     def _stop_opensearch(self, *, restart=False) -> None:
         """Stop OpenSearch if possible."""
@@ -1585,6 +1584,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Return an alternative host (of another node) in case the current is offline."""
         all_units_ips = units_ips(self, PeerRelationName)
         all_hosts = list(all_units_ips.values())
+
+        if nodes_conf := self.peers_data.get_object(Scope.APP, "nodes_config"):
+            all_hosts.extend([Node.from_dict(node).ip for node in nodes_conf.values()])
+
         random.shuffle(all_hosts)
 
         if not all_hosts:
