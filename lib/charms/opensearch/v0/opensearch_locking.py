@@ -243,7 +243,7 @@ class OpenSearchNodeLock(ops.Object):
                 # if the node lock cannot be acquired, fall back to peer databag lock
                 # this avoids hitting deadlock situations in cases where
                 # the .charm_node_lock index is not available
-                if online_nodes <= 2:
+                if online_nodes <= 1:
                     return self._peer.acquired
                 else:
                     return False
