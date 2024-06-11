@@ -387,7 +387,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
 
     def _on_peer_relation_changed(self, event) -> None:
         """Processes the non-orchestrator cluster events."""
-        if not self.charm.plugin_manager.check_plugin_manager_ready():
+        if not self.charm.plugin_manager.check_plugin_manager_ready_for_api():
             logger.warning("s3-changed: cluster not ready yet")
             event.defer()
             return
