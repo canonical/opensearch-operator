@@ -26,7 +26,6 @@ from charms.opensearch.v0.constants_charm import (
     OpenSearchUsers,
     PeerRelationName,
     PluginConfigChangeError,
-    PluginConfigCheck,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -638,22 +637,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 event.defer()
                 return
 
-            if self.unit.is_leader():
-                self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
-
             if self.plugin_manager.run() and not restart_requested:
                 self._restart_opensearch_event.emit()
 
         except (OpenSearchPluginError, OpenSearchKeystoreNotReadyYetError) as e:
-            if self.unit.is_leader():
-                self.status.clear(PluginConfigCheck, app=True)
-                if isinstance(e, OpenSearchPluginError):
-                    self.status.set(BlockedStatus(PluginConfigChangeError), app=True)
+            if self.unit.is_leader() and isinstance(e, OpenSearchPluginError):
+                self.status.set(BlockedStatus(PluginConfigChangeError), app=True)
             event.defer()
             return
 
         if self.unit.is_leader():
-            self.status.clear(PluginConfigCheck, app=True)
             self.status.clear(PluginConfigChangeError, app=True)
 
     def _on_set_password_action(self, event: ActionEvent):
