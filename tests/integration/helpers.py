@@ -125,8 +125,7 @@ async def set_watermark(
         f"https://{unit_ip}:9200/_cluster/settings",
         {
             "persistent": {
-                "cluster.routing.allocation.disk.watermark.low": 0.98,
-                "cluster.routing.allocation.disk.watermark.high": 0.99,
+                "cluster.routing.allocation.disk.threshold_enabled": "false",
             }
         },
         app=app,
