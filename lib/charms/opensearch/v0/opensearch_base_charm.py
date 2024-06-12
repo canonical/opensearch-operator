@@ -641,6 +641,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self._restart_opensearch_event.emit()
 
         except (OpenSearchPluginError, OpenSearchKeystoreNotReadyYetError) as e:
+            logger.warning(f"{PluginConfigChangeError}: {str(e)}")
             if self.unit.is_leader() and isinstance(e, OpenSearchPluginError):
                 self.status.set(BlockedStatus(PluginConfigChangeError), app=True)
             event.defer()

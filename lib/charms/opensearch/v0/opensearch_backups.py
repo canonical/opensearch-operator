@@ -1074,24 +1074,38 @@ class OpenSearchBackup(OpenSearchBackupBase):
 class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
     """Creates the correct backup class and populates the appropriate relation details."""
 
-    _singleton = None
     _backup_obj = None
-
-    def __new__(cls, *args):
-        """Sets singleton class to be reused during this hook."""
-        if cls._singleton is None:
-            cls._singleton = super(OpenSearchBackupFactory, cls).__new__(cls)
-        return cls._singleton
 
     def __init__(self, charm: CharmBase):
         super().__init__()
         self._charm = charm
 
+    @property
+    def _get_peer_rel_data(self) -> Dict[str, Any]:
+        if (
+            not (relation := self._charm.model.get_relation(PeerClusterRelationName))
+            or not (data := relation.data.get(relation.app))
+            or not data.get("data")
+        ):
+            return {}
+        data = PeerClusterRelData.from_str(data["data"])
+        return data.credentials.s3
+
     @override
     def is_relation_set(self) -> bool:
         """Checks if the relation is set for the plugin handler."""
         relation = self._charm.model.get_relation(self._relation_name)
-        return relation is not None and relation.units
+        if isinstance(self.backup(), OpenSearchBackup):
+            return relation is not None and relation.units
+
+        # We are not not the MAIN_ORCHESTRATOR
+        # The peer-cluster relation will always exist, so we must check if
+        # the relation has the information we need or not.
+        return (
+            self._get_peer_rel_data
+            and self._get_peer_rel_data.access_key
+            and self._get_peer_rel_data.secret_key
+        )
 
     @property
     def _relation_name(self) -> str:
@@ -1106,7 +1120,9 @@ class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
         relation = self._charm.model.get_relation(self._relation_name)
         if not self.is_relation_set():
             return {}
-        return relation.data.get(relation.app)
+        elif isinstance(self.backup(), OpenSearchBackup):
+            return relation.data.get(relation.app)
+        return self._get_peer_rel_data
 
     def backup(self) -> OpenSearchBackupBase:
         """Implements the logic that returns the correct class according to the cluster type."""

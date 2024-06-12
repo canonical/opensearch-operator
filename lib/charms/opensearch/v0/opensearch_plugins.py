@@ -340,12 +340,30 @@ class OpenSearchPluginRelationsHandler(ABC):
     relations should plugin manager listen to.
     """
 
+    _singleton = None
+
+    def __new__(cls, *args):
+        """Sets singleton class in this hook, as relation objects can only be created once."""
+        if cls._singleton is None:
+            cls._singleton = super(OpenSearchPluginRelationsHandler, cls).__new__(cls)
+        return cls._singleton
+
     def is_relation_set(self) -> bool:
-        """Returns True if the relation is set, False otherwise."""
-        return False
+        """Returns True if the relation is set, False otherwise.
+
+        It can mean the relation exists or not, simply put; or it can also mean a subset of data
+        exists within a bigger relation. One good example, peer-cluster is a single relation that
+        contains a lot of different data. In this case, we'd be interested in a subset of
+        its entire databag.
+        """
+        return NotImplementedError()
 
     def get_relation_data(self) -> Dict[str, Any]:
-        """Returns the relation that the plugin manager should listen to."""
+        """Returns the relation that the plugin manager should listen to.
+
+        Simplest case, just returns the relation data. In more complex cases, it may return
+        a subset of the relation data, e.g. a single key-value pair.
+        """
         raise NotImplementedError()
 
 
