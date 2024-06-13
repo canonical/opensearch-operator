@@ -999,7 +999,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1085,7 +1085,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_indexing_index_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$interval]) / rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "1000 * increase(opensearch_indices_indexing_index_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval]) / increase(opensearch_indices_indexing_index_count{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1095,7 +1095,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Indexing latency",
+          "title": "Indexing latency (avg in millisecs / doc)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1171,7 +1171,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_search_query_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_search_query_count{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1257,7 +1257,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_search_query_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$interval]) / rate(opensearch_indices_search_query_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "1000 * rate(opensearch_indices_search_query_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval]) / rate(opensearch_indices_search_query_count{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1267,7 +1267,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Search latency",
+          "title": "Search latency (avg in millisecs / query)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1429,7 +1429,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_doc_deleted_number{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_doc_deleted_number{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1515,7 +1515,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_merges_total_docs_count{cluster=\"$cluster\",node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_merges_total_docs_count{cluster=\"$cluster\",node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1701,7 +1701,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_fielddata_evictions_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_fielddata_evictions_count{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1873,7 +1873,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_querycache_evictions_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_querycache_evictions_count{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1883,7 +1883,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Query cache evictions",
+          "title": "Query cache evictions rate",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1959,7 +1959,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_querycache_hit_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_querycache_hit_count{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1969,7 +1969,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Query cache hits",
+          "title": "Query cache hits rate",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -2045,7 +2045,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_querycache_miss_number{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_querycache_miss_number{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -2055,7 +2055,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Query cache misses",
+          "title": "Query cache misses rate",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -2145,7 +2145,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_indexing_throttle_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_indexing_throttle_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -2231,7 +2231,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_merges_total_throttled_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_merges_total_throttled_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -2417,7 +2417,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_jvm_gc_collection_count{cluster=\"$cluster\",node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_jvm_gc_collection_count{cluster=\"$cluster\",node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}} - {{gc}}",
@@ -2503,7 +2503,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_jvm_gc_collection_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_jvm_gc_collection_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}} - {{gc}}",
