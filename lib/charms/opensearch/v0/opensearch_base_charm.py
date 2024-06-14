@@ -656,13 +656,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.unit.is_leader() and isinstance(e, OpenSearchPluginError):
                 self.status.set(BlockedStatus(PluginConfigChangeError), app=True)
             event.defer()
+            return
         except OpenSearchKeystoreNotReadyYetError:
             logger.warning("Keystore not ready yet")
             event.defer()
-        else:
-            if self.unit.is_leader():
-                self.status.clear(PluginConfigChangeError, app=True)
-                self.status.clear(PluginConfigCheck, new_status=original_status, app=True)
+
+        if self.unit.is_leader():
+            self.status.clear(PluginConfigChangeError, app=True)
+            self.status.clear(PluginConfigCheck, new_status=original_status, app=True)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
