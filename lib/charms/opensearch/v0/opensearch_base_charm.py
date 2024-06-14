@@ -26,6 +26,7 @@ from charms.opensearch.v0.constants_charm import (
     OpenSearchUsers,
     PeerRelationName,
     PluginConfigChangeError,
+    PluginConfigCheck,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -584,7 +585,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 HealthColors.GREEN,
                 HealthColors.IGNORE,
             ]:
-                event.defer()
+                logger.warning(
+                    f"Update status: exclusions updated and cluster health is {health}."
+                )
 
             if health == HealthColors.UNKNOWN:
                 return
@@ -637,18 +640,29 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 event.defer()
                 return
 
+            original_status = None
+            if self.unit.is_leader() and self.app.status.message not in [
+                PluginConfigChangeError,
+                PluginConfigCheck,
+            ]:
+                original_status = self.app.status
+                self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
+
             if self.plugin_manager.run() and not restart_requested:
                 self._restart_opensearch_event.emit()
 
-        except (OpenSearchPluginError, OpenSearchKeystoreNotReadyYetError) as e:
+        except OpenSearchPluginError as e:
             logger.warning(f"{PluginConfigChangeError}: {str(e)}")
             if self.unit.is_leader() and isinstance(e, OpenSearchPluginError):
                 self.status.set(BlockedStatus(PluginConfigChangeError), app=True)
             event.defer()
-            return
-
-        if self.unit.is_leader():
-            self.status.clear(PluginConfigChangeError, app=True)
+        except OpenSearchKeystoreNotReadyYetError:
+            logger.warning("Keystore not ready yet")
+            event.defer()
+        else:
+            if self.unit.is_leader():
+                self.status.clear(PluginConfigChangeError, app=True)
+                self.status.clear(PluginConfigCheck, new_status=original_status, app=True)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""

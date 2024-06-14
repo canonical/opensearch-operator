@@ -86,6 +86,7 @@ RestoreInProgress = "Restore in progress..."
 BackupSetupStart = "Backup setup started."
 BackupConfigureStart = "Configuring backup service..."
 BackupInDisabling = "Disabling backup service..."
+PluginConfigCheck = "Plugin configuration check."
 
 # Relation Interfaces
 ClientRelationName = "opensearch-client"
