@@ -641,29 +641,30 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
 
             original_status = None
-            if self.unit.is_leader() and self.app.status.message not in [
+            if self.unit.status.message not in [
                 PluginConfigChangeError,
                 PluginConfigCheck,
             ]:
-                original_status = self.app.status
-                self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
+                logger.debug(f"Plugin manager: storing status {self.unit.status.message}")
+                original_status = self.unit.status
+                self.status.set(MaintenanceStatus(PluginConfigCheck))
 
             if self.plugin_manager.run() and not restart_requested:
                 self._restart_opensearch_event.emit()
 
         except OpenSearchPluginError as e:
             logger.warning(f"{PluginConfigChangeError}: {str(e)}")
-            if self.unit.is_leader() and isinstance(e, OpenSearchPluginError):
-                self.status.set(BlockedStatus(PluginConfigChangeError), app=True)
+            self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
             return
         except OpenSearchKeystoreNotReadyYetError:
             logger.warning("Keystore not ready yet")
             event.defer()
 
-        if self.unit.is_leader():
-            self.status.clear(PluginConfigChangeError, app=True)
-            self.status.clear(PluginConfigCheck, new_status=original_status, app=True)
+        # self.status.clear(PluginConfigChangeError, app=True)
+        logger.debug(f"Plugin manager: storing status {original_status}")
+        self.status.clear(PluginConfigChangeError)
+        self.status.clear(PluginConfigCheck, new_status=original_status)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
