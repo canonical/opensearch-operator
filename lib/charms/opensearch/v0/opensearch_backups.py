@@ -92,7 +92,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import DeploymentType, PeerClusterRelData
+from charms.opensearch.v0.models import DeploymentType, PeerClusterRelData, S3RelDataCredentials
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
@@ -1081,7 +1081,7 @@ class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
         self._charm = charm
 
     @property
-    def _get_peer_rel_data(self) -> Dict[str, Any]:
+    def _get_peer_rel_data(self) -> Optional[S3RelDataCredentials]:
         """Returns the relation data.
 
         If we have two connections here, then we check if data is the same. If not, then
@@ -1089,18 +1089,18 @@ class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
         """
         if not (relations := self._charm.model.relations.get(PeerClusterRelationName, [])):
             # No relation currently available
-            return {}
+            return None
 
         contents = [
             data for rel in relations if (data := rel.data.get(rel.app, {}).get("data", None))
         ]
         if not contents or not all(contents):
             # We have one of the peers missing data
-            return {}
+            return None
 
         contents = [PeerClusterRelData.from_str(c) for c in contents]
         if len(contents) > 1 and contents[0].credentials.s3 != contents[1].credentials.s3:
-            return {}
+            return None
         return contents[0].credentials.s3
 
     @override
@@ -1114,7 +1114,7 @@ class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
         # The peer-cluster relation will always exist, so we must check if
         # the relation has the information we need or not.
         return (
-            self._get_peer_rel_data != {}
+            self._get_peer_rel_data is not None
             and self._get_peer_rel_data.access_key
             and self._get_peer_rel_data.secret_key
         )
@@ -1134,7 +1134,7 @@ class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
         elif isinstance(self.backup(), OpenSearchBackup):
             relation = self._charm.model.get_relation(self._relation_name)
             return relation and relation.data.get(relation.app, {})
-        return self._get_peer_rel_data
+        return self._get_peer_rel_data.dict()
 
     def backup(self) -> OpenSearchBackupBase:
         """Implements the logic that returns the correct class according to the cluster type."""
