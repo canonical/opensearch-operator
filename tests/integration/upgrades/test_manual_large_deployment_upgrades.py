@@ -8,12 +8,11 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .ha.continuous_writes import ContinuousWrites
-from .ha.helpers import app_name, assert_continuous_writes_consistency
-from .ha.test_horizontal_scaling import IDLE_PERIOD
-from .helpers import APP_NAME, MODEL_CONFIG, SERIES, run_action
-from .helpers_deployments import get_application_units, wait_until
-from .tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..ha.continuous_writes import ContinuousWrites
+from ..ha.helpers import assert_continuous_writes_consistency
+from ..helpers import APP_NAME, IDLE_PERIOD, MODEL_CONFIG, SERIES, run_action
+from ..helpers_deployments import get_application_units, wait_until
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -32,22 +31,6 @@ WORKLOAD = {
     OPENSEARCH_FAILOVER_APP_NAME: 2,
     OPENSEARCH_MAIN_APP_NAME: 1,
 }
-
-
-@pytest.fixture()
-async def c_writes(ops_test: OpsTest):
-    """Creates instance of the ContinuousWrites."""
-    app = (await app_name(ops_test)) or APP_NAME
-    return ContinuousWrites(ops_test, app)
-
-
-@pytest.fixture()
-async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
-    """Starts continuous write operations and clears writes at the end of the test."""
-    await c_writes.start()
-    yield
-    await c_writes.clear()
-    logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
 @pytest.mark.skip(reason="Fix with DPE-4528")
