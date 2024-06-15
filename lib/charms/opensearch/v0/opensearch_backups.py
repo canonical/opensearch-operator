@@ -1082,27 +1082,39 @@ class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
 
     @property
     def _get_peer_rel_data(self) -> Dict[str, Any]:
-        if (
-            not (relation := self._charm.model.get_relation(PeerClusterRelationName))
-            or not (data := relation.data.get(relation.app))
-            or not data.get("data")
-        ):
+        """Returns the relation data.
+
+        If we have two connections here, then we check if data is the same. If not, then
+        return empty. Otherwise, return the credentials for s3 if available.
+        """
+        if not (relations := self._charm.model.relations.get(PeerClusterRelationName, [])):
+            # No relation currently available
             return {}
-        data = PeerClusterRelData.from_str(data["data"])
-        return data.credentials.s3
+
+        contents = [
+            data for rel in relations if (data := rel.data.get(rel.app, {}).get("data", None))
+        ]
+        if not contents or not all(contents):
+            # We have one of the peers missing data
+            return {}
+
+        contents = [PeerClusterRelData.from_str(c) for c in contents]
+        if len(contents) > 1 and contents[0].credentials.s3 != contents[1].credentials.s3:
+            return {}
+        return contents[0].credentials.s3
 
     @override
     def is_relation_set(self) -> bool:
         """Checks if the relation is set for the plugin handler."""
-        relation = self._charm.model.get_relation(self._relation_name)
         if isinstance(self.backup(), OpenSearchBackup):
-            return relation is not None and relation.units
+            relation = self._charm.model.get_relation(self._relation_name)
+            return relation is not None and relation.units != {}
 
         # We are not not the MAIN_ORCHESTRATOR
         # The peer-cluster relation will always exist, so we must check if
         # the relation has the information we need or not.
         return (
-            self._get_peer_rel_data
+            self._get_peer_rel_data != {}
             and self._get_peer_rel_data.access_key
             and self._get_peer_rel_data.secret_key
         )
@@ -1117,11 +1129,11 @@ class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
     @override
     def get_relation_data(self) -> Dict[str, Any]:
         """Returns the relation that the plugin manager should listen to."""
-        relation = self._charm.model.get_relation(self._relation_name)
         if not self.is_relation_set():
             return {}
         elif isinstance(self.backup(), OpenSearchBackup):
-            return relation.data.get(relation.app)
+            relation = self._charm.model.get_relation(self._relation_name)
+            return relation and relation.data.get(relation.app, {})
         return self._get_peer_rel_data
 
     def backup(self) -> OpenSearchBackupBase:

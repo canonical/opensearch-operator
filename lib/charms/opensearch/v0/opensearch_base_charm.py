@@ -659,10 +659,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
         except OpenSearchKeystoreNotReadyYetError:
             logger.warning("Keystore not ready yet")
+            # defer, and let it finish the status clearing down below
             event.defer()
 
-        # self.status.clear(PluginConfigChangeError, app=True)
-        logger.debug(f"Plugin manager: storing status {original_status}")
         self.status.clear(PluginConfigChangeError)
         self.status.clear(PluginConfigCheck, new_status=original_status)
 
