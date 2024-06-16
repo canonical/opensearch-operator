@@ -1085,7 +1085,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "1000 * increase(opensearch_indices_indexing_index_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval]) / increase(opensearch_indices_indexing_index_count{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
+              "expr": "1000 * rate(opensearch_indices_indexing_index_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval]) / rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
