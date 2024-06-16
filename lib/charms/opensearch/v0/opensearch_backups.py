@@ -92,7 +92,11 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import DeploymentType, PeerClusterRelData, S3RelDataCredentials
+from charms.opensearch.v0.models import (
+    DeploymentType,
+    PeerClusterRelData,
+    S3RelDataCredentials,
+)
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
