@@ -447,6 +447,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # If the handler is called again within this Juju hook, we will abandon the event
                 self._is_peer_rel_changed_deferred = True
 
+        # we want to have the most up-to-date info broadcasted to related sub-clusters
         if self.opensearch_peer_cm.is_provider_orchestrator():
             self.peer_cluster_provider.refresh_relation_data(event)
 
@@ -526,9 +527,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
                 self.peers_data.delete(Scope.APP, "nodes_config")
 
-                # todo: remove this if snap storage reuse is solved.
-                self.peers_data.delete(Scope.APP, "security_index_initialised")
-
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
             try:
@@ -554,7 +552,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # release lock
             self.node_lock.release()
 
-    def _on_update_status(self, event: UpdateStatusEvent):  # noqa: C901
+    def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
 
         We want to periodically check for the following:
@@ -566,8 +564,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
         # if there are missing system requirements defer
-        missing_sys_reqs = self.opensearch.missing_sys_requirements()
-        if len(missing_sys_reqs) > 0:
+        if len(missing_sys_reqs := self.opensearch.missing_sys_requirements()) > 0:
             self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
             return
 
@@ -579,13 +576,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
 
-            if (health := self.health.apply(wait_for_green_first=True)) not in [
-                HealthColors.GREEN,
-                HealthColors.IGNORE,
-            ]:
-                event.defer()
-
-            if health == HealthColors.UNKNOWN:
+            if self.health.apply(wait_for_green_first=True) == HealthColors.UNKNOWN:
                 return
 
         for relation in self.model.relations.get(ClientRelationName, []):
@@ -777,16 +768,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def is_every_unit_marked_as_started(self) -> bool:
         """Check if every unit in the cluster is marked as started."""
         rel = self.model.get_relation(PeerRelationName)
-        for unit in rel.units.union({self.unit}):
-            if rel.data[unit].get("started") != "True":
+        for unit in all_units(self):
+            if rel.data[unit].get("started", "").lower() != "true":
                 return False
         return True
 
     def is_tls_full_configured_in_cluster(self) -> bool:
         """Check if TLS is configured in all the units of the current cluster."""
         rel = self.model.get_relation(PeerRelationName)
-        for unit in rel.units.union({self.unit}):
-            if rel.data[unit].get("tls_configured") != "True":
+        for unit in all_units(self):
+            if rel.data[unit].get("tls_configured", "").lower() != "true":
                 return False
         return True
 

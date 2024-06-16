@@ -4,7 +4,7 @@
 """Class for Managing simple or large deployments and configuration related changes."""
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Literal, Optional
 
 from charms.opensearch.v0.constants_charm import (
     CMRoleRemovalForbidden,
@@ -384,7 +384,7 @@ class OpenSearchPeerClustersManager:
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
 
-    def is_provider_orchestrator(self) -> bool:
+    def is_provider_orchestrator(self, typ: Optional[Literal["main", "failover"]] = None) -> bool:
         """Check whether the current app is an active provider orchestrator."""
         if not self._charm.unit.is_leader():
             return False
@@ -402,11 +402,17 @@ class OpenSearchPeerClustersManager:
             return False
 
         orchestrators = PeerClusterOrchestrators.from_dict(orchestrators)
-        return (
-            orchestrators.main_app and orchestrators.main_app.id == deployment_desc.app.id
-        ) or (
+        is_main = orchestrators.main_app and orchestrators.main_app.id == deployment_desc.app.id
+        is_failover = (
             orchestrators.failover_app and orchestrators.failover_app.id == deployment_desc.app.id
         )
+
+        if typ == "main":
+            return is_main
+        elif typ == "failover":
+            return is_failover
+        else:
+            return is_main or is_failover
 
     def validate_roles(self, nodes: List[Node], on_new_unit: bool = False) -> None:
         """Validate full-cluster wide the quorum for CM/voting_only nodes on services start."""

@@ -74,6 +74,7 @@ class OpenSearchPeerClusterRelation(Object):
         self.relation_name = relation_name
         self.charm = charm
         self.peer_cm = charm.opensearch_peer_cm
+        self._is_peer_rel_changed_deferred = False
 
     def get_from_rel(
         self, key: str, rel_id: int = None, remote_app: bool = False
@@ -240,6 +241,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
+        if self._is_peer_rel_changed_deferred:
+            return
+
         # all relations with the current orchestrator
         all_relation_ids = [
             rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
@@ -255,8 +259,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # compute the data that needs to be broadcast to all related clusters (success or error)
         rel_data = self._rel_data(deployment_desc, orchestrators)
+
+        # todo remove
+        deferring = rel_data.should_wait if isinstance(rel_data, PeerClusterRelErrorData) else False
         logger.debug(
-            f"\n\n\nrefresh-relation-data: {self.charm.unit_name} - \nData:{rel_data.to_dict()}\n\n"
+            f"\n\n\nrefresh-relation-data: {self.charm.unit_name} - "
+            f"\n\tData:{rel_data.to_dict()}\n"
+            f"\tDeferring: {deferring}\n\n\n"
         )
 
         # exit if current cluster should not have been considered a provider
@@ -299,6 +308,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         if should_defer:
             event.defer()
+            self._is_peer_rel_changed_deferred = True
 
     def _notify_if_wrong_integration(
         self,
@@ -512,9 +522,13 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
+        if self._is_peer_rel_changed_deferred:
+            return
+
         # check if current cluster ready
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             event.defer()
+            self._is_peer_rel_changed_deferred = True
             return
 
         if not (data := event.relation.data.get(event.app)):
@@ -575,6 +589,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: error_from_tls\n\n\n"
             )
             event.defer()
+            self._is_peer_rel_changed_deferred = True
             return
 
         # aggregate all CMs (main + failover if any)
