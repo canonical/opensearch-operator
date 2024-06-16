@@ -271,7 +271,7 @@ class OpenSearchBaseCharm(CharmBase):
 """  # noqa: D405, D410, D411, D214, D412, D416
 
 import logging
-from abc import abstractmethod, abstractproperty
+from abc import ABC, abstractmethod, abstractproperty
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -330,6 +330,41 @@ class PluginState(BaseStrEnum):
     ENABLED = "enabled"
     DISABLED = "disabled"
     WAITING_FOR_UPGRADE = "waiting-for-upgrade"
+
+
+class OpenSearchPluginRelationsHandler(ABC):
+    """Implements the relation manager for each plugin.
+
+    Plugins may have one or more relations tied to them. This abstract class
+    enables different modules to implement a class that can specify which
+    relations should plugin manager listen to.
+    """
+
+    _singleton = None
+
+    def __new__(cls, *args):
+        """Sets singleton class in this hook, as relation objects can only be created once."""
+        if cls._singleton is None:
+            cls._singleton = super(OpenSearchPluginRelationsHandler, cls).__new__(cls)
+        return cls._singleton
+
+    def is_relation_set(self) -> bool:
+        """Returns True if the relation is set, False otherwise.
+
+        It can mean the relation exists or not, simply put; or it can also mean a subset of data
+        exists within a bigger relation. One good example, peer-cluster is a single relation that
+        contains a lot of different data. In this case, we'd be interested in a subset of
+        its entire databag.
+        """
+        return NotImplementedError()
+
+    def get_relation_data(self) -> Dict[str, Any]:
+        """Returns the relation that the plugin manager should listen to.
+
+        Simplest case, just returns the relation data. In more complex cases, it may return
+        a subset of the relation data, e.g. a single key-value pair.
+        """
+        raise NotImplementedError()
 
 
 class OpenSearchPluginConfig(BaseModel):

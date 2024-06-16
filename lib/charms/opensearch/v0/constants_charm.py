@@ -83,10 +83,10 @@ HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 NewIndexRequested = "new index {index} requested"
 RestoreInProgress = "Restore in progress..."
-PluginConfigCheck = "Plugin configuration check."
 BackupSetupStart = "Backup setup started."
 BackupConfigureStart = "Configuring backup service..."
 BackupInDisabling = "Disabling backup service..."
+PluginConfigCheck = "Plugin configuration check."
 
 # Relation Interfaces
 ClientRelationName = "opensearch-client"

@@ -531,7 +531,7 @@ class TestBackups(unittest.TestCase):
         assert self.charm.backup._get_endpoint_protocol("test.not-valid-url") == "https"
 
     @patch(
-        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.check_plugin_manager_ready"
+        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.check_plugin_manager_ready_for_api"
     )
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup.apply_api_config_if_needed")

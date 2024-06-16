@@ -92,21 +92,28 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import DeploymentType, PeerClusterRelData
+from charms.opensearch.v0.models import (
+    DeploymentType,
+    PeerClusterRelData,
+    S3RelDataCredentials,
+)
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyYetError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
     OpenSearchPluginConfig,
+    OpenSearchPluginRelationsHandler,
     PluginState,
 )
 from ops.charm import ActionEvent, CharmBase
 from ops.framework import EventBase, Object
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from overrides import override
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
@@ -384,7 +391,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
 
     def _on_peer_relation_changed(self, event) -> None:
         """Processes the non-orchestrator cluster events."""
-        if not self.charm.plugin_manager.check_plugin_manager_ready():
+        if not self.charm.plugin_manager.check_plugin_manager_ready_for_api():
             logger.warning("s3-changed: cluster not ready yet")
             event.defer()
             return
@@ -408,6 +415,10 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
                 ],
             )
             self.charm.plugin_manager.apply_config(plugin)
+        except OpenSearchKeystoreNotReadyYetError:
+            logger.warning("s3-changed: keystore not ready yet")
+            event.defer()
+            return
         except OpenSearchError as e:
             logger.warning(
                 f"s3-changed: failed disabling with {str(e)}\n"
@@ -835,23 +846,24 @@ class OpenSearchBackup(OpenSearchBackupBase):
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
         try:
-            if not self.charm.plugin_manager.check_plugin_manager_ready():
+            if not self.charm.plugin_manager.check_plugin_manager_ready_for_api():
                 raise OpenSearchNotFullyReadyError()
-
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
+
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 # We need to explicitly disable the plugin before reconfiguration
                 # That happens because, differently from the actual configs, we cannot
                 # retrieve the key values and check if they changed.
                 self.charm.plugin_manager.apply_config(plugin.disable())
             self.charm.plugin_manager.apply_config(plugin.config())
+        except (OpenSearchKeystoreNotReadyYetError, OpenSearchNotFullyReadyError):
+            logger.warning("s3-changed: cluster not ready yet")
+            event.defer()
+            return
         except OpenSearchError as e:
-            if isinstance(e, OpenSearchNotFullyReadyError):
-                logger.warning("s3-changed: cluster not ready yet")
-            else:
-                self.charm.status.set(BlockedStatus(PluginConfigError))
-                # There was an unexpected error, log it and block the unit
-                logger.error(e)
+            self.charm.status.set(BlockedStatus(PluginConfigError))
+            # There was an unexpected error, log it and block the unit
+            logger.error(e)
             event.defer()
             return
 
@@ -955,13 +967,14 @@ class OpenSearchBackup(OpenSearchBackupBase):
             plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
             if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
                 self.charm.plugin_manager.apply_config(plugin.disable())
+        except OpenSearchKeystoreNotReadyYetError:
+            logger.warning("s3-changed: keystore not ready yet")
+            event.defer()
+            return
         except OpenSearchError as e:
-            if isinstance(e, OpenSearchNotFullyReadyError):
-                logger.warning("s3-changed: cluster not ready yet")
-            else:
-                self.charm.status.set(BlockedStatus(PluginConfigError))
-                # There was an unexpected error, log it and block the unit
-                logger.error(e)
+            self.charm.status.set(BlockedStatus(PluginConfigError))
+            # There was an unexpected error, log it and block the unit
+            logger.error(e)
             event.defer()
             return
         self.charm.status.clear(BackupInDisabling)
@@ -1062,22 +1075,96 @@ class OpenSearchBackup(OpenSearchBackupBase):
         return status
 
 
-def backup(charm: CharmBase) -> OpenSearchBackupBase:
-    """Implements the logic that returns the correct class according to the cluster type.
+class OpenSearchBackupFactory(OpenSearchPluginRelationsHandler):
+    """Creates the correct backup class and populates the appropriate relation details."""
 
-    This class is solely responsible for the creation of the correct S3 client manager.
+    _backup_obj = None
 
-    If this cluster is an orchestrator or failover cluster, then return the OpenSearchBackup.
-    Otherwise, return the OpenSearchNonOrchestratorBackup.
+    def __init__(self, charm: CharmBase):
+        super().__init__()
+        self._charm = charm
 
-    There is also the condition where the deployment description does not exist yet. In this
-    case, return the base class OpenSearchBackupBase. This class solely defers all s3-related
-    events until the deployment description is available and the actual S3 object is allocated.
-    """
-    if not charm.opensearch_peer_cm.deployment_desc():
-        # Temporary condition: we are waiting for CM to show up and define which type
-        # of cluster are we. Once we have that defined, then we will process.
-        return OpenSearchBackupBase(charm)
-    elif charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
-        return OpenSearchBackup(charm)
-    return OpenSearchNonOrchestratorClusterBackup(charm)
+    @property
+    def _get_peer_rel_data(self) -> Optional[S3RelDataCredentials]:
+        """Returns the relation data.
+
+        If we have two connections here, then we check if data is the same. If not, then
+        return empty. Otherwise, return the credentials for s3 if available.
+        """
+        if not (relations := self._charm.model.relations.get(PeerClusterRelationName, [])):
+            # No relation currently available
+            return None
+
+        contents = [
+            data for rel in relations if (data := rel.data.get(rel.app, {}).get("data", None))
+        ]
+        if not contents or not all(contents):
+            # We have one of the peers missing data
+            return None
+
+        contents = [PeerClusterRelData.from_str(c) for c in contents]
+        if len(contents) > 1 and contents[0].credentials.s3 != contents[1].credentials.s3:
+            return None
+        return contents[0].credentials.s3
+
+    @override
+    def is_relation_set(self) -> bool:
+        """Checks if the relation is set for the plugin handler."""
+        if isinstance(self.backup(), OpenSearchBackup):
+            relation = self._charm.model.get_relation(self._relation_name)
+            return relation is not None and relation.units != {}
+
+        # We are not not the MAIN_ORCHESTRATOR
+        # The peer-cluster relation will always exist, so we must check if
+        # the relation has the information we need or not.
+        return (
+            self._get_peer_rel_data is not None
+            and self._get_peer_rel_data.access_key
+            and self._get_peer_rel_data.secret_key
+        )
+
+    @property
+    def _relation_name(self) -> str:
+        rel_name = PeerClusterRelationName
+        if isinstance(self.backup(), OpenSearchBackup):
+            rel_name = S3_RELATION
+        return rel_name
+
+    @override
+    def get_relation_data(self) -> Dict[str, Any]:
+        """Returns the relation that the plugin manager should listen to."""
+        if not self.is_relation_set():
+            return {}
+        elif isinstance(self.backup(), OpenSearchBackup):
+            relation = self._charm.model.get_relation(self._relation_name)
+            return relation and relation.data.get(relation.app, {})
+        return self._get_peer_rel_data.dict()
+
+    def backup(self) -> OpenSearchBackupBase:
+        """Implements the logic that returns the correct class according to the cluster type."""
+        if not OpenSearchBackupFactory._backup_obj:
+            OpenSearchBackupFactory._backup_obj = self._get_backup_obj()
+        return OpenSearchBackupFactory._backup_obj
+
+    def _get_backup_obj(self) -> OpenSearchBackupBase:
+        """Implements the logic that returns the correct class according to the cluster type.
+
+        This class is solely responsible for the creation of the correct S3 client manager.
+
+        If this cluster is an orchestrator or failover cluster, then return the OpenSearchBackup.
+        Otherwise, return the OpenSearchNonOrchestratorBackup.
+
+        There is also the condition where the deployment description does not exist yet. In this
+        case, return the base class OpenSearchBackupBase. This class solely defers all s3-related
+        events until the deployment description is available and the actual S3 object is allocated.
+        """
+        if not self._charm.opensearch_peer_cm.deployment_desc():
+            # Temporary condition: we are waiting for CM to show up and define which type
+            # of cluster are we. Once we have that defined, then we will process.
+            return OpenSearchBackupBase(self._charm)
+        elif (
+            self._charm.opensearch_peer_cm.deployment_desc().typ
+            == DeploymentType.MAIN_ORCHESTRATOR
+        ):
+            return OpenSearchBackup(self._charm)
+        return OpenSearchNonOrchestratorClusterBackup(self._charm)
