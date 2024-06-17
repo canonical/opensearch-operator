@@ -147,6 +147,48 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.abort_on_fail
+async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str):
+    """Test that Prometheus Exporter is running before the relation is there.
+
+    Test only on small deployments scenario, as this is a more functional check to the plugin.
+    """
+    leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
+    endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
+    response = await http_request(ops_test, "get", endpoint, app=APP_NAME, json_resp=False)
+
+    response_str = response.content.decode("utf-8")
+    assert response_str.count("opensearch_") > 500
+    assert len(response_str.split("\n")) > 500
+
+
+@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.abort_on_fail
+async def test_small_deployments_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
+    await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
+    await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
+    await _wait_for_units(ops_test, deploy_type)
+
+    # Check that the correct settings were successfully communicated to grafana-agent
+    cos_leader_id = await get_leader_unit_id(ops_test, COS_APP_NAME)
+    cos_leader_name = f"{COS_APP_NAME}/{cos_leader_id}"
+    leader_id = await get_leader_unit_id(ops_test, APP_NAME)
+    leader_name = f"{APP_NAME}/{leader_id}"
+    relation_data_raw = await get_unit_relation_data(
+        ops_test, cos_leader_name, leader_name, COS_RELATION_NAME, "config"
+    )
+    relation_data = json.loads(relation_data_raw)["metrics_scrape_jobs"][0]
+    secret = await get_secret_by_label(ops_test, "opensearch:app:monitor-password")
+
+    assert relation_data["basic_auth"]["username"] == "monitor"
+    assert relation_data["basic_auth"]["password"] == secret["monitor-password"]
+
+    admin_secret = await get_secret_by_label(ops_test, "opensearch:app:app-admin")
+    assert relation_data["tls_config"]["ca"] == admin_secret["ca-cert"]
+    assert relation_data["scheme"] == "https"
+
+
 @pytest.mark.parametrize("deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -207,24 +249,14 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
     set_watermark(ops_test, APP_NAME)
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
-async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str):
-    """Test that Prometheus Exporter is running before the relation is there."""
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
-    endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
-    response = await http_request(ops_test, "get", endpoint, app=APP_NAME, json_resp=False)
-
-    response_str = response.content.decode("utf-8")
-    assert response_str.count("opensearch_") > 500
-    assert len(response_str.split("\n")) > 500
-
-
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
-@pytest.mark.abort_on_fail
-async def test_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
+async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
     await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
+    await ops_test.model.integrate("failover", COS_APP_NAME)
+    await ops_test.model.integrate("main", COS_APP_NAME)
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
+
     await _wait_for_units(ops_test, deploy_type)
 
     # Check that the correct settings were successfully communicated to grafana-agent
@@ -272,14 +304,26 @@ async def test_monitoring_user_fetch_prometheus_data(ops_test, deploy_type: str)
 @pytest.mark.abort_on_fail
 async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: str):
     # Password change applied as expected
-    leader_id = await get_leader_unit_id(ops_test, APP_NAME)
-    result1 = await run_action(ops_test, leader_id, "set-password", {"username": "monitor"})
-    new_password = result1.response.get("monitor-password")
-    result2 = await run_action(ops_test, leader_id, "get-password", {"username": "monitor"})
+    app = APP_NAME if deploy_type == "small_deployment" else "main"
 
+    leader_id = await get_leader_unit_id(ops_test, app)
+    result1 = await run_action(
+        ops_test, leader_id, "set-password", {"username": "monitor"}, app=app
+    )
+    await _wait_for_units(ops_test, deploy_type)
+
+    new_password = result1.response.get("monitor-password")
+    # Now, we compare the change in the action above with the opensearch's nodes.
+    # In large deployments, that will mean checking if the change on main orchestrator
+    # was sent down to the opensearch (data node) cluster.
+    result2 = await run_action(
+        ops_test, leader_id, "get-password", {"username": "monitor"}, app=APP_NAME
+    )
     assert result2.response.get("password") == new_password
 
     # Relation data is updated
+    # In both large and small deployments, we want to check if the relation data is updated
+    # on the data node: "opensearch"
     cos_leader_id = await get_leader_unit_id(ops_test, COS_APP_NAME)
     cos_leader_name = f"{COS_APP_NAME}/{cos_leader_id}"
     leader_id = await get_leader_unit_id(ops_test, APP_NAME)
@@ -292,7 +336,7 @@ async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: st
     assert relation_data["password"] == new_password
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_enabled_disabled(ops_test, deploy_type: str):
     config = await ops_test.model.applications[APP_NAME].get_config()
@@ -315,7 +359,7 @@ async def test_knn_enabled_disabled(ops_test, deploy_type: str):
         await _wait_for_units(ops_test, deploy_type)
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
@@ -359,7 +403,7 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -
     assert len(docs) == 2
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the NMSLIB KNNEngine."""
@@ -403,7 +447,7 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) 
     assert len(docs) == 2
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_training_search(ops_test: OpsTest, deploy_type: str) -> None:
     """Tests the entire cycle of KNN plugin.
