@@ -200,15 +200,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.node_lock = OpenSearchNodeLock(self)
-        self.cos_integration = COSAgentProvider(
-            self,
-            relation_name=COSRelationName,
-            metrics_endpoints=[],
-            scrape_configs=self._scrape_config,
-            refresh_events=[self.on.set_password_action, self.on.secret_changed],
-            metrics_rules_dir="./src/alert_rules/prometheus",
-            log_slots=["opensearch:logs"],
-        )
 
         self.plugin_manager = OpenSearchPluginManager(self)
         self.backup = backup(self)
@@ -246,6 +237,19 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
+        self.cos_integration = COSAgentProvider(
+            self,
+            relation_name=COSRelationName,
+            metrics_endpoints=[],
+            scrape_configs=self._scrape_config,
+            refresh_events=[
+                self.on.set_password_action,
+                self.on.secret_changed,
+                self.on[PeerRelationName].relation_changed,
+            ],
+            metrics_rules_dir="./src/alert_rules/prometheus",
+            log_slots=["opensearch:logs"],
+        )
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
