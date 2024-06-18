@@ -1552,15 +1552,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Return the labels for the prometheus scrape."""
         if not self.opensearch.roles:
             return {
-                "unrecognized": "unrecognized",
+                "roles": "unrecognized",
             }
-        tags = {}
-        for role in self.opensearch.roles:
-            if role in COS_TAGGABLE_ROLES:
-                tags[role] = role
-            else:
-                tags["unrecognized"] = "unrecognized"
-        return tags
+        return {
+            "roles": ",".join(
+                [
+                    role if role in COS_TAGGABLE_ROLES else "unrecognized"
+                    for role in self.opensearch.roles
+                ]
+            )
+        }
 
     def _scrape_config(self) -> List[Dict]:
         """Generates the scrape config as needed."""

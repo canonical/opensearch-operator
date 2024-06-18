@@ -712,7 +712,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_os_cpu_percent{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
+              "expr": "opensearch_os_cpu_percent{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -798,7 +798,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_os_mem_used_bytes{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
+              "expr": "opensearch_os_mem_used_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -884,7 +884,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "1 - opensearch_fs_path_available_bytes{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"} / opensearch_fs_path_total_bytes{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
+              "expr": "1 - opensearch_fs_path_available_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"} / opensearch_fs_path_total_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}} - {{path}}",
@@ -999,7 +999,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1085,7 +1085,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "1000 * rate(opensearch_indices_indexing_index_time_seconds{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval]) / rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "1000 * delta(opensearch_indices_indexing_index_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval]) / delta(opensearch_indices_indexing_index_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1095,7 +1095,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Indexing latency (avg in millisecs / doc)",
+          "title": "Indexing latency / doc (in millisecs)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1171,7 +1171,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_search_query_count{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_indices_search_query_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1257,7 +1257,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "1000 * rate(opensearch_indices_search_query_time_seconds{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval]) / rate(opensearch_indices_search_query_count{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "1000 * rate(opensearch_indices_search_query_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval]) / rate(opensearch_indices_search_query_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1343,7 +1343,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_indices_doc_number{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
+              "expr": "opensearch_indices_doc_number{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1429,7 +1429,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_doc_deleted_number{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_indices_doc_deleted_number{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1515,7 +1515,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_merges_total_docs_count{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_indices_merges_total_docs_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1615,7 +1615,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_indices_fielddata_memory_size_bytes{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
+              "expr": "opensearch_indices_fielddata_memory_size_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1701,7 +1701,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_fielddata_evictions_count{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_indices_fielddata_evictions_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1787,7 +1787,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_indices_querycache_cache_size_bytes{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
+              "expr": "opensearch_indices_querycache_cache_size_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1873,7 +1873,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_querycache_evictions_count{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_indices_querycache_evictions_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1959,7 +1959,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_querycache_hit_count{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_indices_querycache_hit_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -2045,7 +2045,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_querycache_miss_number{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_indices_querycache_miss_number{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -2145,7 +2145,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_indexing_throttle_time_seconds{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_indices_indexing_throttle_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -2231,7 +2231,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_merges_total_throttled_time_seconds{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_indices_merges_total_throttled_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -2331,7 +2331,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_jvm_mem_heap_used_bytes{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
+              "expr": "opensearch_jvm_mem_heap_used_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}} - heap used",
@@ -2417,7 +2417,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_jvm_gc_collection_count{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_jvm_gc_collection_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}} - {{gc}}",
@@ -2503,7 +2503,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_jvm_gc_collection_time_seconds{cluster=\"$cluster\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "rate(opensearch_jvm_gc_collection_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{juju_model}}.{{juju_unit}} - {{gc}}",
@@ -2626,6 +2626,64 @@
           }
         ],
         "query": "15s, 30s, 1m, 5m, 1h, 6h, 1d",
+        "refresh": 0,
+        "type": "custom"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "prometheus",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Role",
+        "multi": true,
+        "name": "role",
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "data",
+            "value": "data"
+          },
+          {
+            "selected": false,
+            "text": "cluster_manager",
+            "value": "cluster_manager"
+          },
+          {
+            "selected": false,
+            "text": "voting",
+            "value": "voting"
+          },
+          {
+            "selected": false,
+            "text": "cluster_manager_elegible",
+            "value": "cluster_manager_elegible"
+          },
+          {
+            "selected": false,
+            "text": "ml",
+            "value": "ml"
+          },
+          {
+            "selected": false,
+            "text": "unrecognized",
+            "value": "unrecognized"
+          }
+        ],
+        "query": "data, cluster_manager, voting, cluster_manager_elegible, ml, unrecognized",
         "refresh": 0,
         "type": "custom"
       },

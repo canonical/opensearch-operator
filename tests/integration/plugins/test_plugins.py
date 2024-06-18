@@ -253,6 +253,13 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
 @pytest.mark.abort_on_fail
 async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
     # Check that the correct settings were successfully communicated to grafana-agent
+    await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
+    await ops_test.model.integrate("failover", COS_APP_NAME)
+    await ops_test.model.integrate("main", COS_APP_NAME)
+    await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
+
+    await _wait_for_units(ops_test, deploy_type)
+
     leader_id = await get_leader_unit_id(ops_test, APP_NAME)
     leader_name = f"{APP_NAME}/{leader_id}"
     relation_data_raw = await get_unit_relation_data(
