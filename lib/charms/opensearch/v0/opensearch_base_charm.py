@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
+    COS_TAGGABLE_ROLES,
     AdminUser,
     AdminUserInitProgress,
     AdminUserNotConfigured,
@@ -24,6 +25,7 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     OpenSearchSystemUsers,
     OpenSearchUsers,
+    PeerClusterRelationName,
     PeerRelationName,
     PluginConfigChangeError,
     PluginConfigCheck,
@@ -246,6 +248,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.on.set_password_action,
                 self.on.secret_changed,
                 self.on[PeerRelationName].relation_changed,
+                self.on[PeerClusterRelationName].relation_changed,
             ],
             metrics_rules_dir="./src/alert_rules/prometheus",
             log_slots=["opensearch:logs"],
@@ -693,8 +696,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._put_or_update_internal_user_leader(user_name, password)
             label = self.secrets.password_key(user_name)
             event.set_results({label: password})
+            # We know we are already running for MAIN_ORCH. and its leader unit
+            self.peer_cluster_provider.refresh_relation_data(event)
         except OpenSearchError as e:
             event.fail(f"Failed changing the password: {e}")
+        except RuntimeError as e:
+            # From:
+            # https://github.com/canonical/operator/blob/ \
+            #     eb52cef1fba4df2f999f88902fb39555fb6de52f/ops/charm.py
+            if str(e) == "cannot defer action events":
+                event.fail("Cluster is not ready to update this password. Try again later.")
+            else:
+                event.fail(f"Failed with unknown error: {e}")
 
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
@@ -1535,6 +1548,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             Scope.UNIT, "certs_exp_checked_at", datetime.now().strftime(date_format)
         )
 
+    def _get_prometheus_labels(self) -> Dict[str, str]:
+        """Return the labels for the prometheus scrape."""
+        if not self.opensearch.roles:
+            return {
+                "unrecognized": "unrecognized",
+            }
+        tags = {}
+        for role in self.opensearch.roles:
+            if role in COS_TAGGABLE_ROLES:
+                tags[role] = role
+            else:
+                tags["unrecognized"] = "unrecognized"
+        return tags
+
     def _scrape_config(self) -> List[Dict]:
         """Generates the scrape config as needed."""
         if (
@@ -1547,7 +1574,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         return [
             {
                 "metrics_path": "/_prometheus/metrics",
-                "static_configs": [{"targets": [f"{self.unit_ip}:{COSPort}"]}],
+                "static_configs": [
+                    {
+                        "targets": [f"{self.unit_ip}:{COSPort}"],
+                        "labels": self._get_prometheus_labels(),
+                    }
+                ],
                 "tls_config": {"ca": ca},
                 "scheme": "https" if self.is_tls_fully_configured() else "http",
                 "basic_auth": {"username": f"{COSUser}", "password": f"{pwd}"},
