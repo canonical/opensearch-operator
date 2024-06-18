@@ -83,8 +83,7 @@ class OpenSearchPeerClusterRelation(Object):
         if not rel_id:
             raise ValueError("Relation id must be provided as arguments.")
 
-        relation = self.get_rel(rel_id=rel_id)
-        if relation:
+        if relation := self.get_rel(rel_id=rel_id):
             return relation.data[relation.app if remote_app else self.charm.app].get(key)
 
         return None
@@ -101,8 +100,7 @@ class OpenSearchPeerClusterRelation(Object):
         if not rel_id:
             raise ValueError("Relation id must be provided as arguments.")
 
-        relation = self.get_rel(rel_id=rel_id)
-        if relation:
+        if relation := self.get_rel(rel_id=rel_id):
             relation.data[self.charm.app].update(data)
 
     def delete_from_rel(
@@ -112,8 +110,7 @@ class OpenSearchPeerClusterRelation(Object):
         if not event and not rel_id:
             raise ValueError("Relation Event or relation id must be provided as arguments.")
 
-        relation = self.get_rel(rel_id=rel_id if rel_id else event.relation.id)
-        if relation:
+        if relation := self.get_rel(rel_id=rel_id if rel_id else event.relation.id):
             relation.data[self.charm.app].pop(key, None)
 
     def get_rel(self, rel_id: Optional[int]) -> Optional[Relation]:
@@ -259,14 +256,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # compute the data that needs to be broadcast to all related clusters (success or error)
         rel_data = self._rel_data(deployment_desc, orchestrators)
-
-        # todo remove
-        deferring = rel_data.should_wait if isinstance(rel_data, PeerClusterRelErrorData) else False
-        logger.debug(
-            f"\n\n\nrefresh-relation-data: {self.charm.unit_name} - "
-            f"\n\tData:{rel_data.to_dict()}\n"
-            f"\tDeferring: {deferring}\n\n\n"
-        )
 
         # exit if current cluster should not have been considered a provider
         if self._notify_if_wrong_integration(rel_data, all_relation_ids):
@@ -517,7 +506,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         """Event received when a new main-failover cluster unit joins the fleet."""
         pass
 
-    def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
+    def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Peer cluster relation change hook. Crucial to capture changes from the provider side."""
         if not self.charm.unit.is_leader():
             return
@@ -544,10 +533,20 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # fetch main and failover clusters relations ids if any
         orchestrators = self._orchestrators(event, data, deployment_desc)
 
+        # should we add a check where only the failover rel has data while the main has none yet?
+        if orchestrators.failover_app and not orchestrators.main_app:
+            logger.debug(
+                f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: "
+                f"orchestrators.failover_app and not orchestrators.main_app\n\n\n"
+            )
+            event.defer()
+            return
+
         # check errors sent by providers
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
             logger.debug(
-                f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: error_from_provider\n\n\n"
+                f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: "
+                f"error_from_provider\n\n\n"
             )
             return
 
