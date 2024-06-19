@@ -1550,18 +1550,24 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _get_prometheus_labels(self) -> Dict[str, str]:
         """Return the labels for the prometheus scrape."""
-        if not self.opensearch.roles:
+        try:
+            if not self.opensearch.roles:
+                return {
+                    "roles": "unrecognized",
+                }
+            roles = set(
+                role if role in COS_TAGGABLE_ROLES else "unrecognized"
+                for role in self.opensearch.roles
+            )
+            roles = sorted(roles)
+            return {"roles": ",".join(roles)}
+        except KeyError:
+            # At very early stages of the deployment, "node.roles" may not be yet present
+            # in the opensearch.yml, nor APIs is responding. Therefore, we need to catch
+            # the KeyError here and report the appropriate response.
             return {
                 "roles": "unrecognized",
             }
-        return {
-            "roles": ",".join(
-                [
-                    role if role in COS_TAGGABLE_ROLES else "unrecognized"
-                    for role in self.opensearch.roles
-                ]
-            )
-        }
 
     def _scrape_config(self) -> List[Dict]:
         """Generates the scrape config as needed."""

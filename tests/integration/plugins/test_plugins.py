@@ -44,6 +44,8 @@ logger = logging.getLogger(__name__)
 
 COS_APP_NAME = "grafana-agent"
 COS_RELATION_NAME = "cos-agent"
+MAIN_ORCHESTRATOR_NAME = "main"
+FAILOVER_ORCHESTRATOR_NAME = "failover"
 
 
 DEPLOY_CLOUD_GROUP_MARKS = [
@@ -82,6 +84,15 @@ DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS = [
 ]
 
 
+async def _set_config(ops_test: OpsTest, deploy_type: str, conf: dict[str, str]) -> None:
+    if deploy_type == "small_deployment":
+        await ops_test.model.applications[APP_NAME].set_config(conf)
+        return
+    await ops_test.model.applications[MAIN_ORCHESTRATOR_NAME].set_config(conf)
+    await ops_test.model.applications[FAILOVER_ORCHESTRATOR_NAME].set_config(conf)
+    await ops_test.model.applications[APP_NAME].set_config(conf)
+
+
 async def _wait_for_units(ops_test: OpsTest, deployment_type: str) -> None:
     """Wait for all units to be active.
 
@@ -100,13 +111,18 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str) -> None:
         return
     await wait_until(
         ops_test,
-        apps=[TLS_CERTIFICATES_APP_NAME, "main", "failover", APP_NAME],
+        apps=[
+            TLS_CERTIFICATES_APP_NAME,
+            MAIN_ORCHESTRATOR_NAME,
+            FAILOVER_ORCHESTRATOR_NAME,
+            APP_NAME,
+        ],
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units={
             TLS_CERTIFICATES_APP_NAME: 1,
-            "main": 1,
-            "failover": 2,
+            MAIN_ORCHESTRATOR_NAME: 1,
+            FAILOVER_ORCHESTRATOR_NAME: 2,
             APP_NAME: 1,
         },
         timeout=1200,
@@ -216,14 +232,14 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
         ops_test.model.deploy(
             my_charm,
-            application_name="main",
+            application_name=MAIN_ORCHESTRATOR_NAME,
             num_units=1,
             series=SERIES,
             config=main_orchestrator_conf,
         ),
         ops_test.model.deploy(
             my_charm,
-            application_name="failover",
+            application_name=FAILOVER_ORCHESTRATOR_NAME,
             num_units=2,
             series=SERIES,
             config=failover_orchestrator_conf,
@@ -241,8 +257,8 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
     )
 
     # TLS setup
-    await ops_test.model.integrate("main", TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.integrate("failover", TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(MAIN_ORCHESTRATOR_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(FAILOVER_ORCHESTRATOR_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
     await _wait_for_units(ops_test, deploy_type)
@@ -254,8 +270,8 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
 async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
     # Check that the correct settings were successfully communicated to grafana-agent
     await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
-    await ops_test.model.integrate("failover", COS_APP_NAME)
-    await ops_test.model.integrate("main", COS_APP_NAME)
+    await ops_test.model.integrate(FAILOVER_ORCHESTRATOR_NAME, COS_APP_NAME)
+    await ops_test.model.integrate(MAIN_ORCHESTRATOR_NAME, COS_APP_NAME)
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
 
     await _wait_for_units(ops_test, deploy_type)
@@ -304,7 +320,7 @@ async def test_monitoring_user_fetch_prometheus_data(ops_test, deploy_type: str)
 @pytest.mark.abort_on_fail
 async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: str):
     # Password change applied as expected
-    app = APP_NAME if deploy_type == "small_deployment" else "main"
+    app = APP_NAME if deploy_type == "small_deployment" else MAIN_ORCHESTRATOR_NAME
 
     leader_id = await get_leader_unit_id(ops_test, app)
     result1 = await run_action(
@@ -338,7 +354,7 @@ async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: st
     assert relation_data["password"] == new_password
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_enabled_disabled(ops_test, deploy_type: str):
     config = await ops_test.model.applications[APP_NAME].get_config()
@@ -346,13 +362,13 @@ async def test_knn_enabled_disabled(ops_test, deploy_type: str):
     assert config["plugin_opensearch_knn"]["value"] is True
 
     async with ops_test.fast_forward():
-        await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "False"})
+        await _set_config(ops_test, deploy_type, {"plugin_opensearch_knn": "False"})
         await _wait_for_units(ops_test, deploy_type)
 
         config = await ops_test.model.applications[APP_NAME].get_config()
         assert config["plugin_opensearch_knn"]["value"] is False
 
-        await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "True"})
+        await _set_config(ops_test, deploy_type, {"plugin_opensearch_knn": "True"})
         await _wait_for_units(ops_test, deploy_type)
 
         config = await ops_test.model.applications[APP_NAME].get_config()
@@ -361,7 +377,7 @@ async def test_knn_enabled_disabled(ops_test, deploy_type: str):
         await _wait_for_units(ops_test, deploy_type)
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
@@ -405,7 +421,7 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -
     assert len(docs) == 2
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the NMSLIB KNNEngine."""
@@ -449,7 +465,7 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) 
     assert len(docs) == 2
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_training_search(ops_test: OpsTest, deploy_type: str) -> None:
     """Tests the entire cycle of KNN plugin.
@@ -512,9 +528,7 @@ async def test_knn_training_search(ops_test: OpsTest, deploy_type: str) -> None:
 
         # get current timestamp, to compare with restarts later
         ts = await get_application_unit_ids_start_time(ops_test, APP_NAME)
-        await ops_test.model.applications[APP_NAME].set_config(
-            {"plugin_opensearch_knn": str(knn_enabled)}
-        )
+        await _set_config(ops_test, deploy_type, {"plugin_opensearch_knn": str(knn_enabled)})
 
         await _wait_for_units(ops_test, deploy_type)
 

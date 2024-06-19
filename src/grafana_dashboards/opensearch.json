@@ -295,7 +295,7 @@
               "value": "null"
             }
           ],
-          "valueName": "avg"
+          "valueName": "current"
         },
         {
           "cacheTimeout": null,
@@ -375,7 +375,7 @@
               "value": "null"
             }
           ],
-          "valueName": "avg"
+          "valueName": "current"
         },
         {
           "cacheTimeout": null,
@@ -455,7 +455,7 @@
               "value": "null"
             }
           ],
-          "valueName": "avg"
+          "valueName": "current"
         }
       ],
       "repeat": null,
@@ -1085,7 +1085,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "1000 * delta(opensearch_indices_indexing_index_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval]) / delta(opensearch_indices_indexing_index_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "1000 * rate(opensearch_indices_indexing_index_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1095,7 +1095,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Indexing latency / doc (in millisecs)",
+          "title": "Indexing latency for new docs (in millisecs)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1257,7 +1257,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "1000 * rate(opensearch_indices_search_query_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval]) / rate(opensearch_indices_search_query_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
+              "expr": "1000 * rate(opensearch_indices_search_query_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1267,7 +1267,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Search latency (avg in millisecs / query)",
+          "title": "Search latency (avg in millisecs)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -2666,6 +2666,16 @@
             "selected": false,
             "text": "voting",
             "value": "voting"
+          },
+          {
+            "selected": false,
+            "text": "coordinating_only",
+            "value": "coordinating_only"
+          },
+          {
+            "selected": false,
+            "text": "ingest",
+            "value": "ingest"
           },
           {
             "selected": false,
