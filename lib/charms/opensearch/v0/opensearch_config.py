@@ -175,6 +175,12 @@ class OpenSearchConfig:
             "plugins.security.unsupported.restapi.allow_securityconfig_modification",
             True,
         )
+        # enable hot reload of TLS certs (without restarting the node)
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            "plugins.security.ssl_cert_reload_enabled",
+            True,
+        )
 
     def remove_temporary_data_role(self):
         """Remove the data role that was added temporarily to the first dedicated CM node."""
