@@ -1548,13 +1548,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             Scope.UNIT, "certs_exp_checked_at", datetime.now().strftime(date_format)
         )
 
-    def _get_prometheus_labels(self) -> Dict[str, str]:
+    def _get_prometheus_labels(self) -> Optional[Dict[str, str]]:
         """Return the labels for the prometheus scrape."""
         try:
             if not self.opensearch.roles:
-                return {
-                    "roles": "unrecognized",
-                }
+                return None
             roles = set(
                 role if role in COS_TAGGABLE_ROLES else "unrecognized"
                 for role in self.opensearch.roles
@@ -1565,9 +1563,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # At very early stages of the deployment, "node.roles" may not be yet present
             # in the opensearch.yml, nor APIs is responding. Therefore, we need to catch
             # the KeyError here and report the appropriate response.
-            return {
-                "roles": "unrecognized",
-            }
+            return None
 
     def _scrape_config(self) -> List[Dict]:
         """Generates the scrape config as needed."""
@@ -1575,6 +1571,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             not (app_secrets := self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val))
             or not (ca := app_secrets.get("ca-cert"))
             or not (pwd := self.secrets.get(Scope.APP, self.secrets.password_key(COSUser)))
+            or not self._get_prometheus_labels()
         ):
             # Not yet ready, waiting for certain values to be set
             return []

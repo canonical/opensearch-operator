@@ -262,7 +262,7 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
     await _wait_for_units(ops_test, deploy_type)
-    set_watermark(ops_test, APP_NAME)
+    await set_watermark(ops_test, APP_NAME)
 
 
 @pytest.mark.parametrize("deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
