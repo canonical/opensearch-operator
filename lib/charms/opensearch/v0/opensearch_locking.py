@@ -201,7 +201,7 @@ class _PeerRelationLock(ops.Object):
     def _default_unit_name(full_unit_id: str) -> str:
         """Build back the juju formatted unit name."""
         # we first take out the app id suffix
-        full_unit_id_split = "_".join(full_unit_id.split("_")[:-1]).rsplit("-")
+        full_unit_id_split = full_unit_id.split(".")[0].rsplit("-")
         return "{}/{}".format("-".join(full_unit_id_split[:-1]), full_unit_id_split[-1])
 
 
