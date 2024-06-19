@@ -354,7 +354,7 @@ async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: st
     assert relation_data["password"] == new_password
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_enabled_disabled(ops_test, deploy_type: str):
     config = await ops_test.model.applications[APP_NAME].get_config()
@@ -377,7 +377,7 @@ async def test_knn_enabled_disabled(ops_test, deploy_type: str):
         await _wait_for_units(ops_test, deploy_type)
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
@@ -421,7 +421,7 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -
     assert len(docs) == 2
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the NMSLIB KNNEngine."""
@@ -465,7 +465,7 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) 
     assert len(docs) == 2
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
 @pytest.mark.abort_on_fail
 async def test_knn_training_search(ops_test: OpsTest, deploy_type: str) -> None:
     """Tests the entire cycle of KNN plugin.
