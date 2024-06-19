@@ -311,8 +311,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         """Test current unit name."""
         deployment_desc.return_value = self.deployment_descriptions["ok"]
 
-        app_short_id = deployment_desc().app.short_id
-        self.assertEqual(self.charm.unit_name, f"{self.charm.app.name}-0_{app_short_id}")
+        app_id = deployment_desc().app.id
+        self.assertEqual(self.charm.unit_name, f"{self.charm.app.name}-0.{app_id}")
 
     def test_unit_id(self):
         """Test retrieving the integer id pf a unit."""

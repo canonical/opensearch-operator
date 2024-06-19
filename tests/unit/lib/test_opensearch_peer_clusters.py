@@ -189,7 +189,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             is_peer_cluster_orchestrator_relation_set.return_value = True
             nodes.return_value = [
                 Node(
-                    name=node.name.replace("/", "-") + f"_{deployment_desc().app.short_id}",
+                    name=node.name.replace("/", "-") + f".{deployment_desc().app.id}",
                     roles=["data"],
                     ip="1.1.1.1",
                     app=deployment_desc().app,
@@ -198,7 +198,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                 for node in self.p_units
             ] + [
                 Node(
-                    name=f"node-5_{deployment_desc().app.short_id}",
+                    name=f"node-5.{deployment_desc().app.id}",
                     roles=["data"],
                     ip="2.2.2.2",
                     app=deployment_desc().app,
@@ -225,7 +225,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             is_peer_cluster_orchestrator_relation_set.return_value = True
             nodes.return_value = [
                 Node(
-                    name=node.name.replace("/", "-") + f"_{deployment_desc().app.short_id}",
+                    name=node.name.replace("/", "-") + f".{deployment_desc().app.id}",
                     roles=["data"],
                     ip="1.1.1.1",
                     app=deployment_desc().app,

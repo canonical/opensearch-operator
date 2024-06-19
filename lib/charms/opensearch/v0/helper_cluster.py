@@ -163,7 +163,7 @@ class ClusterTopology:
                         roles=obj["roles"],
                         ip=obj["ip"],
                         app=App(id=obj["attributes"]["app_id"]),
-                        unit_number=int("_".join(obj["name"].split("_")[:-1]).split("-")[-1]),
+                        unit_number=int(obj["name"].split(".")[0].split("-")[-1]),
                         temperature=obj.get("attributes", {}).get("temp"),
                     )
                     nodes.append(node)
@@ -220,7 +220,7 @@ class ClusterState:
         opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
-    ) -> List[Dict[str, str]]:
+    ) -> Dict[str, Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
         endpoint = "/_cat/indices?expand_wildcards=all"
         idx = {}

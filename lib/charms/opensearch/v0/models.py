@@ -4,7 +4,6 @@
 """Cluster-related data structures / model classes."""
 from abc import ABC
 from datetime import datetime
-from hashlib import md5
 from typing import Any, Dict, List, Literal, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -70,7 +69,6 @@ class App(Model):
     """Data class representing an application."""
 
     id: Optional[str] = None
-    short_id: Optional[str] = None
     name: Optional[str] = None
     model_uuid: Optional[str] = None
 
@@ -89,7 +87,6 @@ class App(Model):
         else:
             values["id"] = f"{values['model_uuid']}/{values['name']}"
 
-        values["short_id"] = md5(values["id"].encode()).hexdigest()[:3]
         return values
 
 
