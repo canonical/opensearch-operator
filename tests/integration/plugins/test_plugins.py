@@ -262,8 +262,10 @@ async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deplo
 
     leader_id = await get_leader_unit_id(ops_test, APP_NAME)
     leader_name = f"{APP_NAME}/{leader_id}"
+
+    cos_leader_id = await get_leader_unit_id(ops_test, COS_APP_NAME)
     relation_data_raw = await get_unit_relation_data(
-        ops_test, f"{COS_APP_NAME}/0", leader_name, COS_RELATION_NAME, "config"
+        ops_test, f"{COS_APP_NAME}/{cos_leader_id}", leader_name, COS_RELATION_NAME, "config"
     )
     relation_data = json.loads(relation_data_raw)["metrics_scrape_jobs"][0]
     secret = await get_secret_by_label(ops_test, "opensearch:app:monitor-password")
@@ -326,8 +328,9 @@ async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: st
     leader_name = f"{APP_NAME}/{leader_id}"
 
     # We're not sure which grafana-agent is sitting with APP_NAME in large deployments
+    cos_leader_id = await get_leader_unit_id(ops_test, COS_APP_NAME)
     relation_data_raw = await get_unit_relation_data(
-        ops_test, f"{COS_APP_NAME}/0", leader_name, COS_RELATION_NAME, "config"
+        ops_test, f"{COS_APP_NAME}/{cos_leader_id}", leader_name, COS_RELATION_NAME, "config"
     )
     relation_data = json.loads(relation_data_raw)["metrics_scrape_jobs"][0]["basic_auth"]
 
