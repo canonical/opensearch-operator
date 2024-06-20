@@ -18,9 +18,9 @@ from ..helpers import (
     run_action,
     set_watermark,
 )
-from .helpers import assert_upgrade_to_local
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .helpers import assert_upgrade_to_local
 
 logger = logging.getLogger(__name__)
 

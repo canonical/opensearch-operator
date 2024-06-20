@@ -120,6 +120,5 @@ COS_TAGGABLE_ROLES = [
     "voting",
     "coordinating_only",
     "ingest",
-    "cluster_manager_elegible",
     "ml",
 ]

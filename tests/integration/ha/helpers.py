@@ -23,7 +23,6 @@ from tenacity import (
 
 from ..helpers import (
     APP_NAME,
-    IDLE_PERIOD,
     get_application_unit_ids,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
@@ -32,7 +31,6 @@ from ..helpers import (
     juju_version_major,
     run_action,
 )
-from ..helpers_deployments import get_application_units, wait_until
 from .continuous_writes import ContinuousWrites
 from .helpers_data import index_docs_count
 
