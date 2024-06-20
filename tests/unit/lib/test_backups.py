@@ -659,7 +659,6 @@ class TestBackups(unittest.TestCase):
         mock_status.return_value = PluginState.ENABLED
         self.harness.remove_relation_unit(self.s3_rel_id, "s3-integrator/0")
         self.harness.remove_relation(self.s3_rel_id)
-        mock_request.called_once_with("GET", "/_snapshot/_status")
         mock_execute_s3_broken_calls.assert_called_once()
         assert (
             mock_apply_config.call_args[0][0].__dict__
