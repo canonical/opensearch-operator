@@ -1554,7 +1554,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return None
             taggable_roles = ClusterTopology.generated_roles() + ["voting"]
             roles = set(
-                role if role in taggable_roles else "unrecognized"
+                role if role in taggable_roles else "other"
                 for role in self.opensearch.roles
             )
             roles = sorted(roles)
