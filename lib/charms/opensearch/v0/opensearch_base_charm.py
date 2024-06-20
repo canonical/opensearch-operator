@@ -582,9 +582,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.upgrade_in_progress:
             logger.debug("Skipping `remove_users_and_roles()` because upgrade is in-progress")
-        else:
+        elif (
+            self.unit.is_leader()
+            and deployment_desc
+            and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+        ):
             self.user_manager.remove_users_and_roles()
 
         # If relation not broken - leave
