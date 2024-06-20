@@ -2,11 +2,14 @@
 # See LICENSE file for licensing details.
 
 """Class for Setting configuration in opensearch config files."""
+import json
 import logging
 import socket
+import subprocess
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.constants_tls import CertType
+from charms.opensearch.v0.helper_enums import ByteUnit
 from charms.opensearch.v0.helper_security import normalized_tls_subject
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
@@ -23,6 +26,89 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
+class OpenSearchPerformanceProfile:
+    """Applies the performance profile to the opensearch config."""
+
+    def __init__(self):
+        self._jvm_options = {}
+        self._opensearch_yml = {}
+
+    def _meminfo(self) -> dict[str, Any]:
+        with open("/proc/meminfo") as f:
+            meminfo = f.read()
+        return {
+            line.split()[0][:-1].lower(): ByteUnit.to_kb(
+                (
+                    line.split()[1],
+                    line.split()[2],
+                )
+            )
+            for line in meminfo.split("\n")
+            if line
+        }
+
+    def _cpuinfo(self) -> dict[str, Any]:
+        return json.loads(subprocess.check_output(["cpuinfo", "--json"]))
+
+    def _java_heap(self) -> dict[str, str]:
+        """Calculate the java heap size."""
+        raise NotImplementedError
+
+    @property
+    def jvm_options(self):
+        """Get the jvm options."""
+        return self._jvm_options
+
+    @jvm_options.setter
+    def jvm_options(self, jvm_options: Dict[str, str]):
+        """Set the jvm options."""
+        self._jvm_options = jvm_options
+
+    @property
+    def opensearch_yml(self):
+        """Get the opensearch yml options."""
+        return self._opensearch_yml
+
+    @opensearch_yml.setter
+    def opensearch_yml(self, opensearch_yml: Dict[str, str]):
+        """Set the opensearch yml options."""
+        self._opensearch_yml = opensearch_yml
+
+
+class HighPerformanceProfile(OpenSearchPerformanceProfile):
+    """High performance profile for opensearch."""
+
+    @property
+    def jvm_options(self):
+        """Get the jvm options."""
+        self._jvm_options |= self._calculate_memory()
+        return self._jvm_options
+
+    @property
+    def opensearch_yml(self):
+        """Set the opensearch yml options."""
+        meminfo = self._meminfo()
+        total_memory, _ = meminfo["memtotal"]  # we know it is in kB
+        flush_threshold_size = ByteUnit.format(total_memory // 4)
+
+        return self._opensearch_yml | {
+            "index.translog.flush_threshold_size": f"{flush_threshold_size[0]}{str(flush_threshold_size[1]).upper()}",
+            "index.merge.scheduler.max_thread_count": max(self._cpuinfo()["count"], 4),
+            "index.merge.scheduler.max_merge_count": max(self._cpuinfo()["count"], 4),
+            "index.codec": "zstd",
+        }
+
+    def _calculate_memory(self) -> str:
+        """Calculate the memory for the high performance profile."""
+        meminfo = self._meminfo()
+        total_memory, _ = meminfo["memtotal"]  # we know it is in kB
+        jvm_memory, unit = ByteUnit.format(total_memory // 2)
+        return {
+            "Xms": f"{jvm_memory}{str(unit)[0]}",
+            "Xmx": f"{jvm_memory}{str(unit)[0]}",
+        }
+
+
 class OpenSearchConfig:
     """This class covers the configuration changes depending on certain actions."""
 
@@ -32,6 +118,17 @@ class OpenSearchConfig:
 
     def __init__(self, opensearch: OpenSearchDistribution):
         self._opensearch = opensearch
+
+    def set_profile(self, profile: str) -> None:
+        """Adds plugin configuration to opensearch.yml."""
+        configs = None
+        # TODO: create an actual list to track the different profiles.
+        if profile == "production":
+            configs = HighPerformanceProfile()
+        for key, val in configs.opensearch_yml.items():
+            self._opensearch.config.put(self.CONFIG_YML, key, val)
+        for key, val in configs.jvm_options.items():
+            self._opensearch.config.put(self.JVM_OPTIONS, key, val)
 
     def load_node(self):
         """Load the opensearch.yml config of the node."""
