@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
+    COS_TAGGABLE_ROLES,
     AdminUser,
     AdminUserInitProgress,
     AdminUserNotConfigured,
