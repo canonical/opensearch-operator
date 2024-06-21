@@ -743,8 +743,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-#        if renewal and self.is_admin_user_configured() and self.is_tls_fully_configured():
-#            self._restart_opensearch_event.emit()
+
+    #    if renewal and self.is_admin_user_configured() and self.is_tls_fully_configured():
+    #        self._restart_opensearch_event.emit()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""

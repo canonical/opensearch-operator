@@ -182,6 +182,13 @@ class OpenSearchConfig:
             True,
         )
 
+        # add config for oid pattern in certificate Subject Alternative Name
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            "plugins.security.cert.oid",
+            "1.2.3.4.5.5",
+        )
+
     def remove_temporary_data_role(self):
         """Remove the data role that was added temporarily to the first dedicated CM node."""
         conf = self._opensearch.config.load(self.CONFIG_YML)
