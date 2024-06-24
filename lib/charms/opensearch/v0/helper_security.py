@@ -14,9 +14,8 @@ from types import SimpleNamespace
 from typing import Optional, Tuple
 
 import bcrypt
-from cryptography import x509
-
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from cryptography import x509
 
 # The unique Charmhub library identifier, never change it
 LIBID = "224ce9884b0d47b997357fec522f11c7"
