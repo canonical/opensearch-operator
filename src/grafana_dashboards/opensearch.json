@@ -105,7 +105,7 @@
               "value": "2"
             }
           ],
-          "valueName": "avg"
+          "valueName": "current"
         },
         {
           "aliasColors": {},
@@ -2503,209 +2503,46 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_threadpool_threads_count{cluster=\"$cluster\",name=\"$pool_name\"}",
+              "expr": "sum(rate(opensearch_threadpool_threads_count{cluster=\"$cluster\", name=\"$pool_name\", type=\"completed\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "",
+              "legendFormat": "Increase of completed/sec",
               "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$pool_name threads",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
             },
             {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ]
-        }
-      ],
-      "repeat": null,
-      "repeatIteration": null,
-      "repeatRowId": null,
-      "showTitle": true,
-      "title": "Threadpools - Thread Status",
-      "titleSize": "h6",
-      "type": "row"
-    },
-    {
-      "collapse": false,
-      "collapsed": true,
-      "height": "200",
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "datasource",
-            "uid": "${prometheusds}"
-          },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {},
-          "id": 8,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "sideWidth": null,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": "pool_name",
-          "repeatDirection": "h",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "span": 2.4,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "opensearch_threadpool_threads_number{cluster=\"$cluster\",name=\"$pool_name\"}",
+              "expr": "sum(rate(opensearch_threadpool_threads_count{cluster=\"$cluster\", name=\"$pool_name\", type=\"rejected\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "",
-              "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$pool_name threads",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
+              "legendFormat": "Increase of rejected/sec",
+              "refId": "B"
             },
             {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ]
-        }
-      ],
-      "repeat": null,
-      "repeatIteration": null,
-      "repeatRowId": null,
-      "showTitle": true,
-      "title": "Threadpools - Thread Number",
-      "titleSize": "h6",
-      "type": "row"
-    },
-    {
-      "collapse": false,
-      "collapsed": true,
-      "height": "200",
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "datasource",
-            "uid": "${prometheusds}"
-          },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {},
-          "id": 8,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "sideWidth": null,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": "pool_name",
-          "repeatDirection": "h",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "span": 2.4,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "max(opensearch_threadpool_tasks_number{cluster=\"$cluster\",name=\"$pool_name\"})",
+              "expr": "sum(opensearch_threadpool_tasks_number{cluster=\"$cluster\", name=\"$pool_name\", type=\"queue\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"})",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "",
-              "refId": "A"
+              "legendFormat": "Queued tasks",
+              "refId": "C"
+            },
+            {
+              "expr": "sum(opensearch_threadpool_threads_number{cluster=\"$cluster\", name=\"$pool_name\", type=\"active\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Active threads",
+              "refId": "D"
+            },
+            {
+              "expr": "sum(opensearch_threadpool_threads_number{cluster=\"$cluster\", name=\"$pool_name\", type=\"largest\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Largest # threads",
+              "refId": "E"
+            },
+            {
+              "expr": "sum(opensearch_threadpool_threads_number{cluster=\"$cluster\", name=\"$pool_name\", type=\"threads\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Total # threads available",
+              "refId": "F"
             }
           ],
           "thresholds": [],
@@ -2749,7 +2586,7 @@
       "repeatIteration": null,
       "repeatRowId": null,
       "showTitle": true,
-      "title": "Threadpools - Task Queue",
+      "title": "Threadpool - Tasks Status",
       "titleSize": "h6",
       "type": "row"
     }
