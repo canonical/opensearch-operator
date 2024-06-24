@@ -198,7 +198,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = OpenSearchSecrets(self, PeerRelationName)
-        self.tls = OpenSearchTLS(self, TLS_RELATION)
+        self.tls = OpenSearchTLS(
+            self, TLS_RELATION, self.opensearch.paths.jdk, self.opensearch.paths.certs
+        )
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.node_lock = OpenSearchNodeLock(self)

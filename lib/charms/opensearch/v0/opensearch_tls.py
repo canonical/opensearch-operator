@@ -17,14 +17,16 @@ import base64
 import logging
 import re
 import socket
+import tempfile
 import typing
+from os.path import exists
 from typing import Dict, List, Optional, Tuple, Union
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_networking import get_host_public_ip
-from charms.opensearch.v0.helper_security import generate_password
+from charms.opensearch.v0.helper_security import generate_password, run_cmd
 from charms.opensearch.v0.models import DeploymentType
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchError, OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
@@ -56,11 +58,13 @@ logger = logging.getLogger(__name__)
 class OpenSearchTLS(Object):
     """Class that Manages OpenSearch relation with TLS Certificates Operator."""
 
-    def __init__(self, charm: "OpenSearchBaseCharm", peer_relation: str):
+    def __init__(self, charm: "OpenSearchBaseCharm", peer_relation: str, jdk_path: str, certs_path: str):
         super().__init__(charm, "tls-component")
 
         self.charm = charm
         self.peer_relation = peer_relation
+        self.jdk_path = jdk_path
+        self.certs_path = certs_path
         self.certs = TLSCertificatesRequiresV3(charm, TLS_RELATION)
 
         self.framework.observe(
@@ -186,6 +190,11 @@ class OpenSearchTLS(Object):
             },
             merge=True,
         )
+
+        # currently only make sure there is a CA
+        # workflow for replacement will be added later
+        if self._read_stored_ca() is None:
+            self.store_new_ca(event.ca)
 
         for relation in self.charm.opensearch_provider.relations:
             self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
@@ -394,3 +403,70 @@ class OpenSearchTLS(Object):
         keystore_pwd = self.charm.secrets.get(scope, f"keystore-password-{alias}")
         if not keystore_pwd:
             self.charm.secrets.put(scope, f"keystore-password-{alias}", generate_password())
+
+    def store_new_ca(self, ca_cert: str):
+        """Add new CA cert to trust store."""
+        store_pwd = self.charm.secrets.get(Scope.APP, "keystore-password-ca")
+
+        keytool = f"sudo {self.jdk_path}/bin/keytool"
+        alias = "ca"
+        store_path = f"{self.certs_path}/{alias}.p12"
+        try:
+            run_cmd(
+                f"""{keytool} -changealias \
+                -alias {alias} \
+                -destalias old-{alias} \
+                -keystore {store_path} \
+                -storepass {store_pwd} \
+                -storetype PKCS12
+            """
+            )
+        except OpenSearchCmdError as e:
+            # This message means there was no "ca" alias or store before, if it happens ignore
+            if not (
+                f"Alias <{alias}> does not exist" in e.out
+                or "Keystore file does not exist" in e.out
+            ):
+                raise
+
+        with tempfile.NamedTemporaryFile(mode="w+t") as ca_tmp_file:
+            ca_tmp_file.write(ca_cert)
+            ca_tmp_file.flush()
+
+            run_cmd(
+                f"""{keytool} -importcert \
+                -trustcacerts \
+                -noprompt \
+                -alias {alias} \
+                -keystore {store_path} \
+                -file {ca_tmp_file.name} \
+                -storepass {store_pwd} \
+                -storetype PKCS12
+            """
+            )
+
+        run_cmd(f"sudo chown -R snap_daemon:root {self.certs_path}")
+        run_cmd(f"sudo chmod +r {store_path}")
+        run_cmd(
+            f"{keytool} -list -v -keystore {store_path} -storepass {store_pwd} -storetype PKCS12"
+        )
+
+    def _read_stored_ca(self, alias: str = "ca") -> Optional[str]:
+        """Load stored CA cert."""
+        store_pwd = self.charm.secrets.get(Scope.APP, "keystore-password-ca")
+
+        ca_trust_store = f"{self.certs_path}/ca.p12"
+        if not exists(ca_trust_store):
+            return None
+
+        stored_certs = run_cmd(f"openssl pkcs12 -in {ca_trust_store} -passin pass:{store_pwd}").out
+
+        # parse output to retrieve the current CA (in case there are many)
+        start_cert_marker = "-----BEGIN CERTIFICATE-----"
+        end_cert_marker = "-----END CERTIFICATE-----"
+        certificates = stored_certs.split(end_cert_marker)
+        for cert in certificates:
+            if f"friendlyName: {alias}" in cert:
+                return f"{start_cert_marker}{cert.split(start_cert_marker)[1]}{end_cert_marker}"
+
+        return None
