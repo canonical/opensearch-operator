@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_networking import get_host_public_ip
+from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
@@ -131,12 +132,17 @@ class OpenSearchTLS(Object):
             event.defer()
             return
         admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if (
-            self.charm.unit.is_leader()
-            and admin_cert is None
-            and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-        ):
-            self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+        if self.charm.unit.is_leader:
+            # create passwords for both ca trust_store/admin key_store
+            self._create_keystore_pwd_if_not_exists(Scope.APP, "ca")
+            self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN.val)
+
+            if admin_cert is None and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+                self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+
+        # create passwords for both unit-http/transport key_stores
+        self._create_keystore_pwd_if_not_exists(Scope.UNIT, CertType.UNIT_TRANSPORT.val)
+        self._create_keystore_pwd_if_not_exists(Scope.UNIT, CertType.UNIT_HTTP.val)
 
         self._request_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
         self._request_certificate(Scope.UNIT, CertType.UNIT_HTTP)
@@ -382,3 +388,9 @@ class OpenSearchTLS(Object):
                 certs[CertType.APP_ADMIN] = admin_secrets["cert"]
 
         return certs
+
+    def _create_keystore_pwd_if_not_exists(self, scope: Scope, alias: str):
+        """Create passwords for the key stores if not already created."""
+        keystore_pwd = self.charm.secrets.get(scope, f"keystore-password-{alias}")
+        if not keystore_pwd:
+            self.charm.secrets.put(scope, f"keystore-password-{alias}", generate_password())
