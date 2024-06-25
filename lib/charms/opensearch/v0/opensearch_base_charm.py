@@ -748,7 +748,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         if scope == Scope.UNIT:
             # node http or transport cert
-            self.opensearch_config.set_node_tls_conf(cert_type, current_secrets)
+            self.opensearch_config.set_node_tls_conf(
+                cert_type,
+                self.secrets.get(Scope.APP, "keystore-password-ca"),
+                self.secrets.get(scope, f"keystore-password-{cert_type}"),
+            )
         else:
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
             self.opensearch_config.set_admin_tls_conf(current_secrets)
