@@ -204,7 +204,7 @@ class OpenSearchTLS(Object):
             self.store_new_ca(event.ca)
 
         # store the certificates and keys in a key store
-        self._store_new_tls_resources(
+        self.store_new_tls_resources(
             scope, cert_type, self.charm.secrets.get_object(scope, cert_type.val)
         )
 
@@ -212,7 +212,7 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader():
             if self.all_certificates_available():
                 admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-                self._store_new_tls_resources(Scope.APP, CertType.APP_ADMIN, admin_secrets)
+                self.store_new_tls_resources(Scope.APP, CertType.APP_ADMIN, admin_secrets)
 
         for relation in self.charm.opensearch_provider.relations:
             self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
@@ -489,7 +489,7 @@ class OpenSearchTLS(Object):
 
         return None
 
-    def _store_new_tls_resources(self, scope: Scope, cert_type: CertType, secrets: Dict[str, Any]):
+    def store_new_tls_resources(self, scope: Scope, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
         store_pwd = self.charm.secrets.get(scope, f"keystore-password-{cert_type.val}")
         store_path = f"{self.certs_path}/{cert_type.val}.p12"
