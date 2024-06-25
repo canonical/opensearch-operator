@@ -24,9 +24,8 @@ from os.path import exists
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_commands import run_cmd
 from charms.opensearch.v0.helper_networking import get_host_public_ip
-from charms.opensearch.v0.helper_security import generate_password
+from charms.opensearch.v0.helper_security import generate_password, run_cmd
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,

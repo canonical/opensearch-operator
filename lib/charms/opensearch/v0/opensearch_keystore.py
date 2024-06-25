@@ -10,7 +10,6 @@ import os
 from abc import ABC
 from typing import Dict, List
 
-from charms.opensearch.v0.helper_commands import run_cmd
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
@@ -63,7 +62,7 @@ class Keystore(ABC):
         if not os.path.exists(self._keystore):
             raise OpenSearchKeystoreError(f"{self._keystore} not found")
         try:
-            run_cmd(
+            self._opensearch._run_cmd(
                 self._keytool,
                 f"-storepasswd -new {pwd} -keystore {self._keystore} " f"-storepass {old_pwd}",
             )
@@ -74,7 +73,7 @@ class Keystore(ABC):
         """Lists the keys available in opensearch's keystore."""
         try:
             # Not using OPENSEARCH_BIN path
-            return run_cmd(self._keytool, f"-v -list -keystore {self._keystore}")
+            return self._opensearch._run_cmd(self._keytool, f"-v -list -keystore {self._keystore}")
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
@@ -94,7 +93,7 @@ class Keystore(ABC):
                 pass
             try:
                 # Not using OPENSEARCH_BIN path
-                run_cmd(
+                self._opensearch._run_cmd(
                     self._keytool,
                     f"-import -alias {key} "
                     f"-file {filename} -storetype JKS "
@@ -112,7 +111,7 @@ class Keystore(ABC):
         for key in entries:
             try:
                 # Not using OPENSEARCH_BIN path
-                run_cmd(
+                self._opensearch._run_cmd(
                     self._keytool,
                     f"-delete -alias {key} "
                     f"-keystore {self._keystore} "
