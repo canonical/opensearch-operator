@@ -1279,9 +1279,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             f"-cd {self.opensearch.paths.conf}/opensearch-security/",
             f"-cn {self.opensearch_peer_cm.deployment_desc().config.cluster_name}",
             f"-h {self.unit_ip}",
-            f"-cacert {self.opensearch.paths.certs}/root-ca.cert",
-            f"-cert {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.cert",
-            f"-key {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.key",
+            f"-ts {self.opensearch.paths.certs}/ca.p12",
+            f"-tspass {self.secrets.get(Scope.APP, 'keystore-password-ca')}",
+            "-tsalias ca",
+            "-tst PKCS12",
+            f"-ks {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.p12",
+            f"-kspass {self.secrets.get(Scope.APP, f'keystore-password-{CertType.APP_ADMIN}')}",
+            f"-ksalias {CertType.APP_ADMIN}",
+            "-kst PKCS12",
         ]
 
         admin_key_pwd = admin_secrets.get("key-password", None)
