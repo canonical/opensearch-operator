@@ -28,8 +28,8 @@ from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password, run_cmd
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchError,
     OpenSearchCmdError,
+    OpenSearchError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v3.tls_certificates import (
@@ -62,7 +62,9 @@ logger = logging.getLogger(__name__)
 class OpenSearchTLS(Object):
     """Class that Manages OpenSearch relation with TLS Certificates Operator."""
 
-    def __init__(self, charm: "OpenSearchBaseCharm", peer_relation: str, jdk_path: str, certs_path: str):
+    def __init__(
+        self, charm: "OpenSearchBaseCharm", peer_relation: str, jdk_path: str, certs_path: str
+    ):
         super().__init__(charm, "tls-component")
 
         self.charm = charm
