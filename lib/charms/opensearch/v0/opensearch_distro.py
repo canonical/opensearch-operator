@@ -18,23 +18,17 @@ from typing import Dict, List, Optional, Set, Union
 import requests
 import urllib3.exceptions
 from charms.opensearch.v0.helper_cluster import Node
+from charms.opensearch.v0.helper_commands import run_cmd
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
 from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHttpError,
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from tenacity import (
-    Retrying,
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_fixed,
-)
+from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7145c219467d43beb9c566ab4a72c454"
@@ -169,24 +163,23 @@ class OpenSearchDistribution(ABC):
         except (OpenSearchHttpError, Exception):
             return False
 
-    def run_bin(self, bin_script_name: str, args: str = None, stdin: str = None) -> str:
+    def run_bin(self, bin_script_name: str, args: str = None) -> str:
         """Run opensearch provided bin command, relative to OPENSEARCH_BIN.
 
         Args:
             bin_script_name: opensearch script located in OPENSEARCH_BIN to be executed
             args: arguments passed to the script
-            stdin: string input to be passed on the standard input of the subprocess.
         """
         script_path = f"{self.paths.bin}/{bin_script_name}"
-        return self._run_cmd(script_path, args, stdin=stdin)
+        return run_cmd(script_path, args)
 
     def run_script(self, script_name: str, args: str = None):
         """Run script provided by Opensearch in another directory, relative to OPENSEARCH_HOME."""
         script_path = f"{self.paths.home}/{script_name}"
         if not os.access(script_path, os.X_OK):
-            self._run_cmd(f"chmod a+x {script_path}")
+            run_cmd(f"chmod a+x {script_path}")
 
-        self._run_cmd(f"{script_path}", args)
+        run_cmd(f"{script_path}", args)
 
     def request(  # noqa
         self,
@@ -300,45 +293,6 @@ class OpenSearchDistribution(ABC):
 
         with open(path, mode="w") as f:
             f.write(data)
-
-    @staticmethod
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(0.5), reraise=True)
-    def _run_cmd(command: str, args: str = None, stdin: str = None) -> str:
-        """Run command.
-
-        Arg:
-            command: can contain arguments
-            args: command line arguments
-            stdin: string input to be passed on the standard input of the subprocess
-
-        Returns the stdout
-        """
-        if args is not None:
-            command = f"{command} {args}"
-
-        logger.debug(f"Executing command: {command}")
-
-        try:
-            output = subprocess.run(
-                command,
-                input=stdin,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=True,
-                text=True,
-                encoding="utf-8",
-                timeout=60,
-                env=os.environ,
-            )
-
-            logger.debug(f"{command}:\n{output.stdout}")
-
-            if output.returncode != 0:
-                logger.error(f"{command}:\n Stderr: {output.stderr}\n Stdout: {output.stdout}")
-                raise OpenSearchCmdError(output.stderr)
-        except (TimeoutError, subprocess.TimeoutExpired) as e:
-            raise OpenSearchCmdError(e)
-        return output.stdout.strip()
 
     @abstractmethod
     def _build_paths(self) -> Paths:

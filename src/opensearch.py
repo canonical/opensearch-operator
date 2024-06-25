@@ -16,6 +16,7 @@ from pathlib import Path
 
 import requests
 from charms.opensearch.v0.constants_charm import OPENSEARCH_SNAP_REVISION
+from charms.opensearch.v0.helper_commands import run_cmd
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution, Paths
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -182,7 +183,7 @@ class OpenSearchTarball(OpenSearchDistribution):
         """Start opensearch."""
         try:
             self._setup_linux_perms()
-            self._run_cmd(
+            run_cmd(
                 "setpriv",
                 "--clear-groups --reuid ubuntu --regid ubuntu -- sudo systemctl start opensearch.service",
             )
@@ -193,7 +194,7 @@ class OpenSearchTarball(OpenSearchDistribution):
     def _stop_service(self):
         """Stop opensearch."""
         try:
-            self._run_cmd("systemctl stop opensearch.service")
+            run_cmd("systemctl stop opensearch.service")
         except OpenSearchCmdError:
             logger.debug("Failed stopping the opensearch service.")
             raise OpenSearchStopError()
@@ -225,8 +226,8 @@ class OpenSearchTarball(OpenSearchDistribution):
 
     def _setup_linux_perms(self):
         """Create ubuntu:ubuntu user:group."""
-        self._run_cmd("chown", f"-R ubuntu:ubuntu {self.paths.home}")
-        self._run_cmd("chown", "-R ubuntu:ubuntu /mnt/opensearch")
+        run_cmd("chown", f"-R ubuntu:ubuntu {self.paths.home}")
+        run_cmd("chown", "-R ubuntu:ubuntu /mnt/opensearch")
 
     def _create_systemd_unit(self):
         """Create a systemd unit file to run OpenSearch as a service."""
@@ -254,4 +255,4 @@ class OpenSearchTarball(OpenSearchDistribution):
             "\n".join([line.strip() for line in unit_content.split("\n")]),
         )
 
-        self._run_cmd("systemctl daemon-reload")
+        run_cmd("systemctl daemon-reload")

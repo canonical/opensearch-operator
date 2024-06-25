@@ -153,9 +153,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
     def test_failed_install_plugin(self, _) -> None:
         """Tests a failed command."""
         succeeded = False
-        self.charm.opensearch._run_cmd = MagicMock(
-            side_effect=OpenSearchCmdError("this is a test")
-        )
+        self.charm.opensearch.run_cmd = MagicMock(side_effect=OpenSearchCmdError("this is a test"))
         self.plugin_manager._installed_plugins = MagicMock(return_value=["test-plugin-dependency"])
         try:
             test_plugin = self.plugin_manager.plugins[0]
@@ -171,7 +169,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
     def test_failed_install_plugin_already_exists(self, _) -> None:
         """Tests a failed command when the plugin already exists."""
         succeeded = True
-        self.charm.opensearch._run_cmd = MagicMock(
+        self.charm.opensearch.run_cmd = MagicMock(
             side_effect=OpenSearchCmdError("this is a test - already exists")
         )
         self.plugin_manager._installed_plugins = MagicMock(return_value=["test-plugin-dependency"])
@@ -192,7 +190,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
     def test_failed_install_plugin_missing_dependency(self, _, mock_version) -> None:
         """Tests a failed install plugin because of missing dependency."""
         succeeded = False
-        self.charm.opensearch._run_cmd = MagicMock(return_value=RETURN_LIST_PLUGINS)
+        self.charm.opensearch.run_cmd = MagicMock(return_value=RETURN_LIST_PLUGINS)
         try:
             test_plugin = self.plugin_manager.plugins[0]
             self.plugin_manager._install_if_needed(test_plugin)
