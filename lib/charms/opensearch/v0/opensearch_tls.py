@@ -143,7 +143,7 @@ class OpenSearchTLS(Object):
             event.defer()
             return
         admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if self.charm.unit.is_leader:
+        if self.charm.unit.is_leader():
             # create passwords for both ca trust_store/admin key_store
             self._create_keystore_pwd_if_not_exists(Scope.APP, "ca")
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN.val)
@@ -493,6 +493,10 @@ class OpenSearchTLS(Object):
         """Add key and cert to keystore."""
         store_pwd = self.charm.secrets.get(scope, f"keystore-password-{cert_type.val}")
         store_path = f"{self.certs_path}/{cert_type.val}.p12"
+
+        if not secrets.get("key"):
+            logging.error("TLS key not found, quitting.")
+            return
 
         # we store the pem format to make it easier for the python requests lib
         if cert_type == CertType.APP_ADMIN:
