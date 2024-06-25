@@ -7,7 +7,7 @@ from os.path import isfile, join
 from unittest.mock import MagicMock, patch
 
 from charms.opensearch.v0.constants_tls import CertType
-from helpers import create_utf8_encoded_private_key
+from helpers import create_utf8_encoded_private_key, create_x509_resources
 from unit.lib.test_opensearch_base_charm import TestOpenSearchBaseCharm
 
 
@@ -20,18 +20,19 @@ class TestCharm(TestOpenSearchBaseCharm):
     @patch("grp.getgrnam")
     def test_store_tls_resources(self, grp_getgrnam, pwd_getpwnam, os_chown):
         """Test the storing of TLS resources."""
-        self.opensearch.paths = MagicMock()
+        self.charm.tls.certs_path = MagicMock()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
-            self.opensearch.paths.certs = tmp_dir
+            self.charm.tls.certs_path = tmp_dir
+
+            ca_resources = create_x509_resources()
 
             self.charm.tls.store_new_tls_resources(
-                "unit",
                 CertType.UNIT_TRANSPORT,
                 {
                     "ca-cert": "ca",
-                    "cert": "cert_transport",
-                    "key": create_utf8_encoded_private_key(),
+                    "cert": ca_resources.cert,
+                    "key": ca_resources.key,
                 },
             )
 
@@ -42,20 +43,20 @@ class TestCharm(TestOpenSearchBaseCharm):
                 stored_files, ["ca.p12", f"{t_prefix}.p12"]
             )
 
+            admin_resources = create_x509_resources()
+
             self.charm.tls.store_new_tls_resources(
-                "app",
                 CertType.APP_ADMIN,
                 {
                     "ca-cert": "ca",
-                    "cert": "cert_admin",
-                    "chain": "chain",
-                    "key": create_utf8_encoded_private_key(),
+                    "cert": admin_resources.cert,
+                    "chain": admin_resources.cert,
+                    "key": admin_resources.key,
                 },
             )
 
             stored_files = [f for f in listdir(tmp_dir) if isfile(join(tmp_dir, f))]
 
-            a_prefix = CertType.APP_ADMIN.val
             self.assertCountEqual(
                 stored_files,
                 [
@@ -71,39 +72,46 @@ class TestCharm(TestOpenSearchBaseCharm):
     @patch("grp.getgrnam")
     def test_are_all_tls_resources_stored(self, grp_getgrnam, pwd_getpwnam, os_chown):
         """Test if all TLS resources are successfully stored."""
-        self.opensearch.paths = MagicMock()
+        self.charm.tls.certs_path = MagicMock()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
-            self.opensearch.paths.certs = tmp_dir
+            self.charm.tls.certs_path = tmp_dir
 
             self.assertFalse(self.charm.tls.all_tls_resources_stored())
 
+            ca_resources = create_x509_resources()
+
             self.charm.tls.store_new_tls_resources(
-                "unit",
                 CertType.UNIT_TRANSPORT,
                 {
                     "ca-cert": "ca",
-                    "cert": "cert_transport",
-                    "key": create_utf8_encoded_private_key(),
+                    "cert": ca_resources.cert,
+                    "key": ca_resources.key,
                 },
             )
             self.assertFalse(self.charm.tls.all_tls_resources_stored())
 
+            admin_resources = create_x509_resources()
+
             self.charm.tls.store_new_tls_resources(
-                "app",
                 CertType.APP_ADMIN,
                 {
                     "ca-cert": "ca",
-                    "cert": "cert_admin",
-                    "chain": "chain",
-                    "key": create_utf8_encoded_private_key(),
+                    "cert": admin_resources.cert,
+                    "chain": admin_resources.cert,
+                    "key": admin_resources.key,
                 },
             )
             self.assertFalse(self.charm.tls.all_tls_resources_stored())
 
+            http_resources = create_x509_resources()
+
             self.charm.tls.store_new_tls_resources(
-                "unit",
                 CertType.UNIT_HTTP,
-                {"ca-cert": "ca", "cert": "cert_http", "key": create_utf8_encoded_private_key()},
+                {
+                    "ca-cert": "ca",
+                    "cert": http_resources.cert,
+                    "key": http_resources.key,
+                },
             )
-            self.assertTrue(self.charm._are_all_tls_resources_stored())
+            self.assertTrue(self.charm.tls.all_tls_resources_stored())

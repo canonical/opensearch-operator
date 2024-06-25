@@ -409,6 +409,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
+        self.tls.store_new_tls_resources(CertType.APP_ADMIN, current_secrets)
+
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units when a new node joins the cluster."""
         if self.upgrade_in_progress:
@@ -745,6 +747,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """
         # Get the list of stored secrets for this cert
         current_secrets = self.secrets.get_object(scope, cert_type.val)
+
+        self.tls.store_new_tls_resources(CertType.APP_ADMIN, current_secrets)
 
         if scope == Scope.UNIT:
             # node http or transport cert

@@ -204,14 +204,14 @@ class OpenSearchTLS(Object):
 
         # store the certificates and keys in a key store
         self.store_new_tls_resources(
-            scope, cert_type, self.charm.secrets.get_object(scope, cert_type.val)
+            cert_type, self.charm.secrets.get_object(scope, cert_type.val)
         )
 
         # store the admin certificates in non-leader units
         if not self.charm.unit.is_leader():
             if self.all_certificates_available():
                 admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-                self.store_new_tls_resources(Scope.APP, CertType.APP_ADMIN, admin_secrets)
+                self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
 
         for relation in self.charm.opensearch_provider.relations:
             self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
@@ -488,7 +488,7 @@ class OpenSearchTLS(Object):
 
         return None
 
-    def store_new_tls_resources(self, scope: Scope, cert_type: CertType, secrets: Dict[str, Any]):
+    def store_new_tls_resources(self, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
         store_pwd = self.charm.secrets.get(Scope.APP, f"keystore-password-{cert_type.val}")
         store_path = f"{self.certs_path}/{cert_type}.p12"
@@ -499,8 +499,10 @@ class OpenSearchTLS(Object):
 
         # we store the pem format to make it easier for the python requests lib
         if cert_type == CertType.APP_ADMIN:
-            with open(f"{self.certs_path}/admin-cert-chain.pem", "w+") as f:
-                f.write("\n".join(secrets.get("cert-chain")))
+            self.charm.opensearch.write_file(
+                f"{self.certs_path}/admin-cert-chain.pem",
+                secrets["chain"],
+                )
 
         try:
             os.remove(store_path)
@@ -529,7 +531,7 @@ class OpenSearchTLS(Object):
                 cmd = f"{cmd} -passin pass:{secrets.get('key-password')}"
 
             run_cmd(cmd)
-            run_cmd(f"sudo chown -R snap_daemon:root {self.certs_path}")
+            # run_cmd(f"sudo chown -R snap_daemon:root {self.certs_path}")
             run_cmd(f"sudo chmod +r {store_path}")
         finally:
             tmp_key.close()
