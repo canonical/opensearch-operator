@@ -16,7 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v13.2.0
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v16.2.0
 
   unit-test:
     name: Unit test charm
@@ -61,22 +61,22 @@ jobs:
         path:
         - .
         - ./tests/integration/relations/opensearch_provider/application-charm/
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v13.2.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v16.2.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
       cache: true
 
   integration-test:
-    name: Integration test charm | 3.4.2
+    name: Integration test charm | 3.5.1
     needs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v13.2.0
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v16.2.0
     with:
       artifact-prefix: packed-charm-cache-true
       cloud: lxd
-      juju-agent-version: 3.4.2
+      juju-agent-version: 3.5.1
     secrets:
       # GitHub appears to redact each line of a multi-line secret
       # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
