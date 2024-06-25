@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
-    COS_TAGGABLE_ROLES,
     AdminUser,
     AdminUserInitProgress,
     AdminUserNotConfigured,
@@ -1553,9 +1552,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         try:
             if not self.opensearch.roles:
                 return None
+            taggable_roles = ClusterTopology.generated_roles() + ["voting"]
             roles = set(
-                role if role in COS_TAGGABLE_ROLES else "unrecognized"
-                for role in self.opensearch.roles
+                role if role in taggable_roles else "other" for role in self.opensearch.roles
             )
             roles = sorted(roles)
             return {"roles": ",".join(roles)}

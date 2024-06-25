@@ -25,6 +25,7 @@ from .continuous_writes import ContinuousWrites
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
@@ -57,6 +58,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_after_scale_down(
@@ -129,6 +131,7 @@ async def test_storage_reuse_after_scale_down(
     assert testfile == subprocess.getoutput(check_testfile_cmd)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_after_scale_to_zero(
@@ -184,6 +187,7 @@ async def test_storage_reuse_after_scale_to_zero(
     await assert_continuous_writes_increasing(c_writes)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_in_new_cluster_after_app_removal(
