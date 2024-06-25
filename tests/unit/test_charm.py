@@ -25,7 +25,8 @@ class TestCharm(TestOpenSearchBaseCharm):
         with tempfile.TemporaryDirectory() as tmp_dir:
             self.opensearch.paths.certs = tmp_dir
 
-            self.charm.store_tls_resources(
+            self.charm.tls.store_new_tls_resources(
+                "unit",
                 CertType.UNIT_TRANSPORT,
                 {
                     "ca-cert": "ca",
@@ -38,10 +39,11 @@ class TestCharm(TestOpenSearchBaseCharm):
 
             t_prefix = CertType.UNIT_TRANSPORT.val
             self.assertCountEqual(
-                stored_files, ["root-ca.cert", f"{t_prefix}.cert", f"{t_prefix}.key"]
+                stored_files, ["ca.p12", f"{t_prefix}.p12"]
             )
 
-            self.charm.store_tls_resources(
+            self.charm.tls.store_new_tls_resources(
+                "app",
                 CertType.APP_ADMIN,
                 {
                     "ca-cert": "ca",
@@ -58,11 +60,9 @@ class TestCharm(TestOpenSearchBaseCharm):
                 stored_files,
                 [
                     "root-ca.cert",
-                    f"{a_prefix}.cert",
-                    f"{a_prefix}.key",
-                    "chain.pem",
-                    f"{t_prefix}.cert",
-                    f"{t_prefix}.key",
+                    "ca.p12",
+                    "admin-cert-chain.pem",
+                    f"{t_prefix}.p12",
                 ],
             )
 
@@ -76,9 +76,10 @@ class TestCharm(TestOpenSearchBaseCharm):
         with tempfile.TemporaryDirectory() as tmp_dir:
             self.opensearch.paths.certs = tmp_dir
 
-            self.assertFalse(self.charm._are_all_tls_resources_stored())
+            self.assertFalse(self.charm.tls.all_tls_resources_stored())
 
-            self.charm.store_tls_resources(
+            self.charm.tls.store_new_tls_resources(
+                "unit",
                 CertType.UNIT_TRANSPORT,
                 {
                     "ca-cert": "ca",
@@ -86,9 +87,10 @@ class TestCharm(TestOpenSearchBaseCharm):
                     "key": create_utf8_encoded_private_key(),
                 },
             )
-            self.assertFalse(self.charm._are_all_tls_resources_stored())
+            self.assertFalse(self.charm.tls.all_tls_resources_stored())
 
-            self.charm.store_tls_resources(
+            self.charm.tls.store_new_tls_resources(
+                "app",
                 CertType.APP_ADMIN,
                 {
                     "ca-cert": "ca",
@@ -97,9 +99,10 @@ class TestCharm(TestOpenSearchBaseCharm):
                     "key": create_utf8_encoded_private_key(),
                 },
             )
-            self.assertFalse(self.charm._are_all_tls_resources_stored())
+            self.assertFalse(self.charm.tls.all_tls_resources_stored())
 
-            self.charm.store_tls_resources(
+            self.charm.tls.store_new_tls_resources(
+                "unit",
                 CertType.UNIT_HTTP,
                 {"ca-cert": "ca", "cert": "cert_http", "key": create_utf8_encoded_private_key()},
             )

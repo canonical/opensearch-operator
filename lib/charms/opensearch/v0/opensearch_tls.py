@@ -491,8 +491,8 @@ class OpenSearchTLS(Object):
 
     def store_new_tls_resources(self, scope: Scope, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
-        store_pwd = self.charm.secrets.get(scope, f"keystore-password-{cert_type.val}")
-        store_path = f"{self.certs_path}/{cert_type.val}.p12"
+        store_pwd = self.charm.secrets.get(Scope.APP, f"keystore-password-{cert_type.val}")
+        store_path = f"{self.certs_path}/{cert_type}.p12"
 
         if not secrets.get("key"):
             logging.error("TLS key not found, quitting.")

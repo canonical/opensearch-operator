@@ -58,7 +58,7 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
     @patch(
         "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.update_dashboards_password"
     )
-    @patch("charms.opensearch.v0.opensearch_tls.store_new_tls_resources")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.store_new_tls_resources")
     def test_on_secret_changed_app(
         self, mock_store_tls_resources, mock_update_dashboard_pw, _, __
     ):
@@ -83,7 +83,7 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
         self.secrets._on_secret_changed(event)
         mock_update_dashboard_pw.assert_called()
 
-    @patch("charms.opensearch.v0.opensearch_tls.store_new_tls_resources")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.store_new_tls_resources")
     def test_on_secret_changed_unit(self, mock_store_tls_resources):
         event = MagicMock()
         event.secret = MagicMock()
@@ -101,7 +101,7 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
         event.secret.label = f"opensearch:app:{CertType.APP_ADMIN.val}"
         self.secrets._on_secret_changed(event)
         mock_store_tls_resources.assert_called()
-        mock_store_tls_resources.assert_called_with(CertType.APP_ADMIN, event.secret.get_content())
+        mock_store_tls_resources.assert_called_with(Scope.APP, CertType.APP_ADMIN, event.secret.get_content())
 
     def test_interface(self):
         """We want to make sure that the following public methods are always supported."""

@@ -106,27 +106,52 @@ class TestOpenSearchConfig(unittest.TestCase):
             self.assertNotIn(f"plugins.security.ssl.{layer}.pemkey_password", opensearch_conf)
 
         # call
-        self.opensearch_config.set_node_tls_conf(CertType.UNIT_TRANSPORT, {})
-        self.opensearch_config.set_node_tls_conf(CertType.UNIT_HTTP, {"key-password": "123"})
+        self.opensearch_config.set_node_tls_conf(
+            CertType.UNIT_TRANSPORT, truststore_pwd="123", keystore_pwd="987"
+        )
+        self.opensearch_config.set_node_tls_conf(
+            CertType.UNIT_HTTP, truststore_pwd="123", keystore_pwd="987"
+        )
 
         # check the changes
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
 
         for layer in ["http", "transport"]:
             self.assertEqual(
-                opensearch_conf[f"plugins.security.ssl.{layer}.pemcert_filepath"],
-                f"certificates/unit-{layer}.cert",
+                opensearch_conf[f"plugins.security.ssl.{layer}.keystore_type"],
+                "PKCS12",
             )
             self.assertEqual(
-                opensearch_conf[f"plugins.security.ssl.{layer}.pemkey_filepath"],
-                f"certificates/unit-{layer}.key",
+                opensearch_conf[f"plugins.security.ssl.{layer}.truststore_type"],
+                "PKCS12",
+            )
+
+            self.assertEqual(
+                opensearch_conf[f"plugins.security.ssl.{layer}.keystore_filepath"],
+                f"certificates/unit-{layer}.p12",
             )
             self.assertEqual(
-                opensearch_conf[f"plugins.security.ssl.{layer}.pemtrustedcas_filepath"],
-                "certificates/root-ca.cert",
+                opensearch_conf[f"plugins.security.ssl.{layer}.truststore_filepath"],
+                "certificates/ca.p12",
             )
-        self.assertEqual(opensearch_conf["plugins.security.ssl.http.pemkey_password"], "123")
-        self.assertNotIn("plugins.security.ssl.transport.pemkey_password", opensearch_conf)
+
+            self.assertEqual(
+                opensearch_conf[f"plugins.security.ssl.{layer}.keystore_alias"],
+                f"unit-{layer}",
+            )
+            self.assertEqual(
+                opensearch_conf[f"plugins.security.ssl.{layer}.truststore_alias"],
+                "ca",
+            )
+
+            self.assertEqual(
+                opensearch_conf[f"plugins.security.ssl.{layer}.keystore_password"],
+                "987",
+            )
+            self.assertEqual(
+                opensearch_conf[f"plugins.security.ssl.{layer}.truststore_password"],
+                "123",
+            )
 
     def test_append_transport_node(self):
         """Test setting the transport config of node."""

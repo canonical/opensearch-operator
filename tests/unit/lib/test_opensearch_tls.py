@@ -184,8 +184,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm.on_tls_conf_set")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.store_new_ca")
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
-    def test_on_certificate_available(self, _, on_tls_conf_set, _request_certificate):
+    def test_on_certificate_available(self, _, on_tls_conf_set, _request_certificate, store_new_ca):
         """Test _on_certificate_available event."""
         csr = "csr_12345"
         cert = "cert_12345"
