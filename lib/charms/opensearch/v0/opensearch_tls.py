@@ -198,7 +198,7 @@ class OpenSearchTLS(Object):
         # currently only make sure there is a CA
         # workflow for replacement will be added later
         if self._read_stored_ca() is None:
-            self.store_new_ca(event.ca)
+            self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val))
 
         # store the certificates and keys in a key store
         self.store_new_tls_resources(
@@ -419,29 +419,35 @@ class OpenSearchTLS(Object):
         if not keystore_pwd:
             self.charm.secrets.put(scope, f"keystore-password-{alias}", generate_password())
 
-    def store_new_ca(self, ca_cert: str):
+    def store_new_ca(self, secrets: Dict[str, Any]):
         """Add new CA cert to trust store."""
         store_pwd = self.charm.secrets.get(Scope.APP, "keystore-password-ca")
+
+        keytool = f"sudo {self.jdk_path}/bin/keytool"
+
+        if not secrets.get("ca-cert"):
+            logging.error("CA cert not found, quitting.")
+            return
 
         alias = "ca"
         store_path = f"{self.certs_path}/{alias}.p12"
 
         with tempfile.NamedTemporaryFile(mode="w+t") as ca_tmp_file:
-            ca_tmp_file.write(ca_cert)
+            ca_tmp_file.write(secrets.get("ca-cert"))
             ca_tmp_file.flush()
 
             run_cmd(
-                f"""openssl pkcs12 -export \
-                -out {store_path} \
-                -in {ca_tmp_file.name} \
-                -nokeys \
-                -name {alias} \
-                -passout pass:{store_pwd}
+                f"""{keytool} -importcert \
+                -trustcacerts \
+                -noprompt \
+                -alias {alias} \
+                -keystore {store_path} \
+                -file {ca_tmp_file.name} \
+                -storepass {store_pwd} \
+                -storetype PKCS12
             """
             )
-
-        # run_cmd(f"sudo chown -R snap_daemon:root {self.certs_path}")
-        run_cmd(f"sudo chmod +r {store_path}")
+            run_cmd(f"sudo chmod +r {store_path}")
 
     def _read_stored_ca(self, alias: str = "ca") -> Optional[str]:
         """Load stored CA cert."""
@@ -465,10 +471,11 @@ class OpenSearchTLS(Object):
 
     def store_new_tls_resources(self, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
+        cert_name = cert_type.val
         if cert_type == CertType.APP_ADMIN:
-            store_pwd = self.charm.secrets.get(Scope.APP, f"keystore-password-{cert_type.val}")
+            store_pwd = self.charm.secrets.get(Scope.APP, f"keystore-password-{cert_name}")
         else:
-            store_pwd = self.charm.secrets.get(Scope.UNIT, f"keystore-password-{cert_type.val}")
+            store_pwd = self.charm.secrets.get(Scope.UNIT, f"keystore-password-{cert_name}")
         store_path = f"{self.certs_path}/{cert_type}.p12"
 
         if not secrets.get("key"):
@@ -502,7 +509,7 @@ class OpenSearchTLS(Object):
                 -in {tmp_cert.name} \
                 -inkey {tmp_key.name} \
                 -out {store_path} \
-                -name {cert_type.val} \
+                -name {cert_name} \
                 -passout pass:{store_pwd}
             """
             if secrets.get("key-password"):

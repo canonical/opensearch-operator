@@ -748,8 +748,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Get the list of stored secrets for this cert
         current_secrets = self.secrets.get_object(scope, cert_type.val)
 
-        self.tls.store_new_tls_resources(CertType, current_secrets)
-
         if scope == Scope.UNIT:
             # node http or transport cert
             self.opensearch_config.set_node_tls_conf(
