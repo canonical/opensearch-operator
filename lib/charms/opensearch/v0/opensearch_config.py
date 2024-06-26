@@ -4,6 +4,7 @@
 """Class for Setting configuration in opensearch config files."""
 import logging
 import socket
+from collections import namedtuple
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.constants_tls import CertType
@@ -134,6 +135,10 @@ class OpenSearchConfig:
         self._opensearch.config.put(
             self.CONFIG_YML, "network.host", ["_site_"] + self._opensearch.network_hosts
         )
+        if self._opensearch.host:
+            self._opensearch.config.put(
+                self.CONFIG_YML, "network.publish_host", self._opensearch.host
+            )
 
         self._opensearch.config.put(self.CONFIG_YML, "node.roles", roles)
         if node_temperature:
@@ -230,15 +235,28 @@ class OpenSearchConfig:
 
         Returns: True if host updated, False otherwise.
         """
-        old_hosts = set(self.load_node().get("network.host", []))
-        if not old_hosts:
-            # Unit not configured yet
-            return False
+        NetworkHost = namedtuple("NetworkHost", ["entry", "old", "new"])
 
-        hosts = set(["_site_"] + self._opensearch.network_hosts)
-        if old_hosts != hosts:
-            logger.info(f"Updating network.host from: {old_hosts} - to: {hosts}")
-            self._opensearch.config.put(self.CONFIG_YML, "network.host", hosts)
-            return True
+        result = False
+        for host in [
+            NetworkHost(
+                "network.host",
+                set(self.load_node().get("network.host", [])),
+                set(["_site_"] + self._opensearch.network_hosts),
+            ),
+            NetworkHost(
+                "network.publish_host",
+                set(self.load_node().get("network.publish_host", [])),
+                set(self._opensearch.host),
+            ),
+        ]:
+            if not host.old:
+                # Unit not configured yet
+                continue
 
-        return False
+            if host.old != host.new:
+                logger.info(f"Updating {host.entry} from: {host.old} - to: {host.new}")
+                self._opensearch.config.put(self.CONFIG_YML, host.entry, host.new)
+                result = True
+
+        return result

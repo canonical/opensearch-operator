@@ -35,6 +35,7 @@ class TestOpenSearchConfig(unittest.TestCase):
 
         self.charm.opensearch = Mock()
         self.charm.opensearch.network_hosts = ["10.10.10.10"]
+        self.charm.opensearch.host = "20.20.20.20"
 
         self.charm.opensearch.paths = Mock()
         self.charm.opensearch.paths.conf = None
@@ -156,6 +157,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         self.assertEqual(opensearch_conf["node.name"], self.charm.unit_name)
         self.assertEqual(opensearch_conf["node.attr.temp"], "hot")
         self.assertEqual(opensearch_conf["network.host"], ["_site_", "10.10.10.10"])
+        self.assertEqual(opensearch_conf["network.publish_host"], "20.20.20.20")
         self.assertEqual(opensearch_conf["node.roles"], ["cluster_manager", "data"])
         self.assertEqual(opensearch_conf["discovery.seed_providers"], "file")
         self.assertEqual(opensearch_conf["cluster.initial_cluster_manager_nodes"], ["cm1"])
