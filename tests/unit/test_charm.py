@@ -2,12 +2,11 @@
 # See LICENSE file for licensing details.
 
 import tempfile
-from os import listdir
-from os.path import isfile, join
+from os.path import exists
 from unittest.mock import MagicMock, patch
 
 from charms.opensearch.v0.constants_tls import CertType
-from helpers import create_utf8_encoded_private_key, create_x509_resources
+from helpers import create_x509_resources
 from unit.lib.test_opensearch_base_charm import TestOpenSearchBaseCharm
 
 
@@ -21,27 +20,23 @@ class TestCharm(TestOpenSearchBaseCharm):
     def test_store_tls_resources(self, grp_getgrnam, pwd_getpwnam, os_chown):
         """Test the storing of TLS resources."""
         self.charm.tls.certs_path = MagicMock()
+        self.charm.tls.jdk_path = MagicMock()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             self.charm.tls.certs_path = tmp_dir
 
-            ca_resources = create_x509_resources()
+            unit_resources = create_x509_resources()
 
             self.charm.tls.store_new_tls_resources(
                 CertType.UNIT_TRANSPORT,
                 {
                     "ca-cert": "ca",
-                    "cert": ca_resources.cert,
-                    "key": ca_resources.key,
+                    "cert": unit_resources.cert,
+                    "key": unit_resources.key,
                 },
             )
 
-            stored_files = [f for f in listdir(tmp_dir) if isfile(join(tmp_dir, f))]
-
-            t_prefix = CertType.UNIT_TRANSPORT.val
-            self.assertCountEqual(
-                stored_files, ["ca.p12", f"{t_prefix}.p12"]
-            )
+            self.assertTrue(exists(f"{tmp_dir}/unit-transport.p12"))
 
             admin_resources = create_x509_resources()
 
@@ -55,17 +50,22 @@ class TestCharm(TestOpenSearchBaseCharm):
                 },
             )
 
-            stored_files = [f for f in listdir(tmp_dir) if isfile(join(tmp_dir, f))]
+            self.assertTrue(exists(f"{tmp_dir}/admin-cert-chain.pem"))
+            self.assertTrue(exists(f"{tmp_dir}/unit-transport.p12"))
 
-            self.assertCountEqual(
-                stored_files,
-                [
-                    "root-ca.cert",
-                    "ca.p12",
-                    "admin-cert-chain.pem",
-                    f"{t_prefix}.p12",
-                ],
-            )
+    def test_store_ca_resource(self):
+        """Test the storing of the ca certificate"""
+        self.charm.tls.certs_path = MagicMock()
+        self.charm.tls.jdk_path = MagicMock()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            self.charm.tls.certs_path = tmp_dir
+
+            ca_resources = create_x509_resources()
+
+            self.charm.tls.store_new_ca(ca_resources.cert)
+
+            self.assertTrue(exists(f"{tmp_dir}/ca.p12"))
 
     @patch("os.chown")
     @patch("pwd.getpwnam")
@@ -73,6 +73,7 @@ class TestCharm(TestOpenSearchBaseCharm):
     def test_are_all_tls_resources_stored(self, grp_getgrnam, pwd_getpwnam, os_chown):
         """Test if all TLS resources are successfully stored."""
         self.charm.tls.certs_path = MagicMock()
+        self.charm.tls.jdk_path = MagicMock()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             self.charm.tls.certs_path = tmp_dir
@@ -89,6 +90,9 @@ class TestCharm(TestOpenSearchBaseCharm):
                     "key": ca_resources.key,
                 },
             )
+
+            self.charm.tls.store_new_ca(ca_resources.cert)
+
             self.assertFalse(self.charm.tls.all_tls_resources_stored())
 
             admin_resources = create_x509_resources()
