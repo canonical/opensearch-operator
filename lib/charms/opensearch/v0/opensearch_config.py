@@ -132,7 +132,7 @@ class OpenSearchConfig:
         self._opensearch.config.put(self.CONFIG_YML, "cluster.name", f"{cluster_name}")
         self._opensearch.config.put(self.CONFIG_YML, "node.name", unit_name)
         self._opensearch.config.put(
-            self.CONFIG_YML, "network.host", ["_site_"] + self._opensearch.network_hosts
+            self.CONFIG_YML, "network.host", self._opensearch.network_hosts
         )
 
         self._opensearch.config.put(self.CONFIG_YML, "node.roles", roles)
@@ -235,7 +235,7 @@ class OpenSearchConfig:
             # Unit not configured yet
             return False
 
-        hosts = set(["_site_"] + self._opensearch.network_hosts)
+        hosts = set(self._opensearch.network_hosts)
         if old_hosts != hosts:
             logger.info(f"Updating network.host from: {old_hosts} - to: {hosts}")
             self._opensearch.config.put(self.CONFIG_YML, "network.host", hosts)
