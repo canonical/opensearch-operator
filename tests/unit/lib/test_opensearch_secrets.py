@@ -101,9 +101,7 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
         event.secret.label = f"opensearch:app:{CertType.APP_ADMIN.val}"
         self.secrets._on_secret_changed(event)
         mock_store_tls_resources.assert_called()
-        mock_store_tls_resources.assert_called_with(
-            CertType.APP_ADMIN, event.secret.get_content()
-        )
+        mock_store_tls_resources.assert_called_with(CertType.APP_ADMIN, event.secret.get_content())
 
     def test_interface(self):
         """We want to make sure that the following public methods are always supported."""
