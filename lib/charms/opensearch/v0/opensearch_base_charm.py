@@ -387,7 +387,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # In the case of the first units before TLS is initialized
         if not current_secrets:
-            if not self.unit.is_leader():
+            if not self.unit.is_leader() or not self.opensearch_peer_cm.is_provider(typ="main"):
                 event.defer()
             return
 
@@ -576,7 +576,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
 
-            if self.health.apply(wait_for_green_first=True) == HealthColors.UNKNOWN:
+            if (health := self.health.apply(wait_for_green_first=True)) not in [
+                HealthColors.GREEN,
+                HealthColors.IGNORE,
+            ]:
+                event.defer()
+
+            if health == HealthColors.UNKNOWN:
                 return
 
         for relation in self.model.relations.get(ClientRelationName, []):
@@ -739,7 +745,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-        if renewal and self.is_admin_user_configured() and self.is_tls_fully_configured():
+        if self.is_tls_fully_configured() and self.is_admin_user_configured() and renewal:
             self._restart_opensearch_event.emit()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
@@ -777,7 +783,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         all_started = True
         for unit in all_units(self):
             logger.debug(f"Unit: {unit.name} -- started: {rel.data[unit].get('started')}")
-            if rel.data[unit].get("started", "").lower() != "true":
+            if rel.data[unit].get("started") != "True":
                 all_started = False
                 break
 
@@ -798,7 +804,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Check if TLS is configured in all the units of the current cluster."""
         rel = self.model.get_relation(PeerRelationName)
         for unit in all_units(self):
-            if rel.data[unit].get("tls_configured", "").lower() != "true":
+            if rel.data[unit].get("tls_configured") != "True":
                 return False
         return True
 
@@ -936,11 +942,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
         try:
-            nodes = self._get_nodes(use_localhost=not self.alt_hosts)
+            nodes = self._get_nodes(use_localhost=self.opensearch.is_node_up())
         except OpenSearchHttpError:
-            logger.exception("Failed to get online nodes")
+            logger.debug("Failed to get online nodes")
             event.defer()
             return
+
         for node in nodes:
             if node.name == self.unit_name:
                 break
@@ -1035,9 +1042,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     "other than primary shards on upgraded unit & not enough upgraded units available "
                     "for replica shards"
                 )
-        else:
-            # apply cluster health
-            self.health.apply()
 
         self._upgrade.unit_state = upgrade.UnitState.HEALTHY
         logger.debug("Set upgrade unit state to healthy")

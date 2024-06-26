@@ -74,7 +74,6 @@ class OpenSearchPeerClusterRelation(Object):
         self.relation_name = relation_name
         self.charm = charm
         self.peer_cm = charm.opensearch_peer_cm
-        self._is_peer_rel_changed_deferred = False
 
     def get_from_rel(
         self, key: str, rel_id: int = None, remote_app: bool = False
@@ -174,10 +173,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             trigger_rel_id=event.relation.id,
         )
 
-        logger.debug(
-            f"\n\n\n_on_peer_cluster_relation_changed: {event.relation.id}\n{peer_cluster_app.to_dict()}\n\n"
-        )
-
         if data.get("is_candidate_failover_orchestrator") != "true":
             self.refresh_relation_data(event)
             return
@@ -238,9 +233,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
-        if self._is_peer_rel_changed_deferred:
-            return
-
         # all relations with the current orchestrator
         all_relation_ids = [
             rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
@@ -270,7 +262,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # update reported orchestrators on local orchestrator
         orchestrators = orchestrators.to_dict()
-        orchestrators[f"{cluster_type}_app"] = deployment_desc.app
+        orchestrators[f"{cluster_type}_app"] = deployment_desc.app.to_dict()
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators)
 
         peer_rel_data_key, should_defer = "data", False
@@ -297,7 +289,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         if should_defer:
             event.defer()
-            self._is_peer_rel_changed_deferred = True
 
     def _notify_if_wrong_integration(
         self,
@@ -511,43 +502,27 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
-        if self._is_peer_rel_changed_deferred:
-            return
-
         # check if current cluster ready
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             event.defer()
-            self._is_peer_rel_changed_deferred = True
             return
-
-        if not (data := event.relation.data.get(event.app)):
-            return
-
-        logger.debug(
-            f"\n\n\n\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: \ndata: {data}"
-        )
 
         # register in the 'main/failover'-CMs / save the number of planned units of the current app
         self._put_current_app(event, deployment_desc)
+
+        if not (data := event.relation.data.get(event.app)):
+            return
 
         # fetch main and failover clusters relations ids if any
         orchestrators = self._orchestrators(event, data, deployment_desc)
 
         # should we add a check where only the failover rel has data while the main has none yet?
         if orchestrators.failover_app and not orchestrators.main_app:
-            logger.debug(
-                f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: "
-                f"orchestrators.failover_app and not orchestrators.main_app\n\n\n"
-            )
             event.defer()
             return
 
         # check errors sent by providers
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
-            logger.debug(
-                f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: "
-                f"error_from_provider\n\n\n"
-            )
             return
 
         # fetch the success data
@@ -555,9 +530,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
-            logger.debug(
-                f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: error_from_requirer\n\n\n"
-            )
             return
 
         # this means it's a previous "main orchestrator" that was unrelated then re-related
@@ -584,11 +556,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # check if there are any security misconfigurations / violations
         if self._error_set_from_tls(data):
-            logger.debug(
-                f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: error_from_tls\n\n\n"
-            )
             event.defer()
-            self._is_peer_rel_changed_deferred = True
             return
 
         # aggregate all CMs (main + failover if any)
@@ -596,10 +564,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
-
-        logger.debug(
-            f"\nREQUIRER --- {self.charm.unit_name} --- peer-cluster-rel-changed: success\n\n\n"
-        )
 
     def _set_security_conf(self, data: PeerClusterRelData) -> None:
         """Store security related config."""
@@ -653,7 +617,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 local_orchestrators.failover_app
                 and local_orchestrators.failover_app.id == deployment_desc.app.id
             ):
-                orchestrators["failover_app"] = local_orchestrators.failover_app
+                orchestrators["failover_app"] = local_orchestrators.failover_app.to_dict()
 
         return PeerClusterOrchestrators.from_dict(orchestrators)
 
