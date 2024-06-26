@@ -317,7 +317,7 @@ LIBAPI = 3
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 15
+LIBPATCH = 16
 
 PYDEPS = ["cryptography", "jsonschema"]
 
@@ -1109,25 +1109,16 @@ def csr_matches_certificate(csr: str, cert: str) -> bool:
     Returns:
         bool: True/False depending on whether the CSR matches the certificate.
     """
-    try:
-        csr_object = x509.load_pem_x509_csr(csr.encode("utf-8"))
-        cert_object = x509.load_pem_x509_certificate(cert.encode("utf-8"))
+    csr_object = x509.load_pem_x509_csr(csr.encode("utf-8"))
+    cert_object = x509.load_pem_x509_certificate(cert.encode("utf-8"))
 
-        if csr_object.public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        ) != cert_object.public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        ):
-            return False
-        if (
-            csr_object.public_key().public_numbers().n  # type: ignore[union-attr]
-            != cert_object.public_key().public_numbers().n  # type: ignore[union-attr]
-        ):
-            return False
-    except ValueError:
-        logger.warning("Could not load certificate or CSR.")
+    if csr_object.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ) != cert_object.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ):
         return False
     return True
 
