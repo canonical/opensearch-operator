@@ -102,7 +102,7 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
         self.secrets._on_secret_changed(event)
         mock_store_tls_resources.assert_called()
         mock_store_tls_resources.assert_called_with(
-            Scope.APP, CertType.APP_ADMIN, event.secret.get_content()
+            CertType.APP_ADMIN, event.secret.get_content()
         )
 
     def test_interface(self):
