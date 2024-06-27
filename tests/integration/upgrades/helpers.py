@@ -8,10 +8,6 @@ import time
 from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
-from ..ha.helpers import (
-    assert_continuous_writes_consistency,
-    assert_continuous_writes_increasing,
-)
 from ..helpers import APP_NAME, IDLE_PERIOD, app_name, run_action
 from ..helpers_deployments import get_application_units, wait_until
 
