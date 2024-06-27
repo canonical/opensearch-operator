@@ -195,7 +195,7 @@ class ContinuousWrites:
         """Fetch secrets and return the password."""
         secrets = await get_secrets(self._ops_test)
         with open(ContinuousWrites.CERT_PATH, "w") as chain:
-            chain.write(secrets["ca-chain"])
+            chain.write(secrets.get("ca-chain"))
 
         return secrets["password"]
 
