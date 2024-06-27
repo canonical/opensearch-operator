@@ -112,3 +112,14 @@ OPENSEARCH_SNAP_REVISION = 51  # Keep in sync with `workload_version` file
 
 # User-face Backup ID format
 OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+# Roles that we can add as tags to prometheus data
+COS_TAGGABLE_ROLES = [
+    "data",
+    "cluster_manager",
+    "voting",
+    "coordinating_only",
+    "ingest",
+    "cluster_manager_elegible",
+    "ml",
+]

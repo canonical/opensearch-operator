@@ -24,6 +24,7 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     OpenSearchSystemUsers,
     OpenSearchUsers,
+    PeerClusterRelationName,
     PeerRelationName,
     PluginConfigChangeError,
     PluginConfigCheck,
@@ -196,15 +197,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.node_lock = OpenSearchNodeLock(self)
-        self.cos_integration = COSAgentProvider(
-            self,
-            relation_name=COSRelationName,
-            metrics_endpoints=[],
-            scrape_configs=self._scrape_config,
-            refresh_events=[self.on.set_password_action, self.on.secret_changed],
-            metrics_rules_dir="./src/alert_rules/prometheus",
-            log_slots=["opensearch:logs"],
-        )
 
         self.plugin_manager = OpenSearchPluginManager(self)
         self.backup = backup(self)
@@ -242,6 +234,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
+        self.cos_integration = COSAgentProvider(
+            self,
+            relation_name=COSRelationName,
+            metrics_endpoints=[],
+            scrape_configs=self._scrape_config,
+            refresh_events=[
+                self.on.set_password_action,
+                self.on.secret_changed,
+                self.on[PeerRelationName].relation_changed,
+                self.on[PeerClusterRelationName].relation_changed,
+            ],
+            metrics_rules_dir="./src/alert_rules/prometheus",
+            log_slots=["opensearch:logs"],
+        )
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
@@ -691,8 +697,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._put_or_update_internal_user_leader(user_name, password)
             label = self.secrets.password_key(user_name)
             event.set_results({label: password})
+            # We know we are already running for MAIN_ORCH. and its leader unit
+            self.peer_cluster_provider.refresh_relation_data(event)
         except OpenSearchError as e:
             event.fail(f"Failed changing the password: {e}")
+        except RuntimeError as e:
+            # From:
+            # https://github.com/canonical/operator/blob/ \
+            #     eb52cef1fba4df2f999f88902fb39555fb6de52f/ops/charm.py
+            if str(e) == "cannot defer action events":
+                event.fail("Cluster is not ready to update this password. Try again later.")
+            else:
+                event.fail(f"Failed with unknown error: {e}")
 
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
@@ -1546,19 +1562,42 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             Scope.UNIT, "certs_exp_checked_at", datetime.now().strftime(date_format)
         )
 
+    def _get_prometheus_labels(self) -> Optional[Dict[str, str]]:
+        """Return the labels for the prometheus scrape."""
+        try:
+            if not self.opensearch.roles:
+                return None
+            taggable_roles = ClusterTopology.generated_roles() + ["voting"]
+            roles = set(
+                role if role in taggable_roles else "other" for role in self.opensearch.roles
+            )
+            roles = sorted(roles)
+            return {"roles": ",".join(roles)}
+        except KeyError:
+            # At very early stages of the deployment, "node.roles" may not be yet present
+            # in the opensearch.yml, nor APIs is responding. Therefore, we need to catch
+            # the KeyError here and report the appropriate response.
+            return None
+
     def _scrape_config(self) -> List[Dict]:
         """Generates the scrape config as needed."""
         if (
             not (app_secrets := self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val))
             or not (ca := app_secrets.get("ca-cert"))
             or not (pwd := self.secrets.get(Scope.APP, self.secrets.password_key(COSUser)))
+            or not self._get_prometheus_labels()
         ):
             # Not yet ready, waiting for certain values to be set
             return []
         return [
             {
                 "metrics_path": "/_prometheus/metrics",
-                "static_configs": [{"targets": [f"{self.unit_ip}:{COSPort}"]}],
+                "static_configs": [
+                    {
+                        "targets": [f"{self.unit_ip}:{COSPort}"],
+                        "labels": self._get_prometheus_labels(),
+                    }
+                ],
                 "tls_config": {"ca": ca},
                 "scheme": "https" if self.is_tls_fully_configured() else "http",
                 "basic_auth": {"username": f"{COSUser}", "password": f"{pwd}"},
