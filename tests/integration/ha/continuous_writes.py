@@ -193,7 +193,7 @@ class ContinuousWrites:
 
     async def _secrets(self) -> str:
         """Fetch secrets and return the password."""
-        secrets = await get_secrets(self._ops_test, app=self._app)
+        secrets = await get_secrets(self._ops_test)
         with open(ContinuousWrites.CERT_PATH, "w") as chain:
             chain.write(secrets["ca-chain"])
 
