@@ -22,12 +22,7 @@ from tenacity import (
     wait_random,
 )
 
-from ..helpers import (
-    get_application_unit_ips,
-    get_leader_unit_id,
-    get_secrets,
-    opensearch_client,
-)
+from ..helpers import (get_application_unit_ips, get_secrets, opensearch_client)
 
 logging.getLogger("opensearch").setLevel(logging.ERROR)
 logging.getLogger("opensearchpy.helpers").setLevel(logging.ERROR)
@@ -200,10 +195,12 @@ class ContinuousWrites:
 
     async def _secrets(self) -> str:
         """Fetch secrets and return the password."""
-        leader_unit = await get_leader_unit_id(self._ops_test, app=self._app)
-        secrets = await get_secrets(self._ops_test, leader_unit)
+        secrets = await get_secrets(self._ops_test, app=self._app)
         with open(ContinuousWrites.CERT_PATH, "w") as chain:
-            chain.write(secrets.get("ca-chain"))
+            try:
+                chain.write(secrets["ca-chain"])
+            except Exception as e:
+                logging.info(f"Error writing ca-chain: {e}")
 
         return secrets["password"]
 
