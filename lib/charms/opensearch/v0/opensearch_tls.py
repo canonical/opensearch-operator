@@ -554,3 +554,12 @@ class OpenSearchTLS(Object):
                 return False
 
         return True
+
+    def delete_stored_tls_resources(self):
+        """Delete the TLS resources of the unit that are stored on disk."""
+        for cert_type in [CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]:
+            try:
+                os.remove(f"{self.certs_path}/{cert_type}.p12")
+            except OSError:
+                # thrown if file not exists, ignore
+                pass

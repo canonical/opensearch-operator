@@ -617,6 +617,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             restart_requested = True
 
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
+            self.tls.delete_stored_tls_resources()
             self.tls.request_new_unit_certificates()
 
             # since when an IP change happens, "_on_peer_relation_joined" won't be called,
