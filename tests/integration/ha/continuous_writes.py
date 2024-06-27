@@ -97,7 +97,7 @@ class ContinuousWrites:
         except Exception as e:
             # we want to catch any exception that may happen when tearing down the test
             logging.info(f"Error when clearing the writes: {e}")
-            
+
     @retry(
         wait=wait_fixed(wait=5) + wait_random(0, 5),
         stop=stop_after_attempt(5),
