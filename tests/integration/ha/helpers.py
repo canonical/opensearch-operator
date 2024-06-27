@@ -23,7 +23,6 @@ from tenacity import (
 
 from ..helpers import (
     APP_NAME,
-    IDLE_PERIOD,
     get_application_unit_ids,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
@@ -32,7 +31,6 @@ from ..helpers import (
     juju_version_major,
     run_action,
 )
-from ..helpers_deployments import get_application_units, wait_until
 from .continuous_writes import ContinuousWrites
 from .helpers_data import index_docs_count
 
@@ -595,65 +593,3 @@ async def assert_restore_indices_and_compare_consistency(
     # We expect that new_count has a loss of documents and the numbers are different.
     # Check if we have data but not all of it.
     assert 0 < new_count < original_count
-
-
-async def assert_upgrade_to_local(
-    ops_test: OpsTest, cwrites: ContinuousWrites, local_charm: str
-) -> None:
-    """Does the upgrade to local and asserts continuous writes."""
-    app = (await app_name(ops_test)) or APP_NAME
-    units = await get_application_units(ops_test, app)
-    leader_id = [u.id for u in units if u.is_leader][0]
-
-    application = ops_test.model.applications[app]
-    action = await run_action(
-        ops_test,
-        leader_id,
-        "pre-upgrade-check",
-        app=app,
-    )
-    assert action.status == "completed"
-
-    async with ops_test.fast_forward():
-        logger.info("Refresh the charm")
-        await application.refresh(path=local_charm)
-
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["blocked"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            timeout=1400,
-            idle_period=IDLE_PERIOD,
-        )
-
-        logger.info("Upgrade finished")
-        # Resume the upgrade
-        action = await run_action(
-            ops_test,
-            leader_id,
-            "resume-upgrade",
-            app=app,
-        )
-        logger.info(action)
-        assert action.status == "completed"
-
-        logger.info("Refresh is over, waiting for the charm to settle")
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            timeout=1400,
-            idle_period=IDLE_PERIOD,
-        )
-
-    # continuous writes checks
-    await assert_continuous_writes_increasing(cwrites)
-    await assert_continuous_writes_consistency(ops_test, cwrites, [app])

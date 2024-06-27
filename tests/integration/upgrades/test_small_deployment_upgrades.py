@@ -9,7 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
-from ..ha.helpers import app_name, assert_upgrade_to_local
+from ..ha.helpers import app_name
 from ..helpers import (
     APP_NAME,
     IDLE_PERIOD,
@@ -20,6 +20,7 @@ from ..helpers import (
 )
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from .helpers import assert_upgrade_to_local
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,6 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
 #######################################################################
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group("happy_path_upgrade")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -108,7 +108,6 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
     await _build_env(ops_test, STARTING_VERSION)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group("happy_path_upgrade")
 @pytest.mark.abort_on_fail
 async def test_upgrade_between_versions(
@@ -180,7 +179,6 @@ async def test_upgrade_between_versions(
             )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group("happy_path_upgrade")
 @pytest.mark.abort_on_fail
 async def test_upgrade_to_local(
