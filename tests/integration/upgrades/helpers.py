@@ -78,6 +78,6 @@ async def assert_upgrade_to_local(
         )
 
     # continuous writes checks
-    writes_count = (await cwrites.count())
+    writes_count = await cwrites.count()
     time.sleep(30)
     assert await cwrites.count() > writes_count, "Continuous writes not increasing"
