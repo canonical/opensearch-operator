@@ -89,9 +89,9 @@ class ContinuousWrites:
             client = await self._client()
             client.indices.delete(index=ContinuousWrites.INDEX_NAME, ignore_unavailable=True)
             client.close()
-        except Exception as e:
+        except Exception:
             # we want to catch any exception that may happen when tearing down the test
-            logging.info(f"Error when clearing the writes: {e}")
+            pass
 
     @retry(
         wait=wait_fixed(wait=5) + wait_random(0, 5),
@@ -199,8 +199,8 @@ class ContinuousWrites:
         with open(ContinuousWrites.CERT_PATH, "w") as chain:
             try:
                 chain.write(secrets["ca-chain"])
-            except Exception as e:
-                logging.info(f"Error writing ca-chain: {e}")
+            except Exception:
+                pass
 
         return secrets["password"]
 

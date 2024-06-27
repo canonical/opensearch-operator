@@ -516,7 +516,6 @@ class OpenSearchTLS(Object):
                 cmd = f"{cmd} -passin pass:{secrets.get('key-password')}"
 
             run_cmd(cmd)
-            # run_cmd(f"sudo chown -R snap_daemon:root {self.certs_path}")
             run_cmd(f"sudo chmod +r {store_path}")
         finally:
             tmp_key.close()

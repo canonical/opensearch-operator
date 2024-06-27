@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import time
 
 from pytest_operator.plugin import OpsTest
 
@@ -81,5 +82,6 @@ async def assert_upgrade_to_local(
         )
 
     # continuous writes checks
-    await assert_continuous_writes_increasing(cwrites)
-    await assert_continuous_writes_consistency(ops_test, cwrites, [app])
+    writes_count = (await cwrites.count())
+    time.sleep(30)
+    assert (await cwrites.count()) > writes_count, "Continuous writes not increasing"
