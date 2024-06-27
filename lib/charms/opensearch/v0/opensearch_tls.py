@@ -425,8 +425,8 @@ class OpenSearchTLS(Object):
 
         keytool = f"sudo {self.jdk_path}/bin/keytool"
 
-        if not secrets.get("ca-cert"):
-            logging.error("CA cert not found, quitting.")
+        if not (secrets.get("ca-cert") and store_pwd):
+            logging.error("CA cert or keystore password not found, quitting.")
             return
 
         alias = "ca"
