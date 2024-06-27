@@ -485,7 +485,7 @@ class OpenSearchTLS(Object):
         # we store the pem format to make it easier for the python requests lib
         if cert_type == CertType.APP_ADMIN:
             self.charm.opensearch.write_file(
-                f"{self.certs_path}/admin-cert-chain.pem",
+                f"{self.certs_path}/chain.pem",
                 secrets["chain"],
             )
 
