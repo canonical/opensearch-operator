@@ -194,7 +194,7 @@ async def get_number_of_shards_by_node(ops_test: OpsTest, unit_ip: str) -> Dict[
     for alloc in init_cluster_alloc:
         key = -1
         if alloc["node"] != "UNASSIGNED":
-            key = int("_".join(alloc["node"].split("_")[:-1]).split("-")[-1])
+            key = int(alloc["node"].split(".")[0].split("-")[-1])
         result[key] = int(alloc["shards"])
 
     return result
