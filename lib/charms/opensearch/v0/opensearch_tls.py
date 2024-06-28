@@ -523,13 +523,14 @@ class OpenSearchTLS(Object):
 
     def all_tls_resources_stored(self, only_unit_resources: bool = False) -> bool:
         """Check if all TLS resources are stored on disk."""
-        cert_types = ["ca", CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]
+        cert_types = [CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]
         if not only_unit_resources:
             cert_types.append(CertType.APP_ADMIN)
 
         for cert_type in cert_types:
-            if not exists(f"{self.certs_path}/{cert_type}.p12"):
-                return False
+            for extension in ["key", "cert", "p12"]:
+                if not exists(f"{self.certs_path}/{cert_type}.{extension}"):
+                    return False
 
         return True
 
