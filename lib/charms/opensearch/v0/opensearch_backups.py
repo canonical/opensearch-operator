@@ -500,7 +500,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
         We run the peer cluster orchestrator's refresh on every new s3 information.
         """
-        if self.charm.opensearch_peer_cm.is_provider_orchestrator(typ="main"):
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _on_s3_relation_action(self, event: EventBase) -> None:
