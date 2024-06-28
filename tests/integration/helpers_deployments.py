@@ -5,6 +5,7 @@ import json
 import logging
 import subprocess
 from datetime import datetime, timedelta
+from hashlib import md5
 from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
@@ -132,10 +133,12 @@ async def get_application_units(ops_test: OpsTest, app: str) -> List[Unit]:
             # unit not ready yet...
             continue
 
+        app_id = f"{ops_test.model.uuid}/{app}"
+        app_short_id = md5(app_id.encode()).hexdigest()[:3]
         unit = Unit(
             id=unit_id,
             short_name=u_name.replace("/", "-"),
-            name=f"{u_name.replace('/', '-')}.{ops_test.model.uuid}",
+            name=f"{u_name.replace('/', '-')}.{app_short_id}",
             ip=unit["public-address"],
             hostname=await get_unit_hostname(ops_test, unit_id, app),
             is_leader=unit.get("leader", False),
