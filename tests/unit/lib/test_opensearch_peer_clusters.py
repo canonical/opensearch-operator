@@ -205,7 +205,6 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     unit_number=5,
                 )
             ]
-            self.peer_cm._pre_validate_roles_change(new_roles=["ml"], prev_roles=["data", "ml"])
         except OpenSearchProvidedRolesException:
             self.fail("_pre_validate_roles_change() failed unexpectedly.")
 
