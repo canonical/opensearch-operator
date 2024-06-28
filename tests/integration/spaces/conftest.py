@@ -29,7 +29,6 @@ def _lxd_network(name: str, subnet: str, external: bool = True):
                 "--type=bridge",
                 f"ipv4.address={subnet}",
                 f"ipv4.nat={external}".lower(),
-                f"ipv4.routing={external}".lower(),
                 "ipv6.address=none",
                 "dns.mode=none",
             ],

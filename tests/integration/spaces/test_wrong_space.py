@@ -67,13 +67,13 @@ async def test_build_and_deploy(ops_test: OpsTest, lxd_spaces) -> None:
 @pytest.mark.abort_on_fail
 async def test_check_opensearch_transport(ops_test: OpsTest) -> None:
     """Test which IP will be assigned to transport bind in the end."""
-    ids = await get_application_unit_ids(ops_test, APP_NAME)
+    ids = get_application_unit_ids(ops_test, APP_NAME)
     # Build the dict containing each id - opensearch-peers' ingress IP
     ids_to_addr = {}
     for id in ids:
         ids_to_addr[id] = yaml.safe_load(
             subprocess.check_output(
-                f"juju exec --unit opensearch/{id} -- network-get opensearch-peers"
+                f"juju exec --unit opensearch/{id} -- network-get opensearch-peers".split()
             ).decode()
         )["bind-addresses"][0]["addresses"][0]["address"]
 
