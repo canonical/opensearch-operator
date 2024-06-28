@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_LXD_NETWORK = "lxdbr0"
+RAW_DNSMASQ = """dhcp-option=3
+dhcp-option=6"""
 
 
 def _lxd_network(name: str, subnet: str, external: bool = True):
@@ -27,8 +29,9 @@ def _lxd_network(name: str, subnet: str, external: bool = True):
                 "--type=bridge",
                 f"ipv4.address={subnet}",
                 f"ipv4.nat={external}".lower(),
+                f"ipv4.routing={external}".lower(),
                 "ipv6.address=none",
-                "dns.mode=none",  # lxdbr0 network is already managing that
+                "dns.mode=none",
             ],
             capture_output=True,
             check=True,
@@ -42,6 +45,12 @@ def _lxd_network(name: str, subnet: str, external: bool = True):
             encoding="utf-8",
         ).stdout
         logger.debug(f"LXD network status: {output}")
+
+        if not external:
+            subprocess.check_output(
+                ["sudo", "lxc", "network", "set", name, "raw.dnsmasq", RAW_DNSMASQ]
+            )
+
         subprocess.check_output(
             f"sudo ip link set up dev {name}".split(),
         )
@@ -52,6 +61,31 @@ def _lxd_network(name: str, subnet: str, external: bool = True):
 
 @pytest.fixture(scope="session", autouse=True)
 def lxd():
+    try:
+        # Set all networks' dns.mode=none
+        # We want to avoid check:
+        # https://github.com/canonical/lxd/blob/
+        #     762f7dc5c3dc4dbd0863a796898212d8fbe3f7c3/lxd/device/nic_bridged.go#L403
+        # As described on:
+        # https://discuss.linuxcontainers.org/t/
+        #     error-failed-start-validation-for-device-enp3s0f0-instance
+        #     -dns-name-net17-nicole-munoz-marketing-already-used-on-network/15586/22?page=2
+        subprocess.run(
+            [
+                "sudo",
+                "lxc",
+                "network",
+                "set",
+                DEFAULT_LXD_NETWORK,
+                "dns.mode=none",
+            ],
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        logger.error(
+            f"Error creating LXD network {DEFAULT_LXD_NETWORK} with: {e.returncode} {e.stderr}"
+        )
+        raise
     _lxd_network("client", "10.0.0.1/24", True)
     _lxd_network("cluster", "10.10.10.1/24", False)
     _lxd_network("backup", "10.20.20.1/24", False)

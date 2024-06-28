@@ -3,7 +3,6 @@
 
 """Class for Setting configuration in opensearch config files."""
 import logging
-import socket
 from collections import namedtuple
 from typing import Any, Dict, List, Optional
 
@@ -193,17 +192,9 @@ class OpenSearchConfig:
 
     def add_seed_hosts(self, cm_ips: List[str]):
         """Add CM nodes ips / host names to the seed host list of this unit."""
-        cm_ips_hostnames = set(cm_ips)
-        for ip in cm_ips:
-            try:
-                name, aliases, addresses = socket.gethostbyaddr(ip)
-                cm_ips_hostnames.update([name] + aliases + addresses)
-            except socket.herror:
-                # no ptr record - the IP is enough and the only thing we have
-                pass
-
+        cm_ips_set = set(cm_ips)
         with open(self._opensearch.paths.seed_hosts, "w+") as f:
-            lines = "\n".join([entry for entry in cm_ips_hostnames if entry.strip()])
+            lines = "\n".join([entry for entry in cm_ips_set if entry.strip()])
             f.write(f"{lines}\n")
 
     def cleanup_bootstrap_conf(self):

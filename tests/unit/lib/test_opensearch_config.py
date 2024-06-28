@@ -5,7 +5,7 @@
 import shutil
 import unittest
 from typing import Dict
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
@@ -138,11 +138,8 @@ class TestOpenSearchConfig(unittest.TestCase):
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
         self.assertCountEqual(opensearch_conf["plugins.security.nodes_dn"], ["10.10.10.10"])
 
-    @patch("socket.gethostbyaddr")
-    def test_set_node_and_cleanup_if_bootstrapped(self, gethostbyaddr):
+    def test_set_node_and_cleanup_if_bootstrapped(self):
         """Test setting the core config of a node."""
-        gethostbyaddr.return_value = "hostname.com", ["alias1", "alias2"], ["10.10.10.10"]
-
         self.opensearch_config.set_node(
             cluster_name="opensearch-dev",
             unit_name=self.charm.unit_name,
@@ -173,12 +170,6 @@ class TestOpenSearchConfig(unittest.TestCase):
         self.opensearch_config.cleanup_bootstrap_conf()
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
         self.assertNotIn("cluster.initial_cluster_manager_nodes", opensearch_conf)
-
-        # test unicast_hosts content
-        with open(self.seed_unicast_hosts, "r") as f:
-            stored = set([line.strip() for line in f.readlines()])
-            expected = {"hostname.com", "alias1", "alias2", "10.10.10.10"}
-            self.assertEqual(stored, expected)
 
     def tearDown(self) -> None:
         shutil.rmtree(f"{self.config_path}/tmp")
