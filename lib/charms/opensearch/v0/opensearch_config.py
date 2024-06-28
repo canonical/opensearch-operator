@@ -228,16 +228,17 @@ class OpenSearchConfig:
         """
         NetworkHost = namedtuple("NetworkHost", ["entry", "old", "new"])
 
+        node = self.load_node()
         result = False
         for host in [
             NetworkHost(
                 "network.host",
-                set(self.load_node().get("network.host", [])),
+                set(node.get("network.host", [])),
                 set(["_site_"] + self._opensearch.network_hosts),
             ),
             NetworkHost(
                 "network.publish_host",
-                set(self.load_node().get("network.publish_host", [])),
+                set(node.get("network.publish_host", [])),
                 set(self._opensearch.host),
             ),
         ]:
