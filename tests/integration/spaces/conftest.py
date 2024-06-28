@@ -92,6 +92,12 @@ def lxd():
 
 @pytest.fixture(scope="module")
 async def lxd_spaces(ops_test: OpsTest):
+    subprocess.run(
+        [
+            "juju",
+            "reload-spaces",
+        ],
+    )
     await ops_test.model.add_space("client", cidrs=["10.0.0.0/24"])
     await ops_test.model.add_space("cluster", cidrs=["10.10.10.0/24"])
     await ops_test.model.add_space("backup", cidrs=["10.20.20.0/24"])
