@@ -85,13 +85,11 @@ class ContinuousWrites:
         if not self._is_stopped:
             await self.stop()
 
+        client = await self._client()
         try:
-            client = await self._client()
             client.indices.delete(index=ContinuousWrites.INDEX_NAME, ignore_unavailable=True)
+        finally:
             client.close()
-        except Exception:
-            # we want to catch any exception that may happen when tearing down the test
-            pass
 
     @retry(
         wait=wait_fixed(wait=5) + wait_random(0, 5),
@@ -197,10 +195,7 @@ class ContinuousWrites:
         """Fetch secrets and return the password."""
         secrets = await get_secrets(self._ops_test, app=self._app)
         with open(ContinuousWrites.CERT_PATH, "w") as chain:
-            try:
-                chain.write(secrets["ca-chain"])
-            except Exception:
-                pass
+            chain.write(secrets["ca-chain"])
 
         return secrets["password"]
 

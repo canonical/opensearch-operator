@@ -528,9 +528,11 @@ class OpenSearchTLS(Object):
             cert_types.append(CertType.APP_ADMIN)
 
         for cert_type in cert_types:
-            for extension in ["key", "cert", "p12"]:
-                if not exists(f"{self.certs_path}/{cert_type}.{extension}"):
-                    return False
+            if not exists(f"{self.certs_path}/{cert_type}.p12"):
+                # this ensures backward compatibility when downgrading to charm version still using pem files
+                for extension in ["key", "cert"]:
+                    if not exists(f"{self.certs_path}/{cert_type}.{extension}"):
+                        return False
 
         return True
 
