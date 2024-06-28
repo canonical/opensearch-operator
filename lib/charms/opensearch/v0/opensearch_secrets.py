@@ -15,7 +15,11 @@ import logging
 from typing import Dict, Optional, Union
 
 from charms.opensearch.v0.constants_charm import KibanaserverUser, OpenSearchSystemUsers
-from charms.opensearch.v0.constants_secrets import HASH_POSTFIX, PW_POSTFIX
+from charms.opensearch.v0.constants_secrets import (
+    HASH_POSTFIX,
+    PW_POSTFIX,
+    S3_CREDENTIALS,
+)
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchSecretInsertionError
 from charms.opensearch.v0.opensearch_internal_data import (
@@ -78,6 +82,8 @@ class OpenSearchSecrets(Object, RelationDataStore):
         # 3. System user hash secret update
         #     - Action: Every unit needs to update local internal_users.yml
         #     - Note: Leader is updated already
+        # 4.  S3 credentials (secret / access keys) in large relations
+        #     - Action: write them into the opensearch.yml by running backup module
 
         system_user_hash_keys = [
             self._charm.secrets.hash_key(user) for user in OpenSearchSystemUsers
@@ -85,6 +91,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         keys_to_process = system_user_hash_keys + [
             CertType.APP_ADMIN.val,
             self._charm.secrets.password_key(KibanaserverUser),
+            S3_CREDENTIALS,
         ]
 
         # Variables for better readability
@@ -114,6 +121,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
             password = event.secret.get_content()[label_key]
             if sys_user := self._user_from_hash_key(label_key):
                 self._charm.user_manager.put_internal_user(sys_user, password)
+
+        # all units must persist the s3 access & secret keys in opensearch.yml
+        if label_key == S3_CREDENTIALS:
+            self._charm.backup.manual_update(event)
 
     def _user_from_hash_key(self, key):
         """Which user is referred to by key?"""
@@ -320,6 +331,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
         if not self.implements_secrets:
             return super().put(scope, key, value)
 
+        # todo: remove when secret-changed not triggered for same content update
+        if self.get(scope, key) == value:
+            return
+
         self._add_or_update_juju_secret(scope, key, {key: value})
 
     @override
@@ -330,6 +345,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
         logging.debug(f"Putting secret object {scope}:{key}")
         if not self.implements_secrets:
             return super().put_object(scope, key, value, merge)
+
+        # todo: remove when secret-changed not triggered for same content update
+        if self.get_object(scope, key) == self._safe_obj_data(value):
+            return
 
         self._add_or_update_juju_secret(scope, key, value, merge)
 

@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
+from pydantic.utils import ROOT_KEY
 
 # The unique Charmhub library identifier, never change it
 LIBID = "6007e8030e4542e6b189e2873c8fbfef"
@@ -22,6 +23,11 @@ LIBPATCH = 1
 
 class Model(ABC, BaseModel):
     """Base model class."""
+
+    def __init__(self, **data: Any) -> None:
+        if self.__custom_root_type__ and data.keys() != {ROOT_KEY}:
+            data = {ROOT_KEY: data}
+        super().__init__(**data)
 
     def to_str(self) -> str:
         """Deserialize object into a string."""
@@ -59,13 +65,38 @@ class Model(ABC, BaseModel):
         return equal
 
 
+class App(Model):
+    """Data class representing an application."""
+
+    id: Optional[str] = None
+    name: Optional[str] = None
+    model_uuid: Optional[str] = None
+
+    @root_validator
+    def set_props(cls, values):  # noqa: N805
+        """Generate the attributes depending on the input."""
+        if None not in list(values.values()):
+            return values
+
+        if not values["id"] and None in [values["name"], values["model_uuid"]]:
+            raise ValueError("'id' or 'name and model_uuid' must be set.")
+
+        if values["id"]:
+            full_id_split = values["id"].split("/")
+            values["name"], values["model_uuid"] = full_id_split[-1], full_id_split[0]
+        else:
+            values["id"] = f"{values['model_uuid']}/{values['name']}"
+
+        return values
+
+
 class Node(Model):
     """Data class representing a node in a cluster."""
 
     name: str
     roles: List[str]
     ip: str
-    app_name: str
+    app: App
     unit_number: int
     temperature: Optional[str] = None
 
@@ -185,11 +216,11 @@ class PeerClusterConfig(Model):
 class DeploymentDescription(Model):
     """Model class describing the current state of a deployment / sub-cluster."""
 
+    app: App
     config: PeerClusterConfig
     start: StartMode
     pending_directives: List[Directive]
     typ: DeploymentType
-    app: str
     state: DeploymentState = DeploymentState(value=State.ACTIVE)
     promotion_time: Optional[float]
 
@@ -222,6 +253,28 @@ class PeerClusterRelDataCredentials(Model):
     s3: Optional[S3RelDataCredentials]
 
 
+class PeerClusterApp(Model):
+    """Model class for representing an application part of a large deployment."""
+
+    app: App
+    planned_units: int
+    units: List[str]
+
+
+class PeerClusterFleetApps(Model):
+    """Model class for all applications in a large deployment as a dict."""
+
+    __root__: Dict[str, PeerClusterApp]
+
+    def __iter__(self):
+        """Implements the iter magic method."""
+        return iter(self.__root__)
+
+    def __getitem__(self, item):
+        """Implements the getitem magic method."""
+        return self.__root__[item]
+
+
 class PeerClusterRelData(Model):
     """Model class for the PCluster relation data."""
 
@@ -247,9 +300,9 @@ class PeerClusterOrchestrators(Model):
     _TYPES = Literal["main", "failover"]
 
     main_rel_id: int = -1
-    main_app: Optional[str]
+    main_app: Optional[App]
     failover_rel_id: int = -1
-    failover_app: Optional[str]
+    failover_app: Optional[App]
 
     def delete(self, typ: _TYPES) -> None:
         """Delete an orchestrator from the current pair."""

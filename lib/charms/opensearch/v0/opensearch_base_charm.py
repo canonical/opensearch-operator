@@ -40,7 +40,7 @@ from charms.opensearch.v0.constants_charm import (
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_charm import Status
+from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
@@ -71,11 +71,7 @@ from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
-from charms.opensearch.v0.opensearch_nodes_exclusions import (
-    ALLOCS_TO_DELETE,
-    VOTING_TO_DELETE,
-    OpenSearchExclusions,
-)
+from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
     OpenSearchProvidedRolesException,
@@ -397,7 +393,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # In the case of the first units before TLS is initialized
         if not current_secrets:
-            if not self.unit.is_leader():
+            if not self.unit.is_leader() or not self.opensearch_peer_cm.is_provider(typ="main"):
                 event.defer()
             return
 
@@ -444,19 +440,22 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
-        if (
-            self.unit.is_leader()
-            and self.opensearch.is_node_up()
-            and self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]
-        ):
+        if self.unit.is_leader() and self.opensearch.is_node_up():
+            health = self.health.apply()
             if self._is_peer_rel_changed_deferred:
                 # We already deferred this event during this Juju event. Retry on the next
                 # Juju event.
                 return
-            # we defer because we want the temporary status to be updated
-            event.defer()
-            # If the handler is called again within this Juju hook, we will abandon the event
-            self._is_peer_rel_changed_deferred = True
+
+            if health in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
+                # we defer because we want the temporary status to be updated
+                event.defer()
+                # If the handler is called again within this Juju hook, we will abandon the event
+                self._is_peer_rel_changed_deferred = True
+
+        # we want to have the most up-to-date info broadcasted to related sub-clusters
+        if self.opensearch_peer_cm.is_provider():
+            self.peer_cluster_provider.refresh_relation_data(event)
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -470,20 +469,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # if self._remove_data_role_from_dedicated_cm_if_needed(event):
         #    return
 
-        app_data = event.relation.data.get(event.app)
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
             self._recompute_roles_if_needed(event)
-        elif app_data:
+        elif event.relation.data.get(event.app):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
 
-        unit_data = event.relation.data.get(event.unit)
-        if not unit_data:
+        if not (unit_data := event.relation.data.get(event.unit)):
             return
 
-        if unit_data.get(VOTING_TO_DELETE) or unit_data.get(ALLOCS_TO_DELETE):
-            self.opensearch_exclusions.cleanup()
+        self.opensearch_exclusions.cleanup()
 
         if self.unit.is_leader() and unit_data.get("bootstrap_contributor"):
             contributor_count = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
@@ -498,10 +494,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not (self.unit.is_leader() and self.opensearch.is_node_up()):
             return
 
+        current_app = self.opensearch_peer_cm.deployment_desc().app
         remaining_nodes = [
             node
             for node in self._get_nodes(True)
-            if node.name != event.departing_unit.name.replace("/", "-")
+            if node.name != format_unit_name(event.departing_unit, app=current_app)
         ]
 
         self.health.apply(wait_for_green_first=True)
@@ -561,7 +558,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # release lock
             self.node_lock.release()
 
-    def _on_update_status(self, event: UpdateStatusEvent):  # noqa: C901
+    def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
 
         We want to periodically check for the following:
@@ -573,8 +570,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
         # if there are missing system requirements defer
-        missing_sys_reqs = self.opensearch.missing_sys_requirements()
-        if len(missing_sys_reqs) > 0:
+        if len(missing_sys_reqs := self.opensearch.missing_sys_requirements()) > 0:
             self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
             return
 
@@ -598,9 +594,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.upgrade_in_progress:
             logger.debug("Skipping `remove_users_and_roles()` because upgrade is in-progress")
-        else:
+        elif (
+            self.unit.is_leader()
+            and deployment_desc
+            and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+        ):
             self.user_manager.remove_users_and_roles()
 
         # If relation not broken - leave
@@ -650,7 +651,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.plugin_manager.run() and not restart_requested:
                 if self.upgrade_in_progress:
                     logger.warning(
-                        "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+                        "Changing config during an upgrade is not supported. The charm may be in a broken, "
+                        "unrecoverable state"
                     )
                     event.defer()
                     return
@@ -759,7 +761,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-        if renewal and self.is_admin_user_configured() and self.is_tls_fully_configured():
+        if self.is_tls_fully_configured() and self.is_admin_user_configured() and renewal:
             self._restart_opensearch_event.emit()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
@@ -794,15 +796,30 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def is_every_unit_marked_as_started(self) -> bool:
         """Check if every unit in the cluster is marked as started."""
         rel = self.model.get_relation(PeerRelationName)
-        for unit in rel.units.union({self.unit}):
+        all_started = True
+        for unit in all_units(self):
+            logger.debug(f"Unit: {unit.name} -- started: {rel.data[unit].get('started')}")
             if rel.data[unit].get("started") != "True":
-                return False
-        return True
+                all_started = False
+                break
+
+        if all_started:
+            return True
+
+        try:
+            current_app_nodes = [
+                node
+                for node in self._get_nodes(self.opensearch.is_node_up())
+                if node.app.id == self.opensearch_peer_cm.deployment_desc().app.id
+            ]
+            return len(current_app_nodes) == self.app.planned_units()
+        except OpenSearchHttpError:
+            return False
 
     def is_tls_full_configured_in_cluster(self) -> bool:
         """Check if TLS is configured in all the units of the current cluster."""
         rel = self.model.get_relation(PeerRelationName)
-        for unit in rel.units.union({self.unit}):
+        for unit in all_units(self):
             if rel.data[unit].get("tls_configured") != "True":
                 return False
         return True
@@ -941,11 +958,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
         try:
-            nodes = self._get_nodes(use_localhost=not self.alt_hosts)
+            nodes = self._get_nodes(use_localhost=self.opensearch.is_node_up())
         except OpenSearchHttpError:
-            logger.exception("Failed to get online nodes")
+            logger.debug("Failed to get online nodes")
             event.defer()
             return
+
         for node in nodes:
             if node.name == self.unit_name:
                 break
@@ -1027,7 +1045,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # (otherwise `health_` would be `HealthColors.YELLOW_TEMP`)
             if health not in (HealthColors.GREEN, HealthColors.YELLOW):
                 logger.error(
-                    "Cluster is not healthy after upgrade. Manual intervention required. To rollback, `juju refresh` to the previous revision"
+                    "Cluster is not healthy after upgrade. Manual intervention required. To rollback, "
+                    "`juju refresh` to the previous revision"
                 )
                 event.defer()
                 return
@@ -1035,20 +1054,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # TODO future improvement:
                 # https://github.com/canonical/opensearch-operator/issues/268
                 logger.warning(
-                    "Cluster is yellow. Upgrade may cause data loss if cluster is yellow for reason other than primary shards on upgraded unit & not enough upgraded units available for replica shards"
+                    "Cluster is yellow. Upgrade may cause data loss if cluster is yellow for reason "
+                    "other than primary shards on upgraded unit & not enough upgraded units available "
+                    "for replica shards"
                 )
-        else:
-            # apply cluster health
-            self.health.apply()
 
         self._upgrade.unit_state = upgrade.UnitState.HEALTHY
         logger.debug("Set upgrade unit state to healthy")
         self._reconcile_upgrade()
 
         # update the peer cluster rel data with new IP in case of main cluster manager
-        if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
-            if self.opensearch_peer_cm.is_peer_cluster_orchestrator_relation_set():
-                self.peer_cluster_provider.refresh_relation_data(event)
+        if self.opensearch_peer_cm.is_provider():
+            self.peer_cluster_provider.refresh_relation_data(event)
 
     def _stop_opensearch(self, *, restart=False) -> None:
         """Stop OpenSearch if possible."""
@@ -1147,19 +1164,24 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""
         # if there are any missing system requirements leave
-        missing_sys_reqs = self.opensearch.missing_sys_requirements()
-        if len(missing_sys_reqs) > 0:
+        if missing_sys_reqs := self.opensearch.missing_sys_requirements():
             self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
             return False
 
-        if self.unit.is_leader():
-            return True
-
-        if not self.peers_data.get(Scope.APP, "security_index_initialised", False):
+        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
             return False
 
-        if not self.alt_hosts:
+        if not self.opensearch_peer_cm.can_start(deployment_desc):
             return False
+
+        if (
+            not self.peers_data.get(Scope.APP, "security_index_initialised", False)
+            or not self.peers_data.get(Scope.APP, "admin_user_initialized", False)
+            or not self.alt_hosts
+        ):
+            return (
+                self.unit.is_leader() and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            )
 
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
         # overloading the cluster, units must be started one at a time. So we defer starting
@@ -1272,7 +1294,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # Secrets need to be maintained
         # For System Users we also save the hash key
-        # (so all units can fetch it for local users (internal_users.yml) updates.
+        # so all units can fetch it for local users (internal_users.yml) updates.
         self.secrets.put(Scope.APP, self.secrets.password_key(user), pwd)
 
         if user in OpenSearchSystemUsers:
@@ -1322,15 +1344,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         ):
             return []
 
-        # add CM nodes reported in the peer cluster relation if any
-        hosts = self.alt_hosts
-        if (
-            self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR
-            and (peer_cm_rel_data := self.opensearch_peer_cm.rel_data()) is not None
-        ):
-            hosts.extend([node.ip for node in peer_cm_rel_data.cm_nodes])
-
-        return ClusterTopology.nodes(self.opensearch, use_localhost, hosts)
+        return ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
 
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
@@ -1377,6 +1391,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
         self.opensearch_config.set_node(
+            app=deployment_desc.app,
             cluster_name=deployment_desc.config.cluster_name,
             unit_name=self.unit_name,
             roles=computed_roles,
@@ -1407,8 +1422,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _reconfigure_and_restart_unit_if_needed(self):
         """Reconfigure the current unit if a new config was computed for it, then restart."""
-        nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
-        if not nodes_config:
+        if not (nodes_config := self.peers_data.get_object(Scope.APP, "nodes_config")):
             return
 
         nodes_config = {name: Node.from_dict(node) for name, node in nodes_config.items()}
@@ -1418,8 +1432,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             [node.ip for node in list(nodes_config.values()) if node.is_cm_eligible()]
         )
 
-        new_node_conf = nodes_config.get(self.unit_name)
-        if not new_node_conf:
+        if not (new_node_conf := nodes_config.get(self.unit_name)):
             # the conf could not be computed / broadcast, because this node is
             # "starting" and is not online "yet" - either barely being configured (i.e. TLS)
             # or waiting to start.
@@ -1439,7 +1452,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _recompute_roles_if_needed(self, event: RelationChangedEvent):
         """Recompute node roles:self-healing that didn't trigger leader related event occurred."""
         try:
-            nodes = self._get_nodes(self.opensearch.is_node_up())
+            if not (nodes := self._get_nodes(self.opensearch.is_node_up())):
+                return
+
             if len(nodes) < self.app.planned_units():
                 if self._is_peer_rel_changed_deferred:
                     # We already deferred this event during this Juju event. Retry on the next
@@ -1468,14 +1483,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             deployment_desc := self.opensearch_peer_cm.deployment_desc()
         ).start == StartMode.WITH_GENERATED_ROLES:
             updated_nodes = ClusterTopology.recompute_nodes_conf(
-                app_name=self.app.name, nodes=current_nodes
+                app_id=deployment_desc.app.id, nodes=current_nodes
             )
         else:
             first_dedicated_cm_node = None
             rel = self.model.get_relation(PeerRelationName)
-            for unit in rel.units.union({self.unit}):
+            for unit in all_units(self):
                 if rel.data[unit].get("remove-data-role") == "True":
-                    first_dedicated_cm_node = unit.name.replace("/", "-")
+                    first_dedicated_cm_node = format_unit_name(unit, app=deployment_desc.app)
                     break
 
             updated_nodes = {}
@@ -1484,7 +1499,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 temperature = node.temperature
 
                 # only change the roles of the nodes of the current cluster
-                if node.app_name == self.app.name and node.name != first_dedicated_cm_node:
+                if node.app.id == deployment_desc.app.id and node.name != first_dedicated_cm_node:
                     roles = deployment_desc.config.roles
                     temperature = deployment_desc.config.data_temperature
 
@@ -1492,7 +1507,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     name=node.name,
                     roles=roles,
                     ip=node.ip,
-                    app_name=node.app_name,
+                    app=node.app,
                     unit_number=self.unit_id,
                     temperature=temperature,
                 )
@@ -1614,7 +1629,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     @property
     def unit_name(self) -> str:
         """Name of the current unit."""
-        return self.unit.name.replace("/", "-")
+        return format_unit_name(self.unit, app=self.opensearch_peer_cm.deployment_desc().app)
 
     @property
     def unit_id(self) -> int:
@@ -1626,6 +1641,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Return an alternative host (of another node) in case the current is offline."""
         all_units_ips = units_ips(self, PeerRelationName)
         all_hosts = list(all_units_ips.values())
+
+        if nodes_conf := self.peers_data.get_object(Scope.APP, "nodes_config"):
+            all_hosts.extend([Node.from_dict(node).ip for node in nodes_conf.values()])
+
+        if peer_cm_rel_data := self.opensearch_peer_cm.rel_data():
+            all_hosts.extend([node.ip for node in peer_cm_rel_data.cm_nodes])
+
         random.shuffle(all_hosts)
 
         if not all_hosts:
