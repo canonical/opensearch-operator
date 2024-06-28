@@ -145,7 +145,7 @@ class TestOpenSearchConfig(unittest.TestCase):
             unit_name=self.charm.unit_name,
             roles=["cluster_manager", "data"],
             cm_names=["cm1"],
-            cm_ips=["10.10.10.10"],
+            cm_ips=["20.20.20.20"],
             contribute_to_bootstrap=True,
             node_temperature="hot",
         )
@@ -170,6 +170,11 @@ class TestOpenSearchConfig(unittest.TestCase):
         self.opensearch_config.cleanup_bootstrap_conf()
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
         self.assertNotIn("cluster.initial_cluster_manager_nodes", opensearch_conf)
+
+        with open(self.seed_unicast_hosts, "r") as f:
+            stored = set([line.strip() for line in f.readlines()])
+            expected = {"20.20.20.20"}
+            self.assertEqual(stored, expected)
 
     def tearDown(self) -> None:
         shutil.rmtree(f"{self.config_path}/tmp")
