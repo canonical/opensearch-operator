@@ -12,7 +12,7 @@ information for the Opensearch charm.
 """
 
 import logging
-from typing import Dict, Optional, Union
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from charms.opensearch.v0.constants_charm import KibanaserverUser, OpenSearchSystemUsers
 from charms.opensearch.v0.constants_secrets import (
@@ -43,6 +43,10 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
+if TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,7 +55,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
     LABEL_SEPARATOR = ":"
 
-    def __init__(self, charm, peer_relation: str):
+    def __init__(self, charm: "OpenSearchBaseCharm", peer_relation: str):
         Object.__init__(self, charm, peer_relation)
         RelationDataStore.__init__(self, charm, peer_relation)
 
@@ -112,6 +116,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         # Leader has to maintain TLS and Dashboards relation credentials
         if not is_leader and label_key == CertType.APP_ADMIN.val:
             self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
+            self._charm.is_tls_fully_configured()
 
         elif is_leader and label_key == self._charm.secrets.password_key(KibanaserverUser):
             self._charm.opensearch_provider.update_dashboards_password()
