@@ -98,7 +98,7 @@ async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
     resp = await http_request(ops_test, "GET", f"https://{unit_ip}:9200/_nodes")
     node_name = resp["nodes"][cm_node_id]["name"]
 
-    return int("_".join(node_name.split("_")[:-1]).split("-")[-1])
+    return int(node_name.split(".")[0].split("-")[-1])
 
 
 @retry(
