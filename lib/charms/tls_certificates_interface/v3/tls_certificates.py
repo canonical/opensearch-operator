@@ -111,7 +111,6 @@ class ExampleProviderCharm(CharmBase):
             ca=ca_certificate,
             chain=[ca_certificate, certificate],
             relation_id=event.relation_id,
-            recommended_expiry_notification_time=720,
         )
 
     def _on_certificate_revocation_request(self, event: CertificateRevocationRequestEvent) -> None:
@@ -317,7 +316,7 @@ LIBAPI = 3
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 15
+LIBPATCH = 11
 
 PYDEPS = ["cryptography", "jsonschema"]
 
@@ -454,46 +453,22 @@ class ProviderCertificate:
     ca: str
     chain: List[str]
     revoked: bool
-    expiry_time: datetime
-    expiry_notification_time: Optional[datetime] = None
 
     def chain_as_pem(self) -> str:
         """Return full certificate chain as a PEM string."""
         return "\n\n".join(reversed(self.chain))
-
-    def to_json(self) -> str:
-        """Return the object as a JSON string.
-
-        Returns:
-            str: JSON representation of the object
-        """
-        return json.dumps(
-            {
-                "relation_id": self.relation_id,
-                "application_name": self.application_name,
-                "csr": self.csr,
-                "certificate": self.certificate,
-                "ca": self.ca,
-                "chain": self.chain,
-                "revoked": self.revoked,
-                "expiry_time": self.expiry_time.isoformat(),
-                "expiry_notification_time": self.expiry_notification_time.isoformat()
-                if self.expiry_notification_time
-                else None,
-            }
-        )
 
 
 class CertificateAvailableEvent(EventBase):
     """Charm Event triggered when a TLS certificate is available."""
 
     def __init__(
-        self,
-        handle: Handle,
-        certificate: str,
-        certificate_signing_request: str,
-        ca: str,
-        chain: List[str],
+            self,
+            handle: Handle,
+            certificate: str,
+            certificate_signing_request: str,
+            ca: str,
+            chain: List[str],
     ):
         super().__init__(handle)
         self.certificate = certificate
@@ -552,13 +527,13 @@ class CertificateInvalidatedEvent(EventBase):
     """Charm Event triggered when a TLS certificate is invalidated."""
 
     def __init__(
-        self,
-        handle: Handle,
-        reason: Literal["expired", "revoked"],
-        certificate: str,
-        certificate_signing_request: str,
-        ca: str,
-        chain: List[str],
+            self,
+            handle: Handle,
+            reason: Literal["expired", "revoked"],
+            certificate: str,
+            certificate_signing_request: str,
+            ca: str,
+            chain: List[str],
     ):
         super().__init__(handle)
         self.reason = reason
@@ -605,11 +580,11 @@ class CertificateCreationRequestEvent(EventBase):
     """Charm Event triggered when a TLS certificate is required."""
 
     def __init__(
-        self,
-        handle: Handle,
-        certificate_signing_request: str,
-        relation_id: int,
-        is_ca: bool = False,
+            self,
+            handle: Handle,
+            certificate_signing_request: str,
+            relation_id: int,
+            is_ca: bool = False,
     ):
         super().__init__(handle)
         self.certificate_signing_request = certificate_signing_request
@@ -635,12 +610,12 @@ class CertificateRevocationRequestEvent(EventBase):
     """Charm Event triggered when a TLS certificate needs to be revoked."""
 
     def __init__(
-        self,
-        handle: Handle,
-        certificate: str,
-        certificate_signing_request: str,
-        ca: str,
-        chain: str,
+            self,
+            handle: Handle,
+            certificate: str,
+            certificate_signing_request: str,
+            ca: str,
+            chain: str,
     ):
         super().__init__(handle)
         self.certificate = certificate
@@ -689,7 +664,7 @@ def _load_relation_data(relation_data_content: RelationDataContent) -> dict:
 
 
 def _get_closest_future_time(
-    expiry_notification_time: datetime, expiry_time: datetime
+        expiry_notification_time: datetime, expiry_time: datetime
 ) -> datetime:
     """Return expiry_notification_time if not in the past, otherwise return expiry_time.
 
@@ -707,57 +682,29 @@ def _get_closest_future_time(
     )
 
 
-def calculate_expiry_notification_time(
-    validity_start_time: datetime,
-    expiry_time: datetime,
-    provider_recommended_notification_time: Optional[int],
-    requirer_recommended_notification_time: Optional[int],
-) -> datetime:
-    """Calculate a reasonable time to notify the user about the certificate expiry.
-
-    It takes into account the time recommended by the provider and by the requirer.
-    Time recommended by the provider is preferred,
-    then time recommended by the requirer,
-    then dynamically calculated time.
+def _get_certificate_expiry_time(certificate: str) -> Optional[datetime]:
+    """Extract expiry time from a certificate string.
 
     Args:
-        validity_start_time: Certificate validity time
-        expiry_time: Certificate expiry time
-        provider_recommended_notification_time:
-            Time in hours prior to expiry to notify the user.
-            Recommended by the provider.
-        requirer_recommended_notification_time:
-            Time in hours prior to expiry to notify the user.
-            Recommended by the requirer.
+        certificate (str): x509 certificate as a string
 
     Returns:
-        datetime: Time to notify the user about the certificate expiry.
+        Optional[datetime]: Expiry datetime or None
     """
-    if provider_recommended_notification_time is not None:
-        provider_recommended_notification_time = abs(provider_recommended_notification_time)
-        provider_recommendation_time_delta = (
-            expiry_time - timedelta(hours=provider_recommended_notification_time)
-        )
-        if validity_start_time < provider_recommendation_time_delta:
-            return provider_recommendation_time_delta
-
-    if requirer_recommended_notification_time is not None:
-        requirer_recommended_notification_time = abs(requirer_recommended_notification_time)
-        requirer_recommendation_time_delta = (
-            expiry_time - timedelta(hours=requirer_recommended_notification_time)
-        )
-        if validity_start_time < requirer_recommendation_time_delta:
-            return requirer_recommendation_time_delta
-    calculated_hours = (expiry_time - validity_start_time).total_seconds() / (3600 * 3)
-    return expiry_time - timedelta(hours=calculated_hours)
+    try:
+        certificate_object = x509.load_pem_x509_certificate(data=certificate.encode())
+        return certificate_object.not_valid_after_utc
+    except ValueError:
+        logger.warning("Could not load certificate.")
+        return None
 
 
 def generate_ca(
-    private_key: bytes,
-    subject: str,
-    private_key_password: Optional[bytes] = None,
-    validity: int = 365,
-    country: str = "US",
+        private_key: bytes,
+        subject: str,
+        private_key_password: Optional[bytes] = None,
+        validity: int = 365,
+        country: str = "US",
 ) -> bytes:
     """Generate a CA Certificate.
 
@@ -823,10 +770,10 @@ def generate_ca(
 
 
 def get_certificate_extensions(
-    authority_key_identifier: bytes,
-    csr: x509.CertificateSigningRequest,
-    alt_names: Optional[List[str]],
-    is_ca: bool,
+        authority_key_identifier: bytes,
+        csr: x509.CertificateSigningRequest,
+        alt_names: Optional[List[str]],
+        is_ca: bool,
 ) -> List[x509.Extension]:
     """Generate a list of certificate extensions from a CSR and other known information.
 
@@ -922,13 +869,13 @@ def get_certificate_extensions(
 
 
 def generate_certificate(
-    csr: bytes,
-    ca: bytes,
-    ca_key: bytes,
-    ca_key_password: Optional[bytes] = None,
-    validity: int = 365,
-    alt_names: Optional[List[str]] = None,
-    is_ca: bool = False,
+        csr: bytes,
+        ca: bytes,
+        ca_key: bytes,
+        ca_key_password: Optional[bytes] = None,
+        validity: int = 365,
+        alt_names: Optional[List[str]] = None,
+        is_ca: bool = False,
 ) -> bytes:
     """Generate a TLS certificate based on a CSR.
 
@@ -981,9 +928,9 @@ def generate_certificate(
 
 
 def generate_private_key(
-    password: Optional[bytes] = None,
-    key_size: int = 2048,
-    public_exponent: int = 65537,
+        password: Optional[bytes] = None,
+        key_size: int = 2048,
+        public_exponent: int = 65537,
 ) -> bytes:
     """Generate a private key.
 
@@ -1012,20 +959,20 @@ def generate_private_key(
 
 
 def generate_csr(  # noqa: C901
-    private_key: bytes,
-    subject: str,
-    add_unique_id_to_subject_name: bool = True,
-    organization: Optional[str] = None,
-    email_address: Optional[str] = None,
-    country_name: Optional[str] = None,
-    state_or_province_name: Optional[str] = None,
-    locality_name: Optional[str] = None,
-    private_key_password: Optional[bytes] = None,
-    sans: Optional[List[str]] = None,
-    sans_oid: Optional[List[str]] = None,
-    sans_ip: Optional[List[str]] = None,
-    sans_dns: Optional[List[str]] = None,
-    additional_critical_extensions: Optional[List] = None,
+        private_key: bytes,
+        subject: str,
+        add_unique_id_to_subject_name: bool = True,
+        organization: Optional[str] = None,
+        email_address: Optional[str] = None,
+        country_name: Optional[str] = None,
+        state_or_province_name: Optional[str] = None,
+        locality_name: Optional[str] = None,
+        private_key_password: Optional[bytes] = None,
+        sans: Optional[List[str]] = None,
+        sans_oid: Optional[List[str]] = None,
+        sans_ip: Optional[List[str]] = None,
+        sans_dns: Optional[List[str]] = None,
+        additional_critical_extensions: Optional[List] = None,
 ) -> bytes:
     """Generate a CSR using private key and subject.
 
@@ -1093,13 +1040,6 @@ def generate_csr(  # noqa: C901
     return signed_certificate.public_bytes(serialization.Encoding.PEM)
 
 
-def get_sha256_hex(data: str) -> str:
-    """Calculate the hash of the provided data and return the hexadecimal representation."""
-    digest = hashes.Hash(hashes.SHA256())
-    digest.update(data.encode())
-    return digest.finalize().hex()
-
-
 def csr_matches_certificate(csr: str, cert: str) -> bool:
     """Check if a CSR matches a certificate.
 
@@ -1114,16 +1054,16 @@ def csr_matches_certificate(csr: str, cert: str) -> bool:
         cert_object = x509.load_pem_x509_certificate(cert.encode("utf-8"))
 
         if csr_object.public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
         ) != cert_object.public_key().public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         ):
             return False
         if (
-            csr_object.public_key().public_numbers().n  # type: ignore[union-attr]
-            != cert_object.public_key().public_numbers().n  # type: ignore[union-attr]
+                csr_object.public_key().public_numbers().n  # type: ignore[union-attr]
+                != cert_object.public_key().public_numbers().n  # type: ignore[union-attr]
         ):
             return False
     except ValueError:
@@ -1133,7 +1073,7 @@ def csr_matches_certificate(csr: str, cert: str) -> bool:
 
 
 def _relation_data_is_valid(
-    relation: Relation, app_or_unit: Union[Application, Unit], json_schema: dict
+        relation: Relation, app_or_unit: Union[Application, Unit], json_schema: dict
 ) -> bool:
     """Check whether relation data is valid based on json schema.
 
@@ -1199,13 +1139,12 @@ class TLSCertificatesProvidesV3(Object):
         return _load_relation_data(relation.data[self.charm.app])
 
     def _add_certificate(
-        self,
-        relation_id: int,
-        certificate: str,
-        certificate_signing_request: str,
-        ca: str,
-        chain: List[str],
-        recommended_expiry_notification_time: Optional[int] = None,
+            self,
+            relation_id: int,
+            certificate: str,
+            certificate_signing_request: str,
+            ca: str,
+            chain: List[str],
     ) -> None:
         """Add certificate to relation data.
 
@@ -1215,8 +1154,6 @@ class TLSCertificatesProvidesV3(Object):
             certificate_signing_request (str): Certificate Signing Request
             ca (str): CA Certificate
             chain (list): CA Chain
-            recommended_expiry_notification_time (int):
-                Time in hours before the certificate expires to notify the user.
 
         Returns:
             None
@@ -1234,7 +1171,6 @@ class TLSCertificatesProvidesV3(Object):
             "certificate_signing_request": certificate_signing_request,
             "ca": ca,
             "chain": chain,
-            "recommended_expiry_notification_time": recommended_expiry_notification_time,
         }
         provider_relation_data = self._load_app_relation_data(relation)
         provider_certificates = provider_relation_data.get("certificates", [])
@@ -1246,10 +1182,10 @@ class TLSCertificatesProvidesV3(Object):
         relation.data[self.model.app]["certificates"] = json.dumps(certificates)
 
     def _remove_certificate(
-        self,
-        relation_id: int,
-        certificate: Optional[str] = None,
-        certificate_signing_request: Optional[str] = None,
+            self,
+            relation_id: int,
+            certificate: Optional[str] = None,
+            certificate_signing_request: Optional[str] = None,
     ) -> None:
         """Remove certificate from a given relation based on user provided certificate or csr.
 
@@ -1276,8 +1212,8 @@ class TLSCertificatesProvidesV3(Object):
             if certificate and certificate_dict["certificate"] == certificate:
                 certificates.remove(certificate_dict)
             if (
-                certificate_signing_request
-                and certificate_dict["certificate_signing_request"] == certificate_signing_request
+                    certificate_signing_request
+                    and certificate_dict["certificate_signing_request"] == certificate_signing_request
             ):
                 certificates.remove(certificate_dict)
         relation.data[self.model.app]["certificates"] = json.dumps(certificates)
@@ -1295,13 +1231,12 @@ class TLSCertificatesProvidesV3(Object):
             relation.data[self.model.app]["certificates"] = json.dumps(provider_certificates)
 
     def set_relation_certificate(
-        self,
-        certificate: str,
-        certificate_signing_request: str,
-        ca: str,
-        chain: List[str],
-        relation_id: int,
-        recommended_expiry_notification_time: Optional[int] = None,
+            self,
+            certificate: str,
+            certificate_signing_request: str,
+            ca: str,
+            chain: List[str],
+            relation_id: int,
     ) -> None:
         """Add certificates to relation data.
 
@@ -1311,8 +1246,6 @@ class TLSCertificatesProvidesV3(Object):
             ca (str): CA Certificate
             chain (list): CA Chain
             relation_id (int): Juju relation ID
-            recommended_expiry_notification_time (int):
-                Recommended time in hours before the certificate expires to notify the user.
 
         Returns:
             None
@@ -1334,7 +1267,6 @@ class TLSCertificatesProvidesV3(Object):
             certificate_signing_request=certificate_signing_request.strip(),
             ca=ca.strip(),
             chain=[cert.strip() for cert in chain],
-            recommended_expiry_notification_time=recommended_expiry_notification_time,
         )
 
     def remove_certificate(self, certificate: str) -> None:
@@ -1353,7 +1285,7 @@ class TLSCertificatesProvidesV3(Object):
             self._remove_certificate(certificate=certificate, relation_id=certificate_relation.id)
 
     def get_issued_certificates(
-        self, relation_id: Optional[int] = None
+            self, relation_id: Optional[int] = None
     ) -> List[ProviderCertificate]:
         """Return a List of issued (non revoked) certificates.
 
@@ -1364,7 +1296,7 @@ class TLSCertificatesProvidesV3(Object):
         return [certificate for certificate in provider_certificates if not certificate.revoked]
 
     def get_provider_certificates(
-        self, relation_id: Optional[int] = None
+            self, relation_id: Optional[int] = None
     ) -> List[ProviderCertificate]:
         """Return a List of issued certificates.
 
@@ -1388,13 +1320,6 @@ class TLSCertificatesProvidesV3(Object):
             provider_relation_data = self._load_app_relation_data(relation)
             provider_certificates = provider_relation_data.get("certificates", [])
             for certificate in provider_certificates:
-                try:
-                    certificate_object = x509.load_pem_x509_certificate(
-                        data=certificate["certificate"].encode()
-                    )
-                except ValueError as e:
-                    logger.error("Could not load certificate - Skipping: %s", e)
-                    continue
                 provider_certificate = ProviderCertificate(
                     relation_id=relation.id,
                     application_name=relation.app.name,
@@ -1403,10 +1328,6 @@ class TLSCertificatesProvidesV3(Object):
                     ca=certificate["ca"],
                     chain=certificate["chain"],
                     revoked=certificate.get("revoked", False),
-                    expiry_time=certificate_object.not_valid_after_utc,
-                    expiry_notification_time=certificate.get(
-                        "recommended_expiry_notification_time"
-                    ),
                 )
                 certificates.append(provider_certificate)
         return certificates
@@ -1471,7 +1392,7 @@ class TLSCertificatesProvidesV3(Object):
                 self.remove_certificate(certificate=certificate.certificate)
 
     def get_outstanding_certificate_requests(
-        self, relation_id: Optional[int] = None
+            self, relation_id: Optional[int] = None
     ) -> List[RequirerCSR]:
         """Return CSR's for which no certificate has been issued.
 
@@ -1485,9 +1406,9 @@ class TLSCertificatesProvidesV3(Object):
         outstanding_csrs: List[RequirerCSR] = []
         for relation_csr in requirer_csrs:
             if not self.certificate_issued_for_csr(
-                app_name=relation_csr.application_name,
-                csr=relation_csr.csr,
-                relation_id=relation_id,
+                    app_name=relation_csr.application_name,
+                    csr=relation_csr.csr,
+                    relation_id=relation_id,
             ):
                 outstanding_csrs.append(relation_csr)
         return outstanding_csrs
@@ -1536,7 +1457,7 @@ class TLSCertificatesProvidesV3(Object):
         return relation_csrs
 
     def certificate_issued_for_csr(
-        self, app_name: str, csr: str, relation_id: Optional[int]
+            self, app_name: str, csr: str, relation_id: Optional[int]
     ) -> bool:
         """Check whether a certificate has been issued for a given CSR.
 
@@ -1561,20 +1482,18 @@ class TLSCertificatesRequiresV3(Object):
     on = CertificatesRequirerCharmEvents()  # type: ignore[reportAssignmentType]
 
     def __init__(
-        self,
-        charm: CharmBase,
-        relationship_name: str,
-        expiry_notification_time: Optional[int] = None,
+            self,
+            charm: CharmBase,
+            relationship_name: str,
+            expiry_notification_time: int = 168,
     ):
         """Generate/use private key and observes relation changed event.
 
         Args:
             charm: Charm object
             relationship_name: Juju relation name
-            expiry_notification_time (int): Number of hours prior to certificate expiry.
-                Used to trigger the CertificateExpiring event.
-                This value is used as a recommendation only,
-                The actual value is calculated taking into account the provider's recommendation.
+            expiry_notification_time (int): Time difference between now and expiry (in hours).
+                Used to trigger the CertificateExpiring event. Default: 7 days.
         """
         super().__init__(charm, relationship_name)
         if not JujuVersion.from_environ().has_secrets:
@@ -1635,25 +1554,9 @@ class TLSCertificatesRequiresV3(Object):
             if not certificate:
                 logger.warning("No certificate found in relation data - Skipping")
                 continue
-            try:
-                certificate_object = x509.load_pem_x509_certificate(data=certificate.encode())
-            except ValueError as e:
-                logger.error("Could not load certificate - Skipping: %s", e)
-                continue
             ca = provider_certificate_dict.get("ca")
             chain = provider_certificate_dict.get("chain", [])
             csr = provider_certificate_dict.get("certificate_signing_request")
-            recommended_expiry_notification_time = provider_certificate_dict.get(
-                "recommended_expiry_notification_time"
-            )
-            expiry_time = certificate_object.not_valid_after_utc
-            validity_start_time = certificate_object.not_valid_before_utc
-            expiry_notification_time = calculate_expiry_notification_time(
-                validity_start_time=validity_start_time,
-                expiry_time=expiry_time,
-                provider_recommended_notification_time=recommended_expiry_notification_time,
-                requirer_recommended_notification_time=self.expiry_notification_time,
-            )
             if not csr:
                 logger.warning("No CSR found in relation data - Skipping")
                 continue
@@ -1666,8 +1569,6 @@ class TLSCertificatesRequiresV3(Object):
                 ca=ca,
                 chain=chain,
                 revoked=revoked,
-                expiry_time=expiry_time,
-                expiry_notification_time=expiry_notification_time,
             )
             provider_certificates.append(provider_certificate)
         return provider_certificates
@@ -1733,7 +1634,7 @@ class TLSCertificatesRequiresV3(Object):
         )
 
     def request_certificate_creation(
-        self, certificate_signing_request: bytes, is_ca: bool = False
+            self, certificate_signing_request: bytes, is_ca: bool = False
     ) -> None:
         """Request TLS certificate to provider charm.
 
@@ -1772,7 +1673,7 @@ class TLSCertificatesRequiresV3(Object):
         logger.info("Certificate revocation sent to provider")
 
     def request_certificate_renewal(
-        self, old_certificate_signing_request: bytes, new_certificate_signing_request: bytes
+            self, old_certificate_signing_request: bytes, new_certificate_signing_request: bytes
     ) -> None:
         """Renew certificate.
 
@@ -1817,16 +1718,20 @@ class TLSCertificatesRequiresV3(Object):
         expiring_certificates: List[ProviderCertificate] = []
         for requirer_csr in self.get_certificate_signing_requests(fulfilled_only=True):
             if cert := self._find_certificate_in_relation_data(requirer_csr.csr):
-                if not cert.expiry_time or not cert.expiry_notification_time:
+                expiry_time = _get_certificate_expiry_time(cert.certificate)
+                if not expiry_time:
                     continue
-                if datetime.now(timezone.utc) > cert.expiry_notification_time:
+                expiry_notification_time = expiry_time - timedelta(
+                    hours=self.expiry_notification_time
+                )
+                if datetime.now(timezone.utc) > expiry_notification_time:
                     expiring_certificates.append(cert)
         return expiring_certificates
 
     def get_certificate_signing_requests(
-        self,
-        fulfilled_only: bool = False,
-        unfulfilled_only: bool = False,
+            self,
+            fulfilled_only: bool = False,
+            unfulfilled_only: bool = False,
     ) -> List[RequirerCSR]:
         """Get the list of CSR's that were sent to the provider.
 
@@ -1879,15 +1784,9 @@ class TLSCertificatesRequiresV3(Object):
         ]
         for certificate in provider_certificates:
             if certificate.csr in requirer_csrs:
-                csr_in_sha256_hex = get_sha256_hex(certificate.csr)
                 if certificate.revoked:
                     with suppress(SecretNotFoundError):
-                        logger.debug(
-                            "Removing secret with label %s",
-                            f"{LIBID}-{csr_in_sha256_hex}",
-                        )
-                        secret = self.model.get_secret(
-                            label=f"{LIBID}-{csr_in_sha256_hex}")
+                        secret = self.model.get_secret(label=f"{LIBID}-{certificate.csr}")
                         secret.remove_all_revisions()
                     self.on.certificate_invalidated.emit(
                         reason="revoked",
@@ -1898,24 +1797,16 @@ class TLSCertificatesRequiresV3(Object):
                     )
                 else:
                     try:
-                        logger.debug(
-                            "Setting secret with label %s", f"{LIBID}-{csr_in_sha256_hex}"
-                        )
-                        secret = self.model.get_secret(label=f"{LIBID}-{csr_in_sha256_hex}")
-                        secret.set_content(
-                            {"certificate": certificate.certificate, "csr": certificate.csr}
-                        )
+                        secret = self.model.get_secret(label=f"{LIBID}-{certificate.csr}")
+                        secret.set_content({"certificate": certificate.certificate})
                         secret.set_info(
-                            expire=self._get_next_secret_expiry_time(certificate),
+                            expire=self._get_next_secret_expiry_time(certificate.certificate),
                         )
                     except SecretNotFoundError:
-                        logger.debug(
-                            "Creating new secret with label %s", f"{LIBID}-{csr_in_sha256_hex}"
-                        )
                         secret = self.charm.unit.add_secret(
-                            {"certificate": certificate.certificate, "csr": certificate.csr},
-                            label=f"{LIBID}-{csr_in_sha256_hex}",
-                            expire=self._get_next_secret_expiry_time(certificate),
+                            {"certificate": certificate.certificate},
+                            label=f"{LIBID}-{certificate.csr}",
+                            expire=self._get_next_secret_expiry_time(certificate.certificate),
                         )
                     self.on.certificate_available.emit(
                         certificate_signing_request=certificate.csr,
@@ -1924,7 +1815,7 @@ class TLSCertificatesRequiresV3(Object):
                         chain=certificate.chain,
                     )
 
-    def _get_next_secret_expiry_time(self, certificate: ProviderCertificate) -> Optional[datetime]:
+    def _get_next_secret_expiry_time(self, certificate: str) -> Optional[datetime]:
         """Return the expiry time or expiry notification time.
 
         Extracts the expiry time from the provided certificate, calculates the
@@ -1932,18 +1823,17 @@ class TLSCertificatesRequiresV3(Object):
         the future.
 
         Args:
-            certificate: ProviderCertificate object
+            certificate: x509 certificate
 
         Returns:
             Optional[datetime]: None if the certificate expiry time cannot be read,
                                 next expiry time otherwise.
         """
-        if not certificate.expiry_time or not certificate.expiry_notification_time:
+        expiry_time = _get_certificate_expiry_time(certificate)
+        if not expiry_time:
             return None
-        return _get_closest_future_time(
-            certificate.expiry_notification_time,
-            certificate.expiry_time,
-        )
+        expiry_notification_time = expiry_time - timedelta(hours=self.expiry_notification_time)
+        return _get_closest_future_time(expiry_notification_time, expiry_time)
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle Relation Broken Event.
@@ -1977,26 +1867,27 @@ class TLSCertificatesRequiresV3(Object):
         """
         if not event.secret.label or not event.secret.label.startswith(f"{LIBID}-"):
             return
-        csr = event.secret.get_content()["csr"]
+        csr = event.secret.label[len(f"{LIBID}-") :]
         provider_certificate = self._find_certificate_in_relation_data(csr)
         if not provider_certificate:
             # A secret expired but we did not find matching certificate. Cleaning up
             event.secret.remove_all_revisions()
             return
 
-        if not provider_certificate.expiry_time:
+        expiry_time = _get_certificate_expiry_time(provider_certificate.certificate)
+        if not expiry_time:
             # A secret expired but matching certificate is invalid. Cleaning up
             event.secret.remove_all_revisions()
             return
 
-        if datetime.now(timezone.utc) < provider_certificate.expiry_time:
+        if datetime.now(timezone.utc) < expiry_time:
             logger.warning("Certificate almost expired")
             self.on.certificate_expiring.emit(
                 certificate=provider_certificate.certificate,
-                expiry=provider_certificate.expiry_time.isoformat(),
+                expiry=expiry_time.isoformat(),
             )
             event.secret.set_info(
-                expire=provider_certificate.expiry_time,
+                expire=_get_certificate_expiry_time(provider_certificate.certificate),
             )
         else:
             logger.warning("Certificate is expired")
