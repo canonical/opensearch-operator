@@ -158,7 +158,7 @@ async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) 
     result = []
     for shards_collection in response["shards"]:
         for shard in shards_collection:
-            node_name_split = nodes[shard["node"]]["name"].split("-")
+            node_name_split = nodes[shard["node"]]["name"].split(".")[0].split("-")
             result.append(
                 Shard(
                     index=index_name,

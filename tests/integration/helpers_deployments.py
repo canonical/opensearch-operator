@@ -33,6 +33,7 @@ class Unit:
     def __init__(
         self,
         id: int,
+        short_name: str,
         name: str,
         ip: str,
         hostname: str,
@@ -43,6 +44,7 @@ class Unit:
         app_status: Status,
     ):
         self.id = id
+        self.short_name = short_name
         self.name = name
         self.ip = ip
         self.hostname = hostname
@@ -97,7 +99,7 @@ def _progress_line(units: List[Unit]) -> str:
     for u in units:
         if not log:
             log = (
-                f"\n\tapp: {u.name.split('-')[0]} {u.app_status.value} -- "
+                f"\n\tapp: {u.short_name.split('-')[0]} {u.app_status.value} -- "
                 f"message: {u.app_status.message}\n"
             )
 
@@ -132,7 +134,8 @@ async def get_application_units(ops_test: OpsTest, app: str) -> List[Unit]:
 
         unit = Unit(
             id=unit_id,
-            name=u_name.replace("/", "-"),
+            short_name=u_name.replace("/", "-"),
+            name=f"{u_name.replace('/', '-')}.{ops_test.model.uuid}",
             ip=unit["public-address"],
             hostname=await get_unit_hostname(ops_test, unit_id, app),
             is_leader=unit.get("leader", False),
