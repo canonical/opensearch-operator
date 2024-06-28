@@ -100,7 +100,6 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
 #######################################################################
 
 
-@pytest.mark.skip()
 @pytest.mark.group("happy_path_upgrade")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
