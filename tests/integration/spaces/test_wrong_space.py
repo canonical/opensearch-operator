@@ -10,7 +10,13 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, get_application_unit_ids
+from ..helpers import (
+    APP_NAME,
+    IDLE_PERIOD,
+    MODEL_CONFIG,
+    SERIES,
+    get_application_unit_ids,
+)
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
@@ -59,6 +65,8 @@ async def test_build_and_deploy(ops_test: OpsTest, lxd_spaces) -> None:
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units=DEFAULT_NUM_UNITS,
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == DEFAULT_NUM_UNITS
 
