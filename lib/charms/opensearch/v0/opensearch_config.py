@@ -3,7 +3,7 @@
 
 """Class for Setting configuration in opensearch config files."""
 import logging
-import socket
+from collections import namedtuple
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.constants_tls import CertType
@@ -134,6 +134,10 @@ class OpenSearchConfig:
         self._opensearch.config.put(
             self.CONFIG_YML, "network.host", ["_site_"] + self._opensearch.network_hosts
         )
+        if self._opensearch.host:
+            self._opensearch.config.put(
+                self.CONFIG_YML, "network.publish_host", self._opensearch.host
+            )
 
         self._opensearch.config.put(self.CONFIG_YML, "node.roles", roles)
         if node_temperature:
@@ -188,17 +192,9 @@ class OpenSearchConfig:
 
     def add_seed_hosts(self, cm_ips: List[str]):
         """Add CM nodes ips / host names to the seed host list of this unit."""
-        cm_ips_hostnames = set(cm_ips)
-        for ip in cm_ips:
-            try:
-                name, aliases, addresses = socket.gethostbyaddr(ip)
-                cm_ips_hostnames.update([name] + aliases + addresses)
-            except socket.herror:
-                # no ptr record - the IP is enough and the only thing we have
-                pass
-
+        cm_ips_set = set(cm_ips)
         with open(self._opensearch.paths.seed_hosts, "w+") as f:
-            lines = "\n".join([entry for entry in cm_ips_hostnames if entry.strip()])
+            lines = "\n".join([entry for entry in cm_ips_set if entry.strip()])
             f.write(f"{lines}\n")
 
     def cleanup_bootstrap_conf(self):
@@ -230,15 +226,29 @@ class OpenSearchConfig:
 
         Returns: True if host updated, False otherwise.
         """
-        old_hosts = set(self.load_node().get("network.host", []))
-        if not old_hosts:
-            # Unit not configured yet
-            return False
+        NetworkHost = namedtuple("NetworkHost", ["entry", "old", "new"])
 
-        hosts = set(["_site_"] + self._opensearch.network_hosts)
-        if old_hosts != hosts:
-            logger.info(f"Updating network.host from: {old_hosts} - to: {hosts}")
-            self._opensearch.config.put(self.CONFIG_YML, "network.host", hosts)
-            return True
+        node = self.load_node()
+        result = False
+        for host in [
+            NetworkHost(
+                "network.host",
+                set(node.get("network.host", [])),
+                set(["_site_"] + self._opensearch.network_hosts),
+            ),
+            NetworkHost(
+                "network.publish_host",
+                set(node.get("network.publish_host", [])),
+                set(self._opensearch.host),
+            ),
+        ]:
+            if not host.old:
+                # Unit not configured yet
+                continue
 
-        return False
+            if host.old != host.new:
+                logger.info(f"Updating {host.entry} from: {host.old} - to: {host.new}")
+                self._opensearch.config.put(self.CONFIG_YML, host.entry, host.new)
+                result = True
+
+        return result

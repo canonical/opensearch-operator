@@ -59,6 +59,7 @@ class TestOpenSearchKNN(unittest.TestCase):
             return_value={}
         )
 
+    @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.update_host_if_needed")
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.is_node_up")
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
@@ -87,10 +88,12 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_lock_acquired,
         ___,
         mock_is_node_up,
+        mock_update_host_if_needed,
     ) -> None:
         """Tests entire config_changed event with KNN plugin."""
         mock_status.return_value = PluginState.ENABLED
         mock_is_enabled.return_value = False
+        mock_update_host_if_needed.return_value = False
         mock_is_started.return_value = True
         mock_version.return_value = "2.9.0"
         self.plugin_manager._keystore.add = MagicMock()
