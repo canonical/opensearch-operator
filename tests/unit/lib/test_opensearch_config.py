@@ -5,7 +5,7 @@
 import shutil
 import unittest
 from typing import Dict
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
@@ -36,6 +36,7 @@ class TestOpenSearchConfig(unittest.TestCase):
 
         self.charm.opensearch = Mock()
         self.charm.opensearch.network_hosts = ["10.10.10.10"]
+        self.charm.opensearch.host = "20.20.20.20"
 
         self.charm.opensearch.paths = Mock()
         self.charm.opensearch.paths.conf = None
@@ -138,11 +139,8 @@ class TestOpenSearchConfig(unittest.TestCase):
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
         self.assertCountEqual(opensearch_conf["plugins.security.nodes_dn"], ["10.10.10.10"])
 
-    @patch("socket.gethostbyaddr")
-    def test_set_node_and_cleanup_if_bootstrapped(self, gethostbyaddr):
+    def test_set_node_and_cleanup_if_bootstrapped(self):
         """Test setting the core config of a node."""
-        gethostbyaddr.return_value = "hostname.com", ["alias1", "alias2"], ["10.10.10.10"]
-
         app = App(model_uuid=self.charm.model.uuid, name=self.charm.app.name)
         self.opensearch_config.set_node(
             app=app,
@@ -150,7 +148,7 @@ class TestOpenSearchConfig(unittest.TestCase):
             unit_name=self.charm.unit_name,
             roles=["cluster_manager", "data"],
             cm_names=["cm1"],
-            cm_ips=["10.10.10.10"],
+            cm_ips=["20.20.20.20"],
             contribute_to_bootstrap=True,
             node_temperature="hot",
         )
@@ -160,6 +158,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         self.assertEqual(opensearch_conf["node.attr.temp"], "hot")
         self.assertEqual(opensearch_conf["node.attr.app_id"], app.id)
         self.assertEqual(opensearch_conf["network.host"], ["_site_", "10.10.10.10"])
+        self.assertEqual(opensearch_conf["network.publish_host"], "20.20.20.20")
         self.assertEqual(opensearch_conf["node.roles"], ["cluster_manager", "data"])
         self.assertEqual(opensearch_conf["discovery.seed_providers"], "file")
         self.assertEqual(opensearch_conf["cluster.initial_cluster_manager_nodes"], ["cm1"])
@@ -179,7 +178,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         # test unicast_hosts content
         with open(self.seed_unicast_hosts, "r") as f:
             stored = set([line.strip() for line in f.readlines()])
-            expected = {"hostname.com", "alias1", "alias2", "10.10.10.10"}
+            expected = {"20.20.20.20"}
             self.assertEqual(stored, expected)
 
     def tearDown(self) -> None:
