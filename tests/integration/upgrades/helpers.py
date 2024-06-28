@@ -3,11 +3,14 @@
 # See LICENSE file for licensing details.
 
 import logging
-import time
 
 from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
+from ..ha.helpers import (
+    assert_continuous_writes_consistency,
+    assert_continuous_writes_increasing,
+)
 from ..helpers import APP_NAME, IDLE_PERIOD, app_name, run_action
 from ..helpers_deployments import get_application_units, wait_until
 
@@ -78,6 +81,5 @@ async def assert_upgrade_to_local(
         )
 
     # continuous writes checks
-    writes_count = await cwrites.count()
-    time.sleep(30)
-    assert await cwrites.count() > writes_count, "Continuous writes not increasing"
+    await assert_continuous_writes_increasing(cwrites)
+    await assert_continuous_writes_consistency(ops_test, cwrites, [app])
