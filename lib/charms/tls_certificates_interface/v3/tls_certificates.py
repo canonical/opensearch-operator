@@ -463,12 +463,12 @@ class CertificateAvailableEvent(EventBase):
     """Charm Event triggered when a TLS certificate is available."""
 
     def __init__(
-            self,
-            handle: Handle,
-            certificate: str,
-            certificate_signing_request: str,
-            ca: str,
-            chain: List[str],
+        self,
+        handle: Handle,
+        certificate: str,
+        certificate_signing_request: str,
+        ca: str,
+        chain: List[str],
     ):
         super().__init__(handle)
         self.certificate = certificate
@@ -527,13 +527,13 @@ class CertificateInvalidatedEvent(EventBase):
     """Charm Event triggered when a TLS certificate is invalidated."""
 
     def __init__(
-            self,
-            handle: Handle,
-            reason: Literal["expired", "revoked"],
-            certificate: str,
-            certificate_signing_request: str,
-            ca: str,
-            chain: List[str],
+        self,
+        handle: Handle,
+        reason: Literal["expired", "revoked"],
+        certificate: str,
+        certificate_signing_request: str,
+        ca: str,
+        chain: List[str],
     ):
         super().__init__(handle)
         self.reason = reason
@@ -580,11 +580,11 @@ class CertificateCreationRequestEvent(EventBase):
     """Charm Event triggered when a TLS certificate is required."""
 
     def __init__(
-            self,
-            handle: Handle,
-            certificate_signing_request: str,
-            relation_id: int,
-            is_ca: bool = False,
+        self,
+        handle: Handle,
+        certificate_signing_request: str,
+        relation_id: int,
+        is_ca: bool = False,
     ):
         super().__init__(handle)
         self.certificate_signing_request = certificate_signing_request
@@ -610,12 +610,12 @@ class CertificateRevocationRequestEvent(EventBase):
     """Charm Event triggered when a TLS certificate needs to be revoked."""
 
     def __init__(
-            self,
-            handle: Handle,
-            certificate: str,
-            certificate_signing_request: str,
-            ca: str,
-            chain: str,
+        self,
+        handle: Handle,
+        certificate: str,
+        certificate_signing_request: str,
+        ca: str,
+        chain: str,
     ):
         super().__init__(handle)
         self.certificate = certificate
@@ -700,11 +700,11 @@ def _get_certificate_expiry_time(certificate: str) -> Optional[datetime]:
 
 
 def generate_ca(
-        private_key: bytes,
-        subject: str,
-        private_key_password: Optional[bytes] = None,
-        validity: int = 365,
-        country: str = "US",
+    private_key: bytes,
+    subject: str,
+    private_key_password: Optional[bytes] = None,
+    validity: int = 365,
+    country: str = "US",
 ) -> bytes:
     """Generate a CA Certificate.
 
@@ -770,10 +770,10 @@ def generate_ca(
 
 
 def get_certificate_extensions(
-        authority_key_identifier: bytes,
-        csr: x509.CertificateSigningRequest,
-        alt_names: Optional[List[str]],
-        is_ca: bool,
+    authority_key_identifier: bytes,
+    csr: x509.CertificateSigningRequest,
+    alt_names: Optional[List[str]],
+    is_ca: bool,
 ) -> List[x509.Extension]:
     """Generate a list of certificate extensions from a CSR and other known information.
 
@@ -869,13 +869,13 @@ def get_certificate_extensions(
 
 
 def generate_certificate(
-        csr: bytes,
-        ca: bytes,
-        ca_key: bytes,
-        ca_key_password: Optional[bytes] = None,
-        validity: int = 365,
-        alt_names: Optional[List[str]] = None,
-        is_ca: bool = False,
+    csr: bytes,
+    ca: bytes,
+    ca_key: bytes,
+    ca_key_password: Optional[bytes] = None,
+    validity: int = 365,
+    alt_names: Optional[List[str]] = None,
+    is_ca: bool = False,
 ) -> bytes:
     """Generate a TLS certificate based on a CSR.
 
@@ -928,9 +928,9 @@ def generate_certificate(
 
 
 def generate_private_key(
-        password: Optional[bytes] = None,
-        key_size: int = 2048,
-        public_exponent: int = 65537,
+    password: Optional[bytes] = None,
+    key_size: int = 2048,
+    public_exponent: int = 65537,
 ) -> bytes:
     """Generate a private key.
 
@@ -959,20 +959,20 @@ def generate_private_key(
 
 
 def generate_csr(  # noqa: C901
-        private_key: bytes,
-        subject: str,
-        add_unique_id_to_subject_name: bool = True,
-        organization: Optional[str] = None,
-        email_address: Optional[str] = None,
-        country_name: Optional[str] = None,
-        state_or_province_name: Optional[str] = None,
-        locality_name: Optional[str] = None,
-        private_key_password: Optional[bytes] = None,
-        sans: Optional[List[str]] = None,
-        sans_oid: Optional[List[str]] = None,
-        sans_ip: Optional[List[str]] = None,
-        sans_dns: Optional[List[str]] = None,
-        additional_critical_extensions: Optional[List] = None,
+    private_key: bytes,
+    subject: str,
+    add_unique_id_to_subject_name: bool = True,
+    organization: Optional[str] = None,
+    email_address: Optional[str] = None,
+    country_name: Optional[str] = None,
+    state_or_province_name: Optional[str] = None,
+    locality_name: Optional[str] = None,
+    private_key_password: Optional[bytes] = None,
+    sans: Optional[List[str]] = None,
+    sans_oid: Optional[List[str]] = None,
+    sans_ip: Optional[List[str]] = None,
+    sans_dns: Optional[List[str]] = None,
+    additional_critical_extensions: Optional[List] = None,
 ) -> bytes:
     """Generate a CSR using private key and subject.
 
@@ -1054,16 +1054,16 @@ def csr_matches_certificate(csr: str, cert: str) -> bool:
         cert_object = x509.load_pem_x509_certificate(cert.encode("utf-8"))
 
         if csr_object.public_key().public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         ) != cert_object.public_key().public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         ):
             return False
         if (
-                csr_object.public_key().public_numbers().n  # type: ignore[union-attr]
-                != cert_object.public_key().public_numbers().n  # type: ignore[union-attr]
+            csr_object.public_key().public_numbers().n  # type: ignore[union-attr]
+            != cert_object.public_key().public_numbers().n  # type: ignore[union-attr]
         ):
             return False
     except ValueError:
@@ -1073,7 +1073,7 @@ def csr_matches_certificate(csr: str, cert: str) -> bool:
 
 
 def _relation_data_is_valid(
-        relation: Relation, app_or_unit: Union[Application, Unit], json_schema: dict
+    relation: Relation, app_or_unit: Union[Application, Unit], json_schema: dict
 ) -> bool:
     """Check whether relation data is valid based on json schema.
 
@@ -1139,12 +1139,12 @@ class TLSCertificatesProvidesV3(Object):
         return _load_relation_data(relation.data[self.charm.app])
 
     def _add_certificate(
-            self,
-            relation_id: int,
-            certificate: str,
-            certificate_signing_request: str,
-            ca: str,
-            chain: List[str],
+        self,
+        relation_id: int,
+        certificate: str,
+        certificate_signing_request: str,
+        ca: str,
+        chain: List[str],
     ) -> None:
         """Add certificate to relation data.
 
@@ -1182,10 +1182,10 @@ class TLSCertificatesProvidesV3(Object):
         relation.data[self.model.app]["certificates"] = json.dumps(certificates)
 
     def _remove_certificate(
-            self,
-            relation_id: int,
-            certificate: Optional[str] = None,
-            certificate_signing_request: Optional[str] = None,
+        self,
+        relation_id: int,
+        certificate: Optional[str] = None,
+        certificate_signing_request: Optional[str] = None,
     ) -> None:
         """Remove certificate from a given relation based on user provided certificate or csr.
 
@@ -1212,8 +1212,8 @@ class TLSCertificatesProvidesV3(Object):
             if certificate and certificate_dict["certificate"] == certificate:
                 certificates.remove(certificate_dict)
             if (
-                    certificate_signing_request
-                    and certificate_dict["certificate_signing_request"] == certificate_signing_request
+                certificate_signing_request
+                and certificate_dict["certificate_signing_request"] == certificate_signing_request
             ):
                 certificates.remove(certificate_dict)
         relation.data[self.model.app]["certificates"] = json.dumps(certificates)
@@ -1231,12 +1231,12 @@ class TLSCertificatesProvidesV3(Object):
             relation.data[self.model.app]["certificates"] = json.dumps(provider_certificates)
 
     def set_relation_certificate(
-            self,
-            certificate: str,
-            certificate_signing_request: str,
-            ca: str,
-            chain: List[str],
-            relation_id: int,
+        self,
+        certificate: str,
+        certificate_signing_request: str,
+        ca: str,
+        chain: List[str],
+        relation_id: int,
     ) -> None:
         """Add certificates to relation data.
 
@@ -1285,7 +1285,7 @@ class TLSCertificatesProvidesV3(Object):
             self._remove_certificate(certificate=certificate, relation_id=certificate_relation.id)
 
     def get_issued_certificates(
-            self, relation_id: Optional[int] = None
+        self, relation_id: Optional[int] = None
     ) -> List[ProviderCertificate]:
         """Return a List of issued (non revoked) certificates.
 
@@ -1296,7 +1296,7 @@ class TLSCertificatesProvidesV3(Object):
         return [certificate for certificate in provider_certificates if not certificate.revoked]
 
     def get_provider_certificates(
-            self, relation_id: Optional[int] = None
+        self, relation_id: Optional[int] = None
     ) -> List[ProviderCertificate]:
         """Return a List of issued certificates.
 
@@ -1392,7 +1392,7 @@ class TLSCertificatesProvidesV3(Object):
                 self.remove_certificate(certificate=certificate.certificate)
 
     def get_outstanding_certificate_requests(
-            self, relation_id: Optional[int] = None
+        self, relation_id: Optional[int] = None
     ) -> List[RequirerCSR]:
         """Return CSR's for which no certificate has been issued.
 
@@ -1406,9 +1406,9 @@ class TLSCertificatesProvidesV3(Object):
         outstanding_csrs: List[RequirerCSR] = []
         for relation_csr in requirer_csrs:
             if not self.certificate_issued_for_csr(
-                    app_name=relation_csr.application_name,
-                    csr=relation_csr.csr,
-                    relation_id=relation_id,
+                app_name=relation_csr.application_name,
+                csr=relation_csr.csr,
+                relation_id=relation_id,
             ):
                 outstanding_csrs.append(relation_csr)
         return outstanding_csrs
@@ -1457,7 +1457,7 @@ class TLSCertificatesProvidesV3(Object):
         return relation_csrs
 
     def certificate_issued_for_csr(
-            self, app_name: str, csr: str, relation_id: Optional[int]
+        self, app_name: str, csr: str, relation_id: Optional[int]
     ) -> bool:
         """Check whether a certificate has been issued for a given CSR.
 
@@ -1482,10 +1482,10 @@ class TLSCertificatesRequiresV3(Object):
     on = CertificatesRequirerCharmEvents()  # type: ignore[reportAssignmentType]
 
     def __init__(
-            self,
-            charm: CharmBase,
-            relationship_name: str,
-            expiry_notification_time: int = 168,
+        self,
+        charm: CharmBase,
+        relationship_name: str,
+        expiry_notification_time: int = 168,
     ):
         """Generate/use private key and observes relation changed event.
 
@@ -1634,7 +1634,7 @@ class TLSCertificatesRequiresV3(Object):
         )
 
     def request_certificate_creation(
-            self, certificate_signing_request: bytes, is_ca: bool = False
+        self, certificate_signing_request: bytes, is_ca: bool = False
     ) -> None:
         """Request TLS certificate to provider charm.
 
@@ -1673,7 +1673,7 @@ class TLSCertificatesRequiresV3(Object):
         logger.info("Certificate revocation sent to provider")
 
     def request_certificate_renewal(
-            self, old_certificate_signing_request: bytes, new_certificate_signing_request: bytes
+        self, old_certificate_signing_request: bytes, new_certificate_signing_request: bytes
     ) -> None:
         """Renew certificate.
 
@@ -1729,9 +1729,9 @@ class TLSCertificatesRequiresV3(Object):
         return expiring_certificates
 
     def get_certificate_signing_requests(
-            self,
-            fulfilled_only: bool = False,
-            unfulfilled_only: bool = False,
+        self,
+        fulfilled_only: bool = False,
+        unfulfilled_only: bool = False,
     ) -> List[RequirerCSR]:
         """Get the list of CSR's that were sent to the provider.
 
