@@ -125,7 +125,7 @@ def format_unit_name(unit: Union[Unit, str], app: App) -> str:
     """Format unit_name according the app."""
     if isinstance(unit, Unit):
         unit = unit.name
-    return f"{unit.replace('/', '-')}.{app.id}"
+    return f"{unit.replace('/', '-')}.{app.short_id}"
 
 
 def all_units(charm: "OpenSearchBaseCharm") -> List[Unit]:
