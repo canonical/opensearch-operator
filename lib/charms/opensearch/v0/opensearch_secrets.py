@@ -63,7 +63,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         self.framework.observe(self._charm.on.secret_changed, self._on_secret_changed)
 
-    def _on_secret_changed(self, event: SecretChangedEvent):
+    def _on_secret_changed(self, event: SecretChangedEvent):  # noqa: C901
         """Refresh secret and re-run corresponding actions if needed."""
         secret = event.secret
         secret.get_content(refresh=True)
@@ -116,7 +116,8 @@ class OpenSearchSecrets(Object, RelationDataStore):
         # Leader has to maintain TLS and Dashboards relation credentials
         if not is_leader and label_key == CertType.APP_ADMIN.val:
             self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
-            self._charm.is_tls_fully_configured()
+            if self._charm.is_tls_fully_configured():
+                self._charm.peers_data.put(Scope.UNIT, "tls_configured", True)
 
         elif is_leader and label_key == self._charm.secrets.password_key(KibanaserverUser):
             self._charm.opensearch_provider.update_dashboards_password()

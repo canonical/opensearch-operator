@@ -228,7 +228,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             trigger_rel_id=event.relation.id,
         )
 
-    def refresh_relation_data(self, event: EventBase) -> None:
+    def refresh_relation_data(self, event: EventBase, can_defer: bool = True) -> None:
         """Refresh the peer cluster rel data (new cm node, admin password change etc.)."""
         if not self.charm.unit.is_leader():
             return
@@ -287,7 +287,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             # are we potentially overriding stuff here?
             self.put_in_rel(data={peer_rel_data_key: rel_data.to_str()}, rel_id=rel_id)
 
-        if should_defer:
+        if can_defer and should_defer:
             event.defer()
 
     def _notify_if_wrong_integration(

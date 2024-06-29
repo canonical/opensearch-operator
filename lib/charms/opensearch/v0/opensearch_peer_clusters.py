@@ -354,6 +354,7 @@ class OpenSearchPeerClustersManager:
         if not current_deployment_desc:
             return None
 
+        logger.debug(f"\n\nDeployment desc: {current_deployment_desc}")
         return DeploymentDescription.from_dict(current_deployment_desc)
 
     def promote_to_main_orchestrator(self) -> None:

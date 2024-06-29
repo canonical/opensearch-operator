@@ -393,7 +393,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # In the case of the first units before TLS is initialized
         if not current_secrets:
-            if not self.unit.is_leader() or not self.opensearch_peer_cm.is_provider(typ="main"):
+            if not self.unit.is_leader():
                 event.defer()
             return
 
@@ -455,7 +455,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # we want to have the most up-to-date info broadcasted to related sub-clusters
         if self.opensearch_peer_cm.is_provider():
-            self.peer_cluster_provider.refresh_relation_data(event)
+            self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -760,8 +760,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
+        if self.is_tls_fully_configured():
+            self.peers_data.put(Scope.UNIT, "tls_configured", True)
+
         # In case of renewal of the unit transport layer cert - restart opensearch
-        if self.is_tls_fully_configured() and self.is_admin_user_configured() and renewal:
+        if renewal:
             self._restart_opensearch_event.emit()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
@@ -787,11 +790,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not unit_http_secrets or not unit_http_secrets.get("cert"):
             return False
 
-        stored = self._are_all_tls_resources_stored()
-        if stored:
-            self.peers_data.put(Scope.UNIT, "tls_configured", True)
-
-        return stored
+        return self._are_all_tls_resources_stored()
 
     def is_every_unit_marked_as_started(self) -> bool:
         """Check if every unit in the cluster is marked as started."""
@@ -1065,7 +1064,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.is_provider():
-            self.peer_cluster_provider.refresh_relation_data(event)
+            self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
     def _stop_opensearch(self, *, restart=False) -> None:
         """Stop OpenSearch if possible."""
@@ -1174,9 +1173,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.opensearch_peer_cm.can_start(deployment_desc):
             return False
 
+        if not self.is_admin_user_configured():
+            return False
+
+        # Case of the first "main" cluster to get started.
         if (
             not self.peers_data.get(Scope.APP, "security_index_initialised", False)
-            or not self.peers_data.get(Scope.APP, "admin_user_initialized", False)
             or not self.alt_hosts
         ):
             return (
