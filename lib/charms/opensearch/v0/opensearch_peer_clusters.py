@@ -30,8 +30,8 @@ from charms.opensearch.v0.models import (
     DeploymentType,
     Directive,
     Node,
+    PeerClusterApp,
     PeerClusterConfig,
-    PeerClusterFleetApps,
     PeerClusterOrchestrators,
     PeerClusterRelData,
     PeerClusterRelErrorData,
@@ -126,6 +126,7 @@ class OpenSearchPeerClustersManager:
             elif deployment_state.value in [
                 State.BLOCKED_WRONG_RELATED_CLUSTER,
                 State.BLOCKED_WAITING_FOR_RELATION,
+                State.ACTIVE,
             ]:
                 deployment_state = DeploymentState(value=State.ACTIVE)
                 pending_directives.remove(Directive.VALIDATE_CLUSTER_NAME)
@@ -400,11 +401,11 @@ class OpenSearchPeerClustersManager:
         full_cluster_planned_units = self._charm.app.planned_units()
         if self.is_consumer():
             if apps_in_fleet := self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
-                apps_in_fleet = PeerClusterFleetApps.from_dict(apps_in_fleet)
+                apps_in_fleet = [PeerClusterApp.from_dict(app) for app in apps_in_fleet.values()]
                 full_cluster_planned_units += sum(
                     [
                         p_cluster_app.planned_units
-                        for p_cluster_app in apps_in_fleet.values()
+                        for p_cluster_app in apps_in_fleet
                         if p_cluster_app.app.id != deployment_desc.app.id
                     ]
                 )
