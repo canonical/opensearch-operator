@@ -46,7 +46,7 @@ class OpenSearchSnap(OpenSearchDistribution):
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
 
-        # Random comment, just to trigger the CI 
+        # Random comment, just to trigger the CI
         for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=5)):
             with attempt:
                 cache = snap.SnapCache()
