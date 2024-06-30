@@ -419,6 +419,7 @@ class OpenSearchDistribution(ABC):
         except OpenSearchHttpError:
             # we try to get the most accurate description of the node
             conf_on_disk = self.config.load("opensearch.yml")
+            logger.debug(f"\n\nConf on disk: {conf_on_disk}\n")
             return Node(
                 name=self._charm.unit_name,
                 roles=conf_on_disk["node.roles"],

@@ -30,13 +30,13 @@ class Model(ABC, BaseModel):
             data = {ROOT_KEY: data}
         super().__init__(**data)
 
-    def to_str(self) -> str:
+    def to_str(self, by_alias: bool = False) -> str:
         """Deserialize object into a string."""
-        return self.json()
+        return self.json(by_alias=by_alias)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, by_alias: bool = False) -> Dict[str, Any]:
         """Deserialize object into a dict."""
-        return self.dict()
+        return self.dict(by_alias=by_alias)
 
     @classmethod
     def from_dict(cls, input_dict: Optional[Dict[str, Any]]):
@@ -239,8 +239,13 @@ class DeploymentDescription(Model):
 class S3RelDataCredentials(Model):
     """Model class for credentials passed on the PCluster relation."""
 
-    access_key: str
-    secret_key: str
+    access_key: str = Field(alias="access-key")
+    secret_key: str = Field(alias="secret-key")
+
+    class Config:
+        """Model config of this pydantic model."""
+
+        allow_population_by_field_name = True
 
 
 class PeerClusterRelDataCredentials(Model):
