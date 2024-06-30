@@ -321,7 +321,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():
-            logger.debug(f"\n\n__on_start: not apply directives / start... deferring \n")
+            logger.debug("\n\n__on_start: not apply directives / start... deferring \n")
             event.defer()
             return
 
@@ -354,13 +354,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             for user in OpenSearchSystemUsers:
                 self._put_or_update_internal_user_unit(user)
 
-        logger.debug(f"\n\n__on_start: setting TLS configured in RELATION\n")
+        logger.debug("\n\n__on_start: setting TLS configured in RELATION\n")
         self.peers_data.put(Scope.UNIT, "tls_configured", True)
 
         # configure clients auth
         self.opensearch_config.set_client_auth()
 
-        logger.debug(f"\n\n__on_start: EMITTING start...\n")
+        logger.debug("\n\n__on_start: EMITTING start...\n")
 
         # request the start of OpenSearch
         self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
@@ -372,25 +372,25 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # the deployment description hasn't finished being computed by the leader
             return False
 
-        logger.debug(f"\n_apply_peer_cm_directives_and_check_if_can_start...")
+        logger.debug("\n_apply_peer_cm_directives_and_check_if_can_start...")
 
         # check possibility to start
         if self.opensearch_peer_cm.can_start(deployment_desc):
-            logger.debug(f"\n\nself.opensearch_peer_cm.can_start \n")
+            logger.debug("\n\nself.opensearch_peer_cm.can_start \n")
             try:
                 nodes = self._get_nodes(False)
                 self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
             except OpenSearchHttpError:
-                logger.debug(f"\n\nself.opensearch_peer_cm.can_start -- HTTPError \n")
+                logger.debug("\n\nself.opensearch_peer_cm.can_start -- HTTPError \n")
                 return False
             except OpenSearchProvidedRolesException as e:
                 self.unit.status = BlockedStatus(str(e))
                 logger.debug(
-                    f"\n\nself.opensearch_peer_cm.can_start -- HOpenSearchProvidedRolesException \n"
+                    "\n\nself.opensearch_peer_cm.can_start -- HOpenSearchProvidedRolesException \n"
                 )
                 return False
 
-            logger.debug(f"\n\nself.opensearch_peer_cm.can_start True\n")
+            logger.debug("\n\nself.opensearch_peer_cm.can_start True\n")
             return True
 
         if self.unit.is_leader():
@@ -398,7 +398,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 deployment_desc, show_status_only_once=False
             )
 
-        logger.debug(f"\n\nself.opensearch_peer_cm.can_start False\n")
+        logger.debug("\n\nself.opensearch_peer_cm.can_start False\n")
         return False
 
     def _on_peer_relation_created(self, event: RelationCreatedEvent):
