@@ -6,10 +6,10 @@ import re
 from time import time_ns
 from typing import TYPE_CHECKING, List, Union
 
-from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import App
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import CharmBase
 from ops.model import ActiveStatus, StatusBase, Unit
 
