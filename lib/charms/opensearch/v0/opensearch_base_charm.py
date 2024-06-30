@@ -367,6 +367,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.can_start(deployment_desc):
             try:
                 nodes = self._get_nodes(False)
+                logger.debug(
+                    "\n\nvalidate_roles from _apply_peer_cm_directives_and_check_if_can_start"
+                )
                 self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
             except OpenSearchHttpError:
                 return False
@@ -909,6 +912,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             nodes = self._get_nodes(False)
 
             # validate the roles prior to starting
+            logger.debug("\n\nvalidate_roles from Start opensearch")
             self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
 
             # Set the configuration of the node
@@ -1515,6 +1519,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 )
 
             try:
+                logger.debug("\n\nvalidate_roles from compute and broadcast topology")
                 self.opensearch_peer_cm.validate_roles(current_nodes, on_new_unit=False)
             except OpenSearchProvidedRolesException as e:
                 logger.exception(e)
