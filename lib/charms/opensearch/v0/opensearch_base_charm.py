@@ -408,6 +408,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
+        # Store the "Admin" certificate, key and CA on the disk of the new unit
         self.tls.store_new_tls_resources(CertType.APP_ADMIN, current_secrets)
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
