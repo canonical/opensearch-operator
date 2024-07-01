@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 """Helpers for security related operations, such as password generation etc."""
-import logging
 import math
 import os
 import secrets
@@ -10,11 +9,9 @@ import string
 import subprocess
 import tempfile
 from datetime import datetime
-from types import SimpleNamespace
 from typing import Optional, Tuple
 
 import bcrypt
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from cryptography import x509
 
 # The unique Charmhub library identifier, never change it
@@ -26,9 +23,6 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
-
-
-logger = logging.getLogger(__name__)
 
 
 def hash_string(string: str) -> str:
@@ -123,38 +117,3 @@ def to_pkcs8(private_key: str, password: Optional[str] = None) -> str:
     finally:
         os.unlink(tmp_key.name)
         os.unlink(tmp_pkcs8_key.name)
-
-
-def run_cmd(command: str, args: str = None) -> SimpleNamespace:
-    """Run command.
-
-    Arg:
-        command: can contain arguments
-        args: command line arguments
-    """
-    if args is not None:
-        command = f"{command} {args}"
-
-    command = " ".join(command.split())
-
-    logger.debug(f"Executing command: {command}")
-
-    try:
-        output = subprocess.run(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True,
-            text=True,
-            encoding="utf-8",
-            timeout=25,
-            env=os.environ,
-        )
-
-        if output.returncode != 0:
-            logger.error(f"err: {output.stderr} / out: {output.stdout}")
-            raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
-
-        return SimpleNamespace(cmd=command, out=output.stdout, err=output.stderr)
-    except (TimeoutError, subprocess.TimeoutExpired):
-        raise OpenSearchCmdError(cmd=command)
