@@ -399,16 +399,16 @@ class OpenSearchPeerClustersManager:
 
         # validate the full-cluster wide count of cm+voting_only nodes to keep the quorum
         full_cluster_planned_units = self._charm.app.planned_units()
-        if self.is_consumer():
-            if apps_in_fleet := self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
-                apps_in_fleet = [PeerClusterApp.from_dict(app) for app in apps_in_fleet.values()]
-                full_cluster_planned_units += sum(
-                    [
-                        p_cluster_app.planned_units
-                        for p_cluster_app in apps_in_fleet
-                        if p_cluster_app.app.id != deployment_desc.app.id
-                    ]
-                )
+        # if self.is_consumer():
+        if apps_in_fleet := self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
+            apps_in_fleet = [PeerClusterApp.from_dict(app) for app in apps_in_fleet.values()]
+            full_cluster_planned_units += sum(
+                [
+                    p_cluster_app.planned_units
+                    for p_cluster_app in apps_in_fleet
+                    if p_cluster_app.app.id != deployment_desc.app.id
+                ]
+            )
 
         current_cluster_online_nodes = [
             node for node in nodes if node.app.id == deployment_desc.app.id

@@ -1540,6 +1540,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     temperature=temperature,
                 )
 
+            # TODO: remove this when we get rid of roles recomputing logic
             try:
                 self.opensearch_peer_cm.validate_roles(current_nodes, on_new_unit=False)
             except OpenSearchProvidedRolesException as e:
