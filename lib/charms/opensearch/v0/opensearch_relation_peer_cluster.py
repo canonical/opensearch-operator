@@ -800,7 +800,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         """Compute TLS related errors."""
         blocked_msg, should_sever_relation = None, False
 
-        if self.charm.is_tls_fully_configured():  # compare CAs
+        if self.charm.tls.all_tls_resources_stored():  # compare CAs
             unit_transport_ca_cert = self.charm.secrets.get_object(
                 Scope.UNIT, CertType.UNIT_TRANSPORT.val
             )["ca-cert"]

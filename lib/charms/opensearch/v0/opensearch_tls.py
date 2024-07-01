@@ -196,7 +196,7 @@ class OpenSearchTLS(Object):
         )
 
         # currently only make sure there is a CA
-        # workflow for replacement will be added later
+        # TODO: workflow for replacement will be added later
         if self._read_stored_ca() is None:
             self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val))
 
@@ -534,6 +534,7 @@ class OpenSearchTLS(Object):
                     if not exists(f"{self.certs_path}/{cert_type}.{extension}"):
                         return False
 
+        self.charm.peers_data.put(Scope.UNIT, "tls_configured", True)
         return True
 
     def all_certificates_available(self) -> bool:

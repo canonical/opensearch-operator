@@ -329,7 +329,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        if not self.is_admin_user_configured() or not self.is_tls_fully_configured():
+        if not self.is_admin_user_configured() or not self.tls.all_tls_resources_stored():
             if not self.model.get_relation("certificates"):
                 status = BlockedStatus(TLSRelationMissing)
             else:
@@ -719,7 +719,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.fail(f"{user_name} user not configured yet.")
             return
 
-        if not self.is_tls_fully_configured():
+        if not self.tls.all_tls_resources_stored():
             event.fail("TLS certificates not configured yet.")
             return
 
@@ -760,22 +760,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-        if renewal and self.is_admin_user_configured() and self.is_tls_fully_configured():
+        if renewal and self.is_admin_user_configured() and self.tls.all_tls_resources_stored():
             self._restart_opensearch_event.emit()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
-        if self.is_tls_fully_configured():
+        if self.tls.all_tls_resources_stored():
             return
 
         # Otherwise, we block.
         self.status.set(BlockedStatus(TLSRelationBrokenError))
-
-    def is_tls_fully_configured(self) -> bool:
-        """Check if TLS fully configured meaning the 3 certificates are present."""
-        if self.tls.all_tls_resources_stored():
-            self.peers_data.put(Scope.UNIT, "tls_configured", True)
-            return True
 
     def is_every_unit_marked_as_started(self) -> bool:
         """Check if every unit in the cluster is marked as started."""
@@ -824,7 +818,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._put_or_update_internal_user_leader(AdminUser)
 
         # we check if we need to generate the admin certificate if missing
-        if not self.is_tls_fully_configured():
+        if not self.tls.all_tls_resources_stored():
             if not self.model.get_relation("certificates"):
                 event.defer()
                 return
@@ -1575,7 +1569,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     }
                 ],
                 "tls_config": {"ca": ca},
-                "scheme": "https" if self.is_tls_fully_configured() else "http",
+                "scheme": "https" if self.tls.all_tls_resources_stored() else "http",
                 "basic_auth": {"username": f"{COSUser}", "password": f"{pwd}"},
             }
         ]
