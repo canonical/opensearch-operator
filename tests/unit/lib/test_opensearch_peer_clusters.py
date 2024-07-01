@@ -5,7 +5,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from charms.data_platform_libs.v0.data_interfaces import Scope
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchProvidedRolesException,
 )
@@ -20,7 +19,6 @@ from lib.charms.opensearch.v0.models import (
     DeploymentType,
     Directive,
     Node,
-    PeerClusterApp,
     PeerClusterConfig,
     StartMode,
     State,
@@ -111,8 +109,9 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
         is_peer_cluster_orchestrator_relation_set.return_value = False
         get_relation.return_value.units = set(self.p_units)
 
-        self.harness.set_leader(True)
         app = App(name="logs", model_uuid=self.charm.model.uuid)
+
+        self.peers_data.get_object = MagicMock()
 
         deployment_desc.return_value = DeploymentDescription(
             config=self.user_configs["roles_ok"],
@@ -136,15 +135,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                 for node in self.p_units[0:3]
             ]
 
-            self.peers_data.put(
-                Scope.APP,
-                "cluster_fleet_apps",
-                {
-                    app.name: PeerClusterApp(
-                        app=app, planned_units=4, units=[n.name for n in nodes]
-                    )
-                },
-            )
+            self.peers_data.get_object.return_value = None
             self.peer_cm.validate_roles(nodes=nodes, on_new_unit=True)
 
         with self.assertRaises(OpenSearchProvidedRolesException):
@@ -168,15 +159,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     unit_number=7,
                 )
             ]
-            self.peers_data.put(
-                Scope.APP,
-                "cluster_fleet_apps",
-                {
-                    app.name: PeerClusterApp(
-                        app=app, planned_units=5, units=[n.name for n in nodes]
-                    )
-                },
-            )
+            self.peers_data.get_object.return_value = None
             self.peer_cm.validate_roles(nodes=nodes, on_new_unit=False)
 
     @patch("ops.model.Model.get_relation")
