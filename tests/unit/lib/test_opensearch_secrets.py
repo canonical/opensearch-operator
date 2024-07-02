@@ -58,7 +58,7 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
     @patch(
         "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.update_dashboards_password"
     )
-    @patch("charm.OpenSearchOperatorCharm.store_tls_resources")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.store_new_tls_resources")
     def test_on_secret_changed_app(
         self, mock_store_tls_resources, mock_update_dashboard_pw, _, __
     ):
@@ -83,7 +83,7 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
         self.secrets._on_secret_changed(event)
         mock_update_dashboard_pw.assert_called()
 
-    @patch("charm.OpenSearchOperatorCharm.store_tls_resources")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.store_new_tls_resources")
     def test_on_secret_changed_unit(self, mock_store_tls_resources):
         event = MagicMock()
         event.secret = MagicMock()
