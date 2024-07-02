@@ -1119,7 +1119,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not restart:
             try:
                 self.opensearch_exclusions.delete_current()
-            except OpenSearchHttpError:
+            except Exception:
+                # It is purposefully broad - as this can fail for HTTP reasons,
+                # or if the config wasn't set on disk etc. In any way, this operation is on
+                # a best attempt basis, as this is called upon start as well,
+                # failure is not blocking at this point of the lifecycle
                 pass
 
     def _restart_opensearch(self, event: _RestartOpenSearch) -> None:
