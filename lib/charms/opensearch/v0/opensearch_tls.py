@@ -530,10 +530,7 @@ class OpenSearchTLS(Object):
 
         for cert_type in cert_types:
             if not exists(f"{self.certs_path}/{cert_type}.p12"):
-                # ensure backward compatibility to older charm versions still using pem files
-                for extension in ["key", "cert"]:
-                    if not exists(f"{self.certs_path}/{cert_type}.{extension}"):
-                        return False
+                return False
 
         self.charm.peers_data.put(Scope.UNIT, "tls_configured", True)
         return True
