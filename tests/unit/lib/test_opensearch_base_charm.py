@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, call, patch
 import charms.opensearch.v0.opensearch_locking as opensearch_locking
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.models import (
+    App,
     DeploymentDescription,
     DeploymentState,
     DeploymentType,
@@ -37,6 +38,9 @@ from tests.helpers import patch_network_get
 class TestOpenSearchBaseCharm(unittest.TestCase):
     BASE_LIB_PATH = "charms.opensearch.v0"
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
+    PEER_CLUSTERS_MANAGER = (
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager"
+    )
     OPENSEARCH_DISTRO = ""
 
     deployment_descriptions = {
@@ -45,7 +49,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
-            app="opensearch",
+            app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.ACTIVE),
         ),
         "ko": DeploymentDescription(
@@ -53,7 +57,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
             typ=DeploymentType.OTHER,
-            app="opensearch",
+            app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
         ),
     }
@@ -64,13 +68,19 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.harness.begin()
 
         self.charm = self.harness.charm
+
+        for typ in ["ok", "ko"]:
+            self.deployment_descriptions[typ].app = App(
+                model_uuid=self.charm.model.uuid, name="opensearch"
+            )
+
         self.opensearch = self.charm.opensearch
         self.opensearch.current = MagicMock()
         self.opensearch.current.return_value = Node(
             name="cm1",
             roles=["cluster_manager", "data"],
             ip="1.1.1.1",
-            app_name="opensearch-ff2z",
+            app=self.deployment_descriptions["ok"].app,
             unit_number=3,
         )
         self.opensearch.is_failed = MagicMock()
@@ -154,6 +164,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         )
         _purge_users.assert_called_once()
 
+    @patch(f"{BASE_LIB_PATH}.opensearch_locking.OpenSearchNodeLock.acquired")
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.validate_roles"
     )
@@ -186,6 +197,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         can_start,
         deployment_desc,
         validate_roles,
+        lock_acquired,
     ):
         """Test on start event."""
         with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
@@ -224,16 +236,22 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         with patch(f"{self.OPENSEARCH_DISTRO}.start") as start:
             # initialisation of the security index
             _get_nodes.reset_mock()
+            _set_node_conf.reset_mock()
             self.peers_data.delete(Scope.APP, "security_index_initialised")
             _can_service_start.return_value = True
             self.harness.set_leader(True)
+            lock_acquired.return_value = True
+
             self.charm.on.start.emit()
 
             # peer cluster manager
             deployment_desc.return_value = self.deployment_descriptions["ok"]
             can_start.return_value = True
+
+            _get_nodes.side_effect = None
             _get_nodes.assert_called()
             validate_roles.side_effect = None
+            validate_roles.assert_called()
             start.assert_called_once()
             _set_node_conf.assert_called()
             _initialize_security_index.assert_called_once()
@@ -288,9 +306,13 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         """Test current unit ip value."""
         self.assertEqual(self.charm.unit_ip, "1.1.1.1")
 
-    def test_unit_name(self):
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
+    def test_unit_name(self, deployment_desc):
         """Test current unit name."""
-        self.assertEqual(self.charm.unit_name, f"{self.charm.app.name}-0")
+        deployment_desc.return_value = self.deployment_descriptions["ok"]
+
+        app_short_id = deployment_desc().app.short_id
+        self.assertEqual(self.charm.unit_name, f"{self.charm.app.name}-0.{app_short_id}")
 
     def test_unit_id(self):
         """Test retrieving the integer id pf a unit."""

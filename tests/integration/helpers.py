@@ -6,6 +6,7 @@ import logging
 import random
 import subprocess
 import tempfile
+from hashlib import md5
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Dict, List, Optional, Union
@@ -156,7 +157,12 @@ def get_application_unit_names(ops_test: OpsTest, app: str = APP_NAME) -> List[s
     Returns:
         list of current unit names of the application
     """
-    return [unit.name.replace("/", "-") for unit in ops_test.model.applications[app].units]
+    app_id = f"{ops_test.model.uuid}/{app}"
+    app_short_id = md5(app_id.encode()).hexdigest()[:3]
+    return [
+        f"{unit.name.replace('/', '-')}.{app_short_id}"
+        for unit in ops_test.model.applications[app].units
+    ]
 
 
 def get_application_unit_ids(ops_test: OpsTest, app: str = APP_NAME) -> List[int]:

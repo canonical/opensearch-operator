@@ -216,7 +216,9 @@ async def test_large_deployment_fully_formed(
     auto_gen_roles = ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
     data_roles = ["data", "ml"]
     for app, node_count in [(MAIN_APP, 3), (FAILOVER_APP, 3), (DATA_APP, 2)]:
-        current_app_nodes = [node for node in nodes if node.app_name == app]
+        current_app_nodes = [
+            node for node in nodes if node.app.id == f"{ops_test.model.uuid}/{app}"
+        ]
         assert (
             len(current_app_nodes) == node_count
         ), f"Wrong count for {app}:{len(current_app_nodes)} - expected:{node_count}"

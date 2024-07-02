@@ -41,6 +41,7 @@ from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
 from lib.charms.opensearch.v0.models import (
+    App,
     DeploymentDescription,
     DeploymentState,
     DeploymentType,
@@ -71,7 +72,7 @@ def create_deployment_desc():
         ),
         start=StartMode.WITH_PROVIDED_ROLES,
         pending_directives=[],
-        app="opensearch",
+        app=App(model_uuid="model-uuid", name="opensearch"),
         typ=DeploymentType.MAIN_ORCHESTRATOR,
         state=DeploymentState(value=State.ACTIVE),
     )
