@@ -750,11 +750,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         current_secrets = self.secrets.get_object(scope, cert_type.val)
 
         if scope == Scope.UNIT:
+            truststore_pwd = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)[
+                "keystore-password-ca"
+            ]
+            keystore_pwd = self.secrets.get_object(scope, cert_type.val)[
+                f"keystore-password-{cert_type}"
+            ]
+
             # node http or transport cert
             self.opensearch_config.set_node_tls_conf(
                 cert_type,
-                self.secrets.get(Scope.APP, "keystore-password-ca"),
-                self.secrets.get(scope, f"keystore-password-{cert_type}"),
+                truststore_pwd=truststore_pwd,
+                keystore_pwd=keystore_pwd,
             )
         else:
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
@@ -1281,11 +1288,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             f"-cn {self.opensearch_peer_cm.deployment_desc().config.cluster_name}",
             f"-h {self.unit_ip}",
             f"-ts {self.opensearch.paths.certs}/ca.p12",
-            f"-tspass {self.secrets.get(Scope.APP, 'keystore-password-ca')}",
+            f"-tspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password-ca']}",
             "-tsalias ca",
             "-tst PKCS12",
             f"-ks {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.p12",
-            f"-kspass {self.secrets.get(Scope.APP, f'keystore-password-{CertType.APP_ADMIN}')}",
+            f"-kspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password-app-admin']}",
             f"-ksalias {CertType.APP_ADMIN}",
             "-kst PKCS12",
         ]
