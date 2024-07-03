@@ -437,11 +437,10 @@ class OpenSearchTLS(Object):
 
     def store_new_ca(self, secrets: Dict[str, Any]):
         """Add new CA cert to trust store."""
-        secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         keytool = f"sudo {self.jdk_path}/bin/keytool"
 
-        if not secrets:
-            logging.error("CA cert or keystore password not found, quitting.")
+        if not secrets.get("ca-cert"):
+            logging.error("CA cert not found, quitting.")
             return
 
         alias = "ca"
