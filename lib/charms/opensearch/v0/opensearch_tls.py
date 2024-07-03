@@ -438,11 +438,9 @@ class OpenSearchTLS(Object):
     def store_new_ca(self, secrets: Dict[str, Any]):
         """Add new CA cert to trust store."""
         secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        store_pwd = secrets.get("keystore-password-ca")
-
         keytool = f"sudo {self.jdk_path}/bin/keytool"
 
-        if not (secrets.get("ca-cert") and store_pwd):
+        if not secrets:
             logging.error("CA cert or keystore password not found, quitting.")
             return
 
@@ -460,7 +458,7 @@ class OpenSearchTLS(Object):
                 -alias {alias} \
                 -keystore {store_path} \
                 -file {ca_tmp_file.name} \
-                -storepass {store_pwd} \
+                -storepass {secrets.get("keystore-password-ca")} \
                 -storetype PKCS12
             """
             )
@@ -469,13 +467,14 @@ class OpenSearchTLS(Object):
     def _read_stored_ca(self, alias: str = "ca") -> Optional[str]:
         """Load stored CA cert."""
         secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        store_pwd = secrets.get("keystore-password-ca")
 
         ca_trust_store = f"{self.certs_path}/ca.p12"
-        if not exists(ca_trust_store):
+        if not (exists(ca_trust_store) and secrets):
             return None
 
-        stored_certs = run_cmd(f"openssl pkcs12 -in {ca_trust_store} -passin pass:{store_pwd}").out
+        stored_certs = run_cmd(
+            f"openssl pkcs12 -in {ca_trust_store} -passin pass:{secrets.get("keystore-password-ca")}"
+        ).out
 
         # parse output to retrieve the current CA (in case there are many)
         start_cert_marker = "-----BEGIN CERTIFICATE-----"
@@ -490,12 +489,6 @@ class OpenSearchTLS(Object):
     def store_new_tls_resources(self, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
         cert_name = cert_type.val
-        if cert_type == CertType.APP_ADMIN:
-            secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-            store_pwd = secrets.get(f"keystore-password-{cert_name}")
-        else:
-            secrets = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)
-            store_pwd = secrets.get(f"keystore-password-{cert_name}")
         store_path = f"{self.certs_path}/{cert_type}.p12"
 
         if not secrets.get("key"):
@@ -530,7 +523,7 @@ class OpenSearchTLS(Object):
                 -inkey {tmp_key.name} \
                 -out {store_path} \
                 -name {cert_name} \
-                -passout pass:{store_pwd}
+                -passout pass:{secrets.get(f"keystore-password-{cert_name}")}
             """
             if secrets.get("key-password"):
                 cmd = f"{cmd} -passin pass:{secrets.get('key-password')}"

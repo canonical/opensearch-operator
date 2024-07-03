@@ -6,6 +6,7 @@ from os.path import exists
 from unittest.mock import MagicMock, patch
 
 from charms.opensearch.v0.constants_tls import CertType
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from helpers import create_x509_resources
 from unit.lib.test_opensearch_base_charm import TestOpenSearchBaseCharm
 
@@ -26,6 +27,13 @@ class TestCharm(TestOpenSearchBaseCharm):
             self.charm.tls.certs_path = tmp_dir
 
             unit_resources = create_x509_resources()
+
+            self.secret_store.put_object(
+                Scope.UNIT, CertType.UNIT_TRANSPORT, {"keystore-password-unit-transport": "123"}
+            )
+            self.secret_store.put_object(
+                Scope.APP, CertType.APP_ADMIN, {"keystore-password-app-admin": "123"}
+            )
 
             self.charm.tls.store_new_tls_resources(
                 CertType.UNIT_TRANSPORT,

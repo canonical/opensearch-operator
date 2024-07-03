@@ -87,6 +87,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             f"{self.opensearch.__class__.__module__}.{self.opensearch.__class__.__name__}"
         )
 
+        self.secret_store = self.charm.secrets
+
     def test_on_install(self):
         """Test the install event callback on success."""
         with patch(f"{self.OPENSEARCH_DISTRO}.install") as install:
