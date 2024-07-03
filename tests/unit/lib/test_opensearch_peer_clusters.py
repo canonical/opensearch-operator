@@ -13,6 +13,7 @@ from ops.testing import Harness
 from charm import OpenSearchOperatorCharm
 from lib.charms.opensearch.v0.constants_charm import PeerRelationName
 from lib.charms.opensearch.v0.models import (
+    App,
     DeploymentDescription,
     DeploymentState,
     DeploymentType,
@@ -66,6 +67,8 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
         self.charm = self.harness.charm
         self.harness.add_relation(PeerRelationName, self.charm.app.name)
 
+        self.peers_data = self.charm.peers_data
+
         self.opensearch = self.charm.opensearch
         self.opensearch.is_node_up = MagicMock(return_value=True)
         self.peer_cm = self.charm.opensearch_peer_cm
@@ -89,7 +92,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                 ),
                 start=StartMode.WITH_PROVIDED_ROLES,
                 pending_directives=directives,
-                app=self.charm.app.name,
+                app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
                 typ=DeploymentType.MAIN_ORCHESTRATOR,
                 state=DeploymentState(value=State.ACTIVE),
             )
@@ -106,11 +109,15 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
         is_peer_cluster_orchestrator_relation_set.return_value = False
         get_relation.return_value.units = set(self.p_units)
 
+        app = App(name="logs", model_uuid=self.charm.model.uuid)
+
+        self.peers_data.get_object = MagicMock()
+
         deployment_desc.return_value = DeploymentDescription(
             config=self.user_configs["roles_ok"],
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
-            app=self.charm.app.name,
+            app=App(model_uuid=self.charm.model.uuid, name="logs"),
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             state=DeploymentState(value=State.ACTIVE),
         )
@@ -122,11 +129,13 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     name=node.name.replace("/", "-"),
                     roles=["cluster_manager", "data"],
                     ip="1.1.1.1",
-                    app_name="logs",
+                    app=App(model_uuid=self.charm.model.uuid, name=app.name),
                     unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units[0:3]
             ]
+
+            self.peers_data.get_object.return_value = None
             self.peer_cm.validate_roles(nodes=nodes, on_new_unit=True)
 
         with self.assertRaises(OpenSearchProvidedRolesException):
@@ -137,22 +146,46 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                     name=node.name.replace("/", "-"),
                     roles=["cluster_manager", "data"],
                     ip="1.1.1.1",
-                    app_name="logs",
+                    app=App(model_uuid=self.charm.model.uuid, name=app.name),
                     unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units[0:4]
-            ] + [Node(name="node", roles=["ml"], ip="0.0.0.0", app_name="logs", unit_number=7)]
+            ] + [
+                Node(
+                    name="node",
+                    roles=["ml"],
+                    ip="0.0.0.0",
+                    app=App(model_uuid=self.charm.model.uuid, name="logs"),
+                    unit_number=7,
+                )
+            ]
+            self.peers_data.get_object.return_value = None
             self.peer_cm.validate_roles(nodes=nodes, on_new_unit=False)
 
     @patch("ops.model.Model.get_relation")
     @patch(f"{BASE_LIB_PATH}.helper_cluster.ClusterTopology.nodes")
     @patch(f"{BASE_CHARM_CLASS}.alt_hosts")
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     @patch(f"{PEER_CLUSTERS_MANAGER}.is_peer_cluster_orchestrator_relation_set")
     def test_pre_validate_roles_change(
-        self, is_peer_cluster_orchestrator_relation_set, alt_hosts, nodes, get_relation
+        self,
+        is_peer_cluster_orchestrator_relation_set,
+        deployment_desc,
+        alt_hosts,
+        nodes,
+        get_relation,
     ):
         """Test the pre_validation of roles change."""
         get_relation.return_value.units = set(self.p_units)
+
+        deployment_desc.return_value = DeploymentDescription(
+            config=self.user_configs["roles_ok"],
+            start=StartMode.WITH_PROVIDED_ROLES,
+            pending_directives=[],
+            app=App(model_uuid=self.charm.model.uuid, name="logs"),
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            state=DeploymentState(value=State.ACTIVE),
+        )
 
         alt_hosts.return_value = []
         try:
@@ -165,15 +198,22 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             is_peer_cluster_orchestrator_relation_set.return_value = True
             nodes.return_value = [
                 Node(
-                    name=node.name.replace("/", "-"),
+                    name=node.name.replace("/", "-") + f".{deployment_desc().app.short_id}",
                     roles=["data"],
                     ip="1.1.1.1",
-                    app_name="logs",
+                    app=deployment_desc().app,
                     unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units
-            ] + [Node(name="node-5", roles=["data"], ip="2.2.2.2", app_name="logs", unit_number=5)]
-            self.peer_cm._pre_validate_roles_change(new_roles=["ml"], prev_roles=["data", "ml"])
+            ] + [
+                Node(
+                    name=f"node-5.{deployment_desc().app.short_id}",
+                    roles=["data"],
+                    ip="2.2.2.2",
+                    app=deployment_desc().app,
+                    unit_number=5,
+                )
+            ]
         except OpenSearchProvidedRolesException:
             self.fail("_pre_validate_roles_change() failed unexpectedly.")
 
@@ -193,10 +233,10 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             is_peer_cluster_orchestrator_relation_set.return_value = True
             nodes.return_value = [
                 Node(
-                    name=node.name.replace("/", "-"),
+                    name=node.name.replace("/", "-") + f".{deployment_desc().app.short_id}",
                     roles=["data"],
                     ip="1.1.1.1",
-                    app_name="logs",
+                    app=deployment_desc().app,
                     unit_number=int(node.name.split("/")[-1]),
                 )
                 for node in self.p_units

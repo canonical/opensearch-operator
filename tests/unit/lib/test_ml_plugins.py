@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
-from charms.opensearch.v0.models import Node
+from charms.opensearch.v0.models import App, Node
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn, PluginState
 from ops.testing import Harness
@@ -108,7 +108,7 @@ class TestOpenSearchKNN(unittest.TestCase):
                     name=f"{self.charm.app.name}-0",
                     roles=["cluster_manager"],
                     ip="1.1.1.1",
-                    app_name=self.charm.app.name,
+                    app=App(model_uuid="model-uuid", name=self.charm.app.name),
                     unit_number=0,
                 ),
             ]
