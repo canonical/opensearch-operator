@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Cluster-related data structures / model classes."""
+import json
 from abc import ABC
 from datetime import datetime
 from hashlib import md5
@@ -32,7 +33,7 @@ class Model(ABC, BaseModel):
 
     def to_str(self, by_alias: bool = False) -> str:
         """Deserialize object into a string."""
-        return self.json(by_alias=by_alias)
+        return json.dumps(Model.sort_payload(self.to_dict(by_alias=by_alias)))
 
     def to_dict(self, by_alias: bool = False) -> Dict[str, Any]:
         """Deserialize object into a dict."""
@@ -49,6 +50,24 @@ class Model(ABC, BaseModel):
     def from_str(cls, input_str_dict: str):
         """Create a new instance of this class from a stringified json/dict repr."""
         return cls.parse_raw(input_str_dict)
+
+    @staticmethod
+    def sort_payload(payload: any) -> any:
+        """Sort input payloads to avoid rel-changed events for same unordered objects."""
+        if isinstance(payload, dict):
+            # Sort dictionary by keys
+            return {key: Model.sort_payload(value) for key, value in sorted(payload.items())}
+        elif isinstance(payload, list):
+            # Sort each item in the list and then sort the list
+            sorted_list = [Model.sort_payload(item) for item in payload]
+            try:
+                return sorted(sorted_list)
+            except TypeError:
+                # If items are not sortable, return as is
+                return sorted_list
+        else:
+            # Return the value as is for non-dict, non-list types
+            return payload
 
     def __eq__(self, other) -> bool:
         """Implement equality."""

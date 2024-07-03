@@ -44,9 +44,7 @@ from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_nam
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import (
     get_host_ip,
-    is_reachable,
     reachable_hosts,
-    unit_ip,
     units_ips,
 )
 from charms.opensearch.v0.helper_security import (
@@ -321,16 +319,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():
-            logger.debug("\n\n__on_start: not apply directives / start... deferring \n")
             event.defer()
             return
 
         if not self.is_admin_user_configured() or not self.is_tls_fully_configured():
-            logger.debug(
-                f"\n\n__on_start: not self.is_admin_user_configured(): "
-                f"{self.is_admin_user_configured()} or not self.is_tls_fully_configured():"
-                f"{self.is_tls_fully_configured()}... deferring \n"
-            )
             if not self.model.get_relation("certificates"):
                 status = BlockedStatus(TLSRelationMissing)
             else:
@@ -354,13 +346,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             for user in OpenSearchSystemUsers:
                 self._put_or_update_internal_user_unit(user)
 
-        logger.debug("\n\n__on_start: setting TLS configured in RELATION\n")
         self.peers_data.put(Scope.UNIT, "tls_configured", True)
 
         # configure clients auth
         self.opensearch_config.set_client_auth()
-
-        logger.debug("\n\n__on_start: EMITTING start...\n")
 
         # request the start of OpenSearch
         self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
@@ -372,25 +361,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # the deployment description hasn't finished being computed by the leader
             return False
 
-        logger.debug("\n_apply_peer_cm_directives_and_check_if_can_start...")
-
         # check possibility to start
         if self.opensearch_peer_cm.can_start(deployment_desc):
-            logger.debug("\n\nself.opensearch_peer_cm.can_start \n")
             try:
                 nodes = self._get_nodes(False)
                 self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
             except OpenSearchHttpError:
-                logger.debug("\n\nself.opensearch_peer_cm.can_start -- HTTPError \n")
                 return False
             except OpenSearchProvidedRolesException as e:
                 self.unit.status = BlockedStatus(str(e))
-                logger.debug(
-                    "\n\nself.opensearch_peer_cm.can_start -- HOpenSearchProvidedRolesException \n"
-                )
                 return False
 
-            logger.debug("\n\nself.opensearch_peer_cm.can_start True\n")
             return True
 
         if self.unit.is_leader():
@@ -398,7 +379,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 deployment_desc, show_status_only_once=False
             )
 
-        logger.debug("\n\nself.opensearch_peer_cm.can_start False\n")
         return False
 
     def _on_peer_relation_created(self, event: RelationCreatedEvent):
@@ -407,22 +387,27 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.warning(
                 "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
-        current_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
-        # In the case of the first units before TLS is initialized
-        if not current_secrets:
-            if not self.unit.is_leader():
-                event.defer()
+        self.store_admin_tls_secrets_if_applies()
+
+    def store_admin_tls_secrets_if_applies(self) -> None:
+        """Store admin TLS resources if available and mark unit as configured if correct."""
+        # In the case of the first units before TLS is initialized,
+        # or non-main orchestrator units having not received the secrets from the main yet
+        if not (current_secrets := self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)):
             return
 
         # in the case the cluster was bootstrapped with multiple units at the same time
         # and the certificates have not been generated yet
         if not current_secrets.get("cert") or not current_secrets.get("chain"):
-            event.defer()
             return
 
         # Store the "Admin" certificate, key and CA on the disk of the new unit
         self.store_tls_resources(CertType.APP_ADMIN, current_secrets, override_admin=False)
+
+        # Mark this unit as tls configured
+        if self.is_tls_fully_configured():
+            self.peers_data.put(Scope.UNIT, "tls_configured", True)
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units when a new node joins the cluster."""
@@ -430,6 +415,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.warning(
                 "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
+
         if not self.unit.is_leader():
             return
 
@@ -439,29 +425,31 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         ):
             return
 
-        if not self.model.get_relation(PeerRelationName).data.get(event.unit):
-            event.defer()
-            return
-
-        new_unit_host = unit_ip(self, event.unit, PeerRelationName)
-        if not is_reachable(new_unit_host, self.opensearch.port):
-            event.defer()
-            return
-
-        try:
-            nodes = self._get_nodes(True)
-        except OpenSearchHttpError:
-            event.defer()
-            return
-
-        # we want to re-calculate the topology only once when latest unit joins
-        if len(nodes) == self.app.planned_units():
-            self._compute_and_broadcast_updated_topology(nodes)
-        else:
-            event.defer()
+        # if not self.model.get_relation(PeerRelationName).data.get(event.unit):
+        #     event.defer()
+        #     return
+        #
+        # new_unit_host = unit_ip(self, event.unit, PeerRelationName)
+        # if not is_reachable(new_unit_host, self.opensearch.port):
+        #     event.defer()
+        #     return
+        #
+        # try:
+        #     nodes = self._get_nodes(True)
+        # except OpenSearchHttpError:
+        #     event.defer()
+        #     return
+        #
+        # # we want to re-calculate the topology only once when latest unit joins
+        # if len(nodes) == self.app.planned_units():
+        #     self._compute_and_broadcast_updated_topology(nodes)
+        # else:
+        #     event.defer()
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
+        self.store_admin_tls_secrets_if_applies()
+
         if self.unit.is_leader() and self.opensearch.is_node_up():
             health = self.health.apply()
             if self._is_peer_rel_changed_deferred:
@@ -782,8 +770,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
-        if self.is_tls_fully_configured():
-            self.peers_data.put(Scope.UNIT, "tls_configured", True)
+        self.store_admin_tls_secrets_if_applies()
 
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal:
@@ -841,6 +828,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Check if TLS is configured in all the units of the current cluster."""
         rel = self.model.get_relation(PeerRelationName)
         for unit in all_units(self):
+            logger.debug(f"\ntls_configured: {unit.name}: {rel.data[unit].get('tls_configured')}")
             if rel.data[unit].get("tls_configured") != "True":
                 return False
         return True
@@ -1488,13 +1476,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
 
             if len(nodes) < self.app.planned_units():
-                if self._is_peer_rel_changed_deferred:
-                    # We already deferred this event during this Juju event. Retry on the next
-                    # Juju event.
-                    return
-                event.defer()
-                # If the handler is called again within this Juju hook, we will abandon the event
-                self._is_peer_rel_changed_deferred = True
                 return
 
             self._compute_and_broadcast_updated_topology(nodes)
@@ -1554,7 +1535,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if current_reported_nodes == updated_nodes:
             return
 
-        self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
+        self.peers_data.put_object(Scope.APP, "nodes_config", dict(sorted(updated_nodes.items())))
 
         # all units will get a peer_rel_changed event, for leader we do as follows
         self._reconfigure_and_restart_unit_if_needed()
@@ -1682,10 +1663,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             all_hosts.extend([node.ip for node in peer_cm_rel_data.cm_nodes])
 
         random.shuffle(all_hosts)
-
-        logger.debug(
-            f"\n\n\nALT HOSTS: All Hosts: {all_hosts} --- reachable: {reachable_hosts([host for host in all_hosts if host != self.unit_ip])}"
-        )
 
         if not all_hosts:
             return None

@@ -140,7 +140,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
-        self.refresh_relation_data(event)
+        self.refresh_relation_data(event, can_defer=False)
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
@@ -415,13 +415,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         self, deployment_desc: DeploymentDescription, orchestrators: PeerClusterOrchestrators
     ) -> Optional[PeerClusterRelErrorData]:
         """Build error peer relation data object."""
-        should_sever_relation, blocked_msg = False, None
+        should_sever_relation, should_retry, blocked_msg = False, True, None
         message_suffix = f"in related '{deployment_desc.typ}'"
 
         if not deployment_desc:
             blocked_msg = "'main/failover'-orchestrators not configured yet."
         elif deployment_desc.typ == DeploymentType.OTHER:
-            should_sever_relation = True
+            should_sever_relation, should_retry = True, False
             blocked_msg = "Related to non 'main/failover'-orchestrator cluster."
         elif (
             orchestrators.main_app
@@ -429,7 +429,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             and orchestrators.failover_app
             and orchestrators.failover_app.id != deployment_desc.app.id
         ):
-            should_sever_relation = True
+            should_sever_relation, should_retry = True, False
             blocked_msg = (
                 "Cannot have 2 'failover'-orchestrators. Relate to the existing failover."
             )
@@ -437,6 +437,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             blocked_msg = f"Admin user not fully configured {message_suffix}."
         elif not self.charm.is_tls_full_configured_in_cluster():
             blocked_msg = f"TLS not fully configured {message_suffix}."
+            should_retry = False
         elif not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
             blocked_msg = f"Security index not initialized {message_suffix}."
         elif not self.charm.is_every_unit_marked_as_started():
@@ -457,7 +458,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         return PeerClusterRelErrorData(
             cluster_name=deployment_desc.config.cluster_name if deployment_desc else None,
             should_sever_relation=should_sever_relation,
-            should_wait=not should_sever_relation,
+            should_wait=should_retry,
             blocked_message=blocked_msg,
             deployment_desc=deployment_desc,
         )
@@ -878,7 +879,11 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         error = PeerClusterRelErrorData.from_dict(error)
         err_message = error.blocked_message
         self.charm.status.set(
-            WaitingStatus(err_message) if error.should_wait else BlockedStatus(err_message),
+            (
+                BlockedStatus(err_message)
+                if error.should_sever_relation
+                else WaitingStatus(err_message)
+            ),
             app=True,
         )
 

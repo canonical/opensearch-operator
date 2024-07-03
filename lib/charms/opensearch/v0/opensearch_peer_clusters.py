@@ -151,7 +151,7 @@ class OpenSearchPeerClustersManager:
         self._charm.peers_data.put_object(
             scope=Scope.APP,
             key="nodes_config",
-            value={node.name: node.to_dict() for node in data.cm_nodes},
+            value=dict(sorted({node.name: node.to_dict() for node in data.cm_nodes}.items())),
             merge=True,
         )
         self._charm.opensearch_config.add_seed_hosts([node.ip for node in data.cm_nodes])
@@ -355,7 +355,6 @@ class OpenSearchPeerClustersManager:
         if not current_deployment_desc:
             return None
 
-        logger.debug(f"\n\nDeployment desc: {current_deployment_desc}")
         return DeploymentDescription.from_dict(current_deployment_desc)
 
     def promote_to_main_orchestrator(self) -> None:
@@ -413,18 +412,12 @@ class OpenSearchPeerClustersManager:
         current_cluster_online_nodes = [
             node for node in nodes if node.app.id == deployment_desc.app.id
         ]
-        logger.debug(
-            f"\n\n\nvalidate_roles on new unit {on_new_unit} \n-- "
-            f"full_cluster_planned_units: {full_cluster_planned_units} \n"
-            f"-- current_cluster_online_nodes: {current_cluster_online_nodes}"
-        )
 
         if len(current_cluster_online_nodes) < full_cluster_planned_units - 1:
             # this is not the latest unit to be brought online, we can continue
             return
 
         voters = sum(1 for node in nodes if node.is_cm_eligible() or node.is_voting_only())
-        logger.debug(f"\nvalidate_roles -- voters: {voters} -- mod: {voters % 2}\n\n")
         if voters % 2 == (0 if on_new_unit else 1):
             # if validation called on new unit: it means it will start and maintain the quorum
             #    (called on the latest unit to be configured and brought online)
