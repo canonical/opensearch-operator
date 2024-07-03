@@ -473,8 +473,7 @@ class OpenSearchTLS(Object):
             return None
 
         stored_certs = run_cmd(
-            f"openssl pkcs12 -in {ca_trust_store} -passin pass:{secrets.get("keystore-password-ca")}"
-        ).out
+            f"openssl pkcs12 -in {ca_trust_store} -passin pass:{secrets.get("keystore-password-ca")}").out
 
         # parse output to retrieve the current CA (in case there are many)
         start_cert_marker = "-----BEGIN CERTIFICATE-----"
