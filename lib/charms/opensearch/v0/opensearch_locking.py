@@ -219,7 +219,7 @@ class OpenSearchNodeLock(ops.Object):
         self._opensearch = charm.opensearch
         self._peer = _PeerRelationLock(self._charm)
 
-    def _unit_with_lock(self, host) -> str | None:
+    def _unit_with_lock(self, host: str | None) -> str | None:
         """Unit that has acquired OpenSearch lock."""
         try:
             document_data = self._opensearch.request(
@@ -231,7 +231,7 @@ class OpenSearchNodeLock(ops.Object):
                 ignore_retry_on=[404],
             )
         except OpenSearchHttpError as e:
-            if e.response_code in [404, 503]:
+            if e.response_code == 404:
                 # No unit has lock or index not available
                 return
             raise
@@ -244,11 +244,8 @@ class OpenSearchNodeLock(ops.Object):
         Returns:
             Whether lock was acquired
         """
-        if self._opensearch.is_node_up():
-            host = self._charm.unit_ip
-        else:
-            host = None
-        alt_hosts = [host for host in self._charm.alt_hosts if self._opensearch.is_node_up(host)]
+        host = self._charm.unit_ip if self._opensearch.is_node_up() else None
+        alt_hosts = self._charm.alt_hosts
         if host or alt_hosts:
             logger.debug("[Node lock] 1+ opensearch nodes online")
             try:
@@ -291,7 +288,7 @@ class OpenSearchNodeLock(ops.Object):
                         "PUT",
                         endpoint=f"/{self.OPENSEARCH_INDEX}/_create/0?refresh=true&wait_for_active_shards=all",
                         host=host,
-                        alt_hosts=alt_hosts,
+                        alt_hosts=self._charm.alt_hosts,
                         retries=0,
                         payload={"unit-name": self._charm.unit_name},
                     )
@@ -331,7 +328,7 @@ class OpenSearchNodeLock(ops.Object):
                             "DELETE",
                             endpoint=f"/{self.OPENSEARCH_INDEX}/_doc/0?refresh=true",
                             host=host,
-                            alt_hosts=alt_hosts,
+                            alt_hosts=self._charm.alt_hosts,
                             retries=10,
                         )
                         logger.debug(
@@ -375,11 +372,8 @@ class OpenSearchNodeLock(ops.Object):
         # fetch current app description
         current_app = self._charm.opensearch_peer_cm.deployment_desc().app
 
-        if self._opensearch.is_node_up():
-            host = self._charm.unit_ip
-        else:
-            host = None
-        alt_hosts = [host for host in self._charm.alt_hosts if self._opensearch.is_node_up(host)]
+        host = self._charm.unit_ip if self._opensearch.is_node_up() else None
+        alt_hosts = self._charm.alt_hosts
         if host or alt_hosts:
             logger.debug("[Node lock] Checking which unit has opensearch lock")
             # Check if this unit currently has lock

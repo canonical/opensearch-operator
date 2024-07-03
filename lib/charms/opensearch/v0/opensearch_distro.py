@@ -164,7 +164,12 @@ class OpenSearchDistribution(ABC):
 
         try:
             resp_code = self.request(
-                "GET", "/_nodes", host=host, check_hosts_reach=False, resp_status_code=True
+                "GET",
+                "/",
+                host=host,
+                check_hosts_reach=False,
+                resp_status_code=True,
+                timeout=1,
             )
             return resp_code < 400
         except (OpenSearchHttpError, Exception):

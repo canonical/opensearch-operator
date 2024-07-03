@@ -42,11 +42,7 @@ from charms.opensearch.v0.constants_charm import (
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
-from charms.opensearch.v0.helper_networking import (
-    get_host_ip,
-    reachable_hosts,
-    units_ips,
-)
+from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.helper_security import (
     cert_expiration_remaining_hours,
     generate_hashed_password,
@@ -390,61 +386,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.store_admin_tls_secrets_if_applies()
 
-    def store_admin_tls_secrets_if_applies(self) -> None:
-        """Store admin TLS resources if available and mark unit as configured if correct."""
-        # In the case of the first units before TLS is initialized,
-        # or non-main orchestrator units having not received the secrets from the main yet
-        if not (current_secrets := self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)):
-            return
-
-        # in the case the cluster was bootstrapped with multiple units at the same time
-        # and the certificates have not been generated yet
-        if not current_secrets.get("cert") or not current_secrets.get("chain"):
-            return
-
-        # Store the "Admin" certificate, key and CA on the disk of the new unit
-        self.store_tls_resources(CertType.APP_ADMIN, current_secrets, override_admin=False)
-
-        # Mark this unit as tls configured
-        if self.is_tls_fully_configured():
-            self.peers_data.put(Scope.UNIT, "tls_configured", True)
-
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units when a new node joins the cluster."""
         if self.upgrade_in_progress:
             logger.warning(
                 "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
-
-        if not self.unit.is_leader():
-            return
-
-        if (
-            not self.peers_data.get(Scope.APP, "security_index_initialised")
-            or not self.opensearch.is_node_up()
-        ):
-            return
-
-        # if not self.model.get_relation(PeerRelationName).data.get(event.unit):
-        #     event.defer()
-        #     return
-        #
-        # new_unit_host = unit_ip(self, event.unit, PeerRelationName)
-        # if not is_reachable(new_unit_host, self.opensearch.port):
-        #     event.defer()
-        #     return
-        #
-        # try:
-        #     nodes = self._get_nodes(True)
-        # except OpenSearchHttpError:
-        #     event.defer()
-        #     return
-        #
-        # # we want to re-calculate the topology only once when latest unit joins
-        # if len(nodes) == self.app.planned_units():
-        #     self._compute_and_broadcast_updated_topology(nodes)
-        # else:
-        #     event.defer()
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
@@ -784,6 +731,25 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Otherwise, we block.
         self.status.set(BlockedStatus(TLSRelationBrokenError))
 
+    def store_admin_tls_secrets_if_applies(self) -> None:
+        """Store admin TLS resources if available and mark unit as configured if correct."""
+        # In the case of the first units before TLS is initialized,
+        # or non-main orchestrator units having not received the secrets from the main yet
+        if not (current_secrets := self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)):
+            return
+
+        # in the case the cluster was bootstrapped with multiple units at the same time
+        # and the certificates have not been generated yet
+        if not current_secrets.get("cert") or not current_secrets.get("chain"):
+            return
+
+        # Store the "Admin" certificate, key and CA on the disk of the new unit
+        self.store_tls_resources(CertType.APP_ADMIN, current_secrets, override_admin=False)
+
+        # Mark this unit as tls configured
+        if self.is_tls_fully_configured():
+            self.peers_data.put(Scope.UNIT, "tls_configured", True)
+
     def is_tls_fully_configured(self) -> bool:
         """Check if TLS fully configured meaning the 3 certificates are present."""
         # In case the initialisation of the admin user is not finished yet
@@ -806,7 +772,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         rel = self.model.get_relation(PeerRelationName)
         all_started = True
         for unit in all_units(self):
-            logger.debug(f"Unit: {unit.name} -- started: {rel.data[unit].get('started')}")
             if rel.data[unit].get("started") != "True":
                 all_started = False
                 break
@@ -828,7 +793,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Check if TLS is configured in all the units of the current cluster."""
         rel = self.model.get_relation(PeerRelationName)
         for unit in all_units(self):
-            logger.debug(f"\ntls_configured: {unit.name}: {rel.data[unit].get('tls_configured')}")
             if rel.data[unit].get("tls_configured") != "True":
                 return False
         return True
@@ -1667,4 +1631,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not all_hosts:
             return None
 
-        return reachable_hosts([host for host in all_hosts if host != self.unit_ip])
+        return [
+            host for host in all_hosts if host != self.unit_ip and self.opensearch.is_node_up(host)
+        ]
