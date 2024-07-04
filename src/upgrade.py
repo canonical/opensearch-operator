@@ -280,7 +280,7 @@ class Upgrade(abc.ABC):
             )
             allowed_states = [HealthColors.GREEN]
             if self.in_progress:
-                allowed_states.append(HealthColors.YELLOW, HealthColors.YELLOW_TEMP)
+                allowed_states.extend([HealthColors.YELLOW, HealthColors.YELLOW_TEMP])
             if health not in allowed_states:
                 raise PrecheckFailed(f"Cluster health is {health} instead of green")
 
