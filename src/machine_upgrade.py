@@ -163,7 +163,11 @@ class Upgrade(upgrade.Upgrade):
                     else:
                         # Run pre-upgrade check
                         # (in case user forgot to run pre-upgrade-check action)
-                        self.pre_upgrade_check()
+
+                        # We accept yellow status here, as some replicas may have been unassigned
+                        # as this unit is down but cannot be allocated somewhere else due to
+                        # upgrade settings (only primaries are allowed)
+                        self.pre_upgrade_check(yellow_allowed=True)
                         logger.debug("Pre-upgrade check after `juju refresh` successful")
                 elif index == 1:
                     # User confirmation needed to resume upgrade (i.e. upgrade second unit)
