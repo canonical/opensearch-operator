@@ -246,7 +246,7 @@ class Upgrade(abc.ABC):
         Only applies to machine charm
         """
 
-    def pre_upgrade_check(self, yellow_allowed: bool = False) -> None:
+    def pre_upgrade_check(self) -> None:
         """Check if this app is ready to upgrade
 
         Runs before any units are upgraded
@@ -260,11 +260,8 @@ class Upgrade(abc.ABC):
 
         If the cluster is in the middle of the upgrade, we may have some replicas being
         unassigned but cannot rellocated due to cluster routing set only for primaries.
-        For that, we use yellow_allowed=True, so we can tolerate unassigned replicas
+        For that, we use self.in_progress, so we can tolerate unassigned replicas
         after a given unit is stopped.
-
-        Args:
-            yellow_allowed: allows the check to pass if the cluster is in YELLOW status
 
         Raises:
             PrecheckFailed: App is not ready to upgrade
@@ -282,7 +279,7 @@ class Upgrade(abc.ABC):
                 wait_for_green_first=True,
             )
             allowed_states = [HealthColors.GREEN]
-            if yellow_allowed:
+            if self.in_progress:
                 allowed_states.append(HealthColors.YELLOW, HealthColors.YELLOW_TEMP)
             if health not in allowed_states:
                 raise PrecheckFailed(f"Cluster health is {health} instead of green")
