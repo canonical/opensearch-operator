@@ -246,7 +246,7 @@ class Upgrade(abc.ABC):
         Only applies to machine charm
         """
 
-    def pre_upgrade_check(self) -> None:
+    def pre_upgrade_check(self, yellow_allowed: bool = False) -> None:
         """Check if this app is ready to upgrade
 
         Runs before any units are upgraded
@@ -273,7 +273,10 @@ class Upgrade(abc.ABC):
                 local_app_only=False,
                 wait_for_green_first=True,
             )
-            if health != HealthColors.GREEN:
+            allowed_states = [HealthColors.GREEN]
+            if yellow_allowed:
+                allowed_states.append(HealthColors.YELLOW, HealthColors.YELLOW_TEMP)
+            if health not in allowed_states:
                 raise PrecheckFailed(f"Cluster health is {health} instead of green")
 
             online_nodes = ClusterTopology.nodes(
