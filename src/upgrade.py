@@ -277,8 +277,8 @@ class Upgrade(abc.ABC):
             if self.in_progress and not self._charm.opensearch.is_started():
                 # If the cluster is in the middle of the upgrade, we may have some replicas being
                 # unassigned but cannot rellocate as cluster routing is set only for primaries.
-                # For that, we use self.in_progress and , so we can tolerate unassigned replicas
-        after a given unit is stopped.
+                # For that, we use self.in_progress and distro's is_started, so we can tolerate
+                # unassigned replicas after this unit has been stopped.
                 allowed_states.extend([HealthColors.YELLOW, HealthColors.YELLOW_TEMP])
             if health not in allowed_states:
                 raise PrecheckFailed(f"Cluster health is {health} instead of green")
