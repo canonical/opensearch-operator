@@ -258,6 +258,14 @@ class Upgrade(abc.ABC):
 
         Can run on leader or non-leader unit
 
+        If the cluster is in the middle of the upgrade, we may have some replicas being
+        unassigned but cannot rellocated due to cluster routing set only for primaries.
+        For that, we use yellow_allowed=True, so we can tolerate unassigned replicas
+        after a given unit is stopped.
+
+        Args:
+            yellow_allowed: allows the check to pass if the cluster is in YELLOW status
+
         Raises:
             PrecheckFailed: App is not ready to upgrade
 
