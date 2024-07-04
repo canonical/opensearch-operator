@@ -104,7 +104,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         # Leader has to maintain TLS and Dashboards relation credentials
         if not is_leader and label_key == CertType.APP_ADMIN.val:
-            self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
+            self._charm.tls.store_new_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
 
         elif is_leader and label_key == self._charm.secrets.password_key(KibanaserverUser):
             self._charm.opensearch_provider.update_dashboards_password()

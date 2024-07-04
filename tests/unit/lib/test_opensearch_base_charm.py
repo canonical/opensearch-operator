@@ -87,6 +87,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             f"{self.opensearch.__class__.__module__}.{self.opensearch.__class__.__name__}"
         )
 
+        self.secret_store = self.charm.secrets
+
     def test_on_install(self):
         """Test the install event callback on success."""
         with patch(f"{self.OPENSEARCH_DISTRO}.install") as install:
@@ -162,7 +164,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     )
     @patch(f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.can_start")
     @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
-    @patch(f"{BASE_CHARM_CLASS}.is_tls_fully_configured")
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.all_tls_resources_stored")
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_client_auth")
     @patch(f"{BASE_CHARM_CLASS}._get_nodes")
     @patch(f"{BASE_CHARM_CLASS}._set_node_conf")
@@ -181,7 +183,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _set_node_conf,
         _get_nodes,
         set_client_auth,
-        is_tls_fully_configured,
+        all_tls_resources_stored,
         is_admin_user_configured,
         can_start,
         deployment_desc,
@@ -193,13 +195,13 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             is_node_up.return_value = True
             self.peers_data.put(Scope.APP, "security_index_initialised", True)
             self.charm.on.start.emit()
-            is_tls_fully_configured.assert_not_called()
+            all_tls_resources_stored.assert_not_called()
             is_admin_user_configured.assert_not_called()
 
             # test when setup not complete
             is_node_up.return_value = False
             self.peers_data.delete(Scope.APP, "security_index_initialised")
-            is_tls_fully_configured.return_value = False
+            all_tls_resources_stored.return_value = False
             is_admin_user_configured.return_value = False
             self.charm.on.start.emit()
             set_client_auth.assert_not_called()
@@ -212,7 +214,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _get_nodes.reset_mock()
 
         # _get_nodes succeeds
-        is_tls_fully_configured.return_value = True
+        all_tls_resources_stored.return_value = True
         is_admin_user_configured.return_value = True
         _get_nodes.side_effect = None
         _can_service_start.return_value = False
