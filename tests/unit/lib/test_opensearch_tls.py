@@ -14,6 +14,7 @@ from charms.opensearch.v0.models import (
     DeploymentDescription,
     DeploymentState,
     DeploymentType,
+    Directive,
     PeerClusterConfig,
     StartMode,
     State,
@@ -29,6 +30,28 @@ from tests.helpers import create_utf8_encoded_private_key, patch_network_get
 class TestOpenSearchTLS(unittest.TestCase):
     BASE_LIB_PATH = "charms.opensearch.v0"
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
+    PEER_CLUSTERS_MANAGER = (
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager"
+    )
+
+    deployment_descriptions = {
+        "ok": DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            start=StartMode.WITH_GENERATED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            app=App(model_uuid="model-uuid", name="opensearch"),
+            state=DeploymentState(value=State.ACTIVE),
+        ),
+        "ko": DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="logs", init_hold=True, roles=["ml"]),
+            start=StartMode.WITH_PROVIDED_ROLES,
+            pending_directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
+            typ=DeploymentType.OTHER,
+            app=App(model_uuid="model-uuid", name="opensearch"),
+            state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
+        ),
+    }
 
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     def setUp(self, _) -> None:
@@ -46,12 +69,17 @@ class TestOpenSearchTLS(unittest.TestCase):
         socket.getfqdn = Mock()
         socket.getfqdn.return_value = "nebula"
 
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.get_host_public_ip")
     @patch("socket.getfqdn")
     @patch("socket.gethostname")
     @patch("socket.gethostbyaddr")
-    def test_get_sans(self, gethostbyaddr, gethostname, getfqdn, get_host_public_ip):
+    def test_get_sans(
+        self, gethostbyaddr, gethostname, getfqdn, get_host_public_ip, deployment_desc
+    ):
         """Test the SANs returned depending on the cert type."""
+        deployment_desc.return_value = self.deployment_descriptions["ok"]
+
         self.assertDictEqual(
             self.charm.tls._get_sans(CertType.APP_ADMIN),
             {"sans_oid": ["1.2.3.4.5.5"]},
