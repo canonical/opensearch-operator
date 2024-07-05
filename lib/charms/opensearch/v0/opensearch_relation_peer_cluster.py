@@ -435,7 +435,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             )
         elif not self.charm.is_admin_user_configured():
             blocked_msg = f"Admin user not fully configured {message_suffix}."
-        elif not self.charm.is_tls_full_configured_in_cluster():
+        elif not self.charm.tls.is_fully_configured_in_cluster():
             blocked_msg = f"TLS not fully configured {message_suffix}."
             should_retry = False
         elif not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
