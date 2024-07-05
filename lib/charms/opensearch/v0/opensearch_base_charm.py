@@ -6,7 +6,6 @@ import abc
 import logging
 import random
 import typing
-from abc import abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
@@ -187,7 +186,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = OpenSearchSecrets(self, PeerRelationName)
-        self.tls = OpenSearchTLS(self, TLS_RELATION)
+        self.tls = OpenSearchTLS(
+            self, TLS_RELATION, self.opensearch.paths.jdk, self.opensearch.paths.certs
+        )
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.node_lock = OpenSearchNodeLock(self)
@@ -318,7 +319,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        if not self.is_admin_user_configured() or not self.is_tls_fully_configured():
+        if not self.is_admin_user_configured() or not self.tls.all_tls_resources_stored():
             if not self.model.get_relation("certificates"):
                 status = BlockedStatus(TLSRelationMissing)
             else:
@@ -384,7 +385,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
 
+        # Store the "Admin" certificate, key and CA on the disk of the new unit
+        # TODO: TLS FIX
         self.store_admin_tls_secrets_if_applies()
+        self.tls.store_new_tls_resources(CertType.APP_ADMIN, current_secrets)
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units when a new node joins the cluster."""
@@ -575,7 +579,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             restart_requested = True
 
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
-            self._delete_stored_tls_resources()
+            self.tls.delete_stored_tls_resources()
             self.tls.request_new_unit_certificates()
 
             # since when an IP change happens, "_on_peer_relation_joined" won't be called,
@@ -678,7 +682,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.fail(f"{user_name} user not configured yet.")
             return
 
-        if not self.is_tls_fully_configured():
+        if not self.tls.all_tls_resources_stored():
             event.fail("TLS certificates not configured yet.")
             return
 
@@ -711,8 +715,19 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.store_tls_resources(cert_type, current_secrets)
 
         if scope == Scope.UNIT:
+            truststore_pwd = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)[
+                "keystore-password-ca"
+            ]
+            keystore_pwd = self.secrets.get_object(scope, cert_type.val)[
+                f"keystore-password-{cert_type}"
+            ]
+
             # node http or transport cert
-            self.opensearch_config.set_node_tls_conf(cert_type, current_secrets)
+            self.opensearch_config.set_node_tls_conf(
+                cert_type,
+                truststore_pwd=truststore_pwd,
+                keystore_pwd=keystore_pwd,
+            )
         else:
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
             self.opensearch_config.set_admin_tls_conf(current_secrets)
@@ -720,12 +735,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.store_admin_tls_secrets_if_applies()
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-        if renewal:
+        if renewal and self.is_admin_user_configured() and self.tls.all_tls_resources_stored():
             self._restart_opensearch_event.emit()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
-        if self.is_tls_fully_configured():
+        if self.tls.all_tls_resources_stored():
             return
 
         # Otherwise, we block.
@@ -749,23 +764,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Mark this unit as tls configured
         if self.is_tls_fully_configured():
             self.peers_data.put(Scope.UNIT, "tls_configured", True)
-
-    def is_tls_fully_configured(self) -> bool:
-        """Check if TLS fully configured meaning the 3 certificates are present."""
-        # In case the initialisation of the admin user is not finished yet
-        admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if not admin_secrets or not admin_secrets.get("cert") or not admin_secrets.get("chain"):
-            return False
-
-        unit_transport_secrets = self.secrets.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)
-        if not unit_transport_secrets or not unit_transport_secrets.get("cert"):
-            return False
-
-        unit_http_secrets = self.secrets.get_object(Scope.UNIT, CertType.UNIT_HTTP.val)
-        if not unit_http_secrets or not unit_http_secrets.get("cert"):
-            return False
-
-        return self._are_all_tls_resources_stored()
 
     def is_every_unit_marked_as_started(self) -> bool:
         """Check if every unit in the cluster is marked as started."""
@@ -828,7 +826,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._put_or_update_internal_user_leader(AdminUser)
 
         # we check if we need to generate the admin certificate if missing
-        if not self.is_tls_fully_configured():
+        if not self.tls.all_tls_resources_stored():
             if not self.model.get_relation("certificates"):
                 event.defer()
                 return
@@ -1305,9 +1303,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             f"-cd {self.opensearch.paths.conf}/opensearch-security/",
             f"-cn {self.opensearch_peer_cm.deployment_desc().config.cluster_name}",
             f"-h {self.unit_ip}",
-            f"-cacert {self.opensearch.paths.certs}/root-ca.cert",
-            f"-cert {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.cert",
-            f"-key {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.key",
+            f"-ts {self.opensearch.paths.certs}/ca.p12",
+            f"-tspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password-ca']}",
+            "-tsalias ca",
+            "-tst PKCS12",
+            f"-ks {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.p12",
+            f"-kspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password-app-admin']}",
+            f"-ksalias {CertType.APP_ADMIN}",
+            "-kst PKCS12",
         ]
 
         admin_key_pwd = admin_secrets.get("key-password", None)
@@ -1499,7 +1502,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if current_reported_nodes == updated_nodes:
             return
 
-        self.peers_data.put_object(Scope.APP, "nodes_config", dict(sorted(updated_nodes.items())))
+        self.peers_data.put_object(Scope.APP, "nodes_config", updated_nodes)
 
         # all units will get a peer_rel_changed event, for leader we do as follows
         self._reconfigure_and_restart_unit_if_needed()
@@ -1577,27 +1580,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     }
                 ],
                 "tls_config": {"ca": ca},
-                "scheme": "https" if self.is_tls_fully_configured() else "http",
+                "scheme": "https" if self.tls.all_tls_resources_stored() else "http",
                 "basic_auth": {"username": f"{COSUser}", "password": f"{pwd}"},
             }
         ]
-
-    @abstractmethod
-    def store_tls_resources(
-        self, cert_type: CertType, secrets: Dict[str, any], override_admin: bool = True
-    ):
-        """Write certificates and keys on disk."""
-        pass
-
-    @abstractmethod
-    def _are_all_tls_resources_stored(self):
-        """Check if all TLS resources are stored on disk."""
-        pass
-
-    @abstractmethod
-    def _delete_stored_tls_resources(self):
-        """Delete the TLS resources of the unit that are stored on disk."""
-        pass
 
     @property
     def unit_ip(self) -> str:

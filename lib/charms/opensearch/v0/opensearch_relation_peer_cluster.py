@@ -583,7 +583,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         secrets.put_object(Scope.APP, CertType.APP_ADMIN.val, data.credentials.admin_tls)
 
         # store the app admin TLS resources if not stored
-        self.charm.store_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+        self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
 
         # set user and security_index initialized flags
         self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
@@ -850,7 +850,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         """Compute TLS related errors."""
         blocked_msg, should_sever_relation = None, False
 
-        if self.charm.is_tls_fully_configured():  # compare CAs
+        if self.charm.tls.all_tls_resources_stored():  # compare CAs
             unit_transport_ca_cert = self.charm.secrets.get_object(
                 Scope.UNIT, CertType.UNIT_TRANSPORT.val
             )["ca-cert"]

@@ -115,7 +115,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         # Leader has to maintain TLS and Dashboards relation credentials
         if not is_leader and label_key == CertType.APP_ADMIN.val:
-            self._charm.store_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
+            self._charm.tls.store_new_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
             if self._charm.is_tls_fully_configured():
                 self._charm.peers_data.put(Scope.UNIT, "tls_configured", True)
 

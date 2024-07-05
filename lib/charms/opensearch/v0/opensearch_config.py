@@ -72,34 +72,35 @@ class OpenSearchConfig:
             f"{normalized_tls_subject(secrets['subject'])}",
         )
 
-    def set_node_tls_conf(self, cert_type: CertType, secrets: Dict[str, any]):
+    def set_node_tls_conf(self, cert_type: CertType, truststore_pwd: str, keystore_pwd: str):
         """Configures TLS for nodes."""
         target_conf_layer = "http" if cert_type == CertType.UNIT_HTTP else "transport"
 
-        self._opensearch.config.put(
-            self.CONFIG_YML,
-            f"plugins.security.ssl.{target_conf_layer}.pemcert_filepath",
-            f"{self._opensearch.paths.certs_relative}/{cert_type}.cert",
-        )
-
-        self._opensearch.config.put(
-            self.CONFIG_YML,
-            f"plugins.security.ssl.{target_conf_layer}.pemkey_filepath",
-            f"{self._opensearch.paths.certs_relative}/{cert_type}.key",
-        )
-
-        self._opensearch.config.put(
-            self.CONFIG_YML,
-            f"plugins.security.ssl.{target_conf_layer}.pemtrustedcas_filepath",
-            f"{self._opensearch.paths.certs_relative}/root-ca.cert",
-        )
-
-        key_pwd = secrets.get("key-password")
-        if key_pwd is not None:
+        for store_type, cert in [("keystore", target_conf_layer), ("truststore", "ca")]:
             self._opensearch.config.put(
                 self.CONFIG_YML,
-                f"plugins.security.ssl.{target_conf_layer}.pemkey_password",
-                key_pwd,
+                f"plugins.security.ssl.{target_conf_layer}.{store_type}_type",
+                "PKCS12",
+            )
+
+            self._opensearch.config.put(
+                self.CONFIG_YML,
+                f"plugins.security.ssl.{target_conf_layer}.{store_type}_filepath",
+                f"{self._opensearch.paths.certs_relative}/{cert if cert == 'ca' else cert_type}.p12",
+            )
+
+        for store_type, certificate_type in [("keystore", cert_type.val), ("truststore", "ca")]:
+            self._opensearch.config.put(
+                self.CONFIG_YML,
+                f"plugins.security.ssl.{target_conf_layer}.{store_type}_alias",
+                certificate_type,
+            )
+
+        for store_type, pwd in [("keystore", keystore_pwd), ("truststore", truststore_pwd)]:
+            self._opensearch.config.put(
+                self.CONFIG_YML,
+                f"plugins.security.ssl.{target_conf_layer}.{store_type}_password",
+                pwd,
             )
 
     def append_transport_node(self, ip_pattern_entries: List[str], append: bool = True):
