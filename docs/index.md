@@ -68,12 +68,11 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 | 2     | t-set-up        | [1. Set up the environment](/t/9724)         |
 | 2     | t-deploy-opensearch        | [2. Deploy OpenSearch](/t/9716)              |
 | 2     | t-enable-tls               | [3. Enable encryption](/t/9718)              |
-| 2     | t-integrate | [4. Integrate with another application](/t/9714)          |
+| 2     | t-integrate | [4. Integrate with a client application](/t/9714)          |
 | 2     | t-passwords          | [5. Manage passwords](/t/9728)                    |
 | 2     | t-horizontal-scaling       | [6. Scale horizontally](/t/9720)  |
 | 2     | t-clean-up                 | [7. Clean up the environment](/t/9726)       |
 | 1     | how-to                     | [How To]()                                   |
-| 2     | h-deploy-lxd     | [Deploy on LXD](/t/14575)    |
 | 2     | h-horizontal-scaling  | [Scale horizontally](/t/10994)          |
 | 2     | h-enable-monitoring | [Enable monitoring](/t/14560) |
 | 2     | h-backups                   | [Back up and restore]()                           |
@@ -93,12 +92,11 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
   1. [1. Set up the environment](tutorial/t-set-up.md)
   1. [2. Deploy OpenSearch](tutorial/t-deploy-opensearch.md)
   1. [3. Enable encryption](tutorial/t-enable-tls.md)
-  1. [4. Integrate with another application](tutorial/t-integrate.md)
+  1. [4. Integrate with a client application](tutorial/t-integrate.md)
   1. [5. Manage passwords](tutorial/t-passwords.md)
   1. [6. Scale horizontally](tutorial/t-horizontal-scaling.md)
   1. [7. Clean up the environment](tutorial/t-clean-up.md)
 1. [How To](how-to)
-  1. [Deploy on LXD](how-to/h-deploy-lxd.md)
   1. [Scale horizontally](how-to/h-horizontal-scaling.md)
   1. [Enable monitoring](how-to/h-enable-monitoring.md)
   1. [Back up and restore](how-to/h-backups)
