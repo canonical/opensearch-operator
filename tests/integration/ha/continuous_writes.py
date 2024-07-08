@@ -9,6 +9,7 @@ from multiprocessing import Event, Process, Queue, log_to_stderr
 from types import SimpleNamespace
 from typing import Optional
 
+import opensearchpy
 from opensearchpy import OpenSearch, TransportError
 from opensearchpy.helpers import BulkIndexError, bulk
 from pytest_operator.plugin import OpsTest
@@ -141,6 +142,9 @@ class ContinuousWrites:
                 },
                 wait_for_active_shards="all",
             )
+        except opensearchpy.exceptions.RequestError as e:
+            if e.error != "resource_already_exists_exception":
+                raise
         finally:
             client.close()
 
@@ -156,6 +160,9 @@ class ContinuousWrites:
                 },
                 wait_for_active_shards="all",
             )
+        except opensearchpy.exceptions.RequestError as e:
+            if e.error != "resource_already_exists_exception":
+                raise
         finally:
             client.close()
 
