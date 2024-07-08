@@ -145,22 +145,17 @@ class OpenSearchPluginManager:
         }
 
     def is_ready_for_api(self) -> bool:
-        """Checks if the plugin manager is ready to run."""
+        """Checks if the plugin manager is ready to run API calls."""
         return self._charm.peers_data.get(
             Scope.APP, "security_index_initialised", False
-        ) and self._charm.health.apply() in [
-            HealthColors.GREEN,
-            HealthColors.YELLOW,
-            HealthColors.YELLOW_TEMP,
-            HealthColors.IGNORE,
-        ]
+        ) and self._charm.health.get() not in [HealthColors.RED, HealthColors.UNKNOWN]
 
     def run(self) -> bool:
         """Runs a check on each plugin: install, execute config changes or remove.
 
         This method should be called at config-changed event. Returns if needed restart.
         """
-        manager_not_ready = False
+        is_manager_ready = True
         err_msgs = []
         restart_needed = False
         for plugin in self.plugins:
@@ -201,13 +196,13 @@ class OpenSearchPluginManager:
                 # We want to apply all configuration changes to the cluster and then
                 # inform the caller this method needs to be reran later to update keystore.
                 # The keystore does not demand a restart, so we can process it later.
-                manager_not_ready = True
+                is_manager_ready = False
                 logger.debug(f"Finished Plugin {plugin.name} waiting for keystore")
             else:
                 logger.debug(f"Finished Plugin {plugin.name} status: {self.status(plugin)}")
         logger.info(f"Plugin check finished, restart needed: {restart_needed}")
 
-        if manager_not_ready:
+        if not is_manager_ready:
             # Next run, configurations above will not change, as they have been applied, and
             # only the missing keystore will be set.
             raise OpenSearchKeystoreNotReadyYetError()
@@ -396,16 +391,10 @@ class OpenSearchPluginManager:
         # Final conclusion, we return a restart is needed if:
         # (1) configuration changes are needed and applied in the files; and (2)
         # the node is not up. For (2), we already checked if the node was up on
-        # _cluster_settings and, if not, cluster_settings_changed=True.
-        return all(
-            [
-                (config.secret_entries_to_add or config.secret_entries_to_del),
-                (
-                    (config.config_entries_to_add or config.config_entries_to_del)
-                    and not cluster_settings_changed
-                ),
-            ]
-        )
+        # _cluster_settings and, if not, cluster_settings_changed=False.
+        return (
+            config.config_entries_to_add or config.config_entries_to_del
+        ) and not cluster_settings_changed
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""
