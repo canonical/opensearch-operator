@@ -112,7 +112,7 @@ class OpenSearchKeystore(Keystore):
         """Creates the keystore manager class."""
         super().__init__(charm)
         self._keytool = "opensearch-keystore"
-        self.keystore = charm.opensearch.paths.conf + "/opensearch.keystore"
+        self.keystore = f"{charm.opensearch.paths.conf}/opensearch.keystore"
 
     def add(self, entries: Dict[str, str]) -> None:
         """Adds a given key to the "opensearch" keystore."""

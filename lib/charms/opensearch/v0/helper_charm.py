@@ -42,17 +42,9 @@ class Status:
         self.charm = charm
 
     def clear(
-        self,
-        status_message: str,
-        pattern: CheckPattern = CheckPattern.Equal,
-        new_status: StatusBase = None,
-        app: bool = False,
+        self, status_message: str, pattern: CheckPattern = CheckPattern.Equal, app: bool = False
     ):
-        """Resets status if message matches pattern.
-
-        Status will be reset back to the new_status if provided AND if the cluster is not in an
-        upgrade process.
-        """
+        """Resets the unit status if it was previously blocked/maintenance with message."""
         context = self.charm.app if app else self.charm.unit
 
         condition: bool
@@ -77,7 +69,7 @@ class Status:
             ):
                 context.status = status
             else:
-                context.status = new_status if new_status else ActiveStatus()
+                context.status = ActiveStatus()
 
     def set(self, status: StatusBase, app: bool = False):
         """Set status on unit or app IF not already set.

@@ -144,7 +144,7 @@ class OpenSearchPluginManager:
             "opensearch-version": self._opensearch.version,
         }
 
-    def check_plugin_manager_ready_for_api(self) -> bool:
+    def is_ready_for_api(self) -> bool:
         """Checks if the plugin manager is ready to run."""
         return self._charm.peers_data.get(
             Scope.APP, "security_index_initialised", False
@@ -295,10 +295,7 @@ class OpenSearchPluginManager:
         self, config: OpenSearchPluginConfig
     ) -> Tuple[Dict[str, str], Dict[str, str]]:
         """Returns the current and the new configuration."""
-        if (
-            not self._charm.opensearch.is_node_up()
-            or not self.check_plugin_manager_ready_for_api()
-        ):
+        if not self._charm.opensearch.is_node_up() or not self.is_ready_for_api():
             return None, None
 
         current_settings = self.cluster_config
