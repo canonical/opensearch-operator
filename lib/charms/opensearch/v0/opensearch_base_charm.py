@@ -1021,12 +1021,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 if len(nodes) > 1:
                     self.opensearch_exclusions.add_allocations_exclusion()
             except OpenSearchHttpError:
-                logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
+                logger.debug("Failed to get online nodes, alloc exclusion not added")
 
-        # TODO: should block until all shards move addressed in PR DPE-2234
+        self._settle_voting_exclusions(unit_is_stopping=True)
+
+        # TODO: improve relocation of all shards move in PR DPE-2234
+        for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
+            with attempt:
+                if self.health.apply(wait_for_green_first=True) != HealthColors.GREEN:
+                    raise OpenSearchHAError("Timed out waiting for shard relocation to complete")
 
         # 2. stop the service
-        self._settle_voting_exclusions(unit_is_stopping=True)
         self.opensearch.stop()
         self.peers_data.delete(Scope.UNIT, "started")
         self.status.set(WaitingStatus(ServiceStopped))
