@@ -32,6 +32,7 @@ from charms.opensearch.v0.constants_charm import (
     ServiceIsStopping,
     ServiceStartError,
     ServiceStopped,
+    TLSNewCaRequested,
     TLSNewCertsRequested,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
@@ -604,6 +605,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             self.user_manager.remove_users_and_roles()
 
+        self._check_ca_expiration()
         # If relation not broken - leave
         if self.model.get_relation("certificates") is not None:
             return
@@ -1539,6 +1541,38 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.peers_data.put(
             Scope.UNIT, "certs_exp_checked_at", datetime.now().strftime(date_format)
         )
+
+    def _check_ca_expiration(self) -> None:
+        """
+        Checks the certificate authority's expiration.
+        As there is no event for ca expiration from the TLS provider, we need to check ourselves.
+        If the ca is about to expire, a new ca-cert will be requested.
+        """
+        date_format = "%Y-%m-%d %H:%M:%S"
+        last_cert_check = datetime.strptime(
+            self.peers_data.get(Scope.APP, "ca_exp_checked_at", "1970-01-01 00:00:00"),
+            date_format,
+        )
+
+        # See if the last check was made less than 6h ago, if yes - leave
+        if (datetime.now() - last_cert_check).seconds < 60: # 6 * 3600:
+            return
+
+        if self.unit.is_leader():
+            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+            if admin_secrets and admin_secrets.get("ca-cert"):
+                ca_cert = admin_secrets["ca-cert"]
+            else:
+                logger.warning(f"CA expiry check: no ca-cert in {CertType.APP_ADMIN.val} secret")
+                return
+
+            if cert_expiration_remaining_hours(ca_cert) < 24 * 365: # 24 * 7:
+                self.status.set(MaintenanceStatus(TLSNewCaRequested))
+                self.tls.request_new_ca_certificates()
+
+            self.peers_data.put(
+                Scope.APP, "ca_exp_checked_at", datetime.now().strftime(date_format)
+            )
 
     def _get_prometheus_labels(self) -> Optional[Dict[str, str]]:
         """Return the labels for the prometheus scrape."""
