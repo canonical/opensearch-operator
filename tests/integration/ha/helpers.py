@@ -9,7 +9,7 @@ import subprocess
 import time
 from typing import Dict, List, Optional
 
-from charms.opensearch.v0.models import Node
+from charms.opensearch.v0.models import App, Node
 from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -96,7 +96,9 @@ async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
 
     # get all nodes
     resp = await http_request(ops_test, "GET", f"https://{unit_ip}:9200/_nodes")
-    return int(resp["nodes"][cm_node_id]["name"].split("-")[1])
+    node_name = resp["nodes"][cm_node_id]["name"]
+
+    return int(node_name.split(".")[0].split("-")[-1])
 
 
 @retry(
@@ -156,7 +158,7 @@ async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) 
     result = []
     for shards_collection in response["shards"]:
         for shard in shards_collection:
-            node_name_split = nodes[shard["node"]]["name"].split("-")
+            node_name_split = nodes[shard["node"]]["name"].split(".")[0].split("-")
             result.append(
                 Shard(
                     index=index_name,
@@ -192,7 +194,7 @@ async def get_number_of_shards_by_node(ops_test: OpsTest, unit_ip: str) -> Dict[
     for alloc in init_cluster_alloc:
         key = -1
         if alloc["node"] != "UNASSIGNED":
-            key = int(alloc["node"].split("-")[1])
+            key = int(alloc["node"].split(".")[0].split("-")[-1])
         result[key] = int(alloc["shards"])
 
     return result
@@ -219,8 +221,8 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str, app: str = APP_NAME) -> Lis
                 name=node["name"],
                 roles=node["roles"],
                 ip=node["ip"],
-                app_name="-".join(node["name"].split("-")[:-1]),
-                unit_number=int(node["name"].split("-")[-1]),
+                app=App(id=node["attributes"]["app_id"]),
+                unit_number=int(node["name"].split(".")[0].split("-")[-1]),
                 temperature=node.get("attributes", {}).get("temp"),
             )
         )

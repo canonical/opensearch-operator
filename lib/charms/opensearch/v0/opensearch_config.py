@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import normalized_tls_subject
+from charms.opensearch.v0.models import App
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
 # The unique Charmhub library identifier, never change it
@@ -121,6 +122,7 @@ class OpenSearchConfig:
 
     def set_node(
         self,
+        app: App,
         cluster_name: str,
         unit_name: str,
         roles: List[str],
@@ -130,7 +132,7 @@ class OpenSearchConfig:
         node_temperature: Optional[str] = None,
     ) -> None:
         """Set base config for each node in the cluster."""
-        self._opensearch.config.put(self.CONFIG_YML, "cluster.name", f"{cluster_name}")
+        self._opensearch.config.put(self.CONFIG_YML, "cluster.name", cluster_name)
         self._opensearch.config.put(self.CONFIG_YML, "node.name", unit_name)
         self._opensearch.config.put(
             self.CONFIG_YML, "network.host", ["_site_"] + self._opensearch.network_hosts
@@ -145,6 +147,9 @@ class OpenSearchConfig:
             self._opensearch.config.put(self.CONFIG_YML, "node.attr.temp", node_temperature)
         else:
             self._opensearch.config.delete(self.CONFIG_YML, "node.attr.temp")
+
+        # Set the current app full id
+        self._opensearch.config.put(self.CONFIG_YML, "node.attr.app_id", app.id)
 
         # This allows the new CMs to be discovered automatically (hot reload of unicast_hosts.txt)
         self._opensearch.config.put(self.CONFIG_YML, "discovery.seed_providers", "file")

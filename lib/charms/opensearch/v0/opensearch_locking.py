@@ -8,12 +8,14 @@ import os
 from typing import TYPE_CHECKING, List, Optional
 
 import ops
-from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.helper_charm import all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology
+from charms.opensearch.v0.models import PeerClusterApp
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
+from charms.opensearch.v0.opensearch_internal_data import Scope
 
 if TYPE_CHECKING:
-    import charms.opensearch.v0.opensearch_base_charm as opensearch_base_charm
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 # The unique Charmhub library identifier, never change it
 LIBID = "0924c6d81c604a15873ad43498cd6895"
@@ -33,7 +35,7 @@ class _PeerRelationLock(ops.Object):
 
     _ENDPOINT_NAME = "node-lock-fallback"
 
-    def __init__(self, charm: ops.CharmBase):
+    def __init__(self, charm: "OpenSearchBaseCharm"):
         super().__init__(charm, self._ENDPOINT_NAME)
         self._charm = charm
         self.framework.observe(
@@ -49,16 +51,20 @@ class _PeerRelationLock(ops.Object):
         """
         if not self._relation:
             return False
+
         self._relation.data[self._charm.unit]["lock-requested"] = json.dumps(True)
+
         if self._charm.unit.is_leader():
             logger.debug("[Node lock] Requested peer lock as leader unit")
             # A separate relation-changed event won't get fired
             self._on_peer_relation_changed()
-        if self._unit_with_lock != self._charm.unit.name:
+
+        if self._unit_with_lock != self._charm.unit_name:
             logger.debug(
                 f"[Node lock] Not acquired. Unit with peer databag lock: {self._unit_with_lock}"
             )
             return False
+
         if (
             self._charm.unit.is_leader()
             and self._relation.data[self._charm.app]["leader-acquired-lock-after-juju-event-id"]
@@ -77,13 +83,16 @@ class _PeerRelationLock(ops.Object):
                 # unit. We must use the lock now and accept that `unit-with-lock` could be reverted
                 # if the charm code raises an uncaught exception later in the Juju event.
                 logger.debug(
-                    "[Node lock] Single unit deployment. Not waiting until next Juju event to use peer databag lock for leader unit"
+                    "[Node lock] Single unit deployment. Not waiting until next Juju event to use peer "
+                    "databag lock for leader unit"
                 )
             else:
                 logger.debug(
-                    "[Node lock] Not acquired. Waiting until next Juju event to use peer databag lock for leader unit"
+                    "[Node lock] Not acquired. Waiting until next Juju event to use peer databag lock "
+                    "for leader unit"
                 )
                 return False
+
         logger.debug("[Node lock] Acquired via peer databag")
         return True
 
@@ -91,6 +100,7 @@ class _PeerRelationLock(ops.Object):
         """Release lock for this unit."""
         if not self._relation:
             return
+
         self._relation.data[self._charm.unit].pop("lock-requested", None)
         if self._charm.unit.is_leader():
             logger.debug("[Node lock] Released peer lock as leader unit")
@@ -100,12 +110,13 @@ class _PeerRelationLock(ops.Object):
     def _unit_requested_lock(self, unit: ops.Unit):
         """Whether unit requested lock."""
         assert self._relation
-        value = self._relation.data[unit].get("lock-requested")
-        if not value:
+        if not (value := self._relation.data[unit].get("lock-requested")):
             return False
+
         value = json.loads(value)
         if not isinstance(value, bool):
             raise ValueError
+
         return value
 
     @property
@@ -117,7 +128,8 @@ class _PeerRelationLock(ops.Object):
     def _unit_with_lock(self, value: str):
         assert self._relation
         assert self._unit_with_lock != value
-        if value == self._charm.unit.name:
+
+        if value == self._charm.unit_name:
             logger.debug("[Node lock] (leader) granted peer lock to own unit")
             # Prevent leader unit from using lock in the same Juju event that it was granted
             # If the charm code raises an uncaught exception later in the Juju event,
@@ -148,6 +160,10 @@ class _PeerRelationLock(ops.Object):
     def _on_peer_relation_changed(self, _=None):
         """Grant & release lock."""
         assert self._relation
+
+        if not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc()):
+            return
+
         if not self._charm.unit.is_leader():
             if self._relation.data[self._charm.app].get(
                 "leader-acquired-lock-after-juju-event-id"
@@ -161,23 +177,32 @@ class _PeerRelationLock(ops.Object):
                 # changed event will not be triggered)
                 self._relation.data[self._charm.unit]["-trigger"] = os.environ["JUJU_CONTEXT_ID"]
             return
+
         if self._unit_with_lock and self._unit_requested_lock(
-            self._charm.model.get_unit(self._unit_with_lock)
+            self._charm.model.get_unit(self._default_unit_name(self._unit_with_lock))
         ):
             # Lock still in use, do not release
             logger.debug("[Node lock] (leader) lock still in use")
             return
+
         # TODO: adjust which unit gets priority on lock after leader?
         # During initial startup, leader unit must start first
         # Give priority to leader unit
         for unit in (self._charm.unit, *self._relation.units):
             if self._unit_requested_lock(unit):
-                self._unit_with_lock = unit.name
+                self._unit_with_lock = format_unit_name(unit, app=deployment_desc.app)
                 logger.debug(f"[Node lock] (leader) granted peer lock to {unit.name=}")
                 break
         else:
             logger.debug("[Node lock] (leader) cleared peer lock")
             del self._unit_with_lock
+
+    @staticmethod
+    def _default_unit_name(full_unit_id: str) -> str:
+        """Build back the juju formatted unit name."""
+        # we first take out the app id suffix
+        full_unit_id_split = full_unit_id.split(".")[0].rsplit("-")
+        return "{}/{}".format("-".join(full_unit_id_split[:-1]), full_unit_id_split[-1])
 
 
 class OpenSearchNodeLock(ops.Object):
@@ -188,13 +213,13 @@ class OpenSearchNodeLock(ops.Object):
 
     OPENSEARCH_INDEX = ".charm_node_lock"
 
-    def __init__(self, charm: "opensearch_base_charm.OpenSearchBaseCharm"):
+    def __init__(self, charm: "OpenSearchBaseCharm"):
         super().__init__(charm, "opensearch-node-lock")
         self._charm = charm
         self._opensearch = charm.opensearch
         self._peer = _PeerRelationLock(self._charm)
 
-    def _unit_with_lock(self, host) -> str | None:
+    def _unit_with_lock(self, host: str | None) -> str | None:
         """Unit that has acquired OpenSearch lock."""
         try:
             document_data = self._opensearch.request(
@@ -203,9 +228,10 @@ class OpenSearchNodeLock(ops.Object):
                 host=host,
                 alt_hosts=self._charm.alt_hosts,
                 retries=3,
+                ignore_retry_on=[404],
             )
         except OpenSearchHttpError as e:
-            if e.response_code in [404, 503]:
+            if e.response_code == 404:
                 # No unit has lock or index not available
                 return
             raise
@@ -218,11 +244,8 @@ class OpenSearchNodeLock(ops.Object):
         Returns:
             Whether lock was acquired
         """
-        if self._opensearch.is_node_up():
-            host = self._charm.unit_ip
-        else:
-            host = None
-        alt_hosts = [host for host in self._charm.alt_hosts if self._opensearch.is_node_up(host)]
+        host = self._charm.unit_ip if self._opensearch.is_node_up() else None
+        alt_hosts = self._charm.alt_hosts
         if host or alt_hosts:
             logger.debug("[Node lock] 1+ opensearch nodes online")
             try:
@@ -265,9 +288,9 @@ class OpenSearchNodeLock(ops.Object):
                         "PUT",
                         endpoint=f"/{self.OPENSEARCH_INDEX}/_create/0?refresh=true&wait_for_active_shards=all",
                         host=host,
-                        alt_hosts=alt_hosts,
+                        alt_hosts=self._charm.alt_hosts,
                         retries=0,
-                        payload={"unit-name": self._charm.unit.name},
+                        payload={"unit-name": self._charm.unit_name},
                     )
                 except OpenSearchHttpError as e:
                     if e.response_code == 409 and "document already exists" in e.response_body.get(
@@ -275,7 +298,8 @@ class OpenSearchNodeLock(ops.Object):
                     ).get("reason", ""):
                         # Document already created
                         logger.debug(
-                            "[Node lock] Another unit acquired OpenSearch lock while this unit attempted to acquire lock"
+                            "[Node lock] Another unit acquired OpenSearch lock while this unit attempted "
+                            "to acquire lock"
                         )
                         return False
                     else:
@@ -304,17 +328,18 @@ class OpenSearchNodeLock(ops.Object):
                             "DELETE",
                             endpoint=f"/{self.OPENSEARCH_INDEX}/_doc/0?refresh=true",
                             host=host,
-                            alt_hosts=alt_hosts,
+                            alt_hosts=self._charm.alt_hosts,
                             retries=10,
                         )
                         logger.debug(
                             "[Node lock] Deleted OpenSearch lock after failing to write to all nodes"
                         )
                         return False
-                    # This unit has OpenSearch lock
-                    unit = self._charm.unit.name
 
-            if unit == self._charm.unit.name:
+                    # This unit has OpenSearch lock
+                    unit = self._charm.unit_name
+
+            if unit == self._charm.unit_name:
                 # Lock acquired
                 # Release peer databag lock, if any
                 logger.debug("[Node lock] Acquired via opensearch")
@@ -343,23 +368,40 @@ class OpenSearchNodeLock(ops.Object):
         document lock will not be released
         """
         logger.debug("[Node lock] Releasing lock")
-        if self._opensearch.is_node_up():
-            host = self._charm.unit_ip
-        else:
-            host = None
-        alt_hosts = [host for host in self._charm.alt_hosts if self._opensearch.is_node_up(host)]
+
+        # fetch current app description
+        current_app = self._charm.opensearch_peer_cm.deployment_desc().app
+
+        host = self._charm.unit_ip if self._opensearch.is_node_up() else None
+        alt_hosts = self._charm.alt_hosts
         if host or alt_hosts:
             logger.debug("[Node lock] Checking which unit has opensearch lock")
             # Check if this unit currently has lock
             # or if there is a stale lock from a unit no longer existing
-            # TODO: for large deployments the MAIN/FAILOVER orchestrators should broadcast info
-            #  over non-online units in the relation. This info should be considered here as well.
+            # for large deployments the MAIN/FAILOVER orchestrators should broadcast info
+            # over non-online units in the relation. This info should be considered here as well.
             unit_with_lock = self._unit_with_lock(host)
             current_app_units = [
-                unit.name for unit in self._charm.model.get_relation(PeerRelationName).units
+                format_unit_name(unit, app=current_app) for unit in all_units(self._charm)
             ]
+
+            # handle case of large deployments
+            other_apps_units = []
+            if all_apps := self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
+                for app in all_apps.values():
+                    p_cluster_app = PeerClusterApp.from_dict(app)
+                    if p_cluster_app.app.id == current_app.id:
+                        continue
+
+                    units = [
+                        format_unit_name(unit, app=p_cluster_app.app)
+                        for unit in p_cluster_app.units
+                    ]
+                    other_apps_units.extend(units)
+
             if unit_with_lock and (
-                unit_with_lock == self._charm.unit.name or unit_with_lock not in current_app_units
+                unit_with_lock == self._charm.unit_name
+                or unit_with_lock not in current_app_units + other_apps_units
             ):
                 logger.debug("[Node lock] Releasing opensearch lock")
                 # Delete document id 0
@@ -370,6 +412,7 @@ class OpenSearchNodeLock(ops.Object):
                         host=host,
                         alt_hosts=alt_hosts,
                         retries=3,
+                        ignore_retry_on=[404],
                     )
                 except OpenSearchHttpError as e:
                     if e.response_code != 404:
@@ -407,6 +450,7 @@ class OpenSearchNodeLock(ops.Object):
                 host=host,
                 alt_hosts=alt_hosts,
                 retries=3,
+                ignore_retry_on=[400],
                 payload={"settings": {"index": {"auto_expand_replicas": "0-all"}}},
             )
             return True
