@@ -7,10 +7,7 @@ from functools import cached_property
 from typing import List, Optional, Set
 
 from charms.opensearch.v0.models import Node
-from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchError,
-    OpenSearchHttpError,
-)
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 
 # The unique Charmhub library identifier, never change it
@@ -27,12 +24,7 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-class OpenSearchExclusionsException(OpenSearchError):
-    """Exception class for all Voting/Allocation exclusions related exceptions."""
-
-
 ALLOCS_TO_DELETE = "allocation-exclusions-to-delete"
-VOTING_TO_DELETE = "delete-voting-exclusions"
 
 
 class OpenSearchExclusions:
@@ -44,50 +36,24 @@ class OpenSearchExclusions:
 
         self._scope = Scope.APP if self._charm.unit.is_leader() else Scope.UNIT
 
-    def add_current(self) -> None:
-        """Add Voting and alloc exclusions."""
-        if (self._node.is_cm_eligible() or self._node.is_voting_only()) and not self._add_voting():
-            logger.error(f"Failed to add voting exclusion: {self._node.name}.")
-
-        if self._node.is_data() and not self._add_allocations():
-            logger.error(f"Failed to add shard allocation exclusion: {self._node.name}.")
-
-    def delete_current(self) -> None:
-        """Delete Voting and alloc exclusions."""
-        if (
-            self._node.is_cm_eligible() or self._node.is_voting_only()
-        ) and not self._delete_voting():
-            self._charm.peers_data.put(self._scope, VOTING_TO_DELETE, True)
-
-        if self._node.is_data() and not self._delete_allocations():
-            current_allocations = set(
-                self._charm.peers_data.get(self._scope, ALLOCS_TO_DELETE, "").split(",")
-            )
-            current_allocations.add(self._node.name)
-
-            self._charm.peers_data.put(
-                self._scope, ALLOCS_TO_DELETE, ",".join(current_allocations)
-            )
-
-    def cleanup(self) -> None:
-        """Delete all exclusions that failed to be deleted."""
-        need_voting_cleanup = self._charm.peers_data.get(self._scope, VOTING_TO_DELETE, False)
-        if need_voting_cleanup and self._delete_voting():
-            self._charm.peers_data.delete(self._scope, VOTING_TO_DELETE)
-
+    def allocation_cleanup(self) -> None:
+        """Delete alloc exclusions that failed to be deleted."""
         allocations_to_cleanup = self._charm.peers_data.get(
             self._scope, ALLOCS_TO_DELETE, ""
         ).split(",")
-        if allocations_to_cleanup and self._delete_allocations(allocations_to_cleanup):
+        if allocations_to_cleanup and self.delete_allocations_exclusion(allocations_to_cleanup):
             self._charm.peers_data.delete(self._scope, ALLOCS_TO_DELETE)
 
-    def _add_voting(self) -> bool:
+    def add_voting(
+        self, alt_hosts: Optional[List[str]] = None, node_names: Optional[List[str]] = None
+    ) -> bool:
         """Include the current node in the CMs voting exclusions list of nodes."""
+        add_nodes = "&node_names=" + (",".join(node_names) if node_names else self._node.name)
         try:
             self._opensearch.request(
                 "POST",
-                f"/_cluster/voting_config_exclusions?node_names={self._node.name}&timeout=1m",
-                alt_hosts=self._charm.alt_hosts,
+                "/_cluster/voting_config_exclusions?timeout=1m" + add_nodes,
+                alt_hosts=alt_hosts if alt_hosts else self._charm.alt_hosts,
                 resp_status_code=True,
                 retries=3,
             )
@@ -95,7 +61,7 @@ class OpenSearchExclusions:
         except OpenSearchHttpError:
             return False
 
-    def _delete_voting(self) -> bool:
+    def delete_voting(self, alt_hosts: Optional[List[str]] = None) -> bool:
         """Remove all the voting exclusions - cannot target 1 exclusion at a time."""
         # "wait_for_removal" is VERY important, it removes all voting configs immediately
         # and allows any node to return to the voting config in the future
@@ -103,14 +69,14 @@ class OpenSearchExclusions:
             self._opensearch.request(
                 "DELETE",
                 "/_cluster/voting_config_exclusions?wait_for_removal=false",
-                alt_hosts=self._charm.alt_hosts,
+                alt_hosts=alt_hosts if alt_hosts else self._charm.alt_hosts,
                 resp_status_code=True,
             )
             return True
         except OpenSearchHttpError:
             return False
 
-    def _add_allocations(
+    def add_allocations_exclusion(
         self, allocations: Optional[Set[str]] = None, override: bool = False
     ) -> bool:
         """Register new allocation exclusions."""
@@ -129,12 +95,12 @@ class OpenSearchExclusions:
         except OpenSearchHttpError:
             return False
 
-    def _delete_allocations(self, allocs: Optional[List[str]] = None) -> bool:
+    def delete_allocations_exclusion(self, allocs: Optional[List[str]] = None) -> bool:
         """This removes the allocation exclusions if needed."""
         try:
             existing = self._fetch_allocations()
             to_remove = set(allocs if allocs is not None else [self._node.name])
-            res = self._add_allocations(existing - to_remove, override=True)
+            res = self.add_allocations_exclusion(existing - to_remove, override=True)
             return res
         except OpenSearchHttpError:
             return False

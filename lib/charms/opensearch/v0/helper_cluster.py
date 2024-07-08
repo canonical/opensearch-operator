@@ -140,6 +140,14 @@ class ClusterTopology:
         return result
 
     @staticmethod
+    def elected_manager(nodes: List[Node]) -> List[str]:
+        """Get the list of nodes in a cluster."""
+        for node in nodes:
+            if node.elected_manager:
+                return node
+        return None
+
+    @staticmethod
     def nodes(
         opensearch: OpenSearchDistribution,
         use_localhost: bool,
@@ -165,6 +173,7 @@ class ClusterTopology:
                         app=App(id=obj["attributes"]["app_id"]),
                         unit_number=int(obj["name"].split(".")[0].split("-")[-1]),
                         temperature=obj.get("attributes", {}).get("temp"),
+                        elected_manager=obj.get("cluster_manager") == "*",
                     )
                     nodes.append(node)
         return nodes
