@@ -52,7 +52,7 @@ class Keystore(ABC):
         """Lists the keys available in opensearch's keystore."""
         try:
             # Not using OPENSEARCH_BIN path
-            return self._opensearch.run_bin(self._keytool, f"-v -list -keystore {self._keystore}")
+            return self._opensearch.run_cmd(self._keytool, f"-v -list -keystore {self._keystore}")
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
@@ -72,7 +72,7 @@ class Keystore(ABC):
                 pass
             try:
                 # Not using OPENSEARCH_BIN path
-                self._opensearch.run_bin(
+                self._opensearch.run_cmd(
                     self._keytool,
                     f"-import -alias {key} "
                     f"-file {filename} -storetype JKS "
@@ -90,7 +90,7 @@ class Keystore(ABC):
         for key in entries:
             try:
                 # Not using OPENSEARCH_BIN path
-                self._opensearch.run_bin(
+                self._opensearch.run_cmd(
                     self._keytool,
                     f"-delete -alias {key} "
                     f"-keystore {self._keystore} "

@@ -663,7 +663,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
 
         self.status.clear(PluginConfigChangeError)
-        self.status.clear(PluginConfigCheck, new_status=original_status)
+        self.status.clear(PluginConfigCheck)
+        self.status.set(original_status)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
