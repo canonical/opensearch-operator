@@ -1081,7 +1081,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
                 node = None
                 for node in nodes:
-                    if node.name == self.opensearch.current().name:
+                    if node.name == self.unit_name:
                         break
                 if unit_is_stopping and node:
                     # This is a stop operation, we exclude the unit that is stopping
@@ -1108,14 +1108,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # This condition only happens IF the cluster had 2x units and now is scalig down
             # to a single unit. We must, in this case, cleanup the voting configuration,
             # add this unit to the voting exclusion and wait until cluster manager is re-elected
-            self.opensearch_exclusions.add_voting(
-                hosts, node_names=[self.opensearch.current().name]
-            )
+            self.opensearch_exclusions.add_voting(hosts, node_names=[self.unit_name])
         elif len(cms) == 2:
             if unit_is_stopping:
                 # Remove both this unit and the first sorted_cm from the voting
                 self.opensearch_exclusions.add_voting(
-                    hosts, node_names=[self.opensearch.current().name, sorted_cm[0]]
+                    hosts, node_names=[self.unit_name, sorted_cm[0]]
                 )
             else:
                 # We are adding this unit to the cluster and we've waited until it is present
@@ -1124,7 +1122,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # Now, we clean up the sorted_cm list, as we want to be sure the new manager is elected
             # and different than the excluded units.
             sorted_cm.pop(0)
-            # We do not exclude the self.opensearch.current().name
+            # We do not exclude the self.unit_name
         else:
             # In this case, we either are scaling down to 0 or len(cms) > 2.
             # There is nothing more to do then cleanup the exclusions
