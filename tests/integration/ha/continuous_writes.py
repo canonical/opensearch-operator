@@ -56,6 +56,8 @@ class ContinuousWrites:
         # create index if custom conf needed
         if repl_on_all_nodes:
             await self._create_fully_replicated_index()
+        else:
+            await self._create()
 
         # create process
         self._create_process(is_bulk=is_bulk)
@@ -124,6 +126,21 @@ class ContinuousWrites:
 
             # max stored document id
             return int(resp["aggregations"]["max_id"]["value"])
+        finally:
+            client.close()
+
+    async def _create(self):
+        """Create index with 1x shard on each node."""
+        client = await self._client()
+        try:
+            # create index with a replica shard on every node
+            client.indices.create(
+                index=ContinuousWrites.INDEX_NAME,
+                body={
+                    "settings": {"index": {"number_of_shards": 1, "auto_expand_replicas": "0-all"}}
+                },
+                wait_for_active_shards="all",
+            )
         finally:
             client.close()
 

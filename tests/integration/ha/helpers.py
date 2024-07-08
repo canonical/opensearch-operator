@@ -595,3 +595,23 @@ async def assert_restore_indices_and_compare_consistency(
     # We expect that new_count has a loss of documents and the numbers are different.
     # Check if we have data but not all of it.
     assert 0 < new_count < original_count
+
+
+@retry(
+    wait=wait_fixed(wait=15) + wait_random(0, 5),
+    stop=stop_after_attempt(25),
+)
+async def cluster_voting_config_exclusions(
+    ops_test: OpsTest, unit_ip: str
+) -> List[Dict[str, str]]:
+    """Fetch the cluster allocation of shards."""
+    result = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_cluster/state/metadata/voting_config_exclusions",
+    )
+    return (
+        result.get("metadata", {})
+        .get("cluster_coordination", {})
+        .get("voting_config_exclusions", {})
+    )

@@ -1072,7 +1072,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
             with attempt:
-                nodes = ClusterTopology.nodes(self.opensearch, use_localhost=False, hosts=hosts)
+                nodes = ClusterTopology.nodes(self.opensearch, use_localhost=True, hosts=hosts)
 
                 node = None
                 for node in nodes:
@@ -1107,9 +1107,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 hosts, node_names=[self.opensearch.current().name]
             )
         elif len(cms) == 2:
-            self.opensearch_exclusions.add_voting(
-                hosts, node_names=[self.opensearch.current().name, sorted_cm[0]]
-            )
+            if unit_is_stopping:
+                # Remove both this unit and the first sorted_cm from the voting
+                self.opensearch_exclusions.add_voting(
+                    hosts, node_names=[self.opensearch.current().name, sorted_cm[0]]
+                )
+            else:
+                # We are adding this unit to the cluster and we've waited until it is present
+                # We only exclude one unit:
+                self.opensearch_exclusions.add_voting(hosts, node_names=[sorted_cm[0]])
             # Now, we clean up the sorted_cm list, as we want to be sure the new manager is elected
             # and different than the excluded units.
             sorted_cm.pop(0)
@@ -1123,7 +1129,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
             with attempt:
                 manager = ClusterTopology.elected_manager(
-                    ClusterTopology.nodes(self.opensearch, use_localhost=False, hosts=hosts)
+                    ClusterTopology.nodes(self.opensearch, use_localhost=True, hosts=hosts)
                 )
                 if not manager or manager.name not in sorted_cm:
                     raise OpenSearchHAError("New manager not elected yet")
