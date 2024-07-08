@@ -102,9 +102,9 @@ async def test_scale_down(ops_test: OpsTest, c_writes: ContinuousWrites, c_write
         voting_exclusions = await cluster_voting_config_exclusions(
             ops_test, unit_ip=leader_unit_ip
         )
-        if len(init_count) == 3:
+        if len(voting_exclusions) == 3:
             assert len(voting_exclusions) == 2
-        elif len(init_count) == 2:
+        elif len(voting_exclusions) == 2:
             assert len(voting_exclusions) == 1
         init_count = len(ops_test.model.applications[app].units)
 
@@ -146,9 +146,9 @@ async def test_scale_back_up(
         voting_exclusions = await cluster_voting_config_exclusions(
             ops_test, unit_ip=leader_unit_ip
         )
-        if len(init_count) == 1:
+        if len(voting_exclusions) == 1:
             assert len(voting_exclusions) == 1
-        elif len(init_count) == 2:
+        elif len(voting_exclusions) == 2:
             assert len(voting_exclusions) == 1
         else:
             assert len(voting_exclusions) == 0
