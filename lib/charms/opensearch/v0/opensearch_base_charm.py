@@ -1011,7 +1011,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-    def _stop_opensearch(self, *, restart=False) -> None:
+    def _stop_opensearch(self, *, restart=False) -> None:  # noqa: C901
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
@@ -1026,10 +1026,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self._settle_voting_exclusions(unit_is_stopping=True)
 
         # TODO: improve relocation of all shards move in PR DPE-2234
-        for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
-            with attempt:
-                if self.health.apply(wait_for_green_first=True) != HealthColors.GREEN:
-                    raise OpenSearchHAError("Timed out waiting for shard relocation to complete")
+        if len(nodes) > 1:
+            # this check only makes sense if we have more than one unit.
+            for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
+                with attempt:
+                    if self.health.apply(wait_for_green_first=True) != HealthColors.GREEN:
+                        raise OpenSearchHAError(
+                            "Timed out waiting for shard relocation to complete"
+                        )
 
         # 2. stop the service
         self.opensearch.stop()

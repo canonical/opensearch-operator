@@ -155,3 +155,16 @@ async def test_scale_back_up(
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_gracefully_cluster_remove(ops_test: OpsTest) -> None:
+    """Tests removing the entire application at once."""
+    app = (await app_name(ops_test)) or APP_NAME
+
+    # This removal must not leave units in error.
+    await asyncio.gather(
+        ops_test.model.remove_application(app, block_until_done=True),
+        ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True),
+    )
