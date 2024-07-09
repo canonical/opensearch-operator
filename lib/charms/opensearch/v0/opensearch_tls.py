@@ -35,7 +35,6 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateExpiringEvent,
     CertificateInvalidatedEvent,
     TLSCertificatesRequiresV3,
-    generate_ca,
     generate_csr,
     generate_private_key,
 )
@@ -130,46 +129,6 @@ class OpenSearchTLS(Object):
             secrets = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)
             self._request_certificate_renewal(Scope.UNIT, cert_type, secrets)
 
-    def request_new_ca_certificates(self) -> None:
-        """Request a new ca certificate from the tls operator"""
-        logger.info("Request a new ca-cert")
-
-        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-
-        if not admin_secrets.get("key", None):
-            logging.error("Private key not found, quitting.")
-            return
-
-        # TODO: don't use fixed text here
-        organization = self.charm.opensearch_peer_cm.deployment_desc().config.cluster_name
-        subject = "Intermediate CA"
-        key = admin_secrets.get("key")
-        key_password = admin_secrets.get("key-password", None)
-
-        csr = generate_csr(
-            add_unique_id_to_subject_name=False,
-            private_key=key.encode("utf-8"),
-            private_key_password=(None if key_password is None else key_password.encode("utf-8")),
-            subject=subject,
-            organization=organization,
-        )
-
-        logger.info(f"Generated csr for Intermediate CA: {csr}")
-
-        self.charm.secrets.put_object(
-            scope=Scope.APP,
-            key="Intermediate CA",
-            value={
-                "key": key,
-                "key-password": key_password,
-                "csr": csr.decode("utf-8"),
-                "subject": f"/O={organization} Intermediate CA",
-            },
-            merge=True,
-        )
-
-        if self.charm.model.get_relation(TLS_RELATION):
-            self.certs.request_certificate_creation(certificate_signing_request=csr, is_ca=True)
 
     def _on_tls_relation_created(self, event: RelationCreatedEvent) -> None:
         """Request certificate when TLS relation created."""
@@ -219,10 +178,7 @@ class OpenSearchTLS(Object):
         """
         try:
             scope, cert_type, secrets = self._find_secret(event.certificate_signing_request, "csr")
-            if cert_type == "Intermediate CA":
-                logger.info(f"TLS Intermediate CA available")
-            else:
-                logger.debug(f"{scope.val}.{cert_type.val} TLS certificate available.")
+            logger.debug(f"{scope.val}.{cert_type.val} TLS certificate available.")
         except TypeError:
             logger.debug("Unknown certificate available.")
             return
@@ -231,6 +187,7 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
+        # TODO: debug, remove
         logger.info(f"CertificateAvailableEvent: {event.certificate}, {event.certificate_signing_request},{event.ca},{event.chain}")
 
         old_cert = secrets.get("cert", None)
@@ -238,44 +195,25 @@ class OpenSearchTLS(Object):
 
         ca_chain = "\n".join(event.chain[::-1])
 
-        if cert_type == "Intermediate CA":
-            self.charm.secrets.put_object(
-                Scope.APP,
-                cert_type,
-                {
-                    "chain": ca_chain,
-                    "ca-cert": event.certificate,
-                    "root-ca": event.ca,
-                },
-                merge=True,
-            )
-        else:
-            self.charm.secrets.put_object(
-                scope,
-                cert_type.val,
-                {
-                    "chain": ca_chain,
-                    "cert": event.certificate,
-                    "ca-cert": event.ca,
-                },
-                merge=True,
-            )
+        self.charm.secrets.put_object(
+            scope,
+            cert_type.val,
+            {
+                "chain": ca_chain,
+                "cert": event.certificate,
+                "ca-cert": event.ca,
+            },
+            merge=True,
+        )
 
-        if cert_type == "Intermediate CA":
-            logger.info("Updating the CA now.")
-            self.store_new_ca(self.charm.secrets.get_object(Scope.APP,cert_type))
-
-            # we need to restart all units with this new CA
-            # prior to updating the certificates with the new CA.
-            self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
-            # placeholder, we will have to trigger some event here
-            # self.charm.on_tls_ca_renewal(event)
-            return
 
         # make sure the non-leader units update the new CA (they don't get the event)
         current_stored_ca = self._read_stored_ca()
         if current_stored_ca != event.ca:
             self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val))
+            # we need to restart all units with this new CA
+            # prior to updating the certificates with the new CA.
+            self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
 
         # store the certificates and keys in a key store
         self.store_new_tls_resources(
