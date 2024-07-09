@@ -1015,9 +1015,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
+        nodes = self._get_nodes(True)
         if self.opensearch.is_node_up():
             try:
-                nodes = self._get_nodes(True)
                 if len(nodes) > 1:
                     self.opensearch_exclusions.add_allocations_exclusion()
             except OpenSearchHttpError:
