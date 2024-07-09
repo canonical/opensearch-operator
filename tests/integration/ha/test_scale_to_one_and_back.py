@@ -104,8 +104,10 @@ async def test_scale_down(ops_test: OpsTest, c_writes: ContinuousWrites, c_write
         )
 
         if init_count == 3:
+            # We're down to 2x units only
             assert len(voting_exclusions) == 2
         elif init_count == 2:
+            # Down to 1x unit only
             assert len(voting_exclusions) == 1
         init_count = len(ops_test.model.applications[app].units)
 
@@ -164,7 +166,7 @@ async def test_gracefully_cluster_remove(ops_test: OpsTest) -> None:
     app = (await app_name(ops_test)) or APP_NAME
 
     # This removal must not leave units in error.
+    # We will block until it is finished.
     await asyncio.gather(
         ops_test.model.remove_application(app, block_until_done=True),
-        ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True),
     )
