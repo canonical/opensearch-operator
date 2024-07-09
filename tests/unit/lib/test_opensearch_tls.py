@@ -212,20 +212,31 @@ class TestOpenSearchTLS(unittest.TestCase):
         _request_certificate.assert_called()
 
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._create_keystore_pwd_if_not_exists")
     @patch("charm.OpenSearchOperatorCharm.on_tls_conf_set")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.store_new_ca")
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     def test_on_certificate_available(
-        self, _, on_tls_conf_set, _request_certificate, store_new_ca
+        self,
+        _,
+        on_tls_conf_set,
+        _request_certificate,
+        store_new_ca,
+        _create_keystore_pwd_if_not_exists,
     ):
         """Test _on_certificate_available event."""
         csr = "csr_12345"
         cert = "cert_12345"
         chain = ["chain_12345"]
         ca = "ca_12345"
+        keystore_password = "keystore_12345"
         secret_key = CertType.UNIT_TRANSPORT.val
 
-        self.secret_store.put_object(Scope.UNIT, secret_key, {"csr": csr})
+        self.secret_store.put_object(
+            Scope.UNIT,
+            secret_key,
+            {"csr": csr, "keystore-password-unit-transport": keystore_password},
+        )
 
         event_mock = MagicMock(
             certificate_signing_request=csr, chain=chain, certificate=cert, ca=ca
@@ -234,7 +245,13 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         self.assertDictEqual(
             self.secret_store.get_object(Scope.UNIT, secret_key),
-            {"csr": csr, "chain": chain[0], "cert": cert, "ca-cert": ca},
+            {
+                "csr": csr,
+                "chain": chain[0],
+                "cert": cert,
+                "ca-cert": ca,
+                "keystore-password-unit-transport": keystore_password,
+            },
         )
 
         on_tls_conf_set.assert_called()

@@ -441,6 +441,7 @@ class OpenSearchTLS(Object):
         keytool = f"sudo {self.jdk_path}/bin/keytool"
 
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
         if not (secrets.get("ca-cert", {}) and admin_secrets.get("keystore-password-ca", {})):
             logging.error("CA cert not found, quitting.")
@@ -495,6 +496,12 @@ class OpenSearchTLS(Object):
         """Add key and cert to keystore."""
         cert_name = cert_type.val
         store_path = f"{self.certs_path}/{cert_type}.p12"
+
+        # if the TLS certificate is available before the keystore-password, create it anyway
+        if cert_type == CertType.APP_ADMIN:
+            self._create_keystore_pwd_if_not_exists(Scope.APP, cert_type, cert_type.val)
+        else:
+            self._create_keystore_pwd_if_not_exists(Scope.UNIT, cert_type, cert_type.val)
 
         if not secrets.get("key"):
             logging.error("TLS key not found, quitting.")
