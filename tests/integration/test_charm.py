@@ -282,3 +282,10 @@ async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
     for unit in ops_test.model.applications[APP_NAME].units:
         unit_conf = get_conf_as_dict(ops_test, unit.name, filename)
         assert leader_conf == unit_conf
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_remove_application(ops_test: OpsTest) -> None:
+    """Removes the application with a single unit."""
+    ops_test.model.remove_application(APP_NAME, block_until_done=True)
