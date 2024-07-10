@@ -225,7 +225,11 @@ class OpenSearchNodeLock(ops.Object):
                 self._opensearch.request(
                     "GET",
                     "/_cluster/allocation/explain?include_yes_decisions=true&include_disk_info=true",
-                    payload={"index": self.OPENSEARCH_INDEX},
+                    payload={
+                        "index": self.OPENSEARCH_INDEX,
+                        "shard": 0,
+                        "primary": "true",
+                    },
                 ),
             )
 
