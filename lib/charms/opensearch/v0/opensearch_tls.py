@@ -183,6 +183,13 @@ class OpenSearchTLS(Object):
             logger.debug("Unknown certificate available.")
             return
 
+        # CA renewal still in progress (rolling restart)
+        if self.charm.peers_data.get(
+                Scope.UNIT, "tls_ca_renewing", False
+        ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+            event.defer()
+            return
+
         # seems like the admin certificate is also broadcast to non leader units on refresh request
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
@@ -191,7 +198,8 @@ class OpenSearchTLS(Object):
         logger.info(f"CertificateAvailableEvent: {event.certificate}, {event.certificate_signing_request},{event.ca},{event.chain}")
 
         old_cert = secrets.get("cert", None)
-        renewal = old_cert is not None and old_cert != event.certificate
+        renewal = (self._read_stored_ca(alias="old-ca") is not None
+            or (old_cert is not None and old_cert != event.certificate))
 
         ca_chain = "\n".join(event.chain[::-1])
 
@@ -206,14 +214,15 @@ class OpenSearchTLS(Object):
             merge=True,
         )
 
-
-        # make sure the non-leader units update the new CA (they don't get the event)
         current_stored_ca = self._read_stored_ca()
         if current_stored_ca != event.ca:
             self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val))
             # we need to restart all units with this new CA
             # prior to updating the certificates with the new CA.
             self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
+            self.charm.on_tls_ca_renewal(event)
+            event.defer()
+            return
 
         # store the certificates and keys in a key store
         self.store_new_tls_resources(

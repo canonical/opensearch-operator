@@ -738,6 +738,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             }
         )
 
+    def on_tls_ca_renewal(self, _: CertificateAvailableEvent):
+        """Called when adding new CA to the trust store."""
+        self._restart_opensearch_event.emit()
+
     def on_tls_conf_set(
         self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
     ):
