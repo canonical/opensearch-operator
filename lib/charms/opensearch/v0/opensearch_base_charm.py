@@ -463,6 +463,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
+        # remove old ca if all units have completely finished renewing it and are running
+        if self.opensearch.is_node_up() and self.is_tls_full_configured_in_cluster():
+            self.tls.remove_old_ca_if_any()
+
         # register new cm addresses on every node
         self._add_cm_addresses_to_conf()
 
@@ -796,7 +800,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Check if TLS is configured in all the units of the current cluster."""
         rel = self.model.get_relation(PeerRelationName)
         for unit in rel.units.union({self.unit}):
-            if rel.data[unit].get("tls_configured") != "True":
+            if rel.data[unit].get("tls_configured") != "True"\
+            or "tls_ca_renewing" in rel.data[unit]\
+            or "tls_ca_renewed" in rel.data[unit]:
                 return False
         return True
 
@@ -930,7 +936,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
         # may be thrown when calling a node - we want to ensure this node is perfectly ready
         # before marking it as ready
-        if not self.opensearch.is_node_up():
+        if (not self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
+            and not self.opensearch.is_node_up()
+        ):
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
 
         try:
@@ -1042,6 +1050,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.OTHER:
             if self.opensearch_peer_cm.is_peer_cluster_orchestrator_relation_set():
                 self.peer_cluster_provider.refresh_relation_data(event)
+
+        # update the peer relation data for TLS CA rotation routine
+        self.tls.reset_internal_state()
 
     def _stop_opensearch(self, *, restart=False) -> None:
         """Stop OpenSearch if possible."""

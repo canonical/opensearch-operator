@@ -183,19 +183,21 @@ class OpenSearchTLS(Object):
             logger.debug("Unknown certificate available.")
             return
 
-        # CA renewal still in progress (rolling restart)
+        # if the CA on this unit is currently being renewed (rolling restart) -> defer
         if self.charm.peers_data.get(
                 Scope.UNIT, "tls_ca_renewing", False
         ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
             event.defer()
             return
 
+        # if there is a CA rotation going on in the cluster -> defer until it's complete
+        if not self._ca_renewal_complete_in_cluster():
+            event.defer()
+            return
+
         # seems like the admin certificate is also broadcast to non leader units on refresh request
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
-
-        # TODO: debug, remove
-        logger.info(f"CertificateAvailableEvent: {event.certificate}, {event.certificate_signing_request},{event.ca},{event.chain}")
 
         old_cert = secrets.get("cert", None)
         renewal = (self._read_stored_ca(alias="old-ca") is not None
@@ -529,6 +531,29 @@ class OpenSearchTLS(Object):
 
         return None
 
+    def remove_old_ca_if_any(self) -> None:
+        """Remove old CA cert from trust store."""
+        keytool = f"sudo {self.jdk_path}/bin/keytool"
+        ca_trust_store = f"{self.certs_path}/ca.p12"
+        old_alias = "old-ca"
+
+        secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        store_pwd = secrets.get("keystore-password-ca")
+
+        try:
+            run_cmd(
+                f"""{keytool} \
+                -delete \
+                -keystore {ca_trust_store} \
+                -storepass {store_pwd} \
+                -alias {old_alias} \
+                -storetype PKCS12"""
+            )
+        except OpenSearchCmdError as e:
+            # This message means there was no "ca" alias or store before, if it happens ignore
+            if f"Alias <{old_alias}> does not exist" in e.out:
+                return
+
     def store_new_tls_resources(self, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
         cert_name = cert_type.val
@@ -619,3 +644,29 @@ class OpenSearchTLS(Object):
             except OSError:
                 # thrown if file not exists, ignore
                 pass
+
+    def reset_internal_state(self) -> None:
+        """Handle internal flags for tls_ca_renewing and tls_ca_renewed during CA rotation routine."""
+        if not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
+            # if the CA is not being renewed we don't have to do anything here
+            return
+
+        # if this flag is set, the CA rotation routine is complete for this unit
+        if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+            self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewing")
+            self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewed")
+        else:
+            # this means only the CA renewal completed, still need to create certificates
+            self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewed", True)
+
+    def _ca_renewal_complete_in_cluster(self) -> bool:
+        """Check whether the CA renewal completed in all units."""
+        rel = self.charm.model.get_relation(self.peer_relation)
+        for unit in rel.units.union({self.charm.unit}):
+            rel_data = rel.data[unit]
+            ca_renewing = rel_data.get("tls_ca_renewing")
+            ca_renewed = rel_data.get("tls_ca_renewed")
+            if ca_renewing == "True" and ca_renewed != "True":
+                return False
+
+        return True
