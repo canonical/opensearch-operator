@@ -137,7 +137,7 @@ class OpenSearchPluginManager:
     def _extra_conf(self, plugin_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Returns the config from the relation data of the target plugin if applies."""
         relation_handler = plugin_data.get("relation_handler")
-        data = relation_handler(self._charm).get_relation_data() if relation_handler else {}
+        data = relation_handler(self._charm).data() if relation_handler else {}
         return {
             **data,
             **self._charm_config,
@@ -297,10 +297,11 @@ class OpenSearchPluginManager:
         # We use current_settings and new_conf and check for any differences
         # therefore, we need to make a deepcopy here before editing new_conf
         new_conf = copy.deepcopy(current_settings)
-        for key_to_del in config.config_entries_to_del:
-            if key_to_del in new_conf:
-                del new_conf[key_to_del]
-        new_conf |= config.config_entries_to_add
+        for key in config.config_entries:
+            if key in new_conf and config.config_entries[key]:
+                new_conf[key] = config.config_entries[key]
+            elif key in new_conf and not config.config_entries[key]:
+                del new_conf[key]
 
         logger.debug(
             "Difference between current and new configuration: \n"
@@ -346,9 +347,8 @@ class OpenSearchPluginManager:
         cluster_settings_changed = False
         try:
             # If security is not yet initialized, this code will throw an exception
-            self._keystore.delete(config.secret_entries_to_del)
-            self._keystore.add(config.secret_entries_to_add)
-            if config.secret_entries_to_del or config.secret_entries_to_add:
+            self._keystore.update(config.secret_entries)
+            if config.secret_entries:
                 self._keystore.reload_keystore()
         except (OpenSearchKeystoreNotReadyYetError, OpenSearchHttpError):
             # We've failed to set the keystore, we need to rerun this method later
@@ -357,28 +357,18 @@ class OpenSearchPluginManager:
 
         current_settings, new_conf = self._compute_settings(config)
         if current_settings and new_conf and current_settings != new_conf:
-            if config.config_entries_to_del:
+            if config.config_entries:
                 # Clean to-be-deleted entries
                 self._opensearch.request(
                     "PUT",
                     "/_cluster/settings?flat_settings=true",
-                    payload={"persistent": {key: "null" for key in config.config_entries_to_del}},
-                )
-                cluster_settings_changed = True
-            if config.config_entries_to_add:
-                # Configuration changed detected, apply it
-                self._opensearch.request(
-                    "PUT",
-                    "/_cluster/settings?flat_settings=true",
-                    payload={"persistent": config.config_entries_to_add},
+                    payload=f'{{"persistent": {str(config)} }}',
                 )
                 cluster_settings_changed = True
 
         # Update the configuration files
-        if config.config_entries_to_del:
-            self._opensearch_config.delete_plugin(config.config_entries_to_del)
-        if config.config_entries_to_add:
-            self._opensearch_config.add_plugin(config.config_entries_to_add)
+        if config.config_entries:
+            self._opensearch_config.update_plugin(config.config_entries)
 
         if cluster_settings_changed:
             # We have changed the cluster settings, clean up the cache
@@ -392,9 +382,7 @@ class OpenSearchPluginManager:
         # (1) configuration changes are needed and applied in the files; and (2)
         # the node is not up. For (2), we already checked if the node was up on
         # _cluster_settings and, if not, cluster_settings_changed=False.
-        return (
-            config.config_entries_to_add or config.config_entries_to_del
-        ) and not cluster_settings_changed
+        return config.config_entries and not cluster_settings_changed
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""
@@ -428,7 +416,7 @@ class OpenSearchPluginManager:
         plugin_data = ConfigExposedPlugins[plugin.name]
         return self._charm.config.get(plugin_data["config"], False) or (
             plugin_data["relation_handler"]
-            and plugin_data["relation_handler"](self._charm).is_relation_set()
+            and plugin_data["relation_handler"](self._charm).is_set()
         )
 
     def _is_enabled(self, plugin: OpenSearchPlugin) -> bool:
@@ -446,25 +434,31 @@ class OpenSearchPluginManager:
         """
         # Avoid the keystore check as we may just be writing configuration in the files
         # while the cluster is not up and running yet.
-        if plugin.config().secret_entries_to_add or plugin.config().secret_entries_to_del:
+        if plugin.config().secret_entries:
             # Need to check keystore
             # If the keystore is not yet set, then an exception will be raised here
             keys_available = self._keystore.list
-            keys_to_add = plugin.config().secret_entries_to_add
+            keys_to_add = [k for k in plugin.config().secret_entries if plugin.config()[k]]
             if any(k not in keys_available for k in keys_to_add):
                 return False
-            keys_to_del = plugin.config().secret_entries_to_del
+            keys_to_del = [k for k in plugin.config().secret_entries if not plugin.config()[k]]
             if any(k in keys_available for k in keys_to_del):
                 return False
 
         # We always check the configuration files, as we always persist data there
-        config = {
-            k: None for k in plugin.config().config_entries_to_del
-        } | plugin.config().config_entries_to_add
-        existing_setup = self._opensearch_config.get_plugin(config)
-        if any([k not in existing_setup.keys() for k in config.keys()]):
+        existing_setup = self._opensearch_config.get_plugin(plugin.config().config_entries)
+
+        if any([k not in existing_setup.keys() for k in plugin.config().config_entries.keys()]):
+            # This case means we are missing the actual key in the config file.
             raise OpenSearchPluginMissingConfigError()
-        return all([config[k] == existing_setup[k] for k in config.keys()])
+
+        # Now, we know the keys are there, we must check their values
+        return all(
+            [
+                plugin.config().config_entries[k] == existing_setup[k]
+                for k in plugin.config().config_entries.keys()
+            ]
+        )
 
     def _needs_upgrade(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin needs upgrade."""

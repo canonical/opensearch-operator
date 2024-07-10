@@ -9,7 +9,7 @@ import functools
 import logging
 import os
 from abc import ABC
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -133,6 +133,24 @@ class OpenSearchKeystore(Keystore):
             return  # no key/value to remove, no need to request reload of keystore either
         for key in entries:
             self._delete(key)
+
+    def update(self, entries: Dict[str, Any]) -> None:
+        """Updates the keystore value (adding or removing) and reload.
+
+        Raises:
+            OpenSearchHttpError: If the reload fails.
+        """
+        if not os.path.exists(self.keystore):
+            raise OpenSearchKeystoreNotReadyYetError()
+
+        if not entries:
+            return
+
+        for key, value in entries.items():
+            if value:
+                self._add(key, value)
+            else:
+                self._delete(key)
 
     @functools.cached_property
     def list(self) -> List[str]:

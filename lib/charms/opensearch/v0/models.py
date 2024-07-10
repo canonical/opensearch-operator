@@ -255,16 +255,41 @@ class DeploymentDescription(Model):
         return values
 
 
-class S3RelDataCredentials(Model):
-    """Model class for credentials passed on the PCluster relation."""
-
-    access_key: str = Field(alias="access-key")
-    secret_key: str = Field(alias="secret-key")
+class S3Model(Model):
+    """Base model class for S3 related data."""
 
     class Config:
         """Model config of this pydantic model."""
 
         allow_population_by_field_name = True
+
+
+class S3RelDataCredentials(S3Model):
+    """Model class for credentials passed on the PCluster relation."""
+
+    access_key: str = Field(alias="access-key")
+    secret_key: str = Field(alias="secret-key")
+
+
+class S3RelData(S3Model):
+    """Model class for the S3 relation data."""
+
+    bucket: str
+    endpoint: str
+    region: str
+    credentials: S3RelDataCredentials = Field(alias="s3-credentials")
+    path: Optional[str] = None
+    storage_class: Optional[str] = Field(alias="storage-class")
+    tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain")
+
+    @classmethod
+    def from_dict(cls, input_dict: Optional[Dict[str, Any]]):
+        """Create a new instance of this class from a json/dict repr.
+
+        This method creates a nested S3RelDataCredentials object from the input dict.
+        """
+        creds = S3RelDataCredentials(**input_dict)
+        return cls(dict(input_dict | {"s3-credentials": creds}))
 
 
 class PeerClusterRelDataCredentials(Model):

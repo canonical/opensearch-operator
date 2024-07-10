@@ -21,12 +21,15 @@ from charms.opensearch.v0.constants_secrets import (
     S3_CREDENTIALS,
 )
 from charms.opensearch.v0.constants_tls import CertType
+from charms.opensearch.v0.models import S3RelDataCredentials
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchSecretInsertionError
 from charms.opensearch.v0.opensearch_internal_data import (
     RelationDataStore,
     Scope,
     SecretCache,
 )
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyYetError
+from charms.opensearch.v0.opensearch_plugins import OpenSearchBackupPlugin
 from ops import JujuVersion, Secret, SecretNotFoundError
 from ops.charm import SecretChangedEvent
 from ops.framework import Object
@@ -62,6 +65,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         self.cached_secrets = SecretCache()
 
         self.framework.observe(self._charm.on.secret_changed, self._on_secret_changed)
+        self.framework.observe(self._charm.on.secret_removed, self._on_secret_removed)
 
     def _on_secret_changed(self, event: SecretChangedEvent):  # noqa: C901
         """Refresh secret and re-run corresponding actions if needed."""
@@ -128,9 +132,18 @@ class OpenSearchSecrets(Object, RelationDataStore):
             if sys_user := self._user_from_hash_key(label_key):
                 self._charm.user_manager.put_internal_user(sys_user, password)
 
-        # all units must persist the s3 access & secret keys in opensearch.yml
-        if label_key == S3_CREDENTIALS:
-            self._charm.backup.manual_update(event)
+        # all units must persist the s3 access & secret keys in opensearch-keystore
+        if label_key == S3_CREDENTIALS and (
+            s3_creds := self._charm.secrets.get_object(Scope.APP, "s3-creds")
+        ):
+            plugin = OpenSearchBackupPlugin().update_secrets(
+                S3RelDataCredentials.from_dict(s3_creds)
+            )
+            try:
+                self._charm.plugin_manager.apply_config(plugin)
+            except OpenSearchKeystoreNotReadyYetError:
+                logger.info("Keystore not ready yet, retrying later.")
+                event.defer()
 
     def _user_from_hash_key(self, key):
         """Which user is referred to by key?"""
