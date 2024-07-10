@@ -32,7 +32,7 @@ from charms.opensearch.v0.constants_charm import (
     ServiceIsStopping,
     ServiceStartError,
     ServiceStopped,
-    TLSNewCaRequested,
+    TLSCaRotation,
     TLSNewCertsRequested,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
@@ -466,6 +466,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # remove old ca if all units have completely finished renewing it and are running
         if self.opensearch.is_node_up() and self.is_tls_full_configured_in_cluster():
             self.tls.remove_old_ca_if_any()
+            self.status.clear(TLSCaRotation)
 
         # register new cm addresses on every node
         self._add_cm_addresses_to_conf()
@@ -744,6 +745,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def on_tls_ca_renewal(self, _: CertificateAvailableEvent):
         """Called when adding new CA to the trust store."""
+        self.status.set(MaintenanceStatus(TLSCaRotation))
         self._restart_opensearch_event.emit()
         logger.info("Restart OpenSearch on TLS CA renewal.")
 
@@ -801,9 +803,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Check if TLS is configured in all the units of the current cluster."""
         rel = self.model.get_relation(PeerRelationName)
         for unit in rel.units.union({self.unit}):
-            if rel.data[unit].get("tls_configured") != "True"\
-            or "tls_ca_renewing" in rel.data[unit]\
-            or "tls_ca_renewed" in rel.data[unit]:
+            if (
+                rel.data[unit].get("tls_configured") != "True"
+                or "tls_ca_renewing" in rel.data[unit]
+                or "tls_ca_renewed" in rel.data[unit]
+            ):
                 return False
         return True
 
@@ -937,7 +941,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
         # may be thrown when calling a node - we want to ensure this node is perfectly ready
         # before marking it as ready
-        if (not self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
+        if (
+            not self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
             and not self.opensearch.is_node_up()
         ):
             raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")

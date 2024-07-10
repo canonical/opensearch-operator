@@ -28,7 +28,7 @@ from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError, OpenSearchError
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
@@ -129,7 +129,6 @@ class OpenSearchTLS(Object):
             secrets = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)
             self._request_certificate_renewal(Scope.UNIT, cert_type, secrets)
 
-
     def _on_tls_relation_created(self, event: RelationCreatedEvent) -> None:
         """Request certificate when TLS relation created."""
         if self.charm.upgrade_in_progress:
@@ -184,24 +183,16 @@ class OpenSearchTLS(Object):
             return
 
         # if the CA on this unit is currently being renewed (rolling restart) -> defer
-        if self.charm.peers_data.get(
-                Scope.UNIT, "tls_ca_renewing", False
-        ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
-            event.defer()
-            return
-
-        # if there is a CA rotation going on in the cluster -> defer until it's complete
-        if not self._ca_renewal_complete_in_cluster():
+        if (
+            self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
+            and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
+        ) or not self._ca_renewal_complete_in_cluster():
             event.defer()
             return
 
         # seems like the admin certificate is also broadcast to non leader units on refresh request
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
-
-        old_cert = secrets.get("cert", None)
-        renewal = (self._read_stored_ca(alias="old-ca") is not None
-            or (old_cert is not None and old_cert != event.certificate))
 
         ca_chain = "\n".join(event.chain[::-1])
 
@@ -240,11 +231,12 @@ class OpenSearchTLS(Object):
         for relation in self.charm.opensearch_provider.relations:
             self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
 
-        try:
-            self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
-        except OpenSearchError as e:
-            logger.exception(e)
-            event.defer()
+        old_cert = secrets.get("cert", None)
+        renewal = self._read_stored_ca(alias="old-ca") is not None or (
+            old_cert is not None and old_cert != event.certificate
+        )
+
+        self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
 
     def _on_certificate_expiring(
         self, event: Union[CertificateExpiringEvent, CertificateInvalidatedEvent]
@@ -485,8 +477,8 @@ class OpenSearchTLS(Object):
         except OpenSearchCmdError as e:
             # This message means there was no "ca" alias or store before, if it happens ignore
             if not (
-                    f"Alias <{alias}> does not exist" in e.out
-                    or "Keystore file does not exist" in e.out
+                f"Alias <{alias}> does not exist" in e.out
+                or "Keystore file does not exist" in e.out
             ):
                 raise
 
@@ -650,7 +642,7 @@ class OpenSearchTLS(Object):
                 pass
 
     def reset_internal_state(self) -> None:
-        """Handle internal flags for tls_ca_renewing and tls_ca_renewed during CA rotation routine."""
+        """Handle internal flags during CA rotation routine."""
         if not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
             # if the CA is not being renewed we don't have to do anything here
             return
