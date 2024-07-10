@@ -521,7 +521,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # release lock
             self.node_lock.release()
 
-    def _on_update_status(self, event: UpdateStatusEvent):  # noqa: C901
+    def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
 
         We want to periodically check for the following:
@@ -532,11 +532,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
-        if self.opensearch.is_node_up():
-            logger.debug(
-                f'Current shard allocation status: {self.opensearch.request("GET", "/_cluster/allocation/explain")}'
-            )
-
         # if there are missing system requirements defer
         if len(missing_sys_reqs := self.opensearch.missing_sys_requirements()) > 0:
             self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
