@@ -219,6 +219,16 @@ class OpenSearchNodeLock(ops.Object):
         self._opensearch = charm.opensearch
         self._peer = _PeerRelationLock(self._charm)
 
+        if self._opensearch.is_node_up():
+            logger.debug(
+                "Current shard allocation status: %s",
+                self._opensearch.request(
+                    "GET",
+                    "/_cluster/allocation/explain?include_yes_decisions=true&include_disk_info=true",
+                    payload={"index": self.OPENSEARCH_INDEX},
+                ),
+            )
+
     def _unit_with_lock(self, host: str | None) -> str | None:
         """Unit that has acquired OpenSearch lock."""
         try:
