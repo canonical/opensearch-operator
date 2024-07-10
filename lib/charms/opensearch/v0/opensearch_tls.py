@@ -481,6 +481,7 @@ class OpenSearchTLS(Object):
                 -storetype PKCS12
             """
             )
+            logger.info(f"Current CA {alias} was renamed to old-{alias}.")
         except OpenSearchCmdError as e:
             # This message means there was no "ca" alias or store before, if it happens ignore
             if not (
@@ -505,6 +506,7 @@ class OpenSearchTLS(Object):
             """
             )
             run_cmd(f"sudo chmod +r {store_path}")
+            logger.info(f"New CA was stored as {alias}.")
 
     def _read_stored_ca(self, alias: str = "ca") -> Optional[str]:
         """Load stored CA cert."""
@@ -549,6 +551,7 @@ class OpenSearchTLS(Object):
                 -alias {old_alias} \
                 -storetype PKCS12"""
             )
+            logger.info(f"Removed CA {old_alias} from truststore.")
         except OpenSearchCmdError as e:
             # This message means there was no "ca" alias or store before, if it happens ignore
             if f"Alias <{old_alias}> does not exist" in e.out:
@@ -598,6 +601,7 @@ class OpenSearchTLS(Object):
 
             run_cmd(cmd)
             run_cmd(f"sudo chmod +r {store_path}")
+            logger.info(f"TLS certificate for {cert_name} stored.")
         finally:
             tmp_key.close()
             tmp_cert.close()
@@ -669,4 +673,5 @@ class OpenSearchTLS(Object):
             if ca_renewing == "True" and ca_renewed != "True":
                 return False
 
+        logger.info("Renewal of CA completed for all units.")
         return True

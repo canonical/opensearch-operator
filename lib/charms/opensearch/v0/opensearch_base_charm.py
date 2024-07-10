@@ -745,6 +745,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def on_tls_ca_renewal(self, _: CertificateAvailableEvent):
         """Called when adding new CA to the trust store."""
         self._restart_opensearch_event.emit()
+        logger.info("Restart OpenSearch on TLS CA renewal.")
 
     def on_tls_conf_set(
         self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
@@ -1093,6 +1094,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         try:
             self._stop_opensearch(restart=True)
+            logger.info("Restarting OpenSearch.")
         except OpenSearchStopError as e:
             logger.exception(e)
             self.node_lock.release()
