@@ -254,18 +254,22 @@ class OpenSearchNodeLock(ops.Object):
                         self._opensearch, use_localhost=host is not None, hosts=alt_hosts
                     )
                 )
-                logger.debug(
-                    "Current shard allocation status: %s",
-                    self._opensearch.request(
-                        "GET",
-                        "/_cluster/allocation/explain?include_yes_decisions=true&include_disk_info=true",
-                        payload={
-                            "index": self.OPENSEARCH_INDEX,
-                            "shard": 0,
-                            "primary": "true",
-                        },
-                    ),
-                )
+                try:
+                    logger.debug(
+                        "Current shard allocation status: %s",
+                        self._opensearch.request(
+                            "GET",
+                            "/_cluster/allocation/explain?include_yes_decisions=true&include_disk_info=true",
+                            payload={
+                                "index": self.OPENSEARCH_INDEX,
+                                "shard": 0,
+                                "primary": "true",
+                            },
+                        ),
+                    )
+                except Exception:
+                    logger.debug("Current shard allocation status: error to connect with API")
+                    pass
 
             except OpenSearchHttpError:
                 logger.exception("Error getting OpenSearch nodes")
