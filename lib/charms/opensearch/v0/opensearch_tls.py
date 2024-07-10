@@ -15,13 +15,19 @@ It requires a charm that extends OpenSearchBaseCharm as it refers internal objec
 
 import base64
 import logging
+import os
 import re
 import socket
+import tempfile
 import typing
-from typing import Dict, List, Optional, Tuple, Union
+from os.path import exists
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
+from charms.opensearch.v0.helper_charm import all_units, run_cmd
 from charms.opensearch.v0.helper_networking import get_host_public_ip
+from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
@@ -55,11 +61,16 @@ logger = logging.getLogger(__name__)
 class OpenSearchTLS(Object):
     """Class that Manages OpenSearch relation with TLS Certificates Operator."""
 
-    def __init__(self, charm: "OpenSearchBaseCharm", peer_relation: str):
+    def __init__(
+        self, charm: "OpenSearchBaseCharm", peer_relation: str, jdk_path: str, certs_path: str
+    ):
         super().__init__(charm, "tls-component")
 
         self.charm = charm
         self.peer_relation = peer_relation
+        self.jdk_path = jdk_path
+        self.certs_path = certs_path
+        self.keytool = self.jdk_path + "/bin/keytool"
         self.certs = TLSCertificatesRequiresV3(charm, TLS_RELATION)
 
         self.framework.observe(
@@ -131,12 +142,23 @@ class OpenSearchTLS(Object):
             event.defer()
             return
         admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if (
-            self.charm.unit.is_leader()
-            and admin_cert is None
-            and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-        ):
-            self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+        if self.charm.unit.is_leader():
+            # create passwords for both ca trust_store/admin key_store
+            self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
+            self._create_keystore_pwd_if_not_exists(
+                Scope.APP, CertType.APP_ADMIN, CertType.APP_ADMIN.val
+            )
+
+            if admin_cert is None and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+                self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+
+        # create passwords for both unit-http/transport key_stores
+        self._create_keystore_pwd_if_not_exists(
+            Scope.UNIT, CertType.UNIT_TRANSPORT, CertType.UNIT_TRANSPORT.val
+        )
+        self._create_keystore_pwd_if_not_exists(
+            Scope.UNIT, CertType.UNIT_HTTP, CertType.UNIT_HTTP.val
+        )
 
         self._request_certificate(Scope.UNIT, CertType.UNIT_TRANSPORT)
         self._request_certificate(Scope.UNIT, CertType.UNIT_HTTP)
@@ -180,6 +202,22 @@ class OpenSearchTLS(Object):
             },
             merge=True,
         )
+
+        # currently only make sure there is a CA
+        # TODO: workflow for replacement will be added later
+        if self._read_stored_ca() is None:
+            self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val))
+
+        # store the certificates and keys in a key store
+        self.store_new_tls_resources(
+            cert_type, self.charm.secrets.get_object(scope, cert_type.val)
+        )
+
+        # store the admin certificates in non-leader units
+        if not self.charm.unit.is_leader():
+            if self.all_certificates_available():
+                admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+                self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
 
         for relation in self.charm.opensearch_provider.relations:
             self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
@@ -382,3 +420,203 @@ class OpenSearchTLS(Object):
                 certs[CertType.APP_ADMIN] = admin_secrets["cert"]
 
         return certs
+
+    def _create_keystore_pwd_if_not_exists(self, scope: Scope, cert_type: CertType, alias: str):
+        """Create passwords for the key stores if not already created."""
+        keystore_pwd = None
+        secrets = self.charm.secrets.get_object(scope, cert_type.val)
+        if secrets:
+            keystore_pwd = secrets.get(f"keystore-password-{alias}")
+
+        if not keystore_pwd:
+            self.charm.secrets.put_object(
+                scope,
+                cert_type.val,
+                {f"keystore-password-{alias}": generate_password()},
+                merge=True,
+            )
+
+    def store_new_ca(self, secrets: Dict[str, Any]):
+        """Add new CA cert to trust store."""
+        keytool = f"sudo {self.jdk_path}/bin/keytool"
+
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
+
+        if not (secrets.get("ca-cert", {}) and admin_secrets.get("keystore-password-ca", {})):
+            logging.error("CA cert not found, quitting.")
+            return
+
+        alias = "ca"
+        store_path = f"{self.certs_path}/{alias}.p12"
+
+        with tempfile.NamedTemporaryFile(mode="w+t") as ca_tmp_file:
+            ca_tmp_file.write(secrets.get("ca-cert"))
+            ca_tmp_file.flush()
+
+            run_cmd(
+                f"""{keytool} -importcert \
+                -trustcacerts \
+                -noprompt \
+                -alias {alias} \
+                -keystore {store_path} \
+                -file {ca_tmp_file.name} \
+                -storepass {admin_secrets.get("keystore-password-ca")} \
+                -storetype PKCS12
+            """
+            )
+            run_cmd(f"sudo chmod +r {store_path}")
+
+    def _read_stored_ca(self, alias: str = "ca") -> Optional[str]:
+        """Load stored CA cert."""
+        secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
+        ca_trust_store = f"{self.certs_path}/ca.p12"
+        if not (exists(ca_trust_store) and secrets):
+            return None
+
+        stored_certs = run_cmd(
+            f"""openssl pkcs12 \
+            -in {ca_trust_store} \
+            -passin pass:{secrets.get("keystore-password-ca")}
+            """
+        ).out
+
+        # parse output to retrieve the current CA (in case there are many)
+        start_cert_marker = "-----BEGIN CERTIFICATE-----"
+        end_cert_marker = "-----END CERTIFICATE-----"
+        certificates = stored_certs.split(end_cert_marker)
+        for cert in certificates:
+            if f"friendlyName: {alias}" in cert:
+                return f"{start_cert_marker}{cert.split(start_cert_marker)[1]}{end_cert_marker}"
+
+        return None
+
+    def store_new_tls_resources(self, cert_type: CertType, secrets: Dict[str, Any]):
+        """Add key and cert to keystore."""
+        cert_name = cert_type.val
+        store_path = f"{self.certs_path}/{cert_type}.p12"
+
+        # if the TLS certificate is available before the keystore-password, create it anyway
+        if cert_type == CertType.APP_ADMIN:
+            self._create_keystore_pwd_if_not_exists(Scope.APP, cert_type, cert_type.val)
+        else:
+            self._create_keystore_pwd_if_not_exists(Scope.UNIT, cert_type, cert_type.val)
+
+        if not secrets.get("key"):
+            logging.error("TLS key not found, quitting.")
+            return
+
+        # we store the pem format to make it easier for the python requests lib
+        if cert_type == CertType.APP_ADMIN:
+            self.charm.opensearch.write_file(
+                f"{self.certs_path}/chain.pem",
+                secrets["chain"],
+            )
+
+        try:
+            os.remove(store_path)
+        except OSError:
+            pass
+
+        tmp_key = tempfile.NamedTemporaryFile(mode="w+t", suffix=".pem")
+        tmp_key.write(secrets.get("key"))
+        tmp_key.flush()
+        tmp_key.seek(0)
+
+        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t", suffix=".cert")
+        tmp_cert.write(secrets.get("cert"))
+        tmp_cert.flush()
+        tmp_cert.seek(0)
+
+        try:
+            cmd = f"""openssl pkcs12 -export \
+                -in {tmp_cert.name} \
+                -inkey {tmp_key.name} \
+                -out {store_path} \
+                -name {cert_name} \
+                -passout pass:{secrets.get(f"keystore-password-{cert_name}")}
+            """
+            if secrets.get("key-password"):
+                cmd = f"{cmd} -passin pass:{secrets.get('key-password')}"
+
+            run_cmd(cmd)
+            run_cmd(f"sudo chmod +r {store_path}")
+        finally:
+            tmp_key.close()
+            tmp_cert.close()
+
+    def all_tls_resources_stored(self, only_unit_resources: bool = False) -> bool:
+        """Check if all TLS resources are stored on disk."""
+        cert_types = [CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]
+        if not only_unit_resources:
+            cert_types.append(CertType.APP_ADMIN)
+
+        for cert_type in cert_types:
+            if not exists(f"{self.certs_path}/{cert_type}.p12"):
+                return False
+
+        return True
+
+    def all_certificates_available(self) -> bool:
+        """Method that checks if all certs available and issued from same CA."""
+        secrets = self.charm.secrets
+
+        admin_secrets = secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        if not admin_secrets or not admin_secrets.get("cert"):
+            return False
+
+        admin_ca = admin_secrets.get("ca")
+
+        for cert_type in [CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]:
+            unit_secrets = secrets.get_object(Scope.UNIT, cert_type.val)
+            if (
+                not unit_secrets
+                or not unit_secrets.get("cert")
+                or unit_secrets.get("ca") != admin_ca
+            ):
+                return False
+
+        return True
+
+    def is_fully_configured(self) -> bool:
+        """Check if all TLS secrets and resources exist and are stored."""
+        return self.all_certificates_available() and self.all_tls_resources_stored()
+
+    def is_fully_configured_in_cluster(self) -> bool:
+        """Check if TLS is configured in all the units of the current cluster."""
+        rel = self.model.get_relation(PeerRelationName)
+        for unit in all_units(self.charm):
+            if rel.data[unit].get("tls_configured") != "True":
+                return False
+        return True
+
+    def store_admin_tls_secrets_if_applies(self) -> None:
+        """Store admin TLS resources if available and mark unit as configured if correct."""
+        # In the case of the first units before TLS is initialized,
+        # or non-main orchestrator units having not received the secrets from the main yet
+        if not (
+            current_secrets := self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        ):
+            return
+
+        # in the case the cluster was bootstrapped with multiple units at the same time
+        # and the certificates have not been generated yet
+        if not current_secrets.get("cert") or not current_secrets.get("chain"):
+            return
+
+        # Store the "Admin" certificate, key and CA on the disk of the new unit
+        self.store_new_tls_resources(CertType.APP_ADMIN, current_secrets)
+
+        # Mark this unit as tls configured
+        if self.is_fully_configured():
+            self.charm.peers_data.put(Scope.UNIT, "tls_configured", True)
+
+    def delete_stored_tls_resources(self):
+        """Delete the TLS resources of the unit that are stored on disk."""
+        for cert_type in [CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]:
+            try:
+                os.remove(f"{self.certs_path}/{cert_type}.p12")
+            except OSError:
+                # thrown if file not exists, ignore
+                pass

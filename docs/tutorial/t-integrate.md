@@ -295,7 +295,6 @@ juju remove-relation opensearch data-integrator
 Now try again to connect in the same way as the previous section
 
 ```bash
-# TODO test this with data-integrator output
 curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/
 ```
 

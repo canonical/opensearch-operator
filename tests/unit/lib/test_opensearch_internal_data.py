@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.models import (
+    App,
     DeploymentDescription,
     DeploymentState,
     DeploymentType,
@@ -162,7 +163,7 @@ class TestOpenSearchInternalData(unittest.TestCase):
                 ),
                 start=StartMode.WITH_PROVIDED_ROLES,
                 pending_directives=[],
-                app=self.charm.app.name,
+                app=App(model_uuid="model-uuid", name=self.charm.app.name),
                 typ=DeploymentType.MAIN_ORCHESTRATOR,
                 state=DeploymentState(value=State.ACTIVE),
             )

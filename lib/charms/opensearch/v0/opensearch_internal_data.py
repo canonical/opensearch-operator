@@ -10,6 +10,7 @@ from ast import literal_eval
 from typing import Any, Dict, Optional, Union
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
+from charms.opensearch.v0.models import Model
 from ops import Secret
 from overrides import override
 
@@ -125,9 +126,13 @@ class RelationDataStore(DataStore):
                 stored.update(value)
                 value = stored
 
+        sorted_value = Model.sort_payload(value)
+
         payload_str = None
         if value is not None:
-            payload_str = json.dumps(value, default=RelationDataStore._default_encoder)
+            payload_str = json.dumps(
+                sorted_value, default=RelationDataStore._default_encoder, sort_keys=True
+            )
 
         self.put(scope, key, payload_str)
 

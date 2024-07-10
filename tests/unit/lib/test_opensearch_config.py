@@ -5,11 +5,12 @@
 import shutil
 import unittest
 from typing import Dict
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
+from charms.opensearch.v0.models import App
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -35,6 +36,7 @@ class TestOpenSearchConfig(unittest.TestCase):
 
         self.charm.opensearch = Mock()
         self.charm.opensearch.network_hosts = ["10.10.10.10"]
+        self.charm.opensearch.host = "20.20.20.20"
 
         self.charm.opensearch.paths = Mock()
         self.charm.opensearch.paths.conf = None
@@ -106,27 +108,52 @@ class TestOpenSearchConfig(unittest.TestCase):
             self.assertNotIn(f"plugins.security.ssl.{layer}.pemkey_password", opensearch_conf)
 
         # call
-        self.opensearch_config.set_node_tls_conf(CertType.UNIT_TRANSPORT, {})
-        self.opensearch_config.set_node_tls_conf(CertType.UNIT_HTTP, {"key-password": "123"})
+        self.opensearch_config.set_node_tls_conf(
+            CertType.UNIT_TRANSPORT, truststore_pwd="123", keystore_pwd="987"
+        )
+        self.opensearch_config.set_node_tls_conf(
+            CertType.UNIT_HTTP, truststore_pwd="123", keystore_pwd="987"
+        )
 
         # check the changes
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
 
         for layer in ["http", "transport"]:
             self.assertEqual(
-                opensearch_conf[f"plugins.security.ssl.{layer}.pemcert_filepath"],
-                f"certificates/unit-{layer}.cert",
+                opensearch_conf[f"plugins.security.ssl.{layer}.keystore_type"],
+                "PKCS12",
             )
             self.assertEqual(
-                opensearch_conf[f"plugins.security.ssl.{layer}.pemkey_filepath"],
-                f"certificates/unit-{layer}.key",
+                opensearch_conf[f"plugins.security.ssl.{layer}.truststore_type"],
+                "PKCS12",
+            )
+
+            self.assertEqual(
+                opensearch_conf[f"plugins.security.ssl.{layer}.keystore_filepath"],
+                f"certificates/unit-{layer}.p12",
             )
             self.assertEqual(
-                opensearch_conf[f"plugins.security.ssl.{layer}.pemtrustedcas_filepath"],
-                "certificates/root-ca.cert",
+                opensearch_conf[f"plugins.security.ssl.{layer}.truststore_filepath"],
+                "certificates/ca.p12",
             )
-        self.assertEqual(opensearch_conf["plugins.security.ssl.http.pemkey_password"], "123")
-        self.assertNotIn("plugins.security.ssl.transport.pemkey_password", opensearch_conf)
+
+            self.assertEqual(
+                opensearch_conf[f"plugins.security.ssl.{layer}.keystore_alias"],
+                f"unit-{layer}",
+            )
+            self.assertEqual(
+                opensearch_conf[f"plugins.security.ssl.{layer}.truststore_alias"],
+                "ca",
+            )
+
+            self.assertEqual(
+                opensearch_conf[f"plugins.security.ssl.{layer}.keystore_password"],
+                "987",
+            )
+            self.assertEqual(
+                opensearch_conf[f"plugins.security.ssl.{layer}.truststore_password"],
+                "123",
+            )
 
     def test_append_transport_node(self):
         """Test setting the transport config of node."""
@@ -137,17 +164,16 @@ class TestOpenSearchConfig(unittest.TestCase):
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
         self.assertCountEqual(opensearch_conf["plugins.security.nodes_dn"], ["10.10.10.10"])
 
-    @patch("socket.gethostbyaddr")
-    def test_set_node_and_cleanup_if_bootstrapped(self, gethostbyaddr):
+    def test_set_node_and_cleanup_if_bootstrapped(self):
         """Test setting the core config of a node."""
-        gethostbyaddr.return_value = "hostname.com", ["alias1", "alias2"], ["10.10.10.10"]
-
+        app = App(model_uuid=self.charm.model.uuid, name=self.charm.app.name)
         self.opensearch_config.set_node(
+            app=app,
             cluster_name="opensearch-dev",
             unit_name=self.charm.unit_name,
             roles=["cluster_manager", "data"],
             cm_names=["cm1"],
-            cm_ips=["10.10.10.10"],
+            cm_ips=["20.20.20.20"],
             contribute_to_bootstrap=True,
             node_temperature="hot",
         )
@@ -155,7 +181,9 @@ class TestOpenSearchConfig(unittest.TestCase):
         self.assertEqual(opensearch_conf["cluster.name"], "opensearch-dev")
         self.assertEqual(opensearch_conf["node.name"], self.charm.unit_name)
         self.assertEqual(opensearch_conf["node.attr.temp"], "hot")
+        self.assertEqual(opensearch_conf["node.attr.app_id"], app.id)
         self.assertEqual(opensearch_conf["network.host"], ["_site_", "10.10.10.10"])
+        self.assertEqual(opensearch_conf["network.publish_host"], "20.20.20.20")
         self.assertEqual(opensearch_conf["node.roles"], ["cluster_manager", "data"])
         self.assertEqual(opensearch_conf["discovery.seed_providers"], "file")
         self.assertEqual(opensearch_conf["cluster.initial_cluster_manager_nodes"], ["cm1"])
@@ -175,7 +203,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         # test unicast_hosts content
         with open(self.seed_unicast_hosts, "r") as f:
             stored = set([line.strip() for line in f.readlines()])
-            expected = {"hostname.com", "alias1", "alias2", "10.10.10.10"}
+            expected = {"20.20.20.20"}
             self.assertEqual(stored, expected)
 
     def tearDown(self) -> None:

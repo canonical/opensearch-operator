@@ -99,7 +99,16 @@ async def get_unit_relation_data(
         raise ValueError(
             f"no relation data could be grabbed on relation with endpoint {relation_name}"
         )
-    return relation_data[0]["related-units"].get(target_unit_name, {}).get("data", {}).get(key, {})
+    # Consider the case we are dealing with subordinate charms, e.g. grafana-agent
+    # The field "relation-units" is structured slightly different.
+    for idx in range(len(relation_data)):
+        if target_unit_name in relation_data[idx]["related-units"]:
+            break
+    else:
+        return {}
+    return (
+        relation_data[idx]["related-units"].get(target_unit_name, {}).get("data", {}).get(key, {})
+    )
 
 
 def wait_for_relation_joined_between(

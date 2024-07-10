@@ -3,11 +3,12 @@
 
 """Class for Setting configuration in opensearch config files."""
 import logging
-import socket
+from collections import namedtuple
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import normalized_tls_subject
+from charms.opensearch.v0.models import App
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
 # The unique Charmhub library identifier, never change it
@@ -71,34 +72,35 @@ class OpenSearchConfig:
             f"{normalized_tls_subject(secrets['subject'])}",
         )
 
-    def set_node_tls_conf(self, cert_type: CertType, secrets: Dict[str, any]):
+    def set_node_tls_conf(self, cert_type: CertType, truststore_pwd: str, keystore_pwd: str):
         """Configures TLS for nodes."""
         target_conf_layer = "http" if cert_type == CertType.UNIT_HTTP else "transport"
 
-        self._opensearch.config.put(
-            self.CONFIG_YML,
-            f"plugins.security.ssl.{target_conf_layer}.pemcert_filepath",
-            f"{self._opensearch.paths.certs_relative}/{cert_type}.cert",
-        )
-
-        self._opensearch.config.put(
-            self.CONFIG_YML,
-            f"plugins.security.ssl.{target_conf_layer}.pemkey_filepath",
-            f"{self._opensearch.paths.certs_relative}/{cert_type}.key",
-        )
-
-        self._opensearch.config.put(
-            self.CONFIG_YML,
-            f"plugins.security.ssl.{target_conf_layer}.pemtrustedcas_filepath",
-            f"{self._opensearch.paths.certs_relative}/root-ca.cert",
-        )
-
-        key_pwd = secrets.get("key-password")
-        if key_pwd is not None:
+        for store_type, cert in [("keystore", target_conf_layer), ("truststore", "ca")]:
             self._opensearch.config.put(
                 self.CONFIG_YML,
-                f"plugins.security.ssl.{target_conf_layer}.pemkey_password",
-                key_pwd,
+                f"plugins.security.ssl.{target_conf_layer}.{store_type}_type",
+                "PKCS12",
+            )
+
+            self._opensearch.config.put(
+                self.CONFIG_YML,
+                f"plugins.security.ssl.{target_conf_layer}.{store_type}_filepath",
+                f"{self._opensearch.paths.certs_relative}/{cert if cert == 'ca' else cert_type}.p12",
+            )
+
+        for store_type, certificate_type in [("keystore", cert_type.val), ("truststore", "ca")]:
+            self._opensearch.config.put(
+                self.CONFIG_YML,
+                f"plugins.security.ssl.{target_conf_layer}.{store_type}_alias",
+                certificate_type,
+            )
+
+        for store_type, pwd in [("keystore", keystore_pwd), ("truststore", truststore_pwd)]:
+            self._opensearch.config.put(
+                self.CONFIG_YML,
+                f"plugins.security.ssl.{target_conf_layer}.{store_type}_password",
+                pwd,
             )
 
     def append_transport_node(self, ip_pattern_entries: List[str], append: bool = True):
@@ -120,6 +122,7 @@ class OpenSearchConfig:
 
     def set_node(
         self,
+        app: App,
         cluster_name: str,
         unit_name: str,
         roles: List[str],
@@ -129,17 +132,24 @@ class OpenSearchConfig:
         node_temperature: Optional[str] = None,
     ) -> None:
         """Set base config for each node in the cluster."""
-        self._opensearch.config.put(self.CONFIG_YML, "cluster.name", f"{cluster_name}")
+        self._opensearch.config.put(self.CONFIG_YML, "cluster.name", cluster_name)
         self._opensearch.config.put(self.CONFIG_YML, "node.name", unit_name)
         self._opensearch.config.put(
             self.CONFIG_YML, "network.host", ["_site_"] + self._opensearch.network_hosts
         )
+        if self._opensearch.host:
+            self._opensearch.config.put(
+                self.CONFIG_YML, "network.publish_host", self._opensearch.host
+            )
 
         self._opensearch.config.put(self.CONFIG_YML, "node.roles", roles)
         if node_temperature:
             self._opensearch.config.put(self.CONFIG_YML, "node.attr.temp", node_temperature)
         else:
             self._opensearch.config.delete(self.CONFIG_YML, "node.attr.temp")
+
+        # Set the current app full id
+        self._opensearch.config.put(self.CONFIG_YML, "node.attr.app_id", app.id)
 
         # This allows the new CMs to be discovered automatically (hot reload of unicast_hosts.txt)
         self._opensearch.config.put(self.CONFIG_YML, "discovery.seed_providers", "file")
@@ -188,17 +198,9 @@ class OpenSearchConfig:
 
     def add_seed_hosts(self, cm_ips: List[str]):
         """Add CM nodes ips / host names to the seed host list of this unit."""
-        cm_ips_hostnames = set(cm_ips)
-        for ip in cm_ips:
-            try:
-                name, aliases, addresses = socket.gethostbyaddr(ip)
-                cm_ips_hostnames.update([name] + aliases + addresses)
-            except socket.herror:
-                # no ptr record - the IP is enough and the only thing we have
-                pass
-
+        cm_ips_set = set(cm_ips)
         with open(self._opensearch.paths.seed_hosts, "w+") as f:
-            lines = "\n".join([entry for entry in cm_ips_hostnames if entry.strip()])
+            lines = "\n".join([entry for entry in cm_ips_set if entry.strip()])
             f.write(f"{lines}\n")
 
     def cleanup_bootstrap_conf(self):
@@ -230,15 +232,29 @@ class OpenSearchConfig:
 
         Returns: True if host updated, False otherwise.
         """
-        old_hosts = set(self.load_node().get("network.host", []))
-        if not old_hosts:
-            # Unit not configured yet
-            return False
+        NetworkHost = namedtuple("NetworkHost", ["entry", "old", "new"])
 
-        hosts = set(["_site_"] + self._opensearch.network_hosts)
-        if old_hosts != hosts:
-            logger.info(f"Updating network.host from: {old_hosts} - to: {hosts}")
-            self._opensearch.config.put(self.CONFIG_YML, "network.host", hosts)
-            return True
+        node = self.load_node()
+        result = False
+        for host in [
+            NetworkHost(
+                "network.host",
+                set(node.get("network.host", [])),
+                set(["_site_"] + self._opensearch.network_hosts),
+            ),
+            NetworkHost(
+                "network.publish_host",
+                set(node.get("network.publish_host", [])),
+                set(self._opensearch.host),
+            ),
+        ]:
+            if not host.old:
+                # Unit not configured yet
+                continue
 
-        return False
+            if host.old != host.new:
+                logger.info(f"Updating {host.entry} from: {host.old} - to: {host.new}")
+                self._opensearch.config.put(self.CONFIG_YML, host.entry, host.new)
+                result = True
+
+        return result

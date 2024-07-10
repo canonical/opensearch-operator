@@ -105,7 +105,7 @@
               "value": "2"
             }
           ],
-          "valueName": "avg"
+          "valueName": "current"
         },
         {
           "aliasColors": {},
@@ -295,7 +295,7 @@
               "value": "null"
             }
           ],
-          "valueName": "avg"
+          "valueName": "current"
         },
         {
           "cacheTimeout": null,
@@ -375,7 +375,7 @@
               "value": "null"
             }
           ],
-          "valueName": "avg"
+          "valueName": "current"
         },
         {
           "cacheTimeout": null,
@@ -455,7 +455,7 @@
               "value": "null"
             }
           ],
-          "valueName": "avg"
+          "valueName": "current"
         }
       ],
       "repeat": null,
@@ -568,105 +568,6 @@
     {
       "collapse": false,
       "collapsed": false,
-      "height": "200",
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "datasource",
-            "uid": "${prometheusds}"
-          },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {},
-          "id": 8,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "sideWidth": null,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": "pool_name",
-          "repeatDirection": "h",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "span": 2.4,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "max(opensearch_threadpool_tasks_number{cluster=\"$cluster\",name=\"$pool_name\"})",
-              "format": "time_series",
-              "intervalFactor": 2,
-              "legendFormat": "",
-              "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$pool_name tasks",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ]
-        }
-      ],
-      "repeat": null,
-      "repeatIteration": null,
-      "repeatRowId": null,
-      "showTitle": true,
-      "title": "Threadpools",
-      "titleSize": "h6",
-      "type": "row"
-    },
-    {
-      "collapse": false,
-      "collapsed": false,
       "height": "400",
       "panels": [
         {
@@ -712,7 +613,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_os_cpu_percent{cluster=\"$cluster\", node=~\"$node\"}",
+              "expr": "opensearch_os_cpu_percent{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -798,7 +699,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_os_mem_used_bytes{cluster=\"$cluster\", node=~\"$node\"}",
+              "expr": "opensearch_os_mem_used_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -884,7 +785,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "1 - opensearch_fs_path_available_bytes{cluster=\"$cluster\",node=~\"$node\"} / opensearch_fs_path_total_bytes{cluster=\"$cluster\",node=~\"$node\"}",
+              "expr": "1 - opensearch_fs_path_available_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"} / opensearch_fs_path_total_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}} - {{path}}",
@@ -999,7 +900,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1085,7 +986,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_indexing_index_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$interval]) / rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "1000 * rate(opensearch_indices_indexing_index_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1095,7 +996,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Indexing latency",
+          "title": "Indexing latency for new docs (in millisecs)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1171,7 +1072,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_search_query_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_search_query_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1257,7 +1158,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_search_query_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$interval]) / rate(opensearch_indices_search_query_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "1000 * rate(opensearch_indices_search_query_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1267,7 +1168,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Search latency",
+          "title": "Search latency (avg in millisecs)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1343,7 +1244,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_indices_doc_number{cluster=\"$cluster\", node=~\"$node\"}",
+              "expr": "opensearch_indices_doc_number{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1429,7 +1330,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_doc_deleted_number{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_doc_deleted_number{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1515,7 +1416,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_merges_total_docs_count{cluster=\"$cluster\",node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_merges_total_docs_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1615,7 +1516,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_indices_fielddata_memory_size_bytes{cluster=\"$cluster\", node=~\"$node\"}",
+              "expr": "opensearch_indices_fielddata_memory_size_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1701,7 +1602,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_fielddata_evictions_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_fielddata_evictions_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1787,7 +1688,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_indices_querycache_cache_size_bytes{cluster=\"$cluster\", node=~\"$node\"}",
+              "expr": "opensearch_indices_querycache_cache_size_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1873,7 +1774,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_querycache_evictions_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_querycache_evictions_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1883,7 +1784,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Query cache evictions",
+          "title": "Query cache evictions rate",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1959,7 +1860,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_querycache_hit_count{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_querycache_hit_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -1969,7 +1870,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Query cache hits",
+          "title": "Query cache hits rate",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -2045,7 +1946,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_querycache_miss_number{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_querycache_miss_number{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -2055,7 +1956,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Query cache misses",
+          "title": "Query cache misses rate",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -2145,7 +2046,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_indexing_throttle_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_indexing_throttle_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -2231,7 +2132,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_indices_merges_total_throttled_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_indices_merges_total_throttled_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}}",
@@ -2331,7 +2232,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "opensearch_jvm_mem_heap_used_bytes{cluster=\"$cluster\", node=~\"$node\"}",
+              "expr": "opensearch_jvm_mem_heap_used_bytes{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}} - heap used",
@@ -2417,7 +2318,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_jvm_gc_collection_count{cluster=\"$cluster\",node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_jvm_gc_collection_count{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{node}} - {{gc}}",
@@ -2503,10 +2404,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(opensearch_jvm_gc_collection_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[$interval])",
+              "expr": "rate(opensearch_jvm_gc_collection_time_seconds{cluster=\"$cluster\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{node}} - {{gc}}",
+              "legendFormat": "{{juju_model}}.{{juju_unit}} - {{gc}}",
               "refId": "A"
             }
           ],
@@ -2554,6 +2455,140 @@
       "title": "JVM",
       "titleSize": "h6",
       "type": "row"
+    },
+    {
+      "collapse": false,
+      "collapsed": true,
+      "height": "200",
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": {
+            "type": "datasource",
+            "uid": "${prometheusds}"
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {},
+          "id": 8,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "sideWidth": null,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "pool_name",
+          "repeatDirection": "h",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "span": 2.4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(opensearch_threadpool_threads_count{cluster=\"$cluster\", name=\"$pool_name\", type=\"completed\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval]))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Increase of completed/sec",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(opensearch_threadpool_threads_count{cluster=\"$cluster\", name=\"$pool_name\", type=\"rejected\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"}[$__rate_interval]))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Increase of rejected/sec",
+              "refId": "B"
+            },
+            {
+              "expr": "sum(opensearch_threadpool_tasks_number{cluster=\"$cluster\", name=\"$pool_name\", type=\"queue\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Queued tasks",
+              "refId": "C"
+            },
+            {
+              "expr": "sum(opensearch_threadpool_threads_number{cluster=\"$cluster\", name=\"$pool_name\", type=\"active\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Active threads",
+              "refId": "D"
+            },
+            {
+              "expr": "sum(opensearch_threadpool_threads_number{cluster=\"$cluster\", name=\"$pool_name\", type=\"largest\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Largest # threads",
+              "refId": "E"
+            },
+            {
+              "expr": "sum(opensearch_threadpool_threads_number{cluster=\"$cluster\", name=\"$pool_name\", type=\"threads\", roles=~\".*($role).*\", juju_model_uuid=~\"$juju_model_uuid\", juju_model=~\"$juju_model\", juju_application=~\"$juju_application\", juju_unit=~\"$juju_unit\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Total # threads available",
+              "refId": "F"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "$pool_name tasks",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
+      "showTitle": true,
+      "title": "Threadpool - Tasks Status",
+      "titleSize": "h6",
+      "type": "row"
     }
   ],
   "schemaVersion": 14,
@@ -2576,56 +2611,65 @@
         "type": "datasource"
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {
-          "tags": [],
-          "text": "1m",
-          "value": "1m"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "hide": 0,
-        "includeAll": false,
-        "label": "Interval",
-        "multi": false,
-        "name": "interval",
+        "includeAll": true,
+        "label": "Role",
+        "multi": true,
+        "name": "role",
         "options": [
           {
-            "selected": false,
-            "text": "15s",
-            "value": "15s"
-          },
-          {
-            "selected": false,
-            "text": "30s",
-            "value": "30s"
-          },
-          {
             "selected": true,
-            "text": "1m",
-            "value": "1m"
+            "text": "All",
+            "value": "$__all"
           },
           {
             "selected": false,
-            "text": "5m",
-            "value": "5m"
+            "text": "data",
+            "value": "data"
           },
           {
             "selected": false,
-            "text": "1h",
-            "value": "1h"
+            "text": "cluster_manager",
+            "value": "cluster_manager"
           },
           {
             "selected": false,
-            "text": "6h",
-            "value": "6h"
+            "text": "voting",
+            "value": "voting"
           },
           {
             "selected": false,
-            "text": "1d",
-            "value": "1d"
+            "text": "coordinating_only",
+            "value": "coordinating_only"
+          },
+          {
+            "selected": false,
+            "text": "ingest",
+            "value": "ingest"
+          },
+          {
+            "selected": false,
+            "text": "ml",
+            "value": "ml"
+          },
+          {
+            "selected": false,
+            "text": "other",
+            "value": "other"
           }
         ],
-        "query": "15s, 30s, 1m, 5m, 1h, 6h, 1d",
+        "query": "data, cluster_manager, voting, coordinating_only, ingest, ml, other",
         "refresh": 0,
         "type": "custom"
       },
@@ -2639,21 +2683,6 @@
         "label": "Cluster",
         "name": "cluster",
         "query": "label_values(opensearch_cluster_status, cluster)",
-        "refresh": 1,
-        "regex": "",
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "datasource": {
-          "type": "datasource",
-          "uid": "${prometheusds}"
-        },
-        "hide": 0,
-        "includeAll": true,
-        "label": "Node",
-        "name": "node",
-        "query": "label_values(opensearch_jvm_uptime_seconds{cluster=\"$cluster\"}, node)",
         "refresh": 1,
         "regex": "",
         "sort": 1,
@@ -2721,6 +2750,6 @@
     ]
   },
   "timezone": "browser",
-  "title": "OpenSearch",
+  "title": "Charmed OpenSearch",
   "version": 0
 }

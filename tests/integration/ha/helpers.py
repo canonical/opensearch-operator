@@ -9,7 +9,7 @@ import subprocess
 import time
 from typing import Dict, List, Optional
 
-from charms.opensearch.v0.models import Node
+from charms.opensearch.v0.models import App, Node
 from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -23,7 +23,6 @@ from tenacity import (
 
 from ..helpers import (
     APP_NAME,
-    IDLE_PERIOD,
     get_application_unit_ids,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
@@ -32,7 +31,6 @@ from ..helpers import (
     juju_version_major,
     run_action,
 )
-from ..helpers_deployments import get_application_units, wait_until
 from .continuous_writes import ContinuousWrites
 from .helpers_data import index_docs_count
 
@@ -98,7 +96,9 @@ async def get_elected_cm_unit_id(ops_test: OpsTest, unit_ip: str) -> int:
 
     # get all nodes
     resp = await http_request(ops_test, "GET", f"https://{unit_ip}:9200/_nodes")
-    return int(resp["nodes"][cm_node_id]["name"].split("-")[1])
+    node_name = resp["nodes"][cm_node_id]["name"]
+
+    return int(node_name.split(".")[0].split("-")[-1])
 
 
 @retry(
@@ -158,7 +158,7 @@ async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) 
     result = []
     for shards_collection in response["shards"]:
         for shard in shards_collection:
-            node_name_split = nodes[shard["node"]]["name"].split("-")
+            node_name_split = nodes[shard["node"]]["name"].split(".")[0].split("-")
             result.append(
                 Shard(
                     index=index_name,
@@ -194,7 +194,7 @@ async def get_number_of_shards_by_node(ops_test: OpsTest, unit_ip: str) -> Dict[
     for alloc in init_cluster_alloc:
         key = -1
         if alloc["node"] != "UNASSIGNED":
-            key = int(alloc["node"].split("-")[1])
+            key = int(alloc["node"].split(".")[0].split("-")[-1])
         result[key] = int(alloc["shards"])
 
     return result
@@ -221,8 +221,8 @@ async def all_nodes(ops_test: OpsTest, unit_ip: str, app: str = APP_NAME) -> Lis
                 name=node["name"],
                 roles=node["roles"],
                 ip=node["ip"],
-                app_name="-".join(node["name"].split("-")[:-1]),
-                unit_number=int(node["name"].split("-")[-1]),
+                app=App(id=node["attributes"]["app_id"]),
+                unit_number=int(node["name"].split(".")[0].split("-")[-1]),
                 temperature=node.get("attributes", {}).get("temp"),
             )
         )
@@ -595,65 +595,3 @@ async def assert_restore_indices_and_compare_consistency(
     # We expect that new_count has a loss of documents and the numbers are different.
     # Check if we have data but not all of it.
     assert 0 < new_count < original_count
-
-
-async def assert_upgrade_to_local(
-    ops_test: OpsTest, cwrites: ContinuousWrites, local_charm: str
-) -> None:
-    """Does the upgrade to local and asserts continuous writes."""
-    app = (await app_name(ops_test)) or APP_NAME
-    units = await get_application_units(ops_test, app)
-    leader_id = [u.id for u in units if u.is_leader][0]
-
-    application = ops_test.model.applications[app]
-    action = await run_action(
-        ops_test,
-        leader_id,
-        "pre-upgrade-check",
-        app=app,
-    )
-    assert action.status == "completed"
-
-    async with ops_test.fast_forward():
-        logger.info("Refresh the charm")
-        await application.refresh(path=local_charm)
-
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["blocked"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            timeout=1400,
-            idle_period=IDLE_PERIOD,
-        )
-
-        logger.info("Upgrade finished")
-        # Resume the upgrade
-        action = await run_action(
-            ops_test,
-            leader_id,
-            "resume-upgrade",
-            app=app,
-        )
-        logger.info(action)
-        assert action.status == "completed"
-
-        logger.info("Refresh is over, waiting for the charm to settle")
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            timeout=1400,
-            idle_period=IDLE_PERIOD,
-        )
-
-    # continuous writes checks
-    await assert_continuous_writes_increasing(cwrites)
-    await assert_continuous_writes_consistency(ops_test, cwrites, [app])

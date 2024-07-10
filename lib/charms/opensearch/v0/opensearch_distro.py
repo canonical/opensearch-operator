@@ -21,6 +21,7 @@ from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
+from charms.opensearch.v0.models import App
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchHttpError,
@@ -162,7 +163,12 @@ class OpenSearchDistribution(ABC):
 
         try:
             resp_code = self.request(
-                "GET", "/_nodes", host=host, check_hosts_reach=False, resp_status_code=True
+                "GET",
+                "/",
+                host=host,
+                check_hosts_reach=False,
+                resp_status_code=True,
+                timeout=1,
             )
             return resp_code < 400
         except (OpenSearchHttpError, Exception):
@@ -197,6 +203,7 @@ class OpenSearchDistribution(ABC):
         check_hosts_reach: bool = True,
         resp_status_code: bool = False,
         retries: int = 0,
+        ignore_retry_on: Optional[List] = None,
         timeout: int = 5,
     ) -> Union[Dict[str, any], List[any], int]:
         """Make an HTTP request.
@@ -210,6 +217,7 @@ class OpenSearchDistribution(ABC):
             check_hosts_reach: if true, performs a ping for each host
             resp_status_code: whether to only return the HTTP code from the response.
             retries: number of retries
+            ignore_retry_on: don't retry for specific error codes
             timeout: number of seconds before a timeout happens
 
         Raises:
@@ -247,7 +255,16 @@ class OpenSearchDistribution(ABC):
                         )
 
                     response = s.request(**request_kwargs)
-                    response.raise_for_status()
+                    try:
+                        response.raise_for_status()
+                    except requests.RequestException as ex:
+                        if ex.response.status_code in (ignore_retry_on or []):
+                            raise OpenSearchHttpError(
+                                response_text=ex.response.text,
+                                response_code=ex.response.status_code,
+                            )
+                        raise
+
                     return response
 
         if None in [endpoint, method]:
@@ -273,6 +290,10 @@ class OpenSearchDistribution(ABC):
                 return resp.status_code
 
             return resp.json()
+        except OpenSearchHttpError as e:
+            if resp_status_code:
+                return e.response_code
+            raise
         except (requests.RequestException, urllib3.exceptions.HTTPError) as e:
             if not isinstance(e, requests.RequestException) or e.response is None:
                 raise OpenSearchHttpError(response_text=str(e))
@@ -395,7 +416,7 @@ class OpenSearchDistribution(ABC):
                 name=current_node["name"],
                 roles=current_node["roles"],
                 ip=current_node["ip"],
-                app_name=self._charm.app.name,
+                app=App(id=current_node["attributes"]["app_id"]),
                 unit_number=self._charm.unit_id,
                 temperature=current_node.get("attributes", {}).get("temp"),
             )
@@ -406,7 +427,7 @@ class OpenSearchDistribution(ABC):
                 name=self._charm.unit_name,
                 roles=conf_on_disk["node.roles"],
                 ip=self._charm.unit_ip,
-                app_name=self._charm.app.name,
+                app=App(id=conf_on_disk.get("node.attr.app_id")),
                 unit_number=self._charm.unit_id,
                 temperature=conf_on_disk.get("node.attr.temp"),
             )
