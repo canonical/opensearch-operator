@@ -794,10 +794,24 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def is_every_unit_marked_as_started(self) -> bool:
         """Check if every unit in the cluster is marked as started."""
         rel = self.model.get_relation(PeerRelationName)
+        all_started = True
         for unit in rel.units.union({self.unit}):
             if rel.data[unit].get("started") != "True":
-                return False
-        return True
+                all_started = False
+                break
+
+        if all_started:
+            return True
+
+        try:
+            current_app_nodes = [
+                node
+                for node in self._get_nodes(self.opensearch.is_node_up())
+                if node.app.id == self.opensearch_peer_cm.deployment_desc().app.id
+            ]
+            return len(current_app_nodes) == self.app.planned_units()
+        except OpenSearchHttpError:
+            return False
 
     def is_tls_full_configured_in_cluster(self) -> bool:
         """Check if TLS is configured in all the units of the current cluster."""
