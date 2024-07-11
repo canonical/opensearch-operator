@@ -210,12 +210,12 @@ class OpenSearchTLS(Object):
         current_stored_ca = self._read_stored_ca()
         if current_stored_ca != event.ca:
             self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val))
-            # we need to restart all units with this new CA
-            # prior to updating the certificates with the new CA.
-            self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
-            self.charm.on_tls_ca_renewal(event)
-            event.defer()
-            return
+            # when the current ca is replaced we need to initiate a rolling restart
+            if current_stored_ca is not None:
+                self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
+                self.charm.on_tls_ca_rotation(event)
+                event.defer()
+                return
 
         # store the certificates and keys in a key store
         self.store_new_tls_resources(
