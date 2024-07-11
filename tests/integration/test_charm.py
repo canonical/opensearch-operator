@@ -57,7 +57,7 @@ async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
         apps=[APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units=DEFAULT_NUM_UNITS,
+        wait_for_exact_units=1,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
     ops_test.model.remove_application(APP_NAME, block_until_done=True)
