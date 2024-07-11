@@ -186,7 +186,7 @@ class OpenSearchTLS(Object):
         if (
             self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
             and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
-        ) or not self._ca_renewal_complete_in_cluster():
+        ) or not self._ca_rotation_complete_in_cluster():
             event.defer()
             return
 
@@ -498,7 +498,7 @@ class OpenSearchTLS(Object):
             """
             )
             run_cmd(f"sudo chmod +r {store_path}")
-            logger.info(f"New CA was stored as {alias}.")
+            logger.info("New CA was added to truststore.")
 
     def _read_stored_ca(self, alias: str = "ca") -> Optional[str]:
         """Load stored CA cert."""
@@ -525,7 +525,7 @@ class OpenSearchTLS(Object):
 
         return None
 
-    def remove_old_ca_if_any(self) -> None:
+    def remove_old_ca(self) -> None:
         """Remove old CA cert from trust store."""
         keytool = f"sudo {self.jdk_path}/bin/keytool"
         ca_trust_store = f"{self.certs_path}/ca.p12"
@@ -543,7 +543,7 @@ class OpenSearchTLS(Object):
                 -alias {old_alias} \
                 -storetype PKCS12"""
             )
-            logger.info(f"Removed CA {old_alias} from truststore.")
+            logger.info(f"Removed {old_alias} from truststore.")
         except OpenSearchCmdError as e:
             # This message means there was no "ca" alias or store before, if it happens ignore
             if f"Alias <{old_alias}> does not exist" in e.out:
@@ -641,7 +641,7 @@ class OpenSearchTLS(Object):
                 # thrown if file not exists, ignore
                 pass
 
-    def reset_internal_state(self) -> None:
+    def reset_ca_rotation_state(self) -> None:
         """Handle internal flags during CA rotation routine."""
         if not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
             # if the CA is not being renewed we don't have to do anything here
@@ -652,11 +652,11 @@ class OpenSearchTLS(Object):
             self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewing")
             self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewed")
         else:
-            # this means only the CA renewal completed, still need to create certificates
+            # this means only the CA rotation completed, still need to create certificates
             self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewed", True)
 
-    def _ca_renewal_complete_in_cluster(self) -> bool:
-        """Check whether the CA renewal completed in all units."""
+    def _ca_rotation_complete_in_cluster(self) -> bool:
+        """Check whether the CA rotation completed in all units."""
         rel = self.charm.model.get_relation(self.peer_relation)
         for unit in rel.units.union({self.charm.unit}):
             rel_data = rel.data[unit]
@@ -665,5 +665,4 @@ class OpenSearchTLS(Object):
             if ca_renewing == "True" and ca_renewed != "True":
                 return False
 
-        logger.info("Renewal of CA completed for all units.")
         return True

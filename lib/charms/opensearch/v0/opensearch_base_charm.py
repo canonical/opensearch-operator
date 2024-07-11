@@ -465,7 +465,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # remove old ca if all units have completely finished renewing it and are running
         if self.opensearch.is_node_up() and self.is_tls_full_configured_in_cluster():
-            self.tls.remove_old_ca_if_any()
+            self.tls.remove_old_ca()
             self.status.clear(TLSCaRotation)
 
         # register new cm addresses on every node
@@ -743,11 +743,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             }
         )
 
-    def on_tls_ca_renewal(self, _: CertificateAvailableEvent):
+    def on_tls_ca_rotation(self, _: CertificateAvailableEvent):
         """Called when adding new CA to the trust store."""
         self.status.set(MaintenanceStatus(TLSCaRotation))
         self._restart_opensearch_event.emit()
-        logger.info("Restart OpenSearch on TLS CA renewal.")
+        logger.info("Restart OpenSearch on TLS CA rotation.")
 
     def on_tls_conf_set(
         self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
@@ -1072,7 +1072,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.peer_cluster_provider.refresh_relation_data(event)
 
         # update the peer relation data for TLS CA rotation routine
-        self.tls.reset_internal_state()
+        self.tls.reset_ca_rotation_state()
 
     def _stop_opensearch(self, *, restart=False) -> None:
         """Stop OpenSearch if possible."""
