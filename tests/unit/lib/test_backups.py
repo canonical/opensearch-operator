@@ -16,13 +16,13 @@ from charms.opensearch.v0.constants_charm import (
     RestoreInProgress,
 )
 from charms.opensearch.v0.helper_cluster import IndexStateEnum
+from charms.opensearch.v0.models import S3RelData
 
 # from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_backups import (
     S3_RELATION,
     S3_REPOSITORY,
     BackupServiceState,
-    OpenSearchBackupPlugin,
     OpenSearchRestoreCheckError,
     OpenSearchRestoreIndexClosingError,
 )
@@ -32,6 +32,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchBackupPlugin,
     OpenSearchPluginConfig,
     OpenSearchPluginError,
     PluginState,
@@ -83,6 +84,9 @@ def harness():
     harness_obj = Harness(OpenSearchOperatorCharm)
     charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc = (
         MagicMock(return_value=create_deployment_desc())
+    )
+    charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.is_provider = (
+        MagicMock(return_value=True)
     )
     harness_obj.begin()
     charm = harness_obj.charm
@@ -487,6 +491,9 @@ class TestBackups(unittest.TestCase):
         charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc = MagicMock(
             return_value=create_deployment_desc()
         )
+        charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.is_provider = (
+            MagicMock(return_value=True)
+        )
         self.harness.begin()
 
         self.charm = self.harness.charm
@@ -532,7 +539,7 @@ class TestBackups(unittest.TestCase):
         assert self.charm.backup._get_endpoint_protocol("test.not-valid-url") == "https"
 
     @patch(
-        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.check_plugin_manager_ready_for_api"
+        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.is_ready_for_api"
     )
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup.apply_api_config_if_needed")
@@ -544,23 +551,27 @@ class TestBackups(unittest.TestCase):
         """Tests if new relation without data returns."""
         mock_pm_ready.return_value = True
         mock_status.return_value = PluginState.INSTALLED
+
+        relation_data = {
+            "bucket": TEST_BUCKET_NAME,
+            "access-key": "aaaa",
+            "secret-key": "bbbb",
+            "path": TEST_BASE_PATH,
+            "endpoint": "localhost",
+            "region": "testing-region",
+            "storage-class": "storageclass",
+        }
+
         self.harness.update_relation_data(
             self.s3_rel_id,
             "s3-integrator",
-            {
-                "bucket": TEST_BUCKET_NAME,
-                "access-key": "aaaa",
-                "secret-key": "bbbb",
-                "path": TEST_BASE_PATH,
-                "endpoint": "localhost",
-                "region": "testing-region",
-                "storage-class": "storageclass",
-            },
+            relation_data,
         )
+        assert S3RelData.from_relation(relation_data) == self.charm.backup.plugin.data
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
-                secret_entries_to_add={
+                secret_entries={
                     "s3.client.default.access_key": "aaaa",
                     "s3.client.default.secret_key": "bbbb",
                 },
@@ -593,11 +604,11 @@ class TestBackups(unittest.TestCase):
             payload={
                 "type": "s3",
                 "settings": {
-                    "endpoint": "localhost",
-                    "protocol": "https",
                     "bucket": TEST_BUCKET_NAME,
-                    "base_path": TEST_BASE_PATH,
+                    "endpoint": "localhost",
                     "region": "testing-region",
+                    "base_path": TEST_BASE_PATH,
+                    "protocol": "https",
                     "storage_class": "storageclass",
                 },
             },
@@ -664,10 +675,15 @@ class TestBackups(unittest.TestCase):
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
-                secret_entries_to_del=[
-                    "s3.client.default.access_key",
-                    "s3.client.default.secret_key",
-                ],
+                config_entries={
+                    "s3.client.default.endpoint": None,
+                    "s3.client.default.region": None,
+                    "s3.client.default.protocol": None,
+                },
+                secret_entries={
+                    "s3.client.default.access_key": None,
+                    "s3.client.default.secret_key": None,
+                },
             ).__dict__
         )
 

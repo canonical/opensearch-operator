@@ -16,10 +16,6 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from charms.opensearch.v0.helper_cluster import ClusterTopology
-from charms.opensearch.v0.opensearch_backups import (
-    OpenSearchBackupFactory,
-    OpenSearchBackupPlugin,
-)
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchHttpError,
@@ -31,6 +27,7 @@ from charms.opensearch.v0.opensearch_keystore import (
     OpenSearchKeystoreNotReadyYetError,
 )
 from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchBackupPlugin,
     OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
@@ -66,7 +63,7 @@ ConfigExposedPlugins = {
     "repository-s3": {
         "class": OpenSearchBackupPlugin,
         "config": None,
-        "relation_handler": OpenSearchBackupFactory,
+        "relation_handler": OpenSearchBackupPlugin,
     },
 }
 
@@ -264,9 +261,7 @@ class OpenSearchPluginManager:
     def _configure_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """Gathers all the configuration changes needed and applies them."""
         try:
-            if self.status(plugin) == PluginState.ENABLED or not self._user_requested_to_enable(
-                plugin
-            ):
+            if self.status(plugin) != PluginState.ENABLING_NEEDED:
                 # Leave this method if either user did not request to enable this plugin
                 # or plugin has been already enabled.
                 return False
@@ -277,10 +272,7 @@ class OpenSearchPluginManager:
     def _disable_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""
         try:
-            if (
-                self._user_requested_to_enable(plugin)
-                or self.status(plugin) == PluginState.DISABLED
-            ):
+            if self.status(plugin) != PluginState.DISABLING_NEEDED:
                 return False
             return self.apply_config(plugin.disable())
         except KeyError as e:
@@ -395,10 +387,14 @@ class OpenSearchPluginManager:
         # The _user_request_to_enable comes first, as it ensures there is a relation/config
         # set, which will be used by _is_enabled to determine if we are enabled or not.
         try:
-            if not self._is_enabled(plugin):
+            if not self._is_enabled(plugin) and not self._user_requested_to_enable(plugin):
                 return PluginState.DISABLED
-            elif self._user_requested_to_enable(plugin):
+            elif not self._is_enabled(plugin) and self._user_requested_to_enable(plugin):
+                return PluginState.ENABLING_NEEDED
+            elif self._is_enabled(plugin) and self._user_requested_to_enable(plugin):
                 return PluginState.ENABLED
+            else:  # self._user_requested_to_enable(plugin) == False
+                return PluginState.DISABLING_NEEDED
         except (
             OpenSearchKeystoreNotReadyYetError,
             OpenSearchPluginMissingConfigError,
@@ -415,8 +411,7 @@ class OpenSearchPluginManager:
         """Returns True if user requested plugin to be enabled."""
         plugin_data = ConfigExposedPlugins[plugin.name]
         return self._charm.config.get(plugin_data["config"], False) or (
-            plugin_data["relation_handler"]
-            and plugin_data["relation_handler"](self._charm).is_set()
+            plugin_data["relation_handler"] and plugin_data["relation_handler"]().is_relation_set()
         )
 
     def _is_enabled(self, plugin: OpenSearchPlugin) -> bool:
@@ -469,9 +464,6 @@ class OpenSearchPluginManager:
 
     def _remove_if_needed(self, plugin: OpenSearchPlugin) -> bool:
         """If disabled, removes plugin configuration or sets it to other values."""
-        if self.status(plugin) == PluginState.DISABLED:
-            if plugin.REMOVE_ON_DISABLE:
-                return self._remove_plugin(plugin)
         return False
 
     def _remove_plugin(self, plugin: OpenSearchPlugin) -> bool:

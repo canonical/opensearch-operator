@@ -86,14 +86,14 @@ class TestPluginAlreadyInstalled(TestPlugin):
 
     def config(self):
         return OpenSearchPluginConfig(
-            config_entries_to_add={"param": "tested"},
-            secret_entries_to_add={"key1": "secret1"},
+            config_entries={"param": "tested"},
+            secret_entries={"key1": "secret1"},
         )
 
     def disable(self):
         return OpenSearchPluginConfig(
-            config_entries_to_del=["param"],
-            secret_entries_to_del=["key1"],
+            config_entries=["param"],
+            secret_entries=["key1"],
         )
 
 
@@ -457,7 +457,7 @@ class TestOpenSearchBackupPlugin(unittest.TestCase):
             "secret-key": "SECRET_KEY",
         }
         expected_config = OpenSearchPluginConfig(
-            secret_entries_to_add={
+            secret_entries={
                 "s3.client.default.access_key": "ACCESS_KEY",
                 "s3.client.default.secret_key": "SECRET_KEY",
             },
@@ -470,7 +470,7 @@ class TestOpenSearchBackupPlugin(unittest.TestCase):
             extra_config={},
         )
         expected_config = OpenSearchPluginConfig(
-            secret_entries_to_del=[
+            secret_entries=[
                 "s3.client.default.access_key",
                 "s3.client.default.secret_key",
             ],

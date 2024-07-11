@@ -270,7 +270,7 @@ from abc import abstractmethod, abstractproperty
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import S3RelDataCredentials
+from charms.opensearch.v0.models import S3RelData, S3RelDataCredentials
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from jproperties import Properties
 from pydantic import BaseModel, validator
@@ -452,9 +452,20 @@ class OpenSearchPluginRelationsHandler(OpenSearchPlugin):
     Plugins may have one or more relations tied to them. This abstract class
     enables different modules to implement a class that can specify which
     relations should plugin manager listen to.
+
+    There is a difference between OpenSearchPluginRelationsHandler.data and
+    OpenSearchPluginRelationsHandler.config/disable: the former is possible to be overridden and
+    it represents the entire data from the relation databag, while the latter represents what
+    the plugin_manager should have access so it can configure /_cluster/settings APIs.
     """
 
-    def is_set(self) -> bool:
+    MODEL = None
+
+    def __init__(self, *args, **kwargs):
+        """Creates the OpenSearchPluginRelationsHandler object."""
+        super().__init__(*args, **kwargs)
+
+    def is_relation_set(self) -> bool:
         """Returns True if the relation is set, False otherwise.
 
         It can mean the relation exists or not, simply put; or it can also mean a subset of data
@@ -466,11 +477,21 @@ class OpenSearchPluginRelationsHandler(OpenSearchPlugin):
         """
         return NotImplementedError()
 
-    def check_for_updates(self) -> bool:
-        """Review the data available and check for updates.
+    @property
+    def data(self) -> BaseModel:
+        """Returns the data from the relation databag.
 
-        This method should be called by the plugin manager or any other manager that wants to
-        trigger the handler to review data available on the relation databag / secrets.
+        Exceptions:
+            ValueError: if the data is not valid
+        """
+        raise NotImplementedError()
+
+    @data.setter
+    def data(self, value: Dict[str, Any]):
+        """Sets the data from the relation databag.
+
+        Exceptions:
+            ValueError: if the data is not valid
         """
         raise NotImplementedError()
 
@@ -509,16 +530,41 @@ class OpenSearchBackupPlugin(OpenSearchPluginRelationsHandler):
 
     This class must load the opensearch plugin: repository-s3 and configure it.
 
-
+    The plugin is responsible for managing the backup configuration, which includes relation
+    databag or only the secrets' content, as backup changes behavior depending on the juju app
+    role within the cluster.
     """
 
-    secrets: S3RelDataCredentials = None
+    MODEL = S3RelData
 
-    def __init__(self, plugin_path, relation_name, manager, model_class):
-        super().__init__(plugin_path, None)
-        self.manager = manager
-        self.relation_name = relation_name
-        self.model_class = model_class
+    def __init__(self, plugin_path, relation_data, is_main_orchestrator, repo_name=None):
+        """Creates the OpenSearchBackupPlugin object."""
+        super().__init__(plugin_path, relation_data)
+        self.is_main_orchestrator = is_main_orchestrator
+        self.repo_name = repo_name or "default"
+
+    @property
+    def data(self) -> BaseModel:
+        """Returns the data from the relation databag."""
+        return self.MODEL.from_relation(self._extra_config)
+
+    @data.setter
+    def data(self, value: Dict[str, Any]):
+        """Sets the data from the relation databag."""
+        self._extra_config = value
+
+    def update_secrets(self, secret_map: Dict[str, Any]) -> bool:
+        """Update the secrets using secret_map."""
+        self.data.credentials = S3RelDataCredentials(**secret_map)
+        return self.data.credentials.access_key and self.data.credentials.secret_key
+
+    def is_relation_set(self) -> bool:
+        """Returns True if the relation is set, False otherwise."""
+        try:
+            self.config()
+        except OpenSearchPluginMissingConfigError:
+            return False
+        return True
 
     @property
     def name(self) -> str:
@@ -527,35 +573,47 @@ class OpenSearchBackupPlugin(OpenSearchPluginRelationsHandler):
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
-        if not self._extra_config.get("access-key") or not self._extra_config.get("secret-key"):
+        conf = self.data.credentials.dict()
+        if self.is_main_orchestrator:
+            conf = self.data.dict()
+        if any([val is None for val in conf.values()]):
             raise OpenSearchPluginMissingConfigError(
                 "Plugin {} missing: {}".format(
                     self.name,
-                    [
-                        conf
-                        for conf in ["access-key", "secret-key"]
-                        if not self._extra_config.get(conf)
-                    ],
+                    [key for key, val in conf.items() if val is None],
                 )
             )
 
+        if not self.is_main_orchestrator:
+            return OpenSearchPluginConfig(
+                secret_entries={
+                    f"s3.client.{self.repo_name}.access_key": self.data.credentials.access_key,
+                    f"s3.client.{self.repo_name}.secret_key": self.data.credentials.secret_key,
+                },
+            )
+        # This is the main orchestrator
         return OpenSearchPluginConfig(
+            config_entries={
+                f"s3.client.{self.repo_name}.endpoint": self.data.endpoint,
+                f"s3.client.{self.repo_name}.region": self.data.region,
+                f"s3.client.{self.repo_name}.protocol": self.data.protocol,
+            },
             secret_entries={
-                # Remove any entries with None value
-                k: v
-                for k, v in {
-                    "s3.client.default.access_key": self._extra_config.get("access-key"),
-                    "s3.client.default.secret_key": self._extra_config.get("secret-key"),
-                }.items()
-                if v
+                f"s3.client.{self.repo_name}.access_key": self.data.credentials.access_key,
+                f"s3.client.{self.repo_name}.secret_key": self.data.credentials.secret_key,
             },
         )
 
     def disable(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin removal."""
         return OpenSearchPluginConfig(
+            config_entries={
+                f"s3.client.{self.repo_name}.endpoint": None,
+                f"s3.client.{self.repo_name}.region": None,
+                f"s3.client.{self.repo_name}.protocol": None,
+            },
             secret_entries={
-                "s3.client.default.access_key": None,
-                "s3.client.default.secret_key": None,
+                f"s3.client.{self.repo_name}.access_key": None,
+                f"s3.client.{self.repo_name}.secret_key": None,
             },
         )

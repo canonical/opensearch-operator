@@ -79,6 +79,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
+    S3_REPO_BASE_PATH,
     BackupConfigureStart,
     BackupDeferRelBrokenAsInProgress,
     BackupInDisabling,
@@ -87,12 +88,11 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterRelationName,
     PluginConfigError,
     RestoreInProgress,
-    S3RelMissing,
     S3RelShouldNotExist,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import DeploymentType, S3RelDataCredentials
+from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
@@ -100,11 +100,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 )
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyYetError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
-from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchBackupPlugin,
-    OpenSearchPluginRelationsHandler,
-    PluginState,
-)
+from charms.opensearch.v0.opensearch_plugins import OpenSearchBackupPlugin, PluginState
 from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
@@ -131,8 +127,6 @@ S3_RELATION = "s3-credentials"
 S3_REPOSITORY = "s3-repository"
 PEER_CLUSTER_S3_CONFIG_KEY = "s3_credentials"
 
-
-S3_REPO_BASE_PATH = "/"
 
 INDICES_TO_EXCLUDE_AT_RESTORE = {
     ".opendistro_security",
@@ -189,7 +183,7 @@ class BackupServiceState(BaseStrEnum):
     SNAPSHOT_FAILED_UNKNOWN = "snapshot failed for unknown reason"
 
 
-class OpenSearchBackupBase(Object, OpenSearchPluginRelationsHandler):
+class OpenSearchBackupBase(Object):
     """Works as parent for all backup classes.
 
     This class does a smooth transition between orchestrator and non-orchestrator clusters.
@@ -222,10 +216,9 @@ class OpenSearchBackupBase(Object, OpenSearchPluginRelationsHandler):
         # Set the plugin class
         # This will kickstart the singleton that will exist for this entire hook life
         self.plugin = OpenSearchBackupPlugin(
-            self,
-            self._charm.opensearch.paths.plugins,
-            None,
-            S3RelDataCredentials,
+            self.charm.opensearch.paths.plugins,
+            relation_data={},
+            is_main_orchestrator=False,
         )
 
     def _on_s3_relation_event(self, event: EventBase) -> None:
@@ -270,7 +263,7 @@ class OpenSearchBackupBase(Object, OpenSearchPluginRelationsHandler):
          2) check for each index shard: for all type=SNAPSHOT and stage=DONE, return False.
         """
         try:
-            indices_status = self.charm.opensearch.request("GET", "/_recovery?human") or {}
+            indices_status = self._request("GET", "/_recovery?human") or {}
         except OpenSearchHttpError:
             # Defaults to True if we have a failure, to avoid any actions due to
             # intermittent connection issues.
@@ -406,17 +399,14 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             self.charm.on[S3_RELATION].relation_broken, self._on_s3_relation_broken
         )
 
-    def _on_s3_relation_event(self, event: EventBase) -> None:
+    def _on_s3_relation_event(self, _: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
-        if self.charm.unit.is_leader():
-            self.charm.status.set(BlockedStatus(S3RelShouldNotExist), app=True)
+        self.charm.status.set(BlockedStatus(S3RelShouldNotExist))
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
 
-    def _on_s3_relation_broken(self, event: EventBase) -> None:
+    def _on_s3_relation_broken(self, _: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
-        self.charm.status.clear(S3RelMissing)
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(S3RelShouldNotExist, app=True)
+        self.charm.status.clear(S3RelShouldNotExist)
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
 
 
@@ -427,6 +417,14 @@ class OpenSearchBackup(OpenSearchBackupBase):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
         self.s3_client = S3Requirer(self.charm, relation_name)
+
+        # Set the plugin class
+        # This will kickstart the singleton that will exist for this entire hook life
+        self.plugin = OpenSearchBackupPlugin(
+            self.charm.opensearch.paths.plugins,
+            relation_data=self.s3_client.get_s3_connection_info(),
+            is_main_orchestrator=True,
+        )
 
         # s3 relation handles the config options for s3 backups
         self.framework.observe(self.charm.on[S3_RELATION].relation_created, self._on_s3_created)
@@ -768,14 +766,17 @@ class OpenSearchBackup(OpenSearchBackupBase):
         3) If the plugin is not enabled, then defer the event
         4) Send the API calls to setup the backup service
         """
-        if not self.can_use_s3_repository():
+        # Update the plugin with the new s3 data
+        self.plugin.data = self.s3_client.get_s3_connection_info()
+
+        if not self.plugin.is_relation_set():
             # Always check if a relation actually exists and if options are available
             # in this case, seems one of the conditions above is not yet present
             # abandon this restart event, as it will be called later once s3 configuration
             # is correctly set
             return
 
-        if self.s3_client.get_s3_connection_info().get("tls-ca-chain"):
+        if self.plugin.data.tls_ca_chain is not None:
             raise NotImplementedError
 
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
@@ -783,14 +784,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         try:
             if not self.charm.plugin_manager.is_ready_for_api():
                 raise OpenSearchNotFullyReadyError()
-            plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
-
-            if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
-                # We need to explicitly disable the plugin before reconfiguration
-                # That happens because, differently from the actual configs, we cannot
-                # retrieve the key values and check if they changed.
-                self.charm.plugin_manager.apply_config(plugin.disable())
-            self.charm.plugin_manager.apply_config(plugin.config())
+            self.charm.plugin_manager.apply_config(self.plugin.config())
         except (OpenSearchKeystoreNotReadyYetError, OpenSearchNotFullyReadyError):
             logger.warning("s3-changed: cluster not ready yet")
             event.defer()
@@ -815,6 +809,8 @@ class OpenSearchBackup(OpenSearchBackupBase):
             self.charm.status.clear(PluginConfigError)
             self.charm.status.clear(BackupSetupStart)
             return
+
+        # Leader configures this plugin
         self.apply_api_config_if_needed()
         self.charm.status.clear(PluginConfigError)
         self.charm.status.clear(BackupSetupStart)
@@ -899,9 +895,8 @@ class OpenSearchBackup(OpenSearchBackupBase):
             self._execute_s3_broken_calls()
 
         try:
-            plugin = self.charm.plugin_manager.get_plugin(OpenSearchBackupPlugin)
-            if self.charm.plugin_manager.status(plugin) == PluginState.ENABLED:
-                self.charm.plugin_manager.apply_config(plugin.disable())
+            if self.charm.plugin_manager.status(self.plugin) == PluginState.ENABLED:
+                self.charm.plugin_manager.apply_config(self.plugin.disable())
         except OpenSearchKeystoreNotReadyYetError:
             logger.warning("s3-changed: keystore not ready yet")
             event.defer()
@@ -912,6 +907,10 @@ class OpenSearchBackup(OpenSearchBackupBase):
             logger.error(e)
             event.defer()
             return
+
+        # Let's reset the current plugin
+        self.plugin.data = {}
+
         self.charm.status.clear(BackupInDisabling)
         self.charm.status.clear(PluginConfigError)
 
@@ -941,57 +940,16 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
-        info = self.s3_client.get_s3_connection_info()
-        extra_settings = {}
-        if info.get("region"):
-            extra_settings["region"] = info.get("region")
-        if info.get("storage-class"):
-            extra_settings["storage_class"] = info.get("storage-class")
-
         return self.get_service_status(
             self._request(
                 "PUT",
                 f"_snapshot/{S3_REPOSITORY}",
                 payload={
                     "type": "s3",
-                    "settings": {
-                        "endpoint": info.get("endpoint"),
-                        "protocol": self._get_endpoint_protocol(info.get("endpoint")),
-                        "bucket": info["bucket"],
-                        "base_path": info.get("path", S3_REPO_BASE_PATH),
-                        **extra_settings,
-                    },
+                    "settings": self.plugin.data.dict(exclude={"tls_ca_chain", "credentials"}),
                 },
             )
         )
-
-    def can_use_s3_repository(self) -> bool:
-        """Checks if relation is set and all configs needed are present.
-
-        The get_s3_connection_info() checks if the relation is present, and if yes,
-        returns the data in it.
-
-        This method will go over the output and generate a list of missing parameters
-        that are manadatory to have be present. An empty list means everything is present.
-        """
-        missing_s3_configs = [
-            config
-            for config in ["bucket", "endpoint", "access-key", "secret-key"]
-            if config not in self.s3_client.get_s3_connection_info()
-        ]
-        if missing_s3_configs:
-            logger.warn(f"Missing following configs {missing_s3_configs} in s3 relation")
-            rel = self.charm.model.get_relation(S3_RELATION)
-            if rel and rel.units:
-                # Now, there is genuine interest in configuring S3 correctly,
-                # hence we generate the status
-                self.charm.status.set(
-                    WaitingStatus(
-                        f"Waiting for s3 relation to be fully configured: {missing_s3_configs}"
-                    )
-                )
-            return False
-        return True
 
     def get_service_status(  # noqa: C901
         self, response: dict[str, Any] | None

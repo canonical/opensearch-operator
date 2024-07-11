@@ -65,7 +65,36 @@ class OpenSearchSecrets(Object, RelationDataStore):
         self.cached_secrets = SecretCache()
 
         self.framework.observe(self._charm.on.secret_changed, self._on_secret_changed)
-        self.framework.observe(self._charm.on.secret_removed, self._on_secret_removed)
+        self.framework.observe(self._charm.on.secret_remove, self._on_secret_removed)
+
+    def _on_secret_removed(self, event):
+        """Clean secret from the plugin cache."""
+        secret = event.secret
+        secret.get_content()
+
+        if not event.secret.label:
+            logger.info("Secret %s has no label, ignoring it.", event.secret.id)
+            return
+
+        try:
+            label_parts = self.breakdown_label(event.secret.label)
+        except ValueError:
+            logging.info(f"Label {event.secret.label} was meaningless for us, returning")
+            return
+
+        label_key = label_parts["key"]
+
+        if label_key == S3_CREDENTIALS and (
+            s3_creds := self._charm.secrets.get_object(Scope.APP, "s3-creds")
+        ):
+            plugin = OpenSearchBackupPlugin().update_secrets(
+                S3RelDataCredentials.from_dict(s3_creds)
+            )
+            try:
+                self._charm.plugin_manager.apply_config(plugin)
+            except OpenSearchKeystoreNotReadyYetError:
+                logger.info("Keystore not ready yet, retrying later.")
+                event.defer()
 
     def _on_secret_changed(self, event: SecretChangedEvent):  # noqa: C901
         """Refresh secret and re-run corresponding actions if needed."""
