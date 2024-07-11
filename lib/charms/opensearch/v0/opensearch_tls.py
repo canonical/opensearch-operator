@@ -537,17 +537,26 @@ class OpenSearchTLS(Object):
         try:
             run_cmd(
                 f"""{keytool} \
-                -delete \
+                -list \
                 -keystore {ca_trust_store} \
                 -storepass {store_pwd} \
                 -alias {old_alias} \
                 -storetype PKCS12"""
             )
-            logger.info(f"Removed {old_alias} from truststore.")
         except OpenSearchCmdError as e:
             # This message means there was no "ca" alias or store before, if it happens ignore
             if f"Alias <{old_alias}> does not exist" in e.out:
                 return
+
+        run_cmd(
+            f"""{keytool} \
+            -delete \
+            -keystore {ca_trust_store} \
+            -storepass {store_pwd} \
+            -alias {old_alias} \
+            -storetype PKCS12"""
+        )
+        logger.info(f"Removed {old_alias} from truststore.")
 
     def store_new_tls_resources(self, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
