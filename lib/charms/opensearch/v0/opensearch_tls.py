@@ -183,10 +183,10 @@ class OpenSearchTLS(Object):
             return
 
         # if the CA on this unit is currently being renewed (rolling restart) -> defer
-        if (
-            self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
-            and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
-        ) or not self._ca_rotation_complete_in_cluster():
+        if self.charm.peers_data.get(
+                Scope.UNIT, "tls_ca_renewing", False
+        ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)\
+        and not self._ca_rotation_complete_in_cluster():
             event.defer()
             return
 
@@ -211,7 +211,7 @@ class OpenSearchTLS(Object):
         if current_stored_ca != event.ca:
             self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val))
             # when the current ca is replaced we need to initiate a rolling restart
-            if current_stored_ca is not None:
+            if current_stored_ca:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
                 self.charm.on_tls_ca_rotation(event)
                 event.defer()
@@ -602,10 +602,10 @@ class OpenSearchTLS(Object):
 
             run_cmd(cmd)
             run_cmd(f"sudo chmod +r {store_path}")
-            logger.info(f"TLS certificate for {cert_name} stored.")
         finally:
             tmp_key.close()
             tmp_cert.close()
+            logger.info(f"TLS certificate for {cert_name} stored.")
 
     def all_tls_resources_stored(self, only_unit_resources: bool = False) -> bool:
         """Check if all TLS resources are stored on disk."""
