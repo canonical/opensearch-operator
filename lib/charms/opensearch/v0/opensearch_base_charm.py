@@ -39,7 +39,7 @@ from charms.opensearch.v0.constants_charm import (
     TLSRelationMissing,
     WaitingToStart,
 )
-from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
+from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import (
@@ -198,7 +198,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = OpenSearchSecrets(self, PeerRelationName)
         self.tls = OpenSearchTLS(
-            self, TLS_RELATION, self.opensearch.paths.jdk, self.opensearch.paths.certs
+            self, PeerRelationName, self.opensearch.paths.jdk, self.opensearch.paths.certs
         )
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
