@@ -21,7 +21,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
-from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import (
     OpenSearchKeystore,
     OpenSearchKeystoreNotReadyYetError,
@@ -143,9 +142,7 @@ class OpenSearchPluginManager:
 
     def is_ready_for_api(self) -> bool:
         """Checks if the plugin manager is ready to run API calls."""
-        return self._charm.peers_data.get(
-            Scope.APP, "security_index_initialised", False
-        ) and self._charm.health.get() not in [HealthColors.RED, HealthColors.UNKNOWN]
+        return self._charm.health.get() not in [HealthColors.RED, HealthColors.UNKNOWN]
 
     def run(self) -> bool:
         """Runs a check on each plugin: install, execute config changes or remove.
@@ -288,12 +285,10 @@ class OpenSearchPluginManager:
         current_settings = self.cluster_config
         # We use current_settings and new_conf and check for any differences
         # therefore, we need to make a deepcopy here before editing new_conf
-        new_conf = copy.deepcopy(current_settings)
-        for key in config.config_entries:
-            if key in new_conf and config.config_entries[key]:
-                new_conf[key] = config.config_entries[key]
-            elif key in new_conf and not config.config_entries[key]:
-                del new_conf[key]
+        # Also, we simply apply the config.config_entries straight to new_conf
+        # As setting a config entry to None will render a "null" entry with
+        # jsonl dumps, and hence, it will be removed from the configuration.
+        new_conf = copy.deepcopy(current_settings) | config.config_entries
 
         logger.debug(
             "Difference between current and new configuration: \n"
