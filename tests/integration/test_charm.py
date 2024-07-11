@@ -35,6 +35,34 @@ logger = logging.getLogger(__name__)
 DEFAULT_NUM_UNITS = 2
 
 
+@pytest.mark.group("test-single-node-removal")
+@pytest.mark.abort_on_fail
+async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
+    """Build and deploy OpenSearch with a single unit and remove it."""
+    my_charm = await ops_test.build_charm(".")
+    await ops_test.model.set_config(MODEL_CONFIG)
+
+    await ops_test.model.deploy(
+        my_charm,
+        num_units=1,
+        series=SERIES,
+    )
+    # Deploy TLS Certificates operator.
+    config = {"ca-common-name": "CN_CA"}
+    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+    # Relate it to OpenSearch to set up TLS.
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=DEFAULT_NUM_UNITS,
+    )
+    assert len(ops_test.model.applications[APP_NAME].units) == 1
+    ops_test.model.remove_application(APP_NAME, block_until_done=True)    
+
+
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -287,5 +315,5 @@ async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_remove_application(ops_test: OpsTest) -> None:
-    """Removes the application with a single unit."""
+    """Removes the application with two units."""
     ops_test.model.remove_application(APP_NAME, block_until_done=True)
