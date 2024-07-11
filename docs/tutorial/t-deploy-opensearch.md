@@ -45,4 +45,4 @@ vm.swappiness should be 0 - net.ipv4.tcp_retries2 should be 5
 you need to [set the correct kernel parameters](/t/9724) to continue.
 
 
-**Next step:** [3. Enable TLS](/t/9718)
+>**Next step:** [3. Enable TLS](/t/9718)

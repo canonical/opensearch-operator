@@ -166,4 +166,4 @@ EOF
 juju model-config --file=./cloudinit-userdata.yaml
 ```
 
-**Next step:** [2. Deploy OpenSearch](/t/9716).
+>**Next step:** [2. Deploy OpenSearch](/t/9716).

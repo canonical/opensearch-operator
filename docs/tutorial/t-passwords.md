@@ -1,16 +1,15 @@
+>[Charmed OpenSearch Tutorial](/t/9722) > 5. Manage passwords
 # Manage Passwords
-
-## Passwords
 
 When we accessed OpenSearch earlier in this tutorial, we needed to include a password in the HTTP request. Over time it is a good practice to change the password frequently. Here we will go through setting and changing the password for the admin user.
 
-### Retrieve the admin password
+## Retrieve the admin password
 As previously mentioned, the admin credentials (password + the ca chain used to generate the admin client certificate) can be retrieved by running the `get-password` action on the Charmed OpenSearch application:
 
 ```bash
 juju run-action opensearch/leader get-password --wait
 ```
-Running the command should output:
+Running the command above should output something like:
 
 ```yaml
 unit-opensearch-0:
@@ -30,7 +29,7 @@ unit-opensearch-0:
 The admin password is under the result: `admin-password`.
 
 
-### Rotate the admin password
+## Rotate the admin password
 
 You can change the admin password to a new random and generated password by running:
 
@@ -57,7 +56,7 @@ The admin password is under the result: `admin-password`. It should be different
 
 You can test this password works correctly using the same HTTP requests you used during [Section 5: Connecting to OpenSearch](./5-connecting-to-opensearch.md)
 
-### Set the admin password
+## Set the admin password
 
 You can change the admin password to a specific password by entering:
 
@@ -82,7 +81,7 @@ unit-opensearch-0:
 
 The admin password under the result: `admin-password` should match whatever you passed in when you entered the command.
 
-### Set TLS Private Key
+## Set TLS Private Key
 
 TLS private keys are used for certificate signing requests, and should be recycled in the same way as passwords. There are three types of private keys available to be updated on this charm, and they are as follows:
 
@@ -153,8 +152,5 @@ unit-opensearch-0:
     started: 2023-04-06 12:37:54 +0000 UTC
 ```
 
----
 
-## Next Steps
-
-The next stage in this tutorial is about horizontally scaling the OpenSearch cluster, and can be found [here](/t/charmed-opensearch-tutorial-horizontal-scaling/9720).
+>**Next step**: [6. Scale horizontally](/t/9720)
