@@ -544,6 +544,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # if there are exclusions to be removed
         if self.unit.is_leader():
             self.opensearch_exclusions.allocation_cleanup()
+            # Now, review voting exclusions, as we may have lost a unit due to an outage
+            self._settle_voting_exclusions(unit_is_stopping=False)
 
             if (health := self.health.apply(wait_for_green_first=True)) not in [
                 HealthColors.GREEN,
@@ -579,6 +581,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         restart_requested = False
         if self.opensearch_config.update_host_if_needed():
             restart_requested = True
+            # Review voting exclusions as our IP has changed: we may be coming back from a network
+            # outage case.
+            self._settle_voting_exclusions(unit_is_stopping=False)
 
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
             self.tls.delete_stored_tls_resources()
