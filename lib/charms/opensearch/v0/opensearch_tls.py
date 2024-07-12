@@ -462,7 +462,8 @@ class OpenSearchTLS(Object):
                 -keystore {store_path} \
                 -file {ca_tmp_file.name} \
                 -storetype PKCS12
-            """, f"-storepass {admin_secrets.get("keystore-password-ca")}"
+            """,
+                f"-storepass {admin_secrets.get("keystore-password-ca")}",
             )
             run_cmd(f"sudo chmod +r {store_path}")
 
@@ -476,7 +477,7 @@ class OpenSearchTLS(Object):
 
         stored_certs = run_cmd(
             f"openssl pkcs12 -in {ca_trust_store}",
-            f"-passin pass:{secrets.get("keystore-password-ca")}"
+            f"-passin pass:{secrets.get("keystore-password-ca")}",
         ).out
 
         # parse output to retrieve the current CA (in case there are many)
