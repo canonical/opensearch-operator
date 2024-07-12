@@ -186,8 +186,9 @@ class OpenSearchTLS(Object):
         # if the CA on this unit is currently being renewed (rolling restart) -> defer
         if not self._ca_rotation_complete_in_cluster():
             # TODO: remove logging
-            logger.info("CA rotation not complete in cluster, defer CertificateAvailableEvent")
+            logger.info(f"CA rotation not complete in cluster, defer CertificateAvailableEvent for {cert_type}")
             event.defer()
+            return
 
         # seems like the admin certificate is also broadcast to non leader units on refresh request
         if not self.charm.unit.is_leader() and scope == Scope.APP:
