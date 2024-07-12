@@ -334,14 +334,15 @@ class OpenSearchDistribution(ABC):
 
         Returns the stdout
         """
+        command_with_args = command
         if args is not None:
-            command = f"{command} {args}"
+            command_with_args = f"{command} {args}"
 
         logger.debug(f"Executing command: {command}")
 
         try:
             output = subprocess.run(
-                command,
+                command_with_args,
                 input=stdin,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

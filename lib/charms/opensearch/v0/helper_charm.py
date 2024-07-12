@@ -167,16 +167,17 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
         command: can contain arguments
         args: command line arguments
     """
+    command_with_args = command
     if args is not None:
-        command = f"{command} {args}"
+        command_with_args = f"{command} {args}"
 
-    command = " ".join(command.split())
+    command_with_args = " ".join(command_with_args.split())
 
     logger.debug(f"Executing command: {command}")
 
     try:
         output = subprocess.run(
-            command,
+            command_with_args,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             shell=True,
