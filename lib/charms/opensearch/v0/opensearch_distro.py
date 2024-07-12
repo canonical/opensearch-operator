@@ -338,6 +338,8 @@ class OpenSearchDistribution(ABC):
         if args is not None:
             command_with_args = f"{command} {args}"
 
+        # only log the command and no arguments to avoid logging sensitive information
+        command = command.split()[0]
         logger.debug(f"Executing command: {command}")
 
         try:

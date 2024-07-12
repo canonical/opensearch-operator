@@ -173,6 +173,8 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
 
     command_with_args = " ".join(command_with_args.split())
 
+    # only log the command and no arguments to avoid logging sensitive information
+    command = command.split()[0]
     logger.debug(f"Executing command: {command}")
 
     try:
