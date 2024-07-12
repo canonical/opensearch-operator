@@ -418,11 +418,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
-        # remove old ca if all units have completely finished renewing it and are running
-        if self.opensearch.is_node_up() and self.is_tls_full_configured_in_cluster():
-            self.tls.remove_old_ca()
-            self.status.clear(TLSCaRotation)
-
         # register new cm addresses on every node
         self._add_cm_addresses_to_conf()
 
@@ -776,7 +771,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def is_tls_full_configured_in_cluster(self) -> bool:
         """Check if TLS is configured in all the units of the current cluster."""
         rel = self.model.get_relation(PeerRelationName)
-        for unit in rel.units.union({self.unit}):
+        for unit in all_units(self):
             if (
                 rel.data[unit].get("tls_configured") != "True"
                 or "tls_ca_renewing" in rel.data[unit]
@@ -1033,6 +1028,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # update the peer relation data for TLS CA rotation routine
         self.tls.reset_ca_rotation_state()
+        if self.is_tls_full_configured_in_cluster():
+            self.status.clear(TLSCaRotation)
 
     def _stop_opensearch(self, *, restart=False) -> None:
         """Stop OpenSearch if possible."""
@@ -1083,6 +1080,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._stop_opensearch(restart=True)
             logger.info("Restarting OpenSearch.")
         except OpenSearchStopError as e:
+            # TODO: remove logging
+            logger.info(f"Error while Restarting Opensearch: {e}")
             logger.exception(e)
             self.node_lock.release()
             event.defer()
