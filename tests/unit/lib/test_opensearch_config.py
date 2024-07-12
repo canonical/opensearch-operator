@@ -10,6 +10,7 @@ from unittest.mock import Mock
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
+from charms.opensearch.v0.models import App
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -165,7 +166,9 @@ class TestOpenSearchConfig(unittest.TestCase):
 
     def test_set_node_and_cleanup_if_bootstrapped(self):
         """Test setting the core config of a node."""
+        app = App(model_uuid=self.charm.model.uuid, name=self.charm.app.name)
         self.opensearch_config.set_node(
+            app=app,
             cluster_name="opensearch-dev",
             unit_name=self.charm.unit_name,
             roles=["cluster_manager", "data"],
@@ -178,6 +181,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         self.assertEqual(opensearch_conf["cluster.name"], "opensearch-dev")
         self.assertEqual(opensearch_conf["node.name"], self.charm.unit_name)
         self.assertEqual(opensearch_conf["node.attr.temp"], "hot")
+        self.assertEqual(opensearch_conf["node.attr.app_id"], app.id)
         self.assertEqual(opensearch_conf["network.host"], ["_site_", "10.10.10.10"])
         self.assertEqual(opensearch_conf["network.publish_host"], "20.20.20.20")
         self.assertEqual(opensearch_conf["node.roles"], ["cluster_manager", "data"])
@@ -196,6 +200,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
         self.assertNotIn("cluster.initial_cluster_manager_nodes", opensearch_conf)
 
+        # test unicast_hosts content
         with open(self.seed_unicast_hosts, "r") as f:
             stored = set([line.strip() for line in f.readlines()])
             expected = {"20.20.20.20"}

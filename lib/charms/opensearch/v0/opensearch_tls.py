@@ -23,8 +23,9 @@ import typing
 from os.path import exists
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_charm import run_cmd
+from charms.opensearch.v0.helper_charm import all_units, run_cmd
 from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
@@ -455,6 +456,7 @@ class OpenSearchTLS(Object):
         keytool = f"sudo {self.jdk_path}/bin/keytool"
 
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
         if not (secrets.get("ca-cert", {}) and admin_secrets.get("keystore-password-ca", {})):
             logging.error("CA cert not found, quitting.")
@@ -563,6 +565,12 @@ class OpenSearchTLS(Object):
         cert_name = cert_type.val
         store_path = f"{self.certs_path}/{cert_type}.p12"
 
+        # if the TLS certificate is available before the keystore-password, create it anyway
+        if cert_type == CertType.APP_ADMIN:
+            self._create_keystore_pwd_if_not_exists(Scope.APP, cert_type, cert_type.val)
+        else:
+            self._create_keystore_pwd_if_not_exists(Scope.UNIT, cert_type, cert_type.val)
+
         if not secrets.get("key"):
             logging.error("TLS key not found, quitting.")
             return
@@ -617,7 +625,6 @@ class OpenSearchTLS(Object):
             if not exists(f"{self.certs_path}/{cert_type}.p12"):
                 return False
 
-        self.charm.peers_data.put(Scope.UNIT, "tls_configured", True)
         return True
 
     def all_certificates_available(self) -> bool:
@@ -640,6 +647,39 @@ class OpenSearchTLS(Object):
                 return False
 
         return True
+
+    def is_fully_configured(self) -> bool:
+        """Check if all TLS secrets and resources exist and are stored."""
+        return self.all_certificates_available() and self.all_tls_resources_stored()
+
+    def is_fully_configured_in_cluster(self) -> bool:
+        """Check if TLS is configured in all the units of the current cluster."""
+        rel = self.model.get_relation(PeerRelationName)
+        for unit in all_units(self.charm):
+            if rel.data[unit].get("tls_configured") != "True":
+                return False
+        return True
+
+    def store_admin_tls_secrets_if_applies(self) -> None:
+        """Store admin TLS resources if available and mark unit as configured if correct."""
+        # In the case of the first units before TLS is initialized,
+        # or non-main orchestrator units having not received the secrets from the main yet
+        if not (
+            current_secrets := self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        ):
+            return
+
+        # in the case the cluster was bootstrapped with multiple units at the same time
+        # and the certificates have not been generated yet
+        if not current_secrets.get("cert") or not current_secrets.get("chain"):
+            return
+
+        # Store the "Admin" certificate, key and CA on the disk of the new unit
+        self.store_new_tls_resources(CertType.APP_ADMIN, current_secrets)
+
+        # Mark this unit as tls configured
+        if self.is_fully_configured():
+            self.charm.peers_data.put(Scope.UNIT, "tls_configured", True)
 
     def delete_stored_tls_resources(self):
         """Delete the TLS resources of the unit that are stored on disk."""

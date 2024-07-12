@@ -127,7 +127,7 @@ async def test_set_roles_manually(
         idle_period=IDLE_PERIOD,
     )
     new_nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert len(new_nodes) == len(nodes) + 1
+    assert len(new_nodes) == len(nodes)
 
     # remove new unit
     last_unit_id = sorted(get_application_unit_ids(ops_test, app))[-1]

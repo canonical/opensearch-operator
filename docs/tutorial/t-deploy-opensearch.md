@@ -1,20 +1,26 @@
-## Deploy Charmed OpenSearch
+> [Charmed OpenSearch Tutorial](/t/9722) >  2. Deploy OpenSearch
 
-To deploy Charmed OpenSearch, all you need to do is run the following command, which will fetch the charm from [Charmhub](https://charmhub.io/opensearch?channel=edge) and deploy it to your model:
+# Deploy OpenSearch
 
-```bash
+To deploy Charmed OpenSearch, all you need to do is run the following command:
+
+```shell
 juju deploy opensearch --channel 2/edge
 ```
 
-Juju will now fetch Charmed OpenSearch and begin deploying it to the LXD cloud. This process can take several minutes depending on your machine. You can track the progress by running:
+This will fetch the charm from [Charmhub](https://charmhub.io/opensearch?channel=edge) and begin deploying it to the LXD cloud. This process can take several minutes depending on your machine. 
 
-```bash
-watch -c juju status --color
+You can track the progress by running:
+
+```shell
+juju status --watch 1s
 ```
 
-This command is useful for checking the status of your Juju Model, including the applications and machines that it hosts. Some of the helpful information it displays include IP addresses, ports, state, etc. The output of this command updates once every other second. When the application is ready, `juju status` will show:
+>This command is useful for checking the status of your Juju model, including the applications and machines that it hosts. Some of the helpful information it displays include IP addresses, ports, state, etc. The output of this command updates once every other second. 
 
-```bash
+When the application is ready, `juju status` will show something similar to the sample output below: 
+
+```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:12:41Z
 
@@ -26,20 +32,17 @@ opensearch/0*  blocked   idle   0        10.180.162.97          Waiting for TLS 
 
 Machine  State    Address        Inst id        Series  AZ  Message
 0        started  10.180.162.97  juju-3305a8-0  jammy       Running
-
-
 ```
 
-To exit the screen with `watch -c juju status --color`, enter `Ctrl+c`.
+To exit the `juju status` screen, enter `Ctrl + C`.
 
-The status message `Waiting for TLS to be fully configured...` exists because Charmed OpenSearch requires TLS to be configured before use, to ensure data is encrypted in transit for the HTTP and Transport layers. If you're seeing a status message like the following, [you need to set the correct kernel parameters to continue](/t/charmed-opensearch-tutorial-setup-environment/9724).
+The status message `Waiting for TLS to be fully configured...` exists at this time because Charmed OpenSearch requires TLS to be configured before use, to ensure data is encrypted in transit for the HTTP and Transport layers. We will do this in the next step.
 
-```bash
+If you're seeing the following status message:
+```shell
 vm.swappiness should be 0 - net.ipv4.tcp_retries2 should be 5
 ```
+you need to [set the correct kernel parameters](/t/9724) to continue.
 
----
 
-## Next Steps
-
-The next stage in this tutorial is about enabling TLS on the OpenSearch charm. This step is essential for the charm's function, and the tutorial can be found [here](/t/charmed-opensearch-tutorial-enable-tls/9718).
+**Next step:** [3. Enable TLS](/t/9718)

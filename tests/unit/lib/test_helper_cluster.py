@@ -7,6 +7,7 @@ from typing import List
 from unittest.mock import patch
 
 from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology, Node
+from charms.opensearch.v0.models import App
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -16,8 +17,8 @@ class TestHelperCluster(unittest.TestCase):
     base_roles = ["data", "ingest", "ml", "coordinating_only"]
     cm_roles = base_roles + ["cluster_manager"]
 
-    cluster1 = "cluster1"
-    cluster2 = "cluster2"
+    cluster1 = App(model_uuid="model-uuid", name="cluster1")
+    cluster2 = App(model_uuid="model-uuid", name="cluster2")
 
     def cluster1_5_nodes_conf(self) -> List[Node]:
         """Returns the expected config of a 5 "planned" nodes cluster."""
@@ -26,14 +27,14 @@ class TestHelperCluster(unittest.TestCase):
                 name="cm1",
                 roles=self.cm_roles,
                 ip="0.0.0.1",
-                app_name=self.cluster1,
+                app=self.cluster1,
                 unit_number=0,
             ),
             Node(
                 name="cm2",
                 roles=self.cm_roles,
                 ip="0.0.0.2",
-                app_name=self.cluster1,
+                app=self.cluster1,
                 unit_number=1,
             ),
             # Unit number 2 omitted on purpose
@@ -42,21 +43,21 @@ class TestHelperCluster(unittest.TestCase):
                 name="cm3",
                 roles=self.cm_roles,
                 ip="0.0.0.3",
-                app_name=self.cluster1,
+                app=self.cluster1,
                 unit_number=3,
             ),
             Node(
                 name="cm4",
                 roles=self.cm_roles,
                 ip="0.0.0.4",
-                app_name=self.cluster1,
+                app=self.cluster1,
                 unit_number=4,
             ),
             Node(
                 name="cm5",
                 roles=self.cm_roles,
                 ip="0.0.0.5",
-                app_name=self.cluster1,
+                app=self.cluster1,
                 unit_number=5,
             ),
         ]
@@ -69,7 +70,7 @@ class TestHelperCluster(unittest.TestCase):
                 name="data1",
                 roles=self.base_roles,
                 ip="0.0.0.6",
-                app_name=self.cluster1,
+                app=self.cluster1,
                 unit_number=6,
             )
         )
@@ -83,35 +84,35 @@ class TestHelperCluster(unittest.TestCase):
                 name="cm_data_ml1",
                 roles=roles,
                 ip="0.0.0.11",
-                app_name=self.cluster2,
+                app=self.cluster2,
                 unit_number=0,
             ),
             Node(
                 name="cm_data_ml2",
                 roles=roles,
                 ip="0.0.0.12",
-                app_name=self.cluster2,
+                app=self.cluster2,
                 unit_number=1,
             ),
             Node(
                 name="cm_data_ml3",
                 roles=roles,
                 ip="0.0.0.13",
-                app_name=self.cluster2,
+                app=self.cluster2,
                 unit_number=2,
             ),
             Node(
                 name="cm_data_ml4",
                 roles=roles,
                 ip="0.0.0.14",
-                app_name=self.cluster2,
+                app=self.cluster2,
                 unit_number=3,
             ),
             Node(
                 name="cm_data_ml5",
                 roles=roles,
                 ip="0.0.0.15",
-                app_name=self.cluster2,
+                app=self.cluster2,
                 unit_number=4,
             ),
         ]
@@ -208,7 +209,7 @@ class TestHelperCluster(unittest.TestCase):
             first_cluster_nodes.append(new_node)
 
         computed_node_to_change = ClusterTopology.recompute_nodes_conf(
-            app_name=self.cluster2,
+            app_id=self.cluster2.id,
             nodes=cluster_conf + first_cluster_nodes,
         )
 
@@ -218,7 +219,7 @@ class TestHelperCluster(unittest.TestCase):
                 name=node.name,
                 roles=self.cm_roles,
                 ip=node.ip,
-                app_name=node.app_name,
+                app=node.app,
                 unit_number=node.unit_number,
                 temperature=node.temperature,
             )
@@ -262,7 +263,7 @@ class TestHelperCluster(unittest.TestCase):
             name="cm1",
             roles=["cluster_manager"],
             ip="0.0.0.11",
-            app_name=self.cluster1,
+            app=self.cluster1,
             unit_number=0,
         )
         from_json_node = Node.from_dict(
@@ -270,7 +271,7 @@ class TestHelperCluster(unittest.TestCase):
                 "name": "cm1",
                 "roles": ["cluster_manager"],
                 "ip": "0.0.0.11",
-                "app_name": self.cluster1,
+                "app": self.cluster1.to_dict(),
                 "unit_number": 0,
             }
         )
