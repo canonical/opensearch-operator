@@ -534,7 +534,7 @@ class OpenSearchTLS(Object):
                 -out {store_path} \
                 -name {cert_name}
             """
-            args = f"-passout pass:{secrets.get(f"keystore-password-{cert_name}")}"
+            args = f"-passout pass:{secrets.get(f'keystore-password-{cert_name}')}"
             if secrets.get("key-password"):
                 args = f"{args} -passin pass:{secrets.get('key-password')}"
 
