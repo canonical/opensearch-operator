@@ -11,8 +11,12 @@ The Charmed OpenSearch Operator deploys and operates the [OpenSearch](https://op
 This operator provides an OpenSearch cluster, with:
 - TLS (for the HTTP and Transport layers)
 - Automated node discovery
+- Observability
+- Backup / Restore
+- Safe horizontal scale-down/up
+- Large deployments
 
-The Operator in this repository is a Python script which wraps OpenSearch installed by the OpenSearch Snap, providing lifecycle management and handling events (install, start, etc).
+The Operator in this repository is a Python project installing and managing OpenSearch installed from the [OpenSearch Snap](https://snapcraft.io/opensearch), providing lifecycle management and handling events (install, start, etc).
 
 ## Usage
 
@@ -36,8 +40,13 @@ cloudinit-userdata: |
     - [ 'sysctl', '-p' ]
 EOF
 
-echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
-echo "vm.swappiness=0" | sudo tee -a /etc/sysctl.conf
+sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
+vm.max_map_count=262144
+vm.swappiness=0
+net.ipv4.tcp_retries2=5
+fs.file-max=1048576
+EOT
+
 sudo sysctl -p
 
 juju model-config --file=./cloudinit-userdata.yaml
@@ -60,17 +69,16 @@ To connect to the Charmed OpenSearch Operator and exchange data, relate to the `
 
 ```shell
 juju deploy data-integrator --channel=2/edge
-juju relate opensearch data-integrator
+juju integrate opensearch data-integrator
 ```
 
 ### TLS:
 
 The Charmed OpenSearch Operator also supports TLS encryption on the HTTP and Transport layers. TLS is enabled by default.
 
-The charm relies on the `tls-certificates` interface.
+The charm relies on the `certificates` interface.
 
 #### 1. Self-signed certificates:
-
 ```shell
 # Deploy the self-signed TLS Certificates Operator.
 juju deploy self-signed-certificates --channel=latest/stable
@@ -90,6 +98,17 @@ juju remove-relation opensearch self-signed-certificates
 ```
 
 **Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The Self Signed Certificates Operator offers a variety of configuration options. Read more on the TLS Certificates Operator [here](https://charmhub.io/self-signed-certificates).
+
+
+### Large deployments:
+Charmed OpenSearch also allows to form large clusters or join an existing deployment, through the relations:
+- `peer-cluster`
+- `peer-cluster-orchestrator`
+```
+juju integrate main:peer-cluster-orchestrator data-hot:peer-cluster
+```
+
+
 
 ## Security
 Security issues in the Charmed OpenSearch Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
