@@ -216,27 +216,30 @@ class OpenSearchTLS(Object):
                 self.charm.on_tls_ca_rotation(event)
                 return
 
-        # store the certificates and keys in a key store
-        logger.info(f"This CertificateAvailableEvent was not deferred. cert_type: {cert_type}")
-        self.store_new_tls_resources(
-            cert_type, self.charm.secrets.get_object(scope, cert_type.val)
-        )
+        # make sure no new cert is stored during CA rotation, even if an event was not deferred
+        if not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
+            # TODO: remove logging
+            logger.info(f"This CertificateAvailableEvent was not deferred. cert_type: {cert_type}")
+            # store the certificates and keys in a key store
+            self.store_new_tls_resources(
+                cert_type, self.charm.secrets.get_object(scope, cert_type.val)
+            )
 
-        # store the admin certificates in non-leader units
-        if not self.charm.unit.is_leader():
-            if self.all_certificates_available():
-                admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-                self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
+            # store the admin certificates in non-leader units
+            if not self.charm.unit.is_leader():
+                if self.all_certificates_available():
+                    admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+                    self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
 
-        for relation in self.charm.opensearch_provider.relations:
-            self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
+            for relation in self.charm.opensearch_provider.relations:
+                self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
 
-        old_cert = secrets.get("cert", None)
-        renewal = self._read_stored_ca(alias="old-ca") is not None or (
-            old_cert is not None and old_cert != event.certificate
-        )
+            old_cert = secrets.get("cert", None)
+            renewal = self._read_stored_ca(alias="old-ca") is not None or (
+                old_cert is not None and old_cert != event.certificate
+            )
 
-        self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
+            self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
 
     def _on_certificate_expiring(
         self, event: Union[CertificateExpiringEvent, CertificateInvalidatedEvent]
