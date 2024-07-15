@@ -39,7 +39,7 @@ def harness():
     harness_obj.begin()
     # charm = harness_obj.charm
 
-    harness_obj.set_leader(is_leader=True)
+    # harness_obj.set_leader(is_leader=True)
     charms.opensearch.v0.opensearch_base_charm.stop_after_delay = MagicMock(
         return_value=tenacity.stop.stop_after_delay(0.2)
     )
@@ -47,6 +47,7 @@ def harness():
         return_value=tenacity.wait.wait_fixed(0.1)
     )
     type(harness_obj.charm).alt_hosts = PropertyMock()
+    harness_obj.charm._put_or_update_internal_user_leader = MagicMock()
 
     return harness_obj
 
