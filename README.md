@@ -59,11 +59,11 @@ To deploy a single unit of OpenSearch using its default configuration.
 juju deploy opensearch --channel=2/edge
 ```
 
-## Relations
+## Relations / Integrations
 
-Supported [relations](https://juju.is/docs/olm/relations):
+The relevant provided [relations](https://juju.is/docs/olm/relations) of Charmed OpenSearch are:
 
-#### `opensearch-client` interface:
+### Client interface:
 
 To connect to the Charmed OpenSearch Operator and exchange data, relate to the `opensearch-client` endpoint:
 
@@ -72,11 +72,20 @@ juju deploy data-integrator --channel=2/edge
 juju integrate opensearch data-integrator
 ```
 
-### TLS:
+### Large deployments:
+Charmed OpenSearch also allows to form large clusters or join an existing deployment, through the relations:
+- `peer-cluster`
+- `peer-cluster-orchestrator`
+```
+juju integrate main:peer-cluster-orchestrator data-hot:peer-cluster
+```
 
-The Charmed OpenSearch Operator also supports TLS encryption on the HTTP and Transport layers. TLS is enabled by default.
+## TLS:
 
-The charm relies on the `certificates` interface.
+The Charmed OpenSearch Operator also supports TLS encryption as a first class citizen, on both the HTTP and Transport layers. 
+TLS is enabled by default and is a requirement for the charm to start.
+
+The charm relies on the `tls-certificates` interface.
 
 #### 1. Self-signed certificates:
 ```shell
@@ -98,17 +107,6 @@ juju remove-relation opensearch self-signed-certificates
 ```
 
 **Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The Self Signed Certificates Operator offers a variety of configuration options. Read more on the TLS Certificates Operator [here](https://charmhub.io/self-signed-certificates).
-
-
-### Large deployments:
-Charmed OpenSearch also allows to form large clusters or join an existing deployment, through the relations:
-- `peer-cluster`
-- `peer-cluster-orchestrator`
-```
-juju integrate main:peer-cluster-orchestrator data-hot:peer-cluster
-```
-
-
 
 ## Security
 Security issues in the Charmed OpenSearch Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
