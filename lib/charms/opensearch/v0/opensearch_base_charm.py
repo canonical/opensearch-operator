@@ -907,15 +907,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._initialize_security_index(admin_secrets)
             self.peers_data.put(Scope.APP, "security_index_initialised", True)
 
-        # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
-        # may be thrown when calling a node - we want to ensure this node is perfectly ready
-        # before marking it as ready
-        if (
-            not self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
-            and not self.opensearch.is_node_up()
-        ):
-            raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
-
         try:
             nodes = self._get_nodes(use_localhost=self.opensearch.is_node_up())
         except OpenSearchHttpError:
@@ -1030,6 +1021,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.tls.reset_ca_rotation_state()
         if self.is_tls_full_configured_in_cluster():
             self.status.clear(TLSCaRotation)
+
+        # request new certificates after rotating the CA
+        if (
+            self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
+            and self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
+            and not self.peers_data.get(Scope.UNIT, "tls_configured", False)
+        ):
+            self.tls.request_new_unit_certificates()
+            if self.unit.is_leader():
+                self.tls.request_new_admin_certificate()
 
     def _stop_opensearch(self, *, restart=False) -> None:
         """Stop OpenSearch if possible."""
