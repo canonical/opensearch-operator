@@ -521,7 +521,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # release lock
             self.node_lock.release()
 
-    def _on_update_status(self, event: UpdateStatusEvent):
+    def _on_update_status(self, event: UpdateStatusEvent):  # noqa: C901
         """On update status event.
 
         We want to periodically check for the following:
@@ -543,10 +543,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # if there are exclusions to be removed
         if self.unit.is_leader():
-            self.opensearch_exclusions.allocation_cleanup()
-            # Now, review voting exclusions, as we may have lost a unit due to an outage
-            self._settle_voting_exclusions(unit_is_stopping=False)
-
             if (health := self.health.apply(wait_for_green_first=True)) not in [
                 HealthColors.GREEN,
                 HealthColors.IGNORE,
@@ -555,6 +551,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             if health == HealthColors.UNKNOWN:
                 return
+
+            self.opensearch_exclusions.allocation_cleanup()
+            # Now, review voting exclusions, as we may have lost a unit due to an outage
+            try:
+                self._settle_voting_exclusions(unit_is_stopping=False)
+            except RetryError:
+                # We need to retry later as the cluster does not seem to be stable enough
+                event.defer()
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -1114,10 +1118,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # Each of the possible cases
         if len(cms) == 1:
-            # This condition only happens IF the cluster had 2x units and now is scalig down
-            # to a single unit. We must, in this case, cleanup the voting configuration,
-            # add this unit to the voting exclusion and wait until cluster manager is re-elected
-            self.opensearch_exclusions.add_voting(hosts, node_names=[self.unit_name])
+            # This condition only happens IF the cluster had 2x units and now is scalig down to 1
+            # In this scenario, we should exclude the node that is going away, to force election
+            # to the remaining unit.
+            if unit_is_stopping:
+                self.opensearch_exclusions.add_voting(hosts, node_names=[self.unit_name])
         elif len(cms) == 2:
             if unit_is_stopping:
                 # Remove both this unit and the first sorted_cm from the voting

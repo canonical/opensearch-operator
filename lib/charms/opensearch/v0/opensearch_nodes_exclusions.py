@@ -47,7 +47,10 @@ class OpenSearchExclusions:
     def add_voting(
         self, alt_hosts: Optional[List[str]] = None, node_names: Optional[List[str]] = None
     ) -> bool:
-        """Include the current node in the CMs voting exclusions list of nodes."""
+        """Include the current node in the CMs voting exclusions list of nodes.
+
+        If node_names is not specified, then the current node is excluded for compatibility.
+        """
         add_nodes = "&node_names=" + (",".join(node_names) if node_names else self._node.name)
         try:
             self._opensearch.request(
@@ -120,6 +123,19 @@ class OpenSearchExclusions:
             pass
         finally:
             return allocation_exclusions
+
+    def _fetch_voting_exclusions(self, alt_hosts) -> Set[str]:
+        """Fetch the registered voting exclusions."""
+        hosts = alt_hosts if alt_hosts else self._charm.alt_hosts
+        try:
+            resp = self._opensearch.request(
+                "GET", "/_cluster/state/metadata/voting_config_exclusions", alt_hosts=hosts
+            )
+            return set(sorted(resp["metadata"]["voting_config_exclusions"] or []))
+        except (KeyError, OpenSearchHttpError) as e:
+            logger.warning(f"Failed to fetch voting exclusions: {e}")
+            # no voting exclusion set
+            return {}
 
     @cached_property
     def _node(self) -> Node:
