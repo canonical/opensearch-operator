@@ -47,7 +47,7 @@ class OpenSearchExclusions:
     def add_voting(
         self, alt_hosts: Optional[List[str]] = None, node_names: Optional[List[str]] = None
     ) -> bool:
-        """Include the current node in the CMs voting exclusions list of nodes."""
+        """Include the node_names list in the CMs voting exclusions."""
         add_nodes = "&node_names=" + (",".join(node_names) if node_names else self._node.name)
         try:
             self._opensearch.request(
