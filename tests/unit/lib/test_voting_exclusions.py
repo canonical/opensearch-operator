@@ -33,13 +33,8 @@ PeerCMRelData = namedtuple("PeerCMRelData", ["cm_nodes"])
 @pytest.fixture(scope="function")
 def harness():
     harness_obj = Harness(OpenSearchOperatorCharm)
-    # charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc = (
-    #     MagicMock(return_value=create_deployment_desc())
-    # )
     harness_obj.begin()
-    # charm = harness_obj.charm
 
-    # harness_obj.set_leader(is_leader=True)
     charms.opensearch.v0.opensearch_base_charm.stop_after_delay = MagicMock(
         return_value=tenacity.stop.stop_after_delay(0.2)
     )
@@ -48,6 +43,8 @@ def harness():
     )
     type(harness_obj.charm).alt_hosts = PropertyMock()
     harness_obj.charm._put_or_update_internal_user_leader = MagicMock()
+
+    harness_obj.charm.opensearch_exclusions._fetch_voting_exclusions = MagicMock(return_value={})
 
     return harness_obj
 
@@ -227,9 +224,6 @@ def test_settle_voting_exclusions(
     )
     charm.opensearch_peer_cm.rel_data = MagicMock(return_value=__rel_data(cm_node_list))
     ClusterTopology.nodes = MagicMock(return_value=cm_node_list)
-    # ClusterTopology.get_cluster_managers_names = MagicMock(
-    #     return_value=[cm_node.name for cm_node in cm_node_list]
-    # )
     ClusterTopology.elected_manager = MagicMock(return_value=elected_manager)
     charm.opensearch_exclusions.delete_voting = MagicMock()
     charm.opensearch_exclusions.add_voting = MagicMock()

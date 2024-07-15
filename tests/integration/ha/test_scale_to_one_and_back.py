@@ -105,10 +105,14 @@ async def test_scale_down(ops_test: OpsTest, c_writes: ContinuousWrites, c_write
 
         if init_count == 3:
             # We're down to 2x units only
-            assert len(voting_exclusions) == 2
+            # We may have 1 or 2 voting exclusions, as at stop, it will set to 2
+            # and eventually be cleaned to 1 by an update-status, peer-changed, etc
+            assert len(voting_exclusions) in [1, 2]
         elif init_count == 2:
             # Down to 1x unit only
-            assert len(voting_exclusions) == 1
+            # We may have 0 or 1 voting exclusions, as at stop, it will set to 1
+            # and eventually be cleaned by an update-status, peer-changed, etc
+            assert len(voting_exclusions) in [0, 1]
         init_count = len(ops_test.model.applications[app].units)
 
     # continuous writes checks

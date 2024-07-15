@@ -51,6 +51,10 @@ class OpenSearchExclusions:
 
         If node_names is not specified, then the current node is excluded for compatibility.
         """
+        if set(node_names or []) == self._fetch_voting_exclusions(alt_hosts):
+            # no need to add the same nodes again
+            return True
+
         add_nodes = "&node_names=" + (",".join(node_names) if node_names else self._node.name)
         try:
             self._opensearch.request(
