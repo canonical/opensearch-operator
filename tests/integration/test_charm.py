@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_NUM_UNITS = 2
 
 
-@pytest.mark.group("test-single-node-removal")
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
     """Build and deploy OpenSearch with a single unit and remove it."""
@@ -61,11 +61,11 @@ async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
     ops_test.model.remove_application(APP_NAME, block_until_done=True)
+    ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy a couple of OpenSearch units."""
     my_charm = await ops_test.build_charm(".")
