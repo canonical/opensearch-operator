@@ -461,7 +461,7 @@ class OpenSearchDistribution(ABC):
             return False
 
     @staticmethod
-    def missing_sys_requirements() -> List[str]:
+    def missing_sys_requirements(name: str) -> List[str]:
         """Checks the system requirements."""
         missing_requirements = []
 
@@ -491,7 +491,7 @@ class OpenSearchDistribution(ABC):
                 missing_requirements.append("fs.file-max should be 1048576")
 
         try:
-            sysctl.Config().configure(config)
+            sysctl.Config(name).configure(config)
         except sysctl.CommandError as e:
             logger.error(f"Failed to apply sysctl config: {e}")
             missing_requirements.append(str(e))

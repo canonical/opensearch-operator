@@ -527,7 +527,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
         # if there are missing system requirements defer
-        if len(missing_sys_reqs := self.opensearch.missing_sys_requirements()) > 0:
+        if len(missing_sys_reqs := self.opensearch.missing_sys_requirements(self.unit_name)) > 0:
             self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
             return
 
@@ -1109,7 +1109,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""
         # if there are any missing system requirements leave
-        if missing_sys_reqs := self.opensearch.missing_sys_requirements():
+        if missing_sys_reqs := self.opensearch.missing_sys_requirements(self.unit_name):
             self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
             return False
 
