@@ -274,8 +274,8 @@ class S3RelData(Model):
     This model should receive the data directly from the relation and map it to a model.
     """
 
-    bucket: str
-    endpoint: str
+    bucket: str = Field(default="")
+    endpoint: str = Field(default="")
     region: Optional[str] = None
     base_path: Optional[str] = Field(alias="path", default=S3_REPO_BASE_PATH)
     protocol: Optional[str] = None
@@ -327,6 +327,9 @@ class S3RelData(Model):
     @staticmethod
     def get_endpoint_protocol(endpoint: str) -> str:
         """Returns the protocol based on the endpoint."""
+        if not endpoint:
+            return "http"
+
         if endpoint.startswith("http://"):
             return "http"
         if endpoint.startswith("https://"):

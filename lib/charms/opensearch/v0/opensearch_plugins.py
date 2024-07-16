@@ -27,9 +27,13 @@ upgrade, uninstall, etc).
 
 The plugin lifecycle runs through the following steps:
 
+
 MISSING (not installed yet) > INSTALLED (plugin installed, but not configured yet) >
-ENABLED (configuration has been applied) > WAITING_FOR_UPGRADE (if an upgrade is needed)
-> ENABLED (back to enabled state once upgrade has been applied)
+ENABLING_NEEDED (the user requested to be enabled, but not configured yet) >
+ENABLED (configuration has been applied) > 
+DISABLING_NEEDED (is_enabled returns True but user is not requesting anymore) >
+DISABLED (disabled by removing options) > WAITING_FOR_UPGRADE >
+ENABLED (back to enabled state once upgrade has been applied)
 
 WHERE PLUGINS ARE USED:
 Plugins are managed in the OpenSearchPluginManager class, which is called by the charm;
@@ -163,7 +167,7 @@ In case the plugin depends on API calls to finish configuration or a relation to
 configured, create an extra class at the charm level to manage plugin events:
 
 
-class MyPluginRelationHandler(Object):
+class MyPluginRelationManager(Object):
 
     PLUGIN_NAME = "MyPlugin"
 
@@ -274,6 +278,7 @@ from charms.opensearch.v0.models import S3RelData, S3RelDataCredentials
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from jproperties import Properties
 from pydantic import BaseModel, validator
+from pydantic.error_wrappers import ValidationError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "3b05456c6e304680b4af8e20dae246a2"
@@ -447,7 +452,7 @@ class OpenSearchPlugin(metaclass=OpenSearchPluginMeta):
 
 
 class OpenSearchPluginRelationsHandler(OpenSearchPlugin):
-    """Implements the relation manager for each plugin.
+    """Implements a handler the relation databag.
 
     Plugins may have one or more relations tied to them. This abstract class
     enables different modules to implement a class that can specify which
@@ -516,7 +521,7 @@ class OpenSearchKnn(OpenSearchPlugin):
     def disable(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for disabling the current plugin."""
         return OpenSearchPluginConfig(
-            config_entries={"knn.plugin.enabled": None},
+            config_entries={"knn.plugin.enabled": False},
         )
 
     @property
@@ -546,7 +551,10 @@ class OpenSearchBackupPlugin(OpenSearchPluginRelationsHandler):
     @property
     def data(self) -> BaseModel:
         """Returns the data from the relation databag."""
-        return self.MODEL.from_relation(self._extra_config)
+        try:
+            return self.MODEL.from_relation(self._extra_config)
+        except ValidationError:
+            return self.MODEL()
 
     @data.setter
     def data(self, value: Dict[str, Any]):

@@ -133,7 +133,7 @@ class OpenSearchPluginManager:
     def _extra_conf(self, plugin_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Returns the config from the relation data of the target plugin if applies."""
         relation_handler = plugin_data.get("relation_handler")
-        data = relation_handler(self._charm).data() if relation_handler else {}
+        data = relation_handler(self._charm).data.dict() if relation_handler else {}
         return {
             **data,
             **self._charm_config,
@@ -394,7 +394,7 @@ class OpenSearchPluginManager:
             OpenSearchKeystoreNotReadyYetError,
             OpenSearchPluginMissingConfigError,
         ):
-            # We are missing configs or keystore. Report the plugin is only installed
+            # We are keystore access. Report the plugin is only installed
             pass
         return PluginState.INSTALLED
 
@@ -419,8 +419,6 @@ class OpenSearchPluginManager:
 
         Raise:
             OpenSearchKeystoreNotReadyYetError: If the keystore is not yet ready
-            OpenSearchPluginMissingConfigError: If the plugin is missing configuration
-                                                in opensearch.yml
         """
         # Avoid the keystore check as we may just be writing configuration in the files
         # while the cluster is not up and running yet.
@@ -439,8 +437,7 @@ class OpenSearchPluginManager:
         existing_setup = self._opensearch_config.get_plugin(plugin.config().config_entries)
 
         if any([k not in existing_setup.keys() for k in plugin.config().config_entries.keys()]):
-            # This case means we are missing the actual key in the config file.
-            raise OpenSearchPluginMissingConfigError()
+            return False
 
         # Now, we know the keys are there, we must check their values
         return all(
