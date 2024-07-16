@@ -466,9 +466,9 @@ class OpenSearchTLS(Object):
                 -alias {alias} \
                 -keystore {store_path} \
                 -file {ca_tmp_file.name} \
-                -storepass {admin_secrets.get("truststore-password")} \
                 -storetype PKCS12
-            """
+            """,
+                f"-storepass {admin_secrets.get('truststore-password')}",
             )
             run_cmd(f"sudo chmod +r {store_path}")
 
@@ -481,10 +481,8 @@ class OpenSearchTLS(Object):
             return None
 
         stored_certs = run_cmd(
-            f"""openssl pkcs12 \
-            -in {ca_trust_store} \
-            -passin pass:{secrets.get("truststore-password")}
-            """
+            f"openssl pkcs12 -in {ca_trust_store}",
+            f"-passin pass:{secrets.get('truststore-password')}",
         ).out
 
         # parse output to retrieve the current CA (in case there are many)
@@ -539,13 +537,13 @@ class OpenSearchTLS(Object):
                 -in {tmp_cert.name} \
                 -inkey {tmp_key.name} \
                 -out {store_path} \
-                -name {cert_name} \
-                -passout pass:{secrets.get("keystore-password")}
+                -name {cert_name}
             """
+            args = f"-passout pass:{secrets.get(f'keystore-password')}"
             if secrets.get("key-password"):
-                cmd = f"{cmd} -passin pass:{secrets.get('key-password')}"
+                args = f"{args} -passin pass:{secrets.get('key-password')}"
 
-            run_cmd(cmd)
+            run_cmd(cmd, args)
             run_cmd(f"sudo chmod +r {store_path}")
         finally:
             tmp_key.close()
