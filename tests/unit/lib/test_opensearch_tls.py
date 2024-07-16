@@ -235,7 +235,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.secret_store.put_object(
             Scope.UNIT,
             secret_key,
-            {"csr": csr, "keystore-password-unit-transport": keystore_password},
+            {"csr": csr, "keystore-password": keystore_password},
         )
 
         event_mock = MagicMock(
@@ -250,7 +250,7 @@ class TestOpenSearchTLS(unittest.TestCase):
                 "chain": chain[0],
                 "cert": cert,
                 "ca-cert": ca,
-                "keystore-password-unit-transport": keystore_password,
+                "keystore-password": keystore_password,
             },
         )
 
