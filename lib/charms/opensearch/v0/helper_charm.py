@@ -200,6 +200,6 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
 
 def mask_sensitive_information(cmd: str) -> str:
     """Replace passwords or secrets by 'xxx' and return the masked str."""
-    pattern = re.compile(r"(--tspass\s+|-storepass\s+|-new\s+|pass:)(\S+)")
+    pattern = re.compile(r"(-tspass\s+|-kspass\s+|-storepass\s+|-new\s+|pass:)(\S+)")
 
     return re.sub(pattern, r"\1" + "xxx", cmd)
