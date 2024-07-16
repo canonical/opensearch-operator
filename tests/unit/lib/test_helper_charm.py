@@ -6,7 +6,7 @@
 import unittest
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
-from charms.opensearch.v0.helper_charm import mask_sensitive_information, Status
+from charms.opensearch.v0.helper_charm import Status, mask_sensitive_information
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 
