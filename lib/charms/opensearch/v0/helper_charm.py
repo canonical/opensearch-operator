@@ -175,7 +175,7 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
 
     # only log the command and no arguments to avoid logging sensitive information
     command = mask_sensitive_information(command_with_args)
-    logger.info(f"Executing command: {command}")
+    logger.debug(f"Executing command: {command}")
 
     try:
         output = subprocess.run(
