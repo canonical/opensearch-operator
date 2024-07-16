@@ -39,7 +39,7 @@ EOT
 sudo sysctl -p
 ```
 
-As these are not available to be set from within the container.
+As these are not available to be set within the container.
 
 ### Basic Usage
 To deploy a single unit of OpenSearch using its default configuration.
