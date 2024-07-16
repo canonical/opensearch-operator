@@ -253,6 +253,38 @@ async def test_check_workload_version(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+async def test_check_sysctl(ops_test: OpsTest) -> None:
+    """Test to check sysctl values from the leader unit."""
+    leader_id = await get_leader_unit_id(ops_test)
+
+    config = {
+        "vm.max_map_count": "262144",
+        "vm.swappiness": "0",
+        "net.ipv4.tcp_retries2": "5",
+        "fs.file-max": "1048576",
+    }
+
+    for key, val in config.items():
+        assert (
+            val
+            == subprocess.check_output(
+                [
+                    "juju",
+                    "ssh",
+                    f"opensearch/{leader_id}",
+                    "--",
+                    "sudo",
+                    "sysctl",
+                    "-n",
+                    key,
+                ],
+                text=True,
+            ).rstrip()
+        )
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_all_units_have_all_local_users(ops_test: OpsTest) -> None:
     """Compare the internal_users.yaml of all units."""
     # Get the leader's version of internal_users.yml

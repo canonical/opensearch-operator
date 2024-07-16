@@ -466,7 +466,7 @@ class OpenSearchDistribution(ABC):
         missing_requirements = []
 
         config = {}
-        if OpenSearchDistribution.running_as_lxc():
+        if not OpenSearchDistribution.running_as_lxc():
             config = {
                 "vm.max_map_count": "262144",
                 "vm.swappiness": "0",
