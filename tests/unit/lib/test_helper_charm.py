@@ -6,7 +6,7 @@
 import unittest
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
-from charms.opensearch.v0.helper_charm import Status
+from charms.opensearch.v0.helper_charm import mask_sensitive_information, Status
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 
@@ -45,3 +45,22 @@ class TestHelperDatabag(unittest.TestCase):
         self.charm.unit.status = BlockedStatus(message_template.format(5, "unit tests"))
         self.status.clear(message_template, pattern=Status.CheckPattern.Interpolated)
         self.assertEqual(self.charm.unit.status.name, "active")
+
+    def test_mask_sensitive_information(self):
+        """Verify the pattern to remove sensitive information from the logs."""
+        command_to_test = """-tspass mypasswd \
+        -kspass myother!passwd \
+        -storepass another#passwd \
+        -new newpasswd% \
+        pass:pass&wd,
+        """
+
+        expected_result = """-tspass xxx \
+        -kspass xxx \
+        -storepass xxx \
+        -new xxx \
+        pass:xxx
+        """
+
+        actual_result = mask_sensitive_information(command_to_test)
+        assert actual_result == expected_result
