@@ -30,7 +30,7 @@ The plugin lifecycle runs through the following steps:
 
 MISSING (not installed yet) > INSTALLED (plugin installed, but not configured yet) >
 ENABLING_NEEDED (the user requested to be enabled, but not configured yet) >
-ENABLED (configuration has been applied) > 
+ENABLED (configuration has been applied) >
 DISABLING_NEEDED (is_enabled returns True but user is not requesting anymore) >
 DISABLED (disabled by removing options) > WAITING_FOR_UPGRADE >
 ENABLED (back to enabled state once upgrade has been applied)
