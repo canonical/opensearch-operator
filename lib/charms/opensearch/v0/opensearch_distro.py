@@ -30,6 +30,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
+from charms.operator_libs_linux.v0 import sysctl
 from tenacity import (
     Retrying,
     retry,
@@ -448,23 +449,53 @@ class OpenSearchDistribution(ABC):
         return exclusions
 
     @staticmethod
+    def running_as_lxc():
+        """Check if the current process is running inside an LXC container.
+
+        TODO: if canonical/operator-libs-linux#127 fixes, we may remove this method.
+        """
+        try:
+            return subprocess.run(["systemd-detect-virt", "--container"]).returncode == 0
+        except FileNotFoundError:
+            # No systemd! Either this is a docker container OR a very old distro
+            return False
+
+    @staticmethod
     def missing_sys_requirements() -> List[str]:
         """Checks the system requirements."""
         missing_requirements = []
 
-        max_map_count = int(subprocess.getoutput("sysctl vm.max_map_count").split("=")[-1].strip())
-        if max_map_count < 262144:
-            missing_requirements.append("vm.max_map_count should be at least 262144")
+        config = {}
+        if OpenSearchDistribution.running_as_lxc():
+            config = {
+                "vm.max_map_count": "262144",
+                "vm.swappiness": "0",
+                "net.ipv4.tcp_retries2": "5",
+                "fs.file-max": "1048576",
+            }
+        else:
+            config = {
+                "net.ipv4.tcp_retries2": "5",
+            }
+            max_map_count = int(
+                subprocess.getoutput("sysctl vm.max_map_count").split("=")[-1].strip()
+            )
+            if max_map_count < 262144:
+                missing_requirements.append("vm.max_map_count should be at least 262144")
 
-        swappiness = int(subprocess.getoutput("sysctl vm.swappiness").split("=")[-1].strip())
-        if swappiness > 0:
-            missing_requirements.append("vm.swappiness should be 0")
+            swappiness = int(subprocess.getoutput("sysctl vm.swappiness").split("=")[-1].strip())
+            if swappiness > 0:
+                missing_requirements.append("vm.swappiness should be 0")
 
-        tcp_retries = int(
-            subprocess.getoutput("sysctl net.ipv4.tcp_retries2").split("=")[-1].strip()
-        )
-        if tcp_retries > 5:
-            missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
+            fs_file_max = int(subprocess.getoutput("sysctl fs.file-max").split("=")[-1].strip())
+            if fs_file_max > 0:
+                missing_requirements.append("fs.file-max should be 1048576")
+
+        try:
+            sysctl.Config().configure(config)
+        except sysctl.CommandError as e:
+            logger.error(f"Failed to apply sysctl config: {e}")
+            missing_requirements.append(str(e))
 
         return missing_requirements
 
