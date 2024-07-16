@@ -174,8 +174,8 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
     command_with_args = " ".join(command_with_args.split())
 
     # only log the command and no arguments to avoid logging sensitive information
-    command = command.split()[0]
-    logger.debug(f"Executing command: {command}")
+    command = mask_sensitive_information(command_with_args)
+    logger.info(f"Executing command: {command}")
 
     try:
         output = subprocess.run(
@@ -196,3 +196,10 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
         return SimpleNamespace(cmd=command, out=output.stdout, err=output.stderr)
     except (TimeoutError, subprocess.TimeoutExpired):
         raise OpenSearchCmdError(cmd=command)
+
+
+def mask_sensitive_information(cmd: str) -> str:
+    """Replace passwords or secrets by 'xxx' and return the masked str."""
+    pattern = re.compile(r"(--tspass\s+|-storepass\s+|-new\s+|pass:)(\S+)")
+
+    return re.sub(pattern, r"\1" + "xxx", cmd)
