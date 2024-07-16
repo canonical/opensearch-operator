@@ -424,10 +424,7 @@ class OpenSearchTLS(Object):
     def _create_keystore_pwd_if_not_exists(self, scope: Scope, cert_type: CertType, alias: str):
         """Create passwords for the key stores if not already created."""
         store_pwd = None
-        if alias == "ca":
-            store_type = "truststore"
-        else:
-            store_type = "keystore"
+        store_type = "truststore" if alias == "ca" else "keystore"
 
         secrets = self.charm.secrets.get_object(scope, cert_type.val)
         if secrets:
