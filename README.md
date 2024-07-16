@@ -26,31 +26,20 @@ Bootstrap a [lxd controller](https://juju.is/docs/olm/lxd#heading--create-a-cont
 juju add-model opensearch
 ```
 
-Configure the system settings required by [OpenSearch](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/),
-we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model. 
-As well as setting some kernel settings on the host machine.
-```
-cat <<EOF > cloudinit-userdata.yaml
-cloudinit-userdata: |
-  postruncmd:
-    - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'net.ipv4.tcp_retries2=5', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
-    - [ 'sysctl', '-p' ]
-EOF
+The charm will configure the system settings required by [OpenSearch](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/).
 
+If the charm is running in a LXC container, the host machine must be set beforehand with the following parameters:
+```
 sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
 vm.max_map_count=262144
 vm.swappiness=0
-net.ipv4.tcp_retries2=5
 fs.file-max=1048576
 EOT
 
 sudo sysctl -p
-
-juju model-config --file=./cloudinit-userdata.yaml
 ```
+
+As these are not available to be set from within the container.
 
 ### Basic Usage
 To deploy a single unit of OpenSearch using its default configuration.
