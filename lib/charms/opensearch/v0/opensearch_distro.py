@@ -477,17 +477,16 @@ class OpenSearchDistribution(ABC):
             config = {
                 "net.ipv4.tcp_retries2": "5",
             }
-            max_map_count = int(
-                subprocess.getoutput("sysctl vm.max_map_count").split("=")[-1].strip()
-            )
+            # Now, check for the remaining parameters, as LXC cannot set these values
+            max_map_count = int(subprocess.getoutput("sysctl -n vm.max_map_count"))
             if max_map_count < 262144:
                 missing_requirements.append("vm.max_map_count should be at least 262144")
 
-            swappiness = int(subprocess.getoutput("sysctl vm.swappiness").split("=")[-1].strip())
+            swappiness = int(subprocess.getoutput("sysctl -n vm.swappiness"))
             if swappiness > 0:
                 missing_requirements.append("vm.swappiness should be 0")
 
-            fs_file_max = int(subprocess.getoutput("sysctl fs.file-max").split("=")[-1].strip())
+            fs_file_max = int(subprocess.getoutput("sysctl -n fs.file-max"))
             if fs_file_max > 0:
                 missing_requirements.append("fs.file-max should be 1048576")
 
