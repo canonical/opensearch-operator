@@ -465,30 +465,21 @@ class OpenSearchDistribution(ABC):
         """Checks the system requirements."""
         missing_requirements = []
 
-        config = {}
-        if not OpenSearchDistribution.running_as_lxc():
+        config = {
+            "vm.max_map_count": "262144",
+            "vm.swappiness": "0",
+            "net.ipv4.tcp_retries2": "5",
+        }
+        if OpenSearchDistribution.running_as_lxc():
+            # LXCs cannot apply all sysctl configs
+            # Therefore, we check the current values and apply only the tcp_retries2
+            for key, val in config.items():
+                current = int(subprocess.getoutput(f"sysctl -n {key}"))
+                if key != "net.ipv4.tcp_retries2" and current != int(val):
+                    missing_requirements.append(f"{key} should be {val}")
             config = {
-                "vm.max_map_count": "262144",
-                "vm.swappiness": "0",
-                "net.ipv4.tcp_retries2": "5",
-                "fs.file-max": "1048576",
-            }
-        else:
-            config = {
                 "net.ipv4.tcp_retries2": "5",
             }
-            # Now, check for the remaining parameters, as LXC cannot set these values
-            max_map_count = int(subprocess.getoutput("sysctl -n vm.max_map_count"))
-            if max_map_count < 262144:
-                missing_requirements.append("vm.max_map_count should be at least 262144")
-
-            swappiness = int(subprocess.getoutput("sysctl -n vm.swappiness"))
-            if swappiness > 0:
-                missing_requirements.append("vm.swappiness should be 0")
-
-            fs_file_max = int(subprocess.getoutput("sysctl -n fs.file-max"))
-            if fs_file_max > 0:
-                missing_requirements.append("fs.file-max should be 1048576")
 
         try:
             sysctl.Config(name).configure(config)
