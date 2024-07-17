@@ -1,11 +1,11 @@
 # Charmed OpenSearch Tutorial
 
-This section of our documentation contains comprehensive, hands-on tutorials to help you learn how to deploy Charmed OpenSearch and become familiar with its available operations.
+This tutorial is designed to help you learn how to deploy Charmed OpenSearch and become familiar with its available operations.
 
 >To get started right away, go to [**Step 1. Set up the environment**](/t/9724).
 
 [note type="caution"]
-:construction: **Note:** This tutorial is currently being updated, so you may notice some inconsistencies in the UI.
+:construction: This tutorial is currently being renovated, so you may notice some inconsistencies in the versions displayed in sample outputs. 
 [/note]
 
 ## Prerequisites

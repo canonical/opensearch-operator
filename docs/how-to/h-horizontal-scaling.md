@@ -1,22 +1,35 @@
-## How to safely scale-down 
+## How to safely scale down 
 
-Horizontal scale down (removal of units) is a common process that administrators occasionally do, but one that requires special care in order to prevent data loss and keep the deployment of the application highly available.
+This page outlines the steps to follow when scaling down Charmed OpenSearch in order to:
+* prevent data loss
+*  ensure the deployment remains highly available
 
-(for more details on how to horizontally scale down / up please refer to [this page](https://discourse.charmhub.io/t/charmed-opensearch-tutorial-horizontal-scaling/9720))
+To see an example of scaling down a real deployment scenario, check the following page from the Charmed OpenSearch Tutorial: [6. Scale horizontally](/t/9720).
 
-----
-**Note: Do not remove multiple units at the same time.**  You should only remove one unit at a time to be able to control and react to the health of your cluster.
-Though we implement rolling units removal, the internal state of OpenSearch is only reflected reactively, meaning the charm does **not** know **beforehand** whether a certain removal will put the cluster in a `red` (some primary shards are unassigned) or `yellow` (some replica shards are unassigned) – (you can read more about the cluster health in the [OpenSearch official documentation](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/)).
+[note type="caution"]
+**Warning: Never remove multiple units at the same time.** Remove one unit at a time to be able to control and react to the health of your cluster.
 
-----------
+For more information, see the section [Scale down one unit](#scale-down-one-unit).
+[/note]
 
-### Steps to follow when scaling down:
-Here we detail the steps that an administrator must follow in order to guarantee the safety of the process:
+## Summary
+* [1. Check cluster health before scaling down](#1-check-cluster-health-before-scaling-down)
+  * [Via Juju](#via-juju)
+  * [Via the OpenSearch health API](#via-the-opensearch-health-api)
+  * [Cluster health statuses](#cluster-health-statuses)
+* [2. Scale down one unit](#2-scale-down-one-unit)
+* [3. Repeat cluster health check](#3-repeat-cluster-health-check)
 
-#### 1. Before scaling down:
-You should make sure that removing nodes is a safe operation to do. For that, check the health of the cluster: the charm will usually reflect the current health of the cluster on the application status, i.e:
+---
+
+## 1. Check cluster health before scaling down
+
+First of all, make sure that removing nodes is a safe operation to do. For that, check the health of the cluster. This can be done via Juju or via the OpenSearch API.
+
+### Via Juju
+The charm will reflect the current health of the cluster on the application status. Below is a sample output of the command `juju status --watch 1s`.
  
-```bash
+```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:46:15Z
 
@@ -25,10 +38,13 @@ data-integrator                     active      1  data-integrator            ed
 opensearch                          blocked     2  opensearch                 edge      22  no       1 or more 'replica' shards are not assigned, please scale your application up.
 tls-certificates-operator           active      1  tls-certificates-operator  stable    22  no
 ```
-You can also manually verify it by using the [OpenSearch health api](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/).
+<!-- Do the green/yellow/red statuses only apply to the API? What's the juju equivalent?-->
 
-**Reminder:** in order to authenticate your requests to the REST API, you need to [retrieve the admin user's credentials](https://discourse.charmhub.io/t/charmed-opensearch-tutorial-user-management/9728). You can run the following command:
-```
+### Via the OpenSearch health API
+Alternatively, you can manually verify cluster health by using the [OpenSearch health API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/).
+
+In order to authenticate your requests to the REST API, you need to [retrieve the admin user's credentials](https://discourse.charmhub.io/t/charmed-opensearch-tutorial-user-management/9728). You can run the following command:
+```shell
 juju run-action opensearch/leader get-password --wait
 
 > unit-opensearch-0:
@@ -39,48 +55,74 @@ juju run-action opensearch/leader get-password --wait
         password: admin_password
 ``` 
 
-If the cluster health is:
-- **`green`:** the scale down **may** be safe to do: it is imperative to check whether the node targeted for removal does not hold a primary shard of an index with no replicas! You can see this by making the following request and seeing which primary shards are allocated to the said node. 
-  ```
-   curl -k -XGET https://admin:admin_pasword@10.180.162.96:9200/_cat/shards
-   ```
-  It is in general a bad idea to disable replication for indices, but if that's the case: please [re-route](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/cluster-reroute.html) the said shard manually to another node. 
-- **`yellow`:** scaling down may **not** be a good idea. This means that some replica shards are `unassigned` - you can visualize that by using the cat api. i.e:
-   ```
-   curl -k -XGET https://10.180.162.96:9200/_cat/shards -u admin:admin_password
-   ```
-  A general good course of action here would be the opposite, to scale up / add a unit to have a `green` state where all primary and replica shards are well assigned. 
+### Cluster health statuses
 
-  Regardless, you **should investigate** why is your cluster in a `yellow` state.
-You can make the following call to have an explanation:
-  ```
-   curl -k -XGET "https://10.180.162.96:9200/_cluster/allocation/explain?filter_path=index,shard,primary,**.node_name,**.node_decision,**.decider,**.decision,**.*explanation,**.unassigned_info,**.*delay"  -u admin:admin_password
-   ``` 
-   And react accordingly, such as horizontally scaling up or adding more storage to the existing nodes or perhaps [manually re-route](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/cluster-reroute.html) the said shard manually to another node.
+A cluster health may return `green`, `yellow`, or `red`.
 
-- **`red`:** scaling down **is definitely not** a good idea, as some primary shards are not assigned. The course of action to follow here would be to add units to the cluster.
+#### `green` :green_circle: 
+The scale down **might be safe** to do.
 
+It is imperative to check whether the node targeted for removal does not hold a primary shard of an index with no replicas. You can see this by making the following request and seeing which primary shards are allocated to a given node:
+
+```shell
+curl -k -XGET https://admin:admin_pasword@10.180.162.96:9200/_cat/shards
+```
+It is generally not recommended to disable replication for indices, but if that's the case: [re-route](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/cluster-reroute.html) the said shard manually to another node.
+
+#### `yellow` :yellow_circle: 
+Scaling down **might not be safe** to do. 
+
+This means that some replica shards are `unassigned`. You can visualize that by using the cat API as shown below.
+
+```shell
+curl -k -XGET https://10.180.162.96:9200/_cat/shards -u admin:admin_password
+```
+A general good course of action here would be to scale up (add a unit) to have a `green` state where all primary and replica shards are well assigned. <!-- This can be done with `jujuj add-unit ...`-->
+
+To investigate why is your cluster in a `yellow` state. You can make the following call to have an explanation:
+
+```shell
+curl -k -XGET "https://10.180.162.96:9200/_cluster/allocation/explain?filter_path=index,shard,primary,**.node_name,**.node_decision,**.decider,**.decision,**.*explanation,**.unassigned_info,**.*delay"  -u admin:admin_password
+``` 
+<!-- What can we expect as an output?-->
+Depending on the output, there may be a different course of action. For example, horizontally scaling, adding more storage to the existing nodes, or perhaps [manually re-route](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/cluster-reroute.html) the relevant shard manually to another node.
+
+#### `red` :red_circle: 
+Scaling down is **definitely not safe** to do, as some primary shards are not assigned. 
+
+The course of action to follow here is to add units to the cluster. <!-- This can be done with `jujuj add-unit ...`-->
+
+[note]
+**Note**: If the health color is `red` after removing a unit, the charm will attempt to block the removal of the node, giving the administrator the opportunity to scale up (add units).
+[/note]
+
+<!--
 **Note:** You'll notice we did not use the certificates to authenticate the curl requests above, in a real world example you should always make sure you verify your requests with the TLS certificates received from the `get-password` action.
 i.e:
 ```
 curl --cacert cert.pem -XGET https://admin:admin_password@10.180.162.96:9200/_cluster/health
 ``` 
+-->
+## 2. Scale down one unit
+Once you made sure that removing a unit is safe to do, you can proceed to removing **a single unit**. It is unsafe to remove more than one unit at a time.
 
-#### 2. Scaling down / remove unit:
-Now that you made sure that removing a unit may be safe to do.  **ONLY remove 1 unit at a time.**
+[note]
+**Note:** Although we implement a rolling units removal, the internal state of OpenSearch is only reflected reactively. This means the charm **does not know in advance** whether a certain removal will put the cluster in a `red` (some primary shards are unassigned) or `yellow` (some replica shards are unassigned).
 
-You can run the following command (change the unit name to the one you're targeting):
+Read more about cluster health in the official [OpenSearch documentation](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/).
+[/note]
+
+To remove one unit of the `opensearch` application, run the following command:
+```shell
+juju remove-unit opensearch/<unit-id>
 ```
-juju remove-unit opensearch/2
-```
 
-Make sure you monitor the status of the application using: `watch -c juju status --color`.
+Make sure you monitor the status of the application using: `juju status --watch 1s`.
 
-#### 3. After scale down:
-After removing a unit, depending on the roles of the said unit, the charm may reconfigure and restart a unit to balance the node roles. (you should see this by monitoring the juju status: `watch -c juju status --color`)
+## 3. Repeat cluster health check
+After removing **one unit**, depending on the roles of the said unit, the charm may reconfigure and restart a unit to balance the node roles. You can monitor this with `juju status --watch 1s`.
+<!-- what happens to each role?-->
 
-Please make sure you wait for all the application to stabilize, before you consider removing further units.
+Make sure you wait for all the application to stabilize, before you consider removing further units.
 
-**Now, you should check the health of the cluster as detailed previously and react accordingly.**
-
-**Note**: If after a scale down the health color is red: the charm will attempt to block the removal of the node, giving the administrator the opportunity to scale up / add units.
+Once the application is stable, check the health of the cluster as detailed in the section [Understand the meaning of the cluster status](#cluster-health-statuses) and react accordingly.
