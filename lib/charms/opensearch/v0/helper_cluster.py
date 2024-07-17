@@ -140,7 +140,7 @@ class ClusterTopology:
         return result
 
     @staticmethod
-    def elected_manager(nodes: List[Node]) -> List[str]:
+    def elected_manager(nodes: List[Node]) -> Optional[List[str]]:
         """Get the list of nodes in a cluster."""
         for node in nodes:
             if node.elected_manager:
