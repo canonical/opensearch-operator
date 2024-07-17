@@ -423,16 +423,18 @@ class OpenSearchTLS(Object):
 
     def _create_keystore_pwd_if_not_exists(self, scope: Scope, cert_type: CertType, alias: str):
         """Create passwords for the key stores if not already created."""
-        keystore_pwd = None
+        store_pwd = None
+        store_type = "truststore" if alias == "ca" else "keystore"
+
         secrets = self.charm.secrets.get_object(scope, cert_type.val)
         if secrets:
-            keystore_pwd = secrets.get(f"keystore-password-{alias}")
+            store_pwd = secrets.get(f"{store_type}-password")
 
-        if not keystore_pwd:
+        if not store_pwd:
             self.charm.secrets.put_object(
                 scope,
                 cert_type.val,
-                {f"keystore-password-{alias}": generate_password()},
+                {f"{store_type}-password": generate_password()},
                 merge=True,
             )
 
@@ -443,7 +445,7 @@ class OpenSearchTLS(Object):
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
-        if not (secrets.get("ca-cert", {}) and admin_secrets.get("keystore-password-ca", {})):
+        if not (secrets.get("ca-cert", {}) and admin_secrets.get("truststore-password", {})):
             logging.error("CA cert not found, quitting.")
             return
 
@@ -463,7 +465,7 @@ class OpenSearchTLS(Object):
                 -file {ca_tmp_file.name} \
                 -storetype PKCS12
             """,
-                f"-storepass {admin_secrets.get('keystore-password-ca')}",
+                f"-storepass {admin_secrets.get('truststore-password')}",
             )
             run_cmd(f"sudo chmod +r {store_path}")
 
@@ -477,7 +479,7 @@ class OpenSearchTLS(Object):
 
         stored_certs = run_cmd(
             f"openssl pkcs12 -in {ca_trust_store}",
-            f"-passin pass:{secrets.get('keystore-password-ca')}",
+            f"-passin pass:{secrets.get('truststore-password')}",
         ).out
 
         # parse output to retrieve the current CA (in case there are many)
@@ -534,7 +536,7 @@ class OpenSearchTLS(Object):
                 -out {store_path} \
                 -name {cert_name}
             """
-            args = f"-passout pass:{secrets.get(f'keystore-password-{cert_name}')}"
+            args = f"-passout pass:{secrets.get(f'keystore-password')}"
             if secrets.get("key-password"):
                 args = f"{args} -passin pass:{secrets.get('key-password')}"
 
