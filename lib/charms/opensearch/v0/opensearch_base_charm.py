@@ -63,6 +63,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyYetError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_peer_clusters import (
@@ -194,6 +195,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.node_lock = OpenSearchNodeLock(self)
 
         self.plugin_manager = OpenSearchPluginManager(self)
+
         self.backup = backup(self)
 
         self.user_manager = OpenSearchUserManager(self)
@@ -266,11 +268,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
         if self.peers_data.get(Scope.APP, "security_index_initialised", False):
-            # Leader election event happening after a previous leader got killed
             if not self.opensearch.is_node_up():
                 event.defer()
                 return
 
+            # Leader election event happening after a previous leader got killed
             if self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
                 event.defer()
 
@@ -543,7 +545,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 HealthColors.GREEN,
                 HealthColors.IGNORE,
             ]:
-                event.defer()
+                logger.warning(
+                    f"Update status: exclusions updated and cluster health is {health}."
+                )
 
             if health == HealthColors.UNKNOWN:
                 return
@@ -572,8 +576,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """On config changed event. Useful for IP changes or for user provided config changes."""
         restart_requested = False
         if self.opensearch_config.update_host_if_needed():
-            restart_requested = True
-
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
             self.tls.delete_stored_tls_resources()
             self.tls.request_new_unit_certificates()
@@ -584,6 +586,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._on_peer_relation_joined(
                 RelationJoinedEvent(event.handle, PeerRelationName, self.app, self.unit)
             )
+            restart_requested = True
 
         previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.unit.is_leader():
@@ -594,42 +597,39 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
             self._handle_change_to_main_orchestrator_if_needed(event, previous_deployment_desc)
 
-        # todo: handle gracefully configuration setting at start of the charm
-        if not self.plugin_manager.check_plugin_manager_ready():
-            return
-
         try:
-            if not self.plugin_manager.check_plugin_manager_ready():
-                raise OpenSearchNotFullyReadyError()
+            if self.upgrade_in_progress:
+                logger.warning(
+                    "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+                )
+                event.defer()
+                return
 
-            if self.unit.is_leader():
-                self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
+            original_status = None
+            if self.unit.status.message not in [
+                PluginConfigChangeError,
+                PluginConfigCheck,
+            ]:
+                logger.debug(f"Plugin manager: storing status {self.unit.status.message}")
+                original_status = self.unit.status
+                self.status.set(MaintenanceStatus(PluginConfigCheck))
 
             if self.plugin_manager.run() and not restart_requested:
-                if self.upgrade_in_progress:
-                    logger.warning(
-                        "Changing config during an upgrade is not supported. The charm may be in a broken, "
-                        "unrecoverable state"
-                    )
-                    event.defer()
-                    return
-
                 self._restart_opensearch_event.emit()
-        except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
-            if isinstance(e, OpenSearchNotFullyReadyError):
-                logger.warning("Plugin management: cluster not ready yet at config changed")
-            else:
-                self.status.set(BlockedStatus(PluginConfigChangeError), app=True)
-            event.defer()
-            # Decided to defer the event. We can clean up the status and reset it once the
-            # config-changed is called again.
-            if self.unit.is_leader():
-                self.status.clear(PluginConfigCheck, app=True)
-            return
 
-        if self.unit.is_leader():
-            self.status.clear(PluginConfigCheck, app=True)
-            self.status.clear(PluginConfigChangeError, app=True)
+        except OpenSearchPluginError as e:
+            logger.warning(f"{PluginConfigChangeError}: {str(e)}")
+            self.status.set(BlockedStatus(PluginConfigChangeError))
+            event.defer()
+            return
+        except OpenSearchKeystoreNotReadyYetError:
+            logger.warning("Keystore not ready yet")
+            # defer, and let it finish the status clearing down below
+            event.defer()
+
+        self.status.clear(PluginConfigChangeError)
+        self.status.clear(PluginConfigCheck)
+        self.status.set(original_status)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""

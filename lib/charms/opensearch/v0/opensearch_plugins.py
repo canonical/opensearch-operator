@@ -27,9 +27,13 @@ upgrade, uninstall, etc).
 
 The plugin lifecycle runs through the following steps:
 
+
 MISSING (not installed yet) > INSTALLED (plugin installed, but not configured yet) >
-ENABLED (configuration has been applied) > WAITING_FOR_UPGRADE (if an upgrade is needed)
-> ENABLED (back to enabled state once upgrade has been applied)
+ENABLING_NEEDED (the user requested to be enabled, but not configured yet) >
+ENABLED (configuration has been applied) >
+DISABLING_NEEDED (is_enabled returns True but user is not requesting anymore) >
+DISABLED (disabled by removing options) > WAITING_FOR_UPGRADE >
+ENABLED (back to enabled state once upgrade has been applied)
 
 WHERE PLUGINS ARE USED:
 Plugins are managed in the OpenSearchPluginManager class, which is called by the charm;
@@ -94,8 +98,8 @@ class MyPlugin(OpenSearchPlugin):
         # let the KeyError happen and the plugin manager will capture it.
         try:
             return OpenSearchPluginConfig(
-                config_entries_on_add={...}, # Key-value pairs to be added to opensearch.yaml
-                secret_entries_on_add={...}  # Key-value pairs to be added to keystore
+                config_entries={...}, # Key-value pairs to be added to opensearch.yaml
+                secret_entries={...}  # Key-value pairs to be added to keystore
             )
         except MyPluginError as e:
             # If we want to set the status message with str(e), then raise it with:
@@ -122,17 +126,11 @@ class MyPlugin(OpenSearchPlugin):
 Optionally:
 class MyPluginConfig(OpenSearchPluginConfig):
 
-    config_entries_to_add: Dict[str, str] = {
+    config_entries: Dict[str, str] = {
         ... key, values to add to the config as plugin gets enabled ...
     }
-    config_entries_to_del: List[str] = {
-        ... key to remove from the config as plugin gets disabled ...
-    }
-    secret_entries_to_add: Dict[str, str] = {
+    secret_entries: Dict[str, str] = {
         ... key, values to add to to keystore as plugin gets enabled ...
-    }
-    secret_entries_to_del: List[str] = {
-        ... key to remove from keystore as plugin gets disabled ...
     }
 
 -------------------
@@ -169,7 +167,7 @@ In case the plugin depends on API calls to finish configuration or a relation to
 configured, create an extra class at the charm level to manage plugin events:
 
 
-class MyPluginRelationHandler(Object):
+class MyPluginRelationManager(Object):
 
     PLUGIN_NAME = "MyPlugin"
 
@@ -270,14 +268,17 @@ class OpenSearchBaseCharm(CharmBase):
 
 """  # noqa: D405, D410, D411, D214, D412, D416
 
+import json
 import logging
 from abc import abstractmethod, abstractproperty
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
+from charms.opensearch.v0.models import S3RelData, S3RelDataCredentials
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from jproperties import Properties
 from pydantic import BaseModel, validator
+from pydantic.error_wrappers import ValidationError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "3b05456c6e304680b4af8e20dae246a2"
@@ -327,7 +328,9 @@ class PluginState(BaseStrEnum):
 
     MISSING = "missing"
     INSTALLED = "installed"
+    ENABLING_NEEDED = "enabling-needed"
     ENABLED = "enabled"
+    DISABLING_NEEDED = "disabling-needed"
     DISABLED = "disabled"
     WAITING_FOR_UPGRADE = "waiting-for-upgrade"
 
@@ -339,24 +342,57 @@ class OpenSearchPluginConfig(BaseModel):
     pay attention to special types, such as booleans, which need to be "true" or "false".
     """
 
-    config_entries_to_add: Optional[Dict[str, str]] = {}
-    config_entries_to_del: Optional[List[str]] = []
-    secret_entries_to_add: Optional[Dict[str, str]] = {}
-    secret_entries_to_del: Optional[List[str]] = []
+    config_entries: Optional[Dict[str, Any]] = {}
+    secret_entries: Optional[Dict[str, Any]] = {}
 
-    @validator("config_entries_to_add", "secret_entries_to_add", allow_reuse=True, pre=True)
-    def convert_values_to_add(cls, conf) -> Dict[str, str]:  # noqa N805
+    @validator("config_entries", "secret_entries", allow_reuse=True, pre=True)
+    def convert_values(cls, conf) -> Dict[str, str]:  # noqa N805
         """Converts the object to a dictionary.
 
         Respects the conversion for boolean to {"true", "false"}.
         """
-        return {
-            key: str(val).lower() if isinstance(val, bool) else str(val)
-            for key, val in conf.items()
-        }
+        result = {}
+        for key, val in conf.items():
+            if not val:
+                result[key] = None
+                continue
+            if isinstance(val, bool):
+                result[key] = str(val).lower()
+            else:
+                result[key] = str(val)
+        return result
+
+    def __str__(self) -> str:
+        """Returns the string representation of the plugin config_entries.
+
+        This method is intended to convert the object to a string for HTTP. The main goal
+        is to convert to a JSON string and replace any None entries with a null (without quotes).
+        """
+        return json.dumps(self.config_entries)
 
 
-class OpenSearchPlugin:
+class OpenSearchPluginMeta(type):
+    """Metaclass to ensure only one instance of each plugin is created."""
+
+    _plugins = {}
+
+    def __call__(cls, *args, **kwargs):
+        """Sets singleton class in this hook.
+
+        This singleton guarantees we won't have multiple instances dealing with objects such as
+        relations at once. This is forbidden by the operator framework.
+
+        Besides that, it allows us to have a single instance of each plugin, loaded with particular
+        information at init such as which relation to look for or which config to use. That
+        creation happens either at plugin manager or at the relation manager's creation.
+        """
+        if cls not in cls._plugins:
+            obj = super().__call__(*args, **kwargs)
+            cls._plugins[cls] = obj
+        return cls._plugins[cls]
+
+
+class OpenSearchPlugin(metaclass=OpenSearchPluginMeta):
     """Abstract class describing an OpenSearch plugin."""
 
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
@@ -395,14 +431,6 @@ class OpenSearchPlugin:
     def config(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin addition.
 
-        Format:
-        OpenSearchPluginConfig(
-            config_entries_to_add = {...},
-            config_entries_to_del = [...],
-            secret_entries_to_add = {...},
-            secret_entries_to_del = [...],
-        )
-
         May throw KeyError if accessing some source, such as self._extra_config, but the
         dictionary does not contain all the configs. In this case, let the error happen.
         """
@@ -411,14 +439,6 @@ class OpenSearchPlugin:
     @abstractmethod
     def disable(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin removal.
-
-        Format:
-        OpenSearchPluginConfig(
-            config_entries_to_add = {...},
-            config_entries_to_del = [...],
-            secret_entries_to_add = {...},
-            secret_entries_to_del = [...],
-        )
 
         May throw KeyError if accessing some source, such as self._extra_config, but the
         dictionary does not contain all the configs. In this case, let the error happen.
@@ -431,19 +451,77 @@ class OpenSearchPlugin:
         pass
 
 
+class OpenSearchPluginRelationsHandler(OpenSearchPlugin):
+    """Implements a handler the relation databag.
+
+    Plugins may have one or more relations tied to them. This abstract class
+    enables different modules to implement a class that can specify which
+    relations should plugin manager listen to.
+
+    There is a difference between OpenSearchPluginRelationsHandler.data and
+    OpenSearchPluginRelationsHandler.config/disable: the former is possible to be overridden and
+    it represents the entire data from the relation databag, while the latter represents what
+    the plugin_manager should have access so it can configure /_cluster/settings APIs.
+    """
+
+    MODEL = None
+
+    def __init__(self, *args, **kwargs):
+        """Creates the OpenSearchPluginRelationsHandler object."""
+        super().__init__(*args, **kwargs)
+
+    def is_relation_set(self) -> bool:
+        """Returns True if the relation is set, False otherwise.
+
+        It can mean the relation exists or not, simply put; or it can also mean a subset of data
+        exists within a bigger relation. One good example, peer-cluster is a single relation that
+        contains a lot of different data. In this case, we'd be interested in a subset of
+        its entire databag.
+
+        It can also mean there is a secret with content available or not.
+        """
+        return NotImplementedError()
+
+    @property
+    def data(self) -> BaseModel:
+        """Returns the data from the relation databag.
+
+        Exceptions:
+            ValueError: if the data is not valid
+        """
+        raise NotImplementedError()
+
+    @data.setter
+    def data(self, value: Dict[str, Any]):
+        """Sets the data from the relation databag.
+
+        Exceptions:
+            ValueError: if the data is not valid
+        """
+        raise NotImplementedError()
+
+    def update_secrets(self, secret_map: Dict[str, Any]) -> bool:
+        """Update the secrets using secret_map.
+
+        The plugin classes should not be aware of charm details, such as OpenSearchSecrets.
+        Therefore, update_secrets is the API to pass the new values to the plugin.
+        """
+        raise NotImplementedError()
+
+
 class OpenSearchKnn(OpenSearchPlugin):
     """Implements the opensearch-knn plugin."""
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for enabling the current plugin."""
         return OpenSearchPluginConfig(
-            config_entries_to_add={"knn.plugin.enabled": True},
+            config_entries={"knn.plugin.enabled": True},
         )
 
     def disable(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for disabling the current plugin."""
         return OpenSearchPluginConfig(
-            config_entries_to_add={"knn.plugin.enabled": False},
+            config_entries={"knn.plugin.enabled": False},
         )
 
     @property
@@ -452,11 +530,49 @@ class OpenSearchKnn(OpenSearchPlugin):
         return "opensearch-knn"
 
 
-class OpenSearchBackupPlugin(OpenSearchPlugin):
+class OpenSearchBackupPlugin(OpenSearchPluginRelationsHandler):
     """Manage backup configurations.
 
     This class must load the opensearch plugin: repository-s3 and configure it.
+
+    The plugin is responsible for managing the backup configuration, which includes relation
+    databag or only the secrets' content, as backup changes behavior depending on the juju app
+    role within the cluster.
     """
+
+    MODEL = S3RelData
+
+    def __init__(self, plugin_path, relation_data, is_main_orchestrator, repo_name=None):
+        """Creates the OpenSearchBackupPlugin object."""
+        super().__init__(plugin_path, relation_data)
+        self.is_main_orchestrator = is_main_orchestrator
+        self.repo_name = repo_name or "default"
+
+    @property
+    def data(self) -> BaseModel:
+        """Returns the data from the relation databag."""
+        try:
+            return self.MODEL.from_relation(self._extra_config)
+        except ValidationError:
+            return self.MODEL()
+
+    @data.setter
+    def data(self, value: Dict[str, Any]):
+        """Sets the data from the relation databag."""
+        self._extra_config = value
+
+    def update_secrets(self, secret_map: Dict[str, Any]) -> bool:
+        """Update the secrets using secret_map."""
+        self.data.credentials = S3RelDataCredentials(**secret_map)
+        return self.data.credentials.access_key and self.data.credentials.secret_key
+
+    def is_relation_set(self) -> bool:
+        """Returns True if the relation is set, False otherwise."""
+        try:
+            self.config()
+        except OpenSearchPluginMissingConfigError:
+            return False
+        return True
 
     @property
     def name(self) -> str:
@@ -464,54 +580,48 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         return "repository-s3"
 
     def config(self) -> OpenSearchPluginConfig:
-        """Returns OpenSearchPluginConfig composed of configs used at plugin addition.
-
-        Format:
-        OpenSearchPluginConfig(
-            config_entries_to_add = {...},
-            config_entries_to_del = [...],
-            secret_entries_to_add = {...},
-            secret_entries_to_del = [...],
-        )
-        """
-        if not self._extra_config.get("access-key") or not self._extra_config.get("secret-key"):
+        """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
+        conf = self.data.credentials.dict()
+        if self.is_main_orchestrator:
+            conf = self.data.dict()
+        if any([val is None for val in conf.values()]):
             raise OpenSearchPluginMissingConfigError(
                 "Plugin {} missing: {}".format(
                     self.name,
-                    [
-                        conf
-                        for conf in ["access-key", "secret-key"]
-                        if not self._extra_config.get(conf)
-                    ],
+                    [key for key, val in conf.items() if val is None],
                 )
             )
 
+        if not self.is_main_orchestrator:
+            return OpenSearchPluginConfig(
+                secret_entries={
+                    f"s3.client.{self.repo_name}.access_key": self.data.credentials.access_key,
+                    f"s3.client.{self.repo_name}.secret_key": self.data.credentials.secret_key,
+                },
+            )
+        # This is the main orchestrator
         return OpenSearchPluginConfig(
-            secret_entries_to_add={
-                # Remove any entries with None value
-                k: v
-                for k, v in {
-                    "s3.client.default.access_key": self._extra_config.get("access-key"),
-                    "s3.client.default.secret_key": self._extra_config.get("secret-key"),
-                }.items()
-                if v
+            config_entries={
+                f"s3.client.{self.repo_name}.endpoint": self.data.endpoint,
+                f"s3.client.{self.repo_name}.region": self.data.region,
+                f"s3.client.{self.repo_name}.protocol": self.data.protocol,
+            },
+            secret_entries={
+                f"s3.client.{self.repo_name}.access_key": self.data.credentials.access_key,
+                f"s3.client.{self.repo_name}.secret_key": self.data.credentials.secret_key,
             },
         )
 
     def disable(self) -> OpenSearchPluginConfig:
-        """Returns OpenSearchPluginConfig composed of configs used at plugin removal.
-
-        Format:
-        OpenSearchPluginConfig(
-            config_entries_to_add = {...},
-            config_entries_to_del = [...],
-            secret_entries_to_add = {...},
-            secret_entries_to_del = [...],
-        )
-        """
+        """Returns OpenSearchPluginConfig composed of configs used at plugin removal."""
         return OpenSearchPluginConfig(
-            secret_entries_to_del=[
-                "s3.client.default.access_key",
-                "s3.client.default.secret_key",
-            ],
+            config_entries={
+                f"s3.client.{self.repo_name}.endpoint": None,
+                f"s3.client.{self.repo_name}.region": None,
+                f"s3.client.{self.repo_name}.protocol": None,
+            },
+            secret_entries={
+                f"s3.client.{self.repo_name}.access_key": None,
+                f"s3.client.{self.repo_name}.secret_key": None,
+            },
         )

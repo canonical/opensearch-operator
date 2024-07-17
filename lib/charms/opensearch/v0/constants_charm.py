@@ -83,10 +83,10 @@ HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 NewIndexRequested = "new index {index} requested"
 RestoreInProgress = "Restore in progress..."
-PluginConfigCheck = "Plugin configuration check."
 BackupSetupStart = "Backup setup started."
 BackupConfigureStart = "Configuring backup service..."
 BackupInDisabling = "Disabling backup service..."
+PluginConfigCheck = "Plugin configuration check."
 
 # Relation Interfaces
 ClientRelationName = "opensearch-client"
@@ -112,3 +112,6 @@ OPENSEARCH_SNAP_REVISION = 53  # Keep in sync with `workload_version` file
 
 # User-face Backup ID format
 OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+
+S3_REPO_BASE_PATH = "/"
