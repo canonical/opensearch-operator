@@ -41,7 +41,7 @@ NUM_UNITS = 3
 
 FIRST_RELATION_NAME = "first-index"
 SECOND_RELATION_NAME = "second-index"
-DASHBOARDS_RELATION_NAME = "opensearch_client"
+DASHBOARDS_RELATION_NAME = "opensearch-client"
 ADMIN_RELATION_NAME = "admin"
 PROTECTED_INDICES = [
     ".opendistro_security",
