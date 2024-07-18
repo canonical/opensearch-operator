@@ -63,6 +63,7 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 | 2     | t-horizontal-scaling       | [6. Scale horizontally](/t/9720)  |
 | 2     | t-clean-up                 | [7. Clean up the environment](/t/9726)       |
 | 1     | how-to                     | [How To]()                                   |
+| 2     | h-deploy-lxd | [Deploy on LXD](/t/14575) |
 | 2     | h-horizontal-scaling  | [Scale horizontally](/t/10994)          |
 | 2     | h-enable-tls   | [Enable TLS encryption](/t/14783)          |
 | 2     | h-enable-monitoring | [Enable monitoring](/t/14560) |
@@ -88,6 +89,7 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
   1. [6. Scale horizontally](tutorial/t-horizontal-scaling.md)
   1. [7. Clean up the environment](tutorial/t-clean-up.md)
 1. [How To](how-to)
+  1. [Deploy on LXD](how-to/h-deploy-lxd.md)
   1. [Scale horizontally](how-to/h-horizontal-scaling.md)
   1. [Enable TLS encryption](how-to/h-enable-tls.md)
   1. [Enable monitoring](how-to/h-enable-monitoring.md)
