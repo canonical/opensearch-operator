@@ -222,6 +222,10 @@ async def test_dashboard_relation(ops_test: OpsTest):
     dashboards_relation = await ops_test.model.integrate(OPENSEARCH_APP_NAME, DASHBOARDS_APP_NAME)
     wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, DASHBOARDS_APP_NAME)
 
+    # Work-around for issue: canonical/opensearch-operator/issue#370
+    # Wait it to settle down
+    await asyncio.sleep(100)
+
     await wait_until(
         ops_test,
         apps=ALL_APPS,
@@ -230,7 +234,6 @@ async def test_dashboard_relation(ops_test: OpsTest):
         idle_period=70,
     )
 
-    # Work-around for issue: canonical/opensearch-operator/issue#370
     await ops_test.model.wait_for_idle()
 
     # On this request, kibanaserver user with its own password should be exposed
