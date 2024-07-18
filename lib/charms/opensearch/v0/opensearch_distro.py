@@ -469,14 +469,11 @@ class OpenSearchDistribution(ABC):
             "vm.max_map_count": "262144",
             "vm.swappiness": "0",
             "net.ipv4.tcp_retries2": "5",
+            "fs.file-max": "1048576",
         }
         if OpenSearchDistribution.running_as_lxc():
             # LXCs cannot apply all sysctl configs
             # Therefore, we check the current values and apply only the tcp_retries2
-            for key, val in config.items():
-                current = int(subprocess.getoutput(f"sysctl -n {key}"))
-                if key != "net.ipv4.tcp_retries2" and current != int(val):
-                    missing_requirements.append(f"{key} should be {val}")
             config = {
                 "net.ipv4.tcp_retries2": "5",
             }
@@ -486,6 +483,9 @@ class OpenSearchDistribution(ABC):
         except sysctl.CommandError as e:
             logger.error(f"Failed to apply sysctl config: {e}")
             missing_requirements.append(str(e))
+
+        for key, val in config.items():
+            current = int(subprocess.getoutput(f"sysctl -n {key}"))
 
         return missing_requirements
 
