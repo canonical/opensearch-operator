@@ -234,8 +234,6 @@ async def test_dashboard_relation(ops_test: OpsTest):
         idle_period=70,
     )
 
-    await ops_test.model.wait_for_idle()
-
     # On this request, kibanaserver user with its own password should be exposed
     secret_uri = await get_application_relation_data(
         ops_test, f"{DASHBOARDS_APP_NAME}/0", DASHBOARDS_RELATION_NAME, "secret-user"
