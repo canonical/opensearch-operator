@@ -60,8 +60,8 @@ async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
         wait_for_exact_units=1,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
-    ops_test.model.remove_application(APP_NAME, block_until_done=True)
-    ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
+    await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+    await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
 
 
 @pytest.mark.group(1)
