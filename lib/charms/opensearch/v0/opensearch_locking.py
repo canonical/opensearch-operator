@@ -273,7 +273,9 @@ class OpenSearchNodeLock(ops.Object):
 
             except OpenSearchHttpError:
                 logger.exception("Error getting OpenSearch nodes")
-                return False
+                # If we are trying to acquire the lock at application removal, this condition
+                # will be eventually hit
+                return len(self.units) <= 1
             logger.debug(f"[Node lock] Opensearch {online_nodes=}")
             assert online_nodes > 0
             try:
