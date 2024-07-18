@@ -231,7 +231,9 @@ async def test_dashboard_relation(ops_test: OpsTest):
     )
 
     # Work-around for issue: canonical/opensearch-operator/issue#370
-    await ops_test.model.wait_for_idle()
+    await ops_test.model.wait_for_idle(
+        apps=ALL_APPS, status="active", idle_period=70, timeout=1000
+    )
 
     # On this request, kibanaserver user with its own password should be exposed
     secret_uri = await get_application_relation_data(
