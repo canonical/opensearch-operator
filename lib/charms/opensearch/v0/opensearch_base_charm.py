@@ -552,8 +552,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 HealthColors.GREEN,
                 HealthColors.IGNORE,
             ]:
+                # Do not return right now!
+                # We must first check if we need to remove exclusions
                 event.defer()
 
+            # Unless it is unknown, in this case we can return and wait for the next run
             if health == HealthColors.UNKNOWN:
                 return
 
