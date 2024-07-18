@@ -316,4 +316,4 @@ async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_remove_application(ops_test: OpsTest) -> None:
     """Removes the application with two units."""
-    ops_test.model.remove_application(APP_NAME, block_until_done=True)
+    await ops_test.model.remove_application(APP_NAME, block_until_done=True)
