@@ -719,7 +719,7 @@ class OpenSearchTLS(Object):
         if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
             self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewing")
             self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewed")
-            self.remove_old_ca()
+            self.request_new_unit_certificates()
         else:
             # this means only the CA rotation completed, still need to create certificates
             self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewed", True)
@@ -729,8 +729,8 @@ class OpenSearchTLS(Object):
         rel = self.charm.model.get_relation(self.peer_relation)
         for unit in all_units(self.charm):
             if (
-                "tls_ca_renewing" in rel.data[unit]
-                and not "tls_ca_renewed" in rel.data[unit]
+                rel.data[unit].get("tls_ca_renewing") == "True"
+                and not rel.data[unit].get("tls_ca_renewed") == "True"
             ):
                 return False
         return True
