@@ -184,15 +184,23 @@ class OpenSearchTLS(Object):
             return
 
         # if the CA is currently being renewed (rolling restart) -> ignore or defer
-        if (
-            self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
-            and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
-        ):
-            logger.info(f"CA rotation not complete on this host, ignoring CertificateAvailableEvent for {cert_type}")
-            return
-        elif not self._ca_rotation_complete_in_cluster():
+
+        if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
+            if not self.charm.opensearch.is_started():
+                # in case of errors on the initial restart, try to start opensearch again
+                logger.info("Start opensearch on TLS CA rotation.")
+                self.charm.on_tls_ca_rotation(event, restart=True)
+                event.defer()
+                return
+            elif not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+                self.charm.on_tls_ca_rotation(event)
+                event.defer()
+                return
+
+        if not self.ca_rotation_complete_in_cluster():
             logger.info(f"CA rotation not complete in the cluster, deferring CertificateAvailableEvent for {cert_type}")
             event.defer()
+            return
 
         # seems like the admin certificate is also broadcast to non leader units on refresh request
         if not self.charm.unit.is_leader() and scope == Scope.APP:
@@ -218,9 +226,13 @@ class OpenSearchTLS(Object):
             if current_stored_ca:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
                 self.charm.on_tls_ca_rotation(event)
+                event.defer()
                 return
 
-        # make sure no new cert is stored during CA rotation, even if an event was not deferred
+        # no new cert must be stored during CA rotation, even if not deferred until now
+        if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
+            return
+
         # TODO: remove logging
         logger.info(f"This CertificateAvailableEvent was not deferred. cert_type: {cert_type}")
         # store the certificates and keys in a key store
@@ -712,7 +724,7 @@ class OpenSearchTLS(Object):
             # this means only the CA rotation completed, still need to create certificates
             self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewed", True)
 
-    def _ca_rotation_complete_in_cluster(self) -> bool:
+    def ca_rotation_complete_in_cluster(self) -> bool:
         """Check whether the CA rotation completed in all units."""
         rel = self.charm.model.get_relation(self.peer_relation)
         for unit in all_units(self.charm):

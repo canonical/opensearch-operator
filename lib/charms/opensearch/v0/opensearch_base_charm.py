@@ -696,11 +696,29 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             }
         )
 
-    def on_tls_ca_rotation(self, _: CertificateAvailableEvent):
+    def on_tls_ca_rotation(self, event: CertificateAvailableEvent, restart=False):
         """Called when adding new CA to the trust store."""
+        if restart:
+            self._start_opensearch_event.emit(ignore_lock=True)
+            logger.info("Started OpenSearch on TLS CA rotation")
+            return
+
         self.status.set(MaintenanceStatus(TLSCaRotation))
-        self._restart_opensearch_event.emit()
-        logger.info("Restart OpenSearch on TLS CA rotation.")
+
+        logger.debug("Attempting to acquire lock for restart on TLS CA rotation")
+        if not self.node_lock.acquired:
+            # (Attempt to acquire lock even if `event.ignore_lock`)
+            logger.info("Lock to restart opensearch not acquired. Will retry next event")
+            event.defer()
+            return
+        logger.info("Acquired lock for restart on TLS CA rotation")
+
+        self._stop_opensearch(restart=True)
+        logger.info("Stopped OpenSearch on TLS CA rotation")
+
+        self._start_opensearch_event.emit(ignore_lock=True)
+        logger.info("Started OpenSearch on TLS CA rotation")
+
 
     def on_tls_conf_set(
         self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
@@ -838,18 +856,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.peers_data.delete(Scope.UNIT, "started")
 
-        if not self.node_lock.acquired:
-            # (Attempt to acquire lock even if `event.ignore_lock`)
-            if event.ignore_lock:
-                # Only used for force upgrades
-                logger.debug("Starting without lock")
-            else:
+        if event.ignore_lock:
+            # Only used for force upgrades
+            logger.debug("Starting without lock")
+        else:
+            if not self.node_lock.acquired:
                 logger.debug("Lock to start opensearch not acquired. Will retry next event")
                 event.defer()
                 return
 
         if not self._can_service_start():
             self.node_lock.release()
+            logger.info("Could not start opensearch service. Will retry next event.")
             event.defer()
             return
 
@@ -910,7 +928,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         try:
             nodes = self._get_nodes(use_localhost=self.opensearch.is_node_up())
         except OpenSearchHttpError:
-            logger.debug("Failed to get online nodes")
+            logger.info("Failed to get online nodes")
             event.defer()
             return
 
