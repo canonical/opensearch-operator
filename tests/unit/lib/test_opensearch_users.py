@@ -4,9 +4,11 @@
 """Unit tests for the opensearch_users library."""
 
 import unittest
+from collections import namedtuple
 from unittest.mock import MagicMock, patch
 
 import pytest
+from charms.opensearch.v0.constants_charm import ClientRelationName, OpenSearchUsers
 from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserManager,
     OpenSearchUserMgmtError,
@@ -114,3 +116,96 @@ class TestOpenSearchUserManager(unittest.TestCase):
         self.opensearch.request.return_value = {"status": "OK"}
         self.mgr.patch_user(*patch_args)
         self.opensearch.request.assert_called_with(*request_args, payload=patches)
+
+    def test_avoid_removing_non_charmed_users_and_roles(self):
+        relation_mocker = namedtuple("relation_mocker", ["id"])
+
+        self.mgr.get_users = MagicMock(
+            return_value={
+                "non_charmed_user_1": {
+                    "username": "non_charmed_user_1",
+                    "roles": ["admin", "other_role1"],
+                    "full_name": "Do not erase me",
+                    "email": "noreply",
+                    "enabled": True,
+                },
+                "non_charmed_user_2": {
+                    "username": "non_charmed_user_2",
+                    "roles": ["admin", "other_role1"],
+                    "full_name": "Do not erase me",
+                    "email": "noreply",
+                    "enabled": True,
+                },
+                f"{ClientRelationName}_1": {
+                    "username": "relation1",
+                    "roles": ["admin", "other_role1", f"{ClientRelationName}_test"],
+                    "full_name": "Do not erase me",
+                    "email": "noreply",
+                    "enabled": True,
+                },
+                f"{ClientRelationName}_2": {
+                    "username": "relation_do_not_exist_anymore",
+                    "roles": ["admin", "other_role1", f"{ClientRelationName}_remove_pls"],
+                    "full_name": "Erase me",
+                    "email": "noreply",
+                    "enabled": True,
+                },
+            }
+            | {user: {} for user in OpenSearchUsers}
+        )
+
+        self.mgr.get_roles = MagicMock(
+            return_value={
+                "admin": {
+                    "cluster": ["all"],
+                    "indices": [
+                        {
+                            "names": ["index1", "index2"],
+                            "privileges": ["all"],
+                            "allow_restricted_indices": False,
+                            "field_security": {
+                                "grant": ["title", "body"],
+                            },
+                        }
+                    ],
+                    "applications": [],
+                    "run_as": ["other_user"],
+                    "metadata": {
+                        "version": 1,
+                    },
+                    "transient_metadata": {
+                        "enabled": True,
+                    },
+                },
+                "other_role1": {
+                    "cluster": ["all"],
+                    "indices": [
+                        {
+                            "names": ["index1", "index2"],
+                            "privileges": ["all"],
+                            "allow_restricted_indices": False,
+                            "field_security": {
+                                "grant": ["title", "body"],
+                            },
+                        }
+                    ],
+                    "applications": [],
+                    "run_as": ["other_user"],
+                    "metadata": {
+                        "version": 1,
+                    },
+                    "transient_metadata": {
+                        "enabled": True,
+                    },
+                },
+                f"{ClientRelationName}_test": {},
+                f"{ClientRelationName}_remove_pls": {},
+            }
+        )
+
+        self.charm.model.relations.get = MagicMock(return_value=[relation_mocker(1)])
+        self.mgr.remove_role = MagicMock()
+        self.mgr.remove_user = MagicMock()
+        self.mgr.remove_users_and_roles()
+        self.mgr.remove_user.assert_called_once_with(f"{ClientRelationName}_2")
+        self.mgr.remove_role.assert_called_once_with(f"{ClientRelationName}_remove_pls")
