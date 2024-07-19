@@ -7,7 +7,7 @@ When we accessed OpenSearch earlier in this tutorial, we needed to include a pas
 As previously mentioned, the admin credentials (password + the ca chain used to generate the admin client certificate) can be retrieved by running the `get-password` action on the Charmed OpenSearch application:
 
 ```bash
-juju run-action opensearch/leader get-password --wait
+juju run opensearch/leader get-password
 ```
 Running the command above should output something like:
 
@@ -34,7 +34,7 @@ The admin password is under the result: `admin-password`.
 You can change the admin password to a new random and generated password by running:
 
 ```shell
-juju run-action opensearch/leader set-password --wait
+juju run opensearch/leader set-password 
 ```
 **Note:** this action can only be run from the leader unit.  
 Running the command should output:
@@ -61,7 +61,7 @@ You can test this password works correctly using the same HTTP requests you used
 You can change the admin password to a specific password by entering:
 
 ```shell
-juju run-action opensearch/leader set-password password=<password> --wait
+juju run opensearch/leader set-password password=<password>
 ```
 
 Running the command should output:
@@ -93,7 +93,7 @@ TLS private keys are used for certificate signing requests, and should be recycl
 To change a private key to a random value, run the following command, setting `category` equal to your preferred type of private key:
 
 ```shell
-juju run-action opensearch/leader set-tls-private-key category=<category> --wait
+juju run opensearch/leader set-tls-private-key category=<category>
 ```
 
 Running the command should output:
@@ -115,7 +115,7 @@ No certificate data is presented in the results of this action.
 To set the key to a specific value run the following command:
 
 ```shell
-juju run-action opensearch/leader set-tls-private-key category=<category> key=<key> --wait
+juju run opensearch/leader set-tls-private-key category=<category> key=<key>
 ```
 
 Running the command should output:
@@ -135,7 +135,7 @@ unit-opensearch-0:
 If the key you intend to set has a passphrase, set it like so
 
 ```shell
-juju run-action opensearch/leader set-tls-private-key category=<category> password=<password> key=<key> --wait
+juju run opensearch/leader set-tls-private-key category=<category> password=<password> key=<key>
 ```
 
 Running the command should output:
