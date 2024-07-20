@@ -22,16 +22,16 @@ When the application is ready, `juju status` will show something similar to the 
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:12:41Z
+tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  16:27:51+02:00
 
 App         Version  Status   Scale  Charm       Channel  Rev  Exposed  Message
-opensearch           blocked      1  opensearch  edge      22  no       Waiting for TLS to be fully configured...
+opensearch           blocked      1  opensearch  2/edge   117  no       Missing TLS relation with this cluster.
 
 Unit           Workload  Agent  Machine  Public address  Ports  Message
-opensearch/0*  blocked   idle   0        10.180.162.97          Waiting for TLS to be fully configured...
+opensearch/0*  blocked   idle   0        10.121.127.104         Missing TLS relation with this cluster.
 
-Machine  State    Address        Inst id        Series  AZ  Message
-0        started  10.180.162.97  juju-3305a8-0  jammy       Running
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.127.104  juju-a5b217-0  ubuntu@22.04      Running
 ```
 
 To exit the `juju status` screen, enter `Ctrl + C`.

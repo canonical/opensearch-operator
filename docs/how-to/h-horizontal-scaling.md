@@ -50,7 +50,7 @@ To monitor the health more precisely, you can use the [OpenSearch health API](ht
 In order to authenticate your requests to the REST API, you need to [retrieve the admin user's credentials](/t/9728). 
 Run the following command:
 ```shell
-juju run-action opensearch/leader get-password --wait
+juju run opensearch/leader get-password
 
 > unit-opensearch-0:
     results:

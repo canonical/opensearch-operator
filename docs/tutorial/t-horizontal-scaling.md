@@ -12,11 +12,19 @@ This should result in the following output (notice the `blocked` status and appl
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  14:52:07Z
+tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  17:16:43+02:00
 
-App                        Version  Status   Scale  Charm                      Channel  Rev  Exposed  Message
-opensearch                          blocked      1  opensearch                 edge      21  no       1 or more 'replica' shards are not assigned, please scale your application up.
-tls-certificates-operator           active       1  tls-certificates-operator  stable    22  no
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      1  opensearch                2/edge         117  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   0        10.121.127.140  9200/tcp  
+self-signed-certificates/0*  active    idle   1        10.121.127.164            
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.127.140  juju-454312-0  ubuntu@22.04      Running
+1        started  10.121.127.164  juju-454312-1  ubuntu@22.04      Running
 ```
 
 Out of curiosity, let's take a look at the health of the current 1 node OpenSearch cluster:
@@ -82,26 +90,23 @@ You can now watch the new units join the cluster with: `watch -c juju status --c
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:46:15Z
+tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  17:28:02+02:00
 
-App                        Version  Status  Scale  Charm                      Channel  Rev  Exposed  Message
-data-integrator                     active      1  data-integrator            edge      11  no
-opensearch                          active      3  opensearch                 edge      22  no
-tls-certificates-operator           active      1  tls-certificates-operator  stable    22  no
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      3  opensearch                2/edge         117  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
 
-Unit                          Workload  Agent  Machine  Public address  Ports  Message
-data-integrator/0*            active    idle   2        10.180.162.96
-opensearch/0*                 active    idle   0        10.180.162.97
-opensearch/1                  active    idle   3        10.180.162.177
-opensearch/2                  active    idle   4        10.180.162.142
-tls-certificates-operator/0*  active    idle   1        10.180.162.44
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0*                active    idle       0        10.121.127.140  9200/tcp  
+opensearch/1                 active    idle       3        10.121.127.126  9200/tcp  
+opensearch/2                 active    executing  4        10.121.127.102  9200/tcp  
+self-signed-certificates/0*  active    idle       1        10.121.127.164            
 
-Machine  State    Address         Inst id        Series  AZ  Message
-0        started  10.180.162.97   juju-3305a8-0  jammy       Running
-1        started  10.180.162.44   juju-3305a8-1  jammy       Running
-2        started  10.180.162.96   juju-3305a8-2  jammy       Running
-3        started  10.180.162.177  juju-3305a8-3  jammy       Running
-4        started  10.180.162.142  juju-3305a8-4  jammy       Running
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.127.140  juju-454312-0  ubuntu@22.04      Running
+1        started  10.121.127.164  juju-454312-1  ubuntu@22.04      Running
+3        started  10.121.127.126  juju-454312-3  ubuntu@22.04      Running
+4        started  10.121.127.102  juju-454312-4  ubuntu@22.04      Running
 ```
 
 You will now notice that the application message regarding unassigned replica shards disappeared from the output of `juju status`.
@@ -142,24 +147,21 @@ You’ll know that the node was successfully removed when `watch -c juju status 
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:51:30Z
+tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  17:30:45+02:00
 
-App                        Version  Status  Scale  Charm                      Channel  Rev  Exposed  Message
-data-integrator                     active      1  data-integrator            edge      11  no
-opensearch                          active      2  opensearch                 edge      22  no
-tls-certificates-operator           active      1  tls-certificates-operator  stable    22  no
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      2  opensearch                2/edge         117  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
 
-Unit                          Workload  Agent  Machine  Public address  Ports  Message
-data-integrator/0*            active    idle   2        10.180.162.96
-opensearch/0*                 active    idle   0        10.180.162.97
-opensearch/1                  active    idle   3        10.180.162.177
-tls-certificates-operator/0*  active    idle   1        10.180.162.44
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   0        10.121.127.140  9200/tcp  
+opensearch/1                 active    idle   3        10.121.127.126  9200/tcp  
+self-signed-certificates/0*  active    idle   1        10.121.127.164            
 
-Machine  State    Address         Inst id        Series  AZ  Message
-0        started  10.180.162.97   juju-3305a8-0  jammy       Running
-1        started  10.180.162.44   juju-3305a8-1  jammy       Running
-2        started  10.180.162.96   juju-3305a8-2  jammy       Running
-3        started  10.180.162.177  juju-3305a8-3  jammy       Running
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.127.140  juju-454312-0  ubuntu@22.04      Running
+1        started  10.121.127.164  juju-454312-1  ubuntu@22.04      Running
+3        started  10.121.127.126  juju-454312-3  ubuntu@22.04      Running
 ```
 
 >**Next step**: [7. Clean up the environment](/t/9726).

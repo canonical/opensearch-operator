@@ -4,10 +4,6 @@ This tutorial is designed to help you learn how to deploy Charmed OpenSearch and
 
 >To get started right away, go to [**Step 1. Set up the environment**](/t/9724).
 
-[note type="caution"]
-:construction: This tutorial is currently being renovated, so you may notice some inconsistencies in the versions displayed in sample outputs. 
-[/note]
-
 ## Prerequisites
 While this tutorial intends to guide you as you deploy Charmed OpenSearch for the first time, it will be most beneficial if:
 

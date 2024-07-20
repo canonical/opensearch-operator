@@ -1,20 +1,9 @@
 # Charmed OpenSearch Documentation
-Charmed OpenSearch is a software operator that packages the open-source [OpenSearch](http://opensearch.org/) search and data analytics suite with a system for simplified deployment, operation, and management. 
+Charmed OpenSearch is an open-source software operator that packages the [OpenSearch](http://opensearch.org/) search and data analytics suite with simplified deployment, operation, and management via the Juju CLI. It can be deployed on physical and virtual machines, as well as other cloud and cloud-like environments, including AWS, Azure, OpenStack and VMWare. 
 
-Applications like OpenSearch must be managed and operated in production environments. This means that administrators and analysts who run workloads in various infrastructures should be able to automate tasks for repeatable operational work. Charmed software operators encapsulate the expertise of a real-world operations team into a set of tools that helps to operate complex server applications like OpenSearch and other data applications.
+Charmed OpenSearch  has multiple operator features such as automated deployment, TLS encryption, user management, horizontal scaling, replication, password rotation, and easy integration with other applications. 
 
-The Charmed OpenSearch Virtual Machine (VM) operator deploys and operates OpenSearch on physical and virtual machines, as well as other cloud and cloud-like environments, including AWS, Azure, OpenStack and VMWare. It uses the [Charmed OpenSearch Snap](https://snapcraft.io/opensearch) to build the operator.
-
-Charmed OpenSearch  has multiple operator features such as automated deployment, TLS encryption, user management, horizontal scaling, replication, password rotation, and easy to use integration with other applications.
-
-## In this documentation
-| | |
-|--|--|
-|  [Tutorials](/t/9722)</br>  Get started - a hands-on introduction to using the Charmed OpenSearch operator for new users </br> |  [How-to guides](/t/10994) </br> Step-by-step guides covering key operations and common tasks |
-| [Reference](/t/14109) </br> Technical information - specifications, APIs, architecture | [Explanation]() </br> Concepts - discussion and clarification of key topics  |
-
-
-## Release and versions
+This charm is for anyone looking for a complete data analytics suite. You could be a team of system administrators maintaining large data infrastructures, a software developer who wants to connect their application with a powerful search engine, or even someone curious to learn more about Charmed OpenSearch through our guided tutorial.
 
 To see the Charmed OpenSearch features and releases, visit our [GitHub Releases page](https://github.com/canonical/opensearch-operator/releases).
 <!--
@@ -27,16 +16,18 @@ So, if the candidate is listed, you can pull the candidate and edge. When stable
 The upper portion of this page describes the Operating System (OS) where the charm can run, e.g. 2/stable is compatible and should run on a machine with Ubuntu 22.04 OS.
 -->
 
+## In this documentation
+| | |
+|--|--|
+|  [**Tutorials**](/t/9722)</br>  [Get started](/t/9722) - a hands-on introduction to using the Charmed OpenSearch operator for new users </br> |  [**How-to guides**](/t/10994) </br> Step-by-step guides covering key operations such as [scaling](/t/10994), [TLS encryption](/t/14783), or [monitoring](/t/14560) |
+| [**Reference**](/t/14109) </br> Technical information such as [system requirements](/t/14565) | <!--[Explanation]() </br> Concepts - discussion and clarification of key topics-->  |
+
 ## Project & community
 If you find a bug in this operator or want to request a specific feature, here are the useful links:
 - Raise the issue or feature request in the [Canonical Github repository](https://github.com/canonical/opensearch-operator/issues).
 - Meet the community and chat with us if there are issues and feature requests in our [Mattermost Channel](https://chat.charmhub.io/charmhub/channels/data-platform)
 and join the [Discourse Forum](https://discourse.charmhub.io/tag/opensearch).
-
-Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, 
-and [CONTRIBUTING.md](https://github.com/canonical/mongodb-operator/blob/main/CONTRIBUTING.md) for developer guidance.
-
-[Read our Code of Conduct](https://ubuntu.com/community/code-of-conduct).
+- To learn about contribution guidelines, check the Charmed OpenSearch [CONTRIBUTING.md](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) on GitHub and read the Ubuntu Community's [Code of Conduct](https://ubuntu.com/community/code-of-conduct).
 
 ## License & trademark
 The Charmed OpenSearch ROCK, Charmed OpenSearch Snap, and Charmed OpenSearch Operator are free software, distributed under the 

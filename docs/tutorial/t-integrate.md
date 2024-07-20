@@ -31,23 +31,22 @@ Wait for `watch -c juju status --color` to show:
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:38:21Z
+tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  17:06:27+02:00
 
-App                        Version  Status   Scale  Charm                      Channel  Rev  Exposed  Message
-data-integrator                     blocked      1  data-integrator            edge      11  no       Please relate the data-integrator with the desired product
-opensearch                          active       1  opensearch                 edge      22  no
-tls-certificates-operator           active       1  tls-certificates-operator  stable    22  no
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+data-integrator                    blocked      1  data-integrator           latest/edge     36  no       Please relate the data-integrator with the desired product
+opensearch                         active       1  opensearch                2/edge         117  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
 
-Unit                          Workload  Agent  Machine  Public address  Ports  Message
-data-integrator/0*            blocked   idle   2        10.180.162.96          Please relate the data-integrator with the desired product
-opensearch/0*                 active    idle   0        10.180.162.97
-tls-certificates-operator/0*  active    idle   1        10.180.162.44
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+data-integrator/0*           blocked   idle   2        10.121.127.224            Please relate the data-integrator with the desired product
+opensearch/0*                active    idle   0        10.121.127.140  9200/tcp  
+self-signed-certificates/0*  active    idle   1        10.121.127.164            
 
-Machine  State    Address        Inst id        Series  AZ  Message
-0        started  10.180.162.97  juju-3305a8-0  jammy       Running
-1        started  10.180.162.44  juju-3305a8-1  jammy       Running
-2        started  10.180.162.96  juju-3305a8-2  jammy       Running
-
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.127.140  juju-454312-0  ubuntu@22.04      Running
+1        started  10.121.127.164  juju-454312-1  ubuntu@22.04      Running
+2        started  10.121.127.224  juju-454312-2  ubuntu@22.04      Running
 ```
 <a href="#heading--integrate-opensearch"><h2 id="heading--integrate-opensearch">  Integrate with OpenSearch </h2></a>
 Now that the Database Integrator charm has been set up, we can relate it to Charmed OpenSearch. This will automatically create a username, password, and CA certificate for the Database Integrator charm. 
@@ -58,65 +57,65 @@ Integrate the two applications with:
 juju integrate data-integrator opensearch
 ```
 
-Wait for `watch -c juju status --color` to show:
+Wait for `watch -c juju status --color --relations` to show:
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:40:22Z
+tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  17:13:12+02:00
 
-App                        Version  Status  Scale  Charm                      Channel  Rev  Exposed  Message
-data-integrator                     active      1  data-integrator            edge      11  no
-opensearch                          active      1  opensearch                 edge      22  no
-tls-certificates-operator           active      1  tls-certificates-operator  stable    22  no
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+data-integrator                    active      1  data-integrator           latest/edge     36  no       
+opensearch                         active      1  opensearch                2/edge         117  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
 
-Unit                          Workload  Agent  Machine  Public address  Ports  Message
-data-integrator/0*            active    idle   2        10.180.162.96
-opensearch/0*                 active    idle   0        10.180.162.97
-tls-certificates-operator/0*  active    idle   1        10.180.162.44
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+data-integrator/0*           active    idle   2        10.121.127.224            
+opensearch/0*                active    idle   0        10.121.127.140  9200/tcp  
+self-signed-certificates/0*  active    idle   1        10.121.127.164            
 
-Machine  State    Address        Inst id        Series  AZ  Message
-0        started  10.180.162.97  juju-3305a8-0  jammy       Running
-1        started  10.180.162.44  juju-3305a8-1  jammy       Running
-2        started  10.180.162.96  juju-3305a8-2  jammy       Running
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.127.140  juju-454312-0  ubuntu@22.04      Running
+1        started  10.121.127.164  juju-454312-1  ubuntu@22.04      Running
+2        started  10.121.127.224  juju-454312-2  ubuntu@22.04      Running
 
-Relation provider                       Requirer                               Interface                 Type     Message
-data-integrator:data-integrator-peers   data-integrator:data-integrator-peers  data-integrator-peers     peer
-opensearch:opensearch-client            data-integrator:opensearch             opensearch_client         regular
-opensearch:opensearch-peers             opensearch:opensearch-peers            opensearch_peers          peer
-opensearch:service                      opensearch:service                     rolling_op                peer
-tls-certificates-operator:certificates  opensearch:certificates                tls-certificates          regular
-tls-certificates-operator:replicas      tls-certificates-operator:replicas     tls-certificates-replica  peer
+Integration provider                   Requirer                               Interface              Type     Message
+data-integrator:data-integrator-peers  data-integrator:data-integrator-peers  data-integrator-peers  peer     
+opensearch:node-lock-fallback          opensearch:node-lock-fallback          node_lock_fallback     peer     
+opensearch:opensearch-client           data-integrator:opensearch             opensearch_client      regular  
+opensearch:opensearch-peers            opensearch:opensearch-peers            opensearch_peers       peer     
+opensearch:upgrade-version-a           opensearch:upgrade-version-a           upgrade                peer     
+self-signed-certificates:certificates  opensearch:certificates                tls-certificates       regular  
 ```
 
 To retrieve information such as the username, password, and database. Enter:
 
 ```shell
-juju run-action data-integrator/leader get-credentials --wait
+juju run data-integrator/leader get-credentials
 ```
 
 This should output something like:
 
 ```yaml
-unit-data-integrator-0:
-  UnitId: data-integrator/0
-  id: "2"
-  results:
-    ok: "True"
-    opensearch:
-      endpoints: 10.180.162.97:9200
-      index: test-index
-      password: wPe02Gl7OiJPBTKh21DKvC0X9bzb9ZjQ
-      tls-ca: |-
-        -----BEGIN CERTIFICATE-----
-        MIIC6jCCAdKgAwIBAgIULtS8XNzJj5N8...
-        -----END CERTIFICATE-----
-      username: opensearch-client_5
-      version: 2.6.0
-  status: completed
-  timing:
-    completed: 2023-04-05 15:41:11 +0000 UTC
-    enqueued: 2023-04-05 15:41:09 +0000 UTC
-    started: 2023-04-05 15:41:10 +0000 UTC
+Running operation 5 with 1 task
+  - task 6 on unit-data-integrator-1
+
+Waiting for task 6...
+ok: "True"
+opensearch:
+  data: '{"extra-user-roles": "admin", "index": "test-index", "requested-secrets":
+    "[\"username\", \"password\", \"tls\", \"tls-ca\", \"uris\"]"}'
+  endpoints: 10.121.127.126:9200,10.121.127.140:9200
+  index: test-index
+  password: IMmfxWbPOQbi792E73b0ihFFDXovCmRy
+  tls-ca: |-
+    -----BEGIN CERTIFICATE-----
+    MIIDPzCCAiegAwIBAgI...
+    -----END CERTIFICATE-----
+    -----BEGIN CERTIFICATE-----
+    MIIDOzCCAiOgAwIBA...
+    -----END CERTIFICATE-----
+  username: opensearch-client_7
+  version: 2.14.0
 ```
 
 Save the CA certificate (value of `tls-ca` in the previous response), username, and password, because you'll need them in the next section.

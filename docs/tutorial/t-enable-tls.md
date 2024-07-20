@@ -28,6 +28,23 @@ juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
 
 Wait until `self-signed-certificates` is active. Use `juju status --watch 1s` to monitor the progress.
 
+```
+Model     Controller       Cloud/Region         Version  SLA          Timestamp
+tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  16:57:43+02:00
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         blocked      1  opensearch                2/edge         117  no       Missing TLS relation with this cluster.
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports  Message
+opensearch/0*                blocked   idle   0        10.121.127.140         Missing TLS relation with this cluster.
+self-signed-certificates/0*  active    idle   1        10.121.127.164         
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.127.140  juju-454312-0  ubuntu@22.04      Running
+1        started  10.121.127.164  juju-454312-1  ubuntu@22.04      Running
+```
+
 <!-- TODO: juju status output-->
 
 ## Integrate with OpenSearch
@@ -41,6 +58,29 @@ juju integrate self-signed-certificates opensearch
 ```
 
 The OpenSearch service will start. You can see the new integrations with `juju status --relations`.
+
+```
+Model     Controller       Cloud/Region         Version  SLA          Timestamp
+tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  17:01:00+02:00
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      1  opensearch                2/edge         117  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   0        10.121.127.140  9200/tcp  
+self-signed-certificates/0*  active    idle   1        10.121.127.164            
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.127.140  juju-454312-0  ubuntu@22.04      Running
+1        started  10.121.127.164  juju-454312-1  ubuntu@22.04      Running
+
+Integration provider                   Requirer                       Interface           Type     Message
+opensearch:node-lock-fallback          opensearch:node-lock-fallback  node_lock_fallback  peer     
+opensearch:opensearch-peers            opensearch:opensearch-peers    opensearch_peers    peer     
+opensearch:upgrade-version-a           opensearch:upgrade-version-a   upgrade             peer     
+self-signed-certificates:certificates  opensearch:certificates        tls-certificates    regular  
+```
 
 <!-- TODO: juju status output-->
 
