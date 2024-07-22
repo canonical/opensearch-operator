@@ -1,7 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Utility classes and methods for getting cluster info, configuration info and suggestions."""
+"""Utility classes and methods for getting cluster info, configuration info and suggestions.""" 
 import logging
 from typing import Dict, List, Optional
 
