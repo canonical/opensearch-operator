@@ -128,6 +128,10 @@ class OpenSearchTLS(Object):
         # the "certificate available" callback with old certificates
         for cert_type in [CertType.UNIT_HTTP, CertType.UNIT_TRANSPORT]:
             secrets = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)
+            try:
+                os.remove(f"{self.certs_path}/{cert_type}.p12")
+            except OSError:
+                pass
             self._request_certificate_renewal(Scope.UNIT, cert_type, secrets)
 
     def _on_tls_relation_created(self, event: RelationCreatedEvent) -> None:
