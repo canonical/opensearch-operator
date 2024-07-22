@@ -709,17 +709,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.debug("Attempting to acquire lock for restart on TLS CA rotation")
             if not self.node_lock.acquired:
                 # (Attempt to acquire lock even if `event.ignore_lock`)
-                logger.info("Lock to restart opensearch not acquired. Will retry next event")
+                logger.debug("Lock to restart opensearch not acquired. Will retry next event")
                 event.defer()
                 return
-            logger.info("Acquired lock for restart on TLS CA rotation")
+            logger.debug("Acquired lock for restart on TLS CA rotation")
 
             self._stop_opensearch(restart=True)
             logger.info("Stopped OpenSearch on TLS CA rotation")
 
             self._start_opensearch_event.emit(ignore_lock=True)
             logger.info("Started OpenSearch on TLS CA rotation")
-
 
     def on_tls_conf_set(
         self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool

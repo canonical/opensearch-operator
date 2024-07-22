@@ -303,24 +303,19 @@ class YamlConfigSetter(ConfigSetter):
         config_file: str,
         text_to_append: str,
     ) -> None:
-
         """Append any string to a text file.
 
         Args:
             config_file (str): Path to the source config file
             text_to_append (str): The str to append to the config file
-            output_type (OutputType): The type of output we're expecting from this operation,
-                i.e, set OutputType.all to have the output on both the console and target file
-            output_file: Target file for the result config, by default same as config_file
         """
-
         path = f"{self.base_path}{config_file}"
 
         if not exists(path):
             raise FileNotFoundError(f"{path} not found.")
 
         with open(path, "a") as f:
-            f.write('\n' + text_to_append)
+            f.write("\n" + text_to_append)
 
     def __dump(self, data: Dict[str, any], output_type: OutputType, target_file: str):
         """Write the YAML data on the corresponding "output_type" stream."""

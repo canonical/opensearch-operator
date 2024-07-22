@@ -175,7 +175,7 @@ class OpenSearchTLS(Object):
             )
         self.charm.on_tls_relation_broken(event)
 
-    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
+    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:  # noqa: C901
         """Enable TLS when TLS certificate available.
 
         CertificateAvailableEvents fire whenever a new certificate is created by the TLS charm.
@@ -202,7 +202,9 @@ class OpenSearchTLS(Object):
                 return
 
         if not self.ca_rotation_complete_in_cluster():
-            logger.info(f"CA rotation not complete in the cluster, deferring CertificateAvailableEvent for {cert_type}")
+            logger.info(
+                f"CA rotation not complete in the cluster, deferring CertificateAvailableEvent for {cert_type}"
+            )
             event.defer()
             return
 
@@ -237,8 +239,6 @@ class OpenSearchTLS(Object):
         if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
             return
 
-        # TODO: remove logging
-        logger.info(f"This CertificateAvailableEvent was not deferred. cert_type: {cert_type}")
         # store the certificates and keys in a key store
         self.store_new_tls_resources(
             cert_type, self.charm.secrets.get_object(scope, cert_type.val)
@@ -585,8 +585,6 @@ class OpenSearchTLS(Object):
         """Add key and cert to keystore."""
         cert_name = cert_type.val
         store_path = f"{self.certs_path}/{cert_type}.p12"
-        # TODO: remove logging
-        logger.info(f"Received call for cert_type: {cert_type}")
 
         # if the TLS certificate is available before the keystore-password, create it anyway
         if cert_type == CertType.APP_ADMIN:
