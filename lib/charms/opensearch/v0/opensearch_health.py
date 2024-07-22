@@ -13,7 +13,7 @@ from charms.opensearch.v0.constants_charm import (
     WaitingForSpecificBusyShards,
 )
 from charms.opensearch.v0.helper_charm import Status, trigger_peer_rel_changed
-from charms.opensearch.v0.helper_cluster import ClusterState
+from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology
 from charms.opensearch.v0.models import StartMode
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHAError,
@@ -43,6 +43,7 @@ class HealthColors:
     YELLOW = "yellow"
     YELLOW_TEMP = "yellow-temp"
     RED = "red"
+    RED_NO_DATA_NODES = "red-no-data-nodes"
     UNKNOWN = "unknown"
     IGNORE = "ignore"
 
@@ -111,6 +112,9 @@ class OpenSearchHealth:
         except AttributeError as e:
             logger.error(e)  # means the status was reported as an int (i.e: 503)
             return HealthColors.UNKNOWN
+
+        if status == HealthColors.RED:
+            nodes = ClusterTopology.nodes(self._charm.opensearch, use_localhost, self._charm.alt_hosts)
 
         if status != HealthColors.YELLOW:
             return status
