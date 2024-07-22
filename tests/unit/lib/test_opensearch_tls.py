@@ -323,3 +323,18 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.charm.tls._on_certificate_invalidated(event_mock)
 
         request_certificate_renewal.assert_called_once()
+
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._create_keystore_pwd_if_not_exists")
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
+    def test_truststore_password_secret(self, _, _create_keystore_pwd_if_not_exists):
+        secret = {"key": "secret_12345"}
+
+        self.harness.set_leader(is_leader=False)
+        self.charm.tls.store_new_ca(secret)
+
+        _create_keystore_pwd_if_not_exists.assert_not_called()
+
+        self.harness.set_leader(is_leader=True)
+        self.charm.tls.store_new_ca(secret)
+
+        _create_keystore_pwd_if_not_exists.assert_called_once()
