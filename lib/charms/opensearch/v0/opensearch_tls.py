@@ -29,7 +29,7 @@ from charms.opensearch.v0.helper_charm import all_units, run_cmd
 from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError, OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
@@ -188,7 +188,6 @@ class OpenSearchTLS(Object):
             return
 
         # if the CA is currently being renewed (rolling restart) -> ignore or defer
-
         if (self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
             and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
         ):
@@ -253,7 +252,11 @@ class OpenSearchTLS(Object):
             old_cert is not None and old_cert != event.certificate
         )
 
-        self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
+        try:
+            self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
+        except OpenSearchError as e:
+            logger.exception(e)
+            event.defer()
 
     def _on_certificate_expiring(
         self, event: Union[CertificateExpiringEvent, CertificateInvalidatedEvent]
@@ -416,10 +419,6 @@ class OpenSearchTLS(Object):
         app_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         if is_secret_found(app_secrets):
             return Scope.APP, CertType.APP_ADMIN, app_secrets
-
-        intermediate_ca_secrets = self.charm.secrets.get_object(Scope.APP, "Intermediate CA")
-        if is_secret_found(intermediate_ca_secrets):
-            return Scope.APP, "Intermediate CA", intermediate_ca_secrets
 
         u_transport_secrets = self.charm.secrets.get_object(
             Scope.UNIT, CertType.UNIT_TRANSPORT.val
