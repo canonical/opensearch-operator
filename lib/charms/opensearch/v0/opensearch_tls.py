@@ -194,7 +194,6 @@ class OpenSearchTLS(Object):
         if self.charm.peers_data.get(
             Scope.UNIT, "tls_ca_renewing", False
         ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
-            self.charm.on_tls_ca_rotation()
             event.defer()
             return
 
