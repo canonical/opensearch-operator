@@ -194,14 +194,7 @@ class OpenSearchTLS(Object):
         if self.charm.peers_data.get(
             Scope.UNIT, "tls_ca_renewing", False
         ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
-            event.defer()
-            return
-
-        if not self.ca_rotation_complete_in_cluster():
-            logger.info(
-                f"CA rotation not complete in the cluster, deferring CertificateAvailableEvent for {cert_type}"
-            )
-            event.defer()
+            self.charm.on_tls_ca_rotation()
             return
 
         # seems like the admin certificate is also broadcast to non leader units on refresh request
@@ -227,13 +220,13 @@ class OpenSearchTLS(Object):
             # when the current ca is replaced we need to initiate a rolling restart
             if current_stored_ca:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
-                self.charm.on_tls_ca_rotation()
                 event.defer()
-                return
 
-        # no new cert must be stored during CA rotation, even if not deferred until now
-        if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
-            return
+        if not self.ca_rotation_complete_in_cluster():
+            logger.info(
+                f"CA rotation not complete in the cluster, deferring CertificateAvailableEvent for {cert_type}"
+            )
+            event.defer()
 
         # store the certificates and keys in a key store
         self.store_new_tls_resources(

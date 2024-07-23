@@ -1031,7 +1031,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if (
             self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
             and self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
-            and not self.peers_data.get(Scope.UNIT, "tls_configured", False)
         ):
             self.tls.request_new_unit_certificates()
             if self.unit.is_leader():
@@ -1094,7 +1093,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(WaitingStatus(ServiceIsStopping))
             return
 
-        self._start_opensearch_event.emit(ignore_lock=True)
+        self._start_opensearch_event.emit()
 
     def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:  # noqa: C901
         """Upgrade OpenSearch."""
