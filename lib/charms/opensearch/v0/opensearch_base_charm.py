@@ -696,7 +696,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             }
         )
 
-    def on_tls_ca_rotation(self, event: CertificateAvailableEvent, restart=False):
+    def on_tls_ca_rotation(self):
         """Called when adding new CA to the trust store."""
         self.status.set(MaintenanceStatus(TLSCaRotation))
         self._restart_opensearch_event.emit()
@@ -889,8 +889,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 )
             )
             self._post_start_init(event)
-        except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
+        except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError) as e:
             event.defer()
+            logger.warning(e)
         except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
             logger.warning(e)
             self.node_lock.release()

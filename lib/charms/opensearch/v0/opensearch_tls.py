@@ -189,17 +189,12 @@ class OpenSearchTLS(Object):
 
         # if the CA is currently being renewed (rolling restart) -> ignore or defer
 
-        if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False):
-            if not self.charm.opensearch.is_started():
-                # in case of errors on the initial restart, try to start opensearch again
-                logger.info("Start opensearch on TLS CA rotation.")
-                self.charm.on_tls_ca_rotation(event, restart=True)
-                event.defer()
-                return
-            elif not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
-                self.charm.on_tls_ca_rotation(event)
-                event.defer()
-                return
+        if (self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
+            and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
+        ):
+            self.charm.on_tls_ca_rotation()
+            event.defer()
+            return
 
         if not self.ca_rotation_complete_in_cluster():
             logger.info(
@@ -231,7 +226,7 @@ class OpenSearchTLS(Object):
             # when the current ca is replaced we need to initiate a rolling restart
             if current_stored_ca:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
-                self.charm.on_tls_ca_rotation(event)
+                self.charm.on_tls_ca_rotation()
                 event.defer()
                 return
 
