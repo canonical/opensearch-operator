@@ -889,7 +889,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 )
             )
             self._post_start_init(event)
-        except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError) as e:
+        except (
+            OpenSearchHttpError,
+            OpenSearchStartTimeoutError,
+            OpenSearchNotFullyReadyError,
+        ) as e:
             event.defer()
             logger.warning(e)
         except (OpenSearchStartError, OpenSearchUserMgmtError) as e:

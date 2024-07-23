@@ -29,7 +29,10 @@ from charms.opensearch.v0.helper_charm import all_units, run_cmd
 from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError, OpenSearchError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
+    OpenSearchError,
+)
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
@@ -188,9 +191,9 @@ class OpenSearchTLS(Object):
             return
 
         # if the CA is currently being renewed (rolling restart) -> ignore or defer
-        if (self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
-            and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
-        ):
+        if self.charm.peers_data.get(
+            Scope.UNIT, "tls_ca_renewing", False
+        ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
             self.charm.on_tls_ca_rotation()
             event.defer()
             return
