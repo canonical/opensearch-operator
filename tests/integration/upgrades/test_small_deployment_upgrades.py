@@ -63,6 +63,7 @@ charm = None
 #######################################################################
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 async def _build_env(ops_test: OpsTest, version: str) -> None:
     """Deploy OpenSearch cluster from a given revision."""
     await ops_test.model.set_config(MODEL_CONFIG)
@@ -100,6 +101,7 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
 #######################################################################
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group("happy_path_upgrade")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -179,6 +181,7 @@ async def test_upgrade_between_versions(
             )
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group("happy_path_upgrade")
 @pytest.mark.abort_on_fail
 async def test_upgrade_to_local(
@@ -200,6 +203,7 @@ async def test_upgrade_to_local(
 ##################################################################################
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.parametrize("version", UPGRADE_INITIAL_VERSION)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -208,6 +212,7 @@ async def test_deploy_from_version(ops_test: OpsTest, version) -> None:
     await _build_env(ops_test, version)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.parametrize("version", UPGRADE_INITIAL_VERSION)
 @pytest.mark.abort_on_fail
 async def test_upgrade_rollback_from_local(
@@ -297,6 +302,7 @@ async def test_upgrade_rollback_from_local(
         )
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.parametrize("version", UPGRADE_INITIAL_VERSION)
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_version_to_local(
