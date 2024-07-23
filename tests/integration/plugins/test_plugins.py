@@ -52,14 +52,25 @@ ALL_GROUPS = {
     deploy_type: pytest.param(
         deploy_type,
         id=deploy_type,
-        marks=pytest.mark.group(deploy_type),
+        marks=[
+            pytest.mark.group(deploy_type),
+            pytest.mark.runner(
+                [
+                    "self-hosted",
+                    "linux",
+                    "X64",
+                    "jammy",
+                    "xlarge" if deploy_type == "large" else "large",
+                ]
+            ),
+        ],
     )
     for deploy_type in ["large_deployment", "small_deployment"]
 }
 
 ALL_DEPLOYMENTS = list(ALL_GROUPS.values())
-SMALL_DEPLOYMENTS = ALL_GROUPS["small_deployment"]
-LARGE_DEPLOYMENTS = ALL_GROUPS["large_deployment"]
+SMALL_DEPLOYMENTS = [ALL_GROUPS["small_deployment"]]
+LARGE_DEPLOYMENTS = [ALL_GROUPS["large_deployment"]]
 
 
 async def _set_config(ops_test: OpsTest, deploy_type: str, conf: dict[str, str]) -> None:
@@ -108,7 +119,6 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str) -> None:
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -142,7 +152,6 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str):
@@ -159,7 +168,6 @@ async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str
     assert len(response_str.split("\n")) > 500
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_small_deployments_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
@@ -186,7 +194,6 @@ async def test_small_deployments_prometheus_exporter_cos_relation(ops_test, depl
     assert relation_data["scheme"] == "https"
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.parametrize("deploy_type", LARGE_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -247,7 +254,6 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
     await set_watermark(ops_test, APP_NAME)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.parametrize("deploy_type", LARGE_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
@@ -277,7 +283,6 @@ async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deplo
     assert relation_data["scheme"] == "https"
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.parametrize("deploy_type", ALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_monitoring_user_fetch_prometheus_data(ops_test, deploy_type: str):
@@ -300,7 +305,6 @@ async def test_monitoring_user_fetch_prometheus_data(ops_test, deploy_type: str)
     assert len(response_str.split("\n")) > 500
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.parametrize("deploy_type", ALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: str):
@@ -339,7 +343,6 @@ async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: st
     assert relation_data["password"] == new_password
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_knn_enabled_disabled(ops_test, deploy_type: str):
@@ -363,7 +366,6 @@ async def test_knn_enabled_disabled(ops_test, deploy_type: str):
         await _wait_for_units(ops_test, deploy_type)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -> None:
@@ -408,7 +410,6 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -
     assert len(docs) == 2
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) -> None:
@@ -453,7 +454,6 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) 
     assert len(docs) == 2
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_knn_training_search(ops_test: OpsTest, deploy_type: str) -> None:
