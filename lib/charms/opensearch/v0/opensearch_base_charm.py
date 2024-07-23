@@ -102,7 +102,13 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_fixed,
+)
 
 import lifecycle
 import upgrade
@@ -436,7 +442,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not (unit_data := event.relation.data.get(event.unit)):
             return
 
-        self.opensearch_exclusions.cleanup()
+        self.opensearch_exclusions.allocation_cleanup()
 
         if self.unit.is_leader() and unit_data.get("bootstrap_contributor"):
             contributor_count = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
@@ -471,10 +477,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.warning(
                 "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
-        # acquire lock to ensure only 1 unit removed at a time
-        if not self.node_lock.acquired:
-            # Raise uncaught exception to prevent Juju from removing unit
-            raise Exception("Unable to acquire lock: Another unit is starting or stopping.")
+
+        for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10), reraise=True):
+            with attempt:
+                # acquire lock to ensure only 1 unit removed at a time
+                if not self.node_lock.acquired:
+                    # Raise uncaught exception to prevent Juju from removing unit
+                    raise Exception(
+                        "Unable to acquire lock: Another unit is starting or stopping."
+                    )
 
         # if the leader is departing, and this hook fails "leader elected" won"t trigger,
         # so we want to re-balance the node roles from here
@@ -515,7 +526,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # release lock
             self.node_lock.release()
 
-    def _on_update_status(self, event: UpdateStatusEvent):
+    def _on_update_status(self, event: UpdateStatusEvent):  # noqa: C901
         """On update status event.
 
         We want to periodically check for the following:
@@ -537,16 +548,25 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # if there are exclusions to be removed
         if self.unit.is_leader():
-            self.opensearch_exclusions.cleanup()
-
             if (health := self.health.apply(wait_for_green_first=True)) not in [
                 HealthColors.GREEN,
                 HealthColors.IGNORE,
             ]:
+                # Do not return right now!
+                # We must first check if we need to remove exclusions
                 event.defer()
 
+            # Unless it is unknown, in this case we can return and wait for the next run
             if health == HealthColors.UNKNOWN:
                 return
+
+            self.opensearch_exclusions.allocation_cleanup()
+            # Now, review voting exclusions, as we may have lost a unit due to an outage
+            try:
+                self._settle_voting_exclusions(unit_is_stopping=False)
+            except RetryError:
+                # We need to retry later as the cluster does not seem to be stable enough
+                event.defer()
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -573,6 +593,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         restart_requested = False
         if self.opensearch_config.update_host_if_needed():
             restart_requested = True
+            # Review voting exclusions as our IP has changed: we may be coming back from a network
+            # outage case.
+            self._settle_voting_exclusions(unit_is_stopping=False)
 
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
             self.tls.delete_stored_tls_resources()
@@ -910,7 +933,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._cleanup_bootstrap_conf_if_applies()
 
         # Remove the exclusions that could not be removed when no units were online
-        self.opensearch_exclusions.delete_current()
+        self._settle_voting_exclusions(unit_is_stopping=False)
+        self.opensearch_exclusions.delete_allocations_exclusion()
 
         self.node_lock.release()
 
@@ -1002,25 +1026,29 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-    def _stop_opensearch(self, *, restart=False) -> None:
+    def _stop_opensearch(self, *, restart=False) -> None:  # noqa: C901
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
+        nodes = self._get_nodes(True)
         if self.opensearch.is_node_up():
             try:
-                nodes = self._get_nodes(True)
-                # do not add exclusions if it's the last unit to stop
-                # otherwise cluster manager election will be blocked when starting up again
-                # and re-using storage
                 if len(nodes) > 1:
-                    # TODO: we should probably NOT have any exclusion on restart
-                    # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
-                    # 1. Add current node to the voting + alloc exclusions
-                    self.opensearch_exclusions.add_current()
+                    self.opensearch_exclusions.add_allocations_exclusion()
             except OpenSearchHttpError:
-                logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
+                logger.debug("Failed to get online nodes, alloc exclusion not added")
 
-        # TODO: should block until all shards move addressed in PR DPE-2234
+        self._settle_voting_exclusions(unit_is_stopping=True)
+
+        # TODO: improve relocation of all shards move in PR DPE-2234
+        if len(nodes) > 1:
+            # this check only makes sense if we have more than one unit.
+            for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
+                with attempt:
+                    if self.health.apply(wait_for_green_first=True) != HealthColors.GREEN:
+                        raise OpenSearchHAError(
+                            "Timed out waiting for shard relocation to complete"
+                        )
 
         # 2. stop the service
         self.opensearch.stop()
@@ -1028,11 +1056,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.set(WaitingStatus(ServiceStopped))
 
         # 3. Remove the exclusions
-        # TODO: we should probably NOT have any exclusion on restart
-        # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
         if not restart:
             try:
-                self.opensearch_exclusions.delete_current()
+                self.opensearch_exclusions.delete_allocations_exclusion()
             except Exception:
                 # It is purposefully broad - as this can fail for HTTP reasons,
                 # or if the config wasn't set on disk etc. In any way, this operation is on
@@ -1057,6 +1083,80 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         self._start_opensearch_event.emit()
+
+    def _settle_voting_exclusions(self, unit_is_stopping: bool = False):  # noqa C901
+        """Settle the exclusions for all voting units."""
+        hosts = self.alt_hosts
+        if (
+            self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR
+            and (peer_cm_rel_data := self.opensearch_peer_cm.rel_data()) is not None
+        ):
+            # Also consider peer-relation units
+            hosts.extend([node.ip for node in peer_cm_rel_data.cm_nodes])
+
+        for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
+            with attempt:
+                nodes = ClusterTopology.nodes(self.opensearch, use_localhost=True, hosts=hosts)
+
+                node = None
+                for node in nodes:
+                    if node.name == self.unit_name:
+                        break
+                if unit_is_stopping and node:
+                    # This is a stop operation, we exclude the unit that is stopping
+                    # if still in the list
+                    nodes.remove(node)
+                    # we can finish the for loop here
+                    break
+                elif not unit_is_stopping and not node:
+                    # This unit is starting, we must assure it shows up in the list
+                    # Let's retry
+                    raise OpenSearchStartError("Node not in the list of nodes")
+                # Any other case is okay to move forward without changes
+                break
+
+        cms = ClusterTopology.get_cluster_managers_names(nodes)
+        # For the sake of predictability, we always sort the cluster managers
+        sorted_cm = sorted(cms)
+        # We always clean the voting.
+        # Then, we deal with the specific cases.
+        self.opensearch_exclusions.delete_voting()
+
+        # Each of the possible cases
+        if len(cms) == 1:
+            # This condition only happens IF the cluster had 2x units and now is scalig down to 1
+            # In this scenario, we should exclude the node that is going away, to force election
+            # to the remaining unit.
+            if unit_is_stopping:
+                self.opensearch_exclusions.add_voting(hosts, node_names=[self.unit_name])
+        elif len(cms) == 2:
+            if unit_is_stopping:
+                # Remove both this unit and the first sorted_cm from the voting
+                self.opensearch_exclusions.add_voting(
+                    hosts, node_names=[self.unit_name, sorted_cm[0]]
+                )
+            else:
+                # We are adding this unit to the cluster and we've waited until it is present
+                # We only exclude one unit:
+                self.opensearch_exclusions.add_voting(hosts, node_names=[sorted_cm[0]])
+            # Now, we clean up the sorted_cm list, as we want to be sure the new manager is elected
+            # and different than the excluded units.
+            sorted_cm.pop(0)
+            # We do not exclude the self.unit_name
+        else:
+            # In this case, we either are scaling down to 0 or len(cms) > 2.
+            # There is nothing more to do then cleanup the exclusions
+            return
+
+        # Now, we must be sure a new manager is elected, or there was a failure
+        for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
+            with attempt:
+                manager = ClusterTopology.elected_manager(
+                    ClusterTopology.nodes(self.opensearch, use_localhost=True, hosts=hosts)
+                )
+                if not manager or manager.name not in sorted_cm:
+                    raise OpenSearchHAError("New manager not elected yet")
+                break
 
     def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:  # noqa: C901
         """Upgrade OpenSearch."""
@@ -1174,7 +1274,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_config.remove_temporary_data_role()
 
         # wait until data moves out completely
-        self.opensearch_exclusions.add_current()
+        self.opensearch_exclusions.add_allocations_exclusion()
 
         try:
             for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(0.5)):
@@ -1187,7 +1287,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                             raise Exception
                     return True
         except RetryError:
-            self.opensearch_exclusions.delete_current()
+            self.opensearch_exclusions.delete_allocations_exclusion()
             event.defer()
             return False
 

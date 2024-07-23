@@ -121,6 +121,7 @@ class Node(Model):
     app: App
     unit_number: int
     temperature: Optional[str] = None
+    elected_manager: bool = False
 
     @classmethod
     @validator("roles")

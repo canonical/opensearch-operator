@@ -140,6 +140,14 @@ class ClusterTopology:
         return result
 
     @staticmethod
+    def elected_manager(nodes: List[Node]) -> Optional[List[str]]:
+        """Get the list of nodes in a cluster."""
+        for node in nodes:
+            if node.elected_manager:
+                return node
+        return None
+
+    @staticmethod
     def nodes(
         opensearch: OpenSearchDistribution,
         use_localhost: bool,
@@ -153,11 +161,20 @@ class ClusterTopology:
 
         nodes: List[Node] = []
         if use_localhost or host:
+            manager_id = opensearch.request(
+                "GET",
+                "/_cluster/state/cluster_manager_node",
+                host=host,
+                alt_hosts=alt_hosts,
+                retries=3,
+            )
+            if "cluster_manager_node" in manager_id:
+                manager_id = manager_id["cluster_manager_node"]
             response = opensearch.request(
                 "GET", "/_nodes", host=host, alt_hosts=alt_hosts, retries=3
             )
             if "nodes" in response:
-                for obj in response["nodes"].values():
+                for id, obj in response["nodes"].items():
                     node = Node(
                         name=obj["name"],
                         roles=obj["roles"],
@@ -165,6 +182,7 @@ class ClusterTopology:
                         app=App(id=obj["attributes"]["app_id"]),
                         unit_number=int(obj["name"].split(".")[0].split("-")[-1]),
                         temperature=obj.get("attributes", {}).get("temp"),
+                        elected_manager=id == manager_id,
                     )
                     nodes.append(node)
         return nodes
