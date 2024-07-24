@@ -7,12 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import (
-    APP_NAME,
-    MODEL_CONFIG,
-    SERIES,
-    UNIT_IDS,
-)
+from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, UNIT_IDS
 from ..helpers_deployments import wait_until
 
 logger = logging.getLogger(__name__)
