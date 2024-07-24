@@ -190,11 +190,10 @@ class OpenSearchTLS(Object):
             logger.debug("Unknown certificate available.")
             return
 
-        # if the CA is currently being renewed (rolling restart) -> ignore or defer
         if self.charm.peers_data.get(
             Scope.UNIT, "tls_ca_renewing", False
         ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
-            self.charm.on_tls_ca_rotation()
+            event.defer()
             return
 
         # seems like the admin certificate is also broadcast to non leader units on refresh request
@@ -220,7 +219,8 @@ class OpenSearchTLS(Object):
             # when the current ca is replaced we need to initiate a rolling restart
             if current_stored_ca:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
-                event.defer()
+                self.charm.on_tls_ca_rotation()
+                return
 
         if not self.ca_rotation_complete_in_cluster():
             logger.info(
