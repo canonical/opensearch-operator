@@ -626,6 +626,8 @@ class OpenSearchTLS(Object):
 
             run_cmd(cmd, args)
             run_cmd(f"sudo chmod +r {store_path}")
+        except OpenSearchCmdError as e:
+            logging.error(f"Error storing the TLS certificates for {cert_name}: {e}")
         finally:
             tmp_key.close()
             tmp_cert.close()
