@@ -578,6 +578,12 @@ class OpenSearchTLS(Object):
 
     def store_new_tls_resources(self, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
+        if self.charm.peers_data.get(
+                Scope.UNIT, "tls_ca_renewing", False
+        ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False) or not self.ca_rotation_complete_in_cluster():
+            logger.debug("TLS CA rotation ongoing, will not update tls certificates.")
+            return
+
         cert_name = cert_type.val
         store_path = f"{self.certs_path}/{cert_type}.p12"
 
@@ -728,7 +734,7 @@ class OpenSearchTLS(Object):
         for unit in all_units(self.charm):
             if (
                 rel.data[unit].get("tls_ca_renewing") == "True"
-                and rel.data[unit].get("tls_ca_renewed") != "True"
+                and not rel.data[unit].get("tls_ca_renewed") == "True"
             ):
                 return False
         return True
