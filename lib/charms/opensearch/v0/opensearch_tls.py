@@ -220,6 +220,7 @@ class OpenSearchTLS(Object):
             if current_stored_ca:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
                 self.charm.on_tls_ca_rotation()
+                event.defer()
                 return
 
         if not self.ca_rotation_complete_in_cluster():
@@ -239,6 +240,9 @@ class OpenSearchTLS(Object):
             if self.all_certificates_available():
                 admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
                 self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
+            else:
+                event.defer()
+                return
 
         for relation in self.charm.opensearch_provider.relations:
             self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
@@ -721,7 +725,7 @@ class OpenSearchTLS(Object):
         for unit in all_units(self.charm):
             if (
                 rel.data[unit].get("tls_ca_renewing") == "True"
-                and not rel.data[unit].get("tls_ca_renewed") == "True"
+                and rel.data[unit].get("tls_ca_renewed") != "True"
             ):
                 return False
         return True
