@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Set, Union
 
 import requests
 import urllib3.exceptions
+from charms.opensearch.v0.helper_charm import mask_sensitive_information
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_http import error_http_retry_log
@@ -334,14 +335,17 @@ class OpenSearchDistribution(ABC):
 
         Returns the stdout
         """
+        command_with_args = command
         if args is not None:
-            command = f"{command} {args}"
+            command_with_args = f"{command} {args}"
 
+        # only log the command and no arguments to avoid logging sensitive information
+        command = mask_sensitive_information(command_with_args)
         logger.debug(f"Executing command: {command}")
 
         try:
             output = subprocess.run(
-                command,
+                command_with_args,
                 input=stdin,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

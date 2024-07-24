@@ -254,8 +254,8 @@ class OpenSearchConfig:
             ),
             NetworkHost(
                 "network.publish_host",
-                set(node.get("network.publish_host", [])),
-                set(self._opensearch.host),
+                node.get("network.publish_host"),
+                self._opensearch.host,
             ),
         ]:
             if not host.old:
