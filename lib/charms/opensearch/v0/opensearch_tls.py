@@ -489,7 +489,7 @@ class OpenSearchTLS(Object):
                 -alias {alias} \
                 -destalias old-{alias} \
                 -keystore {store_path} \
-                -storepass {admin_secrets.get("keystore-password-ca")} \
+                -storepass {admin_secrets.get("truststore-password")} \
                 -storetype PKCS12
             """
             )
@@ -550,7 +550,7 @@ class OpenSearchTLS(Object):
         old_alias = "old-ca"
 
         secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        store_pwd = secrets.get("keystore-password-ca")
+        store_pwd = secrets.get("truststore-password")
 
         try:
             run_cmd(
