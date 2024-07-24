@@ -227,6 +227,7 @@ class OpenSearchTLS(Object):
                 f"CA rotation not complete in the cluster, deferring CertificateAvailableEvent for {cert_type}"
             )
             event.defer()
+            return
 
         # store the certificates and keys in a key store
         self.store_new_tls_resources(
@@ -710,7 +711,6 @@ class OpenSearchTLS(Object):
         if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
             self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewing")
             self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewed")
-            self.request_new_unit_certificates()
         else:
             # this means only the CA rotation completed, still need to create certificates
             self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewed", True)

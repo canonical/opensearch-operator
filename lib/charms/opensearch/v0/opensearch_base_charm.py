@@ -1028,9 +1028,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.clear(TLSCaRotation)
 
         # request new certificates after rotating the CA
-        if (
-            self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
-            and self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
+        if self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False) and self.peers_data.get(
+            Scope.UNIT, "tls_ca_renewed", False
         ):
             self.tls.request_new_unit_certificates()
             if self.unit.is_leader():
