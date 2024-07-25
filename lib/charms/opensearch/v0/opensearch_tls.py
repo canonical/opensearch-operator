@@ -479,8 +479,8 @@ class OpenSearchTLS(Object):
         if self.charm.unit.is_leader():
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
-        if not ((secrets.get("ca-cert") or {}) and admin_secrets.get("truststore-password", {})):
-            logging.error("CA cert not found, quitting.")
+        if not ((secrets.get("ca-cert") or {}) and admin_secrets.get("truststore-password")):
+            logging.error("CA cert or truststore-password not found, quitting.")
             return
 
         alias = "ca"
@@ -739,8 +739,9 @@ class OpenSearchTLS(Object):
     def ca_rotation_complete_in_cluster(self) -> bool:
         """Check whether the CA rotation completed in all units."""
         rel = self.charm.model.get_relation(self.peer_relation)
-        for unit in all_units(self.charm):
+        for unit in rel.units:
             if not rel.data[unit].get("tls_ca_renewed") == "True":
                 logger.debug(f"TLS CA rotation not complete for unit {unit}.")
+                logger.debug(f"relation data: {rel.data[unit].get('tls_ca_renewed')}")
                 return False
         return True
