@@ -46,7 +46,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
         units_statuses=["active"],
         # TODO: run tests with three units once the voting exclusions issue is resolved
         # wait_for_exact_units=len(UNIT_IDS),
-        wait_for_exact_units=3,
+        wait_for_exact_units=4,
     )
 
 
@@ -66,5 +66,7 @@ async def test_rollout_new_ca(ops_test: OpsTest) -> None:
         units_statuses=["active"],
         timeout=1000,
         idle_period=60,
-        wait_for_exact_units=len(UNIT_IDS),
+        # TODO: run tests with three units once the voting exclusions issue is resolved
+        # wait_for_exact_units=len(UNIT_IDS),
+        wait_for_exact_units=4,
     )
