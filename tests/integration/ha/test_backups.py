@@ -60,46 +60,33 @@ from .helpers_data import index_docs_count
 
 logger = logging.getLogger(__name__)
 
-DEPLOY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            cloud_name,
-            deploy_type,
-            id=f"{cloud_name}-{deploy_type}",
-            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
-        )
+
+ALL_GROUPS = {
+    (cloud_name, deploy_type): pytest.param(
+        cloud_name,
+        deploy_type,
+        id=f"{cloud_name}-{deploy_type}",
+        marks=[
+            pytest.mark.group(f"{cloud_name}-{deploy_type}"),
+            pytest.mark.runner(
+                [
+                    "self-hosted",
+                    "linux",
+                    "X64",
+                    "jammy",
+                    "xlarge" if deploy_type == "large" else "large",
+                ]
+            ),
+        ],
     )
     for cloud_name in ["microceph", "aws"]
     for deploy_type in ["large", "small"]
-]
+}
 
+ALL_DEPLOYMENTS_ALL_CLOUDS = list(ALL_GROUPS.values())
+SMALL_DEPLOYMENTS_ALL_CLOUDS = [ALL_GROUPS[(cloud, "small")] for cloud in ["aws", "microceph"]]
+LARGE_DEPLOYMENTS_ALL_CLOUDS = [ALL_GROUPS[(cloud, "large")] for cloud in ["aws", "microceph"]]
 
-DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            cloud_name,
-            deploy_type,
-            id=f"{cloud_name}-{deploy_type}",
-            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
-        )
-    )
-    for cloud_name in ["microceph", "aws"]
-    for deploy_type in ["small"]
-]
-
-
-DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            cloud_name,
-            deploy_type,
-            id=f"{cloud_name}-{deploy_type}",
-            marks=pytest.mark.group(f"{cloud_name}-{deploy_type}"),
-        )
-    )
-    for cloud_name in ["microceph", "aws"]
-    for deploy_type in ["large"]
-]
 
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "latest/edge"
@@ -230,7 +217,7 @@ async def _configure_s3(
     )
 
 
-@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_small_deployment_build_and_deploy(
@@ -264,8 +251,7 @@ async def test_small_deployment_build_and_deploy(
     await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_large_deployment_build_and_deploy(
@@ -354,8 +340,7 @@ async def test_large_deployment_build_and_deploy(
     await ops_test.model.integrate("main", S3_INTEGRATOR)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
 async def test_large_setups_relations_with_misconfiguration(
     ops_test: OpsTest,
@@ -434,7 +419,7 @@ async def test_large_setups_relations_with_misconfiguration(
     )
 
 
-@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("cloud_name,deploy_type", ALL_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
 async def test_create_backup_and_restore(
     ops_test: OpsTest,
@@ -483,7 +468,7 @@ async def test_create_backup_and_restore(
     )
 
 
-@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("cloud_name,deploy_type", ALL_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
 async def test_remove_and_readd_s3_relation(
     ops_test: OpsTest,
@@ -555,7 +540,7 @@ async def test_remove_and_readd_s3_relation(
     )
 
 
-@pytest.mark.parametrize("cloud_name,deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
 async def test_restore_to_new_cluster(
     ops_test: OpsTest,
@@ -672,6 +657,7 @@ async def test_restore_to_new_cluster(
 # -------------------------------------------------------------------------------------------
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group("all")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -707,6 +693,7 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest) -> None:
     await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group("all")
 @pytest.mark.abort_on_fail
 async def test_repo_missing_message(ops_test: OpsTest) -> None:
@@ -725,6 +712,7 @@ async def test_repo_missing_message(ops_test: OpsTest) -> None:
     assert "repository_missing_exception" in resp["error"]["type"]
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group("all")
 @pytest.mark.abort_on_fail
 async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
@@ -775,6 +763,7 @@ async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
     assert "Could not determine repository generation from root blobs" in resp["error"]["reason"]
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group("all")
 @pytest.mark.abort_on_fail
 async def test_change_config_and_backup_restore(

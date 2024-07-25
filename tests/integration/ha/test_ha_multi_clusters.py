@@ -26,6 +26,7 @@ from .test_horizontal_scaling import IDLE_PERIOD
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -59,6 +60,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 # put this test at the end of the list of tests, as we delete an app during cleanup
 # and the safeguards we have on the charm prevent us from doing so, so we'll keep
 # using a unit without need - when other tests may need the unit on the CI
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 async def test_multi_clusters_db_isolation(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner

@@ -200,6 +200,9 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
+        old_cert = secrets.get("cert", None)
+        renewal = old_cert is not None and old_cert != event.certificate
+
         ca_chain = "\n".join(event.chain[::-1])
 
         self.charm.secrets.put_object(
@@ -479,8 +482,8 @@ class OpenSearchTLS(Object):
         if self.charm.unit.is_leader():
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
-        if not ((secrets.get("ca-cert") or {}) and admin_secrets.get("truststore-password")):
-            logging.error("CA cert or truststore-password not found, quitting.")
+        if not ((secrets or {}).get("ca-cert") and admin_secrets.get("truststore-password")):
+            logging.error("CA cert not found, quitting.")
             return
 
         alias = "ca"
