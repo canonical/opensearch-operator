@@ -738,8 +738,8 @@ class OpenSearchTLS(Object):
 
     def ca_rotation_complete_in_cluster(self) -> bool:
         """Check whether the CA rotation completed in all units."""
-        rel = self.charm.model.get_relation(self.peer_relation)
-        for unit in rel.units:
+        rel = self.model.get_relation(PeerRelationName)
+        for unit in all_units(self.charm):
             if not rel.data[unit].get("tls_ca_renewed") == "True":
                 logger.debug(f"TLS CA rotation not complete for unit {unit}.")
                 logger.debug(f"relation data: {rel.data[unit].get('tls_ca_renewed')}")
