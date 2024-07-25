@@ -530,8 +530,8 @@ class OpenSearchTLS(Object):
 
         try:
             stored_certs = run_cmd(
-            f"openssl pkcs12 -in {ca_trust_store}",
-            f"-passin pass:{secrets.get('truststore-password')}",
+                f"openssl pkcs12 -in {ca_trust_store}",
+                f"-passin pass:{secrets.get('truststore-password')}",
             ).out
         except OpenSearchCmdError as e:
             logging.error(f"Error reading the current truststore: {e}")
@@ -738,9 +738,7 @@ class OpenSearchTLS(Object):
         """Check whether the CA rotation completed in all units."""
         rel = self.charm.model.get_relation(self.peer_relation)
         for unit in all_units(self.charm):
-            if (
-                rel.data[unit].get("tls_ca_renewing") == "True"
-                and not rel.data[unit].get("tls_ca_renewed") == "True"
-            ):
+            if rel.data[unit].get("tls_ca_renewing") and not rel.data[unit].get("tls_ca_renewed"):
+                logger.debug(f"TLS Ca rotation not complete for unit {unit}.")
                 return False
         return True
