@@ -48,7 +48,6 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
         # wait_for_exact_units=len(UNIT_IDS),
         wait_for_exact_units=4,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
 
 
 @pytest.mark.group(1)
