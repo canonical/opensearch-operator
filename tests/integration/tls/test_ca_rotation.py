@@ -26,7 +26,9 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
 
     await ops_test.model.deploy(
         my_charm,
-        num_units=len(UNIT_IDS),
+        # TODO: run tests with three units once the voting exclusions issue is resolved
+        # num_units=len(UNIT_IDS),
+        num_units=4,
         series=SERIES,
     )
 

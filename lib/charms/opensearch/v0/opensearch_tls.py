@@ -223,7 +223,9 @@ class OpenSearchTLS(Object):
                 event.defer()
                 return
 
-        if not self.ca_rotation_complete_in_cluster():
+        if self.charm.peers_data.get(
+            Scope.UNIT, "tls_ca_renewing", False
+        ) and not self.ca_rotation_complete_in_cluster():
             logger.info(
                 f"CA rotation not complete in the cluster, deferring CertificateAvailableEvent for {cert_type}"
             )
@@ -472,11 +474,11 @@ class OpenSearchTLS(Object):
         """Add new CA cert to trust store."""
         keytool = f"sudo {self.jdk_path}/bin/keytool"
 
-        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
         if self.charm.unit.is_leader():
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
-        if not (secrets.get("ca-cert", {}) and admin_secrets.get("truststore-password", {})):
+        if not ((secrets.get("ca-cert") or {}) and admin_secrets.get("truststore-password", {})):
             logging.error("CA cert not found, quitting.")
             return
 
@@ -584,8 +586,7 @@ class OpenSearchTLS(Object):
         """Add key and cert to keystore."""
         if (
             self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
-            and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
-            or not self.ca_rotation_complete_in_cluster()
+            and not self.ca_rotation_complete_in_cluster()
         ):
             logger.debug("TLS CA rotation ongoing, will not update tls certificates.")
             return
@@ -738,7 +739,7 @@ class OpenSearchTLS(Object):
         """Check whether the CA rotation completed in all units."""
         rel = self.charm.model.get_relation(self.peer_relation)
         for unit in all_units(self.charm):
-            if rel.data[unit].get("tls_ca_renewing") and not rel.data[unit].get("tls_ca_renewed"):
-                logger.debug(f"TLS Ca rotation not complete for unit {unit}.")
+            if not rel.data[unit].get("tls_ca_renewed") == "True":
+                logger.debug(f"TLS CA rotation not complete for unit {unit}.")
                 return False
         return True
