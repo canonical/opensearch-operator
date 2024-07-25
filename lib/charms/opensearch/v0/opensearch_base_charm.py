@@ -696,7 +696,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         )
 
     def on_tls_conf_set(
-        self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
+        self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
     ):
         """Called after certificate ready and stored on the corresponding scope databag.
 
@@ -708,9 +708,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         current_secrets = self.secrets.get_object(scope, cert_type.val)
 
         if scope == Scope.UNIT:
-            truststore_pwd = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)[
-                "truststore-password"
-            ]
+            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+            if not (truststore_pwd := admin_secrets.get("truststore-password")):
+                event.defer()
+                return
+
             keystore_pwd = self.secrets.get_object(scope, cert_type.val)["keystore-password"]
 
             # node http or transport cert
