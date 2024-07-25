@@ -528,10 +528,14 @@ class OpenSearchTLS(Object):
         if not (exists(ca_trust_store) and secrets):
             return None
 
-        stored_certs = run_cmd(
+        try:
+            stored_certs = run_cmd(
             f"openssl pkcs12 -in {ca_trust_store}",
             f"-passin pass:{secrets.get('truststore-password')}",
-        ).out
+            ).out
+        except OpenSearchCmdError as e:
+            logging.error(f"Error reading the current truststore: {e}")
+            return
 
         # parse output to retrieve the current CA (in case there are many)
         start_cert_marker = "-----BEGIN CERTIFICATE-----"
