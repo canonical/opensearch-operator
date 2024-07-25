@@ -44,7 +44,9 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
         apps=[APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units=len(UNIT_IDS),
+        # TODO: run tests with three units once the voting exclusions issue is resolved
+        # wait_for_exact_units=len(UNIT_IDS),
+        wait_for_exact_units=4,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
 
