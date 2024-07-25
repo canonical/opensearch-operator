@@ -223,9 +223,10 @@ class OpenSearchTLS(Object):
                 event.defer()
                 return
 
-        if self.charm.peers_data.get(
-            Scope.UNIT, "tls_ca_renewing", False
-        ) and not self.ca_rotation_complete_in_cluster():
+        if (
+            self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
+            and not self.ca_rotation_complete_in_cluster()
+        ):
             logger.info(
                 f"CA rotation not complete in the cluster, deferring CertificateAvailableEvent for {cert_type}"
             )
