@@ -423,16 +423,18 @@ class OpenSearchTLS(Object):
 
     def _create_keystore_pwd_if_not_exists(self, scope: Scope, cert_type: CertType, alias: str):
         """Create passwords for the key stores if not already created."""
-        keystore_pwd = None
+        store_pwd = None
+        store_type = "truststore" if alias == "ca" else "keystore"
+
         secrets = self.charm.secrets.get_object(scope, cert_type.val)
         if secrets:
-            keystore_pwd = secrets.get(f"keystore-password-{alias}")
+            store_pwd = secrets.get(f"{store_type}-password")
 
-        if not keystore_pwd:
+        if not store_pwd:
             self.charm.secrets.put_object(
                 scope,
                 cert_type.val,
-                {f"keystore-password-{alias}": generate_password()},
+                {f"{store_type}-password": generate_password()},
                 merge=True,
             )
 
@@ -440,9 +442,11 @@ class OpenSearchTLS(Object):
         """Add new CA cert to trust store."""
         keytool = f"sudo {self.jdk_path}/bin/keytool"
 
-        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        if self.charm.unit.is_leader():
+            self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
-        if not (secrets.get("ca-cert", {}) and admin_secrets.get("keystore-password-ca", {})):
+        if not ((secrets or {}).get("ca-cert") and admin_secrets.get("truststore-password")):
             logging.error("CA cert not found, quitting.")
             return
 
@@ -460,9 +464,9 @@ class OpenSearchTLS(Object):
                 -alias {alias} \
                 -keystore {store_path} \
                 -file {ca_tmp_file.name} \
-                -storepass {admin_secrets.get("keystore-password-ca")} \
                 -storetype PKCS12
-            """
+            """,
+                f"-storepass {admin_secrets.get('truststore-password')}",
             )
             run_cmd(f"sudo chmod +r {store_path}")
 
@@ -475,10 +479,8 @@ class OpenSearchTLS(Object):
             return None
 
         stored_certs = run_cmd(
-            f"""openssl pkcs12 \
-            -in {ca_trust_store} \
-            -passin pass:{secrets.get("keystore-password-ca")}
-            """
+            f"openssl pkcs12 -in {ca_trust_store}",
+            f"-passin pass:{secrets.get('truststore-password')}",
         ).out
 
         # parse output to retrieve the current CA (in case there are many)
@@ -495,6 +497,12 @@ class OpenSearchTLS(Object):
         """Add key and cert to keystore."""
         cert_name = cert_type.val
         store_path = f"{self.certs_path}/{cert_type}.p12"
+
+        # if the TLS certificate is available before the keystore-password, create it anyway
+        if cert_type == CertType.APP_ADMIN:
+            self._create_keystore_pwd_if_not_exists(Scope.APP, cert_type, cert_type.val)
+        else:
+            self._create_keystore_pwd_if_not_exists(Scope.UNIT, cert_type, cert_type.val)
 
         if not secrets.get("key"):
             logging.error("TLS key not found, quitting.")
@@ -527,13 +535,13 @@ class OpenSearchTLS(Object):
                 -in {tmp_cert.name} \
                 -inkey {tmp_key.name} \
                 -out {store_path} \
-                -name {cert_name} \
-                -passout pass:{secrets.get(f"keystore-password-{cert_name}")}
+                -name {cert_name}
             """
+            args = f"-passout pass:{secrets.get(f'keystore-password')}"
             if secrets.get("key-password"):
-                cmd = f"{cmd} -passin pass:{secrets.get('key-password')}"
+                args = f"{args} -passin pass:{secrets.get('key-password')}"
 
-            run_cmd(cmd)
+            run_cmd(cmd, args)
             run_cmd(f"sudo chmod +r {store_path}")
         finally:
             tmp_key.close()

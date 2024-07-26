@@ -29,10 +29,10 @@ class TestCharm(TestOpenSearchBaseCharm):
             unit_resources = create_x509_resources()
 
             self.secret_store.put_object(
-                Scope.UNIT, CertType.UNIT_TRANSPORT, {"keystore-password-unit-transport": "123"}
+                Scope.UNIT, CertType.UNIT_TRANSPORT, {"keystore-password": "123"}
             )
             self.secret_store.put_object(
-                Scope.APP, CertType.APP_ADMIN, {"keystore-password-app-admin": "123"}
+                Scope.APP, CertType.APP_ADMIN, {"keystore-password": "123"}
             )
 
             self.charm.tls.store_new_tls_resources(

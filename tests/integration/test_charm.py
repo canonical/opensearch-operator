@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_NUM_UNITS = 2
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -57,6 +58,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == DEFAULT_NUM_UNITS
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
@@ -96,6 +98,7 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     assert result.status == "failed"
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
@@ -145,6 +148,7 @@ async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
     assert http_resp_code == 401
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.parametrize("user", [("monitor"), ("kibanaserver")])
@@ -192,6 +196,7 @@ async def test_actions_rotate_system_user_password(ops_test: OpsTest, user) -> N
     assert http_resp_code == 401
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_check_pinned_revision(ops_test: OpsTest) -> None:
@@ -220,6 +225,7 @@ async def test_check_pinned_revision(ops_test: OpsTest) -> None:
     assert installed_info[3] == "held"
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_check_workload_version(ops_test: OpsTest) -> None:
@@ -251,6 +257,7 @@ async def test_check_workload_version(ops_test: OpsTest) -> None:
     assert installed_info[0] == workload_version
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_all_units_have_all_local_users(ops_test: OpsTest) -> None:
@@ -268,6 +275,7 @@ async def test_all_units_have_all_local_users(ops_test: OpsTest) -> None:
             assert leader_conf[user]["hash"] == unit_conf[user]["hash"]
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
