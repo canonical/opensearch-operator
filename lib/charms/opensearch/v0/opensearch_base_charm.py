@@ -472,7 +472,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
         # acquire lock to ensure only 1 unit removed at a time
-        # Closes canonical/opensearch-operator#381
+        # Closes canonical/opensearch-operator#378
         if (
             self.app.planned_units() > 1
             and (self.opensearch.is_node_up() or self.alt_hosts)
