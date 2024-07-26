@@ -11,8 +11,12 @@ The Charmed OpenSearch Operator deploys and operates the [OpenSearch](https://op
 This operator provides an OpenSearch cluster, with:
 - TLS (for the HTTP and Transport layers)
 - Automated node discovery
+- Observability
+- Backup / Restore
+- Safe horizontal scale-down/up
+- Large deployments
 
-The Operator in this repository is a Python script which wraps OpenSearch installed by the OpenSearch Snap, providing lifecycle management and handling events (install, start, etc).
+The Operator in this repository is a Python project installing and managing OpenSearch installed from the [OpenSearch Snap](https://snapcraft.io/opensearch), providing lifecycle management and handling events (install, start, etc).
 
 ## Usage
 
@@ -36,8 +40,13 @@ cloudinit-userdata: |
     - [ 'sysctl', '-p' ]
 EOF
 
-echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
-echo "vm.swappiness=0" | sudo tee -a /etc/sysctl.conf
+sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
+vm.max_map_count=262144
+vm.swappiness=0
+net.ipv4.tcp_retries2=5
+fs.file-max=1048576
+EOT
+
 sudo sysctl -p
 
 juju model-config --file=./cloudinit-userdata.yaml
@@ -50,27 +59,35 @@ To deploy a single unit of OpenSearch using its default configuration.
 juju deploy opensearch --channel=2/edge
 ```
 
-## Relations
+## Relations / Integrations
 
-Supported [relations](https://juju.is/docs/olm/relations):
+The relevant provided [relations](https://juju.is/docs/olm/relations) of Charmed OpenSearch are:
 
-#### `opensearch-client` interface:
+### Client interface:
 
 To connect to the Charmed OpenSearch Operator and exchange data, relate to the `opensearch-client` endpoint:
 
 ```shell
 juju deploy data-integrator --channel=2/edge
-juju relate opensearch data-integrator
+juju integrate opensearch data-integrator
 ```
 
-### TLS:
+### Large deployments:
+Charmed OpenSearch also allows to form large clusters or join an existing deployment, through the relations:
+- `peer-cluster`
+- `peer-cluster-orchestrator`
+```
+juju integrate main:peer-cluster-orchestrator data-hot:peer-cluster
+```
 
-The Charmed OpenSearch Operator also supports TLS encryption on the HTTP and Transport layers. TLS is enabled by default.
+## TLS:
+
+The Charmed OpenSearch Operator also supports TLS encryption as a first class citizen, on both the HTTP and Transport layers. 
+TLS is enabled by default and is a requirement for the charm to start.
 
 The charm relies on the `tls-certificates` interface.
 
 #### 1. Self-signed certificates:
-
 ```shell
 # Deploy the self-signed TLS Certificates Operator.
 juju deploy self-signed-certificates --channel=latest/stable
