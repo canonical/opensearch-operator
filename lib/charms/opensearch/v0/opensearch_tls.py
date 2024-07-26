@@ -472,10 +472,10 @@ class OpenSearchTLS(Object):
         if self.charm.unit.is_leader():
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
-        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
-        if not ((secrets or {}).get("ca-cert") and admin_secrets.get("truststore-password")):
-            logging.error("CA cert not found, quitting.")
+        if not ((secrets or {}).get("ca-cert") and admin_secrets):
+            logging.error("CA cert  or truststore-password not found, quitting.")
             return
 
         alias = "ca"
@@ -505,19 +505,23 @@ class OpenSearchTLS(Object):
             ca_tmp_file.write(secrets.get("ca-cert"))
             ca_tmp_file.flush()
 
-            run_cmd(
-                f"""{keytool} -importcert \
-                -trustcacerts \
-                -noprompt \
-                -alias {alias} \
-                -keystore {store_path} \
-                -file {ca_tmp_file.name} \
-                -storetype PKCS12
-            """,
-                f"-storepass {admin_secrets.get('truststore-password')}",
-            )
-            run_cmd(f"sudo chmod +r {store_path}")
-            logger.info("New CA was added to truststore.")
+            try:
+                run_cmd(
+                    f"""{keytool} -importcert \
+                    -trustcacerts \
+                    -noprompt \
+                    -alias {alias} \
+                    -keystore {store_path} \
+                    -file {ca_tmp_file.name} \
+                    -storetype PKCS12
+                """,
+                    f"-storepass {admin_secrets.get('truststore-password')}",
+                )
+                run_cmd(f"sudo chmod +r {store_path}")
+                logger.info("New CA was added to truststore.")
+            except OpenSearchCmdError as e:
+                logging.error(f"Error storing the ca-cert: {e}")
+                return
 
     def _read_stored_ca(self, alias: str = "ca") -> Optional[str]:
         """Load stored CA cert."""
