@@ -30,6 +30,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
+from charms.operator_libs_linux.v0 import sysctl
 from tenacity import (
     Retrying,
     retry,
@@ -448,23 +449,43 @@ class OpenSearchDistribution(ABC):
         return exclusions
 
     @staticmethod
-    def missing_sys_requirements() -> List[str]:
+    def running_as_lxc():
+        """Check if the current process is running inside an LXC container.
+
+        TODO: if canonical/operator-libs-linux#127 fixes, we may remove this method.
+        """
+        try:
+            return subprocess.run(["systemd-detect-virt", "--container"]).returncode == 0
+        except FileNotFoundError:
+            # No systemd! Either this is a docker container OR a very old distro
+            return False
+
+    @staticmethod
+    def missing_sys_requirements(name: str) -> List[str]:
         """Checks the system requirements."""
         missing_requirements = []
 
-        max_map_count = int(subprocess.getoutput("sysctl vm.max_map_count").split("=")[-1].strip())
-        if max_map_count < 262144:
-            missing_requirements.append("vm.max_map_count should be at least 262144")
+        config = {
+            "vm.max_map_count": "262144",
+            "vm.swappiness": "0",
+            "net.ipv4.tcp_retries2": "5",
+            "fs.file-max": "1048576",
+        }
+        if OpenSearchDistribution.running_as_lxc():
+            # LXCs cannot apply all sysctl configs
+            # Therefore, we check the current values and apply only the tcp_retries2
+            config = {
+                "net.ipv4.tcp_retries2": "5",
+            }
 
-        swappiness = int(subprocess.getoutput("sysctl vm.swappiness").split("=")[-1].strip())
-        if swappiness > 0:
-            missing_requirements.append("vm.swappiness should be 0")
+        try:
+            sysctl.Config(name).configure(config)
+        except sysctl.CommandError as e:
+            logger.error(f"Failed to apply sysctl config: {e}")
+            missing_requirements.append(str(e))
 
-        tcp_retries = int(
-            subprocess.getoutput("sysctl net.ipv4.tcp_retries2").split("=")[-1].strip()
-        )
-        if tcp_retries > 5:
-            missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
+        for key, val in config.items():
+            current = int(subprocess.getoutput(f"sysctl -n {key}"))
 
         return missing_requirements
 

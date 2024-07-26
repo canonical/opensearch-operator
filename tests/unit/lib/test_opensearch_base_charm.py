@@ -275,6 +275,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
         with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
+            self.charm.opensearch.missing_sys_requirements = MagicMock()
             # test when TLS relation is broken and cert is expiring soon
             is_node_up.return_value = True
             self.peers_data.put(
