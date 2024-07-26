@@ -192,7 +192,7 @@ class OpenSearchTLS(Object):
 
         if self.charm.peers_data.get(
             Scope.UNIT, "tls_ca_renewing", False
-        ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+        ) and not self.ca_rotation_complete_in_cluster():
             event.defer()
             return
 
@@ -496,6 +496,7 @@ class OpenSearchTLS(Object):
             if not (
                 f"Alias <{alias}> does not exist" in e.out
                 or "Keystore file does not exist" in e.out
+                or "keystore password" in e.out
             ):
                 raise
 
@@ -579,9 +580,7 @@ class OpenSearchTLS(Object):
 
     def store_new_tls_resources(self, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
-        if self.charm.peers_data.get(
-            Scope.UNIT, "tls_ca_renewing", False
-        ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+        if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False) and not self.ca_rotation_complete_in_cluster():
             logger.debug("TLS CA rotation ongoing, will not update tls certificates.")
             return
 
@@ -731,11 +730,14 @@ class OpenSearchTLS(Object):
 
     def ca_rotation_complete_in_cluster(self) -> bool:
         """Check whether the CA rotation completed in all units."""
+        rotation_complete = True
         rel = self.model.get_relation(PeerRelationName)
-        logger.debug(f"Relation data: {rel.data}")
+
         for unit in rel.units:
-            if not rel.data[unit].get("tls_ca_renewed") == "True":
+            if not rel.data[unit].get("tls_ca_renewed"):
                 logger.debug(f"TLS CA rotation not complete for unit {unit}.")
-                logger.debug(f"relation data: {rel.data[unit].get('tls_ca_renewed')}")
-                return False
-        return True
+                logger.debug(f"relation data: {rel.data[unit]}")
+                rotation_complete = False
+                break
+
+        return rotation_complete
