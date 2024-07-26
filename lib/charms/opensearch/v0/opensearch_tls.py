@@ -226,16 +226,6 @@ class OpenSearchTLS(Object):
                 event.defer()
                 return
 
-        if (
-            self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
-            and not self.ca_rotation_complete_in_cluster()
-        ):
-            logger.info(
-                f"CA rotation not complete in the cluster, deferring CertificateAvailableEvent for {cert_type}"
-            )
-            event.defer()
-            return
-
         # store the certificates and keys in a key store
         self.store_new_tls_resources(
             cert_type, self.charm.secrets.get_object(scope, cert_type.val)
@@ -589,10 +579,9 @@ class OpenSearchTLS(Object):
 
     def store_new_tls_resources(self, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
-        if (
-            self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
-            and not self.ca_rotation_complete_in_cluster()
-        ):
+        if self.charm.peers_data.get(
+            Scope.UNIT, "tls_ca_renewing", False
+        ) and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
             logger.debug("TLS CA rotation ongoing, will not update tls certificates.")
             return
 
@@ -743,7 +732,8 @@ class OpenSearchTLS(Object):
     def ca_rotation_complete_in_cluster(self) -> bool:
         """Check whether the CA rotation completed in all units."""
         rel = self.model.get_relation(PeerRelationName)
-        for unit in all_units(self.charm):
+        logger.debug(f"Relation data: {rel.data}")
+        for unit in rel.units:
             if not rel.data[unit].get("tls_ca_renewed") == "True":
                 logger.debug(f"TLS CA rotation not complete for unit {unit}.")
                 logger.debug(f"relation data: {rel.data[unit].get('tls_ca_renewed')}")
