@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 from os.path import exists
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import requests
 import urllib3.exceptions
@@ -448,41 +448,45 @@ class OpenSearchDistribution(ABC):
 
         return exclusions
 
-    @staticmethod
-    def running_as_lxc():
-        """Check if the current process is running inside an LXC container.
-
-        TODO: if canonical/operator-libs-linux#127 fixes, we may remove this method.
-        """
-        try:
-            return subprocess.run(["systemd-detect-virt", "--container"]).returncode == 0
-        except FileNotFoundError:
-            # No systemd! Either this is a docker container OR a very old distro
-            return False
-
-    @staticmethod
-    def missing_sys_requirements(name: str) -> List[str]:
+    def missing_sys_requirements(self) -> List[str]:
         """Checks the system requirements."""
-        missing_requirements = []
 
-        config = {
-            "vm.max_map_count": "262144",
-            "vm.swappiness": "0",
-            "net.ipv4.tcp_retries2": "5",
-            "fs.file-max": "1048576",
-        }
-        if OpenSearchDistribution.running_as_lxc():
-            # LXCs cannot apply all sysctl configs
-            # Therefore, we check the current values and apply only the tcp_retries2
-            config = {
+        def __check_sysctl(sysctl: Dict[str, Dict[str, str]]) -> Tuple[Dict[str, str], List[str]]:
+            missing_requirements = []
+
+            # Check values exist and are correct
+            for operator in target_config.keys():
+                for key, val in target_config[operator].items():
+                    current = -1
+                    try:
+                        current = int(subprocess.getoutput(f"sysctl -n {key}").rstrip())
+                    finally:
+                        if operator == "equal" and current != int(val):
+                            sysctl[key] = val
+                            missing_requirements.append(f"{key} should be {val}")
+                        elif operator == "greater_or_equal" and current < int(val):
+                            sysctl[key] = val
+                            missing_requirements.append(f"{key} should be at least {val}")
+
+        target_config = {
+            "equal": {
+                "vm.swappiness": "0",
                 "net.ipv4.tcp_retries2": "5",
-            }
+            },
+            "greater_or_equal": {
+                "vm.max_map_count": "262144",
+                "fs.file-max": "1048576",
+            },
+        }
+        sysctl_opts, _ = __check_sysctl(target_config)
 
         try:
-            sysctl.Config(name).configure(config)
+            sysctl.Config(self._charm.unit_name).configure(sysctl_opts)
         except sysctl.CommandError as e:
             logger.error(f"Failed to apply sysctl config: {e}")
-            missing_requirements.append(str(e))
+
+        # Recheck values post configuration
+        _, missing_requirements = __check_sysctl(target_config)
 
         for key, val in config.items():
             current = int(subprocess.getoutput(f"sysctl -n {key}"))
