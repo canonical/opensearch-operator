@@ -488,9 +488,6 @@ class OpenSearchDistribution(ABC):
         # Recheck values post configuration
         _, missing_requirements = __check_sysctl(target_config)
 
-        for key, val in config.items():
-            current = int(subprocess.getoutput(f"sysctl -n {key}"))
-
         return missing_requirements
 
     @cached_property
