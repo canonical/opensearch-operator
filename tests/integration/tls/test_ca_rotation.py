@@ -44,6 +44,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
         apps=[APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
+        timeout=1800,
         # TODO: run tests with three units once the voting exclusions issue is resolved
         # wait_for_exact_units=len(UNIT_IDS),
         wait_for_exact_units=5,
