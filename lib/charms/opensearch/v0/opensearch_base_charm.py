@@ -491,9 +491,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     if node.name != self.unit_name
                 ]
                 self._compute_and_broadcast_updated_topology(remaining_nodes)
-            elif self.app.planned_units() == 0:
-                self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
-                self.peers_data.delete(Scope.APP, "nodes_config")
 
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
@@ -517,8 +514,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 else:
                     raise OpenSearchHAError(ClusterHealthUnknown)
         finally:
-            # release lock
-            self.node_lock.release()
+            if self.app.planned_units() > 0 and (self.opensearch.is_node_up() or self.alt_hosts):
+                # release lock
+                self.node_lock.release()
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.

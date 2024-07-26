@@ -110,7 +110,8 @@ class RelationDataStore(DataStore):
         if scope is None:
             raise ValueError("Scope undefined.")
 
-        data = self._get_relation_data(scope)
+        if not (data := self._get_relation_data(scope)):
+            return None
 
         self.put_or_delete(data, key, value)
 
@@ -142,7 +143,9 @@ class RelationDataStore(DataStore):
         if scope is None:
             raise ValueError("Scope undefined.")
 
-        return key in self._get_relation_data(scope)
+        if not (data := self._get_relation_data(scope)):
+            return False
+        return key in data
 
     @override
     def get(
@@ -156,7 +159,8 @@ class RelationDataStore(DataStore):
         if scope is None:
             raise ValueError("Scope undefined.")
 
-        data = self._get_relation_data(scope)
+        if not (data := self._get_relation_data(scope)):
+            return None
 
         value = data.get(key)
         if value is None:
@@ -189,7 +193,7 @@ class RelationDataStore(DataStore):
 
         relation_scope = self._charm.app if scope == Scope.APP else self._charm.unit
 
-        return relation.data[relation_scope]
+        return relation.data.get(relation_scope)
 
     @staticmethod
     def _default_encoder(o: Any) -> Any:
