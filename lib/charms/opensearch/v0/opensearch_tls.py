@@ -587,7 +587,8 @@ class OpenSearchTLS(Object):
         """Add key and cert to keystore."""
         if (
             self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
-            and not self.ca_rotation_complete_in_cluster()
+            and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
+            or not self.ca_rotation_complete_in_cluster()
         ):
             logger.debug("TLS CA rotation ongoing, will not update tls certificates.")
             return
