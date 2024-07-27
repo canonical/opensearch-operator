@@ -119,7 +119,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
             # if self._charm.tls.is_fully_configured():
                 # self._charm.peers_data.put(Scope.UNIT, "tls_configured", True)
 
-        elif is_leader and label_key == self._charm.secrets.password_key(KibanaserverUser):
+        if is_leader and label_key == self._charm.secrets.password_key(KibanaserverUser):
             self._charm.opensearch_provider.update_dashboards_password()
 
         # Non-leader units need to maintain local users in internal_users.yml
