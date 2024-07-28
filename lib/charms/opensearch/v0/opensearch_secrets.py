@@ -113,12 +113,6 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         logger.debug("Secret change for %s", str(label_key))
 
-        # Leader has to maintain TLS and Dashboards relation credentials
-        # if not is_leader and label_key == CertType.APP_ADMIN.val:
-            # self._charm.tls.store_new_tls_resources(CertType.APP_ADMIN, event.secret.get_content())
-            # if self._charm.tls.is_fully_configured():
-                # self._charm.peers_data.put(Scope.UNIT, "tls_configured", True)
-
         if is_leader and label_key == self._charm.secrets.password_key(KibanaserverUser):
             self._charm.opensearch_provider.update_dashboards_password()
 
