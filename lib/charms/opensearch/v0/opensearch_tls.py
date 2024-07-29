@@ -491,7 +491,6 @@ class OpenSearchTLS(Object):
                 -storetype PKCS12
             """,
                 f"-storepass {admin_secrets.get('truststore-password')}",
-
             )
             logger.info(f"Current CA {alias} was renamed to old-{alias}.")
         except OpenSearchCmdError as e:
