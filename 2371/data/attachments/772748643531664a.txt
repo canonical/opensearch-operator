@@ -1,0 +1,92 @@
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.4    unsupported  01:45:39Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         maintenance      3  opensearch                                 0  no       Configuring backup service...
+s3-integrator                      active           1  s3-integrator             latest/edge     29  no       
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+opensearch/0*                maintenance  executing  2        10.105.64.187   9200/tcp  Configuring backup service...
+opensearch/1                 active       executing  3        10.105.64.240   9200/tcp  
+opensearch/2                 active       executing  4        10.105.64.5     9200/tcp  
+s3-integrator/0*             active       idle       1        10.105.64.160             
+self-signed-certificates/0*  active       idle       0        10.105.64.80              
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.105.64.80   juju-a13ee8-0  ubuntu@22.04      Running
+1        started  10.105.64.160  juju-a13ee8-1  ubuntu@22.04      Running
+2        started  10.105.64.187  juju-a13ee8-2  ubuntu@22.04      Running
+3        started  10.105.64.240  juju-a13ee8-3  ubuntu@22.04      Running
+4        started  10.105.64.5    juju-a13ee8-4  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:45:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Configuring backup service...
+		opensearch-0.027* -- (10.105.64.187) -- [executing (since: 01:45:22)] maintenance: Configuring backup service...
+		opensearch-1.027  -- (10.105.64.240) -- [executing (since: 01:45:22)] maintenance: Backup setup started.
+		opensearch-2.027  -- (10.105.64.5) -- [executing (since: 01:45:22)] maintenance: Backup setup started.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:45:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Backup setup failed, check logs for details
+		opensearch-0.027* -- (10.105.64.187) -- [executing (since: 01:45:22)] maintenance: Backup setup started.
+		opensearch-1.027  -- (10.105.64.240) -- [executing (since: 01:45:22)] maintenance: Backup setup started.
+		opensearch-2.027  -- (10.105.64.5) -- [executing (since: 01:45:22)] maintenance: Backup setup started.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:46:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Backup setup failed, check logs for details
+		opensearch-0.027* -- (10.105.64.187) -- [executing (since: 01:45:22)] maintenance: Configuring backup service...
+		opensearch-1.027  -- (10.105.64.240) -- [idle (since: 01:45:56)] active: 
+		opensearch-2.027  -- (10.105.64.5) -- [idle (since: 01:45:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:46:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Backup setup failed, check logs for details
+		opensearch-0.027* -- (10.105.64.187) -- [idle (since: 01:46:12)] active: 
+		opensearch-1.027  -- (10.105.64.240) -- [idle (since: 01:45:56)] active: 
+		opensearch-2.027  -- (10.105.64.5) -- [idle (since: 01:45:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:46:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Backup setup failed, check logs for details
+		opensearch-0.027* -- (10.105.64.187) -- [idle (since: 01:46:12)] active: 
+		opensearch-1.027  -- (10.105.64.240) -- [idle (since: 01:45:56)] active: 
+		opensearch-2.027  -- (10.105.64.5) -- [idle (since: 01:45:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:46:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 01:46:46 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.105.64.187:9200/_snapshot/s3-repository/_all

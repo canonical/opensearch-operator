@@ -1,0 +1,40 @@
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.4    unsupported  02:10:19Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+application                        active      1  application                                0  no       
+opensearch                         active      2  opensearch                                 0  no       
+opensearch-dashboards              active      1  opensearch-dashboards     2/edge          16  no       
+secondary-application              active      1  application                                1  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+application/0*               active    idle       2        10.114.48.206             
+opensearch-dashboards/0*     active    idle       1        10.114.48.136   5601/tcp  
+opensearch/0                 active    executing  3        10.114.48.184   9200/tcp  
+opensearch/1*                active    executing  4        10.114.48.13    9200/tcp  
+secondary-application/0*     active    executing  7        10.114.48.10              
+self-signed-certificates/0*  active    idle       0        10.114.48.63              
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.114.48.63   juju-11514f-0  ubuntu@22.04      Running
+1        started  10.114.48.136  juju-11514f-1  ubuntu@22.04      Running
+2        started  10.114.48.206  juju-11514f-2  ubuntu@22.04      Running
+3        started  10.114.48.184  juju-11514f-3  ubuntu@22.04      Running
+4        started  10.114.48.13   juju-11514f-4  ubuntu@22.04      Running
+7        started  10.114.48.10   juju-11514f-7  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:10:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 02:10:26 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m root:helpers.py:168 request results: namespace(status='completed', response={'results': '{"took": 31, "timed_out": false, "_shards": {"total": 1, "successful": 1, "skipped": 0, "failed": 0}, "hits": {"total": {"value": 3, "relation": "eq"}, "max_score": 0.41299206, "hits": [{"_index": "albums", "_id": "1", "_score": 0.41299206, "_source": {"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}}, {"_index": "albums", "_id": "2", "_score": 0.41299206, "_source": {"artist": "Herbie Hancock", "genre": ["Jazz"], "title": "Head Hunters"}}, {"_index": "albums", "_id": "3", "_score": 0.41299206, "_source": {"artist": "Lydian Collective", "genre": ["Jazz"], "title": "Adventure"}}]}}', 'return-code': 0})
+[32mINFO    [0m root:test_opensearch_provider.py:445 {'took': 31, 'timed_out': False, '_shards': {'total': 1, 'successful': 1, 'skipped': 0, 'failed': 0}, 'hits': {'total': {'value': 3, 'relation': 'eq'}, 'max_score': 0.41299206, 'hits': [{'_index': 'albums', '_id': '1', '_score': 0.41299206, '_source': {'artist': 'Vulfpeck', 'genre': ['Funk', 'Jazz'], 'title': 'Thrill of the Arts'}}, {'_index': 'albums', '_id': '2', '_score': 0.41299206, '_source': {'artist': 'Herbie Hancock', 'genre': ['Jazz'], 'title': 'Head Hunters'}}, {'_index': 'albums', '_id': '3', '_score': 0.41299206, '_source': {'artist': 'Lydian Collective', 'genre': ['Jazz'], 'title': 'Adventure'}}]}}
