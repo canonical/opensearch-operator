@@ -466,7 +466,7 @@ class OpenSearchTLS(Object):
                 merge=True,
             )
 
-    def store_new_ca(self, secrets: Dict[str, Any]):
+    def store_new_ca(self, secrets: Dict[str, Any]):  # noqa: C901
         """Add new CA cert to trust store."""
         keytool = f"sudo {self.jdk_path}/bin/keytool"
 
@@ -474,6 +474,7 @@ class OpenSearchTLS(Object):
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        logger.debug(f"truststore-password: {admin_secrets.get('truststore-password')}")
 
         if not ((secrets or {}).get("ca-cert") and admin_secrets.get("truststore-password")):
             logging.error("CA cert  or truststore-password not found, quitting.")
@@ -494,11 +495,17 @@ class OpenSearchTLS(Object):
             )
             logger.info(f"Current CA {alias} was renamed to old-{alias}.")
         except OpenSearchCmdError as e:
+            # If for any reason the password is incorrect, remove the existing truststore
+            if "keystore password was incorrect" in e.out:
+                try:
+                    logger.info("Password incorrect, current truststore will be replaced.")
+                    os.remove(store_path)
+                except OSError:
+                    pass
             # This message means there was no "ca" alias or store before, if it happens ignore
-            if not (
+            elif not (
                 f"Alias <{alias}> does not exist" in e.out
                 or "Keystore file does not exist" in e.out
-                or "keystore password" in e.out
             ):
                 raise
 
