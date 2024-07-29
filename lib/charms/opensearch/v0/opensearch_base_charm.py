@@ -1084,7 +1084,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._stop_opensearch(restart=True)
             logger.info("Restarting OpenSearch.")
         except OpenSearchStopError as e:
-            # TODO: remove logging
             logger.info(f"Error while Restarting Opensearch: {e}")
             logger.exception(e)
             self.node_lock.release()

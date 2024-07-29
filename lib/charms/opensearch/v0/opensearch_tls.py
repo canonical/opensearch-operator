@@ -194,6 +194,7 @@ class OpenSearchTLS(Object):
             self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
             and not self.ca_rotation_complete_in_cluster()
         ):
+            logger.debug("TLS CA rotation ongoing, deferring this event.")
             event.defer()
             return
 
@@ -746,7 +747,6 @@ class OpenSearchTLS(Object):
         for unit in rel.units:
             if not rel.data[unit].get("tls_ca_renewed"):
                 logger.debug(f"TLS CA rotation not complete for unit {unit}.")
-                logger.debug(f"relation data: {rel.data[unit]}")
                 rotation_complete = False
                 break
 
