@@ -15,10 +15,16 @@ from ..helpers import (
     check_cluster_formation_successful,
     get_application_unit_ips_names,
     get_application_unit_names,
+    get_leader_unit_id,
     get_leader_unit_ip,
+    run_action,
 )
 from ..helpers_deployments import wait_until
-from ..tls.helpers import check_security_index_initialised, check_unit_tls_configured
+from ..tls.helpers import (
+    check_security_index_initialised,
+    check_unit_tls_configured,
+    get_loaded_tls_certificates,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,3 +92,31 @@ async def test_cluster_formation_after_tls(ops_test: OpsTest) -> None:
     leader_unit_ip = await get_leader_unit_ip(ops_test)
 
     assert await check_cluster_formation_successful(ops_test, leader_unit_ip, unit_names)
+
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_tls_renewal_without_restart(ops_test: OpsTest) -> None:
+    """Test that renewed TLS certificates are reloaded immediately without restarting."""
+    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    current_certs = await get_loaded_tls_certificates(leader_unit_ip)
+
+    leader_id = await get_leader_unit_id(ops_test)
+    await run_action(ops_test, leader_id, "set-tls-private-key", {"category": "unit-http"})
+
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=len(UNIT_IDS),
+        timeout=30,
+    )
+
+    updated_certs = await get_loaded_tls_certificates(leader_unit_ip)
+
+    assert (
+        updated_certs["http_certificates_list"][0]["not_before"]
+        > current_certs["http_certificates_list"][0]["not_before"]
+    )

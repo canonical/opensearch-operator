@@ -23,6 +23,7 @@ import typing
 from os.path import exists
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import requests
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import all_units, run_cmd
@@ -618,3 +619,49 @@ class OpenSearchTLS(Object):
             except OSError:
                 # thrown if file not exists, ignore
                 pass
+
+    def reload_tls_certificates(self):
+        """Reload transport and HTTP layer communication certificates via REST APIs."""
+        url_http = f"https://{self.charm.unit_ip}:9200/_plugins/_security/api/ssl/http/reloadcerts"
+        url_transport = (
+            f"https://{self.charm.unit_ip}:9200/_plugins/_security/api/ssl/transport/reloadcerts"
+        )
+
+        # using the SSL API requires authentication with app-admin cert and key
+        admin_secret = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+
+        if not admin_secret:
+            logger.error("Can not update TLS certs, no app-admin secret found.")
+            return
+
+        with open(f"{self.certs_path}/admin.cert", "w") as cert:
+            cert.write(admin_secret["cert"])
+
+        with open(f"{self.certs_path}/admin.key", "w") as key:
+            key.write(admin_secret["key"])
+
+        try:
+            response_http = requests.put(
+                url_http,
+                cert=("admin.cert", "admin.key"),
+                verify=f"{self.certs_path}/chain.pem",
+                timeout=5,
+            )
+            response_transport = requests.put(
+                url_transport,
+                cert=("admin.cert", "admin.key"),
+                verify=f"{self.certs_path}/chain.pem",
+                timeout=5,
+            )
+            if not (
+                response_http.status_code == requests.codes.ok
+                and response_transport.status_code == requests.codes.ok
+            ):
+                logger.error("Error reloading TLS certificates via API.")
+            else:
+                logger.info(f"Reloaded TLS certificates: {response_http}, {response_transport}")
+        except requests.RequestException as e:
+            logger.error(f"Error reloading TLS certificates via API: {e}")
+        finally:
+            os.remove(f"{self.certs_path}/admin.cert")
+            os.remove(f"{self.certs_path}/admin.key")
