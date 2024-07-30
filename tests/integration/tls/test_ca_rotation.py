@@ -5,9 +5,16 @@
 import logging
 
 import pytest
+import requests
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import APP_NAME, MODEL_CONFIG, SERIES
+from ..helpers import (
+    APP_NAME,
+    MODEL_CONFIG,
+    SERIES,
+    get_leader_unit_ip,
+    get_secret_by_label,
+)
 from ..helpers_deployments import wait_until
 
 logger = logging.getLogger(__name__)
@@ -73,3 +80,18 @@ async def test_rollout_new_ca(ops_test: OpsTest) -> None:
         # wait_for_exact_units=len(UNIT_IDS),
         wait_for_exact_units=2,
     )
+
+    # using the SSL API requires authentication with app-admin cert and key
+    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    url = f"https://{leader_unit_ip}:9200/_plugins/_security/api/ssl/certs"
+    admin_secret = await get_secret_by_label(ops_test, "opensearch:app:app-admin")
+
+    with open("admin.cert", "w") as cert:
+        cert.write(admin_secret["cert"])
+
+    with open("admin.key", "w") as key:
+        key.write(admin_secret["key"])
+
+    response = requests.get(url, cert=("admin.cert", "admin.key"), verify=False)
+    data = response.json()
+    assert new_config["ca-common-name"] in data["http_certificates_list"][0]["issuer_dn"]
