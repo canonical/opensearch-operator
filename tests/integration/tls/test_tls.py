@@ -13,6 +13,8 @@ from ..helpers import (
     SERIES,
     UNIT_IDS,
     check_cluster_formation_successful,
+    get_application_unit_ids,
+    get_application_unit_ids_ips,
     get_application_unit_ips_names,
     get_application_unit_names,
     get_leader_unit_id,
@@ -100,10 +102,17 @@ async def test_cluster_formation_after_tls(ops_test: OpsTest) -> None:
 async def test_tls_renewal_without_restart(ops_test: OpsTest) -> None:
     """Test that renewed TLS certificates are reloaded immediately without restarting."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
-    current_certs = await get_loaded_tls_certificates(leader_unit_ip)
-
     leader_id = await get_leader_unit_id(ops_test)
-    await run_action(ops_test, leader_id, "set-tls-private-key", {"category": "unit-http"})
+    non_leader_id = [
+        unit_id for unit_id in get_application_unit_ids(ops_test) if unit_id != leader_id
+    ][0]
+    units = await get_application_unit_ids_ips(ops_test, APP_NAME)
+
+    # test against the leader unit for unit-transport cert
+    current_certs = await get_loaded_tls_certificates(ops_test, leader_unit_ip)
+    await run_action(
+        ops_test, leader_id, "set-tls-private-key", params={"category": "unit-transport"}
+    )
 
     await wait_until(
         ops_test,
@@ -111,11 +120,36 @@ async def test_tls_renewal_without_restart(ops_test: OpsTest) -> None:
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units=len(UNIT_IDS),
+        idle_period=5,
         timeout=30,
     )
 
-    updated_certs = await get_loaded_tls_certificates(leader_unit_ip)
+    updated_certs = await get_loaded_tls_certificates(ops_test, leader_unit_ip)
+    assert (
+        updated_certs["transport_certificates_list"][0]["not_before"]
+        > current_certs["transport_certificates_list"][0]["not_before"]
+    )
 
+    # test against a random non-leader unit for unit-http cert
+    current_certs = await get_loaded_tls_certificates(ops_test, units[non_leader_id])
+    await run_action(
+        ops_test,
+        non_leader_id,
+        action_name="set-tls-private-key",
+        params={"category": "unit-http"},
+    )
+
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=len(UNIT_IDS),
+        idle_period=5,
+        timeout=30,
+    )
+
+    updated_certs = await get_loaded_tls_certificates(ops_test, units[non_leader_id])
     assert (
         updated_certs["http_certificates_list"][0]["not_before"]
         > current_certs["http_certificates_list"][0]["not_before"]
