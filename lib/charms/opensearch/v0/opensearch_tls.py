@@ -328,20 +328,17 @@ class OpenSearchTLS(Object):
         if cert_type == CertType.APP_ADMIN:
             return sans
 
-        dns = {self.charm.unit_name, socket.getfqdn()}
+        dns = {socket.getfqdn()}
         ips = {self.charm.unit_ip}
 
-        host_public_ip = get_host_public_ip()
-        if cert_type == CertType.UNIT_HTTP and host_public_ip:
-            ips.add(host_public_ip)
+#        host_public_ip = get_host_public_ip()
+#        if cert_type == CertType.UNIT_HTTP and host_public_ip:
+#            ips.add(host_public_ip)
 
         for ip in ips.copy():
             try:
                 name, aliases, addresses = socket.gethostbyaddr(ip)
                 ips.update(addresses)
-
-                dns.add(name)
-                dns.update(aliases)
             except (socket.herror, socket.gaierror):
                 continue
 
