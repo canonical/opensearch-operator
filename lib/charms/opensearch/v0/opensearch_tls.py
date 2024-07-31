@@ -328,7 +328,7 @@ class OpenSearchTLS(Object):
         if cert_type == CertType.APP_ADMIN:
             return sans
 
-        dns = {self.charm.unit_name}
+        dns = {self.charm.unit_name, socket.getfqdn()}
         ips = {self.charm.unit_ip}
 
         host_public_ip = get_host_public_ip()
@@ -339,6 +339,9 @@ class OpenSearchTLS(Object):
             try:
                 name, aliases, addresses = socket.gethostbyaddr(ip)
                 ips.update(addresses)
+
+                dns.add(name)
+                dns.update(aliases)
             except (socket.herror, socket.gaierror):
                 continue
 
