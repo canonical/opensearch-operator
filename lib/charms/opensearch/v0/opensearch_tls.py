@@ -27,7 +27,6 @@ import requests
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import all_units, run_cmd
-from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
@@ -330,10 +329,6 @@ class OpenSearchTLS(Object):
 
         dns = {socket.getfqdn()}
         ips = {self.charm.unit_ip}
-
-#        host_public_ip = get_host_public_ip()
-#        if cert_type == CertType.UNIT_HTTP and host_public_ip:
-#            ips.add(host_public_ip)
 
         for ip in ips.copy():
             try:
