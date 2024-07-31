@@ -570,10 +570,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
-        restart_requested = False
         if self.opensearch_config.update_host_if_needed():
-            restart_requested = True
-
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
             self.tls.delete_stored_tls_resources()
             self.tls.request_new_unit_certificates()
@@ -605,7 +602,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
 
-            if self.plugin_manager.run() and not restart_requested:
+            if self.plugin_manager.run():
                 if self.upgrade_in_progress:
                     logger.warning(
                         "Changing config during an upgrade is not supported. The charm may be in a broken, "
