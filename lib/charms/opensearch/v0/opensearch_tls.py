@@ -637,22 +637,25 @@ class OpenSearchTLS(Object):
             logger.error("Can not update TLS certs, no app-admin secret found.")
             return
 
-        with open(f"{self.certs_path}/admin.cert", "w") as cert:
+        admin_cert = f"{self.certs_path}/admin.cert"
+        admin_key = f"{self.certs_path}/admin.key"
+
+        with open(admin_cert, "w") as cert:
             cert.write(admin_secret["cert"])
 
-        with open(f"{self.certs_path}/admin.key", "w") as key:
+        with open(admin_key, "w") as key:
             key.write(admin_secret["key"])
 
         try:
             response_http = requests.put(
                 url_http,
-                cert=("admin.cert", "admin.key"),
+                cert=(admin_cert, admin_key),
                 verify=f"{self.certs_path}/chain.pem",
                 timeout=5,
             )
             response_transport = requests.put(
                 url_transport,
-                cert=("admin.cert", "admin.key"),
+                cert=(admin_cert, admin_key),
                 verify=f"{self.certs_path}/chain.pem",
                 timeout=5,
             )
@@ -666,5 +669,5 @@ class OpenSearchTLS(Object):
         except requests.RequestException as e:
             logger.error(f"Error reloading TLS certificates via API: {e}")
         finally:
-            os.remove(f"{self.certs_path}/admin.cert")
-            os.remove(f"{self.certs_path}/admin.key")
+            os.remove(admin_cert)
+            os.remove(admin_key)
