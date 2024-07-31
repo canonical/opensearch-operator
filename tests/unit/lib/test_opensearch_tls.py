@@ -91,7 +91,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         get_host_public_ip.return_value = "XX.XXX.XX.XXX"
 
         base_ips = ["1.1.1.1", "address1", "address2"]
-        base_dns_entries = [self.charm.unit_name]
+        base_dns_entries = [self.charm.unit_name, "nebula", "alias"]
 
         unit_http_sans = self.charm.tls._get_sans(CertType.UNIT_HTTP)
         self.assertDictEqual(
