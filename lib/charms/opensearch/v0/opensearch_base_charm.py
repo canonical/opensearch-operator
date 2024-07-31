@@ -701,9 +701,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         - Update the corresponding yaml conf files
         - Run the security admin script
         """
-        # Get the list of stored secrets for this cert
-        current_secrets = self.secrets.get_object(scope, cert_type.val)
-
         if scope == Scope.UNIT:
             admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
             if not (truststore_pwd := admin_secrets.get("truststore-password")):
@@ -718,9 +715,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 truststore_pwd=truststore_pwd,
                 keystore_pwd=keystore_pwd,
             )
-        else:
+
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
-            self.opensearch_config.set_admin_tls_conf(current_secrets)
+            self.opensearch_config.set_admin_tls_conf(admin_secrets)
 
         self.tls.store_admin_tls_secrets_if_applies()
 
