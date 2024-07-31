@@ -717,7 +717,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
 
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
-            if not admin_secrets["subject"]:
+            if not (admin_secrets.get("subject") or {}):
                 event.defer()
                 return
             self.opensearch_config.set_admin_tls_conf(admin_secrets)
