@@ -1,0 +1,117 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.4    unsupported  02:42:51Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         error        3  opensearch                                 0  no       hook failed: "secret-changed"
+s3-integrator                      blocked      1  s3-integrator             latest/edge     29  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports  Message
+opensearch/0*                maintenance  executing  2        10.224.1.250           Waiting for TLS to be fully configured...
+opensearch/1                 error        idle       3        10.224.1.108           hook failed: "secret-changed"
+opensearch/2                 maintenance  executing  4        10.224.1.14            Waiting for the admin user to be fully configured...
+s3-integrator/0*             blocked      idle       1        10.224.1.237           Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/0*  active       executing  0        10.224.1.98            
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.224.1.98   juju-f8834e-0  ubuntu@22.04      Running
+1        started  10.224.1.237  juju-f8834e-1  ubuntu@22.04      Running
+2        started  10.224.1.250  juju-f8834e-2  ubuntu@22.04      Running
+3        started  10.224.1.108  juju-f8834e-3  ubuntu@22.04      Running
+4        started  10.224.1.14   juju-f8834e-4  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 02:39:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:39:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 02:39:10 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 02:39:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:39:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:39:11 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:39:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:39:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 02:39:42 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 02:39:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:39:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 02:39:44 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:39:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:39:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:39:44 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-2: 02:42:44 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:42:44 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:42:45 ERROR unit.opensearch/2.juju-log certificates:4: [Errno 111] Connection refused
+unit-opensearch-1: 02:42:45 ERROR unit.opensearch/1.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-1: 02:42:45 ERROR unit.opensearch/1.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-2: 02:42:45 ERROR unit.opensearch/2.juju-log certificates:4: CA cert not found, quitting.
+unit-opensearch-2: 02:42:46 ERROR unit.opensearch/2.juju-log certificates:4: CA cert not found, quitting.
+unit-opensearch-1: 02:42:46 ERROR unit.opensearch/1.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-1: 02:42:46 ERROR unit.opensearch/1.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-2: 02:42:46 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:42:47 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-2: 02:42:47 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-1: 02:42:47 ERROR unit.opensearch/1.juju-log certificates:4: [Errno 111] Connection refused
+unit-opensearch-1: 02:42:47 ERROR unit.opensearch/1.juju-log certificates:4: [Errno 111] Connection refused
+unit-opensearch-1: 02:42:47 ERROR unit.opensearch/1.juju-log certificates:4: CA cert not found, quitting.
+unit-opensearch-1: 02:42:47 ERROR unit.opensearch/1.juju-log certificates:4: CA cert not found, quitting.
+unit-opensearch-2: 02:42:48 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:42:48 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-2: 02:42:48 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-1: 02:42:48 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:42:48 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:42:48 ERROR unit.opensearch/1.juju-log CA cert not found, quitting.
+unit-opensearch-1: 02:42:49 ERROR unit.opensearch/1.juju-log CA cert not found, quitting.
+unit-opensearch-2: 02:42:49 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:42:49 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-2: 02:42:49 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-0: 02:42:49 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:42:50 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:42:50 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:42:50 ERROR unit.opensearch/1.juju-log CA cert not found, quitting.
+unit-opensearch-1: 02:42:50 ERROR unit.opensearch/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/ops/model.py", line 3180, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-opensearch-1/secret-get', '--label', 'opensearch:app:app-admin', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/ops/main.py", line 548, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/ops/main.py", line 527, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/ops/main.py", line 513, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/ops/framework.py", line 870, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 218, in _on_certificate_available
+    if self.all_certificates_available():
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 566, in all_certificates_available
+    admin_secrets = secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 331, in get_object
+    return self._get_juju_secret_content(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 210, in _get_juju_secret_content
+    secret = self._get_juju_secret(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 198, in _get_juju_secret
+    secret = self._charm.model.get_secret(label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/ops/model.py", line 291, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/ops/model.py", line 3545, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/ops/model.py", line 3182, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-opensearch-1: 02:42:50 ERROR juju.worker.uniter.operation hook "secret-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-2: 02:42:50 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:173 Cleaning backups from cloud buckets
