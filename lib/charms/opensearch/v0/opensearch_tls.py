@@ -229,6 +229,8 @@ class OpenSearchTLS(Object):
                 return
 
         # store the certificates and keys in a key store
+        # TODO: remove logger
+        logger.debug(f"Store new tls resources on cert available for {cert_type}")
         self.store_new_tls_resources(
             cert_type, self.charm.secrets.get_object(scope, cert_type.val)
         )
@@ -237,6 +239,8 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader():
             if self.all_certificates_available():
                 admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+                # TODO: remove logger
+                logger.debug(f"Store new tls resources for non-leader unit for {CertType.APP_ADMIN.val}")
                 self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
             else:
                 event.defer()

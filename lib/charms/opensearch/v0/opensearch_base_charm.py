@@ -385,6 +385,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
 
         # Store the "Admin" certificate, key and CA on the disk of the new unit
+        # TODO: remove logger
+        logger.debug("Store new admin tls resources on peer-relation-created")
         self.tls.store_admin_tls_secrets_if_applies()
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
@@ -396,6 +398,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
+        # TODO: remove logger
+        logger.debug("Store new admin tls resources on peer-relation-changed")
         self.tls.store_admin_tls_secrets_if_applies()
 
         if self.unit.is_leader() and self.opensearch.is_node_up():
@@ -731,6 +735,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
             self.opensearch_config.set_admin_tls_conf(current_secrets)
 
+        # TODO: remove logger
+        logger.debug("Store new admin tls resources on tls-conf-set")
         self.tls.store_admin_tls_secrets_if_applies()
 
         # In case of renewal of the unit transport layer cert - restart opensearch
