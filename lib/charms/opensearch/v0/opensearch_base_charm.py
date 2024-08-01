@@ -384,11 +384,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
 
-        # Store the "Admin" certificate, key and CA on the disk of the new unit
-        # TODO: remove logger
-        logger.debug("Store new admin tls resources on peer-relation-created")
-        self.tls.store_admin_tls_secrets_if_applies()
-
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units when a new node joins the cluster."""
         if self.upgrade_in_progress:
@@ -398,10 +393,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
-        # TODO: remove logger
-        logger.debug("Store new admin tls resources on peer-relation-changed")
-        self.tls.store_admin_tls_secrets_if_applies()
-
         if self.unit.is_leader() and self.opensearch.is_node_up():
             health = self.health.apply()
             if self._is_peer_rel_changed_deferred:
