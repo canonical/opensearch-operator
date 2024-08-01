@@ -327,6 +327,10 @@ class OpenSearchTLS(Object):
         if cert_type == CertType.APP_ADMIN:
             return sans
 
+        # in order to be able to use the API for reloading TLS certificates it is necessary
+        # to only have one dns name and one ip address in the sans
+        # otherwise the following upstream bug will mess the sorting of these fields
+        # https://github.com/opensearch-project/security/issues/4480
         dns = {socket.getfqdn()}
         ips = {self.charm.unit_ip}
 
