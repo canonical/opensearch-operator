@@ -240,7 +240,9 @@ class OpenSearchTLS(Object):
             if self.all_certificates_available():
                 admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
                 # TODO: remove logger
-                logger.debug(f"Store new tls resources for non-leader unit for {CertType.APP_ADMIN.val}")
+                logger.debug(
+                    f"Store new tls resources for non-leader unit for {CertType.APP_ADMIN.val}"
+                )
                 self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
             else:
                 event.defer()
