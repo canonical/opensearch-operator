@@ -289,6 +289,30 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             self.charm.on.update_status.emit()
             self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.store_admin_tls_secrets_if_applies")
+    @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.reload_tls_certificates")
+    def test_on_tls_conf_set(
+        self,
+        store_admin_tls_secrets_if_applies,
+        is_admin_user_configured,
+        is_fully_configured,
+        reload_tls_certificates,
+    ):
+        """Test that tls configuration set does not trigger restart."""
+        cert = "cert_12345"
+        event_mock = MagicMock(certificate=cert)
+        self.charm._restart_opensearch_event = MagicMock()
+
+        self.charm.on_tls_conf_set(event_mock, scope="app", cert_type="app-admin", renewal=True)
+        is_admin_user_configured.return_value = True
+        is_fully_configured.return_value = True
+
+        store_admin_tls_secrets_if_applies.assert_called_once()
+        reload_tls_certificates.assert_called_once()
+        self.charm._restart_opensearch_event.emit.assert_not_called()
+
     def test_app_peers_data(self):
         """Test getting data from the app relation data bag."""
         self.assertIsNone(self.peers_data.get(Scope.APP, "app-key"))
