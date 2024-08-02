@@ -20,7 +20,6 @@ import re
 import socket
 import tempfile
 import typing
-from operator import truediv
 from os.path import exists
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -666,7 +665,7 @@ class OpenSearchTLS(Object):
             cert.write(current_ca)
 
         try:
-            ca_issuer = run_cmd(f'openssl x509 -in {current_ca_file} -noout -issuer').out
+            ca_issuer = run_cmd(f"openssl x509 -in {current_ca_file} -noout -issuer").out
         except OpenSearchCmdError as e:
             logging.error(f"Error reading the current truststore: {e}")
             return False
