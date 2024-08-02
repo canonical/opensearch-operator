@@ -10,6 +10,11 @@ bases:
       - name: "ubuntu"
         channel: "22.04"
 parts:
+  files:
+    plugin: nil
+    prime:
+      - charm_version
+      - workload_version
   charm:
     override-pull: |
       craftctl default
@@ -20,9 +25,6 @@ parts:
       fi
     charm-strict-dependencies: true
     charm-entrypoint: src/charm.py
-    prime:
-      - charm_version
-      - workload_version
     build-packages:
       - cargo
       - libffi-dev
