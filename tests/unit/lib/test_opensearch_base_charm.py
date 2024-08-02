@@ -293,7 +293,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.reload_tls_certificates")
-    def test_on_tls_conf_set(
+    def test_reload_tls_certs_without_restart(
         self,
         store_admin_tls_secrets_if_applies,
         is_admin_user_configured,

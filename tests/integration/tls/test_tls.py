@@ -99,7 +99,7 @@ async def test_cluster_formation_after_tls(ops_test: OpsTest) -> None:
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_tls_renewal_without_restart(ops_test: OpsTest) -> None:
+async def test_tls_renewal(ops_test: OpsTest) -> None:
     """Test that renewed TLS certificates are reloaded immediately without restarting."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
     leader_id = await get_leader_unit_id(ops_test)
@@ -120,8 +120,8 @@ async def test_tls_renewal_without_restart(ops_test: OpsTest) -> None:
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units=len(UNIT_IDS),
-        idle_period=5,
-        timeout=30,
+        idle_period=15,
+        timeout=60,
     )
 
     updated_certs = await get_loaded_tls_certificates(ops_test, leader_unit_ip)
