@@ -658,12 +658,20 @@ class OpenSearchTLS(Object):
 
         # compare issuer of the cert with the issuer of the CA
         # if they don't match, certs are not up-to-date and need to be renewed after CA rotation
+        current_ca = self._read_stored_ca()
+
+        # to make sure the content is processed correctly by openssl, temporary store it in a file
+        current_ca_file = f"{self.certs_path}/ca.cert"
+        with open(current_ca_file, "w") as cert:
+            cert.write(current_ca)
+
         try:
-            current_ca = self._read_stored_ca()
-            ca_issuer = run_cmd(f"echo {current_ca} | openssl x509 -noout -issuer").out
+            ca_issuer = run_cmd(f'openssl x509 -in {current_ca_file} -noout -issuer').out
         except OpenSearchCmdError as e:
             logging.error(f"Error reading the current truststore: {e}")
             return False
+        finally:
+            os.remove(current_ca_file)
 
         for cert_type in cert_types:
             if not exists(f"{self.certs_path}/{cert_type}.p12"):
@@ -676,7 +684,7 @@ class OpenSearchTLS(Object):
                 cert_issuer = run_cmd(
                     f"openssl pkcs12 -in {self.certs_path}/{cert_type}.p12",
                     f"""-nodes \
-                    -passin pass:{secret.get('keystore-password')}
+                    -passin pass:{secret.get('keystore-password')} \
                     | openssl x509 -noout -issuer
                     """,
                 ).out
