@@ -20,6 +20,7 @@ import re
 import socket
 import tempfile
 import typing
+from operator import truediv
 from os.path import exists
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -131,10 +132,6 @@ class OpenSearchTLS(Object):
         # the "certificate available" callback with old certificates
         for cert_type in [CertType.UNIT_HTTP, CertType.UNIT_TRANSPORT]:
             secrets = self.charm.secrets.get_object(Scope.UNIT, cert_type.val)
-            try:
-                os.remove(f"{self.certs_path}/{cert_type}.p12")
-            except OSError:
-                pass
             self._request_certificate_renewal(Scope.UNIT, cert_type, secrets)
 
     def _on_tls_relation_created(self, event: RelationCreatedEvent) -> None:
@@ -190,11 +187,7 @@ class OpenSearchTLS(Object):
             logger.debug("Unknown certificate available.")
             return
 
-        if (
-            self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
-            and not self.ca_rotation_complete_in_cluster()
-        ):
-            logger.debug("TLS CA rotation ongoing, deferring this event.")
+        if self.is_ca_rotation_ongoing():
             event.defer()
             return
 
@@ -599,13 +592,7 @@ class OpenSearchTLS(Object):
 
     def store_new_tls_resources(self, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
-        if (
-            self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
-            and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
-            or self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
-            and not self.ca_rotation_complete_in_cluster()
-        ):
-            logger.debug("TLS CA rotation ongoing, will not update tls certificates.")
+        if self.is_ca_rotation_ongoing():
             return
 
         cert_name = cert_type.val
@@ -669,8 +656,35 @@ class OpenSearchTLS(Object):
         if not only_unit_resources:
             cert_types.append(CertType.APP_ADMIN)
 
+        # compare issuer of the cert with the issuer of the CA
+        # if they don't match, certs are not up-to-date and need to be renewed after CA rotation
+        try:
+            current_ca = self._read_stored_ca()
+            ca_issuer = run_cmd(f"echo {current_ca} | openssl x509 -noout -issuer").out
+        except OpenSearchCmdError as e:
+            logging.error(f"Error reading the current truststore: {e}")
+            return False
+
         for cert_type in cert_types:
             if not exists(f"{self.certs_path}/{cert_type}.p12"):
+                return False
+
+            scope = Scope.APP if cert_type == CertType.APP_ADMIN else Scope.UNIT
+            secret = self.charm.secrets.get_object(scope, cert_type.val)
+
+            try:
+                cert_issuer = run_cmd(
+                    f"openssl pkcs12 -in {self.certs_path}/{cert_type}.p12",
+                    f"""-nodes \
+                    -passin pass:{secret.get('keystore-password')}
+                    | openssl x509 -noout -issuer
+                    """,
+                ).out
+            except OpenSearchCmdError as e:
+                logging.error(f"Error reading the current certificate: {e}")
+                return False
+
+            if cert_issuer != ca_issuer:
                 return False
 
         return True
@@ -764,3 +778,16 @@ class OpenSearchTLS(Object):
                 break
 
         return rotation_complete
+
+    def is_ca_rotation_ongoing(self) -> bool:
+        """Check whether the CA rotation is currently in progress."""
+        if (
+            self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing", False)
+            and not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
+            or self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False)
+            and not self.ca_rotation_complete_in_cluster()
+        ):
+            logger.debug("TLS CA rotation ongoing, will not update tls certificates.")
+            return True
+        else:
+            return False
