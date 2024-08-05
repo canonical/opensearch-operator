@@ -91,8 +91,10 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     """Test the retrieval of admin secrets."""
+    leader_id = await get_leader_unit_id(ops_test)
+
     # 1. run the action prior to finishing the config of TLS
-    result = await run_action(ops_test, 0, "get-password")
+    result = await run_action(ops_test, leader_id, "get-password")
     assert result.status == "failed"
 
     # Deploy TLS Certificates operator.
@@ -122,7 +124,7 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     assert http_resp_code == 200
 
     # 3. test retrieving password from non-supported user
-    result = await run_action(ops_test, 0, "get-password", {"username": "non-existent"})
+    result = await run_action(ops_test, leader_id, "get-password", {"username": "non-existent"})
     assert result.status == "failed"
 
 
