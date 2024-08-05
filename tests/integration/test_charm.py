@@ -347,6 +347,9 @@ async def test_add_users_and_calling_update_status(ops_test: OpsTest) -> None:
     cmd = '"export JUJU_DISPATCH_PATH=hooks/update-status; ./dispatch"'
     exec_cmd = f"juju exec -u opensearch/{leader_id} -m {ops_test.model.name} -- {cmd}"
     try:
+        # The "normal" subprocess.run with "export ...; ..." cmd was failing
+        # Noticed that, for this case, canonical/jhack uses shlex instead to split.
+        # Adding it fixed the issue.
         subprocess.run(shlex.split(exec_cmd))
     except Exception as e:
         logger.error(
@@ -354,25 +357,6 @@ async def test_add_users_and_calling_update_status(ops_test: OpsTest) -> None:
             f"stdout = {e.stdout}; "
             f"stderr = {e.stderr}.",
         )
-
-    # try:
-    #     subprocess.check_output(
-    #         [
-    #             "juju",
-    #             "exec",
-    #             "-m",
-    #             ops_test.model.name,
-    #             "--unit",
-    #             f"opensearch/{leader_id}",
-    #             "--",
-    #             '"export JUJU_DISPATCH_PATH=hooks/update-status; ./dispatch"',
-    #         ],
-    #         text=True,
-    #     )
-    # except Exception as e:
-    #     print(e)
-    #     raise
     await asyncio.sleep(300)
     http_resp_code = await http_request(ops_test, "GET", test_url, resp_status_code=True)
     assert http_resp_code >= 200 and http_resp_code < 300
->>>>>>> 0ee22000 (Add fix for user management)
