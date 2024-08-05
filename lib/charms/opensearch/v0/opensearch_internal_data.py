@@ -159,10 +159,7 @@ class RelationDataStore(DataStore):
         if scope is None:
             raise ValueError("Scope undefined.")
 
-        if not (data := self._get_relation_data(scope)):
-            return None
-
-        value = data.get(key)
+        value = self._get_relation_data(scope).get(key)
         if value is None:
             return default
 
