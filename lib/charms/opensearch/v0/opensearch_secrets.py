@@ -122,6 +122,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
             if sys_user := self._user_from_hash_key(label_key):
                 self._charm.user_manager.put_internal_user(sys_user, password)
 
+        # broadcast secret updates to related sub-clusters
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
         # all units must persist the s3 access & secret keys in opensearch.yml
         if label_key == S3_CREDENTIALS:
             self._charm.backup.manual_update(event)
