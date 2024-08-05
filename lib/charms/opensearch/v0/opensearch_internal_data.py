@@ -110,9 +110,7 @@ class RelationDataStore(DataStore):
         if scope is None:
             raise ValueError("Scope undefined.")
 
-        if not (data := self._get_relation_data(scope)):
-            return None
-
+        data = self._get_relation_data(scope)
         self.put_or_delete(data, key, value)
 
     @override
@@ -159,7 +157,9 @@ class RelationDataStore(DataStore):
         if scope is None:
             raise ValueError("Scope undefined.")
 
-        value = self._get_relation_data(scope).get(key)
+        data = self._get_relation_data(scope)
+
+        value = data.get(key)
         if value is None:
             return default
 
