@@ -60,6 +60,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         RelationDataStore.__init__(self, charm, peer_relation)
 
         self.cached_secrets = SecretCache()
+        self.charm = charm
 
         self.framework.observe(self._charm.on.secret_changed, self._on_secret_changed)
 
