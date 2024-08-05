@@ -657,7 +657,8 @@ class OpenSearchTLS(Object):
 
         # compare issuer of the cert with the issuer of the CA
         # if they don't match, certs are not up-to-date and need to be renewed after CA rotation
-        if not (current_ca := self._read_stored_ca()): return False
+        if not (current_ca := self._read_stored_ca()):
+            return False
 
         # to make sure the content is processed correctly by openssl, temporary store it in a file
         tmp_ca_file = tempfile.NamedTemporaryFile(mode="w+t")
