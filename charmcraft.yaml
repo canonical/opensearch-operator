@@ -12,6 +12,7 @@ bases:
 parts:
   charm:
     override-pull: |
+      rustup default stable
       craftctl default
       if [[ ! -f requirements.txt ]]
       then
@@ -23,9 +24,9 @@ parts:
       - workload_version
     charm-strict-dependencies: true
     charm-entrypoint: src/charm.py
+    build-snaps:
+      - rustup
     build-packages:
-      - cargo
       - libffi-dev
       - libssl-dev
       - pkg-config
-      - rustc
