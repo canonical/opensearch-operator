@@ -91,7 +91,8 @@ class DataStore(ABC):
     def put_or_delete(data: Dict[str, str], key: str, value: Optional[str]):
         """Put data into the key/val data store or delete if value is None."""
         if value is None:
-            del data[key]
+            if key in data:
+                del data[key]
             return
 
         data.update({key: str(value)})
