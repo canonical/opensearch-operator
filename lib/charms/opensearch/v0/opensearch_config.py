@@ -69,7 +69,7 @@ class OpenSearchConfig:
         self._opensearch.config.put(
             self.CONFIG_YML,
             "plugins.security.authcz.admin_dn/{}",
-            f"{normalized_tls_subject(secrets.get('subject'))}",
+            f"{normalized_tls_subject(secrets['subject'])}",
         )
 
     def set_node_tls_conf(self, cert_type: CertType, truststore_pwd: str, keystore_pwd: str):

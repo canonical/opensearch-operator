@@ -334,10 +334,18 @@ class OpenSearchTLS(Object):
         dns = {socket.getfqdn()}
         ips = {self.charm.unit_ip}
 
+        # see above, related to https://github.com/opensearch-project/security/issues/4480
+        # host_public_ip = get_host_public_ip()
+        # if cert_type == CertType.UNIT_HTTP and host_public_ip:
+        #    ips.add(host_public_ip)
+
         for ip in ips.copy():
             try:
                 name, aliases, addresses = socket.gethostbyaddr(ip)
                 ips.update(addresses)
+                # see above, related to https://github.com/opensearch-project/security/issues/4480
+                # dns.add(name)
+                # dns.update(aliases)
             except (socket.herror, socket.gaierror):
                 continue
 
@@ -627,31 +635,28 @@ class OpenSearchTLS(Object):
         )
 
         # using the SSL API requires authentication with app-admin cert and key
-        admin_secret = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        admin_secret = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
-        if not admin_secret:
-            logger.error("Can not update TLS certs, no app-admin secret found.")
-            return
+        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_cert.write(admin_secret["cert"])
+        tmp_cert.flush()
+        tmp_cert.seek(0)
 
-        admin_cert = f"{self.certs_path}/admin.cert"
-        admin_key = f"{self.certs_path}/admin.key"
-
-        with open(admin_cert, "w") as cert:
-            cert.write(admin_secret["cert"])
-
-        with open(admin_key, "w") as key:
-            key.write(admin_secret["key"])
+        tmp_key = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_key.write(admin_secret["key"])
+        tmp_key.flush()
+        tmp_key.seek(0)
 
         try:
             response_http = requests.put(
                 url_http,
-                cert=(admin_cert, admin_key),
+                cert=(tmp_cert.name, tmp_key.name),
                 verify=f"{self.certs_path}/chain.pem",
                 timeout=5,
             )
             response_transport = requests.put(
                 url_transport,
-                cert=(admin_cert, admin_key),
+                cert=(tmp_cert.name, tmp_key.name),
                 verify=f"{self.certs_path}/chain.pem",
                 timeout=5,
             )
@@ -665,5 +670,5 @@ class OpenSearchTLS(Object):
         except requests.RequestException as e:
             logger.error(f"Error reloading TLS certificates via API: {e}")
         finally:
-            os.remove(admin_cert)
-            os.remove(admin_key)
+            tmp_cert.close()
+            tmp_key.close()
