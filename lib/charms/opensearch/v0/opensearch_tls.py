@@ -427,7 +427,7 @@ class OpenSearchTLS(Object):
         if secrets:
             store_pwd = secrets.get(f"{store_type}-password")
 
-        if not store_pwd:
+        if not store_pwd and not self.charm.opensearch_peer_cm.is_consumer(of="main"):
             self.charm.secrets.put_object(
                 scope,
                 cert_type.val,
