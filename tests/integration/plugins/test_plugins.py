@@ -48,40 +48,29 @@ MAIN_ORCHESTRATOR_NAME = "main"
 FAILOVER_ORCHESTRATOR_NAME = "failover"
 
 
-DEPLOY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            deploy_type,
-            id=deploy_type,
-            marks=pytest.mark.group(deploy_type),
-        )
+ALL_GROUPS = {
+    deploy_type: pytest.param(
+        deploy_type,
+        id=deploy_type,
+        marks=[
+            pytest.mark.group(deploy_type),
+            pytest.mark.runner(
+                [
+                    "self-hosted",
+                    "linux",
+                    "X64",
+                    "jammy",
+                    "xlarge" if deploy_type == "large" else "large",
+                ]
+            ),
+        ],
     )
     for deploy_type in ["large_deployment", "small_deployment"]
-]
+}
 
-
-DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            deploy_type,
-            id=deploy_type,
-            marks=pytest.mark.group(deploy_type),
-        )
-    )
-    for deploy_type in ["small_deployment"]
-]
-
-
-DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS = [
-    (
-        pytest.param(
-            deploy_type,
-            id=deploy_type,
-            marks=pytest.mark.group(deploy_type),
-        )
-    )
-    for deploy_type in ["large_deployment"]
-]
+ALL_DEPLOYMENTS = list(ALL_GROUPS.values())
+SMALL_DEPLOYMENTS = [ALL_GROUPS["small_deployment"]]
+LARGE_DEPLOYMENTS = [ALL_GROUPS["large_deployment"]]
 
 
 async def _set_config(ops_test: OpsTest, deploy_type: str, conf: dict[str, str]) -> None:
@@ -130,7 +119,7 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str) -> None:
     )
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type: str) -> None:
@@ -163,7 +152,7 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str):
     """Test that Prometheus Exporter is running before the relation is there.
@@ -179,7 +168,7 @@ async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str
     assert len(response_str.split("\n")) > 500
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_small_deployments_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
     await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
@@ -205,7 +194,7 @@ async def test_small_deployments_prometheus_exporter_cos_relation(ops_test, depl
     assert relation_data["scheme"] == "https"
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", LARGE_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type: str) -> None:
@@ -265,7 +254,7 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
     await set_watermark(ops_test, APP_NAME)
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_LARGE_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", LARGE_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
     # Check that the correct settings were successfully communicated to grafana-agent
@@ -294,7 +283,7 @@ async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deplo
     assert relation_data["scheme"] == "https"
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", ALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_monitoring_user_fetch_prometheus_data(ops_test, deploy_type: str):
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
@@ -316,7 +305,7 @@ async def test_monitoring_user_fetch_prometheus_data(ops_test, deploy_type: str)
     assert len(response_str.split("\n")) > 500
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", ALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: str):
     # Password change applied as expected
@@ -354,7 +343,7 @@ async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: st
     assert relation_data["password"] == new_password
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_knn_enabled_disabled(ops_test, deploy_type: str):
     config = await ops_test.model.applications[APP_NAME].get_config()
@@ -377,7 +366,7 @@ async def test_knn_enabled_disabled(ops_test, deploy_type: str):
         await _wait_for_units(ops_test, deploy_type)
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
@@ -421,7 +410,7 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -
     assert len(docs) == 2
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the NMSLIB KNNEngine."""
@@ -465,7 +454,7 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) 
     assert len(docs) == 2
 
 
-@pytest.mark.parametrize("deploy_type", DEPLOY_SMALL_ONLY_CLOUD_GROUP_MARKS)
+@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_knn_training_search(ops_test: OpsTest, deploy_type: str) -> None:
     """Tests the entire cycle of KNN plugin.

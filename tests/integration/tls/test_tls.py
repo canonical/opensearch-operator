@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -57,6 +58,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_security_index_initialised(ops_test: OpsTest) -> None:
@@ -66,6 +68,7 @@ async def test_security_index_initialised(ops_test: OpsTest) -> None:
     assert await check_security_index_initialised(ops_test, leader_unit_ip)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_tls_configured(ops_test: OpsTest) -> None:
@@ -74,6 +77,7 @@ async def test_tls_configured(ops_test: OpsTest) -> None:
         assert await check_unit_tls_configured(ops_test, unit_ip, unit_name)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_cluster_formation_after_tls(ops_test: OpsTest) -> None:
