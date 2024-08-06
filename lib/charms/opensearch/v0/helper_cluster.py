@@ -140,12 +140,28 @@ class ClusterTopology:
         return result
 
     @staticmethod
-    def elected_manager(nodes: List[Node]) -> Optional[List[str]]:
+    def elected_manager(
+        opensearch: OpenSearchDistribution,
+        use_localhost: bool,
+        hosts: Optional[List[str]] = None,
+    ) -> List[Node]:
         """Get the list of nodes in a cluster."""
-        for node in nodes:
-            if node.elected_manager:
-                return node
-        return None
+        host: Optional[str] = None  # defaults to current unit ip
+        alt_hosts: Optional[List[str]] = hosts
+        if not use_localhost and hosts:
+            host, alt_hosts = hosts[0], hosts[1:]
+
+        if use_localhost or host:
+            manager_id = opensearch.request(
+                "GET",
+                "/_cluster/state/cluster_manager_node",
+                host=host,
+                alt_hosts=alt_hosts,
+                retries=3,
+            )
+            if "cluster_manager_node" in manager_id:
+                return manager_id["cluster_manager_node"]
+            return None
 
     @staticmethod
     def nodes(
@@ -161,20 +177,11 @@ class ClusterTopology:
 
         nodes: List[Node] = []
         if use_localhost or host:
-            manager_id = opensearch.request(
-                "GET",
-                "/_cluster/state/cluster_manager_node",
-                host=host,
-                alt_hosts=alt_hosts,
-                retries=3,
-            )
-            if "cluster_manager_node" in manager_id:
-                manager_id = manager_id["cluster_manager_node"]
             response = opensearch.request(
                 "GET", "/_nodes", host=host, alt_hosts=alt_hosts, retries=3
             )
             if "nodes" in response:
-                for id, obj in response["nodes"].items():
+                for obj in response["nodes"].values():
                     node = Node(
                         name=obj["name"],
                         roles=obj["roles"],
@@ -182,7 +189,6 @@ class ClusterTopology:
                         app=App(id=obj["attributes"]["app_id"]),
                         unit_number=int(obj["name"].split(".")[0].split("-")[-1]),
                         temperature=obj.get("attributes", {}).get("temp"),
-                        elected_manager=id == manager_id,
                     )
                     nodes.append(node)
         return nodes

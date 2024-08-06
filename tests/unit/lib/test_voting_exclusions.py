@@ -219,6 +219,8 @@ def test_settle_voting_exclusions(
 
     charm = harness.charm
     type(charm).unit_name = PropertyMock(return_value="thisnode")
+    charm.opensearch.is_node_up = MagicMock(return_value=True)
+    charm._get_nodes = MagicMock(return_value=cm_node_list)
     charm.opensearch_peer_cm.deployment_desc = MagicMock(
         return_value=__create_deployment_desc(is_main)
     )

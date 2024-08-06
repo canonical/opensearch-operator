@@ -478,7 +478,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
 
-        for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10), reraise=True):
+        for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(2), reraise=True):
             with attempt:
                 # acquire lock to ensure only 1 unit removed at a time
                 if not self.node_lock.acquired:
@@ -1032,10 +1032,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
-        nodes = self._get_nodes(True)
+        nodes = []
         if self.opensearch.is_node_up():
             try:
+                nodes = self._get_nodes(self.opensearch.is_node_up())
+                # do not add exclusions if it's the last unit to stop
+                # otherwise cluster manager election will be blocked when starting up again
+                # and re-using storage
                 if len(nodes) > 1:
+                    # 1. Add current node to alloc exclusions
                     self.opensearch_exclusions.add_allocations_exclusion()
             except OpenSearchHttpError:
                 logger.debug("Failed to get online nodes, alloc exclusion not added")
@@ -1047,7 +1052,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # this check only makes sense if we have more than one unit.
             for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
                 with attempt:
-                    if self.health.apply(wait_for_green_first=True) != HealthColors.GREEN:
+                    if self.health.apply(wait_for_green_first=True) == HealthColors.YELLOW_TEMP:
                         raise OpenSearchHAError(
                             "Timed out waiting for shard relocation to complete"
                         )
@@ -1058,6 +1063,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.set(WaitingStatus(ServiceStopped))
 
         # 3. Remove the exclusions
+        # TODO: we should probably NOT have any exclusion on restart
+        # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
         if not restart:
             try:
                 self.opensearch_exclusions.delete_allocations_exclusion()
@@ -1087,18 +1094,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self._start_opensearch_event.emit()
 
     def _settle_voting_exclusions(self, unit_is_stopping: bool = False):  # noqa C901
-        """Settle the exclusions for all voting units."""
+        """Settle the voting exclusions for all voting units."""
         hosts = self.alt_hosts
-        if (
-            self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR
-            and (peer_cm_rel_data := self.opensearch_peer_cm.rel_data()) is not None
-        ):
-            # Also consider peer-relation units
-            hosts.extend([node.ip for node in peer_cm_rel_data.cm_nodes])
 
         for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
             with attempt:
-                nodes = ClusterTopology.nodes(self.opensearch, use_localhost=True, hosts=hosts)
+                nodes = self._get_nodes(use_localhost=self.opensearch.is_node_up())
 
                 node = None
                 for node in nodes:
@@ -1115,7 +1116,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     # Let's retry
                     raise OpenSearchStartError("Node not in the list of nodes")
                 # Any other case is okay to move forward without changes
-                break
 
         cms = ClusterTopology.get_cluster_managers_names(nodes)
         # For the sake of predictability, we always sort the cluster managers
@@ -1154,7 +1154,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
             with attempt:
                 manager = ClusterTopology.elected_manager(
-                    ClusterTopology.nodes(self.opensearch, use_localhost=True, hosts=hosts)
+                    self.opensearch, use_localhost=self.opensearch.is_node_up(), hosts=hosts
                 )
                 if not manager or manager.name not in sorted_cm:
                     raise OpenSearchHAError("New manager not elected yet")
