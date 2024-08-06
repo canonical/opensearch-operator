@@ -1018,11 +1018,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     # TODO: we should probably NOT have any exclusion on restart
                     # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
                     # 1. Add current node to the voting + alloc exclusions
+                    shards_before_relocation = self.opensearch.request(
+                        "GET", endpoint="/_cat/shards"
+                    )
+                    logger.debug(f"Shards before relocation: {shards_before_relocation}")
                     self.opensearch_exclusions.add_current()
             except OpenSearchHttpError:
                 logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
 
         # TODO: should block until all shards move addressed in PR DPE-2234
+        allocations = self.opensearch.request("GET", endpoint="/_cat/allocation")
+        self.health.wait_for_shards_relocation()
+        shards_after_relocation = self.opensearch.request("GET", endpoint="/_cat/shards")
+        logger.debug(f"Allocations after relocation: {allocations}")
+        logger.debug(f"Shards after relocation: {shards_after_relocation}")
 
         # 2. stop the service
         self.opensearch.stop()
