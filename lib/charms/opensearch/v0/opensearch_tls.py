@@ -435,7 +435,10 @@ class OpenSearchTLS(Object):
         if secrets:
             store_pwd = secrets.get(f"{store_type}-password")
 
-        if not store_pwd and not (self.charm.opensearch_peer_cm.is_consumer(of="main") and cert_type == CertType.APP_ADMIN):
+        if not store_pwd and not (
+            self.charm.opensearch_peer_cm.is_consumer(of="main")
+            and cert_type == CertType.APP_ADMIN
+        ):
             self.charm.secrets.put_object(
                 scope,
                 cert_type.val,
@@ -648,17 +651,15 @@ class OpenSearchTLS(Object):
         tmp_key.seek(0)
 
         try:
-            response_http = requests.put(
+            response_http = self.charm.opensearch.request(
+                "PUT",
                 url_http,
-                cert=(tmp_cert.name, tmp_key.name),
-                verify=f"{self.certs_path}/chain.pem",
-                timeout=5,
+                cert_files=(tmp_cert.name, tmp_key.name),
             )
-            response_transport = requests.put(
+            response_transport = self.charm.opensearch.request(
+                "PUT",
                 url_transport,
-                cert=(tmp_cert.name, tmp_key.name),
-                verify=f"{self.certs_path}/chain.pem",
-                timeout=5,
+                cert_files=(tmp_cert.name, tmp_key.name),
             )
             if not (
                 response_http.status_code == requests.codes.ok
