@@ -632,10 +632,8 @@ class OpenSearchTLS(Object):
 
     def reload_tls_certificates(self):
         """Reload transport and HTTP layer communication certificates via REST APIs."""
-        url_http = f"https://{self.charm.unit_ip}:9200/_plugins/_security/api/ssl/http/reloadcerts"
-        url_transport = (
-            f"https://{self.charm.unit_ip}:9200/_plugins/_security/api/ssl/transport/reloadcerts"
-        )
+        url_http = "_plugins/_security/api/ssl/http/reloadcerts"
+        url_transport = "_plugins/_security/api/ssl/transport/reloadcerts"
 
         # using the SSL API requires authentication with app-admin cert and key
         admin_secret = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
