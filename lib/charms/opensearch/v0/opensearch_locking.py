@@ -285,10 +285,10 @@ class OpenSearchNodeLock(ops.Object):
                 # if the node lock cannot be acquired, fall back to peer databag lock
                 # this avoids hitting deadlock situations in cases where
                 # the .charm_node_lock index is not available
-                if online_nodes <= 1:
+                if online_nodes <= 1 and self._charm.app.planned_units() > 1:
                     return self._peer.acquired
                 else:
-                    return False
+                    return self._charm.app.planned_units() > 1
             # If online_nodes == 1, we should acquire the lock via the peer databag.
             # If we acquired the lock via OpenSearch and this unit was stopping, we would be unable
             # to release the OpenSearch lock. For example, when scaling to 0.
@@ -321,10 +321,13 @@ class OpenSearchNodeLock(ops.Object):
                             "to acquire lock"
                         )
                         return False
-                    else:
+                    elif self._charm.app.planned_units() > 1:
                         logger.exception("Error creating OpenSearch lock document")
                         # in this case, try to acquire peer databag lock as fallback
                         return self._peer.acquired
+                    else:
+                        # There is only one unit or less
+                        return True
                 else:
                     # Ensure write was successful on all nodes
                     # "It is important to note that this setting [`wait_for_active_shards`] greatly
@@ -378,7 +381,7 @@ class OpenSearchNodeLock(ops.Object):
         # If return value is True:
         # - Lock granted in previous Juju event
         # - OR, unit is leader & lock granted in this Juju event
-        return self._peer.acquired
+        return self._peer.acquired if self._charm.app.planned_units() > 1 else True
 
     def release(self):
         """Release lock.
