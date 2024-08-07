@@ -131,11 +131,10 @@ class OpenSearchHealth:
             return HealthColors.YELLOW_TEMP
         return HealthColors.YELLOW
 
-    @retry(stop=stop_after_attempt(15), wait=wait_fixed(5), reraise=True)
+    @retry(stop=stop_after_attempt(90), wait=wait_fixed(10), reraise=True)
     def wait_for_shards_relocation(self) -> None:
         """Blocking function until the shards relocation completes in the cluster."""
         endpoint = "/_cluster/health"
-        timeout = 10
 
         try:
             response = self._opensearch.request(
@@ -143,8 +142,6 @@ class OpenSearchHealth:
                 endpoint,
                 host=self._charm.unit_ip,
                 alt_hosts=self._charm.alt_hosts,
-                timeout=timeout,
-                retries=3,
             )
         except OpenSearchHttpError:
             logger.error("Error while waiting for shard relocation to complete")
@@ -153,6 +150,12 @@ class OpenSearchHealth:
         # we throw an error because various operations should NOT start while data
         # is being relocated. Examples are: simple stop, unit removal, upgrade
         if not (response["unassigned_shards"] == 0 and response["relocating_shards"] == 0):
+            logger.info(
+                f"""Some shards are still moving before stopping Opensearch: \
+                relocating: {response['relocating_shards']},
+                unassigned: {response['unassigned_shards']}
+                """
+            )
             raise OpenSearchHAError("Shards haven't completed relocating.")
 
     def _apply_for_app(self, status: str) -> None:
