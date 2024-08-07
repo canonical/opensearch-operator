@@ -20,6 +20,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
 )
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "93d2c27f38974a59b3bbe39fb27ac98d"
@@ -130,19 +131,20 @@ class OpenSearchHealth:
             return HealthColors.YELLOW_TEMP
         return HealthColors.YELLOW
 
+    @retry(stop=stop_after_attempt(15), wait=wait_fixed(5), reraise=True)
     def wait_for_shards_relocation(self) -> None:
         """Blocking function until the shards relocation completes in the cluster."""
-        endpoint = "/_cluster/health?wait_for_no_relocating_shards=true"
+        endpoint = "/_cluster/health"
         timeout = 10
 
         try:
-            relocation_complete = self._opensearch.request(
+            response = self._opensearch.request(
                 "GET",
                 endpoint,
                 host=self._charm.unit_ip,
                 alt_hosts=self._charm.alt_hosts,
                 timeout=timeout,
-                retries=12,
+                retries=3,
             )
         except OpenSearchHttpError:
             logger.error("Error while waiting for shard relocation to complete")
@@ -150,7 +152,7 @@ class OpenSearchHealth:
 
         # we throw an error because various operations should NOT start while data
         # is being relocated. Examples are: simple stop, unit removal, upgrade
-        if not relocation_complete:
+        if not (response["unassigned_shards"] == 0 and response["relocating_shards"] == 0):
             raise OpenSearchHAError("Shards haven't completed relocating.")
 
     def _apply_for_app(self, status: str) -> None:
