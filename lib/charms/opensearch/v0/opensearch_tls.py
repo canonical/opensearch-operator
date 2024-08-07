@@ -29,7 +29,7 @@ from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import all_units, run_cmd
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchError, OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
@@ -649,24 +649,17 @@ class OpenSearchTLS(Object):
         tmp_key.seek(0)
 
         try:
-            response_http = self.charm.opensearch.request(
+            self.charm.opensearch.request(
                 "PUT",
                 url_http,
                 cert_files=(tmp_cert.name, tmp_key.name),
             )
-            response_transport = self.charm.opensearch.request(
+            self.charm.opensearch.request(
                 "PUT",
                 url_transport,
                 cert_files=(tmp_cert.name, tmp_key.name),
             )
-            if not (
-                response_http.status_code == requests.codes.ok
-                and response_transport.status_code == requests.codes.ok
-            ):
-                logger.error("Error reloading TLS certificates via API.")
-            else:
-                logger.info(f"Reloaded TLS certificates: {response_http}, {response_transport}")
-        except requests.RequestException as e:
+        except OpenSearchHttpError as e:
             logger.error(f"Error reloading TLS certificates via API: {e}")
         finally:
             tmp_cert.close()
