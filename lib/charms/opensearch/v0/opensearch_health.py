@@ -149,12 +149,9 @@ class OpenSearchHealth:
 
         # we throw an error because various operations should NOT start while data
         # is being relocated. Examples are: simple stop, unit removal, upgrade
-        if not (response["unassigned_shards"] == 0 and response["relocating_shards"] == 0):
+        if not response["relocating_shards"] == 0:
             logger.info(
-                f"""Some shards are still moving before stopping Opensearch: \
-                relocating: {response['relocating_shards']},
-                unassigned: {response['unassigned_shards']}
-                """
+                f"Shards still moving before stopping Opensearch: relocating: {response['relocating_shards']}"
             )
             raise OpenSearchHAError("Shards haven't completed relocating.")
 
