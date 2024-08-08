@@ -58,7 +58,7 @@ class ContinuousWrites:
         if repl_on_all_nodes:
             await self._create_fully_replicated_index()
         else:
-            await self._create()
+            await self._create_index_with_0_all_replicas()
 
         # create process
         self._create_process(is_bulk=is_bulk)
@@ -130,7 +130,7 @@ class ContinuousWrites:
         finally:
             client.close()
 
-    async def _create(self):
+    async def _create_index_with_0_all_replicas(self):
         """Create index with 1x shard on each node."""
         client = await self._client()
         try:

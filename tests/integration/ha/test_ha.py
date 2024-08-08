@@ -43,11 +43,25 @@ from .test_horizontal_scaling import IDLE_PERIOD
 logger = logging.getLogger(__name__)
 
 
+NODE_COUNT_DICT = {
+    (node_count): pytest.param(
+        node_count,
+        id=f"{node_count}",
+        marks=[
+            pytest.mark.group(f"{node_count}"),
+        ],
+    )
+    for node_count in [2, 3]
+}
+NODE_COUNT = list(NODE_COUNT_DICT.values())
+ONLY_3_NODES = NODE_COUNT_DICT[(3)]
+
+
+@pytest.mark.parametrize("node_count", NODE_COUNT)
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, node_count: int) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -60,7 +74,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
+        ops_test.model.deploy(my_charm, num_units=node_count, series=SERIES),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -71,14 +85,14 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 3
+    assert len(ops_test.model.applications[APP_NAME].units) == node_count
 
 
+@pytest.mark.parametrize("node_count", NODE_COUNT)
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_replication_across_members(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, node_count: int
 ) -> None:
     """Check consistency, ie write to node, read data from remaining nodes.
 
@@ -118,11 +132,11 @@ async def test_replication_across_members(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.parametrize("node_count", NODE_COUNT)
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_kill_db_process_node_with_primary_shard(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
 ) -> None:
     """Check cluster can self-heal + data indexed/read when process dies on node with P_shard."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -181,11 +195,11 @@ async def test_kill_db_process_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.parametrize("node_count", NODE_COUNT)
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_kill_db_process_node_with_elected_cm(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
 ) -> None:
     """Check cluster can self-heal, data indexed/read when process dies on node with elected CM."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -195,6 +209,9 @@ async def test_kill_db_process_node_with_elected_cm(
 
     # find unit currently elected cluster_manager
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+
+    # Increase restart delay to give some extra time for the election to happen
+    await update_restart_delay(ops_test, app, first_elected_cm_unit_id, 100)
 
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
@@ -212,7 +229,15 @@ async def test_kill_db_process_node_with_elected_cm(
     # Kill the opensearch process
     await send_kill_signal_to_process(ops_test, app, first_elected_cm_unit_id, signal="SIGKILL")
 
-    await assert_continuous_writes_increasing(c_writes)
+    if node_count != 2:
+        # This check only makes sense for non 2-node clusters
+        # 2-node cluster that loses its elected CM will stop working until that node is back
+        await assert_continuous_writes_increasing(c_writes)
+
+    # Return to original configs
+    await update_restart_delay(ops_test, app, first_elected_cm_unit_id, ORIGINAL_RESTART_DELAY)
+
+    await asyncio.sleep(100)
 
     # verify that the opensearch service is back running on the old elected cm unit
     assert await is_up(
@@ -221,9 +246,18 @@ async def test_kill_db_process_node_with_elected_cm(
 
     # fetch the current elected cluster manager
     current_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
-    assert (
-        current_elected_cm_unit_id != first_elected_cm_unit_id
-    ), "Cluster manager election did not happen."
+
+    if node_count != 2:
+        assert (
+            current_elected_cm_unit_id != first_elected_cm_unit_id
+        ), "Cluster manager election did not happen."
+    else:
+        # 2-node clusters do not swap the elected CM automatically
+        # One of the nodes must go before that swap happens.
+        # This test ensures the cluster can recover and be accessible once again.
+        assert (
+            current_elected_cm_unit_id == first_elected_cm_unit_id
+        ), "Cluster manager election happened unexpectedly."
 
     # verify the node with the old elected cm successfully joined back the rest of the fleet
     assert await check_cluster_formation_successful(
@@ -234,11 +268,11 @@ async def test_kill_db_process_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.parametrize("node_count", NODE_COUNT)
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_freeze_db_process_node_with_primary_shard(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
 ) -> None:
     """Check cluster can self-heal + data indexed/read on process freeze on node with P_shard."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -320,11 +354,11 @@ async def test_freeze_db_process_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.parametrize("node_count", NODE_COUNT)
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_freeze_db_process_node_with_elected_cm(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
 ) -> None:
     """Check cluster can self-heal, data indexed/read on process freeze on node with elected CM."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -360,7 +394,10 @@ async def test_freeze_db_process_node_with_elected_cm(
     is_node_up = await is_up(ops_test, units_ips[first_elected_cm_unit_id], retries=3)
     assert not is_node_up
 
-    await assert_continuous_writes_increasing(c_writes)
+    if node_count != 2:
+        # This check only makes sense for non 2-node clusters
+        # 2-node cluster that loses its elected CM will stop working until that node is back
+        await assert_continuous_writes_increasing(c_writes)
 
     # get reachable unit to perform requests against, in case the previously stopped unit
     # is leader unit, so its address is not reachable
@@ -395,11 +432,11 @@ async def test_freeze_db_process_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.parametrize("node_count", NODE_COUNT)
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restart_db_process_node_with_elected_cm(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
 ) -> None:
     """Check cluster self-healing & data indexed/read on process restart on CM node."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -426,7 +463,10 @@ async def test_restart_db_process_node_with_elected_cm(
     # restart the opensearch process
     await send_kill_signal_to_process(ops_test, app, first_elected_cm_unit_id, signal="SIGTERM")
 
-    await assert_continuous_writes_increasing(c_writes)
+    if node_count != 2:
+        # This check only makes sense for non 2-node clusters
+        # 2-node cluster that loses its elected CM will stop working until that node is back
+        await assert_continuous_writes_increasing(c_writes)
 
     # verify that the opensearch service is back running on the unit previously elected CM unit
     assert await is_up(
@@ -447,11 +487,11 @@ async def test_restart_db_process_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.parametrize("node_count", NODE_COUNT)
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restart_db_process_node_with_primary_shard(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
 ) -> None:
     """Check cluster can self-heal, data indexed/read on process restart on primary shard node."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -509,10 +549,14 @@ async def test_restart_db_process_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.parametrize("node_count", NODE_COUNT)
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 async def test_full_cluster_crash(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, reset_restart_delay
+    ops_test: OpsTest,
+    c_writes: ContinuousWrites,
+    c_balanced_writes_runner,
+    reset_restart_delay,
+    node_count: int,
 ) -> None:
     """Check cluster can operate normally after all nodes SIGKILL at same time and come back up."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -562,11 +606,15 @@ async def test_full_cluster_crash(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.parametrize("node_count", NODE_COUNT)
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_cluster_restart(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, reset_restart_delay
+    ops_test: OpsTest,
+    c_writes: ContinuousWrites,
+    c_balanced_writes_runner,
+    reset_restart_delay,
+    node_count: int,
 ) -> None:
     """Check cluster can operate normally after all nodes SIGTERM at same time and come back up."""
     app = (await app_name(ops_test)) or APP_NAME

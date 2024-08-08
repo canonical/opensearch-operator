@@ -1095,8 +1095,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_exclusions.settle_voting(unit_is_stopping=True)
         self.opensearch.stop()
 
-        if "cluster_manager" in self.opensearch.roles or "voting_only" in self.opensearch.roles:
-            self.peers_data.delete(Scope.UNIT, "voting_unit_stopping")
+        self.peers_data.delete(Scope.UNIT, "voting_unit_stopping")
         self.peers_data.delete(Scope.UNIT, "started")
         self.status.set(WaitingStatus(ServiceStopped))
 
