@@ -186,10 +186,38 @@ class ClusterState:
         verbose: bool = False,
     ) -> List[Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
-        params = ""
-        if verbose:
-            params = "?v=true&h=index,shard,prirep,state,unassigned.reason&s=state"
-        return opensearch.request("GET", f"/_cat/shards{params}", host=host, alt_hosts=alt_hosts)
+        cluster_state = opensearch.request(
+            "GET", "_cluster/state/routing_table,metadata,nodes", host=host, alt_hosts=alt_hosts
+        )
+
+        nodes = cluster_state["nodes"]
+
+        shards_info = []
+        for index_name, index_data in cluster_state["routing_table"]["indices"].items():
+            for shard_num, shard_data in index_data["shards"].items():
+                for shard in shard_data:
+                    node_data = nodes.get(shard["node"], {})
+                    node_name = node_data.get("name", None)
+                    node_ip = (
+                        node_data["transport_address"].split(":")[0]
+                        if "transport_address" in node_data
+                        else None
+                    )
+
+                    shard_info = {
+                        "index": index_name,
+                        "shard": shard_num,
+                        "prirep": shard["primary"] and "p" or "r",
+                        "state": shard["state"],
+                        "ip": node_ip,
+                        "node": node_name,
+                    }
+                    if verbose:
+                        shard_info["unassigned.reason"] = shard.get("unassigned_info", {}).get(
+                            "reason", None
+                        )
+                    shards_info.append(shard_info)
+        return shards_info
 
     @staticmethod
     @retry(
