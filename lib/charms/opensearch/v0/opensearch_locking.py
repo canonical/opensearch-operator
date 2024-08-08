@@ -254,9 +254,27 @@ class OpenSearchNodeLock(ops.Object):
                         self._opensearch, use_localhost=host is not None, hosts=alt_hosts
                     )
                 )
+                try:
+                    logger.debug(
+                        "Current shard allocation status: %s",
+                        self._opensearch.request(
+                            "GET",
+                            "/_cluster/allocation/explain?include_yes_decisions=true&include_disk_info=true",
+                            payload={
+                                "index": self.OPENSEARCH_INDEX,
+                                "shard": 0,
+                                "primary": "true",
+                            },
+                        ),
+                    )
+                except Exception:
+                    logger.debug("Current shard allocation status: error to connect with API")
+                    pass
             except OpenSearchHttpError:
                 logger.exception("Error getting OpenSearch nodes")
-                return False
+                # If we are trying to acquire the lock at application removal, this condition
+                # will be eventually hit
+                return len(self.units) <= 1
             logger.debug(f"[Node lock] Opensearch {online_nodes=}")
             assert online_nodes > 0
             try:
@@ -266,10 +284,10 @@ class OpenSearchNodeLock(ops.Object):
                 # if the node lock cannot be acquired, fall back to peer databag lock
                 # this avoids hitting deadlock situations in cases where
                 # the .charm_node_lock index is not available
-                if online_nodes <= 1:
+                if online_nodes <= 1 and self._charm.app.planned_units() > 1:
                     return self._peer.acquired
                 else:
-                    return False
+                    return self._charm.app.planned_units() > 1
             # If online_nodes == 1, we should acquire the lock via the peer databag.
             # If we acquired the lock via OpenSearch and this unit was stopping, we would be unable
             # to release the OpenSearch lock. For example, when scaling to 0.
@@ -302,10 +320,13 @@ class OpenSearchNodeLock(ops.Object):
                             "to acquire lock"
                         )
                         return False
-                    else:
+                    elif self._charm.app.planned_units() > 1:
                         logger.exception("Error creating OpenSearch lock document")
                         # in this case, try to acquire peer databag lock as fallback
                         return self._peer.acquired
+                    else:
+                        # There is only one unit or less
+                        return True
                 else:
                     # Ensure write was successful on all nodes
                     # "It is important to note that this setting [`wait_for_active_shards`] greatly
@@ -359,7 +380,7 @@ class OpenSearchNodeLock(ops.Object):
         # If return value is True:
         # - Lock granted in previous Juju event
         # - OR, unit is leader & lock granted in this Juju event
-        return self._peer.acquired
+        return self._peer.acquired if self._charm.app.planned_units() > 1 else True
 
     def release(self):
         """Release lock.
