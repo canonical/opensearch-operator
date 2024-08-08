@@ -250,10 +250,22 @@ class ClusterState:
         alt_hosts: Optional[List[str]] = None,
     ) -> Dict[str, Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
-        endpoint = "/_cat/indices?expand_wildcards=all"
+        # Get cluster state
+        endpoint = "/_cluster/state/metadata"
+        cluster_state = opensearch.request("GET", endpoint, host=host, alt_hosts=alt_hosts)
+        indices_state = cluster_state["metadata"]["indices"]
+
+        # Get cluster health
+        endpoint = "/_cluster/health?level=indices"
+        cluster_health = opensearch.request("GET", endpoint, host=host, alt_hosts=alt_hosts)
+        indices_health = cluster_health["indices"]
+        
         idx = {}
-        for index in opensearch.request("GET", endpoint, host=host, alt_hosts=alt_hosts):
-            idx[index["index"]] = {"health": index["health"], "status": index["status"]}
+        for index in indices_state:
+            idx[index] = {
+                'health': indices_health[index]['status'],
+                'status': indices_state[index]['state'],
+            }
         return idx
 
     @staticmethod
