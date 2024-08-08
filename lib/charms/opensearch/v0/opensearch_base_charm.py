@@ -1181,12 +1181,23 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         try:
             for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(0.5)):
                 with attempt:
-                    resp = self.opensearch.request(
-                        "GET", endpoint=f"/_cat/allocation/{self.unit_name}?format=json"
+                    cluster_state = self.opensearch.request(
+                        "GET", "/_cluster/state/routing_table,nodes"
                     )
-                    for entry in resp:
-                        if entry.get("node") == self.unit_name and entry.get("shards") != 0:
-                            raise Exception
+
+                    # find the node id of the current unit
+                    node_id = None
+                    for node_id, node in cluster_state["nodes"].items():
+                        if node["name"] == self.unit_name:
+                            break
+                    assert node_id is not None  # should never happen
+
+                    # check if the node has any shards assigned to it
+                    for _, index_data in cluster_state["routing_table"]["indices"].items():
+                        for _, shard_data in index_data["shards"].items():
+                            for shard in shard_data:
+                                if shard["node"] == node_id:
+                                    raise Exception
                     return True
         except RetryError:
             self.opensearch_exclusions.delete_current()
