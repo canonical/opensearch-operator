@@ -112,47 +112,33 @@ class OpenSearchHealth:
             logger.error(e)  # means the status was reported as an int (i.e: 503)
             return HealthColors.UNKNOWN
 
-        if status != HealthColors.YELLOW:
-            return status
-
-        try:
-            logger.debug(
-                f"\n\nHealth: {status} -- Shards: {ClusterState.shards(self._opensearch, host, verbose=True)}\n\n"
-            )
-            logger.debug(
-                f"Allocation explanations: {ClusterState.allocation_explain(self._opensearch, host)}\n\n"
-            )
-        except OpenSearchHttpError:
-            pass
-
         # we differentiate between a temp yellow (moving shards) and a permanent
         # one (such as: missing replicas)
-        if response["initializing_shards"] > 0 or response["relocating_shards"] > 0:
+        if status in [HealthColors.GREEN, HealthColors.YELLOW] and (
+                response["initializing_shards"] > 0 or response["relocating_shards"] > 0
+        ):
+            try:
+                logger.debug(
+                    f"\n\nHealth: {status} -- Shards: {ClusterState.shards(self._opensearch, host, verbose=True)}\n\n"
+                )
+                logger.debug(
+                    f"Allocation explanations: {ClusterState.allocation_explain(self._opensearch, host)}\n\n"
+                )
+            except OpenSearchHttpError:
+                pass
             return HealthColors.YELLOW_TEMP
-        return HealthColors.YELLOW
+
+        return status
 
     @retry(stop=stop_after_attempt(90), wait=wait_fixed(10), reraise=True)
     def wait_for_shards_relocation(self) -> None:
         """Blocking function until the shards relocation completes in the cluster."""
-        endpoint = "/_cluster/health"
+        health = self.get(local_app_only=False)
 
-        try:
-            response = self._opensearch.request(
-                "GET",
-                endpoint,
-                host=self._charm.unit_ip,
-                alt_hosts=self._charm.alt_hosts,
-            )
-        except OpenSearchHttpError:
-            logger.error("Error while waiting for shard relocation to complete")
-            raise
-
-        # we throw an error because various operations should NOT start while data
-        # is being relocated. Examples are: simple stop, unit removal, upgrade
-        if not response["relocating_shards"] == 0:
-            logger.info(
-                f"Shards still moving before stopping Opensearch: relocating: {response['relocating_shards']}"
-            )
+        if health == HealthColors.YELLOW_TEMP:
+            logger.info("Shards still moving before stopping Opensearch.")
+            # we throw an error because various operations should NOT start while data
+            # is being relocated. Examples are: simple stop, unit removal, upgrade
             raise OpenSearchHAError("Shards haven't completed relocating.")
 
     def _apply_for_app(self, status: str) -> None:
