@@ -115,7 +115,7 @@ class OpenSearchHealth:
         # we differentiate between a temp yellow (moving shards) and a permanent
         # one (such as: missing replicas)
         if status in [HealthColors.GREEN, HealthColors.YELLOW] and (
-                response["initializing_shards"] > 0 or response["relocating_shards"] > 0
+            response["initializing_shards"] > 0 or response["relocating_shards"] > 0
         ):
             try:
                 logger.debug(
