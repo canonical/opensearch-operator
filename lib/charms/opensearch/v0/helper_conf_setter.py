@@ -146,6 +146,20 @@ class ConfigSetter(ABC):
         """
         pass
 
+    @abstractmethod
+    def append(
+        self,
+        config_file: str,
+        text_to_append: str,
+    ) -> None:
+        """Append any string to a text file.
+
+        Args:
+            config_file (str): Path to the source config file
+            text_to_append (str): The str to append to the config file
+        """
+        pass
+
     @staticmethod
     def __clean_base_path(base_path: str):
         if base_path is None:
@@ -282,6 +296,26 @@ class YamlConfigSetter(ConfigSetter):
                 else:
                     with open(output_file, "w") as g:
                         g.write(data)
+
+    @override
+    def append(
+        self,
+        config_file: str,
+        text_to_append: str,
+    ) -> None:
+        """Append any string to a text file.
+
+        Args:
+            config_file (str): Path to the source config file
+            text_to_append (str): The str to append to the config file
+        """
+        path = f"{self.base_path}{config_file}"
+
+        if not exists(path):
+            raise FileNotFoundError(f"{path} not found.")
+
+        with open(path, "a") as f:
+            f.write("\n" + text_to_append)
 
     def __dump(self, data: Dict[str, any], output_type: OutputType, target_file: str):
         """Write the YAML data on the corresponding "output_type" stream."""

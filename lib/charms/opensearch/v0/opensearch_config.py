@@ -64,6 +64,11 @@ class OpenSearchConfig:
             True,
         )
 
+        self._opensearch.config.append(
+            self.JVM_OPTIONS,
+            "-Djdk.tls.client.protocols=TLSv1.2",
+        )
+
     def set_admin_tls_conf(self, secrets: Dict[str, any]):
         """Configures the admin certificate."""
         self._opensearch.config.put(
@@ -89,12 +94,11 @@ class OpenSearchConfig:
                 f"{self._opensearch.paths.certs_relative}/{cert if cert == 'ca' else cert_type}.p12",
             )
 
-        for store_type, certificate_type in [("keystore", cert_type.val), ("truststore", "ca")]:
-            self._opensearch.config.put(
-                self.CONFIG_YML,
-                f"plugins.security.ssl.{target_conf_layer}.{store_type}_alias",
-                certificate_type,
-            )
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            f"plugins.security.ssl.{target_conf_layer}.keystore_alias",
+            cert_type.val,
+        )
 
         for store_type, pwd in [("keystore", keystore_pwd), ("truststore", truststore_pwd)]:
             self._opensearch.config.put(
@@ -102,6 +106,12 @@ class OpenSearchConfig:
                 f"plugins.security.ssl.{target_conf_layer}.{store_type}_password",
                 pwd,
             )
+
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            f"plugins.security.ssl.{target_conf_layer}.enabled_protocols",
+            "TLSv1.2",
+        )
 
     def append_transport_node(self, ip_pattern_entries: List[str], append: bool = True):
         """Set the IP address of the new unit in nodes_dn."""

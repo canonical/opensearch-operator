@@ -141,10 +141,6 @@ class TestOpenSearchConfig(unittest.TestCase):
                 opensearch_conf[f"plugins.security.ssl.{layer}.keystore_alias"],
                 f"unit-{layer}",
             )
-            self.assertEqual(
-                opensearch_conf[f"plugins.security.ssl.{layer}.truststore_alias"],
-                "ca",
-            )
 
             self.assertEqual(
                 opensearch_conf[f"plugins.security.ssl.{layer}.keystore_password"],
