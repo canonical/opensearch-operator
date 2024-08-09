@@ -654,7 +654,7 @@ class OpenSearchTLS(Object):
             tmp_cert.close()
             logger.info(f"TLS certificate for {cert_name} stored.")
 
-    def all_tls_resources_stored(self, only_unit_resources: bool = False) -> bool:
+    def all_tls_resources_stored(self, only_unit_resources: bool = False) -> bool:  # noqa: C901
         """Check if all TLS resources are stored on disk."""
         cert_types = [CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]
         if not only_unit_resources:
