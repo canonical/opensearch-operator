@@ -194,6 +194,7 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
+        old_cert = secrets.get("cert", None)
         ca_chain = "\n".join(event.chain[::-1])
 
         self.charm.secrets.put_object(
@@ -240,7 +241,6 @@ class OpenSearchTLS(Object):
         for relation in self.charm.opensearch_provider.relations:
             self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
 
-        old_cert = secrets.get("cert", None)
         renewal = self._read_stored_ca(alias="old-ca") is not None or (
             old_cert is not None and old_cert != event.certificate
         )
@@ -674,7 +674,7 @@ class OpenSearchTLS(Object):
         try:
             ca_issuer = run_cmd(f"openssl x509 -in {tmp_ca_file.name} -noout -issuer").out
         except OpenSearchCmdError as e:
-            logging.error(f"Error reading the current truststore: {e}")
+            logger.error(f"Error reading the current truststore: {e}")
             return False
         finally:
             tmp_ca_file.close()
@@ -695,7 +695,10 @@ class OpenSearchTLS(Object):
                     """,
                 ).out
             except OpenSearchCmdError as e:
-                logging.error(f"Error reading the current certificate: {e}")
+                logger.error(f"Error reading the current certificate: {e}")
+                return False
+            except AttributeError as e:
+                logger.error(f"Error reading secret: {e}")
                 return False
 
             if cert_issuer != ca_issuer:
