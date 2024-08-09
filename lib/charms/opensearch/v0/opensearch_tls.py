@@ -194,9 +194,6 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
-        old_cert = secrets.get("cert", None)
-        renewal = old_cert is not None and old_cert != event.certificate
-
         ca_chain = "\n".join(event.chain[::-1])
 
         self.charm.secrets.put_object(
