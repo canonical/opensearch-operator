@@ -7,6 +7,12 @@
 * A deployed [Charmed OpenSearch operator](/t/9716)
 * A deployed [`cos-lite` bundle in a Kubernetes environment](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
 
+## Summary
+
+* [Offer interfaces via the COS controller](#offer-interfaces-via-the-cos-controller)
+* [Consume offers via the OpenSearch model](#consume-offers-via-the-opensearch-model)
+* [Deploy and integrate Grafana](#deploy-and-integrate-grafana)
+* [Connect to the Grafana web interface](#connect-to-the-grafana-web-interface)
 ---
 
 ## Offer interfaces via the COS controller
@@ -87,9 +93,7 @@ Large deployments run across multiple juju applications. Connect all the units o
 
 It is possible to have the same COS and dashboard for multiple deployments. The dashboard provides selectors to filter which cluster to watch at the time.
 
-## Charmed OpenSearch on Grafana
-
-### Connect Grafana web interface
+## Connect to the Grafana web interface
 
 To connect to the Grafana web interface, follow the [Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s?_ga=2.201254254.1948444620.1704703837-757109492.1701777558#heading--browse-dashboards) section of the MicroK8s "Getting started" guide.
 

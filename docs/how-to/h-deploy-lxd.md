@@ -10,9 +10,9 @@ This guide goes shows you how to deploy Charmed OpenSearch on [LXD](https://ubun
 * Fulfil the general [system requirements](/t/14565)
 
 ## Summary
-* Configure LXD
-* Prepare Juju
-* Deploy OpenSearch
+* [Configure LXD](#configure-lxd)
+* [Prepare Juju](#prepare-juju)
+* [Deploy OpenSearch](#deploy-opensearch)
 
 ---
 

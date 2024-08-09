@@ -1,16 +1,15 @@
+>[Charmed OpenSearch Tutorial](/t/9722) > 5. Manage passwords
 # Manage Passwords
-
-## Passwords
 
 When we accessed OpenSearch earlier in this tutorial, we needed to include a password in the HTTP request. Over time it is a good practice to change the password frequently. Here we will go through setting and changing the password for the admin user.
 
-### Retrieve the admin password
+## Retrieve the admin password
 As previously mentioned, the admin credentials (password + the ca chain used to generate the admin client certificate) can be retrieved by running the `get-password` action on the Charmed OpenSearch application:
 
 ```bash
-juju run-action opensearch/leader get-password --wait
+juju run opensearch/leader get-password
 ```
-Running the command should output:
+Running the command above should output something like:
 
 ```yaml
 unit-opensearch-0:
@@ -30,12 +29,12 @@ unit-opensearch-0:
 The admin password is under the result: `admin-password`.
 
 
-### Rotate the admin password
+## Rotate the admin password
 
 You can change the admin password to a new random and generated password by running:
 
 ```shell
-juju run-action opensearch/leader set-password --wait
+juju run opensearch/leader set-password 
 ```
 **Note:** this action can only be run from the leader unit.  
 Running the command should output:
@@ -57,12 +56,12 @@ The admin password is under the result: `admin-password`. It should be different
 
 You can test this password works correctly using the same HTTP requests you used during [Section 5: Connecting to OpenSearch](./5-connecting-to-opensearch.md)
 
-### Set the admin password
+## Set the admin password
 
 You can change the admin password to a specific password by entering:
 
 ```shell
-juju run-action opensearch/leader set-password password=<password> --wait
+juju run opensearch/leader set-password password=<password>
 ```
 
 Running the command should output:
@@ -82,7 +81,7 @@ unit-opensearch-0:
 
 The admin password under the result: `admin-password` should match whatever you passed in when you entered the command.
 
-### Set TLS Private Key
+## Set TLS Private Key
 
 TLS private keys are used for certificate signing requests, and should be recycled in the same way as passwords. There are three types of private keys available to be updated on this charm, and they are as follows:
 
@@ -94,7 +93,7 @@ TLS private keys are used for certificate signing requests, and should be recycl
 To change a private key to a random value, run the following command, setting `category` equal to your preferred type of private key:
 
 ```shell
-juju run-action opensearch/leader set-tls-private-key category=<category> --wait
+juju run opensearch/leader set-tls-private-key category=<category>
 ```
 
 Running the command should output:
@@ -116,7 +115,7 @@ No certificate data is presented in the results of this action.
 To set the key to a specific value run the following command:
 
 ```shell
-juju run-action opensearch/leader set-tls-private-key category=<category> key=<key> --wait
+juju run opensearch/leader set-tls-private-key category=<category> key=<key>
 ```
 
 Running the command should output:
@@ -136,7 +135,7 @@ unit-opensearch-0:
 If the key you intend to set has a passphrase, set it like so
 
 ```shell
-juju run-action opensearch/leader set-tls-private-key category=<category> password=<password> key=<key> --wait
+juju run opensearch/leader set-tls-private-key category=<category> password=<password> key=<key>
 ```
 
 Running the command should output:
@@ -153,8 +152,5 @@ unit-opensearch-0:
     started: 2023-04-06 12:37:54 +0000 UTC
 ```
 
----
 
-## Next Steps
-
-The next stage in this tutorial is about horizontally scaling the OpenSearch cluster, and can be found [here](/t/charmed-opensearch-tutorial-horizontal-scaling/9720).
+>**Next step**: [6. Scale horizontally](/t/9720)

@@ -1,62 +1,43 @@
 # Charmed OpenSearch Documentation
-[OpenSearch](http://opensearch.org/) is an open-source search and analytics suite. Developers build solutions for search, data observability, 
-data ingestion and more using OpenSearch. OpenSearch is offered under the Apache Software Licence, version 2.0, which means the community 
-maintains it as free, open-source software. OpenSearch and Dashboards were derived initially from Elasticsearch 7.10.2 and Kibana 7.10.2.
+Charmed OpenSearch is an open-source software operator that packages the [OpenSearch](http://opensearch.org/) search and data analytics suite with simplified deployment, operation, and management via the Juju CLI. It can be deployed on physical and virtual machines, as well as other cloud and cloud-like environments, including AWS, Azure, OpenStack and VMWare. 
 
-Applications like OpenSearch must be managed and operated in production environments. This means that OpenSearch application administrators and analysts who run workloads in various infrastructures should be able to automate tasks for repeatable operational work. Technologies such 
-as software operators encapsulate the knowledge, wisdom and expertise of a real-world operations team and codify it into a computer program that helps to operate complex server applications like OpenSearch and other data applications.
+Charmed OpenSearch  has multiple operator features such as automated deployment, TLS encryption, user management, horizontal scaling, replication, password rotation, and easy integration with other applications. 
 
-Canonical has developed an open-source operator called [Charmed OpenSearch (VM operator)](https://charmhub.io/opensearch), making it easier to operate OpenSearch. This operator delivers automated operations management from day 0 to day 2 on the [OpenSearch Community Edition](https://github.com/opensearch-project/OpenSearch/).
-
-The Charmed OpenSearch Virtual Machine (VM) operator deploys and operates OpenSearch on physical, Virtual Machines (VM) and other cloud and cloud-like environments, including AWS, Azure, OpenStack and VMWare. In addition, the Charmed OpenSearch (VM operator) uses [Charmed OpenSearch (Snap Package)](https://snapcraft.io/opensearch) as the software package used to build the operator.
-
-Charmed OpenSearch (VM Operator) has multiple operator features such as automated deployment, Transport Layer Security (TLS) implementation, user management and horizontal scaling, replication, password rotation, and easy to use integration with other applications.
-
-## In this documentation
-| | |
-|--|--|
-|  [Tutorials](/t/9722)</br>  Get started - a hands-on introduction to using the Charmed OpenSearch operator for new users </br> |  [How-to guides](/t/10994) </br> Step-by-step guides covering key operations and common tasks |
-| [Reference](/t/14109) </br> Technical information - specifications, APIs, architecture | [Explanation]() </br> Concepts - discussion and clarification of key topics  |
-
-## Release and versions
+This charm is for anyone looking for a complete data analytics suite. You could be a team of system administrators maintaining large data infrastructures, a software developer who wants to connect their application with a powerful search engine, or even someone curious to learn more about Charmed OpenSearch through our guided tutorial.
 
 To see the Charmed OpenSearch features and releases, visit our [GitHub Releases page](https://github.com/canonical/opensearch-operator/releases).
-
+<!--
 The Charmed OpenSearch (VM Operator) release aligns with the [OpenSearch upstream major version naming](https://opensearch.org/docs/latest/version-history/). OpenSearch releases major versions such as 1.0, 2.0, and so on.
-
 
 A charm version combines both the application major version and / (slash) the channel, e.g. `2/stable`, `2/candidate`, `2/edge`. 
 The channels are ordered from the most stable to the least stable, candidate, and edge. More risky channels like edge are always implicitly available. 
 So, if the candidate is listed, you can pull the candidate and edge. When stable is listed, all three are available.
 
 The upper portion of this page describes the Operating System (OS) where the charm can run, e.g. 2/stable is compatible and should run on a machine with Ubuntu 22.04 OS.
+-->
 
+## In this documentation
+| | |
+|--|--|
+|  [**Tutorials**](/t/9722)</br>  [Get started](/t/9722) - a hands-on introduction to using the Charmed OpenSearch operator for new users </br> |  [**How-to guides**](/t/10994) </br> Step-by-step guides covering key operations such as [scaling](/t/10994), [TLS encryption](/t/14783), or [monitoring](/t/14560) |
+| [**Reference**](/t/14109) </br> Technical information such as [system requirements](/t/14565) | <!--[Explanation]() </br> Concepts - discussion and clarification of key topics-->  |
 
-## Security, Bugs and feature request
+## Project & community
 If you find a bug in this operator or want to request a specific feature, here are the useful links:
 - Raise the issue or feature request in the [Canonical Github repository](https://github.com/canonical/opensearch-operator/issues).
 - Meet the community and chat with us if there are issues and feature requests in our [Mattermost Channel](https://chat.charmhub.io/charmhub/channels/data-platform)
 and join the [Discourse Forum](https://discourse.charmhub.io/tag/opensearch).
+- To learn about contribution guidelines, check the Charmed OpenSearch [CONTRIBUTING.md](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) on GitHub and read the Ubuntu Community's [Code of Conduct](https://ubuntu.com/community/code-of-conduct).
 
-
-## Contributing
-Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, 
-and [CONTRIBUTING.md](https://github.com/canonical/mongodb-operator/blob/main/CONTRIBUTING.md) for developer guidance.
-
-[Read our Code of Conduct](https://ubuntu.com/community/code-of-conduct).
-
-
-## Trademark notice
-OpenSearch is a registered trademark of Amazon Web Services. Other trademarks are property of their respective owners. Charmed OpenSearch is not sponsored, 
-endorsed, or affiliated with Amazon Web Services.
-
-
-## License
+## License & trademark
 The Charmed OpenSearch ROCK, Charmed OpenSearch Snap, and Charmed OpenSearch Operator are free software, distributed under the 
 [Apache Software License, version 2.0](https://github.com/canonical/charmed-opensearch-rock/blob/main/licenses/LICENSE-rock). They install and operate OpenSearch, 
 which is also licensed under the [Apache Software License, version 2.0](https://github.com/canonical/charmed-opensearch-rock/blob/main/licenses/LICENSE-opensearch).
 
-This documentation follows the [Diataxis Framework](https://canonical.com/blog/diataxis-a-new-foundation-for-canonical-documentation)
+OpenSearch is a registered trademark of Amazon Web Services. Other trademarks are property of their respective owners. Charmed OpenSearch is not sponsored, 
+endorsed, or affiliated with Amazon Web Services.
+
+This documentation follows the [Diataxis Framework](https://canonical.com/blog/diataxis-a-new-foundation-for-canonical-documentation).
 
 ## Navigation
 
@@ -73,7 +54,9 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 | 2     | t-horizontal-scaling       | [6. Scale horizontally](/t/9720)  |
 | 2     | t-clean-up                 | [7. Clean up the environment](/t/9726)       |
 | 1     | how-to                     | [How To]()                                   |
+| 2     | h-deploy-lxd | [Deploy on LXD](/t/14575) |
 | 2     | h-horizontal-scaling  | [Scale horizontally](/t/10994)          |
+| 2     | h-enable-tls   | [Enable TLS encryption](/t/14783)          |
 | 2     | h-enable-monitoring | [Enable monitoring](/t/14560) |
 | 2     | h-backups                   | [Back up and restore]()                           |
 | 3     | h-configure-s3             | [Configure S3](/t/14097)                     |
@@ -97,7 +80,9 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
   1. [6. Scale horizontally](tutorial/t-horizontal-scaling.md)
   1. [7. Clean up the environment](tutorial/t-clean-up.md)
 1. [How To](how-to)
+  1. [Deploy on LXD](how-to/h-deploy-lxd.md)
   1. [Scale horizontally](how-to/h-horizontal-scaling.md)
+  1. [Enable TLS encryption](how-to/h-enable-tls.md)
   1. [Enable monitoring](how-to/h-enable-monitoring.md)
   1. [Back up and restore](how-to/h-backups)
     1. [Configure S3](how-to/h-backups/h-configure-s3.md)
