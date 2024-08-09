@@ -29,8 +29,8 @@ from charms.opensearch.v0.helper_charm import all_units, run_cmd
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchError,
     OpenSearchCmdError,
+    OpenSearchError,
     OpenSearchHttpError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
