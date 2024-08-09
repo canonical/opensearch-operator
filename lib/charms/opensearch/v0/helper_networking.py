@@ -71,6 +71,8 @@ def unit_ip(charm: CharmBase, unit: Unit, peer_relation_name: str) -> str:
 def units_ips(charm: CharmBase, peer_relation_name: str) -> Dict[str, str]:
     """Returns the mapping "unit id / ip address" of all units."""
     unit_ip_map = {}
+    if not charm.model.get_relation(peer_relation_name):
+        return unit_ip_map
 
     for unit in charm.model.get_relation(peer_relation_name).units:
         unit_id = unit.name.split("/")[1]
