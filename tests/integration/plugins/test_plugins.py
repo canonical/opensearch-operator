@@ -322,7 +322,7 @@ async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: st
     # In large deployments, that will mean checking if the change on main orchestrator
     # was sent down to the opensearch (data node) cluster.
     result2 = await run_action(
-        ops_test, leader_id, "get-password", {"username": "monitor"}, app=APP_NAME
+        ops_test, leader_id, "get-password", {"username": "monitor"}, app=app
     )
     assert result2.response.get("password") == new_password
 
