@@ -1022,7 +1022,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             except OpenSearchHttpError:
                 logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
 
-        # TODO: should block until all shards move addressed in PR DPE-2234
+        # block until all primary shards are moved away from the unit that is stopping
+        self.health.wait_for_shards_relocation()
 
         # 2. stop the service
         self.opensearch.stop()
