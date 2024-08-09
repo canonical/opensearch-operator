@@ -166,7 +166,11 @@ async def test_kill_db_process_node_with_primary_shard(
         ops_test, app, first_unit_with_primary_shard, signal="SIGKILL"
     )
 
-    await assert_continuous_writes_increasing(c_writes)
+    if node_count != 2:
+        # 2-node clusters do not swap the elected CM automatically
+        # One of the nodes must go before that swap happens.
+        # This test ensures the cluster can recover and be accessible once again.
+        await assert_continuous_writes_increasing(c_writes)
 
     # verify that the opensearch service is back running on the old primary unit
     assert await is_up(
@@ -177,10 +181,13 @@ async def test_kill_db_process_node_with_primary_shard(
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     units_with_p_shards = [shard.unit_id for shard in shards if shard.is_prim]
     assert len(units_with_p_shards) == 2
-    for unit_id in units_with_p_shards:
-        assert (
-            unit_id != first_unit_with_primary_shard
-        ), "Primary shard still assigned to the unit where the service was killed."
+
+    if node_count != 2:
+        # There is no switch of primary shard in 2-node clusters
+        for unit_id in units_with_p_shards:
+            assert (
+                unit_id != first_unit_with_primary_shard
+            ), "Primary shard still assigned to the unit where the service was killed."
 
     # check that the unit previously hosting the primary shard now hosts a replica
     units_with_r_shards = [shard.unit_id for shard in shards if not shard.is_prim]

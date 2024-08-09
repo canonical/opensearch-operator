@@ -42,11 +42,11 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         return
 
     my_charm = await ops_test.build_charm(".")
-    await ops_test.model.set_config(MODEL_CONFIG)
-
     # This test will manually issue update-status hooks, as we want to see the change in behavior
     # when applying `settle_voting` during start/stop and during update-status.
     MODEL_CONFIG["update-status-hook-interval"] = "360m"
+
+    await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
@@ -70,9 +70,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_scale_down(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
-) -> None:
+async def test_scale_down(ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner) -> None:
     """Tests the shutdown of a node, and see the voting exclusions to be applied.
 
     This test will remove the elected cluster manager.
@@ -116,13 +114,20 @@ async def test_scale_down(
             assert len(voting_exclusions) == 2
             # After an update-status, we expect the voting exclusions to be updated.
             await execute_update_status_manually(ops_test, app)
-            assert len(voting_exclusions) == 1
+            # Depending on the node picked as excluded, we may have 1 or 2 voting exclusions.
+            voting_exclusions = await cluster_voting_config_exclusions(
+                ops_test, unit_ip=leader_unit_ip
+            )
+            assert len(voting_exclusions) in [1, 2]
 
         elif init_count == 2:
             # Down to 1x unit only
-            assert len(voting_exclusions) in 1
+            assert len(voting_exclusions) == 1
             # After an update-status, we expect the voting exclusions to be updated.
             await execute_update_status_manually(ops_test, app)
+            voting_exclusions = await cluster_voting_config_exclusions(
+                ops_test, unit_ip=leader_unit_ip
+            )
             assert len(voting_exclusions) == 0
 
         init_count = len(ops_test.model.applications[app].units)
@@ -134,7 +139,7 @@ async def test_scale_down(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_scale_back_up(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Tests the scaling back to 3x node-cluster and see the voting exclusions to be applied."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -169,12 +174,18 @@ async def test_scale_back_up(
             assert len(voting_exclusions) == 1
             # After an update-status, we expect the voting exclusions to be the same.
             await execute_update_status_manually(ops_test, app)
+            voting_exclusions = await cluster_voting_config_exclusions(
+                ops_test, unit_ip=leader_unit_ip
+            )
             assert len(voting_exclusions) == 1
 
         elif init_count == 2:
             assert len(voting_exclusions) == 0
             # After an update-status, we expect the voting exclusions to be the same
             await execute_update_status_manually(ops_test, app)
+            voting_exclusions = await cluster_voting_config_exclusions(
+                ops_test, unit_ip=leader_unit_ip
+            )
             assert len(voting_exclusions) == 0
 
         init_count = len(ops_test.model.applications[app].units)

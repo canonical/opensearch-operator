@@ -218,12 +218,13 @@ class OpenSearchExclusions:
         #     This unit has came back online -> it must power up (still 1x unit as voter), once the
         #     unit is online, we will call the settle_voting again and fall in
         #     len(sorted_cm_names) == 3, where we will delete all voting exclusions.
+        finished = True
         for node in new_exclusions:
             if node not in current_exclusions:
                 # There is a node that needs to be excluded
-                break
-        else:
-            # No need to change the voting exclusions
+                finished = False
+
+        if finished:
             return
 
         self._delete_voting(self._charm.alt_hosts)
