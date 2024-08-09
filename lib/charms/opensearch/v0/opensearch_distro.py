@@ -393,6 +393,8 @@ class OpenSearchDistribution(ABC):
         """Get the list of the roles assigned to this node."""
         try:
             nodes = self.request("GET", f"/_nodes/{self.node_id}", alt_hosts=self._charm.alt_hosts)
+            logger.debug(f"Request for node {self.node_id} returned: {nodes}")
+
             return nodes["nodes"][self.node_id]["roles"]
         except OpenSearchHttpError:
             return self.config.load("opensearch.yml")["node.roles"]

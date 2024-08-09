@@ -64,7 +64,11 @@ from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
-from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
+from charms.opensearch.v0.opensearch_nodes_exclusions import (
+    OpenSearchExclusionError,
+    OpenSearchExclusionNodeNotRegisteredError,
+    OpenSearchExclusions,
+)
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
     OpenSearchProvidedRolesException,
@@ -102,7 +106,13 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_fixed,
+)
 
 import lifecycle
 import upgrade
@@ -436,7 +446,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not (unit_data := event.relation.data.get(event.unit)):
             return
 
-        self.opensearch_exclusions.cleanup()
+        self.opensearch_exclusions.allocation_cleanup()
 
         if self.unit.is_leader() and unit_data.get("bootstrap_contributor"):
             contributor_count = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
@@ -471,10 +481,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.warning(
                 "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
-        # acquire lock to ensure only 1 unit removed at a time
-        if not self.node_lock.acquired:
-            # Raise uncaught exception to prevent Juju from removing unit
-            raise Exception("Unable to acquire lock: Another unit is starting or stopping.")
+
+        for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(2), reraise=True):
+            with attempt:
+                # acquire lock to ensure only 1 unit removed at a time
+                if not self.node_lock.acquired:
+                    # Raise uncaught exception to prevent Juju from removing unit
+                    raise Exception(
+                        "Unable to acquire lock: Another unit is starting or stopping."
+                    )
 
         # if the leader is departing, and this hook fails "leader elected" won"t trigger,
         # so we want to re-balance the node roles from here
@@ -515,7 +530,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # release lock
             self.node_lock.release()
 
-    def _on_update_status(self, event: UpdateStatusEvent):
+    def _on_update_status(self, event: UpdateStatusEvent):  # noqa: C901
         """On update status event.
 
         We want to periodically check for the following:
@@ -537,16 +552,32 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # if there are exclusions to be removed
         if self.unit.is_leader():
-            self.opensearch_exclusions.cleanup()
-
             if (health := self.health.apply(wait_for_green_first=True)) not in [
                 HealthColors.GREEN,
                 HealthColors.IGNORE,
             ]:
+                # Do not return right now!
+                # We must first check if we need to remove exclusions
                 event.defer()
 
+            # Unless it is unknown, in this case we can return and wait for the next run
             if health == HealthColors.UNKNOWN:
                 return
+
+            # Execute allocations now, as we know the cluster is minimally healthy.
+            self.opensearch_exclusions.allocation_cleanup()
+            # Now, review voting exclusions, as we may have lost a unit due to an outage
+            if not self.is_any_voting_unit_stopping():
+                try:
+                    self.opensearch_exclusions.settle_voting(
+                        unit_is_stopping=False,
+                        retry=False,
+                    )
+                except (OpenSearchExclusionError, OpenSearchHttpError):
+                    # Register the issue but do not act on it: let the next update status event
+                    # retry the operation.
+                    # We cannot assume or try to enforce the cluster to be in a healthy state
+                    logger.warning("Failed to settle voting exclusions")
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -584,6 +615,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._on_peer_relation_joined(
                 RelationJoinedEvent(event.handle, PeerRelationName, self.app, self.unit)
             )
+
+            # Review voting exclusions as our IP has changed: we may be coming back from a network
+            # outage case.
+            # In this case, we should retry if the node is not found in the cluster
+            if not self.is_any_voting_unit_stopping():
+                try:
+                    self.opensearch_exclusions.settle_voting(unit_is_stopping=False)
+                except (OpenSearchExclusionNodeNotRegisteredError, OpenSearchHttpError):
+                    event.defer()
+                    return
 
         previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.unit.is_leader():
@@ -738,6 +779,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # Otherwise, we block.
         self.status.set(BlockedStatus(TLSRelationBrokenError))
+
+    def is_any_voting_unit_stopping(self) -> bool:
+        """Check if any voting unit is stopping."""
+        rel = self.model.get_relation(PeerRelationName)
+        for unit in all_units(self):
+            if rel.data[unit].get("voting_unit_stopping") == "True":
+                return True
+        return False
 
     def is_every_unit_marked_as_started(self) -> bool:
         """Check if every unit in the cluster is marked as started."""
@@ -912,7 +961,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._cleanup_bootstrap_conf_if_applies()
 
         # Remove the exclusions that could not be removed when no units were online
-        self.opensearch_exclusions.delete_current()
+        if not self.is_any_voting_unit_stopping():
+            self.opensearch_exclusions.settle_voting(unit_is_stopping=False)
+        self.opensearch_exclusions.delete_allocations()
 
         self.node_lock.release()
 
@@ -1004,28 +1055,47 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-    def _stop_opensearch(self, *, restart=False) -> None:
+    def _stop_opensearch(self, *, restart=False) -> None:  # noqa: C901
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
+        if "cluster_manager" in self.opensearch.roles or "voting_only" in self.opensearch.roles:
+            # Inform peers that this unit is stopping and it has a voting seat.
+            # This unit must be the only one managing the voting exclusions, as it may have to
+            # exclude itself from the voting while stopping.
+            self.peers_data.put(Scope.UNIT, "voting_unit_stopping", True)
+
+        nodes = []
         if self.opensearch.is_node_up():
             try:
-                nodes = self._get_nodes(True)
+                nodes = self._get_nodes(self.opensearch.is_node_up())
                 # do not add exclusions if it's the last unit to stop
                 # otherwise cluster manager election will be blocked when starting up again
                 # and re-using storage
                 if len(nodes) > 1:
-                    # TODO: we should probably NOT have any exclusion on restart
-                    # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
-                    # 1. Add current node to the voting + alloc exclusions
-                    self.opensearch_exclusions.add_current()
+                    # 1. Add current node to alloc exclusions
+                    self.opensearch_exclusions.add_allocations()
             except OpenSearchHttpError:
-                logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
+                logger.debug("Failed to get online nodes, alloc exclusion not added")
 
-        # TODO: should block until all shards move addressed in PR DPE-2234
+        # TODO: improve relocation of all shards move in PR DPE-2234
+        if len(nodes) > 1:
+            # this check only makes sense if we have more than one unit.
+            for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
+                with attempt:
+                    if self.health.apply(wait_for_green_first=True) == HealthColors.YELLOW_TEMP:
+                        raise OpenSearchHAError(
+                            "Timed out waiting for shard relocation to complete"
+                        )
 
         # 2. stop the service
+        # We should only run voting settle right before stop. We need to manage voting before
+        # stopping e.g. in case we are going 1->0 units.
+        # We MUST run settle_voting, even if other units are stopping as well.
+        self.opensearch_exclusions.settle_voting(unit_is_stopping=True)
         self.opensearch.stop()
+
+        self.peers_data.delete(Scope.UNIT, "voting_unit_stopping")
         self.peers_data.delete(Scope.UNIT, "started")
         self.status.set(WaitingStatus(ServiceStopped))
 
@@ -1034,7 +1104,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
         if not restart:
             try:
-                self.opensearch_exclusions.delete_current()
+                self.opensearch_exclusions.delete_allocations()
             except Exception:
                 # It is purposefully broad - as this can fail for HTTP reasons,
                 # or if the config wasn't set on disk etc. In any way, this operation is on
@@ -1176,7 +1246,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_config.remove_temporary_data_role()
 
         # wait until data moves out completely
-        self.opensearch_exclusions.add_current()
+        self.opensearch_exclusions.add_allocations()
 
         try:
             for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(0.5)):
@@ -1189,7 +1259,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                             raise Exception
                     return True
         except RetryError:
-            self.opensearch_exclusions.delete_current()
+            self.opensearch_exclusions.delete_allocations()
             event.defer()
             return False
 

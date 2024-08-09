@@ -112,6 +112,10 @@ class OpenSearchHealth:
             logger.error(e)  # means the status was reported as an int (i.e: 503)
             return HealthColors.UNKNOWN
 
+        if status in [HealthColors.GREEN, HealthColors.YELLOW] and (
+            response["initializing_shards"] > 0 or response["relocating_shards"] > 0
+        ):
+            return HealthColors.YELLOW_TEMP
         if status != HealthColors.YELLOW:
             return status
 
