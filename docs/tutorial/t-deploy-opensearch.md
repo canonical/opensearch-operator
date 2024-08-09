@@ -5,7 +5,7 @@
 To deploy Charmed OpenSearch, all you need to do is run the following command:
 
 ```shell
-juju deploy opensearch --channel 2/edge
+juju deploy opensearch --channel 2/beta
 ```
 
 This will fetch the charm from [Charmhub](https://charmhub.io/opensearch?channel=edge) and begin deploying it to the LXD cloud. This process can take several minutes depending on your machine. 
