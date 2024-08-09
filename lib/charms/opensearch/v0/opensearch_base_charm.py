@@ -566,10 +566,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
-        restart_requested = False
         if self.opensearch_config.update_host_if_needed():
-            restart_requested = True
-
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
             self.tls.delete_stored_tls_resources()
             self.tls.request_new_unit_certificates()
@@ -601,7 +598,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
 
-            if self.plugin_manager.run() and not restart_requested:
+            if self.plugin_manager.run():
                 if self.upgrade_in_progress:
                     logger.warning(
                         "Changing config during an upgrade is not supported. The charm may be in a broken, "
@@ -705,9 +702,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         - Update the corresponding yaml conf files
         - Run the security admin script
         """
-        # Get the list of stored secrets for this cert
-        current_secrets = self.secrets.get_object(scope, cert_type.val)
-
         if scope == Scope.UNIT:
             admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
             if not (truststore_pwd := admin_secrets.get("truststore-password")):
@@ -722,9 +716,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 truststore_pwd=truststore_pwd,
                 keystore_pwd=keystore_pwd,
             )
-        else:
+
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
-            self.opensearch_config.set_admin_tls_conf(current_secrets)
+            if not admin_secrets.get("subject"):
+                return
+            self.opensearch_config.set_admin_tls_conf(admin_secrets)
 
         # TODO: remove logger
         logger.debug("Store new admin tls resources on tls-conf-set")
@@ -733,7 +729,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal and self.is_admin_user_configured() and self.tls.is_fully_configured():
             self.tls.remove_old_ca()
-            self._restart_opensearch_event.emit()
+            self.tls.reload_tls_certificates()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
@@ -909,6 +905,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._initialize_security_index(admin_secrets)
             self.peers_data.put(Scope.APP, "security_index_initialised", True)
 
+        # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
+        # may be thrown when calling a node - we want to ensure this node is perfectly ready
+        # before marking it as ready
+        if not self.opensearch.is_node_up():
+            raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
+
         try:
             nodes = self._get_nodes(use_localhost=self.opensearch.is_node_up())
         except OpenSearchHttpError:
@@ -1050,7 +1052,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             except OpenSearchHttpError:
                 logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
 
-        # TODO: should block until all shards move addressed in PR DPE-2234
+        # block until all primary shards are moved away from the unit that is stopping
+        self.health.wait_for_shards_relocation()
 
         # 2. stop the service
         self.opensearch.stop()

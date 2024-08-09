@@ -26,12 +26,12 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import all_units, run_cmd
-from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchCmdError,
     OpenSearchError,
+    OpenSearchCmdError,
+    OpenSearchHttpError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v3.tls_certificates import (
@@ -353,20 +353,25 @@ class OpenSearchTLS(Object):
         if cert_type == CertType.APP_ADMIN:
             return sans
 
-        dns = {self.charm.unit_name, socket.gethostname(), socket.getfqdn()}
+        # in order to be able to use the API for reloading TLS certificates it is necessary
+        # to only have one dns name and one ip address in the sans
+        # otherwise the following upstream bug will mess the sorting of these fields
+        # https://github.com/opensearch-project/security/issues/4480
+        dns = {socket.getfqdn()}
         ips = {self.charm.unit_ip}
 
-        host_public_ip = get_host_public_ip()
-        if cert_type == CertType.UNIT_HTTP and host_public_ip:
-            ips.add(host_public_ip)
+        # see above, related to https://github.com/opensearch-project/security/issues/4480
+        # host_public_ip = get_host_public_ip()
+        # if cert_type == CertType.UNIT_HTTP and host_public_ip:
+        #    ips.add(host_public_ip)
 
         for ip in ips.copy():
             try:
                 name, aliases, addresses = socket.gethostbyaddr(ip)
                 ips.update(addresses)
-
-                dns.add(name)
-                dns.update(aliases)
+                # see above, related to https://github.com/opensearch-project/security/issues/4480
+                # dns.add(name)
+                # dns.update(aliases)
             except (socket.herror, socket.gaierror):
                 continue
 
@@ -456,7 +461,10 @@ class OpenSearchTLS(Object):
         if secrets:
             store_pwd = secrets.get(f"{store_type}-password")
 
-        if not store_pwd and not self.charm.opensearch_peer_cm.is_consumer(of="main"):
+        if not store_pwd and not (
+            self.charm.opensearch_peer_cm.is_consumer(of="main")
+            and cert_type == CertType.APP_ADMIN
+        ):
             self.charm.secrets.put_object(
                 scope,
                 cert_type.val,
@@ -760,6 +768,41 @@ class OpenSearchTLS(Object):
             except OSError:
                 # thrown if file not exists, ignore
                 pass
+
+    def reload_tls_certificates(self):
+        """Reload transport and HTTP layer communication certificates via REST APIs."""
+        url_http = "_plugins/_security/api/ssl/http/reloadcerts"
+        url_transport = "_plugins/_security/api/ssl/transport/reloadcerts"
+
+        # using the SSL API requires authentication with app-admin cert and key
+        admin_secret = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
+        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_cert.write(admin_secret["cert"])
+        tmp_cert.flush()
+        tmp_cert.seek(0)
+
+        tmp_key = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_key.write(admin_secret["key"])
+        tmp_key.flush()
+        tmp_key.seek(0)
+
+        try:
+            self.charm.opensearch.request(
+                "PUT",
+                url_http,
+                cert_files=(tmp_cert.name, tmp_key.name),
+            )
+            self.charm.opensearch.request(
+                "PUT",
+                url_transport,
+                cert_files=(tmp_cert.name, tmp_key.name),
+            )
+        except OpenSearchHttpError as e:
+            logger.error(f"Error reloading TLS certificates via API: {e}")
+        finally:
+            tmp_cert.close()
+            tmp_key.close()
 
     def reset_ca_rotation_state(self) -> None:
         """Handle internal flags during CA rotation routine."""
