@@ -106,13 +106,7 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
-from tenacity import (
-    RetryError,
-    Retrying,
-    stop_after_attempt,
-    stop_after_delay,
-    wait_fixed,
-)
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 import lifecycle
 import upgrade
@@ -601,10 +595,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
-        restart_requested = False
         if self.opensearch_config.update_host_if_needed():
-            restart_requested = True
-
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
             self.tls.delete_stored_tls_resources()
             self.tls.request_new_unit_certificates()
@@ -646,7 +637,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
 
-            if self.plugin_manager.run() and not restart_requested:
+            if self.plugin_manager.run():
                 if self.upgrade_in_progress:
                     logger.warning(
                         "Changing config during an upgrade is not supported. The charm may be in a broken, "
@@ -745,9 +736,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         - Update the corresponding yaml conf files
         - Run the security admin script
         """
-        # Get the list of stored secrets for this cert
-        current_secrets = self.secrets.get_object(scope, cert_type.val)
-
         if scope == Scope.UNIT:
             admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
             if not (truststore_pwd := admin_secrets.get("truststore-password")):
@@ -762,15 +750,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 truststore_pwd=truststore_pwd,
                 keystore_pwd=keystore_pwd,
             )
-        else:
+
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
-            self.opensearch_config.set_admin_tls_conf(current_secrets)
+            if not admin_secrets.get("subject"):
+                return
+            self.opensearch_config.set_admin_tls_conf(admin_secrets)
 
         self.tls.store_admin_tls_secrets_if_applies()
 
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal and self.is_admin_user_configured() and self.tls.is_fully_configured():
-            self._restart_opensearch_event.emit()
+            self.tls.reload_tls_certificates()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
@@ -1078,15 +1068,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             except OpenSearchHttpError:
                 logger.debug("Failed to get online nodes, alloc exclusion not added")
 
-        # TODO: improve relocation of all shards move in PR DPE-2234
-        if len(nodes) > 1:
-            # this check only makes sense if we have more than one unit.
-            for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10)):
-                with attempt:
-                    if self.health.apply(wait_for_green_first=True) == HealthColors.YELLOW_TEMP:
-                        raise OpenSearchHAError(
-                            "Timed out waiting for shard relocation to complete"
-                        )
+        # block until all primary shards are moved away from the unit that is stopping
+        self.health.wait_for_shards_relocation()
 
         # 2. stop the service
         # We should only run voting settle right before stop. We need to manage voting before

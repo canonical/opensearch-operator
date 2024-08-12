@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 from os.path import exists
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import requests
 import urllib3.exceptions
@@ -207,6 +207,7 @@ class OpenSearchDistribution(ABC):
         retries: int = 0,
         ignore_retry_on: Optional[List] = None,
         timeout: int = 5,
+        cert_files: Optional[Tuple[str]] = None,
     ) -> Union[Dict[str, any], List[any], int]:
         """Make an HTTP request.
 
@@ -221,6 +222,7 @@ class OpenSearchDistribution(ABC):
             retries: number of retries
             ignore_retry_on: don't retry for specific error codes
             timeout: number of seconds before a timeout happens
+            cert_files: tuple of cert and key files to use for authentication
 
         Raises:
             ValueError if method or endpoint are missing
@@ -239,7 +241,10 @@ class OpenSearchDistribution(ABC):
             ):
                 with attempt, requests.Session() as s:
                     admin_field = self._charm.secrets.password_key("admin")
-                    s.auth = ("admin", self._charm.secrets.get(Scope.APP, admin_field))
+                    if cert_files:
+                        s.cert = cert_files
+                    else:
+                        s.auth = ("admin", self._charm.secrets.get(Scope.APP, admin_field))
 
                     request_kwargs = {
                         "method": method.upper(),
