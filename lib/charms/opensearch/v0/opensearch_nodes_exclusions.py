@@ -177,6 +177,8 @@ class OpenSearchExclusions:
         sorted_cm_names = sorted(ClusterTopology.get_cluster_managers_names(nodes))
         # For the sake of predictability, we always sort the cluster managers
         current_exclusions = self._fetch_voting_exclusions(self._charm.alt_hosts)
+        logger.debug(f"Current voting exclusions: {current_exclusions}")
+
         new_exclusions = []
 
         # Each of the possible cases
@@ -225,8 +227,10 @@ class OpenSearchExclusions:
                 finished = False
 
         if finished:
+            logger.debug("Voting exclusions are already set")
             return
 
+        logger.debug("Setting new voting exclusions")
         self._delete_voting(self._charm.alt_hosts)
         self._add_voting(self._charm.alt_hosts, node_names=new_exclusions)
 
