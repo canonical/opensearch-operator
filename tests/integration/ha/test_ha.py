@@ -454,6 +454,8 @@ async def test_restart_db_process_node_with_elected_cm(
     # find unit currently elected cluster manager
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
 
+    logger.info(f"First elected CM: {first_elected_cm_unit_id}")
+
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
         old_units_count = len(ops_test.model.applications[app].units)
@@ -482,6 +484,9 @@ async def test_restart_db_process_node_with_elected_cm(
 
     # fetch the current elected cluster manager
     current_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+
+    logger.info(f"Newly elected CM: {first_elected_cm_unit_id}")
+
     assert (
         current_elected_cm_unit_id != first_elected_cm_unit_id
     ), "Cluster manager election did not happen."
