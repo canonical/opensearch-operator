@@ -212,6 +212,7 @@ class OpenSearchTLS(Object):
         if current_stored_ca != event.ca:
             if not self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val)):
                 logger.debug("Could not store new CA certificate.")
+                event.defer()
                 return
             # when the current ca is replaced we need to initiate a rolling restart
             if current_stored_ca:
@@ -244,7 +245,7 @@ class OpenSearchTLS(Object):
             self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
 
         # broadcast secret updates for certs and CA to related sub-clusters
-        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+        if self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
         renewal = self._read_stored_ca(alias="old-ca") is not None or (
