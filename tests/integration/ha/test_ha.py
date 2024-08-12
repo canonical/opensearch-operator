@@ -58,7 +58,7 @@ ONLY_3_NODES = NODE_COUNT_DICT[(3)]
 
 
 @pytest.mark.parametrize("node_count", NODE_COUNT)
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest, node_count: int) -> None:
@@ -89,7 +89,7 @@ async def test_build_and_deploy(ops_test: OpsTest, node_count: int) -> None:
 
 
 @pytest.mark.parametrize("node_count", NODE_COUNT)
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.abort_on_fail
 async def test_replication_across_members(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, node_count: int
@@ -133,7 +133,7 @@ async def test_replication_across_members(
 
 
 @pytest.mark.parametrize("node_count", NODE_COUNT)
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.abort_on_fail
 async def test_kill_db_process_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
@@ -203,7 +203,7 @@ async def test_kill_db_process_node_with_primary_shard(
 
 
 @pytest.mark.parametrize("node_count", NODE_COUNT)
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.abort_on_fail
 async def test_kill_db_process_node_with_elected_cm(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
@@ -276,7 +276,7 @@ async def test_kill_db_process_node_with_elected_cm(
 
 
 @pytest.mark.parametrize("node_count", NODE_COUNT)
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.abort_on_fail
 async def test_freeze_db_process_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
@@ -362,7 +362,7 @@ async def test_freeze_db_process_node_with_primary_shard(
 
 
 @pytest.mark.parametrize("node_count", NODE_COUNT)
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.abort_on_fail
 async def test_freeze_db_process_node_with_elected_cm(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
@@ -440,7 +440,7 @@ async def test_freeze_db_process_node_with_elected_cm(
 
 
 @pytest.mark.parametrize("node_count", NODE_COUNT)
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.abort_on_fail
 async def test_restart_db_process_node_with_elected_cm(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
@@ -495,7 +495,7 @@ async def test_restart_db_process_node_with_elected_cm(
 
 
 @pytest.mark.parametrize("node_count", NODE_COUNT)
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.abort_on_fail
 async def test_restart_db_process_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner, node_count: int
@@ -557,7 +557,7 @@ async def test_restart_db_process_node_with_primary_shard(
 
 
 @pytest.mark.parametrize("node_count", NODE_COUNT)
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 async def test_full_cluster_crash(
     ops_test: OpsTest,
     c_writes: ContinuousWrites,
@@ -614,7 +614,7 @@ async def test_full_cluster_crash(
 
 
 @pytest.mark.parametrize("node_count", NODE_COUNT)
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.abort_on_fail
 async def test_full_cluster_restart(
     ops_test: OpsTest,
