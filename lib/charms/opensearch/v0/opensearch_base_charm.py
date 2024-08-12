@@ -473,11 +473,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
         # acquire lock to ensure only 1 unit removed at a time
         # Closes canonical/opensearch-operator#378
-        if (
-            self.app.planned_units() > 1
-            and (self.opensearch.is_node_up() or self.alt_hosts)
-            and not self.node_lock.acquired
-        ):
+        if self.app.planned_units() > 1 and not self.node_lock.acquired:
             # Raise uncaught exception to prevent Juju from removing unit
             raise Exception("Unable to acquire lock: Another unit is starting or stopping.")
 
