@@ -318,9 +318,13 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         request_certificate_renewal.assert_called_once()
 
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._create_keystore_pwd_if_not_exists")
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
-    def test_truststore_password_secret(self, _, _create_keystore_pwd_if_not_exists):
+    def test_truststore_password_secret(
+        self, _, _create_keystore_pwd_if_not_exists, deployment_desc
+    ):
+        deployment_desc.return_value = self.deployment_descriptions["ok"]
         secret = {"key": "secret_12345"}
 
         self.harness.set_leader(is_leader=False)

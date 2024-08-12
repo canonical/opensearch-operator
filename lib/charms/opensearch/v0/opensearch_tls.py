@@ -145,14 +145,14 @@ class OpenSearchTLS(Object):
             event.defer()
             return
         admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        if self.charm.unit.is_leader():
+        if self.charm.unit.is_leader() and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             # create passwords for both ca trust_store/admin key_store
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
             self._create_keystore_pwd_if_not_exists(
                 Scope.APP, CertType.APP_ADMIN, CertType.APP_ADMIN.val
             )
 
-            if admin_cert is None and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            if admin_cert is None:
                 self._request_certificate(Scope.APP, CertType.APP_ADMIN)
 
         # create passwords for both unit-http/transport key_stores
@@ -210,7 +210,10 @@ class OpenSearchTLS(Object):
 
         current_stored_ca = self._read_stored_ca()
         if current_stored_ca != event.ca:
-            self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val))
+            if not self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val)):
+                logger.debug("Could not store new CA certificate.")
+                event.defer()
+                return
             # when the current ca is replaced we need to initiate a rolling restart
             if current_stored_ca:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
@@ -469,19 +472,23 @@ class OpenSearchTLS(Object):
                 merge=True,
             )
 
-    def store_new_ca(self, secrets: Dict[str, Any]):  # noqa: C901
+    def store_new_ca(self, secrets: Dict[str, Any]) -> bool:  # noqa: C901
         """Add new CA cert to trust store."""
         keytool = f"sudo {self.jdk_path}/bin/keytool"
 
-        if self.charm.unit.is_leader():
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            return False
+
+        if self.charm.unit.is_leader() and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        # TODO: remove this log line!!!
         logger.debug(f"truststore-password: {admin_secrets.get('truststore-password')}")
 
         if not ((secrets or {}).get("ca-cert") and admin_secrets.get("truststore-password")):
             logging.error("CA cert  or truststore-password not found, quitting.")
-            return
+            return False
 
         alias = "ca"
         store_path = f"{self.certs_path}/{alias}.p12"
@@ -498,15 +505,8 @@ class OpenSearchTLS(Object):
             )
             logger.info(f"Current CA {alias} was renamed to old-{alias}.")
         except OpenSearchCmdError as e:
-            # If for any reason the password is incorrect, remove the existing truststore
-            if "keystore password was incorrect" in e.out:
-                try:
-                    logger.info("Password incorrect, current truststore will be replaced.")
-                    os.remove(store_path)
-                except OSError:
-                    pass
             # This message means there was no "ca" alias or store before, if it happens ignore
-            elif not (
+            if not (
                 f"Alias <{alias}> does not exist" in e.out
                 or "Keystore file does not exist" in e.out
             ):
@@ -532,7 +532,9 @@ class OpenSearchTLS(Object):
                 logger.info("New CA was added to truststore.")
             except OpenSearchCmdError as e:
                 logging.error(f"Error storing the ca-cert: {e}")
-                return
+                return False
+
+        return True
 
     def _read_stored_ca(self, alias: str = "ca") -> Optional[str]:
         """Load stored CA cert."""
