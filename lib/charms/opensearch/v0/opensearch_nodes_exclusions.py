@@ -44,7 +44,7 @@ class OpenSearchExclusions:
 
         self._scope = Scope.APP if self._charm.unit.is_leader() else Scope.UNIT
 
-    def add_current(self, restart=False) -> None:
+    def add_current(self, restart: bool = False) -> None:
         """Add Voting and alloc exclusions."""
         if (self._node.is_cm_eligible() or self._node.is_voting_only()) and not self._add_voting():
             logger.error(f"Failed to add voting exclusion: {self._node.name}.")
