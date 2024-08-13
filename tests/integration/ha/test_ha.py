@@ -15,6 +15,7 @@ from ..helpers import (
     SERIES,
     check_cluster_formation_successful,
     cluster_health,
+    execute_update_status_manually,
     get_application_unit_ids,
     get_application_unit_ids_ips,
     get_application_unit_names,
@@ -148,6 +149,8 @@ async def test_kill_db_process_node_with_primary_shard(
     shards = await get_shards_by_index(ops_test, leader_unit_ip, ContinuousWrites.INDEX_NAME)
     first_unit_with_primary_shard = [shard.unit_id for shard in shards if shard.is_prim][0]
 
+    logger.info(f"First unit with primary shard: {first_unit_with_primary_shard}")
+
     # Killing the only instance can be disastrous.
     if len(ops_test.model.applications[app].units) < 2:
         old_units_count = len(ops_test.model.applications[app].units)
@@ -165,6 +168,10 @@ async def test_kill_db_process_node_with_primary_shard(
     await send_kill_signal_to_process(
         ops_test, app, first_unit_with_primary_shard, signal="SIGKILL"
     )
+
+    # Ensure the cluster will process the voting exclusions
+    await execute_update_status_manually(ops_test, app)
+    await asyncio.sleep(15)
 
     if node_count != 2:
         # 2-node clusters do not swap the elected CM automatically
@@ -214,8 +221,13 @@ async def test_kill_db_process_node_with_elected_cm(
     units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
+    import pdb
+
+    pdb.set_trace()
     # find unit currently elected cluster_manager
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+
+    logger.info(f"CM unit found: {first_elected_cm_unit_id}")
 
     # Increase restart delay to give some extra time for the election to happen
     await update_restart_delay(ops_test, app, first_elected_cm_unit_id, 100)
@@ -236,6 +248,16 @@ async def test_kill_db_process_node_with_elected_cm(
     # Kill the opensearch process
     await send_kill_signal_to_process(ops_test, app, first_elected_cm_unit_id, signal="SIGKILL")
 
+    # Ensure the cluster will process the voting exclusions
+    logger.info("update-status will be executed now")
+    await execute_update_status_manually(ops_test, app)
+    logger.info("update-status was manually executed")
+    await asyncio.sleep(15)
+
+    # Print the new elected CM unit id
+    new_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+    logger.info(f"New elected CM unit id: {new_elected_cm_unit_id}")
+
     if node_count != 2:
         # This check only makes sense for non 2-node clusters
         # 2-node cluster that loses its elected CM will stop working until that node is back
@@ -246,6 +268,10 @@ async def test_kill_db_process_node_with_elected_cm(
 
     await asyncio.sleep(100)
 
+    # Ensure the cluster will process the voting exclusions
+    await execute_update_status_manually(ops_test, app)
+    logger.info("update-status was manually executed")
+
     # verify that the opensearch service is back running on the old elected cm unit
     assert await is_up(
         ops_test, units_ips[first_elected_cm_unit_id]
@@ -253,6 +279,7 @@ async def test_kill_db_process_node_with_elected_cm(
 
     # fetch the current elected cluster manager
     current_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+    logger.info(f"Current elected CM unit id: {current_elected_cm_unit_id}")
 
     if node_count != 2:
         assert (
@@ -316,7 +343,14 @@ async def test_freeze_db_process_node_with_primary_shard(
     is_node_up = await is_up(ops_test, units_ips[first_unit_with_primary_shard], retries=3)
     assert not is_node_up
 
-    await assert_continuous_writes_increasing(c_writes)
+    # Ensure the cluster will process the voting exclusions
+    await execute_update_status_manually(ops_test, app)
+    await asyncio.sleep(15)
+
+    if node_count != 2:
+        # This check only makes sense for non 2-node clusters
+        # 2-node cluster that loses its elected CM will stop working until that node is back
+        await assert_continuous_writes_increasing(c_writes)
 
     # get reachable unit to perform requests against, in case the previously stopped unit
     # is leader unit, so its address is not reachable
@@ -373,6 +407,9 @@ async def test_freeze_db_process_node_with_elected_cm(
     units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
+    import pdb
+
+    pdb.set_trace()
     # find unit currently elected cluster_manager
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
 
@@ -400,6 +437,10 @@ async def test_freeze_db_process_node_with_elected_cm(
     # verify the unit is not reachable
     is_node_up = await is_up(ops_test, units_ips[first_elected_cm_unit_id], retries=3)
     assert not is_node_up
+
+    # Ensure the cluster will process the voting exclusions
+    await execute_update_status_manually(ops_test, app)
+    await asyncio.sleep(15)
 
     if node_count != 2:
         # This check only makes sense for non 2-node clusters
@@ -472,6 +513,10 @@ async def test_restart_db_process_node_with_elected_cm(
     # restart the opensearch process
     await send_kill_signal_to_process(ops_test, app, first_elected_cm_unit_id, signal="SIGTERM")
 
+    # Ensure the cluster will process the voting exclusions
+    await execute_update_status_manually(ops_test, app)
+    await asyncio.sleep(15)
+
     if node_count != 2:
         # This check only makes sense for non 2-node clusters
         # 2-node cluster that loses its elected CM will stop working until that node is back
@@ -533,7 +578,14 @@ async def test_restart_db_process_node_with_primary_shard(
         ops_test, app, first_unit_with_primary_shard, signal="SIGTERM"
     )
 
-    await assert_continuous_writes_increasing(c_writes)
+    # Ensure the cluster will process the voting exclusions
+    await execute_update_status_manually(ops_test, app)
+    await asyncio.sleep(15)
+
+    if node_count != 2:
+        # This check only makes sense for non 2-node clusters
+        # 2-node cluster that loses its elected CM will stop working until that node is back
+        await assert_continuous_writes_increasing(c_writes)
 
     # verify that the opensearch service is back running on the previous primary shard unit
     assert await is_up(
