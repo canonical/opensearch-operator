@@ -663,6 +663,7 @@ class OpenSearchTLS(Object):
             )
         except OpenSearchHttpError as e:
             logger.error(f"Error reloading TLS certificates via API: {e}")
+            raise
         finally:
             tmp_cert.close()
             tmp_key.close()
