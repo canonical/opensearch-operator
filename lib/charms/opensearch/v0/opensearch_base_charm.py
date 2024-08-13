@@ -472,7 +472,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
         # acquire lock to ensure only 1 unit removed at a time
-        if not self.node_lock.acquired:
+        # Closes canonical/opensearch-operator#378
+        if self.app.planned_units() > 1 and not self.node_lock.acquired:
             # Raise uncaught exception to prevent Juju from removing unit
             raise Exception("Unable to acquire lock: Another unit is starting or stopping.")
 
@@ -486,7 +487,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     if node.name != self.unit_name
                 ]
                 self._compute_and_broadcast_updated_topology(remaining_nodes)
-            elif self.app.planned_units() == 0:
+            elif self.app.planned_units() == 0 and self.model.get_relation(PeerRelationName):
                 self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
                 self.peers_data.delete(Scope.APP, "nodes_config")
 
@@ -512,8 +513,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 else:
                     raise OpenSearchHAError(ClusterHealthUnknown)
         finally:
-            # release lock
-            self.node_lock.release()
+            if self.app.planned_units() > 1 and (self.opensearch.is_node_up() or self.alt_hosts):
+                # release lock
+                self.node_lock.release()
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
