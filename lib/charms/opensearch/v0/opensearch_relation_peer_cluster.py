@@ -553,12 +553,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
 
         # store the security related settings in secrets, peer_data, disk
-        logger.debug(f"admin_tls: {data.credentials.admin_tls}")
-        if not data.credentials.admin_tls["truststore-password"]:
-            logger.info("Relation data for TLS is missing.")
-            event.defer()
-            return
-
         self._set_security_conf(data)
 
         # check if there are any security misconfigurations / violations
@@ -863,6 +857,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             if unit_transport_ca_cert != peer_cluster_rel_data.credentials.admin_tls["ca-cert"]:
                 blocked_msg = "CA certificate mismatch between clusters."
                 should_sever_relation = True
+
+        logger.debug(f"admin_tls: {peer_cluster_rel_data.credentials.admin_tls}")
+        if not peer_cluster_rel_data.credentials.admin_tls["truststore-password"]:
+            logger.info("Relation data for TLS is missing.")
+            blocked_msg = "CA truststore-password not available."
+            should_sever_relation = True
 
         if not blocked_msg:
             self._clear_errors("error_from_tls")
