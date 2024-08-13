@@ -728,7 +728,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             try:
                 self.tls.reload_tls_certificates()
             except OpenSearchHttpError:
-                logger.error(f"Could not reload TLS certificates via API, will restart.")
+                logger.error("Could not reload TLS certificates via API, will restart.")
                 self._restart_opensearch_event.emit()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
