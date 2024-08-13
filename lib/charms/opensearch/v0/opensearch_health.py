@@ -3,6 +3,7 @@
 
 """Base class for the OpenSearch Health management."""
 import logging
+import time
 from typing import Dict, Optional
 
 from charms.opensearch.v0.constants_charm import (
@@ -130,9 +131,11 @@ class OpenSearchHealth:
 
         return status
 
-    @retry(stop=stop_after_attempt(90), wait=wait_fixed(10), reraise=True)
+    @retry(stop=stop_after_attempt(90), wait=wait_fixed(5), reraise=True)
     def wait_for_shards_relocation(self) -> None:
         """Blocking function until the shards relocation completes in the cluster."""
+        time.sleep(5)
+
         health = self.get(local_app_only=False)
 
         if health == HealthColors.YELLOW_TEMP:

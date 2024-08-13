@@ -468,7 +468,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
         # acquire lock to ensure only 1 unit removed at a time
-        if not self.node_lock.acquired:
+        # Closes canonical/opensearch-operator#378
+        if self.app.planned_units() > 1 and not self.node_lock.acquired:
             # Raise uncaught exception to prevent Juju from removing unit
             raise Exception("Unable to acquire lock: Another unit is starting or stopping.")
 
@@ -482,7 +483,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     if node.name != self.unit_name
                 ]
                 self._compute_and_broadcast_updated_topology(remaining_nodes)
-            elif self.app.planned_units() == 0:
+            elif self.app.planned_units() == 0 and self.model.get_relation(PeerRelationName):
                 self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
                 self.peers_data.delete(Scope.APP, "nodes_config")
 
@@ -508,8 +509,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 else:
                     raise OpenSearchHAError(ClusterHealthUnknown)
         finally:
-            # release lock
-            self.node_lock.release()
+            if self.app.planned_units() > 1 and (self.opensearch.is_node_up() or self.alt_hosts):
+                # release lock
+                self.node_lock.release()
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
@@ -728,8 +730,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal and self.is_admin_user_configured() and self.tls.is_fully_configured():
-            self.tls.remove_old_ca()
-            self.tls.reload_tls_certificates()
+            try:
+                self.tls.reload_tls_certificates()
+            except OpenSearchHttpError:
+                logger.error("Could not reload TLS certificates via API, will restart.")
+                self._restart_opensearch_event.emit()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
@@ -1045,10 +1050,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # otherwise cluster manager election will be blocked when starting up again
                 # and re-using storage
                 if len(nodes) > 1:
-                    # TODO: we should probably NOT have any exclusion on restart
-                    # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
                     # 1. Add current node to the voting + alloc exclusions
-                    self.opensearch_exclusions.add_current()
+                    self.opensearch_exclusions.add_current(restart=restart)
             except OpenSearchHttpError:
                 logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
 
@@ -1061,8 +1064,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.set(WaitingStatus(ServiceStopped))
 
         # 3. Remove the exclusions
-        # TODO: we should probably NOT have any exclusion on restart
-        # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
         if not restart:
             try:
                 self.opensearch_exclusions.delete_current()
