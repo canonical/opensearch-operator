@@ -194,7 +194,7 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
-        if self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_consumer(typ="main"):
+        if self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_consumer(of="main"):
             logger.debug(
                 f"admin-secret: {self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)}"
             )
