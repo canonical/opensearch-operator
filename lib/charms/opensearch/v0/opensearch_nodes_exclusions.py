@@ -53,6 +53,35 @@ class OpenSearchExclusions:
 
         self._scope = Scope.APP if self._charm.unit.is_leader() else Scope.UNIT
 
+    def add_allocations(
+        self, allocations: Optional[Set[str]] = None, override: bool = False
+    ) -> bool:
+        """Register new allocation exclusions."""
+        try:
+            existing = set() if override else self._fetch_allocations()
+            all_allocs = existing.union(
+                allocations if allocations is not None else {self._node.name}
+            )
+            response = self._opensearch.request(
+                "PUT",
+                "/_cluster/settings",
+                {"persistent": {"cluster.routing.allocation.exclude._name": ",".join(all_allocs)}},
+                alt_hosts=self._charm.alt_hosts,
+            )
+            return "acknowledged" in response
+        except OpenSearchHttpError:
+            return False
+
+    def delete_allocations(self, allocs: Optional[List[str]] = None) -> None:
+        """Delete Voting and alloc exclusions."""
+        try:
+            existing = self._fetch_allocations()
+            to_remove = set(allocs if allocs is not None else [self._node.name])
+            res = self.add_allocations(existing - to_remove, override=True)
+            return res
+        except OpenSearchHttpError:
+            return False
+
     def allocation_cleanup(self) -> None:
         """Delete alloc exclusions that failed to be deleted."""
         allocations_to_cleanup = self._charm.peers_data.get(
@@ -251,35 +280,6 @@ class OpenSearchExclusions:
                 )
                 if not manager or manager.name in new_exclusions:
                     raise OpenSearchExclusionElectedManagerNotFoundError()
-
-    def add_allocations(
-        self, allocations: Optional[Set[str]] = None, override: bool = False
-    ) -> bool:
-        """Register new allocation exclusions."""
-        try:
-            existing = set() if override else self._fetch_allocations()
-            all_allocs = existing.union(
-                allocations if allocations is not None else {self._node.name}
-            )
-            response = self._opensearch.request(
-                "PUT",
-                "/_cluster/settings",
-                {"persistent": {"cluster.routing.allocation.exclude._name": ",".join(all_allocs)}},
-                alt_hosts=self._charm.alt_hosts,
-            )
-            return "acknowledged" in response
-        except OpenSearchHttpError:
-            return False
-
-    def delete_allocations(self, allocs: Optional[List[str]] = None) -> bool:
-        """This removes the allocation exclusions if needed."""
-        try:
-            existing = self._fetch_allocations()
-            to_remove = set(allocs if allocs is not None else [self._node.name])
-            res = self.add_allocations(existing - to_remove, override=True)
-            return res
-        except OpenSearchHttpError:
-            return False
 
     def _fetch_allocations(self) -> Set[str]:
         """Fetch the registered allocation exclusions."""
