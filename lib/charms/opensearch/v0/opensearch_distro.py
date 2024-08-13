@@ -402,7 +402,7 @@ class OpenSearchDistribution(ABC):
 
             return nodes["nodes"][self.node_id]["roles"]
         except OpenSearchHttpError:
-            return self.config.load("opensearch.yml")["node.roles"]
+            return self.config.load("opensearch.yml").get("node.roles", [])
 
     @property
     def host(self) -> str:

@@ -195,10 +195,11 @@ class OpenSearchExclusions:
                     nodes.remove(node)
                     # we can finish the for loop here
 
-                elif not unit_is_stopping and not node:
-                    # This unit is starting, we must assure it shows up in the list
-                    # Let's retry
+                elif not unit_is_stopping and not node and self._charm.opensearch.is_started():
+                    # If this unit was supposed to be active but not in the node list, then there
+                    # is an issue with the ClusterTopology.nodes() output
                     raise OpenSearchExclusionNodeNotRegisteredError()
+
                 # Any other case is okay to move forward without changes
                 # not unit_is_stopping and     node: normal checks from the MAIN leader
                 #     unit_is_stopping and not node: expected if we have a unit going away
