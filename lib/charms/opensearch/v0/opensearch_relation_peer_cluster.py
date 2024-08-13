@@ -582,6 +582,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         secrets.put_object(Scope.APP, CertType.APP_ADMIN.val, data.credentials.admin_tls)
 
+        if not self.charm.tls.all_tls_resources_stored():
+            self.charm.tls.request_new_unit_certificates()
+
         # store the app admin TLS resources if not stored
         self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
 
@@ -858,7 +861,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 blocked_msg = "CA certificate mismatch between clusters."
                 should_sever_relation = True
 
-        logger.debug(f"admin_tls: {peer_cluster_rel_data.credentials.admin_tls}")
         if not peer_cluster_rel_data.credentials.admin_tls["truststore-password"]:
             logger.info("Relation data for TLS is missing.")
             blocked_msg = "CA truststore-password not available."
