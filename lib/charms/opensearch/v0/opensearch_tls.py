@@ -655,11 +655,13 @@ class OpenSearchTLS(Object):
                 "PUT",
                 url_http,
                 cert_files=(tmp_cert.name, tmp_key.name),
+                retries=3,
             )
             self.charm.opensearch.request(
                 "PUT",
                 url_transport,
                 cert_files=(tmp_cert.name, tmp_key.name),
+                retries=3,
             )
         except OpenSearchHttpError as e:
             logger.error(f"Error reloading TLS certificates via API: {e}")
