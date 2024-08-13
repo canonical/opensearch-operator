@@ -221,9 +221,6 @@ async def test_kill_db_process_node_with_elected_cm(
     units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
-    import pdb
-
-    pdb.set_trace()
     # find unit currently elected cluster_manager
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
 
@@ -407,9 +404,6 @@ async def test_freeze_db_process_node_with_elected_cm(
     units_ips = await get_application_unit_ids_ips(ops_test, app)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
-    import pdb
-
-    pdb.set_trace()
     # find unit currently elected cluster_manager
     first_elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
 
