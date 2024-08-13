@@ -553,6 +553,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
 
         # store the security related settings in secrets, peer_data, disk
+        logger.debug(f"admin_tls: {data.credentials.admin_tls}")
+        if not data.credentials.admin_tls["truststore-password"]:
+            logger.info("Relation data for TLS is missing.")
+            event.defer()
+            return
+
         self._set_security_conf(data)
 
         # check if there are any security misconfigurations / violations
