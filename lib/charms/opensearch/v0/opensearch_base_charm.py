@@ -540,16 +540,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
             return
 
-        # if node already shutdown - leave
-        if not self.opensearch.is_node_up():
-            return
-
         # if there are exclusions to be removed
         if self.unit.is_leader():
             if (health := self.health.apply(wait_for_green_first=True)) not in [
                 HealthColors.GREEN,
                 HealthColors.IGNORE,
-            ]:
+            ] or not self.opensearch.is_node_up():
                 # Do not return right now!
                 # We must first check if we need to remove exclusions
                 event.defer()
@@ -572,6 +568,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     # retry the operation.
                     # We cannot assume or try to enforce the cluster to be in a healthy state
                     logger.warning("Failed to settle voting exclusions")
+
+        # if node already shutdown - leave
+        if not self.opensearch.is_node_up():
+            return
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
