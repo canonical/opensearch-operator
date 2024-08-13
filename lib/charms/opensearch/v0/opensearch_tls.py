@@ -194,6 +194,14 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
+        if self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_consumer(typ="main"):
+            logger.debug(
+                f"admin-secret: {self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)}"
+            )
+            logger.debug("Updating the admin-tls secret in large deployments")
+            rel_data = self.charm.opensearch_peer_cm.rel_data()
+            secrets.put_object(Scope.APP, CertType.APP_ADMIN.val, rel_data.credentials.admin_tls)
+
         old_cert = secrets.get("cert", None)
         ca_chain = "\n".join(event.chain[::-1])
 
