@@ -724,18 +724,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
             self.opensearch_config.set_admin_tls_conf(admin_secrets)
 
-        # TODO: remove logger
-        logger.debug("Store new admin tls resources on tls-conf-set")
         self.tls.store_admin_tls_secrets_if_applies()
 
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal and self.is_admin_user_configured() and self.tls.is_fully_configured():
             try:
-                self.tls.remove_old_ca()
                 self.tls.reload_tls_certificates()
             except OpenSearchHttpError:
                 logger.error("Could not reload TLS certificates via API, will restart.")
                 self._restart_opensearch_event.emit()
+            self.tls.reset_ca_rotation_state()
+            self.tls.remove_old_ca()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
@@ -1039,6 +1038,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.tls.request_new_unit_certificates()
             if self.unit.is_leader():
                 self.tls.request_new_admin_certificate()
+            else:
+                self.tls.store_admin_tls_secrets_if_applies()
 
     def _stop_opensearch(self, *, restart=False) -> None:
         """Stop OpenSearch if possible."""

@@ -221,8 +221,6 @@ class OpenSearchTLS(Object):
                 return
 
         # store the certificates and keys in a key store
-        # TODO: remove logger
-        logger.debug(f"Store new tls resources on cert available for {cert_type}")
         self.store_new_tls_resources(
             cert_type, self.charm.secrets.get_object(scope, cert_type.val)
         )
@@ -231,10 +229,6 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader():
             if self.all_certificates_available():
                 admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-                # TODO: remove logger
-                logger.debug(
-                    f"Store new tls resources for non-leader unit for {CertType.APP_ADMIN.val}"
-                )
                 self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
             else:
                 event.defer()
@@ -486,8 +480,6 @@ class OpenSearchTLS(Object):
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
-        # TODO: remove this log line!!!
-        logger.debug(f"truststore-password: {admin_secrets.get('truststore-password')}")
 
         if not ((secrets or {}).get("ca-cert") and admin_secrets.get("truststore-password")):
             logging.error("CA cert  or truststore-password not found, quitting.")
@@ -832,7 +824,7 @@ class OpenSearchTLS(Object):
         rel = self.model.get_relation(PeerRelationName)
 
         for unit in rel.units:
-            if not rel.data[unit].get("tls_ca_renewed"):
+            if rel.data[unit].get("tls_ca_renewing") and not rel.data[unit].get("tls_ca_renewed"):
                 logger.debug(f"TLS CA rotation not complete for unit {unit}.")
                 rotation_complete = False
                 break
