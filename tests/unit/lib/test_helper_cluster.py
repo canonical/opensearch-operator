@@ -334,5 +334,5 @@ class TestHelperCluster(unittest.TestCase):
                 "STARTED": 5,
                 "INITIALIZING": 2,
                 "RELOCATING": 1,
-            }
+            },
         )
