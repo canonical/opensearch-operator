@@ -85,7 +85,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         # From: https://github.com/torvalds/linux/blob/master/fs/proc/array.c#L126-L140
         # "Parked" state is ignored as it applies to threads.
         try:
-            pid = subprocess.check_output(["lsof", "-ti:9200"], text=True)
+            pid = subprocess.check_output(["lsof", "-ti:9200"], text=True).rstrip()
             if not pid or not os.path.exists(f"/proc/{pid}/stat"):
                 return False
             with open(f"/proc/{pid}/stat") as f:
