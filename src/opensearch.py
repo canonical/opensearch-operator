@@ -10,6 +10,7 @@ import grp
 import logging
 import os
 import pwd
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
@@ -24,7 +25,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
-from charms.operator_libs_linux.v1.systemd import service_failed
+from charms.operator_libs_linux.v1.systemd import service_failed, service_running
 from charms.operator_libs_linux.v2 import snap
 from charms.operator_libs_linux.v2.snap import SnapError
 from overrides import override
@@ -69,6 +70,32 @@ class OpenSearchSnap(OpenSearchDistribution):
         except SnapError as e:
             logger.error(f"Failed to install/upgrade opensearch. \n{e}")
             raise OpenSearchInstallError()
+
+    @override
+    def is_started(self) -> bool:
+        """Check if the snap service and JVM process are running."""
+        if not self._opensearch.present:
+            return False
+
+        if not service_running("snap.opensearch.daemon.service"):
+            return False
+
+        # Now, we must dig deeper into the actual status of systemd and the JVM process.
+        # First, we want to make sure the process is not stopped, dead or zombie.
+        # From: https://github.com/torvalds/linux/blob/master/fs/proc/array.c#L126-L140
+        # "Parked" state is ignored as it applies to threads.
+        try:
+            pid = subprocess.check_output(["lsof", "-ti:9200"], text=True)
+            if not pid or not os.path.exists(f"/proc/{pid}/stat"):
+                return False
+            with open(f"/proc/{pid}/stat") as f:
+                stat = f.read()
+            if stat[2] in ["Z", "T", "X"]:
+                return False
+        except subprocess.CalledProcessError:
+            return False
+
+        return super().is_started()
 
     @override
     def _start_service(self):
@@ -206,6 +233,11 @@ class OpenSearchTarball(OpenSearchDistribution):
     def is_failed(self) -> bool:
         """Check if the opensearch daemon has failed."""
         return service_failed("opensearch.service")
+
+    @override
+    def is_started(self) -> bool:
+        """Check if the opensearch daemon is running."""
+        return self._run_cmd("systemctl is-active opensearch.service").strip() == "active"
 
     @override
     def _build_paths(self) -> Paths:
