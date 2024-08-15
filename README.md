@@ -27,23 +27,25 @@ juju add-model opensearch
 ```
 
 Configure the system settings required by [OpenSearch](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/),
-As well as setting some kernel settings on the host machine.
-```
-sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
-vm.max_map_count=262144
-vm.swappiness=0
-net.ipv4.tcp_retries2=5
-fs.file-max=1048576
-EOT
-
-sudo sysctl -p
-```
 
 ### Basic Usage
 To deploy a single unit of OpenSearch using its default configuration.
 
 ```shell
 juju deploy opensearch --channel=2/edge
+```
+
+### LXD Setup
+
+If you are using LXD as the backend for Juju, then most of the sysctl parameters need to be set manually on the host:
+```
+sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
+vm.max_map_count=262144
+vm.swappiness=0
+fs.file-max=1048576
+EOT
+
+sudo sysctl -p
 ```
 
 ## Relations / Integrations
