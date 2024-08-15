@@ -537,6 +537,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.opensearch.is_node_up():
             return
 
+        # review available CMs
+        self._add_cm_addresses_to_conf()
+
         # if there are exclusions to be removed
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
