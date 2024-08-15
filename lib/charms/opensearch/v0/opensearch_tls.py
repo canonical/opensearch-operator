@@ -824,7 +824,7 @@ class OpenSearchTLS(Object):
         rel = self.model.get_relation(PeerRelationName)
 
         for unit in rel.units:
-            if rel.data[unit].get("tls_ca_renewing") and not rel.data[unit].get("tls_ca_renewed"):
+            if not rel.data[unit].get("tls_ca_renewed"):
                 logger.debug(f"TLS CA rotation not complete for unit {unit}.")
                 rotation_complete = False
                 break
