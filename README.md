@@ -27,19 +27,8 @@ juju add-model opensearch
 ```
 
 Configure the system settings required by [OpenSearch](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/),
-we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model. 
 As well as setting some kernel settings on the host machine.
 ```
-cat <<EOF > cloudinit-userdata.yaml
-cloudinit-userdata: |
-  postruncmd:
-    - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'net.ipv4.tcp_retries2=5', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
-    - [ 'sysctl', '-p' ]
-EOF
-
 sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
 vm.max_map_count=262144
 vm.swappiness=0
@@ -48,8 +37,6 @@ fs.file-max=1048576
 EOT
 
 sudo sysctl -p
-
-juju model-config --file=./cloudinit-userdata.yaml
 ```
 
 ### Basic Usage
@@ -110,6 +97,23 @@ juju remove-relation opensearch self-signed-certificates
 
 ## Security
 Security issues in the Charmed OpenSearch Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
+
+## Customizing
+
+### Update Sysctl via ' clout-init`
+
+Certain values can be configured with different cloud-init values.
+We'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model. 
+```
+cat <<EOF > cloudinit-userdata.yaml
+cloudinit-userdata: |
+  postruncmd:
+    - [ 'echo', 'net.ipv4.tcp_retries2=2', '>>', '/etc/sysctl.conf' ]
+    - [ 'sysctl', '-p' ]
+EOF
+
+juju model-config --file=./cloudinit-userdata.yaml
+```
 
 ## Contributing
 
