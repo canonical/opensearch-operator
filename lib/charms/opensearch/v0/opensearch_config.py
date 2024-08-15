@@ -157,7 +157,7 @@ class OpenSearchConfig:
 
         if "cluster_manager" in roles and contribute_to_bootstrap:  # cluster NOT bootstrapped yet
             self._opensearch.config.put(
-                self.CONFIG_YML, "cluster.initial_cluster_manager_nodes", cm_names
+                self.CONFIG_YML, "cluster.initial_cluster_manager_nodes", [sorted(cm_names)[0]]
             )
 
         self._opensearch.config.put(self.CONFIG_YML, "path.data", self._opensearch.paths.data)
