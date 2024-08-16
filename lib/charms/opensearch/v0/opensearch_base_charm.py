@@ -734,6 +734,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 logger.error("Could not reload TLS certificates via API, will restart.")
                 self._restart_opensearch_event.emit()
             self.tls.reset_ca_rotation_state()
+            # the chain.pem file should only be updated after applying the new certs
+            # otherwise there could be TLS verification errors after renewing the CA
             self.tls.update_request_ca_bundle()
             self.tls.remove_old_ca()
 
