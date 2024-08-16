@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Unit test for the helper_cluster library."""
+import datetime
 import socket
 import unittest
 from unittest import mock
@@ -235,6 +236,8 @@ class TestOpenSearchTLS(unittest.TestCase):
         event_mock = MagicMock(
             certificate_signing_request=csr, chain=chain, certificate=cert, ca=ca
         )
+        expiry = datetime.datetime.now()
+        self.charm.tls._get_certificate_secret_expiry = MagicMock(return_value=expiry)
         self.charm.tls._on_certificate_available(event_mock)
 
         self.assertDictEqual(

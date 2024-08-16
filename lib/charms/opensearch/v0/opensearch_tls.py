@@ -14,6 +14,7 @@ It requires a charm that extends OpenSearchBaseCharm as it refers internal objec
 """
 
 import base64
+import datetime
 import logging
 import os
 import re
@@ -194,13 +195,7 @@ class OpenSearchTLS(Object):
 
         ca_chain = "\n".join(event.chain[::-1])
 
-        with tempfile.NamedTemporaryFile(mode="w+t") as cert_tmp_file:
-            cert_tmp_file.write(secrets.get("cert"))
-            cert_tmp_file.flush()
-
-            cert_expiration = run_cmd(f"openssl x509 -dates -noout < {cert_tmp_file} | grep 'notAfter'").out
-
-        logger.debug(f"cert expirtation: {cert_expiration}")
+        secret_expiry = self._get_certificate_secret_expiry(secrets)
 
         self.charm.secrets.put_object(
             scope,
@@ -211,7 +206,7 @@ class OpenSearchTLS(Object):
                 "ca-cert": event.ca,
             },
             merge=True,
-            expire=cert_expiration,
+            expire=secret_expiry,
         )
 
         # currently only make sure there is a CA
@@ -640,6 +635,24 @@ class OpenSearchTLS(Object):
             except OSError:
                 # thrown if file not exists, ignore
                 pass
+
+    def _get_certificate_secret_expiry(self, secret: Dict[str, Any]) -> datetime.datetime:
+        """Query the expiry date of the certificate from a given secret"""
+        with tempfile.NamedTemporaryFile(mode="w+t") as cert_tmp_file:
+            cert_tmp_file.write(secret.get("cert"))
+            cert_tmp_file.flush()
+
+            cert_expiry = run_cmd(
+                f"openssl x509 -dates -noout < {cert_tmp_file} | grep 'notAfter'"
+            ).out
+
+        # we subtract some time from the expiry for it to still be valid
+        secret_expiry = datetime.datetime.strptime(
+            cert_expiry, "%b %d %H:%M:%S %Y %Z"
+        ) - datetime.timedelta(days=7)
+
+        logger.debug(f"cert expiration: {cert_expiry}, {secret_expiry}")
+        return secret_expiry
 
     def reload_tls_certificates(self):
         """Reload transport and HTTP layer communication certificates via REST APIs."""

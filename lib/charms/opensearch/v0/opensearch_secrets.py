@@ -247,7 +247,12 @@ class OpenSearchSecrets(Object, RelationDataStore):
         return secret
 
     def _update_juju_secret(
-        self, scope: Scope, key: str, value: Dict[str, str], merge: bool = False, expire: datetime = None
+        self,
+        scope: Scope,
+        key: str,
+        value: Dict[str, str],
+        merge: bool = False,
+        expire: datetime = None,
     ) -> Optional[Secret]:
         # If the call below occurs for the 2nd time within the same flow,
         # it's hitting on the cache (i.e. cheap)
@@ -275,7 +280,12 @@ class OpenSearchSecrets(Object, RelationDataStore):
         return secret
 
     def _add_or_update_juju_secret(
-        self, scope: Scope, key: str, value: Dict[str, str], merge: bool = False, expire: datetime = None
+        self,
+        scope: Scope,
+        key: str,
+        value: Dict[str, str],
+        merge: bool = False,
+        expire: datetime = None,
     ):
         # Existing secret?
         if not self._get_juju_secret(scope, key):
@@ -341,7 +351,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
         return self._get_juju_secret_content(scope, key)
 
     @override
-    def put(self, scope: Scope, key: str, value: Optional[Union[any]], expire: datetime = None) -> None:
+    def put(
+        self, scope: Scope, key: str, value: Optional[Union[any]], expire: datetime = None
+    ) -> None:
         """Adding or updating a secret's value."""
         logging.debug(f"Putting secret {scope}:{key}")
         if not self.implements_secrets:
@@ -355,7 +367,12 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
     @override
     def put_object(
-        self, scope: Scope, key: str, value: Dict[str, any], merge: bool = False, expire: datetime = None
+        self,
+        scope: Scope,
+        key: str,
+        value: Dict[str, any],
+        merge: bool = False,
+        expire: datetime = None,
     ) -> None:
         """Put a dict object into relation data store."""
         logging.debug(f"Putting secret object {scope}:{key}")
