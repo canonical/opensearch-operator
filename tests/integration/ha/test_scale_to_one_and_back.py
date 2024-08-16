@@ -66,8 +66,8 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
-    # Set watermark to 1
-    await set_watermark(ops_test, app=APP_NAME, watermark=1)
+    # Set watermark
+    await set_watermark(ops_test, app=APP_NAME)
 
 
 @pytest.mark.group(1)

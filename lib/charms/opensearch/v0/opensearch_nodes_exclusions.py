@@ -43,7 +43,7 @@ class OpenSearchExclusions:
 
     def add_current(self, restart: bool = False) -> None:
         """Add Voting and alloc exclusions."""
-        if self._node.is_cm_eligible() or self._node.is_voting_only() and not self._add_voting():
+        if (self._node.is_cm_eligible() or self._node.is_voting_only()) and not self._add_voting():
             logger.error(f"Failed to add voting exclusion: {self._node.name}.")
 
         if not restart:
