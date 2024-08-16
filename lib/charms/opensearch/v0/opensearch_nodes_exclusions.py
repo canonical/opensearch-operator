@@ -39,14 +39,15 @@ class OpenSearchExclusions:
 
     def add_current(self, restart: bool = False) -> None:
         """Add Voting and alloc exclusions."""
-        if (self._node.is_cm_eligible() or self._node.is_voting_only()) and self._add_voting():
-            self._charm.peers_data.put(
-                self._scope,
-                VOTING_TO_DELETE,
-                ",".join(self._fetch_voting_exclusions()),
-            )
-        else:
-            logger.error(f"Failed to add voting exclusion: {self._node.name}.")
+        if self._node.is_cm_eligible() or self._node.is_voting_only():
+            if self._add_voting():
+                self._charm.peers_data.put(
+                    self._scope,
+                    VOTING_TO_DELETE,
+                    ",".join(self._fetch_voting_exclusions()),
+                )
+            else:
+                logger.error(f"Failed to add voting exclusion: {self._node.name}.")
 
         if not restart:
             if self._node.is_data() and not self.add_allocations():
@@ -54,12 +55,15 @@ class OpenSearchExclusions:
 
     def delete_current(self) -> None:
         """Delete Voting and alloc exclusions."""
-        if (self._node.is_cm_eligible() or self._node.is_voting_only()) and self._delete_voting():
-            self._charm.peers_data.put(
-                self._scope,
-                VOTING_TO_DELETE,
-                ",".join(self._fetch_voting_exclusions()),
-            )
+        if self._node.is_cm_eligible() or self._node.is_voting_only():
+            if self._delete_voting():
+                self._charm.peers_data.put(
+                    self._scope,
+                    VOTING_TO_DELETE,
+                    ",".join(self._fetch_voting_exclusions()),
+                )
+            else:
+                logger.error(f"Failed to exclude voting exclusion: {self._node.name}.")
 
         if self._node.is_data() and not self.delete_allocations():
             current_allocations = set(
