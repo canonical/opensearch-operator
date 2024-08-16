@@ -96,7 +96,7 @@ class OpenSearchExclusions:
     def _add_voting(self, exclusions: Optional[Set[str]] = None) -> bool:
         """Include the current node in the CMs voting exclusions list of nodes."""
         try:
-            to_add = set(self._node.name) if not exclusions else exclusions
+            to_add = exclusions or set([self._node.name])
             self._opensearch.request(
                 "POST",
                 f"/_cluster/voting_config_exclusions?node_names={','.join(to_add)}&timeout=1m",
@@ -120,7 +120,7 @@ class OpenSearchExclusions:
                 alt_hosts=self._charm.alt_hosts,
                 resp_status_code=True,
             )
-            remove_set = to_remove or {self._node.name}
+            remove_set = to_remove or set([self._node.name])
             for node in remove_set:
                 if node in exclusions:
                     exclusions.remove(node)
@@ -161,7 +161,7 @@ class OpenSearchExclusions:
         try:
             existing = set() if override else self._fetch_allocations()
             all_allocs = existing.union(
-                allocations if allocations is not None else {self._node.name}
+                allocations if allocations is not None else set([self._node.name])
             )
             response = self._opensearch.request(
                 "PUT",
