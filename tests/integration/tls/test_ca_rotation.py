@@ -36,7 +36,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
         my_charm,
         # TODO: run tests with three units once the voting exclusions issue is resolved
         # num_units=len(UNIT_IDS),
-        num_units=3,
+        num_units=2,
         series=SERIES,
     )
 
@@ -55,7 +55,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
         timeout=1800,
         # TODO: run tests with three units once the voting exclusions issue is resolved
         # wait_for_exact_units=len(UNIT_IDS),
-        wait_for_exact_units=3,
+        wait_for_exact_units=2,
     )
 
 
@@ -78,7 +78,7 @@ async def test_rollout_new_ca(ops_test: OpsTest) -> None:
         idle_period=60,
         # TODO: run tests with three units once the voting exclusions issue is resolved
         # wait_for_exact_units=len(UNIT_IDS),
-        wait_for_exact_units=3,
+        wait_for_exact_units=2,
     )
 
     # using the SSL API requires authentication with app-admin cert and key
