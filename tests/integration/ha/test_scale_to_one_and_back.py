@@ -22,7 +22,11 @@ from ..helpers import (
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
-from .helpers import app_name, assert_continuous_writes_consistency
+from .helpers import (
+    app_name,
+    assert_continuous_writes_consistency,
+    assert_continuous_writes_increasing,
+)
 from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
@@ -61,6 +65,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         idle_period=IDLE_PERIOD,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
+
+    # Set watermark to 1
+    await set_watermark(ops_test, app=APP_NAME, watermark=1)
 
 
 @pytest.mark.group(1)
@@ -112,6 +119,9 @@ async def test_scale_down(ops_test: OpsTest, c_writes: ContinuousWrites, c_write
             # Down to 1x unit only
             assert len(voting_exclusions) == 2
 
+        # Make sure we continue to be writable
+        await assert_continuous_writes_increasing(c_writes)
+
         init_count = len(ops_test.model.applications[app].units)
 
     # Make sure update status is executed and fixes the voting exclusions
@@ -157,6 +167,9 @@ async def test_scale_back_up(
             ops_test, unit_ip=leader_unit_ip
         )
         assert len(voting_exclusions) == 0
+
+        # Make sure we continue to be writable
+        await assert_continuous_writes_increasing(c_writes)
 
         init_count = len(ops_test.model.applications[app].units)
 

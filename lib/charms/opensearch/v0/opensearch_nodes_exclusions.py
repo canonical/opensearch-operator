@@ -6,7 +6,11 @@ import logging
 from functools import cached_property
 from typing import List, Optional, Set
 
-from charms.opensearch.v0.models import Node
+from charms.opensearch.v0.constants_charm import (
+    PeerClusterOrchestratorRelationName,
+    PeerRelationName,
+)
+from charms.opensearch.v0.models import DeploymentType, Node
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 
@@ -39,15 +43,8 @@ class OpenSearchExclusions:
 
     def add_current(self, restart: bool = False) -> None:
         """Add Voting and alloc exclusions."""
-        if self._node.is_cm_eligible() or self._node.is_voting_only():
-            if self._add_voting():
-                self._charm.peers_data.put(
-                    self._scope,
-                    VOTING_TO_DELETE,
-                    ",".join(self._fetch_voting_exclusions()),
-                )
-            else:
-                logger.error(f"Failed to add voting exclusion: {self._node.name}.")
+        if self._node.is_cm_eligible() or self._node.is_voting_only() and not self._add_voting():
+            logger.error(f"Failed to add voting exclusion: {self._node.name}.")
 
         if not restart:
             if self._node.is_data() and not self.add_allocations():
@@ -75,10 +72,42 @@ class OpenSearchExclusions:
                 self._scope, ALLOCS_TO_DELETE, ",".join(current_allocations)
             )
 
+    def _removed_units_to_cleanup(self) -> Optional[List[str]]:
+        """Deletes all units that have left the cluster via Juju.
+
+        This method ensures we keep a small list of voting exclusions at all times.
+        """
+        if self._charm.opensearch_peer_cm.deployment_desc() not in [
+            DeploymentType.MAIN_ORCHESTRATOR,
+            DeploymentType.FAILOVER_ORCHESTRATOR,
+        ]:
+            return False
+
+        short_id = self._charm.opensearch_peer_cm.deployment_desc().app.short_id
+        cms = set(
+            [
+                unit.name + "." + short_id
+                for relation in self._charm.model.relations.get(
+                    PeerClusterOrchestratorRelationName, []
+                )
+                for unit in relation.units
+            ]
+            + [
+                unit.name + "." + short_id
+                for unit in self._charm.model.get_relation(PeerRelationName)
+            ]
+        )
+        cleanup_nodes = []
+        for node in self._fetch_voting_exclusions():
+            if node not in cms:
+                cleanup_nodes.append(node)
+        return cleanup_nodes
+
     def cleanup(self) -> None:
         """Delete all exclusions that failed to be deleted."""
         need_voting_cleanup = set(
             self._charm.peers_data.get(self._scope, VOTING_TO_DELETE, "").split(",")
+            + self._removed_units_to_cleanup()
         )
         if (
             need_voting_cleanup
