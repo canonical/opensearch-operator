@@ -77,30 +77,28 @@ class OpenSearchExclusions:
 
         This method ensures we keep a small list of voting exclusions at all times.
         """
+        deployment_desc = self._charm.opensearch_peer_cm.deployment_desc()
+        if not deployment_desc or deployment_desc.typ not in [
+            DeploymentType.MAIN_ORCHESTRATOR,
+            DeploymentType.FAILOVER_ORCHESTRATOR,
+        ]:
+            return []
+
+        short_id = self._charm.opensearch_peer_cm.deployment_desc().app.short_id
         # We do not need to add our own unit as this code is running on it!
         peers = self._charm.model.get_relation(PeerRelationName)
         peers = [] if not peers else peers.units
 
-        deployment_desc = self._charm.opensearch_peer_cm.deployment_desc()
-        if deployment_desc and deployment_desc.typ in [
-            DeploymentType.MAIN_ORCHESTRATOR,
-            DeploymentType.FAILOVER_ORCHESTRATOR,
-        ]:
-            short_id = self._charm.opensearch_peer_cm.deployment_desc().app.short_id
-
-            cms = set(
-                [
-                    unit.name + "." + short_id
-                    for relation in self._charm.model.relations.get(
-                        PeerClusterOrchestratorRelationName
-                    )
-                    for unit in relation.units
-                ]
-                + [unit.name + "." + short_id for unit in peers]
-            )
-        elif not deployment_desc:
-            # No deployment description available, we check only the peers
-            cms = set([unit.name + "." + short_id for unit in peers])
+        cms = set(
+            [
+                unit.name + "." + short_id
+                for relation in self._charm.model.relations.get(
+                    PeerClusterOrchestratorRelationName
+                )
+                for unit in relation.units
+            ]
+            + [unit.name + "." + short_id for unit in peers]
+        )
 
         cleanup_nodes = []
         for node in self._fetch_voting_exclusions():
