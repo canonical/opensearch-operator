@@ -269,7 +269,8 @@ class OpenSearchSecrets(Object, RelationDataStore):
             logging.error("Secret %s:%s couldn't be updated", str(scope.val), str(key))
             raise OpenSearchSecretInsertionError(e)
 
-        secret.set_info(expire=expire)
+        if expire:
+            secret.set_info(expire=expire)
         self.cached_secrets.put(scope, self.label(scope, key), content=safe_content)
         return secret
 

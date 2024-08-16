@@ -194,6 +194,14 @@ class OpenSearchTLS(Object):
 
         ca_chain = "\n".join(event.chain[::-1])
 
+        with tempfile.NamedTemporaryFile(mode="w+t") as cert_tmp_file:
+            cert_tmp_file.write(secrets.get("cert"))
+            cert_tmp_file.flush()
+
+            cert_expiration = run_cmd(f"openssl x509 -dates -noout < {cert_tmp_file} | grep 'notAfter'").out
+
+        logger.debug(f"cert expirtation: {cert_expiration}")
+
         self.charm.secrets.put_object(
             scope,
             cert_type.val,
@@ -203,6 +211,7 @@ class OpenSearchTLS(Object):
                 "ca-cert": event.ca,
             },
             merge=True,
+            expire=cert_expiration,
         )
 
         # currently only make sure there is a CA
