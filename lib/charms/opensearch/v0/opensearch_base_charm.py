@@ -728,6 +728,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal and self.is_admin_user_configured() and self.tls.is_fully_configured():
+            self.health.get(local_app_only=True, wait_for_green_first=True)
             try:
                 self.tls.reload_tls_certificates()
             except OpenSearchHttpError:
