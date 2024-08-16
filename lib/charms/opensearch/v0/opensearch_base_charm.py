@@ -1030,17 +1030,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.peers_data.delete(Scope.UNIT, "started")
         self.status.set(WaitingStatus(ServiceStopped))
 
-        # 3. Remove the exclusions
-        if not restart:
-            try:
-                self.opensearch_exclusions.delete_current()
-            except Exception:
-                # It is purposefully broad - as this can fail for HTTP reasons,
-                # or if the config wasn't set on disk etc. In any way, this operation is on
-                # a best attempt basis, as this is called upon start as well,
-                # failure is not blocking at this point of the lifecycle
-                pass
-
     def _restart_opensearch(self, event: _RestartOpenSearch) -> None:
         """Restart OpenSearch if possible."""
         if not self.node_lock.acquired:
@@ -1175,7 +1164,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_config.remove_temporary_data_role()
 
         # wait until data moves out completely
-        self.opensearch_exclusions.add_current()
+        self.opensearch_exclusions.add_allocations(allocations={self.unit_name})
 
         try:
             for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(0.5)):
@@ -1188,10 +1177,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                             raise Exception
                     return True
         except RetryError:
-            self.opensearch_exclusions.delete_current()
+            self.opensearch_exclusions.delete_allocations(allocations={self.unit_name})
             event.defer()
             return False
 
+        self.opensearch_exclusions.delete_allocations(allocations={self.unit_name})
         self.status.set(WaitingStatus(WaitingToStart))
         self._restart_opensearch_event.emit()
         return True
