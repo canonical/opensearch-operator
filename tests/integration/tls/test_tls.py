@@ -154,3 +154,74 @@ async def test_tls_renewal(ops_test: OpsTest) -> None:
         updated_certs["http_certificates_list"][0]["not_before"]
         > current_certs["http_certificates_list"][0]["not_before"]
     )
+
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_tls_expiration(ops_test: OpsTest) -> None:
+    """Test that expiring TLS certificates are renewed."""
+    # before we can run this test, need to clean up and deploy with different config.
+    await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+    await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
+
+    # Deploy TLS Certificates operator.
+    config = {"ca-common-name": "CN_CA", "certificate-validity": "1"}
+    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+    await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
+
+    # Deploy Opensearch operator.
+    await ops_test.model.set_config(MODEL_CONFIG)
+    my_charm = await ops_test.build_charm(".")
+    await ops_test.model.deploy(
+        my_charm,
+        num_units=len(UNIT_IDS),
+        series=SERIES,
+    )
+
+    # Relate OpenSearch to TLS.
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=len(UNIT_IDS),
+    )
+
+    # Now start with the actual test.
+    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    leader_id = await get_leader_unit_id(ops_test)
+    non_leader_id = [
+        unit_id for unit_id in get_application_unit_ids(ops_test) if unit_id != leader_id
+    ][0]
+    units = await get_application_unit_ids_ips(ops_test, APP_NAME)
+
+    current_certs_leader = await get_loaded_tls_certificates(ops_test, leader_unit_ip)
+    current_certs_non_leader = await get_loaded_tls_certificates(ops_test, units[non_leader_id])
+
+    # fast-forward to the next update status when the certs expiration should be checked
+    # the certs should then be renewed and the units should settle again
+    async with ops_test.fast_forward("24h"):
+        await wait_until(
+            ops_test,
+            apps=[APP_NAME],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units=len(UNIT_IDS),
+            idle_period=30,
+            timeout=300,
+        )
+
+    updated_certs_leader = await get_loaded_tls_certificates(ops_test, leader_unit_ip)
+    updated_certs_non_leader = await get_loaded_tls_certificates(ops_test, units[non_leader_id])
+
+    assert (
+        updated_certs_leader["transport_certificates_list"][0]["not_before"]
+        > current_certs_leader["transport_certificates_list"][0]["not_before"]
+    )
+
+    assert (
+        updated_certs_non_leader["transport_certificates_list"][0]["not_before"]
+        > current_certs_non_leader["transport_certificates_list"][0]["not_before"]
+    )
