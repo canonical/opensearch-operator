@@ -126,9 +126,7 @@ async def test_scale_down(ops_test: OpsTest, c_writes: ContinuousWrites, c_write
 
     # Make sure update status is executed and fixes the voting exclusions
     await execute_update_status_manually(ops_test, app=app)
-    voting_exclusions = await cluster_voting_config_exclusions(
-        ops_test, unit_ip=leader_unit_ip
-    )
+    voting_exclusions = await cluster_voting_config_exclusions(ops_test, unit_ip=leader_unit_ip)
     assert len(voting_exclusions) == 0
 
     # continuous writes checks
@@ -178,9 +176,7 @@ async def test_scale_back_up(
 
     # Make sure update status is executed and fixes the voting exclusions
     await execute_update_status_manually(ops_test, app=app)
-    voting_exclusions = await cluster_voting_config_exclusions(
-        ops_test, unit_ip=leader_unit_ip
-    )
+    voting_exclusions = await cluster_voting_config_exclusions(ops_test, unit_ip=leader_unit_ip)
     assert len(voting_exclusions) == 0
 
     # continuous writes checks
