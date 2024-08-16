@@ -12,6 +12,7 @@ information for the Opensearch charm.
 """
 
 import logging
+from datetime import datetime
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from charms.opensearch.v0.constants_charm import KibanaserverUser, OpenSearchSystemUsers
@@ -220,7 +221,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
         self.cached_secrets.put_content(scope, self.label(scope, key), content=content)
         return content
 
-    def _add_juju_secret(self, scope: Scope, key: str, value: Dict[str, str]) -> Optional[Secret]:
+    def _add_juju_secret(
+        self, scope: Scope, key: str, value: Dict[str, str], expire: datetime = None
+    ) -> Optional[Secret]:
         safe_value = self._safe_obj_data(value)
 
         if not safe_value:
@@ -230,7 +233,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         label = self.label(scope, key)
         try:
-            secret = scope_obj.add_secret(safe_value, label=label)
+            secret = scope_obj.add_secret(safe_value, label=label, expire=expire)
         except ValueError as e:
             logging.error("Secret %s:%s couldn't be added", str(scope.val), str(key))
             raise OpenSearchSecretInsertionError(e)
@@ -244,7 +247,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         return secret
 
     def _update_juju_secret(
-        self, scope: Scope, key: str, value: Dict[str, str], merge: bool = False
+        self, scope: Scope, key: str, value: Dict[str, str], merge: bool = False, expire: datetime = None
     ) -> Optional[Secret]:
         # If the call below occurs for the 2nd time within the same flow,
         # it's hitting on the cache (i.e. cheap)
@@ -266,16 +269,17 @@ class OpenSearchSecrets(Object, RelationDataStore):
             logging.error("Secret %s:%s couldn't be updated", str(scope.val), str(key))
             raise OpenSearchSecretInsertionError(e)
 
+        secret.set_info(expire=expire)
         self.cached_secrets.put(scope, self.label(scope, key), content=safe_content)
         return secret
 
     def _add_or_update_juju_secret(
-        self, scope: Scope, key: str, value: Dict[str, str], merge: bool = False
+        self, scope: Scope, key: str, value: Dict[str, str], merge: bool = False, expire: datetime = None
     ):
         # Existing secret?
         if not self._get_juju_secret(scope, key):
-            return self._add_juju_secret(scope, key, value)
-        return self._update_juju_secret(scope, key, value, merge)
+            return self._add_juju_secret(scope, key, value, expire)
+        return self._update_juju_secret(scope, key, value, merge, expire)
 
     def _remove_juju_secret(self, scope: Scope, key: str):
         secret = self._get_juju_secret(scope, key)
@@ -336,7 +340,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         return self._get_juju_secret_content(scope, key)
 
     @override
-    def put(self, scope: Scope, key: str, value: Optional[Union[any]]) -> None:
+    def put(self, scope: Scope, key: str, value: Optional[Union[any]], expire: datetime = None) -> None:
         """Adding or updating a secret's value."""
         logging.debug(f"Putting secret {scope}:{key}")
         if not self.implements_secrets:
@@ -346,11 +350,11 @@ class OpenSearchSecrets(Object, RelationDataStore):
         if self.get(scope, key) == value:
             return
 
-        self._add_or_update_juju_secret(scope, key, {key: value})
+        self._add_or_update_juju_secret(scope, key, {key: value}, expire=expire)
 
     @override
     def put_object(
-        self, scope: Scope, key: str, value: Dict[str, any], merge: bool = False
+        self, scope: Scope, key: str, value: Dict[str, any], merge: bool = False, expire: datetime = None
     ) -> None:
         """Put a dict object into relation data store."""
         logging.debug(f"Putting secret object {scope}:{key}")
@@ -361,7 +365,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         if self.get_object(scope, key) == self._safe_obj_data(value):
             return
 
-        self._add_or_update_juju_secret(scope, key, value, merge)
+        self._add_or_update_juju_secret(scope, key, value, merge, expire=expire)
 
     @override
     def delete(self, scope: Scope, key: str) -> None:
