@@ -14,17 +14,14 @@ from ..helpers import (
     MODEL_CONFIG,
     SERIES,
     cluster_health,
+    cluster_voting_config_exclusions,
     get_leader_unit_ip,
     set_watermark,
 )
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
-from .helpers import (
-    app_name,
-    assert_continuous_writes_consistency,
-    cluster_voting_config_exclusions,
-)
+from .helpers import app_name, assert_continuous_writes_consistency
 from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
