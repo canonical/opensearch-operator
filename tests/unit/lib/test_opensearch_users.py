@@ -16,6 +16,16 @@ from charms.opensearch.v0.opensearch_users import (
 
 from tests.helpers import patch_network_get
 
+PEERS_USER_DICT_JSON = f"""{{
+    "0": ["{ClientRelationName}_2"],
+    "1": ["{ClientRelationName}_1"]
+}}"""  # returns user list
+
+PEERS_ROLE_DICT_JSON = f"""{{
+    "0": ["admin", "other_role1", "{ClientRelationName}_remove_pls"],
+    "1": ["admin", "other_role1", "{ClientRelationName}_test"]
+}}"""  # returns role list
+
 
 @patch_network_get("1.1.1.1")
 class TestOpenSearchUserManager(unittest.TestCase):
@@ -206,6 +216,11 @@ class TestOpenSearchUserManager(unittest.TestCase):
         self.charm.model.relations.get = MagicMock(return_value=[relation_mocker(1)])
         self.mgr.remove_role = MagicMock()
         self.mgr.remove_user = MagicMock()
-        self.mgr.remove_users_and_roles()
+        self.charm.peers_data.get = MagicMock(
+            side_effect=[PEERS_USER_DICT_JSON, PEERS_ROLE_DICT_JSON]
+        )
+        self.charm.peers_data.put = MagicMock()
+
+        self.mgr.remove_users_and_roles(departed_relation_id=0)
         self.mgr.remove_user.assert_called_once_with(f"{ClientRelationName}_2")
         self.mgr.remove_role.assert_called_once_with(f"{ClientRelationName}_remove_pls")

@@ -6,18 +6,21 @@
 These functions wrap around some API calls used for user management.
 """
 
+import json
 import logging
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import (
     AdminUser,
-    ClientRelationName,
+    ClientRolesDict,
+    ClientUsersDict,
     COSRole,
     COSUser,
     KibanaserverUser,
     OpenSearchUsers,
 )
 from charms.opensearch.v0.opensearch_distro import OpenSearchError, OpenSearchHttpError
+from charms.opensearch.v0.opensearch_internal_data import Scope
 
 logger = logging.getLogger(__name__)
 
@@ -251,31 +254,31 @@ class OpenSearchUserManager:
         """
         if not self.opensearch.is_node_up() or not self.unit.is_leader():
             return
+        rel_id = str(departed_relation_id)
 
-        relations = self.model.relations.get(ClientRelationName, [])
-        relation_users_to_keep = set(
-            [
-                f"{ClientRelationName}_{relation.id}"
-                for relation in relations
-                if relation.id != departed_relation_id
-            ]
-        )
-        relation_roles_to_keep = []
-        for key, val in self.get_users().items():
-            if key not in relation_users_to_keep or not key.startswith(f"{ClientRelationName}_"):
+        relation_users = json.loads(self.charm.peers_data.get(Scope.APP, ClientUsersDict))
+        relation_roles = json.loads(self.charm.peers_data.get(Scope.APP, ClientRolesDict))
+
+        for username in relation_users.get(rel_id, []):
+            try:
+                self.remove_user(username)
+            except OpenSearchUserMgmtError:
+                logger.error(f"failed to remove user {username}")
+        del relation_users[rel_id]
+
+        roles_to_remove = relation_roles.get(rel_id, [])
+        del relation_roles[rel_id]
+        for role in roles_to_remove:
+            # Check if this role is not present in any other relation:
+            if any(role in r for r in relation_roles.values()):
                 continue
-            # We may have multiple categories
-            # e.g. opensearch_security_roles, backend_roles, etc
-            for cat, data in val.items():
-                if not cat.endswith("roles"):
-                    continue
-                if isinstance(data, list):
-                    relation_roles_to_keep += data
-                else:
-                    relation_roles_to_keep += [data]
+            try:
+                self.remove_role(role)
+            except OpenSearchUserMgmtError:
+                logger.error(f"failed to remove role {role}")
 
-        self._remove_lingering_users(relation_users_to_keep)
-        self._remove_lingering_roles(set(relation_roles_to_keep))
+        self.charm.peers_data.put(Scope.APP, ClientUsersDict, json.dumps(relation_users))
+        self.charm.peers_data.put(Scope.APP, ClientRolesDict, json.dumps(relation_roles))
 
     def update_user_password(self, username: str, hashed_pwd: str = None):
         """Change user hashed password."""
@@ -327,35 +330,3 @@ class OpenSearchUserManager:
                 COSUser,
                 [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
             )
-
-    def _remove_lingering_users(self, relation_users: Set[str]):
-        app_users = relation_users | OpenSearchUsers
-        try:
-            database_users = set(self.get_users().keys())
-        except OpenSearchUserMgmtError:
-            logger.error("failed to get users")
-            return
-
-        for username in database_users - app_users:
-            if not username.startswith(f"{ClientRelationName}_"):
-                continue
-            try:
-                self.remove_user(username)
-            except OpenSearchUserMgmtError:
-                logger.error(f"failed to remove user {username}")
-
-    def _remove_lingering_roles(self, roles: Set[str]):
-        try:
-            database_roles = set(self.get_roles().keys())
-        except (OpenSearchUserMgmtError, OpenSearchHttpError):
-            logger.error("failed to get roles")
-            return
-
-        for role in database_roles - roles:
-            if not role.startswith(f"{ClientRelationName}_"):
-                # This role was not created by this charm, so leave it alone
-                continue
-            try:
-                self.remove_role(role)
-            except OpenSearchUserMgmtError:
-                logger.error(f"failed to remove role {role}")

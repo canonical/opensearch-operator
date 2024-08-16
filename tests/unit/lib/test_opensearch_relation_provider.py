@@ -97,7 +97,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         event.index = "test_index"
         self.unit.status = ActiveStatus()
         self.opensearch_provider._on_index_requested(event)
-        _create_users.assert_called_with(username, hashed_pw, event.index, event.extra_user_roles)
+        _create_users.assert_called_with(
+            username, hashed_pw, event.index, event.extra_user_roles, relation_id=event.relation.id
+        )
         _set_credentials.assert_called_with(event.relation.id, username, password)
         _set_version.assert_called_with(event.relation.id, _opensearch_version())
         self.assertNotIsInstance(self.unit.status, BlockedStatus)
@@ -171,10 +173,11 @@ class TestOpenSearchProvider(unittest.TestCase):
         _set_credentials.reset_mock()
         _set_version.reset_mock()
 
+    @patch("json.dumps")
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_user")
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_role")
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.patch_user")
-    def test_create_opensearch_users(self, _patch_user, _create_role, _create_user):
+    def test_create_opensearch_users(self, _patch_user, _create_role, _create_user, _):
         username = "username"
         hashed_pw = "my_cool_hash"
         extra_user_roles = "admin"
@@ -183,10 +186,14 @@ class TestOpenSearchProvider(unittest.TestCase):
         patches = [
             {"op": "replace", "path": "/opendistro_security_roles", "value": roles},
         ]
+        self.charm.peers_data.get = MagicMock(return_value=None)
+        self.charm.peers_data.put = MagicMock()
 
         self.opensearch_provider.create_opensearch_users(
-            username, hashed_pw, index, extra_user_roles
+            username, hashed_pw, index, extra_user_roles, relation_id=0
         )
+        self.charm.peers_data.put.assert_called()
+
         # permissions and action groups are in extra_user_roles, so we create a new role.
         _create_role.assert_called_with(
             role_name=username,

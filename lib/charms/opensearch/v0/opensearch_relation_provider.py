@@ -17,6 +17,7 @@ Default security values can be found in the opensearch documentation here:
 https://opensearch.org/docs/latest/security/access-control/index/.
 
 """
+import json
 import logging
 import typing
 from enum import Enum
@@ -28,6 +29,8 @@ from charms.data_platform_libs.v0.data_interfaces import (
 )
 from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
+    ClientRolesDict,
+    ClientUsersDict,
     IndexCreationFailed,
     KibanaserverRole,
     KibanaserverUser,
@@ -233,7 +236,13 @@ class OpenSearchProvider(Object):
             username = self._relation_username(event.relation)
             hashed_pwd, pwd = generate_hashed_password()
             try:
-                self.create_opensearch_users(username, hashed_pwd, event.index, extra_user_roles)
+                self.create_opensearch_users(
+                    username,
+                    hashed_pwd,
+                    event.index,
+                    extra_user_roles,
+                    relation_id=event.relation.id,
+                )
             except OpenSearchUserMgmtError as err:
                 logger.error(err)
                 self.charm.status.set(
@@ -258,9 +267,7 @@ class OpenSearchProvider(Object):
         # Clear old statuses set by this hook
         self.charm.status.clear(NewIndexRequested.format(index=event.index))
         self.charm.status.clear(IndexCreationFailed.format(index=event.index))
-        self.charm.status.clear(
-            UserCreationFailed.format(rel_name=ClientRelationName, id=event.relation.id)
-        )
+        self.charm.status.clear(UserCreationFailed.format(rel_name=ClientRelationName, id=rel_id))
 
     def validate_index_name(self, index_name: str) -> bool:
         """Validates that the index name provided in the relation is acceptable."""
@@ -290,6 +297,7 @@ class OpenSearchProvider(Object):
         hashed_pwd: str,
         index: str,
         extra_user_roles: str,
+        relation_id: Optional[int] = None,
     ):
         """Creates necessary opensearch users and permissions for this relation.
 
@@ -299,10 +307,24 @@ class OpenSearchProvider(Object):
             index: the index to which the users must be granted access
             extra_user_roles: the level of permissions that the user should be given. Can be a
                 comma-separated list of roles, which should result in a merged list of permissions.
+            relation_id: the relation id for this relation, if it exists
 
         Raises:
             OpenSearchUserMgmtError if user creation fails
         """
+        rel_id = str(relation_id) if relation_id is not None else None
+
+        users = json.loads(
+            self.charm.peers_data.get(Scope.APP, ClientUsersDict, auto_casting=False) or "{}"
+        )
+        if rel_id not in users:
+            users[rel_id] = []
+        roles = json.loads(
+            self.charm.peers_data.get(Scope.APP, ClientRolesDict, auto_casting=False) or "{}"
+        )
+        if rel_id not in roles:
+            roles[rel_id] = []
+
         try:
             # Create a new role for this relation, encapsulating the permissions we care about. We
             # can't create a "default" and an "admin" role once because the permissions need to be
@@ -311,15 +333,24 @@ class OpenSearchProvider(Object):
                 role_name=username,
                 permissions=self.get_extra_user_role_permissions(extra_user_roles, index),
             )
-            roles = [username]
-            self.user_manager.create_user(username, roles, hashed_pwd)
+            roles[rel_id].append(extra_user_roles)
+            roles[rel_id].append(username)
+
+            self.user_manager.create_user(username, [username], hashed_pwd)
             self.user_manager.patch_user(
                 username,
-                [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
+                [{"op": "replace", "path": "/opendistro_security_roles", "value": [username]}],
             )
+            users[rel_id].append(username)
         except OpenSearchUserMgmtError as err:
             logger.error(err)
             raise
+
+        if rel_id:
+            users[rel_id] = username
+            roles[rel_id] = roles
+            self.charm.peers_data.put(Scope.APP, ClientUsersDict, json.dumps(users))
+            self.charm.peers_data.put(Scope.APP, ClientRolesDict, json.dumps(roles))
 
     def get_extra_user_role_permissions(self, extra_user_roles: str, index: str) -> Dict[str, any]:
         """Get relation role permissions from the extra_user_roles field.

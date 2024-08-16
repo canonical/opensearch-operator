@@ -108,6 +108,9 @@ OpenSearchRoles = set()
 AdminUser = "admin"
 KibanaserverUser = "kibanaserver"
 KibanaserverRole = "kibana_server"
+ClientUsersDict = "client_relation_users"
+ClientRolesDict = "client_relation_roles"
+
 
 # Opensearch Snap revision
 OPENSEARCH_SNAP_REVISION = 57  # Keep in sync with `workload_version` file
