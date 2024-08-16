@@ -264,10 +264,12 @@ class OpenSearchUserManager:
                 self.remove_user(username)
             except OpenSearchUserMgmtError:
                 logger.error(f"failed to remove user {username}")
-        del relation_users[rel_id]
+        if rel_id in relation_users:  
+            del relation_users[rel_id]
 
         roles_to_remove = relation_roles.get(rel_id, [])
-        del relation_roles[rel_id]
+        if rel_id in relation_roles:
+            del relation_roles[rel_id]
         for role in roles_to_remove:
             # Check if this role is not present in any other relation:
             if any(role in r for r in relation_roles.values()):
