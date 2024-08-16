@@ -591,6 +591,16 @@ class OpenSearchTLS(Object):
         )
         logger.info(f"Removed {old_alias} from truststore.")
 
+    def update_request_ca_bundle(self) -> None:
+        """Create a new chain.pem file for requests module"""
+        admin_secret = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
+        # we store the pem format to make it easier for the python requests lib
+        self.charm.opensearch.write_file(
+            f"{self.certs_path}/chain.pem",
+            admin_secret["chain"],
+        )
+
     def store_new_tls_resources(self, cert_type: CertType, secrets: Dict[str, Any]):
         """Add key and cert to keystore."""
         if self.is_ca_rotation_ongoing():
@@ -608,13 +618,6 @@ class OpenSearchTLS(Object):
         if not secrets.get("key"):
             logging.error("TLS key not found, quitting.")
             return
-
-        # we store the pem format to make it easier for the python requests lib
-        if cert_type == CertType.APP_ADMIN:
-            self.charm.opensearch.write_file(
-                f"{self.certs_path}/chain.pem",
-                secrets["chain"],
-            )
 
         try:
             os.remove(store_path)
