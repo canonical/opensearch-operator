@@ -256,8 +256,8 @@ class OpenSearchUserManager:
             return
         rel_id = str(departed_relation_id)
 
-        relation_users = json.loads(self.charm.peers_data.get(Scope.APP, ClientUsersDict))
-        relation_roles = json.loads(self.charm.peers_data.get(Scope.APP, ClientRolesDict))
+        relation_users = json.loads(self.charm.peers_data.get(Scope.APP, ClientUsersDict) or "{}")
+        relation_roles = json.loads(self.charm.peers_data.get(Scope.APP, ClientRolesDict) or "{}")
 
         for username in relation_users.get(rel_id, []):
             try:
