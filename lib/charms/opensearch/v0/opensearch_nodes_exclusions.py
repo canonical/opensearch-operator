@@ -153,7 +153,8 @@ class OpenSearchExclusions:
                 resp_status_code=True,
             )
             remove_set = to_remove or set([self._node.name])
-            for node in remove_set:
+            nodes = set(remove_set)
+            for node in nodes:
                 if node in exclusions:
                     exclusions.remove(node)
                     remove_set.remove(node)
