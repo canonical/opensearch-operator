@@ -9,6 +9,7 @@ from multiprocessing import Event, Process, Queue, log_to_stderr
 from types import SimpleNamespace
 from typing import Optional
 
+import opensearchpy
 from opensearchpy import OpenSearch, TransportError
 from opensearchpy.helpers import BulkIndexError, bulk
 from pytest_operator.plugin import OpsTest
@@ -56,6 +57,8 @@ class ContinuousWrites:
         # create index if custom conf needed
         if repl_on_all_nodes:
             await self._create_fully_replicated_index()
+        else:
+            await self._create_index_with_0_all_replicas()
 
         # create process
         self._create_process(is_bulk=is_bulk)
@@ -139,6 +142,27 @@ class ContinuousWrites:
                 },
                 wait_for_active_shards="all",
             )
+        except opensearchpy.exceptions.RequestError as e:
+            if e.error != "resource_already_exists_exception":
+                raise
+        finally:
+            client.close()
+
+    async def _create_index_with_0_all_replicas(self):
+        """Create index with 1x shard on each node."""
+        client = await self._client()
+        try:
+            # create index with a replica shard on every node
+            client.indices.create(
+                index=ContinuousWrites.INDEX_NAME,
+                body={
+                    "settings": {"index": {"number_of_shards": 1, "auto_expand_replicas": "0-all"}}
+                },
+                wait_for_active_shards="all",
+            )
+        except opensearchpy.exceptions.RequestError as e:
+            if e.error != "resource_already_exists_exception":
+                raise
         finally:
             client.close()
 
