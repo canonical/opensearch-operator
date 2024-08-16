@@ -245,7 +245,7 @@ class OpenSearchUserManager:
 
         return resp
 
-    def remove_users_and_roles(self, departed_relation_id: Optional[int] = None):
+    def remove_users_and_roles(self, departed_relation_id: Optional[int] = None):  # noqa: C901
         """Removes lingering relation users and roles from opensearch.
 
         Args:
@@ -264,7 +264,7 @@ class OpenSearchUserManager:
                 self.remove_user(username)
             except OpenSearchUserMgmtError:
                 logger.error(f"failed to remove user {username}")
-        if rel_id in relation_users:  
+        if rel_id in relation_users:
             del relation_users[rel_id]
 
         roles_to_remove = relation_roles.get(rel_id, [])
