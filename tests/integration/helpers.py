@@ -4,6 +4,7 @@
 import json
 import logging
 import random
+import shlex
 import subprocess
 import tempfile
 from hashlib import md5
@@ -55,6 +56,25 @@ def model_conf_with_short_update_schedule():
     model_conf = MODEL_CONFIG.copy()
     model_conf["update-status-hook-interval"] = "2m"
     return model_conf
+
+
+async def execute_update_status_manually(ops_test: OpsTest, app: str):
+    """Execute the update-status hook manually."""
+    leader_id = await get_leader_unit_id(ops_test, app)
+
+    cmd = '"export JUJU_DISPATCH_PATH=hooks/update-status; ./dispatch"'
+    exec_cmd = f"juju exec -u opensearch/{leader_id} -m {ops_test.model.name} -- {cmd}"
+    try:
+        # The "normal" subprocess.run with "export ...; ..." cmd was failing
+        # Noticed that, for this case, canonical/jhack uses shlex instead to split.
+        # Adding it fixed the issue.
+        subprocess.run(shlex.split(exec_cmd))
+    except Exception as e:
+        logger.error(
+            f"Failed to apply state: process exited with {e.returncode}; "
+            f"stdout = {e.stdout}; "
+            f"stderr = {e.stderr}.",
+        )
 
 
 async def app_name(ops_test: OpsTest) -> Optional[str]:

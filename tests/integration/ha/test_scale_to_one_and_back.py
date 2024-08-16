@@ -15,6 +15,7 @@ from ..helpers import (
     SERIES,
     cluster_health,
     cluster_voting_config_exclusions,
+    execute_update_status_manually,
     get_leader_unit_ip,
     set_watermark,
 )
@@ -61,8 +62,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
-    await set_watermark(ops_test, app=APP_NAME)
-
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -106,21 +105,18 @@ async def test_scale_down(ops_test: OpsTest, c_writes: ContinuousWrites, c_write
         )
 
         if init_count == 3:
-            assert len(voting_exclusions) == 0
-            voting_exclusions = await cluster_voting_config_exclusions(
-                ops_test, unit_ip=leader_unit_ip
-            )
+            # Down to 2x units only
             assert len(voting_exclusions) == 1
 
         elif init_count == 2:
             # Down to 1x unit only
-            assert len(voting_exclusions) == 1
-            voting_exclusions = await cluster_voting_config_exclusions(
-                ops_test, unit_ip=leader_unit_ip
-            )
             assert len(voting_exclusions) == 2
 
         init_count = len(ops_test.model.applications[app].units)
+
+    # Make sure update status is executed and fixes the voting exclusions
+    await execute_update_status_manually(ops_test, app=app)
+    assert len(voting_exclusions) == 0
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
@@ -160,21 +156,13 @@ async def test_scale_back_up(
         voting_exclusions = await cluster_voting_config_exclusions(
             ops_test, unit_ip=leader_unit_ip
         )
-        if init_count == 1:
-            assert len(voting_exclusions) == 2
-            voting_exclusions = await cluster_voting_config_exclusions(
-                ops_test, unit_ip=leader_unit_ip
-            )
-            assert len(voting_exclusions) == 2
-
-        elif init_count == 2:
-            assert len(voting_exclusions) == 2
-            voting_exclusions = await cluster_voting_config_exclusions(
-                ops_test, unit_ip=leader_unit_ip
-            )
-            assert len(voting_exclusions) == 2
+        assert len(voting_exclusions) == 0
 
         init_count = len(ops_test.model.applications[app].units)
+
+    # Make sure update status is executed and fixes the voting exclusions
+    await execute_update_status_manually(ops_test, app=app)
+    assert len(voting_exclusions) == 0
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
