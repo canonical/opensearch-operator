@@ -333,8 +333,7 @@ class OpenSearchProvider(Object):
                 role_name=username,
                 permissions=self.get_extra_user_role_permissions(extra_user_roles, index),
             )
-            roles[rel_id].append(extra_user_roles)
-            roles[rel_id].append(username)
+            roles[rel_id].extend([username] + extra_user_roles.split(","))
 
             self.user_manager.create_user(username, [username], hashed_pwd)
             self.user_manager.patch_user(
@@ -347,8 +346,6 @@ class OpenSearchProvider(Object):
             raise
 
         if rel_id:
-            users[rel_id] = username
-            roles[rel_id] = roles
             self.charm.peers_data.put(Scope.APP, ClientUsersDict, json.dumps(users))
             self.charm.peers_data.put(Scope.APP, ClientRolesDict, json.dumps(roles))
 
@@ -421,6 +418,8 @@ class OpenSearchProvider(Object):
 
         if event.departing_unit == self.charm.unit:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
+
+        self.user_manager.remove_users_and_roles(event.relation.id)
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle client relation-broken event."""
