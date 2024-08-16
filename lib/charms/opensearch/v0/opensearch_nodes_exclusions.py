@@ -77,25 +77,26 @@ class OpenSearchExclusions:
 
         This method ensures we keep a small list of voting exclusions at all times.
         """
-        if self._charm.opensearch_peer_cm.deployment_desc() not in [
+        if self._charm.opensearch_peer_cm.deployment_desc().typ not in [
             DeploymentType.MAIN_ORCHESTRATOR,
             DeploymentType.FAILOVER_ORCHESTRATOR,
         ]:
             return False
 
         short_id = self._charm.opensearch_peer_cm.deployment_desc().app.short_id
+        # We do not need to add our own unit as this code is running on it!
+        peers = self._charm.model.get_relation(PeerRelationName)
+        peers = [] if not peers else peers.units
+
         cms = set(
             [
                 unit.name + "." + short_id
                 for relation in self._charm.model.relations.get(
-                    PeerClusterOrchestratorRelationName, []
+                    PeerClusterOrchestratorRelationName
                 )
                 for unit in relation.units
             ]
-            + [
-                unit.name + "." + short_id
-                for unit in self._charm.model.get_relation(PeerRelationName)
-            ]
+            + [unit.name + "." + short_id for unit in peers]
         )
         cleanup_nodes = []
         for node in self._fetch_voting_exclusions():
