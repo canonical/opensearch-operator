@@ -58,5 +58,5 @@ class TestCharm(TestOpenSearchBaseCharm):
                 },
             )
 
-            self.assertTrue(exists(f"{tmp_dir}/chain.pem"))
+            self.assertFalse(exists(f"{tmp_dir}/chain.pem"))
             self.assertTrue(exists(f"{tmp_dir}/unit-transport.p12"))
