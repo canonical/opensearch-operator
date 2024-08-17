@@ -136,8 +136,10 @@ class OpenSearchExclusions:
                 resp_status_code=True,
                 retries=3,
             )
+            logger.debug(f"Added voting for {to_add}: SUCCESS")
             return to_add is not None
         except OpenSearchHttpError:
+            logger.debug(f"Added voting for {to_add}: FAILED")
             return False
 
     def _delete_voting(self, to_remove: Optional[Set[str]] = None) -> Optional[Set[str]]:
@@ -152,6 +154,7 @@ class OpenSearchExclusions:
                 alt_hosts=self._charm.alt_hosts,
                 resp_status_code=True,
             )
+            logger.debug("Removed voting")
             remove_set = to_remove or set([self._node.name])
             nodes = set(remove_set)
             for node in nodes:
@@ -159,9 +162,11 @@ class OpenSearchExclusions:
                     exclusions.remove(node)
                     remove_set.remove(node)
             if exclusions and exclusions != original_exclusions:
+                logger.debug("Removed voting, adding back voting")
                 self._add_voting(exclusions)
             return remove_set is None
         except OpenSearchHttpError:
+            logger.debug("Removed voting: FAILED")
             return False
 
     def _fetch_voting_exclusions(self) -> Set[str]:
