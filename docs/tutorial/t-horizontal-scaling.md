@@ -137,6 +137,10 @@ albums                    0 p STARTED  4 10.6kb 10.111.61.68 opensearch-0
 **Note:** Refer to [safe-horizontal-scaling guide](/t/10994) to understand how to safely remove units in a production environment.
 [/note]
 
+[note type="caution"]
+**Warning:** In highly available deployment, only scaling down to 3 nodes is safe. If only 2 nodes are online, neither can be unavailable nor removed. The service will become **unavailable** and **data may be lost**  if scaling below 2 nodes.
+[/note]
+
 Removing a unit from the Juju application scales down your OpenSearch cluster by one node. Before we scale down the nodes we no longer need, list all the units with `juju status`. Here you will see three units / nodes: `opensearch/0`, `opensearch/1`, and `opensearch/2`. To remove the unit `opensearch/2` run:
 
 ```shell

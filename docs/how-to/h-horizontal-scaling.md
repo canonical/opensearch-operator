@@ -12,6 +12,11 @@ To see an example of scaling down a real deployment scenario, check the followin
 For more information, see the section [Scale down one unit](#scale-down-one-unit).
 [/note]
 
+
+[note type="caution"]
+**Warning:** In highly available deployment, only scaling down to 3 nodes is safe. If only 2 nodes are online, neither can be unavailable nor removed at all time. The service will become **unavailable** and **data may be lost**  if scaling below 2 nodes.
+[/note]
+
 ## Summary
 * [1. Check cluster health before scaling down](#1-check-cluster-health-before-scaling-down)
   * [Via Juju](#via-juju)
@@ -48,7 +53,8 @@ In this case, the cluster is not in good health because the status is `blocked`,
 To monitor the health more precisely, you can use the [OpenSearch health API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/).
 
 In order to authenticate your requests to the REST API, you need to [retrieve the admin user's credentials](/t/9728). 
-Run the following command:
+
+To get the admin user credentials, run the following command:
 ```shell
 juju run opensearch/leader get-password
 
@@ -66,7 +72,7 @@ A cluster health may return `green`, `yellow`, or `red`.
 
 #### `green`
 
- :green_circle: Scaling down **might be safe** to do. This is roughly equivalent to an `active` juju status.
+ :green_circle: Scaling down might be safe to do. This is roughly equivalent to an `active` juju status.
 
 It is imperative to check whether the node targeted for removal does not hold a primary shard of an index with no replicas. You can see this by making the following request and seeing which primary shards are allocated to a given node:
 
@@ -101,7 +107,7 @@ juju add-unit -n 1
 
 #### `red`  
 
-:red_circle: Scaling down is **definitely not safe** to do, as some primary shards are not assigned. This is roughly equivalent to a `blocked` juju status.
+:red_circle: Scaling down **is definitely not safe** to do, as some primary shards are not assigned. This is roughly equivalent to a `blocked` juju status.
 
 The course of action to follow here is to add units to the cluster. To scale up by one unit, run the following command:
 ```shell
