@@ -300,9 +300,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.status.clear(AdminUserInitProgress)
 
-    def _on_start(self, event: StartEvent):
+    def _on_start(self, event: StartEvent):  # noqa C901
         """Triggered when on start. Set the right node role."""
-        if self.opensearch.is_node_up():
+
+        def __on_start_post_cleanup():
             if self.peers_data.get(Scope.APP, "security_index_initialised"):
                 # in the case where it was on WaitingToStart status, event got deferred
                 # and the service started in between, put status back to active
@@ -312,6 +313,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
                 self._cleanup_bootstrap_conf_if_applies()
 
+        if self.opensearch.is_node_up():
+            __on_start_post_cleanup()
             return
 
         elif (
@@ -319,6 +322,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             and not self.opensearch.is_service_started()
         ):
             # We had a reboot in this node.
+            # We execute the same logic as above:
+            __on_start_post_cleanup()
 
             # Add the gateway.recover_after_nodes config and restart the service
             # TODO: Extend node count logic to also consider large deployments
@@ -330,7 +335,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
             # Now, reissue a restart: we should not have stopped in the first place
             # as "started" flag is still set to True.
-            self._restart_opensearch_event.emit()
+            # We do not wait for the 200 return, as each unit is coming back online
+            self.opensearch.start(wait_until_http_200=False)
             return
 
         # apply the directives computed and emitted by the peer cluster manager
