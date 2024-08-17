@@ -314,6 +314,25 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             return
 
+        elif (
+            self.peers_data.get(Scope.UNIT, "started") == "True"
+            and not self.opensearch.is_service_started()
+        ):
+            # We had a reboot in this node.
+
+            # Add the gateway.recover_after_nodes config and restart the service
+            # TODO: Extend node count logic to also consider large deployments
+            rel = self.model.get_relation(PeerRelationName)
+            self.opensearch_config.set_recover_after_nodes(
+                recover_after_nodes=len(
+                    [unit for unit in all_units(self) if rel.data[unit].get("started") == "True"]
+                )
+            )
+            # Now, reissue a restart: we should not have stopped in the first place
+            # as "started" flag is still set to True.
+            self._restart_opensearch_event.emit()
+            return
+
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():
             event.defer()
@@ -919,6 +938,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Remove the exclusions that could not be removed when no units were online
         self.opensearch_exclusions.delete_current()
 
+        # Unset the recover configuration
+        self.opensearch_config.set_recover_after_nodes()
         self.node_lock.release()
 
         if event.after_upgrade:

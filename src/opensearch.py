@@ -10,9 +10,11 @@ import grp
 import logging
 import os
 import pwd
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import requests
 from charms.opensearch.v0.constants_charm import OPENSEARCH_SNAP_REVISION
@@ -24,7 +26,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
-from charms.operator_libs_linux.v1.systemd import service_failed
+from charms.operator_libs_linux.v1.systemd import service_failed, service_running
 from charms.operator_libs_linux.v2 import snap
 from charms.operator_libs_linux.v2.snap import SnapError
 from overrides import override
@@ -69,6 +71,37 @@ class OpenSearchSnap(OpenSearchDistribution):
         except SnapError as e:
             logger.error(f"Failed to install/upgrade opensearch. \n{e}")
             raise OpenSearchInstallError()
+
+    def is_service_started(self, paused: Optional[bool] = False) -> bool:
+        """Check if the snap service and JVM process are running.
+
+        Set paused=True if the process was intentionally paused.
+        """
+        if not self._opensearch.present:
+            return False
+
+        if not service_running("snap.opensearch.daemon.service"):
+            return False
+
+        # Now, we must dig deeper into the actual status of systemd and the JVM process.
+        # First, we want to make sure the process is not stopped, dead or zombie.
+        # From: https://github.com/torvalds/linux/blob/master/fs/proc/array.c#L126-L140
+        # "Parked" state is ignored as it applies to threads.
+        try:
+            pid = subprocess.check_output(["lsof", "-ti:9200"], text=True).rstrip()
+            if not pid or not os.path.exists(f"/proc/{pid}/stat"):
+                return False
+            with open(f"/proc/{pid}/stat") as f:
+                stat = f.read()
+        except subprocess.CalledProcessError:
+            return False
+
+        if stat[2] == "T" and paused:
+            return True
+
+        # We do not check reachability of the service
+        # If that is needed, then use the `is_started` method.
+        return stat[2] not in ["Z", "T", "X"]
 
     @override
     def _start_service(self):
