@@ -103,6 +103,17 @@ class OpenSearchSnap(OpenSearchDistribution):
         # If that is needed, then use the `is_started` method.
         return stat[2] not in ["Z", "T", "X"]
 
+    def start_service_only(self):
+        """Start the snap service only."""
+        if not self._opensearch.present:
+            raise OpenSearchMissingError()
+
+        try:
+            self._opensearch.start([self.SERVICE_NAME])
+        except SnapError as e:
+            logger.error(f"Failed to start the opensearch.{self.SERVICE_NAME} service. \n{e}")
+            raise OpenSearchStartError()
+
     @override
     def _start_service(self):
         """Start the snap exposed "daemon" service."""

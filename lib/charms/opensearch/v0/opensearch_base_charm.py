@@ -327,15 +327,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # Add the gateway.recover_after_nodes config and restart the service
             # TODO: Extend node count logic to also consider large deployments
             rel = self.model.get_relation(PeerRelationName)
-            self.opensearch_config.set_recover_after_nodes(
-                recover_after_nodes=len(
-                    [unit for unit in all_units(self) if rel.data[unit].get("started") == "True"]
+            if rel:
+                self.opensearch_config.set_recover_after_nodes(
+                    recover_after_nodes=len(
+                        [
+                            unit
+                            for unit in all_units(self)
+                            if rel.data[unit].get("started") == "True"
+                        ]
+                    )
                 )
-            )
             # Now, reissue a restart: we should not have stopped in the first place
             # as "started" flag is still set to True.
             # We do not wait for the 200 return, as each unit is coming back online
-            self.opensearch.start(wait_until_http_200=False)
+            self.opensearch.start_service_only()
             return
 
         # apply the directives computed and emitted by the peer cluster manager
