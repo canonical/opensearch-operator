@@ -318,8 +318,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         elif (
-            self.peers_data.get(Scope.UNIT, "started") == "True"
-            and not self.opensearch.is_service_started()
+            self.peers_data.get(Scope.UNIT, "started") and not self.opensearch.is_service_started()
         ):
             # We had a reboot in this node.
             # We execute the same logic as above:
