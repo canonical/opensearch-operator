@@ -1,0 +1,86 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:734 Connecting to existing model localhost-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:jammy/opensearch-0
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  self-signed-certificates/0 [allocating] waiting: waiting for machine
+  opensearch/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  self-signed-certificates/0 [allocating] waiting: waiting for machine
+  opensearch/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  self-signed-certificates/0 [allocating] waiting: waiting for machine
+  opensearch/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  self-signed-certificates/0 [allocating] waiting: waiting for machine
+  opensearch/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  self-signed-certificates/0 [idle] active: 
+  opensearch/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  opensearch/0 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  opensearch/0 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  self-signed-certificates/0 [idle] active: 
+  opensearch/0 [executing] active: 
+[33mWARNING [0m juju.client.connection:connection.py:578 Receiver: Connection closed, reconnecting
+[1m[31mERROR   [0m juju.model:jasyncio.py:53 Task tmp raised an exception: watcher was stopped
+Traceback (most recent call last):
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/jasyncio.py", line 41, in _task_result_exp_handler
+    task.result()
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/facade.py", line 486, in wrapper
+    reply = await f(*args, **kwargs)
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/_client3.py", line 760, in Next
+    reply = await self.rpc(msg)
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/overrides.py", line 114, in rpc
+    result = await self.connection.rpc(msg, encoder=TypeEncoder)
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 672, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: watcher was stopped
+[33mWARNING [0m juju.model:model.py:1220 Watcher: watcher stopped, restarting
+[33mWARNING [0m juju.client.connection:connection.py:654 RPC: Connection closed, reconnecting
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Task exception was never retrieved
+future: <Task finished name='Task-2332' coro=<Connection.reconnect() done, defined at /home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py:779> exception=InvalidStatusCode(404, Headers([('Content-Type', 'text/plain; charset=utf-8'), ('X-Content-Type-Options', 'nosniff'), ('Date', 'Mon, 19 Aug 2024 03:42:10 GMT'), ('Content-Length', '19'), ('Connection', 'close')]))>
+Traceback (most recent call last):
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 788, in reconnect
+    res = await connector(
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 868, in _connect_with_login
+    await self._connect(endpoints)
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 817, in _connect
+    result = await task
+  File "/usr/lib/python3.10/asyncio/tasks.py", line 571, in _wait_for_one
+    return f.result()  # May raise f.exception().
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 806, in _try_endpoint
+    return await self._open(endpoint, cacert)
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 427, in _open
+    return (await websockets.connect(
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 647, in __await_impl_timeout__
+    return await self.__await_impl__()
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 654, in __await_impl__
+    await protocol.handshake(
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 325, in handshake
+    raise InvalidStatusCode(status_code, response_headers)
+websockets.exceptions.InvalidStatusCode: server rejected WebSocket connection: HTTP 404
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Task exception was never retrieved
+future: <Task finished name='Task-2338' coro=<Connection.reconnect() done, defined at /home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py:779> exception=InvalidStatusCode(404, Headers([('Content-Type', 'text/plain; charset=utf-8'), ('X-Content-Type-Options', 'nosniff'), ('Date', 'Mon, 19 Aug 2024 03:42:10 GMT'), ('Content-Length', '19'), ('Connection', 'close')]))>
+Traceback (most recent call last):
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 788, in reconnect
+    res = await connector(
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 868, in _connect_with_login
+    await self._connect(endpoints)
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 817, in _connect
+    result = await task
+  File "/usr/lib/python3.10/asyncio/tasks.py", line 571, in _wait_for_one
+    return f.result()  # May raise f.exception().
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 806, in _try_endpoint
+    return await self._open(endpoint, cacert)
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 427, in _open
+    return (await websockets.connect(
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 647, in __await_impl_timeout__
+    return await self.__await_impl__()
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 654, in __await_impl__
+    await protocol.handshake(
+  File "/home/ubuntu/github-runner/_work/opensearch-operator/opensearch-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 325, in handshake
+    raise InvalidStatusCode(status_code, response_headers)
+websockets.exceptions.InvalidStatusCode: server rejected WebSocket connection: HTTP 404
+[1m[31mERROR   [0m juju.client.connection:connection.py:662 RPC: Automatic reconnect failed

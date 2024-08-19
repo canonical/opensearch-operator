@@ -1,0 +1,51 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.4    unsupported  03:42:15Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         waiting    0/1  opensearch                                 0  no       Waiting for OpenSearch to start...
+self-signed-certificates           active     0/1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports  Message
+opensearch/0*                unknown   lost   1        10.178.103.46          agent lost, see 'juju show-status-log opensearch/0'
+self-signed-certificates/0*  unknown   lost   0        10.178.103.13          agent lost, see 'juju show-status-log self-signed-certificates/0'
+
+Machine  State  Address        Inst id        Base          AZ  Message
+0        down   10.178.103.13  juju-f114ee-0  ubuntu@22.04      Running
+1        down   10.178.103.46  juju-f114ee-1  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 03:39:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 03:39:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 03:39:29 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 03:39:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 03:39:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 03:39:40 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-0: 03:41:26 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 03:41:27 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 03:41:27 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 03:41:27 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 03:41:27 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 03:41:28 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-0: 03:41:29 ERROR unit.opensearch/0.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-0: 03:41:33 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 03:41:34 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 03:41:35 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 03:41:35 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 03:41:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 03:41:36 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:41:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 03:41:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 03:41:36 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:41:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 03:41:36 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:41:42 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 03:42:03 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:42:07 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-self-signed-certificates-0: 03:42:09 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+
+[33mWARNING [0m juju.client.connection:connection.py:654 RPC: Connection closed, reconnecting
+[1m[31mERROR   [0m juju.client.connection:connection.py:662 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
