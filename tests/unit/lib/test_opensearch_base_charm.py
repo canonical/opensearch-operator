@@ -316,6 +316,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         store_admin_tls_secrets_if_applies.assert_called_once()
         reload_tls_certificates.assert_called_once()
         update_request_ca_bundle.assert_called_once()
+
         remove_old_ca.assert_called_once()
         self.charm._restart_opensearch_event.emit.assert_not_called()
 

@@ -724,8 +724,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
             self.opensearch_config.set_admin_tls_conf(admin_secrets)
 
-        self.tls.store_admin_tls_secrets_if_applies()
-
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal and self.is_admin_user_configured() and self.tls.is_fully_configured():
             try:
@@ -734,6 +732,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 logger.error("Could not reload TLS certificates via API, will restart.")
                 self._restart_opensearch_event.emit()
             self.tls.reset_ca_rotation_state()
+            self.tls.store_admin_tls_secrets_if_applies()
             # the chain.pem file should only be updated after applying the new certs
             # otherwise there could be TLS verification errors after renewing the CA
             self.tls.update_request_ca_bundle()

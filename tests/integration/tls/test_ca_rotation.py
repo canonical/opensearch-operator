@@ -12,6 +12,7 @@ from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    UNIT_IDS,
     get_leader_unit_ip,
     get_secret_by_label,
 )
@@ -34,9 +35,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
 
     await ops_test.model.deploy(
         my_charm,
-        # TODO: run tests with three units once the voting exclusions issue is resolved
-        # num_units=len(UNIT_IDS),
-        num_units=3,
+        num_units=len(UNIT_IDS),
         series=SERIES,
     )
 
@@ -53,9 +52,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
         apps_statuses=["active"],
         units_statuses=["active"],
         timeout=1800,
-        # TODO: run tests with three units once the voting exclusions issue is resolved
-        # wait_for_exact_units=len(UNIT_IDS),
-        wait_for_exact_units=3,
+        wait_for_exact_units=len(UNIT_IDS),
     )
 
 
@@ -74,11 +71,9 @@ async def test_rollout_new_ca(ops_test: OpsTest) -> None:
         apps=[APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        timeout=1000,
+        timeout=1800,
         idle_period=60,
-        # TODO: run tests with three units once the voting exclusions issue is resolved
-        # wait_for_exact_units=len(UNIT_IDS),
-        wait_for_exact_units=3,
+        wait_for_exact_units=len(UNIT_IDS),
     )
 
     # using the SSL API requires authentication with app-admin cert and key
