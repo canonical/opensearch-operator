@@ -39,7 +39,12 @@ from charms.opensearch.v0.constants_charm import (
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
+from charms.opensearch.v0.helper_charm import (
+    Status,
+    all_units,
+    all_units_names,
+    format_unit_name,
+)
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.helper_security import (
@@ -332,7 +337,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     recover_after_nodes=len(
                         [
                             unit
-                            for unit in all_units(self)
+                            for unit in all_units_names(self)
                             if rel.data[unit].get("started") == "True"
                         ]
                     )
@@ -341,6 +346,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # as "started" flag is still set to True.
             # We do not wait for the 200 return, as each unit is coming back online
             self.opensearch.start_service_only()
+
+            for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(10), reraise=True):
+                with attempt:
+                    if not self.opensearch.is_service_started():
+                        # if we fail here enough times, then we have a problem
+                        # We will let the charm error and retry this hook
+                        # Otherwise, the user will be informed of an ERROR status
+                        raise OpenSearchStartError("Service did not start correctly after reboot.")
+                    # Unset the recover configuration
+                    self.opensearch_config.set_recover_after_nodes()
             return
 
         # apply the directives computed and emitted by the peer cluster manager
@@ -948,8 +963,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Remove the exclusions that could not be removed when no units were online
         self.opensearch_exclusions.delete_current()
 
-        # Unset the recover configuration
-        self.opensearch_config.set_recover_after_nodes()
         self.node_lock.release()
 
         if event.after_upgrade:

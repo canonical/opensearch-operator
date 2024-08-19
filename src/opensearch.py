@@ -72,6 +72,7 @@ class OpenSearchSnap(OpenSearchDistribution):
             logger.error(f"Failed to install/upgrade opensearch. \n{e}")
             raise OpenSearchInstallError()
 
+    @override
     def is_service_started(self, paused: Optional[bool] = False) -> bool:
         """Check if the snap service and JVM process are running.
 
@@ -103,6 +104,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         # If that is needed, then use the `is_started` method.
         return stat[2] not in ["Z", "T", "X"]
 
+    @override
     def start_service_only(self):
         """Start the snap service only."""
         if not self._opensearch.present:

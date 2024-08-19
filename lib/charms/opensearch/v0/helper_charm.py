@@ -10,7 +10,11 @@ from time import time_ns
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, List, Union
 
-from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.constants_charm import (
+    PeerClusterOrchestratorRelationName,
+    PeerClusterRelationName,
+    PeerRelationName,
+)
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import App
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
@@ -134,6 +138,29 @@ def format_unit_name(unit: Union[Unit, str], app: App) -> str:
     if isinstance(unit, Unit):
         unit = unit.name
     return f"{unit.replace('/', '-')}.{app.short_id}"
+
+
+def all_units_names(charm: "OpenSearchBaseCharm") -> List[Unit]:
+    """Fetch the list of units for the current app."""
+    deployment_desc = charm.opensearch_peer_cm.deployment_desc()
+    if not deployment_desc:
+        return []
+
+    app = charm.opensearch_peer_cm.deployment_desc().app
+    # We do not need to add our own unit as this code is running on it!
+    peers = charm.model.get_relation(PeerRelationName)
+    peers = [] if not peers else peers.units
+
+    peer_cluster_units = []
+    for relation in charm.model.relations.get(
+        PeerClusterOrchestratorRelationName
+    ) + charm.model.relations.get(PeerClusterRelationName):
+        peer_cluster_units.extend(relation.units if relation else [])
+
+    return set(
+        [format_unit_name(unit, app) for unit in peer_cluster_units]
+        + [format_unit_name(unit, app) for unit in peers]
+    )
 
 
 def all_units(charm: "OpenSearchBaseCharm") -> List[Unit]:
