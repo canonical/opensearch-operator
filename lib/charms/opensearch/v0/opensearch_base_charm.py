@@ -322,26 +322,21 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             __on_start_post_cleanup()
             return
 
-        elif (
-            self.peers_data.get(Scope.UNIT, "started") and not self.opensearch.is_service_started()
+        elif self.peers_data.get(Scope.UNIT, "started") and (
+            self.opensearch.is_present() and not self.opensearch.is_service_started()
         ):
+            logger.debug(
+                "Start hook: snap already installed and service should be up, but it is not. Restarting it..."
+            )
+
             # We had a reboot in this node.
             # We execute the same logic as above:
             __on_start_post_cleanup()
 
             # Add the gateway.recover_after_nodes config and restart the service
-            # TODO: Extend node count logic to also consider large deployments
-            rel = self.model.get_relation(PeerRelationName)
-            if rel:
-                self.opensearch_config.set_recover_after_nodes(
-                    recover_after_nodes=len(
-                        [
-                            unit
-                            for unit in all_units_names(self)
-                            if rel.data[unit].get("started") == "True"
-                        ]
-                    )
-                )
+            self.opensearch_config.set_recover_after_nodes(
+                recover_after_nodes=len(all_units_names(self))
+            )
             # Now, reissue a restart: we should not have stopped in the first place
             # as "started" flag is still set to True.
             # We do not wait for the 200 return, as each unit is coming back online

@@ -142,6 +142,11 @@ class OpenSearchDistribution(ABC):
         pass
 
     @abstractmethod
+    def is_present(self):
+        """Check if opensearch installed"""
+        pass
+
+    @abstractmethod
     def is_service_started(self, paused: Optional[bool] = False) -> bool:
         """Check if the snap service and JVM process are running.
 

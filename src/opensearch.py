@@ -73,6 +73,11 @@ class OpenSearchSnap(OpenSearchDistribution):
             raise OpenSearchInstallError()
 
     @override
+    def is_present(self):
+        """Check if the snap is present."""
+        return self._opensearch.present
+
+    @override
     def is_service_started(self, paused: Optional[bool] = False) -> bool:
         """Check if the snap service and JVM process are running.
 
