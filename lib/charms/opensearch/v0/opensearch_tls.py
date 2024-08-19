@@ -733,12 +733,7 @@ class OpenSearchTLS(Object):
 
     def is_fully_configured(self) -> bool:
         """Check if all TLS secrets and resources exist and are stored."""
-        if self.charm.unit.is_leader():
-            return self.all_certificates_available() and self.all_tls_resources_stored()
-        else:
-            return self.all_certificates_available() and self.all_tls_resources_stored(
-                only_unit_resources=True
-            )
+        return self.all_certificates_available() and self.all_tls_resources_stored()
 
     def is_fully_configured_in_cluster(self) -> bool:
         """Check if TLS is configured in all the units of the current cluster."""
