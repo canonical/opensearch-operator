@@ -322,8 +322,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             __on_start_post_cleanup()
             return
 
-        elif self.peers_data.get(Scope.UNIT, "started") and (
-            self.opensearch.is_present() and not self.opensearch.is_service_started()
+        elif (
+            self.peers_data.get(Scope.UNIT, "started") and not self.opensearch.is_service_started()
         ):
             logger.debug(
                 "Start hook: snap already installed and service should be up, but it is not. Restarting it..."
