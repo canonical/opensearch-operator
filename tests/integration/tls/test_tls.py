@@ -190,8 +190,8 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     # Now apply a hack to make the certificate secrets expire in short time
     # set the secret expiry to a fixed timedelta of 300 seconds to give time to start initially
     # this happens on the tls_certificates lib and we apply the patch via sed-command
-    search_expression = "expire=self._get_next_secret_expiry_time\(certificate\)"
-    replace_expression = "expire=timedelta\(seconds=300\)"
+    search_expression = "expire=self._get_next_secret_expiry_time\\(certificate\\)"
+    replace_expression = "expire=timedelta\\(seconds=300\\)"
 
     for unit_id in get_application_unit_ids(ops_test, APP_NAME):
         lib_file = f"/var/lib/juju/agents/unit-opensearch-{unit_id}/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py"
@@ -228,7 +228,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units=len(UNIT_IDS),
-        idle_period=180,
+        idle_period=240,
         timeout=1200,
     )
 
