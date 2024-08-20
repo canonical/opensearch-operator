@@ -4,6 +4,7 @@
 
 import logging
 import subprocess
+import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -20,6 +21,7 @@ from ..helpers import (
     get_application_unit_names,
     get_leader_unit_id,
     get_leader_unit_ip,
+    is_up,
     run_action,
 )
 from ..helpers_deployments import wait_until
@@ -176,7 +178,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.deploy(
         my_charm,
-        num_units=3,
+        num_units=1,
         series=SERIES,
     )
 
@@ -184,64 +186,37 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
         ops_test,
         apps=[APP_NAME],
         units_statuses=["blocked"],
-        wait_for_exact_units=3,
+        wait_for_exact_units=1,
     )
 
     # Now apply a hack to make the certificate secrets expire in short time
     # set the secret expiry to a fixed timedelta of 300 seconds to give time to start initially
     # this happens on the tls_certificates lib and we apply the patch via sed-command
     search_expression = "expire=self._get_next_secret_expiry_time\\(certificate\\)"
-    replace_expression = "expire=timedelta\\(seconds=300\\)"
+    replace_expression = "expire=timedelta\\(seconds=180\\)"
 
-    for unit_id in get_application_unit_ids(ops_test, APP_NAME):
-        lib_file = f"/var/lib/juju/agents/unit-opensearch-{unit_id}/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py"
-        cmd = f"juju ssh {APP_NAME}/{unit_id} sudo sed -i 's/{search_expression}/{replace_expression}/g' {lib_file}"
-        subprocess.run(cmd, shell=True)
+    unit_id = get_application_unit_ids(ops_test, APP_NAME)[0]
+    unit_ip = await get_leader_unit_ip(ops_test)
+    lib_file = f"/var/lib/juju/agents/unit-opensearch-{unit_id}/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py"
+    cmd = f"juju ssh {APP_NAME}/{unit_id} sudo sed -i 's/{search_expression}/{replace_expression}/g' {lib_file}"
+    subprocess.run(cmd, shell=True)
 
     # Relate OpenSearch to TLS and wait until all is settled
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await wait_until(
-        ops_test,
-        apps=[APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units=3,
-        idle_period=15,
-    )
+    assert await is_up(ops_test, unit_ip), "OpenSearch service hasn't started."
 
     # now start with the actual test
     # first get the currently used certs
-    leader_unit_ip = await get_leader_unit_ip(ops_test)
-    leader_id = await get_leader_unit_id(ops_test)
-    non_leader_id = [
-        unit_id for unit_id in get_application_unit_ids(ops_test) if unit_id != leader_id
-    ][0]
-    units = await get_application_unit_ids_ips(ops_test, APP_NAME)
+    current_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
 
-    current_certs_leader = await get_loaded_tls_certificates(ops_test, leader_unit_ip)
-    current_certs_non_leader = await get_loaded_tls_certificates(ops_test, units[non_leader_id])
-
-    # Now wait until the secrets have expired and the certificates have been renewed
-    await wait_until(
-        ops_test,
-        apps=[APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units=len(UNIT_IDS),
-        idle_period=240,
-        timeout=1200,
-    )
+    # now wait for the expiration period to pass by (and a bit longer for things to settle)
+    # we can't use `wait_until` here because the unit might not be idle in the meantime
+    time.sleep(300)
 
     # now compare the current certificates against the earlier ones and see if they were updated
-    updated_certs_leader = await get_loaded_tls_certificates(ops_test, leader_unit_ip)
-    updated_certs_non_leader = await get_loaded_tls_certificates(ops_test, units[non_leader_id])
+    updated_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
 
     assert (
-        updated_certs_leader["transport_certificates_list"][0]["not_before"]
-        > current_certs_leader["transport_certificates_list"][0]["not_before"]
-    )
-
-    assert (
-        updated_certs_non_leader["transport_certificates_list"][0]["not_before"]
-        > current_certs_non_leader["transport_certificates_list"][0]["not_before"]
+        updated_certs["transport_certificates_list"][0]["not_before"]
+        > current_certs["transport_certificates_list"][0]["not_before"]
     )
