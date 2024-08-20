@@ -211,7 +211,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
 
     # now wait for the expiration period to pass by (and a bit longer for things to settle)
     # we can't use `wait_until` here because the unit might not be idle in the meantime
-    time.sleep(300)
+    time.sleep(360)
 
     # now compare the current certificates against the earlier ones and see if they were updated
     updated_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
