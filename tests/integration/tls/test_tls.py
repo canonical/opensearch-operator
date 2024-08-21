@@ -204,6 +204,10 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     # Relate OpenSearch to TLS and wait until all is settled
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     assert await is_up(ops_test, unit_ip), "OpenSearch service hasn't started."
+    logger.info("Waiting for certificates to expire.")
+
+    # wait for the certs API to be ready
+    time.sleep(30)
 
     # now start with the actual test
     # first get the currently used certs
@@ -211,10 +215,16 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
 
     # now wait for the expiration period to pass by (and a bit longer for things to settle)
     # we can't use `wait_until` here because the unit might not be idle in the meantime
-    time.sleep(300)
+    time.sleep(240)
 
     # now compare the current certificates against the earlier ones and see if they were updated
     updated_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
+    logger.info(
+        f"Certificates before expiry: {current_certs}"
+    )
+    logger.info(
+        f"Certificates after expiry: {updated_certs}"
+    )
 
     assert (
         updated_certs["transport_certificates_list"][0]["not_before"]
