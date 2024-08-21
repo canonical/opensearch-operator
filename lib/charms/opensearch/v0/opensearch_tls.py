@@ -302,6 +302,7 @@ class OpenSearchTLS(Object):
         subject = self._get_subject(cert_type)
         organization = self.charm.opensearch_peer_cm.deployment_desc().config.cluster_name
         new_csr = generate_csr(
+            add_unique_id_to_subject_name=False,
             private_key=key,
             private_key_password=(None if key_password is None else key_password.encode("utf-8")),
             subject=subject,
