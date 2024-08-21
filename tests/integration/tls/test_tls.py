@@ -15,13 +15,13 @@ from ..helpers import (
     SERIES,
     UNIT_IDS,
     check_cluster_formation_successful,
+    cluster_health,
     get_application_unit_ids,
     get_application_unit_ids_ips,
     get_application_unit_ips_names,
     get_application_unit_names,
     get_leader_unit_id,
     get_leader_unit_ip,
-    is_up,
     run_action,
 )
 from ..helpers_deployments import wait_until
@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
+SECRET_EXPIRY_WAIT_TIME = 240
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
@@ -190,7 +191,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     )
 
     # Now apply a hack to make the certificate secrets expire in short time
-    # set the secret expiry to a fixed timedelta of 300 seconds to give time to start initially
+    # set the secret expiry to a fixed timedelta of 180 seconds to give time to start initially
     # this happens on the tls_certificates lib and we apply the patch via sed-command
     search_expression = "expire=self._get_next_secret_expiry_time\\(certificate\\)"
     replace_expression = "expire=timedelta\\(seconds=180\\)"
@@ -203,11 +204,10 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
 
     # Relate OpenSearch to TLS and wait until all is settled
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    assert await is_up(ops_test, unit_ip), "OpenSearch service hasn't started."
-    logger.info("Waiting for certificates to expire.")
 
-    # wait for the certs API to be ready
-    time.sleep(30)
+    # wait for the unit to be ready and API's available
+    cluster_health_resp = await cluster_health(ops_test, unit_ip, wait_for_green_first=True)
+    assert cluster_health_resp["status"] == "green"
 
     # now start with the actual test
     # first get the currently used certs
@@ -215,7 +215,8 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
 
     # now wait for the expiration period to pass by (and a bit longer for things to settle)
     # we can't use `wait_until` here because the unit might not be idle in the meantime
-    time.sleep(240)
+    logger.info("Waiting for certificates to expire.")
+    time.sleep(SECRET_EXPIRY_WAIT_TIME)
 
     # now compare the current certificates against the earlier ones and see if they were updated
     updated_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
