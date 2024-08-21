@@ -219,12 +219,8 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
 
     # now compare the current certificates against the earlier ones and see if they were updated
     updated_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
-    logger.info(
-        f"Certificates before expiry: {current_certs}"
-    )
-    logger.info(
-        f"Certificates after expiry: {updated_certs}"
-    )
+    logger.info(f"Certificates before expiry: {current_certs}")
+    logger.info(f"Certificates after expiry: {updated_certs}")
 
     assert (
         updated_certs["transport_certificates_list"][0]["not_before"]
