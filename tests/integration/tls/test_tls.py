@@ -5,10 +5,8 @@
 import logging
 
 import pytest
-from pytest_operator.plugin import OpsTest
 from juju.application import Application
-
-from .helpers_manual_tls import MANUAL_TLS_CERTIFICATES_APP_NAME, ManualTLSAgent
+from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
     APP_NAME,
@@ -30,6 +28,7 @@ from ..tls.helpers import (
     check_unit_tls_configured,
     get_loaded_tls_certificates,
 )
+from .helpers_manual_tls import MANUAL_TLS_CERTIFICATES_APP_NAME, ManualTLSAgent
 
 logger = logging.getLogger(__name__)
 
