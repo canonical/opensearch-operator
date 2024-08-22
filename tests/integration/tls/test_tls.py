@@ -191,8 +191,10 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     )
 
     # Now apply a hack to make the certificate secrets expire in short time
-    # set the secret expiry to a fixed timedelta of 180 seconds to give time to start initially
-    # this happens on the tls_certificates lib and we apply the patch via sed-command
+    # set the secret expiry to a fixed timedelta of 180 seconds to give time to start initially.
+    # This happens on the tls_certificates lib and we apply the patch via sed-command.
+    # The patch accesses the method `_get_next_secret_expiry_time` in the tls_certificate libs.
+    # If the test should fail on updates to this lib, check if the method was renamed or removed.
     search_expression = "expire=self._get_next_secret_expiry_time\\(certificate\\)"
     replace_expression = "expire=timedelta\\(seconds=180\\)"
 
