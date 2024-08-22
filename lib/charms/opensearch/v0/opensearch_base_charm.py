@@ -729,17 +729,21 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.tls.store_admin_tls_secrets_if_applies()
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-        if renewal and self.is_admin_user_configured() and self.tls.is_fully_configured():
-            try:
-                self.tls.reload_tls_certificates()
-            except OpenSearchHttpError:
-                logger.error("Could not reload TLS certificates via API, will restart.")
-                self._restart_opensearch_event.emit()
-            self.tls.reset_ca_rotation_state()
-            # the chain.pem file should only be updated after applying the new certs
-            # otherwise there could be TLS verification errors after renewing the CA
-            self.tls.update_request_ca_bundle()
-            self.tls.remove_old_ca()
+        if renewal and self.is_admin_user_configured():
+            if self.tls.is_fully_configured():
+                try:
+                    self.tls.reload_tls_certificates()
+                except OpenSearchHttpError:
+                    logger.error("Could not reload TLS certificates via API, will restart.")
+                    self._restart_opensearch_event.emit()
+                self.tls.reset_ca_rotation_state()
+                # the chain.pem file should only be updated after applying the new certs
+                # otherwise there could be TLS verification errors after renewing the CA
+                self.tls.update_request_ca_bundle()
+                self.tls.remove_old_ca()
+            else:
+                event.defer()
+                return
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
