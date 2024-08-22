@@ -421,6 +421,7 @@ class OpenSearchDistribution(ABC):
         """Returns current Node."""
         try:
             nodes = self.request("GET", f"/_nodes/{self.node_id}", alt_hosts=self._charm.alt_hosts)
+
             current_node = nodes["nodes"][self.node_id]
             return Node(
                 name=current_node["name"],
@@ -431,15 +432,34 @@ class OpenSearchDistribution(ABC):
                 temperature=current_node.get("attributes", {}).get("temp"),
             )
         except OpenSearchHttpError:
-            # we try to get the most accurate description of the node
-            conf_on_disk = self.config.load("opensearch.yml")
+            # we try to get the most accurate description of the node from the static config
+            conf = self.config.load("opensearch.yml")
+            try:
+                roles = conf["node.roles"]
+            except KeyError:
+                roles = self._charm.opensearch_peer_cm.deployment_desc().config.roles
+
+            try:
+                app = App(id=conf["node.attr.app_id"])
+            except KeyError:
+                app = App(id=self._charm.opensearch_peer_cm.deployment_desc().app.id)
+
+            try:
+                temperature = conf["node.attr.temp"]
+            except KeyError:
+                temperature = (
+                    self._charm.opensearch_peer_cm.deployment_desc().config.data_temperature
+                )
+            if not (app and roles):
+                raise OpenSearchError("Can not determine app name and/or roles.")
+
             return Node(
                 name=self._charm.unit_name,
-                roles=conf_on_disk["node.roles"],
+                roles=roles,
                 ip=self._charm.unit_ip,
-                app=App(id=conf_on_disk.get("node.attr.app_id")),
+                app=app,
                 unit_number=self._charm.unit_id,
-                temperature=conf_on_disk.get("node.attr.temp"),
+                temperature=temperature,
             )
 
     @staticmethod
