@@ -161,6 +161,7 @@ async def test_tls_renewal(ops_test: OpsTest) -> None:
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
 async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest) -> None:
     """Build and deploy prod cluster of OpenSearch with Manual TLS Operator integration."""
     my_charm = await ops_test.build_charm(".")
