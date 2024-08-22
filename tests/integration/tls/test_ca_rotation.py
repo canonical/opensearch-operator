@@ -8,6 +8,7 @@ import pytest
 import requests
 from pytest_operator.plugin import OpsTest
 
+from ..ha.continuous_writes import ContinuousWrites
 from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
@@ -61,10 +62,14 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_rollout_new_ca(ops_test: OpsTest) -> None:
     """Test that the cluster restarted and functional after processing a new CA certificate"""
-    new_config = {"ca-common-name": "NEW_CA"}
+    c_writes = ContinuousWrites(ops_test, APP_NAME)
+    await c_writes.start()
 
     # trigger a rollout of the new CA by changing the config on TLS Provider side
+    new_config = {"ca-common-name": "NEW_CA"}
     await ops_test.model.applications[TLS_CERTIFICATES_APP_NAME].set_config(new_config)
+
+    writes_count = await c_writes.count()
 
     await wait_until(
         ops_test,
@@ -75,6 +80,10 @@ async def test_rollout_new_ca(ops_test: OpsTest) -> None:
         idle_period=60,
         wait_for_exact_units=len(UNIT_IDS),
     )
+
+    more_writes = await c_writes.count()
+    await c_writes.stop()
+    assert more_writes > writes_count, "Writes have not continued during CA rotation"
 
     # using the SSL API requires authentication with app-admin cert and key
     leader_unit_ip = await get_leader_unit_ip(ops_test)

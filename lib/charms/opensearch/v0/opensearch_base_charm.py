@@ -513,7 +513,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # release lock
                 self.node_lock.release()
 
-    def _on_update_status(self, event: UpdateStatusEvent):
+    def _on_update_status(self, event: UpdateStatusEvent):  # noqa: C901
         """On update status event.
 
         We want to periodically check for the following:
@@ -545,6 +545,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             if health == HealthColors.UNKNOWN:
                 return
+        elif not self.tls.is_fully_configured():
+            self.tls.store_admin_tls_secrets_if_applies()
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
