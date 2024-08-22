@@ -91,6 +91,7 @@ BackupInDisabling = "Disabling backup service..."
 # Relation Interfaces
 ClientRelationName = "opensearch-client"
 PeerRelationName = "opensearch-peers"
+NodeLockRelationName = "node-lock-fallback"
 PeerClusterOrchestratorRelationName = "peer-cluster-orchestrator"
 PeerClusterRelationName = "peer-cluster"
 COSUser = "monitor"
