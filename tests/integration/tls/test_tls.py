@@ -5,8 +5,10 @@
 import logging
 import subprocess
 import time
+from datetime import datetime, timedelta
 
 import pytest
+from charms.tls_certificates_interface.v3.tls_certificates import LIBID as TLS_LIBID
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
@@ -190,22 +192,18 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
         wait_for_exact_units=1,
     )
 
-    # Now apply a hack to make the certificate secrets expire in short time
-    # set the secret expiry to a fixed timedelta of 180 seconds to give time to start initially.
-    # This happens on the tls_certificates lib and we apply the patch via sed-command.
-    # The patch accesses the method `_get_next_secret_expiry_time` in the tls_certificate libs.
-    # If the test should fail on updates to this lib, check if the method was renamed or removed.
-    search_expression = "expire=self._get_next_secret_expiry_time\\(certificate\\)"
-    replace_expression = "expire=timedelta\\(seconds=180\\)"
+    # Relate OpenSearch to TLS and wait until all is settled
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        units_statuses=["active"],
+        wait_for_exact_units=1,
+    )
 
     unit_id = get_application_unit_ids(ops_test, APP_NAME)[0]
     unit_ip = await get_leader_unit_ip(ops_test)
-    lib_file = f"/var/lib/juju/agents/unit-opensearch-{unit_id}/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py"
-    cmd = f"juju ssh {APP_NAME}/{unit_id} sudo sed -i 's/{search_expression}/{replace_expression}/g' {lib_file}"
-    subprocess.run(cmd, shell=True)
-
-    # Relate OpenSearch to TLS and wait until all is settled
-    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
     # wait for the unit to be ready and API's available
     cluster_health_resp = await cluster_health(ops_test, unit_ip, wait_for_green_first=True)
@@ -214,6 +212,19 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     # now start with the actual test
     # first get the currently used certs
     current_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
+
+    # Now apply a hack to make the certificate secrets expire in short time
+    # set the secret expiry to a fixed timedelta of 180 seconds to give time to start initially.
+    expire = datetime.now() + timedelta(seconds=180)
+
+    juju_secrets = await ops_test.model.list_secrets()
+    for secret in juju_secrets:
+        if secret.label.startswith(TLS_LIBID):
+            cmd = f"""juju exec -u {APP_NAME}/{unit_id} --  \
+             /var/lib/juju/tools/unit-{APP_NAME}-{unit_id}/secret-set \
+            {secret.uri.split(":")[1]} --expire {expire.isoformat()}
+            """
+            subprocess.run(cmd, shell=True)
 
     # now wait for the expiration period to pass by (and a bit longer for things to settle)
     # we can't use `wait_until` here because the unit might not be idle in the meantime
