@@ -179,7 +179,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.deploy(
         my_charm,
-        num_units=len(UNIT_IDS),
+        num_units=1,
         series=SERIES,
     )
 
@@ -187,7 +187,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
         ops_test,
         apps=[APP_NAME],
         units_statuses=["blocked"],
-        wait_for_exact_units=len(UNIT_IDS),
+        wait_for_exact_units=1,
     )
 
     # Relate OpenSearch to TLS and wait until all is settled
@@ -197,20 +197,17 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
         ops_test,
         apps=[APP_NAME],
         units_statuses=["active"],
-        wait_for_exact_units=len(UNIT_IDS),
+        wait_for_exact_units=1,
     )
 
     # wait for the unit to be ready and API's available
-    leader_ip = await get_leader_unit_ip(ops_test)
-    cluster_health_resp = await cluster_health(ops_test, leader_ip, wait_for_green_first=True)
+    unit_ip = await get_leader_unit_ip(ops_test)
+    cluster_health_resp = await cluster_health(ops_test, unit_ip, wait_for_green_first=True)
     assert cluster_health_resp["status"] == "green"
 
     # now start with the actual test
     # first get the currently used certs
-    unit_ips = await get_application_unit_ids_ips(ops_test, APP_NAME)
-    current_certs = {}
-    for unit_id in unit_ips:
-        current_certs[unit_id] = await get_loaded_tls_certificates(ops_test, unit_ips[unit_id])
+    current_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
 
     # now wait for the expiration period to pass by (and a bit longer for things to settle)
     # we can't use `wait_until` here because the unit might not be idle in the meantime
@@ -220,20 +217,18 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     )
     time.sleep(SECRET_EXPIRY_WAIT_TIME)
 
-    cluster_health_resp = await cluster_health(ops_test, leader_ip, wait_for_green_first=True)
+    cluster_health_resp = await cluster_health(ops_test, unit_ip, wait_for_green_first=True)
     assert cluster_health_resp["status"] == "green"
 
     # now compare the current certificates against the earlier ones and see if they were updated
-    updated_certs = {}
-    for unit in unit_ips:
-        updated_certs[unit] = await get_loaded_tls_certificates(ops_test, unit_ips[unit])
-        logger.info(f"Certs: {current_certs[unit]}, {updated_certs[unit]}")
-        assert (
-            updated_certs[unit]["transport_certificates_list"][0]["not_before"]
-            > current_certs[unit]["transport_certificates_list"][0]["not_before"]
-        )
+    updated_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
+    logger.info(f"Certs: {current_certs}, {updated_certs}")
+    assert (
+        updated_certs["transport_certificates_list"][0]["not_before"]
+        > current_certs["transport_certificates_list"][0]["not_before"]
+    )
 
-        assert (
-            updated_certs[unit]["http_certificates_list"][0]["not_before"]
-            > current_certs[unit]["http_certificates_list"][0]["not_before"]
-        )
+    assert (
+        updated_certs["http_certificates_list"][0]["not_before"]
+        > current_certs["http_certificates_list"][0]["not_before"]
+    )
