@@ -73,7 +73,7 @@ class OpenSearchTLS(Object):
         self.jdk_path = jdk_path
         self.certs_path = certs_path
         self.keytool = self.jdk_path + "/bin/keytool"
-        self.certs = TLSCertificatesRequiresV3(charm, TLS_RELATION, expiry_notification_time=168)
+        self.certs = TLSCertificatesRequiresV3(charm, TLS_RELATION, expiry_notification_time=23)
 
         self.framework.observe(
             self.charm.on.set_tls_private_key_action, self._on_set_tls_private_key

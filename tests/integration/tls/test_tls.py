@@ -3,12 +3,9 @@
 # See LICENSE file for licensing details.
 
 import logging
-import subprocess
 import time
-from datetime import datetime, timedelta
 
 import pytest
-from charms.tls_certificates_interface.v3.tls_certificates import LIBID as TLS_LIBID
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
@@ -37,7 +34,8 @@ logger = logging.getLogger(__name__)
 
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
-SECRET_EXPIRY_WAIT_TIME = 240
+# wait time for secret expiry = 65 * 60
+SECRET_EXPIRY_WAIT_TIME = 3900
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
@@ -181,7 +179,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.deploy(
         my_charm,
-        num_units=1,
+        num_units=len(UNIT_IDS),
         series=SERIES,
     )
 
@@ -189,7 +187,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
         ops_test,
         apps=[APP_NAME],
         units_statuses=["blocked"],
-        wait_for_exact_units=1,
+        wait_for_exact_units=len(UNIT_IDS),
     )
 
     # Relate OpenSearch to TLS and wait until all is settled
@@ -199,44 +197,43 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
         ops_test,
         apps=[APP_NAME],
         units_statuses=["active"],
-        wait_for_exact_units=1,
+        wait_for_exact_units=len(UNIT_IDS),
     )
 
-    unit_id = get_application_unit_ids(ops_test, APP_NAME)[0]
-    unit_ip = await get_leader_unit_ip(ops_test)
-
     # wait for the unit to be ready and API's available
-    cluster_health_resp = await cluster_health(ops_test, unit_ip, wait_for_green_first=True)
+    leader_ip = await get_leader_unit_ip(ops_test)
+    cluster_health_resp = await cluster_health(ops_test, leader_ip, wait_for_green_first=True)
     assert cluster_health_resp["status"] == "green"
 
     # now start with the actual test
     # first get the currently used certs
-    current_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
-
-    # Now apply a hack to make the certificate secrets expire in short time
-    # set the secret expiry to a fixed timedelta of 180 seconds to give time to start initially.
-    expire = datetime.now() + timedelta(seconds=180)
-
-    juju_secrets = await ops_test.model.list_secrets()
-    for secret in juju_secrets:
-        if secret.label.startswith(TLS_LIBID):
-            cmd = f"""juju exec -u {APP_NAME}/{unit_id} --  \
-             /var/lib/juju/tools/unit-{APP_NAME}-{unit_id}/secret-set \
-            {secret.uri.split(":")[1]} --expire {expire.isoformat()}
-            """
-            subprocess.run(cmd, shell=True)
+    unit_ips = await get_application_unit_ids_ips(ops_test, APP_NAME)
+    current_certs = {}
+    for unit_id in unit_ips:
+        current_certs[unit_id] = await get_loaded_tls_certificates(ops_test, unit_ips[unit_id])
 
     # now wait for the expiration period to pass by (and a bit longer for things to settle)
     # we can't use `wait_until` here because the unit might not be idle in the meantime
-    logger.info("Waiting for certificates to expire.")
+    # please note: minimum waiting time is 60 minutes, due to limitations on the tls-operator
+    logger.info(
+        f"Waiting for certificates to expire. Wait time: {SECRET_EXPIRY_WAIT_TIME/60} minutes."
+    )
     time.sleep(SECRET_EXPIRY_WAIT_TIME)
 
-    # now compare the current certificates against the earlier ones and see if they were updated
-    updated_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
-    logger.info(f"Certificates before expiry: {current_certs}")
-    logger.info(f"Certificates after expiry: {updated_certs}")
+    cluster_health_resp = await cluster_health(ops_test, leader_ip, wait_for_green_first=True)
+    assert cluster_health_resp["status"] == "green"
 
-    assert (
-        updated_certs["transport_certificates_list"][0]["not_before"]
-        > current_certs["transport_certificates_list"][0]["not_before"]
-    )
+    # now compare the current certificates against the earlier ones and see if they were updated
+    updated_certs = {}
+    for unit in unit_ips:
+        updated_certs[unit] = await get_loaded_tls_certificates(ops_test, unit_ips[unit])
+        logger.info(f"Certs: {current_certs[unit]}, {updated_certs[unit]}")
+        assert (
+            updated_certs[unit]["transport_certificates_list"][0]["not_before"]
+            > current_certs[unit]["transport_certificates_list"][0]["not_before"]
+        )
+
+        assert (
+            updated_certs[unit]["http_certificates_list"][0]["not_before"]
+            > current_certs[unit]["http_certificates_list"][0]["not_before"]
+        )
