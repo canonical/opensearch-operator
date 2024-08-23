@@ -545,8 +545,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             if health == HealthColors.UNKNOWN:
                 return
-        elif not self.tls.is_fully_configured():
-            self.tls.store_admin_tls_secrets_if_applies()
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -736,6 +734,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 logger.error("Could not reload TLS certificates via API, will restart.")
                 self._restart_opensearch_event.emit()
             self.tls.reset_ca_rotation_state()
+            self.status.clear(TLSNotFullyConfigured)
             # the chain.pem file should only be updated after applying the new certs
             # otherwise there could be TLS verification errors after renewing the CA
             self.tls.update_request_ca_bundle()
@@ -1040,6 +1039,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False) and self.peers_data.get(
             Scope.UNIT, "tls_ca_renewed", False
         ):
+            self.status.set(TLSNotFullyConfigured)
             self.tls.request_new_unit_certificates()
             if self.unit.is_leader():
                 self.tls.request_new_admin_certificate()
