@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import asyncio
 import base64
 import json
 import logging
@@ -12,6 +14,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     generate_certificate,
     generate_private_key,
 )
+from juju.model import Model
 from juju.unit import Unit
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -183,3 +186,24 @@ class ManualTLSAgent:
         while self.csr_queue:
             csr = self.csr_queue.popleft()
             await self.process_csr(csr)
+
+
+async def main() -> None:
+    """Run the ManualTLSAgent."""
+    logging.basicConfig(level=logging.INFO)
+    logging.info("Starting ManualTLSAgent")
+    model = Model()
+    await model.connect()
+
+    tls_unit = model.applications[MANUAL_TLS_CERTIFICATES_APP_NAME].units[0]
+
+    agent = ManualTLSAgent(tls_unit)
+
+    while True:
+        await agent.wait_for_csrs_in_queue()
+        await agent.process_queue()
+        await asyncio.sleep(5)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
