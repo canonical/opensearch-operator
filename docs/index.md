@@ -41,6 +41,7 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 
 ## Navigation
 
+[details=Navigation]
 
 | Level | Path                       | Navlink                                      |
 |----------|-------------------------|----------------------------------------------|
@@ -67,6 +68,8 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 | 1     | reference                  | [Reference]()                                |
 | 2     | r-system-requirements | [System requirements](/t/14565) |
 | 2     | r-software-testing                  | [Charm testing](/t/14109)                                |
+
+[/details]
 
 # Contents
 
