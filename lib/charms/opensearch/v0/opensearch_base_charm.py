@@ -1042,7 +1042,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False) and self.peers_data.get(
             Scope.UNIT, "tls_ca_renewed", False
         ):
-            self.status.set(TLSNotFullyConfigured)
+            self.status.set(MaintenanceStatus(TLSNotFullyConfigured))
             self.tls.request_new_unit_certificates()
             if self.unit.is_leader():
                 self.tls.request_new_admin_certificate()
