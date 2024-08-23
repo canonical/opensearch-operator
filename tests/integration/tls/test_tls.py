@@ -167,10 +167,12 @@ async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest) -> None:
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
+    os_app_name = APP_NAME + "-manual-tls"
     os_app: Application = await ops_test.model.deploy(
         my_charm,
         num_units=len(UNIT_IDS),
         series=SERIES,
+        application_name=os_app_name,
     )
 
     # Deploy TLS Certificates operator.
@@ -181,8 +183,8 @@ async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest) -> None:
     logger.info(f"Deployed {MANUAL_TLS_CERTIFICATES_APP_NAME} application")
 
     # Integrate it to OpenSearch to set up TLS.
-    await ops_test.model.integrate(APP_NAME, MANUAL_TLS_CERTIFICATES_APP_NAME)
-    logger.info(f"Integrated {MANUAL_TLS_CERTIFICATES_APP_NAME} with {APP_NAME}")
+    await ops_test.model.integrate(os_app_name, MANUAL_TLS_CERTIFICATES_APP_NAME)
+    logger.info(f"Integrated {MANUAL_TLS_CERTIFICATES_APP_NAME} with {os_app_name}")
 
     # Initialize the ManualTLSAgent to process the CSRs
     manual_tls_daemon = ManualTLSAgent(tls_app.units[0])
@@ -197,13 +199,13 @@ async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest) -> None:
 
     await wait_until(
         ops_test,
-        apps=[APP_NAME],
+        apps=[os_app_name],
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units=len(UNIT_IDS),
         timeout=2000,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
+    assert len(ops_test.model.applications[os_app_name].units) == len(UNIT_IDS)
 
     # Scale up the application by adding a new unit
     logger.info("Scaling up the application by adding a new unit")
@@ -221,8 +223,8 @@ async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest) -> None:
     logger.info("Waiting for the new unit to be active")
     await wait_until(
         ops_test,
-        apps=[APP_NAME],
+        apps=[os_app_name],
         units_statuses=["active"],
         wait_for_exact_units=len(UNIT_IDS) + 1,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS) + 1
+    assert len(ops_test.model.applications[os_app_name].units) == len(UNIT_IDS) + 1
