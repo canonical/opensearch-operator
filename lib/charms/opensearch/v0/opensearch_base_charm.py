@@ -848,11 +848,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if event.ignore_lock:
             # Only used for force upgrades
             logger.debug("Starting without lock")
-        else:
-            if not self.node_lock.acquired:
-                logger.debug("Lock to start opensearch not acquired. Will retry next event")
-                event.defer()
-                return
+        elif not self.node_lock.acquired:
+            logger.debug("Lock to start opensearch not acquired. Will retry next event")
+            event.defer()
+            return
 
         if not self._can_service_start():
             self.node_lock.release()

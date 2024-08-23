@@ -849,5 +849,5 @@ class OpenSearchTLS(Object):
         ):
             logger.debug("TLS CA rotation ongoing, will not update tls certificates.")
             return True
-        else:
-            return False
+        
+        return False
