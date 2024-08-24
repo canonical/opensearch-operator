@@ -1324,14 +1324,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # "data" role in the provided roles, we need to add the role to be able to create
             # and store the security index
             # todo: rework: delay sec index init until 1st data node / handle red health
-            if (
-                self.unit.is_leader()
-                and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-                and "data" not in computed_roles
-                and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
-            ):
-                computed_roles.append("data")
-                self.peers_data.put(Scope.UNIT, "remove-data-role", True)
+            # if (
+            #     self.unit.is_leader()
+            #     and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            #     and "data" not in computed_roles
+            #     and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
+            # ):
+            #     computed_roles.append("data")
+            #     self.peers_data.put(Scope.UNIT, "remove-data-role", True)
         else:
             computed_roles = ClusterTopology.generated_roles()
 
