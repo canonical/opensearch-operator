@@ -886,8 +886,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _post_start_init(self, event: _StartOpenSearch):  # noqa: C901
         """Initialization post OpenSearch start."""
         # initialize the security index if needed (and certs written on disk etc.)
-        if self.unit.is_leader() and not self.peers_data.get(
-            Scope.APP, "security_index_initialised"
+        if (
+            self.unit.is_leader()
+            and not self.peers_data.get(Scope.APP, "security_index_initialised")
+            and "data" in self.opensearch.roles
         ):
             admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
             self._initialize_security_index(admin_secrets)
