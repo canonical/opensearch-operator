@@ -71,6 +71,12 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 
 [/details]
 
+<!-- Add when done: 
+How to perform a minor upgrade: /t/15334
+How to perform a minor rollback: /t/15335
+How to integrate with your charm: /t/15333
+-->
+
 # Contents
 
 1. [Tutorial](tutorial)
