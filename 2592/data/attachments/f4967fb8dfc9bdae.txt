@@ -1,0 +1,913 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.4    unsupported  03:00:26Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           active       2  opensearch                                 2  no       
+main                               active       1  opensearch                                 1  no       
+opensearch                         waiting      1  opensearch                                 0  no       TLS not fully configured in related 'failover-orchestrator'.
+s3-integrator                      blocked      1  s3-integrator             latest/edge     37  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/0*                  active    idle   2        10.36.50.132    9200/tcp  
+failover/1                   error     idle   3        10.36.50.203              hook failed: "certificates-relation-changed"
+main/0*                      active    idle   5        10.36.50.191    9200/tcp  
+opensearch/0*                active    idle   4        10.36.50.62               
+s3-integrator/0*             blocked   idle   0        10.36.50.220              Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/0*  active    idle   1        10.36.50.237              
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.36.50.220  juju-9c2107-0  ubuntu@22.04      Running
+1        started  10.36.50.237  juju-9c2107-1  ubuntu@22.04      Running
+2        started  10.36.50.132  juju-9c2107-2  ubuntu@22.04      Running
+3        started  10.36.50.203  juju-9c2107-3  ubuntu@22.04      Running
+4        started  10.36.50.62   juju-9c2107-4  ubuntu@22.04      Running
+5        started  10.36.50.191  juju-9c2107-5  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:01:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:01:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 02:01:54 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:02:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:02:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:02:12 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:02:32 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:02:32 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-0: 02:02:32 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 02:02:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:02:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-main-0: 02:02:43 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 02:02:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:02:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 02:02:46 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:03:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:03:50 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-1: 02:03:51 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-failover-0: 02:04:33 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:04:34 ERROR unit.failover/0.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-failover-0: 02:04:36 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:04:36 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:04:36 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:04:36 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:04:37 ERROR unit.failover/0.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-0: 02:04:43 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:04:44 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:04:45 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:04:46 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:04:47 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:04:48 ERROR unit.failover/0.juju-log peer-cluster-orchestrator:12: [Errno 111] Connection refused
+unit-failover-0: 02:04:49 ERROR unit.failover/0.juju-log peer-cluster-orchestrator:12: [Errno 111] Connection refused
+unit-main-0: 02:04:50 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:04:50 ERROR unit.failover/0.juju-log certificates:14: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:51 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:04:52 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-main-0: 02:04:52 ERROR unit.main/0.juju-log certificates:13: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:52 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:52 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:52 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:52 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-failover-0: 02:04:53 ERROR unit.failover/0.juju-log certificates:14: [Errno 111] Connection refused
+unit-main-0: 02:04:53 ERROR unit.main/0.juju-log opensearch-peers:7: [Errno 111] Connection refused
+unit-main-0: 02:04:53 ERROR unit.main/0.juju-log opensearch-peers:7: [Errno 111] Connection refused
+unit-main-0: 02:04:53 ERROR unit.main/0.juju-log opensearch-peers:7: [Errno 111] Connection refused
+unit-main-0: 02:04:53 ERROR unit.main/0.juju-log opensearch-peers:7: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:53 ERROR unit.opensearch/0.juju-log peer-cluster:11: [Errno 111] Connection refused
+unit-main-0: 02:04:54 ERROR unit.main/0.juju-log peer-cluster-orchestrator:11: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:55 ERROR unit.opensearch/0.juju-log peer-cluster:12: [Errno 111] Connection refused
+unit-failover-0: 02:04:55 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:04:56 ERROR unit.main/0.juju-log certificates:13: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:56 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:56 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:56 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:56 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-failover-0: 02:04:56 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:04:57 ERROR unit.opensearch/0.juju-log peer-cluster:11: [Errno 111] Connection refused
+unit-failover-0: 02:04:57 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:04:58 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:04:58 ERROR unit.opensearch/0.juju-log peer-cluster:11: [Errno 111] Connection refused
+unit-failover-0: 02:04:59 ERROR unit.failover/0.juju-log peer-cluster-orchestrator:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:59 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:59 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:04:59 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:00 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-failover-0: 02:05:00 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:00 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:00 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:00 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:01 ERROR unit.opensearch/0.juju-log peer-cluster:12: [Errno 111] Connection refused
+unit-main-0: 02:05:01 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:05:02 ERROR unit.opensearch/0.juju-log peer-cluster:12: [Errno 111] Connection refused
+unit-main-0: 02:05:02 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:05:03 ERROR unit.opensearch/0.juju-log upgrade-version-a:5: [Errno 111] Connection refused
+unit-main-0: 02:05:03 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:05:04 ERROR unit.opensearch/0.juju-log certificates:15: [Errno 111] Connection refused
+unit-main-0: 02:05:04 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:04 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:04 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 02:05:04 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:05 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:05 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 02:05:05 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:05 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:05:08 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:08 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:08 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:05:09 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:05:10 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:11 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:11 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:05:11 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:05:12 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:12 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:12 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:12 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:13 ERROR unit.opensearch/0.juju-log peer-cluster:11: [Errno 111] Connection refused
+unit-main-0: 02:05:14 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:14 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:05:15 ERROR unit.opensearch/0.juju-log certificates:15: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:16 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:16 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:16 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:16 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:17 ERROR unit.opensearch/0.juju-log certificates:15: [Errno 111] Connection refused
+unit-main-0: 02:05:17 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:17 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:05:18 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:05:19 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:20 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:20 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:05:21 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:05:22 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:23 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:05:23 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-failover-0: 02:05:34 ERROR unit.failover/0.juju-log node-lock-fallback:3: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:34 ERROR unit.opensearch/0.juju-log peer-cluster:12: [Errno 111] Connection refused
+unit-failover-0: 02:05:36 ERROR unit.failover/0.juju-log node-lock-fallback:3: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:36 ERROR unit.opensearch/0.juju-log peer-cluster:12: [Errno 111] Connection refused
+unit-failover-0: 02:05:37 ERROR unit.failover/0.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:37 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:37 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:37 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:37 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-failover-0: 02:05:38 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:38 ERROR unit.opensearch/0.juju-log peer-cluster:11: [Errno 111] Connection refused
+unit-failover-0: 02:05:39 ERROR unit.failover/0.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:39 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:39 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:39 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:39 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-failover-0: 02:05:40 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:40 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:40 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:40 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:40 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:40 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:40 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:40 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:40 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:41 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:41 ERROR unit.opensearch/0.juju-log peer-cluster:12: [Errno 111] Connection refused
+unit-failover-0: 02:05:41 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:41 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:42 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:42 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:05:43 ERROR unit.failover/0.juju-log certificates:14: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:43 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:43 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:43 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:43 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-failover-0: 02:05:44 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:05:45 ERROR unit.failover/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:05:45 ERROR unit.opensearch/0.juju-log peer-cluster:11: [Errno 111] Connection refused
+unit-failover-0: 02:05:45 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:05:46 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:46 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:46 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:46 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:05:46 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-failover-1: 02:05:47 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: [Errno 111] Connection refused
+unit-failover-0: 02:05:47 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:05:47 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-0: 02:05:48 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:05:51 ERROR unit.failover/1.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:05:52 ERROR unit.failover/1.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:05:53 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: [Errno 111] Connection refused
+unit-failover-1: 02:05:54 ERROR unit.failover/1.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:05:55 ERROR unit.failover/1.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:05:56 ERROR unit.failover/1.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-failover-1: 02:05:57 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:05:57 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:05:58 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:05:58 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-1: 02:05:58 ERROR unit.failover/1.juju-log node-lock-fallback:3: [Errno 111] Connection refused
+unit-failover-0: 02:05:58 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:05:58 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-1: 02:05:59 ERROR unit.failover/1.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-failover-0: 02:05:59 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:05:59 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-1: 02:06:00 ERROR unit.failover/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-1: 02:06:00 ERROR unit.failover/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:00 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:06:00 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:06:01 ERROR unit.failover/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:06:02 ERROR unit.opensearch/0.juju-log peer-cluster:11: [Errno 111] Connection refused
+unit-failover-0: 02:06:02 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:02 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-1: 02:06:02 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:06:02 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:02 ERROR unit.failover/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-failover-0: 02:06:02 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:03 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:03 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:03 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 02:06:03 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:06:03 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:06:03 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:06:03 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-failover-0: 02:06:03 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:03 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-1: 02:06:03 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-1: 02:06:03 ERROR unit.failover/1.juju-log peer-cluster:10: Cannot connect to the OpenSearch server...
+unit-failover-1: 02:06:03 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:06:03 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-1: 02:06:03 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:06:04 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-1: 02:06:04 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:06:04 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-1: 02:06:04 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-1: 02:06:04 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-1: 02:06:04 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-opensearch-0: 02:06:04 ERROR unit.opensearch/0.juju-log peer-cluster:11: [Errno 111] Connection refused
+unit-failover-0: 02:06:04 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-1: 02:06:04 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:06:04 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:05 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:05 ERROR unit.failover/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-failover-0: 02:06:05 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-1: 02:06:05 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: [Errno 111] Connection refused
+unit-failover-1: 02:06:05 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: Cannot connect to the OpenSearch server...
+unit-failover-1: 02:06:06 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: [Errno 111] Connection refused
+unit-failover-1: 02:06:06 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: [Errno 111] Connection refused
+unit-failover-1: 02:06:07 ERROR unit.failover/1.juju-log node-lock-fallback:3: [Errno 111] Connection refused
+unit-failover-1: 02:06:07 ERROR unit.failover/1.juju-log node-lock-fallback:3: Cannot connect to the OpenSearch server...
+unit-failover-1: 02:06:07 ERROR unit.failover/1.juju-log node-lock-fallback:3: [Errno 111] Connection refused
+unit-failover-1: 02:06:08 ERROR unit.failover/1.juju-log node-lock-fallback:3: [Errno 111] Connection refused
+unit-failover-0: 02:06:08 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-1: 02:06:09 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:09 ERROR unit.failover/1.juju-log certificates:14: Cannot connect to the OpenSearch server...
+unit-failover-1: 02:06:09 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:09 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:10 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-1: 02:06:10 ERROR unit.failover/1.juju-log peer-cluster:10: Cannot connect to the OpenSearch server...
+unit-failover-1: 02:06:10 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-1: 02:06:11 ERROR unit.failover/1.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-0: 02:06:11 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-1: 02:06:12 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:12 ERROR unit.failover/1.juju-log certificates:14: Cannot connect to the OpenSearch server...
+unit-failover-1: 02:06:12 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:12 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:13 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:06:13 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:06:13 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-failover-0: 02:06:14 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:17 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-1: 02:06:18 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:18 ERROR unit.failover/1.juju-log certificates:14: Cannot connect to the OpenSearch server...
+unit-failover-1: 02:06:18 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:19 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:19 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:06:19 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:06:19 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-failover-0: 02:06:20 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:24 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:24 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 02:06:25 ERROR unit.opensearch/0.juju-log peer-cluster:12: [Errno 111] Connection refused
+unit-failover-0: 02:06:25 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:06:26 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:06:26 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-failover-0: 02:06:26 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:06:26 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-failover-0: 02:06:26 ERROR unit.failover/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:06:26 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:06:26 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-opensearch-0: 02:06:27 ERROR unit.opensearch/0.juju-log opensearch-peers:6: [Errno 111] Connection refused
+unit-failover-0: 02:06:29 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-failover-0: 02:06:29 ERROR unit.failover/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 02:06:30 ERROR unit.opensearch/0.juju-log peer-cluster:12: [Errno 111] Connection refused
+unit-failover-1: 02:06:30 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:30 ERROR unit.failover/1.juju-log certificates:14: Cannot connect to the OpenSearch server...
+unit-failover-1: 02:06:30 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-0: 02:06:30 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-1: 02:06:31 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:31 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:31 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:31 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:31 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-0: 02:06:31 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-1: 02:06:31 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-0: 02:06:32 ERROR unit.failover/0.juju-log peer-cluster:10: [Errno 111] Connection refused
+unit-failover-1: 02:06:32 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:32 ERROR unit.failover/1.juju-log certificates:14: Cannot connect to the OpenSearch server...
+unit-failover-1: 02:06:32 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:35 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:38 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:41 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:44 ERROR unit.failover/1.juju-log certificates:14: [Errno 111] Connection refused
+unit-failover-1: 02:06:48 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:06:48 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:06:48 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-failover-1: 02:07:11 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:07:11 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:07:12 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-failover-1: 02:07:54 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:07:54 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:07:55 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-0: 02:08:20 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:08:20 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:09:19 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:09:19 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:09:19 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-failover-1: 02:12:04 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:12:05 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:12:05 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-0: 02:13:19 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:13:19 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:17:07 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:17:07 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:17:07 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-0: 02:18:58 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:18:59 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:22:09 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:22:09 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:22:10 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-0: 02:24:06 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:24:06 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:27:12 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:27:12 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:27:12 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-0: 02:28:57 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:28:57 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:32:14 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:32:14 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:32:14 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-0: 02:34:19 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:34:19 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:37:17 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:37:17 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:37:17 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-0: 02:38:45 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:38:45 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:42:19 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:42:19 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:42:19 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-0: 02:43:17 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:43:17 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:47:22 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:47:22 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:47:22 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-0: 02:48:34 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:48:34 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:52:24 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:52:24 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:52:24 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-0: 02:53:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:53:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-1: 02:57:27 ERROR unit.failover/1.juju-log certificates:14: err: Mac verify error: invalid password?
+ / out: 
+unit-failover-1: 02:57:27 ERROR unit.failover/1.juju-log certificates:14: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-failover-1/charm/./src/charm.py", line 213, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py", line 1911, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-failover-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 210, in _on_certificate_available
+    if self._read_stored_ca() is None:
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 491, in _read_stored_ca
+    stored_certs = run_cmd(
+  File "/var/lib/juju/agents/unit-failover-1/charm/lib/charms/opensearch/v0/helper_charm.py", line 194, in run_cmd
+    raise OpenSearchCmdError(cmd=command, out=output.stdout, err=output.stderr)
+charms.opensearch.v0.opensearch_exceptions.OpenSearchCmdError
+unit-failover-1: 02:57:27 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-0: 02:58:18 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:58:18 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:173 Cleaning backups from cloud buckets
