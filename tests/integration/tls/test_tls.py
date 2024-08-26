@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 # wait time for secret expiry = 65 * 60
-SECRET_EXPIRY_WAIT_TIME = 3900
+SECRET_EXPIRY_WAIT_TIME = 4200
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
