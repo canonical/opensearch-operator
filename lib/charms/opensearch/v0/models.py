@@ -286,6 +286,7 @@ class PeerClusterApp(Model):
     app: App
     planned_units: int
     units: List[str]
+    roles: List[str]
 
 
 class PeerClusterFleetApps(Model):

@@ -323,6 +323,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             app=deployment_desc.app,
             planned_units=self.charm.app.planned_units(),
             units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
+            roles=deployment_desc.config.roles,
         )
         cluster_fleet_apps.update({current_app.app.id: current_app.to_dict()})
 
@@ -632,6 +633,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             units=[
                 format_unit_name(unit, app=deployment_desc.app) for unit in all_units(self.charm)
             ],
+            roles=deployment_desc.config.roles,
         )
         self.put_in_rel(data={"app": current_app.to_str()}, rel_id=event.relation.id)
 
