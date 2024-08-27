@@ -34,7 +34,7 @@ async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator.
     tls_app: Application = await ops_test.model.deploy(
         MANUAL_TLS_CERTIFICATES_APP_NAME,
-        channel="beta",
+        channel="stable",
     )
     await wait_until(
         ops_test,
