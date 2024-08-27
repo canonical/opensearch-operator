@@ -1330,6 +1330,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             ):
                 computed_roles.append("data")
                 self.peers_data.put(Scope.UNIT, "remove-data-role", True)
+                nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
+                for node in nodes_config.values():
+                    cluster_node = Node.from_dict(node)
+                    logger.info(f"Roles: {cluster_node.roles}")
         else:
             computed_roles = ClusterTopology.generated_roles()
 
