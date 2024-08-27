@@ -739,6 +739,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # the chain.pem file should only be updated after applying the new certs
                 # otherwise there could be TLS verification errors after renewing the CA
                 self.tls.update_request_ca_bundle()
+                # cleaning the former CA certificate from the truststore
+                # must only be done AFTER all renewed certificates are available and loaded
                 self.tls.remove_old_ca()
             else:
                 event.defer()

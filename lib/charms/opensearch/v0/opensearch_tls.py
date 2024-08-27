@@ -214,11 +214,14 @@ class OpenSearchTLS(Object):
                 logger.debug("Could not store new CA certificate.")
                 event.defer()
                 return
-            # when the current ca is replaced we need to initiate a rolling restart
+            # replacing the current CA initiates a rolling restart and certificate renewal
+            # the workflow is the following:
+            # get new CA -> set tls_ca_renewing -> restart -> post_start_init -> set tls_ca_renewed
+            # -> request new certs -> get new certs -> on_tls_conf_set
+            # -> delete both tls_ca_renewing and tls_ca_renewed
             if current_stored_ca:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
                 self.charm.on_tls_ca_rotation()
-                event.defer()
                 return
 
         # store the certificates and keys in a key store
