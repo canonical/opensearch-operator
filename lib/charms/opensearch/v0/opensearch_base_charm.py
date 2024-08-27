@@ -47,7 +47,7 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
-from charms.opensearch.v0.models import DeploymentDescription, DeploymentType
+from charms.opensearch.v0.models import DeploymentDescription, DeploymentType, PeerClusterApp
 from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -851,6 +851,24 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # Retrieve the nodes of the cluster, needed to configure this node
             nodes = self._get_nodes(False)
 
+            cluster_apps = self.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
+            # todo: remove logging
+            logger.debug(f"cluster apps: {cluster_apps}")
+
+            data_node_available = False
+            for app in cluster_apps.values():
+                cluster_app = PeerClusterApp.from_dict(app)
+                # todo: remove logging
+                logger.debug(f"app roles: {cluster_app.roles}")
+                if "data" in cluster_app.roles:
+                    data_node_available = True
+                    break
+
+            if not data_node_available:
+                logger.info("No data role available, deferring event.")
+                event.defer()
+                return
+
             # validate the roles prior to starting
             self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
 
@@ -1322,18 +1340,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # "data" role in the provided roles, we need to add the role to be able to create
             # and store the security index
             # todo: rework: delay sec index init until 1st data node / handle red health
-            if (
-                self.unit.is_leader()
-                and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-                and "data" not in computed_roles
-                and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
-            ):
-                computed_roles.append("data")
-                self.peers_data.put(Scope.UNIT, "remove-data-role", True)
-                nodes_config = self.peers_data.get_object(Scope.APP, "nodes_config")
-                for node in nodes_config.values():
-                    cluster_node = Node.from_dict(node)
-                    logger.info(f"Roles: {cluster_node.roles}")
+            # if (
+                # self.unit.is_leader()
+                # and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+                # and "data" not in computed_roles
+                # and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
+            # ):
+                # todo: remove below lines
+                # computed_roles.append("data")
+                # self.peers_data.put(Scope.UNIT, "remove-data-role", True)
         else:
             computed_roles = ClusterTopology.generated_roles()
 
