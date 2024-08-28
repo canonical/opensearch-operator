@@ -7,7 +7,6 @@ import asyncio
 import base64
 import json
 import logging
-from collections import deque
 from typing import TYPE_CHECKING, NamedTuple
 
 from charms.tls_certificates_interface.v3.tls_certificates import (
@@ -80,7 +79,7 @@ class ManualTLSAgent:
         self.tls_unit = tls_unit
         self.ca_key = generate_private_key()
         self.ca = generate_ca(self.ca_key, "CN_CA")
-        self.csr_queue = deque()
+        self.csr_queue: list[CSR] = []
 
     async def get_outstanding_certificate_requests(self) -> None:
         """Get the outstanding certificate requests from the TLS operator.
@@ -101,7 +100,7 @@ class ManualTLSAgent:
             )
             raise GetOutstandingCertificateRequestsError(message)
         csrs = json.loads(action.results["result"])
-        self.csr_queue = deque([CSR.from_dict(csr) for csr in csrs])
+        self.csr_queue = [CSR.from_dict(csr) for csr in csrs]
 
     @retry(
         wait=wait_exponential(multiplier=1, min=5, max=20),
@@ -168,13 +167,12 @@ class ManualTLSAgent:
     async def process_queue(self) -> None:
         """Process the certificate signing requests in the queue."""
         while self.csr_queue:
-            csr = self.csr_queue.popleft()
+            csr = self.csr_queue.pop()
             await self.process_csr(csr)
 
 
 async def main() -> None:
     """Run the ManualTLSAgent."""
-    logging.basicConfig(level=logging.INFO)
     logging.info("Starting ManualTLSAgent")
     model = Model()
     await model.connect()
