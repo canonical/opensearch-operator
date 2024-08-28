@@ -101,7 +101,7 @@ class ManualTLSAgent:
             )
             raise GetOutstandingCertificateRequestsError(message)
         csrs = json.loads(action.results["result"])
-        self.csr_queue = deque([CSR.from_charm_csr(csr) for csr in csrs])
+        self.csr_queue = deque([CSR.from_dict(csr) for csr in csrs])
 
     @retry(
         wait=wait_exponential(multiplier=1, min=5, max=20),
