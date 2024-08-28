@@ -72,6 +72,15 @@ async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest) -> None:
     logger.info("Scaling up the application by adding a new unit")
     await os_app.add_unit(1)
 
+    # Wait for the new unit to be in maintenance
+    logger.info("Waiting for the new unit to be in maintenance waiting for certificates")
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        units_statuses=["active", "maintenance"],
+        wait_for_exact_units=len(UNIT_IDS) + 1,
+    )
+
     # Wait for the new unit request certificates
     logger.info("Waiting for the new unit to request certificates")
     await manual_tls_daemon.wait_for_csrs_in_queue(2)

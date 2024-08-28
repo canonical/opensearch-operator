@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+from __future__ import annotations
 
 import asyncio
 import base64
@@ -26,28 +27,16 @@ logger = logging.getLogger(__name__)
 MANUAL_TLS_CERTIFICATES_APP_NAME = "manual-tls-certificates"
 
 
-class GettingOutstandingCertificateRequestsFailedError(Exception):
+class GetOutstandingCertificateRequestsError(Exception):
     """Exception raised when getting outstanding certificate requests fails."""
-
-    def __init__(self, message: str) -> None:
-        """Initialise the exception."""
-        super().__init__(message)
 
 
 class CSRsMissingError(Exception):
     """Exception raised when the number of CSRs in the queue is less than the expected number."""
 
-    def __init__(self, message: str) -> None:
-        """Initialise the exception."""
-        super().__init__(message)
-
 
 class ProvidingCertificateFailedError(Exception):
     """Exception raised when providing a certificate fails."""
-
-    def __init__(self, message: str) -> None:
-        """Initialise the exception."""
-        super().__init__(message)
 
 
 class CSR(NamedTuple):
@@ -60,12 +49,12 @@ class CSR(NamedTuple):
     is_ca: bool
 
     @classmethod
-    def from_charm_csr(cls, charm_csr: dict) -> "CSR":
+    def from_dict(cls, csr: dict[str, str]) -> CSR:
         """Create a CSR object from a dictionary.
 
         Arguments:
         ---------
-            charm_csr : dict
+            csr : dict
                 The dictionary containing the information about
                 the certificate signing request gotten from the charm.
 
@@ -75,11 +64,11 @@ class CSR(NamedTuple):
 
         """
         return cls(
-            relation_id=charm_csr["relation_id"],
-            application_name=charm_csr["application_name"],
-            unit_name=charm_csr["unit_name"],
-            csr=charm_csr["csr"].encode(),
-            is_ca=charm_csr["is_ca"],
+            relation_id=csr["relation_id"],
+            application_name=csr["application_name"],
+            unit_name=csr["unit_name"],
+            csr=csr["csr"].encode(),
+            is_ca=csr["is_ca"],
         )
 
 
@@ -98,7 +87,7 @@ class ManualTLSAgent:
 
         Raises
         ------
-            GettingOutstandingCertificateRequestsFailedError:
+            GetOutstandingCertificateRequestsError:
                 If getting the outstanding certificate requests fails.
 
         """
@@ -110,12 +99,7 @@ class ManualTLSAgent:
                 "message",
                 "Failed to get outstanding certificate requests",
             )
-            if "No outstanding certificate requests" in message:
-                logging.info(message)
-            if "No certificates relation has been created yet" in message:
-                logging.info(message)
-            logging.error(message)
-            raise GettingOutstandingCertificateRequestsFailedError(message)
+            raise GetOutstandingCertificateRequestsError(message)
         csrs = json.loads(action.results["result"])
         self.csr_queue = deque([CSR.from_charm_csr(csr) for csr in csrs])
 
@@ -123,12 +107,12 @@ class ManualTLSAgent:
         wait=wait_exponential(multiplier=1, min=5, max=20),
         stop=stop_after_attempt(100),
     )
-    async def wait_for_csrs_in_queue(self, nbr_csrs: int = 1) -> None:
+    async def wait_for_csrs_in_queue(self, csrs_count: int = 1) -> None:
         """Wait for the number of csrs in the queue to be equal to the number of csrs specified.
 
         Arguments:
         ---------
-            nbr_csrs : int
+            csrs_count : int
                 The number of csrs to wait for in the queue.
 
         Raises:
@@ -137,8 +121,8 @@ class ManualTLSAgent:
 
         """
         await self.get_outstanding_certificate_requests()
-        if len(self.csr_queue) < nbr_csrs:
-            message = f"{nbr_csrs - len(self.csr_queue)} CSRs missing in queue"
+        if len(self.csr_queue) < csrs_count:
+            message = f"{csrs_count - len(self.csr_queue)} CSRs missing in queue"
             raise CSRsMissingError(message)
 
     async def process_csr(self, csr: CSR) -> None:
@@ -176,7 +160,7 @@ class ManualTLSAgent:
         )
         action = await action.wait()
         if action.status != "completed":
-            message = "Failed to provide certificate for %s", csr.unit_name
+            message = f"Failed to provide certificate for {csr.unit_name}"
             logging.error(message)
             raise ProvidingCertificateFailedError(message)
         logger.info("Provided certificate to %s", csr.unit_name)
