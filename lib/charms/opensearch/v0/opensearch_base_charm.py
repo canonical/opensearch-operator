@@ -316,6 +316,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():
+            # todo: remove logging
+            logger.debug("Cannot start because of peer cluster manager directives.")
             event.defer()
             return
 
@@ -348,7 +350,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # request the start of OpenSearch
         self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
-        self._start_opensearch_event.emit()
+
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        ignore_lock = (
+                    "data" not in deployment_desc.config.roles
+                    and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+                    or "data" in deployment_desc.config.roles
+                    and self.unit.is_leader()
+                    and deployment_desc.typ == DeploymentType.OTHER
+                    and not self.peers_data.get(Scope.APP, "security_index_initialised", False))
+#        ignore_lock = self.unit.is_leader() and "data" in self.opensearch_peer_cm.deployment_desc().config.roles and not self.peers_data.get(
+#                Scope.APP, "security_index_initialised", False)
+        self._start_opensearch_event.emit(ignore_lock=ignore_lock)
 
     def _apply_peer_cm_directives_and_check_if_can_start(self) -> bool:
         """Apply the directives computed by the opensearch peer cluster manager."""
@@ -356,8 +369,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # the deployment description hasn't finished being computed by the leader
             return False
 
+        # todo: remove logging
+        logger.debug(f"deployment desc: {deployment_desc}")
         # check possibility to start
         if self.opensearch_peer_cm.can_start(deployment_desc):
+            # todo: remove logging
+            logger.debug("can start after checking deployment desc")
             try:
                 nodes = self._get_nodes(False)
                 self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
@@ -851,24 +868,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # Retrieve the nodes of the cluster, needed to configure this node
             nodes = self._get_nodes(False)
 
-            cluster_apps = self.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
-            # todo: remove logging
-            logger.debug(f"cluster apps: {cluster_apps}")
-
-            data_node_available = False
-            for app in cluster_apps.values():
-                cluster_app = PeerClusterApp.from_dict(app)
-                # todo: remove logging
-                logger.debug(f"app roles: {cluster_app.roles}")
-                if "data" in cluster_app.roles:
-                    data_node_available = True
-                    break
-
-            if not data_node_available:
-                logger.info("No data role available, deferring event.")
-                event.defer()
-                return
-
             # validate the roles prior to starting
             self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
 
@@ -886,13 +885,25 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         try:
+            deployment_desc = self.opensearch_peer_cm.deployment_desc()
             self.opensearch.start(
                 wait_until_http_200=(
                     not self.unit.is_leader()
                     or self.peers_data.get(Scope.APP, "security_index_initialised", False)
                 )
             )
-            self._post_start_init(event)
+            if (
+                self.peers_data.get(Scope.APP, "security_index_initialised", False)
+                or self.unit.is_leader()
+                and "data" in deployment_desc.config.roles
+                and deployment_desc.typ == DeploymentType.OTHER
+                ):
+                self._post_start_init(event)
+            else:
+                logger.info("No data role available, deferring event post_start_init.")
+                self.node_lock.release()
+                event.defer()
+                return
         except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             event.defer()
         except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
@@ -900,12 +911,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.node_lock.release()
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
+#
 
     def _post_start_init(self, event: _StartOpenSearch):  # noqa: C901
         """Initialization post OpenSearch start."""
         # initialize the security index if needed (and certs written on disk etc.)
-        if self.unit.is_leader() and not self.peers_data.get(
-            Scope.APP, "security_index_initialised"
+        # this happens only on the first data node to join the cluster
+        if (
+            self.unit.is_leader()
+            and "data" in self.opensearch_peer_cm.deployment_desc().config.roles
+            and not self.peers_data.get(Scope.APP, "security_index_initialised")
         ):
             admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
             self._initialize_security_index(admin_secrets)
@@ -1148,7 +1163,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             or not self.alt_hosts
         ):
             return (
-                self.unit.is_leader() and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+                self.unit.is_leader() and (
+                    deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+                    or deployment_desc.typ == DeploymentType.OTHER
+                    and "data" in deployment_desc.config.roles
+                )
             )
 
         # When a new unit joins, replica shards are automatically added to it. In order to prevent

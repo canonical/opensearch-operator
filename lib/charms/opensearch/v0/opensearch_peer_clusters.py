@@ -119,6 +119,8 @@ class OpenSearchPeerClustersManager:
             pending_directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
 
         if Directive.VALIDATE_CLUSTER_NAME in pending_directives:
+            # todo: remove logger
+            logger.debug(f"validating cluster name: {current_deployment_desc}")
             if config.cluster_name != data.cluster_name:
                 deployment_state = DeploymentState(
                     value=State.BLOCKED_WRONG_RELATED_CLUSTER, message=PClusterWrongRelation

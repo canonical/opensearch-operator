@@ -436,22 +436,22 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             )
         elif not self.charm.is_admin_user_configured():
             blocked_msg = f"Admin user not fully configured {message_suffix}."
-        elif not self.charm.tls.is_fully_configured_in_cluster():
-            blocked_msg = f"TLS not fully configured {message_suffix}."
-            should_retry = False
-        elif not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
-            blocked_msg = f"Security index not initialized {message_suffix}."
-        elif not self.charm.is_every_unit_marked_as_started():
-            blocked_msg = f"Waiting for every unit {message_suffix} to start."
-        elif not self.charm.secrets.get(Scope.APP, self.charm.secrets.password_key(COSUser)):
-            blocked_msg = f"'{COSUser}' user not created yet."
-        else:
-            try:
-                if not self._fetch_local_cm_nodes(deployment_desc):
-                    blocked_msg = f"No 'cluster_manager' eligible nodes found {message_suffix}"
-            except OpenSearchHttpError as e:
-                logger.error(e)
-                blocked_msg = f"Could not fetch nodes {message_suffix}"
+#        elif not self.charm.tls.is_fully_configured_in_cluster():
+#            blocked_msg = f"TLS not fully configured {message_suffix}."
+#            should_retry = False
+#        elif not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
+#            blocked_msg = f"Security index not initialized {message_suffix}."
+#        elif not self.charm.is_every_unit_marked_as_started():
+#            blocked_msg = f"Waiting for every unit {message_suffix} to start."
+#        elif not self.charm.secrets.get(Scope.APP, self.charm.secrets.password_key(COSUser)):
+#            blocked_msg = f"'{COSUser}' user not created yet."
+#        else:
+#            try:
+#                if not self._fetch_local_cm_nodes(deployment_desc):
+#                    blocked_msg = f"No 'cluster_manager' eligible nodes found {message_suffix}"
+#            except OpenSearchHttpError as e:
+#                logger.error(e)
+#                blocked_msg = f"Could not fetch nodes {message_suffix}"
 
         if not blocked_msg:
             return None
@@ -523,8 +523,14 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
-        # check errors sent by providers
+#        if "data" in deployment_desc.config.roles and not self.charm.peers_data.get(
+#                Scope.APP, "security_index_initialised", False
+#        ):
+#            logger.info("Starting 1st data node in cluster.")
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
+            # todo: remove logging
+            logger.debug("Peer Cluster Requirer: Error set from providers.")
+            # check errors sent by providers
             return
 
         # fetch the success data
@@ -588,7 +594,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # set user and security_index initialized flags
         self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
-        self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
+        if self.charm.alt_hosts:
+            self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
 
         if s3_creds := data.credentials.s3:
             self.charm.secrets.put_object(Scope.APP, "s3-creds", s3_creds.to_dict(by_alias=True))
