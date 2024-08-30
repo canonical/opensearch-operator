@@ -1,0 +1,610 @@
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:490 Remove s3-credentials relation
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:502 Re-add s3-credentials relation
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [executing] maintenance: Backup setup started.
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:511 Syncing credentials for microceph
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.20.200.46:9200/_recovery?human
+[32mINFO    [0m integration.ha.helpers:helpers.py:247 Continuous writes result: namespace(max_stored_id=354, count=355, last_expected_id=354)
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.20.200.46:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: POST -- https://10.20.200.46:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.20.200.46:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.20.200.46:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: POST -- https://10.20.200.46:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.20.200.46:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:591 Testing restore for series_index - original count pre-restore: 355, and now, new count: 321
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: POST -- https://10.20.200.46:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.20.200.46:9200/series_index/_count
+[32mINFO    [0m integration.ha.conftest:conftest.py:39 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:54:07Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           active      2  opensearch                                 0  no       
+main                               active      1  opensearch                                 1  no       
+opensearch                         active      1  opensearch                                 2  no       
+s3-integrator                      active      1  s3-integrator             latest/edge     39  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/2*                  active    idle   4        10.20.200.129   9200/tcp  
+failover/3                   active    idle   5        10.20.200.80    9200/tcp  
+main/0*                      active    idle   3        10.20.200.46    9200/tcp  
+opensearch/0*                active    idle   2        10.20.200.230   9200/tcp  
+s3-integrator/0*             active    idle   1        10.20.200.54              
+self-signed-certificates/0*  active    idle   0        10.20.200.85              
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.20.200.85   juju-48aefa-0  ubuntu@22.04      Running
+1        started  10.20.200.54   juju-48aefa-1  ubuntu@22.04      Running
+2        started  10.20.200.230  juju-48aefa-2  ubuntu@22.04      Running
+3        started  10.20.200.46   juju-48aefa-3  ubuntu@22.04      Running
+4        started  10.20.200.129  juju-48aefa-4  ubuntu@22.04      Running
+5        started  10.20.200.80   juju-48aefa-5  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 02:32:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:32:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 02:32:48 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 02:32:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:32:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:32:52 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 02:33:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:33:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-2: 02:33:34 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:33:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:33:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-main-0: 02:33:38 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 02:33:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:33:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-3: 02:33:41 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:33:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:33:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 02:33:47 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-failover-2: 02:38:59 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:39:00 ERROR unit.failover/2.juju-log upgrade-version-a:11: [Errno 111] Connection refused
+unit-failover-2: 02:39:01 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:39:02 ERROR unit.failover/2.juju-log node-lock-fallback:10: [Errno 111] Connection refused
+unit-main-0: 02:39:02 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-failover-3: 02:39:02 ERROR unit.failover/3.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:39:03 ERROR unit.failover/2.juju-log certificates:17: [Errno 111] Connection refused
+unit-main-0: 02:39:04 ERROR unit.main/0.juju-log certificates:16: [Errno 111] Connection refused
+unit-failover-3: 02:39:04 ERROR unit.failover/3.juju-log upgrade-version-a:11: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:04 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:06 ERROR unit.main/0.juju-log opensearch-peers:5: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:06 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-3: 02:39:06 ERROR unit.failover/3.juju-log upgrade-version-a:11: [Errno 111] Connection refused
+unit-main-0: 02:39:06 ERROR unit.main/0.juju-log opensearch-peers:5: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:06 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:06 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-main-0: 02:39:06 ERROR unit.main/0.juju-log opensearch-peers:5: [Errno 111] Connection refused
+unit-main-0: 02:39:06 ERROR unit.main/0.juju-log opensearch-peers:5: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:06 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-3: 02:39:07 ERROR unit.failover/3.juju-log certificates:17: [Errno 111] Connection refused
+unit-main-0: 02:39:07 ERROR unit.main/0.juju-log peer-cluster-orchestrator:13: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:07 ERROR unit.opensearch/0.juju-log peer-cluster:14: [Errno 111] Connection refused
+unit-failover-2: 02:39:08 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:39:08 ERROR unit.opensearch/0.juju-log upgrade-version-a:3: [Errno 111] Connection refused
+unit-main-0: 02:39:08 ERROR unit.main/0.juju-log peer-cluster-orchestrator:13: [Errno 111] Connection refused
+unit-failover-2: 02:39:09 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:39:09 ERROR unit.opensearch/0.juju-log certificates:18: [Errno 111] Connection refused
+unit-main-0: 02:39:09 ERROR unit.main/0.juju-log opensearch-peers:5: [Errno 111] Connection refused
+unit-main-0: 02:39:09 ERROR unit.main/0.juju-log opensearch-peers:5: [Errno 111] Connection refused
+unit-main-0: 02:39:09 ERROR unit.main/0.juju-log opensearch-peers:5: [Errno 111] Connection refused
+unit-main-0: 02:39:09 ERROR unit.main/0.juju-log opensearch-peers:5: [Errno 111] Connection refused
+unit-failover-2: 02:39:10 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:39:10 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:39:10 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:39:10 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-main-0: 02:39:10 ERROR unit.main/0.juju-log peer-cluster-orchestrator:13: [Errno 111] Connection refused
+unit-failover-3: 02:39:11 ERROR unit.failover/3.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:39:11 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-failover-3: 02:39:12 ERROR unit.failover/3.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:39:12 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:12 ERROR unit.main/0.juju-log peer-cluster-orchestrator:13: [Errno 111] Connection refused
+unit-failover-3: 02:39:13 ERROR unit.failover/3.juju-log peer-cluster-orchestrator:15: [Errno 111] Connection refused
+unit-failover-2: 02:39:13 ERROR unit.failover/2.juju-log peer-cluster-orchestrator:15: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:13 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:13 ERROR unit.main/0.juju-log peer-cluster-orchestrator:14: [Errno 111] Connection refused
+unit-failover-3: 02:39:13 ERROR unit.failover/3.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:39:14 ERROR unit.failover/2.juju-log upgrade-version-a:11: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:14 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:14 ERROR unit.main/0.juju-log peer-cluster-orchestrator:14: [Errno 111] Connection refused
+unit-failover-3: 02:39:14 ERROR unit.failover/3.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:39:14 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:15 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:15 ERROR unit.main/0.juju-log upgrade-version-a:4: [Errno 111] Connection refused
+unit-failover-3: 02:39:15 ERROR unit.failover/3.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:39:15 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:15 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:39:15 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:39:16 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:39:16 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-main-0: 02:39:16 ERROR unit.main/0.juju-log certificates:16: [Errno 111] Connection refused
+unit-failover-3: 02:39:16 ERROR unit.failover/3.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:16 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-failover-2: 02:39:16 ERROR unit.failover/2.juju-log upgrade-version-a:11: [Errno 111] Connection refused
+unit-failover-3: 02:39:17 ERROR unit.failover/3.juju-log peer-cluster-orchestrator:15: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:18 ERROR unit.opensearch/0.juju-log certificates:18: [Errno 111] Connection refused
+unit-failover-2: 02:39:18 ERROR unit.failover/2.juju-log certificates:17: [Errno 111] Connection refused
+unit-failover-3: 02:39:19 ERROR unit.failover/3.juju-log peer-cluster-orchestrator:15: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:19 ERROR unit.opensearch/0.juju-log certificates:18: [Errno 111] Connection refused
+unit-failover-2: 02:39:19 ERROR unit.failover/2.juju-log peer-cluster-orchestrator:15: [Errno 111] Connection refused
+unit-failover-3: 02:39:20 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:39:20 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:39:20 ERROR unit.failover/2.juju-log certificates:17: [Errno 111] Connection refused
+unit-main-0: 02:39:21 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:39:21 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-3: 02:39:21 ERROR unit.failover/3.juju-log certificates:17: [Errno 111] Connection refused
+unit-failover-2: 02:39:22 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:22 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-failover-3: 02:39:22 ERROR unit.failover/3.juju-log upgrade-version-a:11: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:22 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:39:23 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:39:23 ERROR unit.opensearch/0.juju-log peer-cluster:14: [Errno 111] Connection refused
+unit-failover-3: 02:39:23 ERROR unit.failover/3.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-main-0: 02:39:23 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:39:23 ERROR unit.failover/2.juju-log node-lock-fallback:10: [Errno 111] Connection refused
+unit-failover-3: 02:39:24 ERROR unit.failover/3.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-main-0: 02:39:24 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:39:24 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:24 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:24 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 02:39:24 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:39:24 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-failover-3: 02:39:25 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-main-0: 02:39:25 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:25 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:39:25 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:25 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:25 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-failover-2: 02:39:25 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:39:26 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-3: 02:39:26 ERROR unit.failover/3.juju-log certificates:17: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:26 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:26 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:39:26 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-main-0: 02:39:30 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:30 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 02:39:36 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:36 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 02:39:42 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:45 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 02:39:53 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:39:53 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 02:39:58 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:40:00 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:40:05 ERROR unit.opensearch/0.juju-log peer-cluster:14: [Errno 111] Connection refused
+unit-failover-2: 02:40:06 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-main-0: 02:40:07 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:40:12 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 02:40:16 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:40:18 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 02:40:27 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:40:29 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 02:40:32 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:40:34 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 02:40:37 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:40:41 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-failover-3: 02:40:42 ERROR unit.failover/3.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:40:44 ERROR unit.failover/2.juju-log peer-cluster-orchestrator:15: [Errno 111] Connection refused
+unit-main-0: 02:40:44 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:40:44 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:40:45 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-failover-3: 02:40:45 ERROR unit.failover/3.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:40:46 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:46 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:46 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:46 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:46 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:46 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:46 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:46 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:46 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:40:46 ERROR unit.failover/3.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:40:46 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:46 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:46 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:46 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-2: 02:40:47 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:47 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:47 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:47 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:47 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-main-0: 02:40:47 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:40:47 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-failover-3: 02:40:48 ERROR unit.failover/3.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:40:48 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-failover-2: 02:40:49 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-3: 02:40:50 ERROR unit.failover/3.juju-log node-lock-fallback:10: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-main-0: 02:40:50 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:40:50 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-main-0: 02:40:50 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-failover-2: 02:40:51 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:40:51 ERROR unit.failover/3.juju-log node-lock-fallback:10: [Errno 111] Connection refused
+unit-failover-2: 02:40:51 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:51 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:40:51 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:51 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-failover-3: 02:40:52 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:40:52 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:40:52 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:40:52 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:40:52 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:40:52 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:40:52 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:52 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-main-0: 02:40:54 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:40:54 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-failover-3: 02:40:54 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:40:54 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:40:54 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:54 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:55 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-main-0: 02:40:57 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:40:57 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:40:57 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-opensearch-0: 02:40:59 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-main-0: 02:41:00 ERROR unit.main/0.juju-log [Errno 111] Connection refused
+unit-main-0: 02:41:00 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:41:15 ERROR unit.opensearch/0.juju-log peer-cluster:14: [Errno 111] Connection refused
+unit-failover-3: 02:41:15 ERROR unit.failover/3.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:15 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-3: 02:41:16 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:16 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-2: 02:41:16 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:16 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-2: 02:41:16 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:16 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-3: 02:41:16 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:16 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-3: 02:41:16 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:16 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:16 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:16 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:17 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:18 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:18 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:18 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:18 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-3: 02:41:19 ERROR unit.failover/3.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:19 ERROR unit.opensearch/0.juju-log peer-cluster:14: [Errno 111] Connection refused
+unit-failover-2: 02:41:19 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:20 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:20 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:20 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:20 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:20 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-2: 02:41:20 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:20 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-2: 02:41:20 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:21 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:21 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-3: 02:41:22 ERROR unit.failover/3.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:41:22 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-failover-3: 02:41:22 ERROR unit.failover/3.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:41:22 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-failover-3: 02:41:23 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:23 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:23 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:23 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:24 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:24 ERROR unit.failover/2.juju-log opensearch-peers:12: Cannot connect to the OpenSearch server...
+unit-failover-3: 02:41:24 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:24 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:24 ERROR unit.failover/3.juju-log opensearch-peers:12: Cannot connect to the OpenSearch server...
+unit-failover-3: 02:41:24 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:24 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:24 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:24 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:24 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:24 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:24 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:24 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:24 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:24 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:24 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:24 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:24 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:25 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:25 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:25 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:25 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:25 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:25 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:25 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:25 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:25 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:25 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:25 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:25 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:25 ERROR unit.failover/3.juju-log opensearch-peers:12: Cannot connect to the OpenSearch server...
+unit-failover-3: 02:41:26 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:26 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-failover-2: 02:41:26 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:41:26 ERROR unit.failover/2.juju-log Cannot connect to the OpenSearch server...
+unit-failover-2: 02:41:26 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:41:26 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:41:27 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-failover-2: 02:41:27 ERROR unit.failover/2.juju-log [Errno 111] Connection refused
+unit-failover-3: 02:41:29 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:33 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:36 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-3: 02:41:36 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:38 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:39 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-3: 02:41:40 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:43 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-3: 02:41:44 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:47 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:50 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:41:53 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:54 ERROR unit.opensearch/0.juju-log peer-cluster:14: [Errno 111] Connection refused
+unit-failover-2: 02:41:54 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:54 ERROR unit.failover/2.juju-log peer-cluster:13: Cannot connect to the OpenSearch server...
+unit-failover-2: 02:41:54 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:55 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:55 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:55 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:56 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:56 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:56 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:56 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:56 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:56 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-2: 02:41:56 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-3: 02:41:56 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:56 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:57 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:57 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-opensearch-0: 02:41:57 ERROR unit.opensearch/0.juju-log peer-cluster:14: [Errno 111] Connection refused
+unit-failover-2: 02:41:58 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:58 ERROR unit.failover/2.juju-log peer-cluster:13: Cannot connect to the OpenSearch server...
+unit-failover-2: 02:41:58 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:58 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:59 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:59 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-3: 02:41:59 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:41:59 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:41:59 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:42:00 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:42:00 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:42:01 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-2: 02:42:01 ERROR unit.failover/2.juju-log peer-cluster:13: [Errno 111] Connection refused
+unit-failover-3: 02:42:02 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:42:06 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:08 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:08 ERROR unit.failover/2.juju-log opensearch-peers:12: Cannot connect to the OpenSearch server...
+unit-failover-2: 02:42:08 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:42:08 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:08 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:42:09 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:09 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:09 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:42:09 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:09 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:42:09 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:42:09 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:09 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:10 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:10 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:42:10 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:42:11 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:42:11 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:42:11 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-failover-2: 02:42:11 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:11 ERROR unit.failover/2.juju-log opensearch-peers:12: Cannot connect to the OpenSearch server...
+unit-failover-2: 02:42:11 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:12 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:12 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-3: 02:42:12 ERROR unit.failover/3.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:13 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:42:13 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:42:13 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:42:13 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-2: 02:42:13 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:13 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:42:13 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-failover-2: 02:42:13 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:14 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:14 ERROR unit.failover/2.juju-log opensearch-peers:12: Cannot connect to the OpenSearch server...
+unit-failover-2: 02:42:14 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:18 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:21 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:25 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:28 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:31 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:34 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:37 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:40 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:43 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:46 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:49 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-failover-2: 02:42:53 ERROR unit.failover/2.juju-log opensearch-peers:12: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:01 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:02 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:02 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:03 ERROR unit.opensearch/0.juju-log peer-cluster:15: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:04 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:43:05 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:06 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:06 ERROR unit.opensearch/0.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:43:06 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:06 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:06 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:07 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:07 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:08 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:08 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:08 ERROR unit.opensearch/0.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:43:09 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:12 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:16 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:20 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:23 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:27 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:30 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:33 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:36 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:39 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:42 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-opensearch-0: 02:43:45 ERROR unit.opensearch/0.juju-log opensearch-peers:1: [Errno 111] Connection refused
+unit-main-0: 02:45:38 ERROR unit.main/0.juju-log s3-credentials:19: Plugin repository-s3 missing: ['access-key', 'secret-key']
+unit-main-0: 02:45:42 ERROR unit.main/0.juju-log s3-credentials:19: Plugin repository-s3 missing: ['access-key', 'secret-key']
+unit-main-0: 02:45:45 ERROR unit.main/0.juju-log s3-credentials:19: Plugin repository-s3 missing: ['access-key', 'secret-key']
+unit-main-0: 02:45:56 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://localhost', 'protocol': 'http', 'bucket': 'error', 'base_path': '/', 'region': 'default'}} failed.(Attempts left: 5)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:45:58 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://localhost', 'protocol': 'http', 'bucket': 'error', 'base_path': '/', 'region': 'default'}} failed.(Attempts left: 4)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:45:59 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://localhost', 'protocol': 'http', 'bucket': 'error', 'base_path': '/', 'region': 'default'}} failed.(Attempts left: 3)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:00 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://localhost', 'protocol': 'http', 'bucket': 'error', 'base_path': '/', 'region': 'default'}} failed.(Attempts left: 2)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:02 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://localhost', 'protocol': 'http', 'bucket': 'error', 'base_path': '/', 'region': 'default'}} failed.(Attempts left: 1)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:03 ERROR unit.main/0.juju-log s3-credentials:19: Failed to setup backup service with state repository s3 is unreachable
+unit-main-0: 02:46:16 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://localhost', 'protocol': 'http', 'bucket': 'error', 'base_path': '/', 'region': 'default'}} failed.(Attempts left: 5)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:17 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://localhost', 'protocol': 'http', 'bucket': 'error', 'base_path': '/', 'region': 'default'}} failed.(Attempts left: 4)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:18 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://localhost', 'protocol': 'http', 'bucket': 'error', 'base_path': '/', 'region': 'default'}} failed.(Attempts left: 3)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:20 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://localhost', 'protocol': 'http', 'bucket': 'error', 'base_path': '/', 'region': 'default'}} failed.(Attempts left: 2)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:21 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://localhost', 'protocol': 'http', 'bucket': 'error', 'base_path': '/', 'region': 'default'}} failed.(Attempts left: 1)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:23 ERROR unit.main/0.juju-log s3-credentials:19: Failed to setup backup service with state repository s3 is unreachable
+unit-main-0: 02:46:40 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 5)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:41 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 4)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:43 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 3)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:44 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 2)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:46:45 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 1)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-opensearch-0: 02:46:57 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-2: 02:46:57 ERROR unit.failover/2.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:46:59 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-2: 02:46:59 ERROR unit.failover/2.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:47:01 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-2: 02:47:01 ERROR unit.failover/2.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:47:02 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-2: 02:47:02 ERROR unit.failover/2.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:47:04 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-2: 02:47:04 ERROR unit.failover/2.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-main-0: 02:47:05 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 5)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-opensearch-0: 02:47:06 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-2: 02:47:06 ERROR unit.failover/2.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-main-0: 02:47:06 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 4)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:47:08 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 3)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:47:09 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 2)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:47:11 ERROR unit.main/0.juju-log s3-credentials:19: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 1)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:50:40 ERROR unit.main/0.juju-log s3-credentials:22: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 5)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:50:41 ERROR unit.main/0.juju-log s3-credentials:22: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 4)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:50:42 ERROR unit.main/0.juju-log s3-credentials:22: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 3)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:50:44 ERROR unit.main/0.juju-log s3-credentials:22: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 2)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:50:45 ERROR unit.main/0.juju-log s3-credentials:22: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 1)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:51:02 ERROR unit.main/0.juju-log s3-credentials:22: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 5)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:51:04 ERROR unit.main/0.juju-log s3-credentials:22: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 4)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:51:05 ERROR unit.main/0.juju-log s3-credentials:22: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 3)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:51:06 ERROR unit.main/0.juju-log s3-credentials:22: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 2)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+unit-main-0: 02:51:08 ERROR unit.main/0.juju-log s3-credentials:22: Request PUT to https://10.20.200.46:9200/_snapshot/s3-repository with payload: {'type': 's3', 'settings': {'endpoint': 'http://10.154.225.3', 'protocol': 'http', 'bucket': 'testbucket', 'base_path': 'opensearch/b9913a74-4251-489c-a277-2d9f64371246', 'region': 'default'}} failed.(Attempts left: 1)
+	Error: 500 Server Error: Internal Server Error for url: https://10.20.200.46:9200/_snapshot/s3-repository
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:173 Cleaning backups from cloud buckets
