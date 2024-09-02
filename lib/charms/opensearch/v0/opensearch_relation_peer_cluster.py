@@ -10,8 +10,10 @@ from charms.opensearch.v0.constants_charm import (
     AdminUser,
     COSUser,
     KibanaserverUser,
+    PClusterNoDataNode,
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
+    PeerRelationName,
 )
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import (
@@ -142,6 +144,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         self.refresh_relation_data(event, can_defer=False)
 
+        if "data" in self.charm.opensearch_peer_cm.deployment_desc().config.roles:
+            self.charm.status.clear(PClusterNoDataNode)
+
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
         if not self.charm.unit.is_leader():
@@ -227,6 +232,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             p_cluster_app=trigger_app,
             trigger_rel_id=event.relation.id,
         )
+
+        if not "data" in self.charm.opensearch_peer_cm.deployment_desc().config.roles:
+            self.charm.status.set(BlockedStatus(PClusterNoDataNode))
 
     def refresh_relation_data(self, event: EventBase, can_defer: bool = True) -> None:
         """Refresh the peer cluster rel data (new cm node, admin password change etc.)."""
@@ -323,6 +331,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             app=deployment_desc.app,
             planned_units=self.charm.app.planned_units(),
             units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
+            leader_host=self.charm.unit_ip,
             roles=deployment_desc.config.roles,
         )
         cluster_fleet_apps.update({current_app.app.id: current_app.to_dict()})
@@ -434,24 +443,25 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             blocked_msg = (
                 "Cannot have 2 'failover'-orchestrators. Relate to the existing failover."
             )
-        elif not self.charm.is_admin_user_configured():
-            blocked_msg = f"Admin user not fully configured {message_suffix}."
-#        elif not self.charm.tls.is_fully_configured_in_cluster():
-#            blocked_msg = f"TLS not fully configured {message_suffix}."
-#            should_retry = False
-#        elif not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
-#            blocked_msg = f"Security index not initialized {message_suffix}."
-#        elif not self.charm.is_every_unit_marked_as_started():
-#            blocked_msg = f"Waiting for every unit {message_suffix} to start."
-#        elif not self.charm.secrets.get(Scope.APP, self.charm.secrets.password_key(COSUser)):
-#            blocked_msg = f"'{COSUser}' user not created yet."
-#        else:
-#            try:
-#                if not self._fetch_local_cm_nodes(deployment_desc):
-#                    blocked_msg = f"No 'cluster_manager' eligible nodes found {message_suffix}"
-#            except OpenSearchHttpError as e:
-#                logger.error(e)
-#                blocked_msg = f"Could not fetch nodes {message_suffix}"
+        elif "data" in deployment_desc.config.roles:
+            if not self.charm.is_admin_user_configured():
+                blocked_msg = f"Admin user not fully configured {message_suffix}."
+            elif not self.charm.tls.is_fully_configured_in_cluster():
+                blocked_msg = f"TLS not fully configured {message_suffix}."
+                should_retry = False
+            elif not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
+                blocked_msg = f"Security index not initialized {message_suffix}."
+            elif not self.charm.is_every_unit_marked_as_started():
+                blocked_msg = f"Waiting for every unit {message_suffix} to start."
+            elif not self.charm.secrets.get(Scope.APP, self.charm.secrets.password_key(COSUser)):
+                blocked_msg = f"'{COSUser}' user not created yet."
+            else:
+                try:
+                    if not self._fetch_local_cm_nodes(deployment_desc):
+                        blocked_msg = f"No 'cluster_manager' eligible nodes found {message_suffix}"
+                except OpenSearchHttpError as e:
+                    logger.error(e)
+                    blocked_msg = f"Could not fetch nodes {message_suffix}"
 
         if not blocked_msg:
             return None
@@ -523,13 +533,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
-#        if "data" in deployment_desc.config.roles and not self.charm.peers_data.get(
-#                Scope.APP, "security_index_initialised", False
-#        ):
-#            logger.info("Starting 1st data node in cluster.")
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
-            # todo: remove logging
-            logger.debug("Peer Cluster Requirer: Error set from providers.")
             # check errors sent by providers
             return
 
@@ -592,7 +596,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # store the app admin TLS resources if not stored
         self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
 
-        # set user and security_index initialized flags
+        # take over the internal users from the main orchestrator
+        self.charm.user_manager.put_internal_user(AdminUser, data.credentials.admin_password_hash)
+        self.charm.user_manager.put_internal_user(KibanaserverUser, data.credentials.kibana_password_hash)
+
         self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
         if self.charm.alt_hosts:
             self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
@@ -640,6 +647,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             units=[
                 format_unit_name(unit, app=deployment_desc.app) for unit in all_units(self.charm)
             ],
+            leader_host=self.charm.unit_ip,
             roles=deployment_desc.config.roles,
         )
         self.put_in_rel(data={"app": current_app.to_str()}, rel_id=event.relation.id)
