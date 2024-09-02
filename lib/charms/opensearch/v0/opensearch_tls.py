@@ -144,7 +144,7 @@ class OpenSearchTLS(Object):
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             event.defer()
             return
-        admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
         if self.charm.unit.is_leader() and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             # create passwords for both ca trust_store/admin key_store
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
@@ -152,8 +152,12 @@ class OpenSearchTLS(Object):
                 Scope.APP, CertType.APP_ADMIN, CertType.APP_ADMIN.val
             )
 
-            if admin_cert is None:
+            if not admin_cert:
                 self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+        elif not admin_cert.get("truststore-password"):
+            logger.debug("Truststore-password from main-orchestrator not available yet.")
+            event.defer()
+            return
 
         # create passwords for both unit-http/transport key_stores
         self._create_keystore_pwd_if_not_exists(
@@ -186,12 +190,12 @@ class OpenSearchTLS(Object):
             logger.debug("Unknown certificate available.")
             return
 
-        if self.is_ca_rotation_ongoing():
-            event.defer()
-            return
-
         # seems like the admin certificate is also broadcast to non leader units on refresh request
         if not self.charm.unit.is_leader() and scope == Scope.APP:
+            return
+
+        if self.is_ca_rotation_ongoing():
+            event.defer()
             return
 
         old_cert = secrets.get("cert", None)
