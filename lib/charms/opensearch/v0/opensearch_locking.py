@@ -1,13 +1,29 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Ensure that only one node (re)starts, joins the cluster, or leaves the cluster at a time."""
+"""Ensure that only one node (re)starts, joins the cluster, or leaves the cluster at a time.
+
+The workflow logic goes alongside the following:
+
+1. If there are opensearch online nodes:
+   a) the node requesting the lock attempts to create a doc with the name of the node
+   b) if it succeeds => the unit gets the lock
+   c) if it fails => the unit doesn't get the lock as it is held by another unit
+   d) when the unit completes with their locked operation => releases the lock => deletes the doc
+2. if there are no online nodes:
+   a) we make use of a flag in the relation data
+   b) we check on the existence of the flag to know if the lock is held or not
+   c) if not there => we set the lock (flag in the peer rel data)
+   d) we release the lock by removing that flag from the rel data
+"""
+
 import json
 import logging
 import os
 from typing import TYPE_CHECKING, List, Optional
 
 import ops
+from charms.opensearch.v0.constants_charm import NodeLockRelationName
 from charms.opensearch.v0.helper_charm import all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology
 from charms.opensearch.v0.models import PeerClusterApp
@@ -33,13 +49,11 @@ logger = logging.getLogger(__name__)
 class _PeerRelationLock(ops.Object):
     """Fallback lock when all units of OpenSearch are offline."""
 
-    _ENDPOINT_NAME = "node-lock-fallback"
-
     def __init__(self, charm: "OpenSearchBaseCharm"):
-        super().__init__(charm, self._ENDPOINT_NAME)
+        super().__init__(charm, NodeLockRelationName)
         self._charm = charm
         self.framework.observe(
-            self._charm.on[self._ENDPOINT_NAME].relation_changed, self._on_peer_relation_changed
+            self._charm.on[NodeLockRelationName].relation_changed, self._on_peer_relation_changed
         )
 
     @property
@@ -110,7 +124,7 @@ class _PeerRelationLock(ops.Object):
     def _unit_requested_lock(self, unit: ops.Unit):
         """Whether unit requested lock."""
         assert self._relation
-        if not (value := self._relation.data[unit].get("lock-requested")):
+        if not (value := self._relation.data.get(unit, {}).get("lock-requested")):
             return False
 
         value = json.loads(value)
@@ -140,6 +154,7 @@ class _PeerRelationLock(ops.Object):
             # the lock.
             # `JUJU_CONTEXT_ID` is unique for each Juju event
             # (https://matrix.to/#/!xdClnUGkurzjxqiQcN:ubuntu.com/$yEGjGlDaIPBtCi8uB3fH6ZaXUjN7GF-Y2s9YwvtPM-o?via=ubuntu.com&via=matrix.org&via=cutefunny.art)
+
             self._relation.data[self._charm.app]["leader-acquired-lock-after-juju-event-id"] = (
                 os.environ["JUJU_CONTEXT_ID"]
             )
@@ -155,7 +170,7 @@ class _PeerRelationLock(ops.Object):
     def _relation(self):
         # Use property instead of `self._relation =` in `__init__()` because of ops Harness unit
         # tests
-        return self._charm.model.get_relation(self._ENDPOINT_NAME)
+        return self._charm.model.get_relation(NodeLockRelationName)
 
     def _on_peer_relation_changed(self, _=None):
         """Grant & release lock."""
@@ -188,6 +203,7 @@ class _PeerRelationLock(ops.Object):
         # TODO: adjust which unit gets priority on lock after leader?
         # During initial startup, leader unit must start first
         # Give priority to leader unit
+
         for unit in (self._charm.unit, *self._relation.units):
             if self._unit_requested_lock(unit):
                 self._unit_with_lock = format_unit_name(unit, app=deployment_desc.app)
@@ -214,6 +230,7 @@ class OpenSearchNodeLock(ops.Object):
     OPENSEARCH_INDEX = ".charm_node_lock"
 
     def __init__(self, charm: "OpenSearchBaseCharm"):
+
         super().__init__(charm, "opensearch-node-lock")
         self._charm = charm
         self._opensearch = charm.opensearch

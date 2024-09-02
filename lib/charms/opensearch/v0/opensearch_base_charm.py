@@ -533,6 +533,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.opensearch.is_node_up():
             return
 
+        # review available CMs
+        self._add_cm_addresses_to_conf()
+
         # if there are exclusions to be removed
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
@@ -1227,11 +1230,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         try:
             for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(0.5)):
                 with attempt:
-                    resp = self.opensearch.request(
-                        "GET", endpoint=f"/_cat/allocation/{self.unit_name}?format=json"
+                    search_shards_info = self.opensearch.request(
+                        "GET", "/*/_search_shards?expand_wildcards=all"
                     )
-                    for entry in resp:
-                        if entry.get("node") == self.unit_name and entry.get("shards") != 0:
+
+                    # find the node id of the current unit
+                    node_id = None
+                    for node_id, node in search_shards_info["nodes"].items():
+                        if node["name"] == self.unit_name:
+                            break
+                    assert node_id is not None  # should never happen
+
+                    # check if the node has any shards assigned to it
+                    for shard_data in search_shards_info["shards"]:
+                        if shard_data[0]["node"] == node_id:
                             raise Exception
                     return True
         except RetryError:
