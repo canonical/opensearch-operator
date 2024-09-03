@@ -239,10 +239,6 @@ class OpenSearchTLS(Object):
                 admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
                 self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
 
-        # in case we do not update to a new CA, we can apply the chain.pem file for requests now
-        if not self._read_stored_ca(alias="old-ca"):
-            self.update_request_ca_bundle()
-
         for relation in self.charm.opensearch_provider.relations:
             self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
 
