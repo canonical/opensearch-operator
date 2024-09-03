@@ -668,7 +668,6 @@ class TestOpenSearchTLS(unittest.TestCase):
         assert self.harness.model.unit.status == original_status_unit
 
         # The new certificate is now replacing the old one in Peer Relation secrets
-        # IMPORTANT QUESTION: DO WE ALWAYS RECEIVE A NEW CERT ALONGSODE THE CA CERT?????
         assert self.secret_store.get_object(Scope.UNIT, cert_type) == {
             "csr": f"{cert_type}-csr",
             "key": key,
@@ -819,7 +818,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     def test_on_certificate_available_ca_rotation_first_stage_any_cluster_non_leader(
-        # NOTE: Syndax: parametrized parameter comes first
+        # NOTE: Syntax: parametrized parameter comes first
         self,
         deployment_type,
         deployment_desc,
@@ -1053,7 +1052,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
-    # Necessary mocks to simulate a smotth startup
+    # Necessary mocks to simulate a smooth startup
     @patch("machine_upgrade.Upgrade")
     @patch("socket.socket.connect")
     @responses.activate
@@ -1263,8 +1262,7 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         self.charm.tls._on_certificate_available(event_mock)
 
-        # NOTE!!!!
-        # Currently store_new_tls_resources() is invoked twice for 'app-admin' cert!!!!!!!!!
+        # NOTE: Currently store_new_tls_resources() is invoked twice for 'app-admin' cert!
         assert run_cmd.call_count == 4
 
         # Exporting new certs
@@ -1481,7 +1479,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
     def test_on_certificate_available_rotation_ongoing_on_this_unit(
-        # NOTE: Syndax: parametrized parameter comes first
+        # NOTE: Syntax: parametrized parameter comes first
         self,
         deployment_type,
         leader,
@@ -1575,7 +1573,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
     def test_on_certificate_available_rotation_ongoing_on_another_unit(
-        # NOTE: Syndax: parametrized parameter comes first
+        # NOTE: Syntax: parametrized parameter comes first
         self,
         deployment_type,
         leader,
