@@ -53,7 +53,7 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
-from charms.opensearch.v0.models import DeploymentDescription, DeploymentType, PeerClusterApp
+from charms.opensearch.v0.models import DeploymentDescription, DeploymentType
 from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -109,7 +109,6 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 import lifecycle
 import upgrade
@@ -359,12 +358,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
         ignore_lock = (
-                    "data" not in deployment_desc.config.roles
-                    and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-                    or "data" in deployment_desc.config.roles
-                    and self.unit.is_leader()
-                    and deployment_desc.typ == DeploymentType.OTHER
-                    and not self.peers_data.get(Scope.APP, "security_index_initialised", False))
+            "data" not in deployment_desc.config.roles
+            and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            or "data" in deployment_desc.config.roles
+            and self.unit.is_leader()
+            and deployment_desc.typ == DeploymentType.OTHER
+            and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
+        )
         self._start_opensearch_event.emit(ignore_lock=ignore_lock)
 
     def _apply_peer_cm_directives_and_check_if_can_start(self) -> bool:
@@ -547,8 +547,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
             return
-        elif self.peers_data.get(Scope.APP, "security_index_initialised") and not self.peers_data.get(Scope.UNIT, "started"):
-            self._post_start_init()
 
         # review available CMs
         self._add_cm_addresses_to_conf()
@@ -891,7 +889,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
             self._post_start_init(event)
         except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
-            if not "data" in deployment_desc.config.roles:
+            if "data" not in deployment_desc.config.roles:
                 self.status.set(BlockedStatus(PClusterNoDataNode))
                 self.node_lock.release()
             if self.opensearch_peer_cm.is_provider():
@@ -964,13 +962,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
 
         self.peers_data.put(Scope.UNIT, "started", True)
-        if (
-            self.unit.is_leader()
-            and self.peers_data.get(Scope.APP, "security_index_initialised")
-            and not self.is_every_unit_marked_as_started()
-        ):
+        if self.unit.is_leader() and not self.is_every_unit_marked_as_started():
             # if the first data node is started and the main-orchestrators not yet -> trigger
-            trigger_peer_rel_changed(self.charm)
+            trigger_peer_rel_changed(self.charm, on_current_unit=True)
 
         # apply post_start fixes to resolve start related upstream bugs
         self.opensearch_fixes.apply_on_start()
@@ -989,7 +983,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # clear waiting to start status
         self.status.clear(WaitingToStart)
-        self.status.clear(MaintenanceStatus(PClusterNoDataNode))
+        self.status.clear(BlockedStatus(PClusterNoDataNode))
 
         if event.after_upgrade:
             health = self.health.get(local_app_only=False, wait_for_green_first=True)
@@ -1166,12 +1160,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             not self.peers_data.get(Scope.APP, "security_index_initialised", False)
             or not self.alt_hosts
         ):
-            return (
-                self.unit.is_leader() and (
-                    deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-                    or deployment_desc.typ == DeploymentType.OTHER
-                    and "data" in deployment_desc.config.roles
-                )
+            return self.unit.is_leader() and (
+                deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+                or deployment_desc.typ == DeploymentType.OTHER
+                and "data" in deployment_desc.config.roles
             )
 
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
@@ -1272,7 +1264,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             "-kst PKCS12",
         ]
 
-        logger.debug(f"pw: {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password']}")
         admin_key_pwd = admin_secrets.get("key-password", None)
         if admin_key_pwd is not None:
             args.append(f"-keypass {admin_key_pwd}")
@@ -1286,8 +1277,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _get_nodes(self, use_localhost: bool) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
         # This means it's the first unit on the cluster.
-        if self.unit.is_leader() and not self.peers_data.get(
-            Scope.APP, "security_index_initialised", False
+        if (
+            self.unit.is_leader()
+            and "data" in self.opensearch_peer_cm.deployment_desc().config.roles
+            and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
         ):
             return []
 
@@ -1300,20 +1293,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             deployment_desc := self.opensearch_peer_cm.deployment_desc()
         ).start == StartMode.WITH_PROVIDED_ROLES:
             computed_roles = deployment_desc.config.roles
-
-            # This is the case where the 1st and main orchestrator to be deployed with no
-            # "data" role in the provided roles, we need to add the role to be able to create
-            # and store the security index
-            # todo: rework: delay sec index init until 1st data node / handle red health
-            # if (
-                # self.unit.is_leader()
-                # and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-                # and "data" not in computed_roles
-                # and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
-            # ):
-                # todo: remove below lines
-                # computed_roles.append("data")
-                # self.peers_data.put(Scope.UNIT, "remove-data-role", True)
         else:
             computed_roles = ClusterTopology.generated_roles()
 

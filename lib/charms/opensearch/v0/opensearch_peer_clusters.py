@@ -34,7 +34,6 @@ from charms.opensearch.v0.models import (
     PeerClusterConfig,
     PeerClusterOrchestrators,
     PeerClusterRelData,
-    PeerClusterRelErrorData,
     StartMode,
     State,
 )
@@ -105,9 +104,7 @@ class OpenSearchPeerClustersManager:
         # TODO: once peer clusters relation implemented, we should apply all directives
         #  + removing them from queue. We currently only apply the status.
 
-    def run_with_relation_data(
-        self, data: PeerClusterRelData, error_data: Optional[PeerClusterRelErrorData] = None
-    ) -> None:
+    def run_with_relation_data(self, data: PeerClusterRelData) -> None:  # noqa: C901
         """Update current peer cluster related config based on peer_cluster rel_data."""
         current_deployment_desc = self.deployment_desc()
 

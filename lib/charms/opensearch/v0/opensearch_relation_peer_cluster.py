@@ -13,7 +13,6 @@ from charms.opensearch.v0.constants_charm import (
     PClusterNoDataNode,
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
-    PeerRelationName,
 )
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import (
@@ -233,7 +232,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             trigger_rel_id=event.relation.id,
         )
 
-        if not "data" in self.charm.opensearch_peer_cm.deployment_desc().config.roles:
+        if "data" not in self.charm.opensearch_peer_cm.deployment_desc().config.roles:
             self.charm.status.set(BlockedStatus(PClusterNoDataNode))
 
     def refresh_relation_data(self, event: EventBase, can_defer: bool = True) -> None:
@@ -564,7 +563,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
 
         # store the security related settings in secrets, peer_data, disk
-        self._set_security_conf(data)
+        if data.credentials.admin_tls:
+            self._set_security_conf(data)
 
         # check if there are any security misconfigurations / violations
         if self._error_set_from_tls(data):
@@ -598,7 +598,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # take over the internal users from the main orchestrator
         self.charm.user_manager.put_internal_user(AdminUser, data.credentials.admin_password_hash)
-        self.charm.user_manager.put_internal_user(KibanaserverUser, data.credentials.kibana_password_hash)
+        self.charm.user_manager.put_internal_user(
+            KibanaserverUser, data.credentials.kibana_password_hash
+        )
 
         self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
         if self.charm.alt_hosts:
