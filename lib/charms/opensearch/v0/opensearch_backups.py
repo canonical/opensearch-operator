@@ -79,7 +79,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
-    S3_REPO_BASE_PATH,
     BackupConfigureStart,
     BackupDeferRelBrokenAsInProgress,
     BackupInDisabling,
@@ -135,7 +134,7 @@ INDICES_TO_EXCLUDE_AT_RESTORE = {
 }
 
 REPO_NOT_CREATED_ERR = "repository type [s3] does not exist"
-REPO_NOT_ACCESS_ERR = f"[{S3_REPOSITORY}] path [{S3_REPO_BASE_PATH}] is not accessible"
+REPO_NOT_ACCESS_ERR = "is not accessible"
 REPO_CREATING_ERR = "Could not determine repository generation from root blobs"
 RESTORE_OPEN_INDEX_WITH_SAME_NAME = "because an open index with same name already exists"
 
@@ -324,11 +323,15 @@ class OpenSearchBackupBase(Object):
         if not response:
             return BackupServiceState.SNAPSHOT_FAILED_UNKNOWN
 
+        type = None
         try:
             if "error" not in response:
                 return BackupServiceState.SUCCESS
+            if "root_cause" not in response:
+                return BackupServiceState.REPO_ERR_UNKNOWN
             type = response["error"]["root_cause"][0]["type"]
             reason = response["error"]["root_cause"][0]["reason"]
+            logger.warning(f"response contained error: {type} - {reason}")
         except KeyError as e:
             logger.exception(e)
             logger.error("response contained unknown error code")
@@ -353,6 +356,9 @@ class OpenSearchBackupBase(Object):
             return BackupServiceState.SNAPSHOT_RESTORE_ERROR_INDEX_NOT_CLOSED
         if type == "snapshot_restore_exception":
             return BackupServiceState.SNAPSHOT_RESTORE_ERROR
+        if type:
+            # There is an error but we could not precise which is
+            return BackupServiceState.REPO_ERR_UNKNOWN
         return self.get_snapshot_status(response)
 
     def get_snapshot_status(self, response: Dict[str, Any] | None) -> BackupServiceState:
@@ -811,7 +817,11 @@ class OpenSearchBackup(OpenSearchBackupBase):
             return
 
         # Leader configures this plugin
-        self.apply_api_config_if_needed()
+        try:
+            self.apply_api_config_if_needed()
+        except OpenSearchBackupError:
+            event.defer()
+            return
         self.charm.status.clear(PluginConfigError)
         self.charm.status.clear(BackupSetupStart)
 
@@ -832,7 +842,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
             self.charm.status.clear(BackupConfigureStart)
-            return
+            raise OpenSearchBackupError()
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupSetupFailed, app=True)
         self.charm.status.clear(BackupConfigureStart)
