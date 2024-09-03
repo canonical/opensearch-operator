@@ -724,14 +724,14 @@ class OpenSearchTLS(Object):
         if not admin_secrets or not admin_secrets.get("cert"):
             return False
 
-        admin_ca = admin_secrets.get("ca")
+        admin_ca = admin_secrets.get("ca-cert")
 
         for cert_type in [CertType.UNIT_TRANSPORT, CertType.UNIT_HTTP]:
             unit_secrets = secrets.get_object(Scope.UNIT, cert_type.val)
             if (
                 not unit_secrets
                 or not unit_secrets.get("cert")
-                or unit_secrets.get("ca") != admin_ca
+                or unit_secrets.get("ca-cert") != admin_ca
             ):
                 return False
 
