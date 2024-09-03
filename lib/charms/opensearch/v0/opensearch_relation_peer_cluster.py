@@ -582,9 +582,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         secrets.put_object(Scope.APP, CertType.APP_ADMIN.val, data.credentials.admin_tls)
 
-        if not self.charm.tls.all_tls_resources_stored():
-            self.charm.tls.request_new_unit_certificates()
-
         # store the app admin TLS resources if not stored
         self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
         self.charm.tls.update_request_ca_bundle()
