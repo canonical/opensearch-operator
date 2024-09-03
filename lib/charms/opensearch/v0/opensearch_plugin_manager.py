@@ -427,12 +427,16 @@ class OpenSearchPluginManager:
             # If the keystore is not yet set, then an exception will be raised here
             keys_available = self._keystore.list
             keys_to_add = [
-                k for k in plugin.config().secret_entries.keys() if k in plugin.config()
+                k
+                for k in plugin.config().secret_entries.keys()
+                if plugin.config().secret_entries.get(k)
             ]
             if any(k not in keys_available for k in keys_to_add):
                 return False
             keys_to_del = [
-                k for k in plugin.config().secret_entries.keys() if k not in plugin.config()
+                k
+                for k in plugin.config().secret_entries.keys()
+                if not plugin.config().secret_entries.get(k)
             ]
             if any(k in keys_available for k in keys_to_del):
                 return False

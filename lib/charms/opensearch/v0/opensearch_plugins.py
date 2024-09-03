@@ -270,7 +270,7 @@ class OpenSearchBaseCharm(CharmBase):
 
 import json
 import logging
-from abc import abstractmethod, abstractproperty
+from abc import abstractmethod
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -445,7 +445,8 @@ class OpenSearchPlugin(metaclass=OpenSearchPluginMeta):
         """
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def name(self) -> str:
         """Returns the name of the plugin."""
         pass
