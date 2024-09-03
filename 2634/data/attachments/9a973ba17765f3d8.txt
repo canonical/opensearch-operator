@@ -1,0 +1,2279 @@
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: PUT -- https://10.143.28.167:9200/test_end_to_end_with_ivf_faiss_training
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: PUT -- https://10.143.28.167:9200/_bulk
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: POST -- https://10.143.28.167:9200/_plugins/_knn/models/test_end_to_end_with_ivf_faiss_model/_train
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.143.28.167:9200/_plugins/_knn/models/test_end_to_end_with_ivf_faiss_model
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: PUT -- https://10.143.28.167:9200/test_end_to_end_with_ivf_faiss_target
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: PUT -- https://10.143.28.167:9200/_bulk
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:516 KNN test starting with False
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  01:55:17Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+grafana-agent                      blocked      3  grafana-agent             latest/edge    256  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch                         active       3  opensearch                                 0  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0                 active    executing  1        10.143.28.103   9200/tcp  (config-changed) 
+  grafana-agent/3            blocked   idle                10.143.28.103             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/1                 active    executing  2        10.143.28.118   9200/tcp  (config-changed) 
+  grafana-agent/1            blocked   idle                10.143.28.118             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/2*                active    executing  3        10.143.28.167   9200/tcp  (config-changed) 
+  grafana-agent/0*           blocked   idle                10.143.28.167             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+self-signed-certificates/0*  active    idle       0        10.143.28.69              
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.143.28.69   juju-75cd03-0  ubuntu@22.04      Running
+1        started  10.143.28.103  juju-75cd03-1  ubuntu@22.04      Running
+2        started  10.143.28.118  juju-75cd03-2  ubuntu@22.04      Running
+3        started  10.143.28.167  juju-75cd03-3  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:55:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 01:55:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:55:16)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:55:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Plugin configuration check.
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 01:55:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:55:16)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:55:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Plugin configuration check.
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 01:55:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:55:16)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:55:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service is stopping.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:56:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:56:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:56:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:56:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:56:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:57:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:57:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:57:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:57:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:57:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:57:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:58:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:58:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:58:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:58:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:58:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: Waiting for OpenSearch to start...
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:59:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:55:50)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 01:55:16)] waiting: Waiting for OpenSearch to start...
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 01:55:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:59:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:59:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:59:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+01:59:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:00:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:00:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:00:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:00:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:00:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:01:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:01:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:01:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:01:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:01:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:02:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:02:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:02:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:02:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 01:59:16)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 01:59:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 01:59:12)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:02:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service is stopping.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:02:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:03:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:03:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:03:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:03:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:03:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:04:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:04:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:04:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:04:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:04:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:05:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:05:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:05:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:05:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:05:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:06:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:02:41)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:02:46)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:02:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:06:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:06:12)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:06:15)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:06:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:06:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:06:12)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:06:15)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:06:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:06:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:06:12)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:06:15)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:06:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:06:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:06:12)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:06:15)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:06:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:07:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:06:12)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:06:15)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:06:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:07:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:06:12)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:06:15)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:06:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:07:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:06:12)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:06:15)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:06:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:07:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 02:07:38 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.143.28.167:9200/_nodes
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:529 Restart finished and was successful
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.143.28.167:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.143.28.167:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.143.28.167:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:516 KNN test starting with True
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:08:13Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+grafana-agent                      blocked      3  grafana-agent             latest/edge    256  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch                         active       3  opensearch                                 0  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0                 active    executing  1        10.143.28.103   9200/tcp  (config-changed) 
+  grafana-agent/3            blocked   idle                10.143.28.103             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/1                 active    executing  2        10.143.28.118   9200/tcp  (config-changed) 
+  grafana-agent/1            blocked   idle                10.143.28.118             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/2*                active    executing  3        10.143.28.167   9200/tcp  (config-changed) 
+  grafana-agent/0*           blocked   idle                10.143.28.167             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+self-signed-certificates/0*  active    idle       0        10.143.28.69              
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.143.28.69   juju-75cd03-0  ubuntu@22.04      Running
+1        started  10.143.28.103  juju-75cd03-1  ubuntu@22.04      Running
+2        started  10.143.28.118  juju-75cd03-2  ubuntu@22.04      Running
+3        started  10.143.28.167  juju-75cd03-3  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:08:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:08:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:08:13)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:08:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Plugin configuration check.
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:08:13)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:08:13)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:08:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:08:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:09:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:09:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:09:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:09:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:09:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:09:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:10:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:10:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:10:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:10:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:10:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:11:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:11:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:11:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: The OpenSearch service stopped.
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:11:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:08:31)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:11:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:08:13)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:11:52)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:08:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:12:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:12:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:12:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:12:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:12:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:13:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:13:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:13:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:13:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:13:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:15:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:11:56)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:11:58)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:15:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [executing (since: 02:15:20)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:20)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [executing (since: 02:11:54)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:15:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service is stopping.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:15:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:15:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:16:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:16:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:16:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:16:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:16:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:17:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:17:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:17:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:17:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:17:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:18:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:18:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:18:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: The OpenSearch service stopped.
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:18:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: Waiting for OpenSearch to start...
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:18:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:15:29)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [executing (since: 02:15:25)] waiting: Waiting for OpenSearch to start...
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:15:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:19:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:18:57)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:18:55)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:18:58)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:19:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:18:57)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:18:55)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:18:58)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:19:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:18:57)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:18:55)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:18:58)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:19:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:18:57)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:18:55)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:18:58)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:19:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:18:57)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:18:55)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:18:58)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:19:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:18:57)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:18:55)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:18:58)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:20:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.8f7  -- (10.143.28.103) -- [idle (since: 02:18:57)] active: 
+		opensearch-1.8f7  -- (10.143.28.118) -- [idle (since: 02:18:55)] active: 
+		opensearch-2.8f7* -- (10.143.28.167) -- [idle (since: 02:18:58)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:20:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 02:20:24 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.143.28.167:9200/_nodes
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:529 Restart finished and was successful
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.143.28.167:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:20:37Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+grafana-agent                      blocked      3  grafana-agent             latest/edge    256  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch                         active       3  opensearch                                 0  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 active    idle   1        10.143.28.103   9200/tcp  
+  grafana-agent/3            blocked   idle            10.143.28.103             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/1                 active    idle   2        10.143.28.118   9200/tcp  
+  grafana-agent/1            blocked   idle            10.143.28.118             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/2*                active    idle   3        10.143.28.167   9200/tcp  
+  grafana-agent/0*           blocked   idle            10.143.28.167             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+self-signed-certificates/0*  active    idle   0        10.143.28.69              
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.143.28.69   juju-75cd03-0  ubuntu@22.04      Running
+1        started  10.143.28.103  juju-75cd03-1  ubuntu@22.04      Running
+2        started  10.143.28.118  juju-75cd03-2  ubuntu@22.04      Running
+3        started  10.143.28.167  juju-75cd03-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:40:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:40:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:40:21 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:40:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:40:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:40:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:40:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:40:57 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-1: 01:40:57 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:40:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:40:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:40:58 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-2: 01:41:57 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:41:58 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:58 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:58 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:58 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:59 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:00 ERROR unit.opensearch/2.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:42:04 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:42:04 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:42:05 ERROR unit.opensearch/2.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:06 ERROR unit.opensearch/2.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:06 ERROR unit.opensearch/2.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:42:06 ERROR unit.opensearch/2.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:06 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:42:06 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:42:06 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:42:07 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:42:07 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:42:07 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:42:07 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:42:10 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:42:10 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:42:13 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:42:13 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:42:16 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:42:16 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:22 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:23 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:23 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:23 ERROR unit.opensearch/0.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:23 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:25 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:25 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:26 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:26 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:27 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:27 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:28 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:28 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:28 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:28 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:28 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:28 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:28 ERROR unit.opensearch/1.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:29 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:29 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:29 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:30 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:30 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:30 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:31 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:31 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:31 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:31 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:31 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:31 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:31 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:32 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:32 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:32 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:32 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:33 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:33 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:33 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:33 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:33 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:34 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:34 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:34 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:34 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:34 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:34 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:34 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:35 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:35 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:35 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:35 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:35 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:35 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:35 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:35 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:35 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:36 ERROR unit.opensearch/1.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:36 ERROR unit.opensearch/1.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:36 ERROR unit.opensearch/1.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:36 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:36 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:36 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:36 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:36 ERROR unit.opensearch/1.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:36 ERROR unit.opensearch/1.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:36 ERROR unit.opensearch/1.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:37 ERROR unit.opensearch/0.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:37 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:37 ERROR unit.opensearch/0.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:38 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:38 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:38 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:38 ERROR unit.opensearch/0.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:38 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:38 ERROR unit.opensearch/0.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:39 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:39 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:39 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:39 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:39 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:39 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:39 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:39 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:39 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:40 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:40 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:40 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:40 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:40 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:40 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:40 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:41 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:41 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:41 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:41 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:41 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:41 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:41 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:41 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:41 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:41 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:42 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:42 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:42 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:42 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:42 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:42 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:42 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:42 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:42 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:42 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:43 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:43 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:43 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:43 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:43 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:42:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:42:44 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:44 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:44 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:44 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:44 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:44 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:44 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:44 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:44 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:44 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:44 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:44 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:44 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:44 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:44 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:44 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:44 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:44 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:44 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:44 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:45 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:45 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:45 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:45 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:45 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:45 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:45 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:45 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:45 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:45 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:45 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:45 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:45 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:45 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:45 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:45 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:46 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:46 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:46 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:46 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:46 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:46 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:46 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:46 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:46 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:46 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:46 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:46 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:46 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:46 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:46 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:46 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:46 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:46 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:46 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:47 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:47 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:47 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:47 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:47 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:47 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:47 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:47 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:47 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:47 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:47 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:47 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:47 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:47 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:47 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:42:47 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:48 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:48 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:48 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:48 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:49 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:49 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:49 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:49 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:50 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:50 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:51 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:51 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:51 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:51 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:51 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:51 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:51 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:51 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:51 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:51 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:51 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:51 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:52 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:52 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:52 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:52 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:52 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:53 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:53 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:53 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:53 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:53 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:53 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:53 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:53 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:54 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:54 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:42:54 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:54 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:54 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:54 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:54 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:42:54 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:54 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:54 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:54 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:54 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:54 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:54 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:54 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:42:54 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:42:56 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:01 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:01 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:43:01 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:01 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:01 ERROR unit.opensearch/1.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:01 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:01 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:01 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:01 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:01 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:01 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:01 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:01 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:01 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:01 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:01 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:02 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:02 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:43:02 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:02 ERROR unit.opensearch/0.juju-log node-lock-fallback:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:02 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:02 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:02 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:02 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:02 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:02 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:02 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:02 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:03 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:03 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:03 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:03 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:43:03 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:04 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:04 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:04 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:05 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:05 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:05 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:06 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:43:06 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:06 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:43:07 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:09 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:43:12 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-grafana-agent-0: 01:44:55 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/jammy/grafana-agent-256" for grafana-agent/0: failed to download charm "ch:amd64/jammy/grafana-agent-256" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 01:44:55 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/jammy/grafana-agent-256" for grafana-agent/1: failed to download charm "ch:amd64/jammy/grafana-agent-256" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 01:44:55 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/jammy/grafana-agent-256" for grafana-agent/3: failed to download charm "ch:amd64/jammy/grafana-agent-256" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 01:44:56 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-grafana-agent-3: 01:44:56 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-grafana-agent-0: 01:44:56 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-2: 01:49:02 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:02 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:49:02 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:02 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:49:02 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:03 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:49:04 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:49:04 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:49:04 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:49:04 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:49:04 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:49:04 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:49:04 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:49:05 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:49:05 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:49:05 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:49:05 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:49:05 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:49:05 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:07 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:10 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:13 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:49:28 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:49:28 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:49:28 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:49:28 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:49:28 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:49:29 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:49:29 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:49:29 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:49:29 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:49:30 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:49:33 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:49:33 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:49:33 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:33 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:33 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:49:33 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:49:33 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:33 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:33 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:34 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:34 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:49:34 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:49:34 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:34 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:49:34 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:49:36 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:49:39 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:49:56 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:49:56 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:49:56 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:49:56 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:49:56 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:49:56 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:49:56 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:49:57 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:49:57 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:49:57 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:50:00 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:50:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:50:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:50:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:50:03 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:50:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:50:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:50:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:50:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:50:03 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:50:06 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:50:06 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:50:06 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:51:57 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:51:57 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:51:57 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:51:57 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:51:57 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:51:57 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:51:57 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:51:57 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:51:57 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:51:57 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:51:57 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:51:57 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:51:58 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:51:58 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:51:58 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:51:58 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:51:58 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:51:58 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:51:58 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:51:58 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:51:58 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:51:58 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:51:58 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:51:58 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:51:58 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:51:58 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:51:58 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:51:58 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:52:01 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:52:04 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:52:07 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:52:08 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:52:08 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:52:08 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:52:08 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:52:23 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:52:23 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:52:23 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:52:23 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:52:23 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:52:23 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:52:23 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:52:24 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:52:24 ERROR unit.opensearch/0.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:52:24 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:52:27 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:52:28 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:28 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:52:28 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:52:28 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:52:30 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:52:33 ERROR unit.opensearch/0.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:52:50 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:52:50 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:52:50 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:52:50 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:52:50 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:52:50 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:52:50 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:52:51 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:52:51 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:52:51 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:52:54 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:52:54 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:52:54 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:52:57 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:52:58 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:52:58 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:53:00 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:55:53 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:55:53 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:55:53 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:55:53 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:55:53 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:55:54 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:55:54 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:56:21 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:56:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:56:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:56:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:56:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:56:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:56:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:56:54 ERROR unit.opensearch/1.juju-log Request GET to https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 2)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-2: 01:57:21 ERROR unit.opensearch/2.juju-log Request GET to https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 2)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 01:57:31 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:57:31 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:57:31 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:57:31 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:57:32 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:57:32 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:57:55 ERROR unit.opensearch/1.juju-log Request GET to https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 1)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-2: 01:58:22 ERROR unit.opensearch/2.juju-log Request GET to https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 1)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 01:58:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:58:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:58:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:58:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:58:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:58:43 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:58:56 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:58:57 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:58:57 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:58:57 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:59:00 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:59:03 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:59:06 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:59:20 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:59:20 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:59:20 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:59:20 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:59:20 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:59:20 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:59:21 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:59:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:59:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:59:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:59:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:59:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:59:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:00:14 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:00:14 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:00:21 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Request GET to https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 2)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 02:00:34 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:00:34 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:00:34 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:00:34 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:00:34 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:00:34 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:01:18 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:01:18 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:01:22 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Request GET to https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 1)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 02:01:40 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:01:40 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:01:40 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:01:40 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:01:40 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:01:40 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:02:23 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:02:23 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:02:23 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:24 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 02:02:26 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:02:26 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:02:27 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:02:30 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:02:33 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 02:02:50 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:02:50 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:50 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:02:50 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:50 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:02:50 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:02:51 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:03:22 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:03:22 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:03:22 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:03:22 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:03:22 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:03:22 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:03:22 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:03:22 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:03:22 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:03:22 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:03:51 ERROR unit.opensearch/0.juju-log Request GET to https://10.143.28.118:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 2)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.118:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-1: 02:04:11 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:04:11 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:04:23 ERROR unit.opensearch/2.juju-log Request GET to https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 2)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 02:04:52 ERROR unit.opensearch/0.juju-log Request GET to https://10.143.28.118:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 1)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.118:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-1: 02:05:21 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:05:21 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:05:24 ERROR unit.opensearch/2.juju-log Request GET to https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 1)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 02:05:53 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:05:54 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:05:54 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:05:54 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:05:57 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:06:00 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:06:03 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:08:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:08:36 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:08:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:08:36 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:08:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:08:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:08:36 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:07 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:07 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:09:07 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:09:07 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:09:08 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:08 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:09:08 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:08 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:09:08 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:08 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:08 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:09:08 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:08 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:08 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:08 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:08 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:08 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:09:08 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:09:36 ERROR unit.opensearch/0.juju-log Request GET to https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 2)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-1: 02:10:05 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:10:05 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:10:06 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:10:06 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:10:06 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:10:06 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:10:08 ERROR unit.opensearch/2.juju-log Request GET to https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 2)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 02:10:37 ERROR unit.opensearch/0.juju-log Request GET to https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 1)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-1: 02:10:56 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:10:56 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:10:56 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:10:56 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:10:56 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:10:56 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:11:09 ERROR unit.opensearch/2.juju-log Request GET to https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 1)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 02:11:38 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:11:39 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:11:39 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:11:39 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:11:42 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:11:45 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:11:48 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:11:48 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:11:48 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:11:48 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:11:48 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:11:49 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:11:49 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:12:02 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:12:02 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:12:02 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:12:02 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:12:02 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:12:02 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:12:03 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-0: 02:12:30 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:12:30 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:12:46 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:12:46 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:12:46 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:12:46 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:12:46 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:12:46 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:13:03 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Request GET to https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 2)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 02:13:38 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:13:38 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:13:53 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:13:53 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:13:53 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:13:53 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:13:53 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:13:53 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:14:04 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Request GET to https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 1)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 02:14:29 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:14:29 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:14:49 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:14:49 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:14:49 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:14:49 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:14:49 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:14:49 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:15:05 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:15:05 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:15:05 ERROR unit.opensearch/2.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:15:05 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:15:08 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:15:11 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:15:14 ERROR unit.opensearch/2.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 02:15:33 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 02:15:33 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:15:33 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 02:15:33 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:15:33 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 02:15:33 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 02:15:34 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-2: 02:15:55 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:15:55 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:15:55 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:15:55 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:15:55 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:15:55 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:15:55 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 02:15:55 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:16:19 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:16:19 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:16:34 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Request GET to https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 2)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-2: 02:16:56 ERROR unit.opensearch/2.juju-log Request GET to https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 2)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 02:17:28 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:17:28 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:17:35 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Request GET to https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 1)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.103:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-2: 02:17:57 ERROR unit.opensearch/2.juju-log Request GET to https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m with payload: None failed.(Attempts left: 1)
+	Error: 408 Client Error: Request Timeout for url: https://10.143.28.167:9200/_cluster/health?wait_for_status=green&timeout=1m
+unit-opensearch-0: 02:18:32 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 02:18:32 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 02:18:36 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 02:18:36 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 02:18:36 ERROR unit.opensearch/1.juju-log opensearch-peers:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:18:37 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 02:18:40 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 02:18:43 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+unit-opensearch-1: 02:18:46 ERROR unit.opensearch/1.juju-log opensearch-peers:0: [Errno 111] Connection refused
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
