@@ -452,7 +452,7 @@ class OpenSearchPlugin(metaclass=OpenSearchPluginMeta):
 
 
 class OpenSearchPluginRelationsHandler(OpenSearchPlugin):
-    """Implements a handler the relation databag.
+    """Implements a handler for the relation databag.
 
     Plugins may have one or more relations tied to them. This abstract class
     enables different modules to implement a class that can specify which

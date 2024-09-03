@@ -984,6 +984,9 @@ def backup(charm: "OpenSearchBaseCharm") -> OpenSearchBackupBase:
         # Temporary condition: we are waiting for CM to show up and define which type
         # of cluster are we. Once we have that defined, then we will process.
         return OpenSearchBackupBase(charm)
-    elif charm.opensearch_peer_cm.is_provider(typ=DeploymentType.MAIN_ORCHESTRATOR):
+    elif charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
+        # Using the deployment_desc() method instead of is_provider()
+        # In both cases: (1) small deployments or (2) large deployments where this cluster is the
+        # main orchestrator, we want to instantiate the OpenSearchBackup class.
         return OpenSearchBackup(charm)
     return OpenSearchNonOrchestratorClusterBackup(charm)
