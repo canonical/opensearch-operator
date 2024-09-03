@@ -41,6 +41,7 @@ from .test_horizontal_scaling import IDLE_PERIOD
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -71,6 +72,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_elected_cm(
@@ -173,6 +175,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_primary_shard(
@@ -291,6 +294,7 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_without_ip_change_node_with_elected_cm(
@@ -379,6 +383,7 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_without_ip_change_node_with_primary_shard(

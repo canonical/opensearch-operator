@@ -4,11 +4,11 @@
 import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
-import charms.opensearch.v0.opensearch_locking as opensearch_locking
 from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
     KibanaserverRole,
     KibanaserverUser,
+    NodeLockRelationName,
     PeerRelationName,
 )
 from charms.opensearch.v0.helper_security import generate_password
@@ -38,7 +38,7 @@ class TestOpenSearchProvider(unittest.TestCase):
 
         self.peers_rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.lock_fallback_rel_id = self.harness.add_relation(
-            opensearch_locking._PeerRelationLock._ENDPOINT_NAME, self.charm.app.name
+            NodeLockRelationName, self.charm.app.name
         )
 
         # Define an opensearch_provider relation

@@ -474,7 +474,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
         # acquire lock to ensure only 1 unit removed at a time
-        if not self.node_lock.acquired:
+        # Closes canonical/opensearch-operator#378
+        if self.app.planned_units() > 1 and not self.node_lock.acquired:
             # Raise uncaught exception to prevent Juju from removing unit
             raise Exception("Unable to acquire lock: Another unit is starting or stopping.")
 
@@ -488,7 +489,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     if node.name != self.unit_name
                 ]
                 self._compute_and_broadcast_updated_topology(remaining_nodes)
-            elif self.app.planned_units() == 0:
+            elif self.app.planned_units() == 0 and self.model.get_relation(PeerRelationName):
                 self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
                 self.peers_data.delete(Scope.APP, "nodes_config")
 
@@ -514,8 +515,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 else:
                     raise OpenSearchHAError(ClusterHealthUnknown)
         finally:
-            # release lock
-            self.node_lock.release()
+            if self.app.planned_units() > 1 and (self.opensearch.is_node_up() or self.alt_hosts):
+                # release lock
+                self.node_lock.release()
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """On update status event.
@@ -536,6 +538,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
             return
+
+        # review available CMs
+        self._add_cm_addresses_to_conf()
 
         # if there are exclusions to be removed
         if self.unit.is_leader():
@@ -574,7 +579,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
-        restart_requested = False
         if self.opensearch_config.update_host_if_needed():
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
             self.tls.delete_stored_tls_resources()
@@ -615,6 +619,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.status.set(MaintenanceStatus(PluginConfigCheck))
 
             if self.plugin_manager.run() and not restart_requested:
+                if self.upgrade_in_progress:
+                    logger.warning(
+                        "Changing config during an upgrade is not supported. The charm may be in a broken, "
+                        "unrecoverable state"
+                    )
+                    event.defer()
+                    return
+
                 self._restart_opensearch_event.emit()
 
         except OpenSearchPluginError as e:
@@ -696,7 +708,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         )
 
     def on_tls_conf_set(
-        self, _: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
+        self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
     ):
         """Called after certificate ready and stored on the corresponding scope databag.
 
@@ -704,16 +716,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         - Update the corresponding yaml conf files
         - Run the security admin script
         """
-        # Get the list of stored secrets for this cert
-        current_secrets = self.secrets.get_object(scope, cert_type.val)
-
         if scope == Scope.UNIT:
-            truststore_pwd = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)[
-                "keystore-password-ca"
-            ]
-            keystore_pwd = self.secrets.get_object(scope, cert_type.val)[
-                f"keystore-password-{cert_type}"
-            ]
+            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+            if not (truststore_pwd := admin_secrets.get("truststore-password")):
+                event.defer()
+                return
+
+            keystore_pwd = self.secrets.get_object(scope, cert_type.val)["keystore-password"]
 
             # node http or transport cert
             self.opensearch_config.set_node_tls_conf(
@@ -721,15 +730,21 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 truststore_pwd=truststore_pwd,
                 keystore_pwd=keystore_pwd,
             )
-        else:
+
             # write the admin cert conf on all units, in case there is a leader loss + cert renewal
-            self.opensearch_config.set_admin_tls_conf(current_secrets)
+            if not admin_secrets.get("subject"):
+                return
+            self.opensearch_config.set_admin_tls_conf(admin_secrets)
 
         self.tls.store_admin_tls_secrets_if_applies()
 
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal and self.is_admin_user_configured() and self.tls.is_fully_configured():
-            self._restart_opensearch_event.emit()
+            try:
+                self.tls.reload_tls_certificates()
+            except OpenSearchHttpError:
+                logger.error("Could not reload TLS certificates via API, will restart.")
+                self._restart_opensearch_event.emit()
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
@@ -1015,14 +1030,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # otherwise cluster manager election will be blocked when starting up again
                 # and re-using storage
                 if len(nodes) > 1:
-                    # TODO: we should probably NOT have any exclusion on restart
-                    # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
                     # 1. Add current node to the voting + alloc exclusions
-                    self.opensearch_exclusions.add_current()
+                    self.opensearch_exclusions.add_current(restart=restart)
             except OpenSearchHttpError:
                 logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
 
-        # TODO: should block until all shards move addressed in PR DPE-2234
+        # block until all primary shards are moved away from the unit that is stopping
+        self.health.wait_for_shards_relocation()
 
         # 2. stop the service
         self.opensearch.stop()
@@ -1030,8 +1044,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.set(WaitingStatus(ServiceStopped))
 
         # 3. Remove the exclusions
-        # TODO: we should probably NOT have any exclusion on restart
-        # https://chat.canonical.com/canonical/pl/bgndmrfxr7fbpgmwpdk3hin93c
         if not restart:
             try:
                 self.opensearch_exclusions.delete_current()
@@ -1181,11 +1193,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         try:
             for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(0.5)):
                 with attempt:
-                    resp = self.opensearch.request(
-                        "GET", endpoint=f"/_cat/allocation/{self.unit_name}?format=json"
+                    search_shards_info = self.opensearch.request(
+                        "GET", "/*/_search_shards?expand_wildcards=all"
                     )
-                    for entry in resp:
-                        if entry.get("node") == self.unit_name and entry.get("shards") != 0:
+
+                    # find the node id of the current unit
+                    node_id = None
+                    for node_id, node in search_shards_info["nodes"].items():
+                        if node["name"] == self.unit_name:
+                            break
+                    assert node_id is not None  # should never happen
+
+                    # check if the node has any shards assigned to it
+                    for shard_data in search_shards_info["shards"]:
+                        if shard_data[0]["node"] == node_id:
                             raise Exception
                     return True
         except RetryError:
@@ -1270,11 +1291,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             f"-cn {self.opensearch_peer_cm.deployment_desc().config.cluster_name}",
             f"-h {self.unit_ip}",
             f"-ts {self.opensearch.paths.certs}/ca.p12",
-            f"-tspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password-ca']}",
+            f"-tspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['truststore-password']}",
             "-tsalias ca",
             "-tst PKCS12",
             f"-ks {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.p12",
-            f"-kspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password-app-admin']}",
+            f"-kspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password']}",
             f"-ksalias {CertType.APP_ADMIN}",
             "-kst PKCS12",
         ]

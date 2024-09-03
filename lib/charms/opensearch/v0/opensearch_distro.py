@@ -13,10 +13,11 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 from os.path import exists
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import requests
 import urllib3.exceptions
+from charms.opensearch.v0.helper_charm import mask_sensitive_information
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_http import error_http_retry_log
@@ -205,6 +206,7 @@ class OpenSearchDistribution(ABC):
         retries: int = 0,
         ignore_retry_on: Optional[List] = None,
         timeout: int = 5,
+        cert_files: Optional[Tuple[str]] = None,
     ) -> Union[Dict[str, any], List[any], int]:
         """Make an HTTP request.
 
@@ -219,6 +221,7 @@ class OpenSearchDistribution(ABC):
             retries: number of retries
             ignore_retry_on: don't retry for specific error codes
             timeout: number of seconds before a timeout happens
+            cert_files: tuple of cert and key files to use for authentication
 
         Raises:
             ValueError if method or endpoint are missing
@@ -237,7 +240,10 @@ class OpenSearchDistribution(ABC):
             ):
                 with attempt, requests.Session() as s:
                     admin_field = self._charm.secrets.password_key("admin")
-                    s.auth = ("admin", self._charm.secrets.get(Scope.APP, admin_field))
+                    if cert_files:
+                        s.cert = cert_files
+                    else:
+                        s.auth = ("admin", self._charm.secrets.get(Scope.APP, admin_field))
 
                     request_kwargs = {
                         "method": method.upper(),
@@ -333,14 +339,17 @@ class OpenSearchDistribution(ABC):
 
         Returns the stdout
         """
+        command_with_args = command
         if args is not None:
-            command = f"{command} {args}"
+            command_with_args = f"{command} {args}"
 
+        # only log the command and no arguments to avoid logging sensitive information
+        command = mask_sensitive_information(command_with_args)
         logger.debug(f"Executing command: {command}")
 
         try:
             output = subprocess.run(
-                command,
+                command_with_args,
                 input=stdin,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -442,24 +451,30 @@ class OpenSearchDistribution(ABC):
 
         return exclusions
 
-    @staticmethod
-    def missing_sys_requirements() -> List[str]:
+    def missing_sys_requirements(self) -> List[str]:
         """Checks the system requirements."""
+
+        def apply(prop: str, value: str) -> bool:
+            """Apply a sysctl value and check if it was set."""
+            try:
+                self._run_cmd(f"sysctl -w {prop}={value}")
+                return self._run_cmd(f"sysctl -n {prop}") == value
+            except OpenSearchCmdError:
+                return False
+
         missing_requirements = []
 
-        max_map_count = int(subprocess.getoutput("sysctl vm.max_map_count").split("=")[-1].strip())
-        if max_map_count < 262144:
-            missing_requirements.append("vm.max_map_count should be at least 262144")
+        prop, val = "vm.max_map_count", "262144"
+        if self._run_cmd(f"sysctl -n {prop}") < val and not apply(prop, val):
+            missing_requirements.append(f"{prop} should be at least {val}")
 
-        swappiness = int(subprocess.getoutput("sysctl vm.swappiness").split("=")[-1].strip())
-        if swappiness > 0:
-            missing_requirements.append("vm.swappiness should be 0")
+        prop, val = "vm.swappiness", "0"
+        if self._run_cmd(f"sysctl -n {prop}") > val and not apply(prop, val):
+            missing_requirements.append(f"{prop} should be {val}")
 
-        tcp_retries = int(
-            subprocess.getoutput("sysctl net.ipv4.tcp_retries2").split("=")[-1].strip()
-        )
-        if tcp_retries > 5:
-            missing_requirements.append("net.ipv4.tcp_retries2 should be 5")
+        prop, val = "net.ipv4.tcp_retries2", "5"
+        if self._run_cmd(f"sysctl -n {prop}") > val and not apply(prop, val):
+            missing_requirements.append(f"{prop} should be at most {val}")
 
         return missing_requirements
 

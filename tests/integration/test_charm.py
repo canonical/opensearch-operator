@@ -35,9 +35,38 @@ logger = logging.getLogger(__name__)
 DEFAULT_NUM_UNITS = 2
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
+async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
+    """Build and deploy OpenSearch with a single unit and remove it."""
+    my_charm = await ops_test.build_charm(".")
+    await ops_test.model.set_config(MODEL_CONFIG)
+
+    await ops_test.model.deploy(
+        my_charm,
+        num_units=1,
+        series=SERIES,
+    )
+    # Deploy TLS Certificates operator.
+    config = {"ca-common-name": "CN_CA"}
+    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+    # Relate it to OpenSearch to set up TLS.
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=1,
+    )
+    assert len(ops_test.model.applications[APP_NAME].units) == 1
+    await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+    await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy a couple of OpenSearch units."""
     my_charm = await ops_test.build_charm(".")
@@ -57,12 +86,15 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == DEFAULT_NUM_UNITS
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     """Test the retrieval of admin secrets."""
+    leader_id = await get_leader_unit_id(ops_test)
+
     # 1. run the action prior to finishing the config of TLS
-    result = await run_action(ops_test, 0, "get-password")
+    result = await run_action(ops_test, leader_id, "get-password")
     assert result.status == "failed"
 
     # Deploy TLS Certificates operator.
@@ -92,10 +124,11 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     assert http_resp_code == 200
 
     # 3. test retrieving password from non-supported user
-    result = await run_action(ops_test, 0, "get-password", {"username": "non-existent"})
+    result = await run_action(ops_test, leader_id, "get-password", {"username": "non-existent"})
     assert result.status == "failed"
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
@@ -145,6 +178,7 @@ async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
     assert http_resp_code == 401
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.parametrize("user", [("monitor"), ("kibanaserver")])
@@ -192,6 +226,7 @@ async def test_actions_rotate_system_user_password(ops_test: OpsTest, user) -> N
     assert http_resp_code == 401
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_check_pinned_revision(ops_test: OpsTest) -> None:
@@ -220,6 +255,7 @@ async def test_check_pinned_revision(ops_test: OpsTest) -> None:
     assert installed_info[3] == "held"
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_check_workload_version(ops_test: OpsTest) -> None:
@@ -253,6 +289,7 @@ async def test_check_workload_version(ops_test: OpsTest) -> None:
     assert installed_info[0] == workload_version
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_all_units_have_all_local_users(ops_test: OpsTest) -> None:
@@ -270,6 +307,7 @@ async def test_all_units_have_all_local_users(ops_test: OpsTest) -> None:
             assert leader_conf[user]["hash"] == unit_conf[user]["hash"]
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
@@ -284,3 +322,10 @@ async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
     for unit in ops_test.model.applications[APP_NAME].units:
         unit_conf = get_conf_as_dict(ops_test, unit.name, filename)
         assert leader_conf == unit_conf
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_remove_application(ops_test: OpsTest) -> None:
+    """Removes the application with two units."""
+    await ops_test.model.remove_application(APP_NAME, block_until_done=True)

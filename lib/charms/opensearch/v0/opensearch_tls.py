@@ -26,10 +26,12 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import all_units, run_cmd
-from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchError,
+    OpenSearchHttpError,
+)
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
@@ -71,7 +73,7 @@ class OpenSearchTLS(Object):
         self.jdk_path = jdk_path
         self.certs_path = certs_path
         self.keytool = self.jdk_path + "/bin/keytool"
-        self.certs = TLSCertificatesRequiresV3(charm, TLS_RELATION)
+        self.certs = TLSCertificatesRequiresV3(charm, TLS_RELATION, expiry_notification_time=23)
 
         self.framework.observe(
             self.charm.on.set_tls_private_key_action, self._on_set_tls_private_key
@@ -300,6 +302,7 @@ class OpenSearchTLS(Object):
         subject = self._get_subject(cert_type)
         organization = self.charm.opensearch_peer_cm.deployment_desc().config.cluster_name
         new_csr = generate_csr(
+            add_unique_id_to_subject_name=False,
             private_key=key,
             private_key_password=(None if key_password is None else key_password.encode("utf-8")),
             subject=subject,
@@ -327,20 +330,25 @@ class OpenSearchTLS(Object):
         if cert_type == CertType.APP_ADMIN:
             return sans
 
-        dns = {self.charm.unit_name, socket.gethostname(), socket.getfqdn()}
+        # in order to be able to use the API for reloading TLS certificates it is necessary
+        # to only have one dns name and one ip address in the sans
+        # otherwise the following upstream bug will mess the sorting of these fields
+        # https://github.com/opensearch-project/security/issues/4480
+        dns = {socket.getfqdn()}
         ips = {self.charm.unit_ip}
 
-        host_public_ip = get_host_public_ip()
-        if cert_type == CertType.UNIT_HTTP and host_public_ip:
-            ips.add(host_public_ip)
+        # see above, related to https://github.com/opensearch-project/security/issues/4480
+        # host_public_ip = get_host_public_ip()
+        # if cert_type == CertType.UNIT_HTTP and host_public_ip:
+        #    ips.add(host_public_ip)
 
         for ip in ips.copy():
             try:
                 name, aliases, addresses = socket.gethostbyaddr(ip)
                 ips.update(addresses)
-
-                dns.add(name)
-                dns.update(aliases)
+                # see above, related to https://github.com/opensearch-project/security/issues/4480
+                # dns.add(name)
+                # dns.update(aliases)
             except (socket.herror, socket.gaierror):
                 continue
 
@@ -423,16 +431,21 @@ class OpenSearchTLS(Object):
 
     def _create_keystore_pwd_if_not_exists(self, scope: Scope, cert_type: CertType, alias: str):
         """Create passwords for the key stores if not already created."""
-        keystore_pwd = None
+        store_pwd = None
+        store_type = "truststore" if alias == "ca" else "keystore"
+
         secrets = self.charm.secrets.get_object(scope, cert_type.val)
         if secrets:
-            keystore_pwd = secrets.get(f"keystore-password-{alias}")
+            store_pwd = secrets.get(f"{store_type}-password")
 
-        if not keystore_pwd:
+        if not store_pwd and not (
+            self.charm.opensearch_peer_cm.is_consumer(of="main")
+            and cert_type == CertType.APP_ADMIN
+        ):
             self.charm.secrets.put_object(
                 scope,
                 cert_type.val,
-                {f"keystore-password-{alias}": generate_password()},
+                {f"{store_type}-password": generate_password()},
                 merge=True,
             )
 
@@ -440,10 +453,11 @@ class OpenSearchTLS(Object):
         """Add new CA cert to trust store."""
         keytool = f"sudo {self.jdk_path}/bin/keytool"
 
-        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        if self.charm.unit.is_leader():
+            self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
-        if not (secrets.get("ca-cert", {}) and admin_secrets.get("keystore-password-ca", {})):
+        if not ((secrets or {}).get("ca-cert") and admin_secrets.get("truststore-password")):
             logging.error("CA cert not found, quitting.")
             return
 
@@ -461,9 +475,9 @@ class OpenSearchTLS(Object):
                 -alias {alias} \
                 -keystore {store_path} \
                 -file {ca_tmp_file.name} \
-                -storepass {admin_secrets.get("keystore-password-ca")} \
                 -storetype PKCS12
-            """
+            """,
+                f"-storepass {admin_secrets.get('truststore-password')}",
             )
             run_cmd(f"sudo chmod +r {store_path}")
 
@@ -476,10 +490,8 @@ class OpenSearchTLS(Object):
             return None
 
         stored_certs = run_cmd(
-            f"""openssl pkcs12 \
-            -in {ca_trust_store} \
-            -passin pass:{secrets.get("keystore-password-ca")}
-            """
+            f"openssl pkcs12 -in {ca_trust_store}",
+            f"-passin pass:{secrets.get('truststore-password')}",
         ).out
 
         # parse output to retrieve the current CA (in case there are many)
@@ -534,13 +546,13 @@ class OpenSearchTLS(Object):
                 -in {tmp_cert.name} \
                 -inkey {tmp_key.name} \
                 -out {store_path} \
-                -name {cert_name} \
-                -passout pass:{secrets.get(f"keystore-password-{cert_name}")}
+                -name {cert_name}
             """
+            args = f"-passout pass:{secrets.get(f'keystore-password')}"
             if secrets.get("key-password"):
-                cmd = f"{cmd} -passin pass:{secrets.get('key-password')}"
+                args = f"{args} -passin pass:{secrets.get('key-password')}"
 
-            run_cmd(cmd)
+            run_cmd(cmd, args)
             run_cmd(f"sudo chmod +r {store_path}")
         finally:
             tmp_key.close()
@@ -620,3 +632,41 @@ class OpenSearchTLS(Object):
             except OSError:
                 # thrown if file not exists, ignore
                 pass
+
+    def reload_tls_certificates(self):
+        """Reload transport and HTTP layer communication certificates via REST APIs."""
+        url_http = "_plugins/_security/api/ssl/http/reloadcerts"
+        url_transport = "_plugins/_security/api/ssl/transport/reloadcerts"
+
+        # using the SSL API requires authentication with app-admin cert and key
+        admin_secret = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
+        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_cert.write(admin_secret["cert"])
+        tmp_cert.flush()
+        tmp_cert.seek(0)
+
+        tmp_key = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_key.write(admin_secret["key"])
+        tmp_key.flush()
+        tmp_key.seek(0)
+
+        try:
+            self.charm.opensearch.request(
+                "PUT",
+                url_http,
+                cert_files=(tmp_cert.name, tmp_key.name),
+                retries=3,
+            )
+            self.charm.opensearch.request(
+                "PUT",
+                url_transport,
+                cert_files=(tmp_cert.name, tmp_key.name),
+                retries=3,
+            )
+        except OpenSearchHttpError as e:
+            logger.error(f"Error reloading TLS certificates via API: {e}")
+            raise
+        finally:
+            tmp_cert.close()
+            tmp_key.close()

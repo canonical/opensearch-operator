@@ -63,6 +63,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         RelationDataStore.__init__(self, charm, peer_relation)
 
         self.cached_secrets = SecretCache()
+        self.charm = charm
 
         self.framework.observe(self._charm.on.secret_changed, self._on_secret_changed)
         self.framework.observe(self._charm.on.secret_remove, self._on_secret_removed)
@@ -161,18 +162,13 @@ class OpenSearchSecrets(Object, RelationDataStore):
             if sys_user := self._user_from_hash_key(label_key):
                 self._charm.user_manager.put_internal_user(sys_user, password)
 
-        # all units must persist the s3 access & secret keys in opensearch-keystore
-        if label_key == S3_CREDENTIALS and (
-            s3_creds := self._charm.secrets.get_object(Scope.APP, "s3-creds")
-        ):
-            plugin = OpenSearchBackupPlugin().update_secrets(
-                S3RelDataCredentials.from_dict(s3_creds)
-            )
-            try:
-                self._charm.plugin_manager.apply_config(plugin)
-            except OpenSearchKeystoreNotReadyYetError:
-                logger.info("Keystore not ready yet, retrying later.")
-                event.defer()
+        # broadcast secret updates to related sub-clusters
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
+        # all units must persist the s3 access & secret keys in opensearch.yml
+        if label_key == S3_CREDENTIALS:
+            self._charm.backup.manual_update(event)
 
     def _user_from_hash_key(self, key):
         """Which user is referred to by key?"""

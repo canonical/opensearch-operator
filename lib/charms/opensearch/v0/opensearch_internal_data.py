@@ -91,7 +91,7 @@ class DataStore(ABC):
     def put_or_delete(data: Dict[str, str], key: str, value: Optional[str]):
         """Put data into the key/val data store or delete if value is None."""
         if value is None:
-            del data[key]
+            data.pop(key, None)
             return
 
         data.update({key: str(value)})
@@ -111,7 +111,6 @@ class RelationDataStore(DataStore):
             raise ValueError("Scope undefined.")
 
         data = self._get_relation_data(scope)
-
         self.put_or_delete(data, key, value)
 
     @override
@@ -142,7 +141,7 @@ class RelationDataStore(DataStore):
         if scope is None:
             raise ValueError("Scope undefined.")
 
-        return key in self._get_relation_data(scope)
+        return key in (self._get_relation_data(scope) or {})
 
     @override
     def get(
@@ -189,7 +188,7 @@ class RelationDataStore(DataStore):
 
         relation_scope = self._charm.app if scope == Scope.APP else self._charm.unit
 
-        return relation.data[relation_scope]
+        return relation.data.get(relation_scope)
 
     @staticmethod
     def _default_encoder(o: Any) -> Any:

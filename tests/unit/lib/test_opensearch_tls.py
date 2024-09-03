@@ -70,13 +70,9 @@ class TestOpenSearchTLS(unittest.TestCase):
         socket.getfqdn.return_value = "nebula"
 
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
-    @patch(f"{BASE_LIB_PATH}.opensearch_tls.get_host_public_ip")
     @patch("socket.getfqdn")
-    @patch("socket.gethostname")
     @patch("socket.gethostbyaddr")
-    def test_get_sans(
-        self, gethostbyaddr, gethostname, getfqdn, get_host_public_ip, deployment_desc
-    ):
+    def test_get_sans(self, gethostbyaddr, getfqdn, deployment_desc):
         """Test the SANs returned depending on the cert type."""
         deployment_desc.return_value = self.deployment_descriptions["ok"]
 
@@ -86,19 +82,17 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         gethostbyaddr.return_value = (self.charm.unit_name, ["alias"], ["address1", "address2"])
-        gethostname.return_value = "nebula"
         getfqdn.return_value = "nebula"
-        get_host_public_ip.return_value = "XX.XXX.XX.XXX"
 
         base_ips = ["1.1.1.1", "address1", "address2"]
-        base_dns_entries = [self.charm.unit_name, "nebula", "alias"]
+        base_dns_entries = ["nebula"]
 
         unit_http_sans = self.charm.tls._get_sans(CertType.UNIT_HTTP)
         self.assertDictEqual(
             dict((key, sorted(val)) for key, val in unit_http_sans.items()),
             {
                 "sans_oid": ["1.2.3.4.5.5"],
-                "sans_ip": sorted(base_ips + ["XX.XXX.XX.XXX"]),
+                "sans_ip": sorted(base_ips),
                 "sans_dns": sorted(base_dns_entries),
             },
         )
@@ -235,7 +229,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.secret_store.put_object(
             Scope.UNIT,
             secret_key,
-            {"csr": csr, "keystore-password-unit-transport": keystore_password},
+            {"csr": csr, "keystore-password": keystore_password},
         )
 
         event_mock = MagicMock(
@@ -250,7 +244,7 @@ class TestOpenSearchTLS(unittest.TestCase):
                 "chain": chain[0],
                 "cert": cert,
                 "ca-cert": ca,
-                "keystore-password-unit-transport": keystore_password,
+                "keystore-password": keystore_password,
             },
         )
 
@@ -323,3 +317,18 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.charm.tls._on_certificate_invalidated(event_mock)
 
         request_certificate_renewal.assert_called_once()
+
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._create_keystore_pwd_if_not_exists")
+    @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
+    def test_truststore_password_secret(self, _, _create_keystore_pwd_if_not_exists):
+        secret = {"key": "secret_12345"}
+
+        self.harness.set_leader(is_leader=False)
+        self.charm.tls.store_new_ca(secret)
+
+        _create_keystore_pwd_if_not_exists.assert_not_called()
+
+        self.harness.set_leader(is_leader=True)
+        self.charm.tls.store_new_ca(secret)
+
+        _create_keystore_pwd_if_not_exists.assert_called_once()
