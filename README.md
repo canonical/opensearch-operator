@@ -109,7 +109,8 @@ Security issues in the Charmed OpenSearch Operator can be reported through [Laun
 
 Certain values can be configured with different cloud-init values.
 We'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model. 
-```
+
+```shell
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
