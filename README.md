@@ -30,7 +30,7 @@ Configure the system settings required by [OpenSearch](https://opensearch.org/do
 
 ### Basic usage
 
-To deploy a single unit of OpenSearch using its default configuration.
+To deploy a single unit of OpenSearch with default configuration, use:
 
 ```shell
 juju deploy opensearch --channel=2/edge
