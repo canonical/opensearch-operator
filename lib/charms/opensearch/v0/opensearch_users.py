@@ -6,21 +6,17 @@
 These functions wrap around some API calls used for user management.
 """
 
-import json
 import logging
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import (
     AdminUser,
-    ClientRolesDict,
-    ClientUsersDict,
     COSRole,
     COSUser,
     KibanaserverUser,
     OpenSearchUsers,
 )
 from charms.opensearch.v0.opensearch_distro import OpenSearchError, OpenSearchHttpError
-from charms.opensearch.v0.opensearch_internal_data import Scope
 
 logger = logging.getLogger(__name__)
 
@@ -245,43 +241,6 @@ class OpenSearchUserManager:
 
         return resp
 
-    def remove_users_and_roles(self, departed_relation_id: Optional[int] = None):  # noqa: C901
-        """Removes lingering relation users and roles from opensearch.
-
-        Args:
-            departed_relation_id: if a relation is departing, pass in the ID and its user will be
-                deleted.
-        """
-        if not self.opensearch.is_node_up() or not self.unit.is_leader():
-            return
-        rel_id = str(departed_relation_id)
-
-        relation_users = json.loads(self.charm.peers_data.get(Scope.APP, ClientUsersDict) or "{}")
-        relation_roles = json.loads(self.charm.peers_data.get(Scope.APP, ClientRolesDict) or "{}")
-
-        for username in relation_users.get(rel_id, []):
-            try:
-                self.remove_user(username)
-            except OpenSearchUserMgmtError:
-                logger.error(f"failed to remove user {username}")
-        if rel_id in relation_users:
-            del relation_users[rel_id]
-
-        roles_to_remove = relation_roles.get(rel_id, [])
-        if rel_id in relation_roles:
-            del relation_roles[rel_id]
-        for role in roles_to_remove:
-            # Check if this role is not present in any other relation:
-            if any(role in r for r in relation_roles.values()):
-                continue
-            try:
-                self.remove_role(role)
-            except OpenSearchUserMgmtError:
-                logger.error(f"failed to remove role {role}")
-
-        self.charm.peers_data.put(Scope.APP, ClientUsersDict, json.dumps(relation_users))
-        self.charm.peers_data.put(Scope.APP, ClientRolesDict, json.dumps(relation_roles))
-
     def update_user_password(self, username: str, hashed_pwd: str = None):
         """Change user hashed password."""
         resp = self.opensearch.request(
@@ -291,6 +250,10 @@ class OpenSearchUserManager:
         )
         if resp.get("status") != "OK":
             raise OpenSearchError(f"{resp}")
+
+    ##########################################################################
+    # Dedicated functionalities
+    ##########################################################################
 
     def put_internal_user(self, user: str, hashed_pwd: str):
         """User creation for specific system users."""

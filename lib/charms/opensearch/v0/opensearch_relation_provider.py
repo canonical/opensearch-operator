@@ -17,7 +17,6 @@ Default security values can be found in the opensearch documentation here:
 https://opensearch.org/docs/latest/security/access-control/index/.
 
 """
-import json
 import logging
 import typing
 from enum import Enum
@@ -29,7 +28,6 @@ from charms.data_platform_libs.v0.data_interfaces import (
 )
 from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
-    ClientRolesDict,
     ClientUsersDict,
     IndexCreationFailed,
     KibanaserverRole,
@@ -201,7 +199,8 @@ class OpenSearchProvider(Object):
         """
         if self.charm.upgrade_in_progress:
             logger.warning(
-                "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+                "Modifying relations during an upgrade is not supported."
+                "The charm may be in a broken, unrecoverable state"
             )
             event.defer()
             return
@@ -292,12 +291,7 @@ class OpenSearchProvider(Object):
         return True
 
     def create_opensearch_users(
-        self,
-        username: str,
-        hashed_pwd: str,
-        index: str,
-        extra_user_roles: str,
-        relation_id: Optional[int] = None,
+        self, username: str, hashed_pwd: str, index: str, extra_user_roles: str, relation_id: int
     ):
         """Creates necessary opensearch users and permissions for this relation.
 
@@ -312,42 +306,19 @@ class OpenSearchProvider(Object):
         Raises:
             OpenSearchUserMgmtError if user creation fails
         """
-        rel_id = str(relation_id) if relation_id is not None else None
-
-        users = json.loads(
-            self.charm.peers_data.get(Scope.APP, ClientUsersDict, auto_casting=False) or "{}"
-        )
-        if rel_id not in users:
-            users[rel_id] = []
-        roles = json.loads(
-            self.charm.peers_data.get(Scope.APP, ClientRolesDict, auto_casting=False) or "{}"
-        )
-        if rel_id not in roles:
-            roles[rel_id] = []
-
         try:
             # Create a new role for this relation, encapsulating the permissions we care about. We
             # can't create a "default" and an "admin" role once because the permissions need to be
             # set to this relation's specific index.
-            self.user_manager.create_role(
-                role_name=username,
-                permissions=self.get_extra_user_role_permissions(extra_user_roles, index),
-            )
-            roles[rel_id].extend([username] + extra_user_roles.split(","))
-
-            self.user_manager.create_user(username, [username], hashed_pwd)
+            permissions = self.get_extra_user_role_permissions(extra_user_roles, index)
+            self._put_relation_user(username, permissions, hashed_pwd, relation_id)
             self.user_manager.patch_user(
                 username,
                 [{"op": "replace", "path": "/opendistro_security_roles", "value": [username]}],
             )
-            users[rel_id].append(username)
         except OpenSearchUserMgmtError as err:
             logger.error(err)
             raise
-
-        if rel_id:
-            self.charm.peers_data.put(Scope.APP, ClientUsersDict, json.dumps(users))
-            self.charm.peers_data.put(Scope.APP, ClientRolesDict, json.dumps(roles))
 
     def get_extra_user_role_permissions(self, extra_user_roles: str, index: str) -> Dict[str, any]:
         """Get relation role permissions from the extra_user_roles field.
@@ -419,7 +390,7 @@ class OpenSearchProvider(Object):
         if event.departing_unit == self.charm.unit:
             self.charm.peers_data.put(Scope.UNIT, self._depart_flag(event.relation), True)
 
-        self.user_manager.remove_users_and_roles(event.relation.id)
+        self.remove_lingering_relation_users_and_roles(event.relation.id)
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle client relation-broken event."""
@@ -431,9 +402,10 @@ class OpenSearchProvider(Object):
             return
         if self.charm.upgrade_in_progress:
             logger.warning(
-                "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+                "Modifying relations during an upgrade is not supported."
+                "The charm may be in a broken, unrecoverable state"
             )
-        self.user_manager.remove_users_and_roles(event.relation.id)
+        self.remove_lingering_relation_users_and_roles(event.relation.id)
 
     def update_endpoints(self, relation: Relation, omit_endpoints: Optional[Set[str]] = None):
         """Updates endpoints in the databag for the given relation."""
@@ -463,3 +435,70 @@ class OpenSearchProvider(Object):
         pwd = self.secrets.get(Scope.APP, self.secrets.password_key(KibanaserverUser))
         for relation in self.dashboards_relations:
             self.opensearch_provides.set_credentials(relation.id, KibanaserverUser, pwd)
+
+    def _put_relation_user(
+        self, user: str, permissions: dict[str], hashed_pwd: str, relation_id: int
+    ):
+        """Create a relation user.
+
+        Relation users are registered with a dedicated role which maps to the username,
+        and their name is saved in the databag for later reference.
+        """
+        self.user_manager.create_role(role_name=user, permissions=permissions)
+        if not (users := self.charm.peers_data.get_object(Scope.APP, ClientUsersDict)):
+            users = {}
+
+        if users.get(relation_id):
+            logger.warning(
+                "User %s is already registered in Peer Relation data for relation %d.",
+                user,
+                relation_id,
+            )
+
+        self.user_manager.create_user(user, [user], hashed_pwd)
+        users[str(relation_id)] = user
+        self.charm.peers_data.put_object(Scope.APP, ClientUsersDict, users)
+
+    def remove_lingering_relation_users_and_roles(  # noqa: C901
+        self, departed_relation_id: int | None = None
+    ):
+        """Removes lingering relation users and roles from opensearch.
+
+        Args:
+            departed_relation_id: if a relation is departing, pass in the ID and its user will be
+                deleted.
+        """
+        if not self.opensearch.is_node_up() or not self.unit.is_leader():
+            return
+
+        if not (relation_users := self.charm.peers_data.get_object(Scope.APP, ClientUsersDict)):
+            relation_users = {}
+
+            if departed_relation_id:
+                logging.warning(
+                    "User for relation %d wasn't registered in internal cham workflows.",
+                    departed_relation_id,
+                )
+
+        clearnup_rel_ids = []
+        if departed_relation_id:
+            clearnup_rel_ids = [str(departed_relation_id)]
+        else:
+            rel_ids = [str(relation.id) for relation in self.opensearch_provides.relations]
+            clearnup_rel_ids = list(set(relation_users.keys()) - set(rel_ids))
+
+        for rel_id in clearnup_rel_ids:
+            if username := relation_users.get(rel_id):
+                try:
+                    self.user_manager.remove_user(username)
+                except OpenSearchUserMgmtError:
+                    logger.error(f"failed to remove user {username}")
+
+                try:
+                    self.user_manager.remove_role(username)
+                except OpenSearchUserMgmtError:
+                    logger.error(f"failed to remove role {username}")
+
+            del relation_users[rel_id]
+
+        self.charm.peers_data.put_object(Scope.APP, ClientUsersDict, relation_users)
