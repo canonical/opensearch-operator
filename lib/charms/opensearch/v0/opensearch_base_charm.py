@@ -982,6 +982,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # clear waiting to start status
         self.status.clear(WaitingToStart)
+        self.status.clear(ServiceStartError)
 
         if event.after_upgrade:
             health = self.health.get(local_app_only=False, wait_for_green_first=True)
