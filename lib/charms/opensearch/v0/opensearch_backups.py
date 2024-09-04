@@ -217,7 +217,11 @@ class OpenSearchBackupBase(Object):
         self.plugin = OpenSearchBackupPlugin(
             self.charm.opensearch.paths.plugins,
             relation_data={},
-            is_main_orchestrator=False,
+            is_main_orchestrator=self.charm.opensearch_peer_cm.deployment_desc()
+            and (
+                self.charm.opensearch_peer_cm.deployment_desc().typ
+                == DeploymentType.MAIN_ORCHESTRATOR
+            ),
         )
 
     def _on_s3_relation_event(self, event: EventBase) -> None:
