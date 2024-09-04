@@ -10,7 +10,7 @@ from unittest import mock
 from unittest.mock import MagicMock, Mock, patch
 
 import responses
-from charms.opensearch.v0.constants_charm import PeerRelationName, TLSCaRotation
+from charms.opensearch.v0.constants_charm import PeerRelationName, TLSCaRotation, TLSNotFullyConfigured
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.models import (
@@ -918,14 +918,14 @@ class TestOpenSearchTLS(unittest.TestCase):
     ):
         """Test CA rotation 2nd stage.
 
-        At this point the charm already has the new CA cert stored locall
+        At this point the charm already has the new CA cert stored locally
         (with the old CA cert also being kept around) and a service restart
         was supposed to take place.
 
         After the restart
          - old certificates have to be invalidated
          - unit certificates have to be renewed using the new CA cert
-         - to signify the above being completed,, the 'tls_ca_renewed' flag is set in the databag.
+         - to signify the above being completed, the 'tls_ca_renewed' flag is set in the databag.
 
         Applies to
          - any deployment types
@@ -996,6 +996,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         mock_response_lock_not_requested("1.1.1.1")
         mock_response_health_green("1.1.1.1")
         event = MagicMock(after_upgrade=False)
+        original_status = self.harness.model.unit.status
 
         self.charm._post_start_init(event)
 
@@ -1028,6 +1029,9 @@ class TestOpenSearchTLS(unittest.TestCase):
         assert renew_cert.call_count == 2
         assert renew_cert.called_with(old_certificate_signing_renew=b"csr-http")
         assert renew_cert.called_with(old_certificate_signing_renew=b"csr-transport")
+
+        assert self.harness.model.unit.status.message == TLSNotFullyConfigured
+        assert self.harness.model.unit.status, MaintenanceStatus != original_status
 
     # Mocks on functions we want to investigate
     # NOTE: Syntax: parametrized has to be the outermost decorator
@@ -1140,7 +1144,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         mock_response_lock_not_requested("1.1.1.1")
         mock_response_health_green("1.1.1.1")
         event = MagicMock(after_upgrade=False)
-        # self.harness.model.unit.status = MaintenanceStatus(TLSCaRotation)
+        original_status = self.harness.model.unit.status
 
         self.charm._post_start_init(event)
 
@@ -1169,6 +1173,9 @@ class TestOpenSearchTLS(unittest.TestCase):
             self.secret_store.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)["csr"]
             != csr_transport_old
         )
+
+        assert self.harness.model.unit.status.message == TLSNotFullyConfigured
+        assert self.harness.model.unit.status, MaintenanceStatus != original_status
 
     # Mocks to investigate/compare/alter
     # NOTE: Syntax: parametrized has to be the outermost decorator
@@ -1244,6 +1251,7 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         self.charm._restart_opensearch_event = MagicMock()
         self.harness.model.unit.status = MaintenanceStatus()
+        original_status = self.harness.model.unit.status
 
         with self.harness.hooks_disabled():
             self.harness.set_leader(is_leader=True)
@@ -1289,6 +1297,9 @@ class TestOpenSearchTLS(unittest.TestCase):
             "key": key,
             "ca-cert": ca,
         }
+
+        assert self.harness.model.unit.status.message == ""
+        assert self.harness.model.unit.status, MaintenanceStatus != original_status
 
     # Mocks to investigate/compare/alter
     # NOTE: Syntax: parametrized has to be the outermost decorator
@@ -1428,6 +1439,7 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         mock_response_put_transport_cert("1.1.1.1")
         mock_response_put_http_cert("1.1.1.1")
+        original_status = self.harness.model.unit.status
 
         self.charm.tls._on_certificate_available(event_mock)
 
@@ -1453,6 +1465,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         assert "tls_ca_renewing" not in self.harness.get_relation_data(self.rel_id, "opensearch/0")
         assert "tls_ca_renewed" not in self.harness.get_relation_data(self.rel_id, "opensearch/0")
+
+        assert self.harness.model.unit.status.message == ""
+        assert self.harness.model.unit.status, MaintenanceStatus != original_status
 
     # Additional potential phases of the workflow
 
