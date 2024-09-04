@@ -1,4 +1,4 @@
-[note]All commands are written for `juju >= v.3.1.7 `[/note]
+[note]All commands are written for `juju v.3.1.7 +`[/note]
 
 # How to configure S3 storage 
 
