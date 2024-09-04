@@ -417,13 +417,13 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         )
 
     @override
-    def _on_s3_relation_event(self, _: EventBase) -> None:
+    def _on_s3_relation_event(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
         self.charm.status.set(BlockedStatus(S3RelShouldNotExist))
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
 
     @override
-    def _on_s3_relation_broken(self, _: EventBase) -> None:
+    def _on_s3_relation_broken(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
         self.charm.status.clear(S3RelShouldNotExist)
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
@@ -448,7 +448,9 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
         # s3 relation handles the config options for s3 backups
         self.framework.observe(self.charm.on[S3_RELATION].relation_created, self._on_s3_created)
-        self.framework.observe(self.charm.on[S3_RELATION].relation_broken, self._on_s3_broken)
+        self.framework.observe(
+            self.charm.on[S3_RELATION].relation_broken, self._on_s3_relation_broken
+        )
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credentials_changed
         )
@@ -870,7 +872,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             )
 
     @override
-    def _on_s3_broken(self, event: EventBase) -> None:  # noqa: C901
+    def _on_s3_relation_broken(self, event: EventBase) -> None:  # noqa: C901
         """Processes the broken s3 relation.
 
         It runs the reverse process of on_s3_change:
