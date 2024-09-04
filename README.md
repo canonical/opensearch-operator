@@ -105,7 +105,7 @@ Security issues in the Charmed OpenSearch Operator can be reported through [Laun
 
 ## Customizing
 
-### Update Sysctl via ' clout-init`
+### Update Sysctl via clout-init
 
 Certain values can be configured with different cloud-init values.
 We'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model. 
