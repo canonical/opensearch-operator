@@ -26,7 +26,7 @@ Bootstrap a [lxd controller](https://juju.is/docs/olm/lxd#heading--create-a-cont
 juju add-model opensearch
 ```
 
-Configure the system settings required by [OpenSearch](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/),
+Configure the system settings required by [OpenSearch](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/).
 
 ### Basic usage
 
