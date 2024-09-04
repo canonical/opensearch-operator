@@ -233,14 +233,16 @@ class OpenSearchTLS(Object):
             cert_type, self.charm.secrets.get_object(scope, cert_type.val)
         )
 
-        # store the admin certificates in non-leader units
-        if not self.charm.unit.is_leader():
-            self.store_admin_tls_secrets_if_applies()
-
         # in case we do not update to a new CA, we can apply the chain.pem file for requests now
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
         if admin_secrets.get("chain") and not self._read_stored_ca(alias="old-ca"):
             self.update_request_ca_bundle()
+            # store the admin certificates in non-leader units
+            if not self.charm.unit.is_leader():
+                self.store_admin_tls_secrets_if_applies()
+        else:
+            # wait for the admin-cert to be updated by the leader
+            event.defer()
 
         for relation in self.charm.opensearch_provider.relations:
             self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
