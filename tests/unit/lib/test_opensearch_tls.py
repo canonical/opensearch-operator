@@ -1450,11 +1450,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         # Saving new cert, cleaning up CA renewal flag, removing old CA from keystore
         # Note: the high number of operations come from the fact that on each certificate received
         # the 'issuer' is checked on each certificate that is saved on the disk.
-        if self.charm.unit.is_leader():
-            assert run_cmd.call_count == 14
-        else:
-            # Non-leaders are also saving the 'app-admin' cert locally (+2 operations)
-            assert run_cmd.call_count == 20
+        assert run_cmd.call_count == 14
 
         assert re.search(
             "openssl pkcs12 -export .* -out "
