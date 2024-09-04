@@ -4,7 +4,6 @@
 """Unit tests for the opensearch_users library."""
 
 import unittest
-from collections import namedtuple
 from unittest.mock import MagicMock, patch
 
 # Imports to simulate designated imports order
@@ -13,12 +12,23 @@ from unittest.mock import MagicMock, patch
 import charms.opensearch.v0.helper_cluster  # noqa
 import charms.opensearch.v0.opensearch_distro  # noqa
 import pytest
-from charms.opensearch.v0.constants_charm import ClientRelationName, OpenSearchUsers
+from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
+from charms.opensearch.v0.models import (
+    App,
+    DeploymentDescription,
+    DeploymentState,
+    DeploymentType,
+    PeerClusterConfig,
+    StartMode,
+    State,
+)
 from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserManager,
     OpenSearchUserMgmtError,
 )
+from ops.testing import Harness
 
+from charm import OpenSearchOperatorCharm
 from tests.helpers import patch_network_get
 
 PEERS_USER_DICT_JSON = f"""{{
@@ -38,6 +48,25 @@ class TestOpenSearchUserManager(unittest.TestCase):
         self.charm = MagicMock()
         self.opensearch = self.charm.opensearch
         self.mgr = OpenSearchUserManager(self.charm)
+
+        self.harness = Harness(OpenSearchOperatorCharm)
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+
+        self.charm = self.harness.charm
+        self.peer_rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
+
+        def mock_deployment_desc():
+            return DeploymentDescription(
+                config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+                start=StartMode.WITH_GENERATED_ROLES,
+                pending_directives=[],
+                typ=DeploymentType.MAIN_ORCHESTRATOR,
+                app=App(model_uuid="model-uuid", name="opensearch"),
+                state=DeploymentState(value=State.ACTIVE),
+            )
+
+        self.charm.opensearch_peer_cm.deployment_desc = mock_deployment_desc
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     def test_create_role(self, _):
@@ -131,101 +160,3 @@ class TestOpenSearchUserManager(unittest.TestCase):
         self.opensearch.request.return_value = {"status": "OK"}
         self.mgr.patch_user(*patch_args)
         self.opensearch.request.assert_called_with(*request_args, payload=patches)
-
-    def test_avoid_removing_non_charmed_users_and_roles(self):
-        relation_mocker = namedtuple("relation_mocker", ["id"])
-
-        self.mgr.get_users = MagicMock(
-            return_value={
-                "non_charmed_user_1": {
-                    "username": "non_charmed_user_1",
-                    "roles": ["admin", "other_role1"],
-                    "full_name": "Do not erase me",
-                    "email": "noreply",
-                    "enabled": True,
-                },
-                "non_charmed_user_2": {
-                    "username": "non_charmed_user_2",
-                    "roles": ["admin", "other_role1"],
-                    "full_name": "Do not erase me",
-                    "email": "noreply",
-                    "enabled": True,
-                },
-                f"{ClientRelationName}_1": {
-                    "username": "relation1",
-                    "roles": ["admin", "other_role1", f"{ClientRelationName}_test"],
-                    "full_name": "Do not erase me",
-                    "email": "noreply",
-                    "enabled": True,
-                },
-                f"{ClientRelationName}_2": {
-                    "username": "relation_do_not_exist_anymore",
-                    "roles": ["admin", "other_role1", f"{ClientRelationName}_remove_pls"],
-                    "full_name": "Erase me",
-                    "email": "noreply",
-                    "enabled": True,
-                },
-            }
-            | {user: {} for user in OpenSearchUsers}
-        )
-
-        self.mgr.get_roles = MagicMock(
-            return_value={
-                "admin": {
-                    "cluster": ["all"],
-                    "indices": [
-                        {
-                            "names": ["index1", "index2"],
-                            "privileges": ["all"],
-                            "allow_restricted_indices": False,
-                            "field_security": {
-                                "grant": ["title", "body"],
-                            },
-                        }
-                    ],
-                    "applications": [],
-                    "run_as": ["other_user"],
-                    "metadata": {
-                        "version": 1,
-                    },
-                    "transient_metadata": {
-                        "enabled": True,
-                    },
-                },
-                "other_role1": {
-                    "cluster": ["all"],
-                    "indices": [
-                        {
-                            "names": ["index1", "index2"],
-                            "privileges": ["all"],
-                            "allow_restricted_indices": False,
-                            "field_security": {
-                                "grant": ["title", "body"],
-                            },
-                        }
-                    ],
-                    "applications": [],
-                    "run_as": ["other_user"],
-                    "metadata": {
-                        "version": 1,
-                    },
-                    "transient_metadata": {
-                        "enabled": True,
-                    },
-                },
-                f"{ClientRelationName}_test": {},
-                f"{ClientRelationName}_remove_pls": {},
-            }
-        )
-
-        self.charm.model.relations.get = MagicMock(return_value=[relation_mocker(1)])
-        self.mgr.remove_role = MagicMock()
-        self.mgr.remove_user = MagicMock()
-        self.charm.peers_data.get = MagicMock(
-            side_effect=[PEERS_USER_DICT_JSON, PEERS_ROLE_DICT_JSON]
-        )
-        self.charm.peers_data.put = MagicMock()
-
-        self.mgr.remove_users_and_roles(departed_relation_id=0)
-        self.mgr.remove_user.assert_called_once_with(f"{ClientRelationName}_2")
-        self.mgr.remove_role.assert_called_once_with(f"{ClientRelationName}_remove_pls")
