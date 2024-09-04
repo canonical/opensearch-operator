@@ -28,7 +28,8 @@ juju add-model opensearch
 
 Configure the system settings required by [OpenSearch](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/),
 
-### Basic Usage
+### Basic usage
+
 To deploy a single unit of OpenSearch using its default configuration.
 
 ```shell
