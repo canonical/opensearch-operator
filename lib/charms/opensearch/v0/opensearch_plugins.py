@@ -372,7 +372,10 @@ class OpenSearchPluginConfig(BaseModel):
 
 
 class OpenSearchPluginMeta(type):
-    """Metaclass to ensure only one instance of each plugin is created."""
+    """Metaclass to ensure only one instance of each plugin is created.
+
+    To force a cleanup of the plugin, set the meta_clean=True when calling the plugin.
+    """
 
     _plugins = {}
 
@@ -386,6 +389,11 @@ class OpenSearchPluginMeta(type):
         information at init such as which relation to look for or which config to use. That
         creation happens either at plugin manager or at the relation manager's creation.
         """
+        if kwargs.get("meta_clean"):
+            del kwargs["meta_clean"]
+            if cls in cls._plugins:
+                del cls._plugins[cls]
+
         if cls not in cls._plugins:
             obj = super().__call__(*args, **kwargs)
             cls._plugins[cls] = obj

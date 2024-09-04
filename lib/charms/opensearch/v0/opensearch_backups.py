@@ -73,6 +73,7 @@ object that corresponds to its own case (cluster-manager, failover, data, etc).
 
 import json
 import logging
+from abc import abstractmethod
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
@@ -103,6 +104,7 @@ from charms.opensearch.v0.opensearch_plugins import OpenSearchBackupPlugin, Plug
 from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from overrides import override
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
@@ -228,6 +230,11 @@ class OpenSearchBackupBase(Object):
         """Defers the s3 relation events."""
         logger.info("Deployment description not yet available, deferring s3 relation event")
         event.defer()
+
+    @abstractmethod
+    def _on_s3_relation_broken(self, event: EventBase) -> None:
+        """Defers the s3 relation broken events."""
+        raise NotImplementedError
 
     def _on_s3_relation_action(self, event: EventBase) -> None:
         """No deployment description yet, fail any actions."""
@@ -409,11 +416,13 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             self.charm.on[S3_RELATION].relation_broken, self._on_s3_relation_broken
         )
 
+    @override
     def _on_s3_relation_event(self, _: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
         self.charm.status.set(BlockedStatus(S3RelShouldNotExist))
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
 
+    @override
     def _on_s3_relation_broken(self, _: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
         self.charm.status.clear(S3RelShouldNotExist)
@@ -434,6 +443,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             self.charm.opensearch.paths.plugins,
             relation_data=self.s3_client.get_s3_connection_info(),
             is_main_orchestrator=True,
+            meta_clean=True,
         )
 
         # s3 relation handles the config options for s3 backups
@@ -446,6 +456,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
 
+    @override
     def _on_s3_relation_event(self, event: EventBase) -> None:
         """Overrides the parent method to process the s3 relation events, as we use s3_client.
 
@@ -454,6 +465,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
 
+    @override
     def _on_s3_relation_action(self, event: EventBase) -> None:
         """Just overloads the base method, as we process each action in this class."""
         pass
@@ -857,6 +869,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
                 "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
 
+    @override
     def _on_s3_broken(self, event: EventBase) -> None:  # noqa: C901
         """Processes the broken s3 relation.
 
