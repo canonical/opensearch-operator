@@ -36,7 +36,7 @@ To deploy a single unit of OpenSearch with default configuration, use:
 juju deploy opensearch --channel=2/edge
 ```
 
-### LXD Setup
+### LXD setup
 
 If you are using LXD as the backend for Juju, then most of the sysctl parameters need to be set manually on the host:
 
