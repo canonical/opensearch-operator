@@ -10,7 +10,11 @@ from unittest import mock
 from unittest.mock import MagicMock, Mock, patch
 
 import responses
-from charms.opensearch.v0.constants_charm import PeerRelationName, TLSCaRotation, TLSNotFullyConfigured
+from charms.opensearch.v0.constants_charm import (
+    PeerRelationName,
+    TLSCaRotation,
+    TLSNotFullyConfigured,
+)
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.models import (
@@ -707,15 +711,15 @@ class TestOpenSearchTLS(unittest.TestCase):
         Note: there is no preceding action on any of the involved parties to trigger that.
         The new CA cert may be received due to a CA change, CA cert expiration, etc.
         The 'self-signed-certificates' operator sends no signal/notification but simply adds
-        the new CA certiifcate to a 'certificate-available' event.
+        the new CA certificate to a 'certificate-available' event.
 
         On this event, the Opensearch charm should:
-         - save the new CA cert to trustsroe ALONGSIDE the old one that receives a new alias
+         - save the new CA cert to truststore ALONGSIDE the old one that receives a new alias
          - set the 'tls_ca_renewing' flag in the peer databag
          - trigger a service restart
-         - set the charm state to 'maintenance', indicating CA certiifcate rotation
+         - set the charm state to 'maintenance', indicating CA certificate rotation
 
-        NOTE: The 'certificate-available' event also condains a new cert and chain. These are
+        NOTE: The 'certificate-available' event also contains a new cert and chain. These are
         kind of "useless", as will need to request new ones matching the new CA cert.
         Not to modify existing workflows, they are saved to the secret but NOT to the disk.
         (The inconsistency is temporary, while the charm is in a maintenance mode anyway.)
@@ -1070,7 +1074,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     ):
         """Test CA rotation 2nd stage.
 
-        At this point the charm already has the new CA cert stored locall
+        At this point the charm already has the new CA cert stored locally
         (with the old CA cert also being kept around) and a service restart
         was supposed to take place.
 
@@ -1345,7 +1349,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         The charm receives a new unit certificate in the 'certificate-available' event.
         The unit has to
          1. save the new certificate
-         2. if it was the last one to be updated: remove CA reneval flags
+         2. if it was the last one to be updated: remove CA renewal flags
          3. if it was the last one updated: remove CA from keystore
 
         Applies to:
@@ -1599,7 +1603,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         further 'certificate-available' events are deferred.
 
         Applies to:
-         - any depolyent
+         - any deployment
          - any unit
         """
         csr = "old_csr"
