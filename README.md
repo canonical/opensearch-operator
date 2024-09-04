@@ -39,7 +39,8 @@ juju deploy opensearch --channel=2/edge
 ### LXD Setup
 
 If you are using LXD as the backend for Juju, then most of the sysctl parameters need to be set manually on the host:
-```
+
+```shell
 sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
 vm.max_map_count=262144
 vm.swappiness=0
