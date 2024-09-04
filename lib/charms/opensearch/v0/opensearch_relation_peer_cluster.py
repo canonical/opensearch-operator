@@ -228,7 +228,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             trigger_rel_id=event.relation.id,
         )
 
-    def refresh_relation_data(self, event: EventBase, event_rel_id: int | None = None, can_defer: bool = True) -> None:
+    def refresh_relation_data(
+        self, event: EventBase, event_rel_id: int | None = None, can_defer: bool = True
+    ) -> None:
         """Refresh the peer cluster rel data (new cm node, admin password change etc.)."""
         if not self.charm.unit.is_leader():
             return
@@ -622,10 +624,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         local_orchestrators = self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
         if trigger in {"main", "failover"}:
-            local_orchestrators.update({
-                f"{trigger}_rel_id": event.relation.id,
-                f"{trigger}_app": remote_orchestrators[f"{trigger}_app"],
-            })
+            local_orchestrators.update(
+                {
+                    f"{trigger}_rel_id": event.relation.id,
+                    f"{trigger}_app": remote_orchestrators[f"{trigger}_app"],
+                }
+            )
 
         return PeerClusterOrchestrators.from_dict(local_orchestrators)
 
