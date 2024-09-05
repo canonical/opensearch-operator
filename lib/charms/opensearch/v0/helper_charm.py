@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, List, Union
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import App
+from charms.opensearch.v0.models import App, PeerClusterApp
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import CharmBase
@@ -203,3 +203,14 @@ def mask_sensitive_information(cmd: str) -> str:
     pattern = re.compile(r"(-tspass\s+|-kspass\s+|-storepass\s+|-new\s+|pass:)(\S+)")
 
     return re.sub(pattern, r"\1" + "xxx", cmd)
+
+
+def data_role_in_cluster_fleet_apps(charm: "OpenSearchBaseCharm") -> bool:
+    """Look for data-role through all the roles of all the nodes in all applications"""
+    if all_apps := charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
+        for app in all_apps.values():
+            p_cluster_app = PeerClusterApp.from_dict(app)
+            if "data" in p_cluster_app.roles:
+                return True
+
+    return False
