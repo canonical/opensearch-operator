@@ -18,6 +18,7 @@ from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import (
     RelDepartureReason,
     all_units,
+    data_role_in_cluster_fleet_apps,
     format_unit_name,
     relation_departure_reason,
 )
@@ -143,7 +144,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         self.refresh_relation_data(event, can_defer=False)
 
-        if "data" in self.charm.opensearch_peer_cm.deployment_desc().config.roles:
+        if data_role_in_cluster_fleet_apps(self.charm):
             self.charm.status.clear(PClusterNoDataNode)
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):

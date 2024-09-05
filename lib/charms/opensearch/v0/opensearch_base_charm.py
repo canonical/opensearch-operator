@@ -40,12 +40,7 @@ from charms.opensearch.v0.constants_charm import (
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_charm import (
-    Status,
-    all_units,
-    format_unit_name,
-    trigger_peer_rel_changed,
-)
+from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.helper_security import (
@@ -313,7 +308,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # in the case where it was on WaitingToStart status, event got deferred
                 # and the service started in between, put status back to active
                 self.status.clear(WaitingToStart)
-                self.status.clear(MaintenanceStatus(PClusterNoDataNode))
+                self.status.clear(PClusterNoDataNode)
 
             # cleanup bootstrap conf in the node if existing
             if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
@@ -962,9 +957,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
 
         self.peers_data.put(Scope.UNIT, "started", True)
-        if self.unit.is_leader() and not self.is_every_unit_marked_as_started():
-            # if the first data node is started and the main-orchestrators not yet -> trigger
-            trigger_peer_rel_changed(self.charm, on_current_unit=True)
 
         # apply post_start fixes to resolve start related upstream bugs
         self.opensearch_fixes.apply_on_start()
@@ -983,7 +975,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # clear waiting to start status
         self.status.clear(WaitingToStart)
-        self.status.clear(BlockedStatus(PClusterNoDataNode))
+        self.status.clear(PClusterNoDataNode)
 
         if event.after_upgrade:
             health = self.health.get(local_app_only=False, wait_for_green_first=True)
