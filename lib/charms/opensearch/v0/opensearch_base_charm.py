@@ -39,12 +39,7 @@ from charms.opensearch.v0.constants_charm import (
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
-from charms.opensearch.v0.helper_charm import (
-    Status,
-    all_units,
-    all_units_names,
-    format_unit_name,
-)
+from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.helper_security import (
@@ -323,7 +318,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         elif (
-            self.peers_data.get(Scope.UNIT, "started") and not self.opensearch.is_service_started()
+            self.peers_data.get(Scope.UNIT, "started")
+            and "cluster_manager" in self.opensearch.roles
+            and not self.opensearch.is_service_started()
         ):
             logger.debug(
                 "Start hook: snap already installed and service should be up, but it is not. Restarting it..."
@@ -333,25 +330,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # We execute the same logic as above:
             __on_start_post_cleanup()
 
-            # Add the gateway.recover_after_nodes config and restart the service
-            self.opensearch_config.set_recover_after_nodes(
-                recover_after_nodes=len(all_units_names(self))
-            )
             # Now, reissue a restart: we should not have stopped in the first place
             # as "started" flag is still set to True.
-            # We do not wait for the 200 return, as each unit is coming back online
+            # We do not wait for the 200 return, as maybe more than one unit is coming back
             self.opensearch.start_service_only()
-
-            for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(10), reraise=True):
-                with attempt:
-                    if not self.opensearch.is_service_started():
-                        # if we fail here enough times, then we have a problem
-                        # We will let the charm error and retry this hook
-                        # Otherwise, the user will be informed of an ERROR status
-                        raise OpenSearchStartError("Service did not start correctly after reboot.")
-                    # Unset the recover configuration
-                    self.opensearch_config.set_recover_after_nodes()
-            return
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():
