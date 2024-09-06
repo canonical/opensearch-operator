@@ -18,11 +18,11 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 import requests
 import urllib3.exceptions
 from charms.opensearch.v0.helper_charm import mask_sensitive_information
-from charms.opensearch.v0.helper_cluster import Node
+from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
-from charms.opensearch.v0.models import App
+from charms.opensearch.v0.models import App, StartMode
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
@@ -434,30 +434,27 @@ class OpenSearchDistribution(ABC):
         except OpenSearchHttpError:
             # we try to get the most accurate description of the node from the static config
             conf = self.config.load("opensearch.yml")
+            deployment_desc = self._charm.opensearch_peer_cm.deployment_desc()
             try:
                 roles = conf["node.roles"]
             except KeyError:
-                roles = self._charm.opensearch_peer_cm.deployment_desc().config.roles
-
-            try:
-                app = App(id=conf["node.attr.app_id"])
-            except KeyError:
-                app = App(id=self._charm.opensearch_peer_cm.deployment_desc().app.id)
+                if deployment_desc.start == StartMode.WITH_PROVIDED_ROLES:
+                    roles = deployment_desc.config.roles
+                else:
+                    roles = ClusterTopology.generated_roles()
 
             try:
                 temperature = conf["node.attr.temp"]
             except KeyError:
-                temperature = (
-                    self._charm.opensearch_peer_cm.deployment_desc().config.data_temperature
-                )
-            if not (app and roles):
+                temperature = deployment_desc.config.data_temperature
+            if not roles:
                 raise OpenSearchError("Can not determine app name and/or roles.")
 
             return Node(
                 name=self._charm.unit_name,
                 roles=roles,
                 ip=self._charm.unit_ip,
-                app=app,
+                app=deployment_desc.app,
                 unit_number=self._charm.unit_id,
                 temperature=temperature,
             )
