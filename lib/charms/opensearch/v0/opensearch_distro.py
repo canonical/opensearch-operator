@@ -17,8 +17,12 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 import requests
 import urllib3.exceptions
-from charms.opensearch.v0.helper_charm import mask_sensitive_information
-from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
+from charms.opensearch.v0.constants_charm import GeneratedRoles
+from charms.opensearch.v0.helper_charm import (
+    format_unit_name,
+    mask_sensitive_information,
+)
+from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
@@ -30,6 +34,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartTimeoutError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
+from pydantic.error_wrappers import ValidationError
 from tenacity import (
     Retrying,
     retry,
@@ -417,7 +422,7 @@ class OpenSearchDistribution(ABC):
         """Return Port of OpenSearch."""
         return 9200
 
-    def current(self) -> Node:
+    def current(self) -> Node:  # noqa: C901
         """Returns current Node."""
         try:
             nodes = self.request("GET", f"/_nodes/{self.node_id}", alt_hosts=self._charm.alt_hosts)
@@ -431,30 +436,56 @@ class OpenSearchDistribution(ABC):
                 unit_number=self._charm.unit_id,
                 temperature=current_node.get("attributes", {}).get("temp"),
             )
+
         except OpenSearchHttpError:
+
             # we try to get the most accurate description of the node from the static config
             conf = self.config.load("opensearch.yml")
+
+            # also, if possible we rely on the Deployment Description (databag)
             deployment_desc = self._charm.opensearch_peer_cm.deployment_desc()
+
+            # Application Priority: Deployment Description
+            # Reason: No reason to re-construct the App object
+            #  - it's available 99% of scenarios
+            #  - it's the same object as a re-constructed one (i.e. no dynamic changes on App)
+            if deployment_desc is None:
+                try:
+                    app = App(id=conf.get("node.attr.app_id"))
+                except ValidationError:
+                    raise OpenSearchError("Can not determine app details.")
+            else:
+                app = deployment_desc.app
+
+            # Roles (Temperature) Priority: local config
+            # Reason:
+            #  - Deployment Description is holding "expected state" (that may not be applied)
+            #  - Static config holds the currently applied settings
             try:
                 roles = conf["node.roles"]
             except KeyError:
-                if deployment_desc.start == StartMode.WITH_PROVIDED_ROLES:
-                    roles = deployment_desc.config.roles
+                if deployment_desc:
+                    if deployment_desc.start == StartMode.WITH_PROVIDED_ROLES:
+                        roles = deployment_desc.config.roles
+                    else:
+                        roles = GeneratedRoles
                 else:
-                    roles = ClusterTopology.generated_roles()
+                    raise OpenSearchError("Can not determine roles.")
 
+            temperature = None
             try:
                 temperature = conf["node.attr.temp"]
             except KeyError:
-                temperature = deployment_desc.config.data_temperature
-            if not roles:
-                raise OpenSearchError("Can not determine app name and/or roles.")
+                if deployment_desc:
+                    temperature = deployment_desc.config.data_temperature
 
             return Node(
-                name=self._charm.unit_name,
+                # NOTE: We are NOT using self._charm.unit_name, as it refers to deployment_desc()
+                # that is not to be assumed to be always available at this point
+                name=format_unit_name(self._charm.unit, app=app),
                 roles=roles,
                 ip=self._charm.unit_ip,
-                app=deployment_desc.app,
+                app=app,
                 unit_number=self._charm.unit_id,
                 temperature=temperature,
             )

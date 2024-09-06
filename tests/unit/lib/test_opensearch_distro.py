@@ -60,18 +60,31 @@ class TestOpenSearchConfig(unittest.TestCase):
         node = self.charm.opensearch.current()
         assert isinstance(node, Node)
         assert node.app.name == "opensearch"
-        assert node.roles == ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
+        assert node.roles == ["cluster_manager", "data", "ingest", "ml"]
         assert not node.temperature
 
-    def test_distro_current_api_unavail_fallback_to_static_conf(self):
+    def test_distro_current_api_unavail_primary_fallback_to_static_conf(self):
+        """Current node attributes are to be determined from static config."""
+        node = self.charm.opensearch.current()
+        assert isinstance(node, Node)
+        assert node.temperature == "hot"
+        assert sorted(node.roles) == sorted(["cluster_manager", "data", "ingest", "ml"])
+        # NOTE: app is still retrieved from Deployment Description
+        assert node.app.name == "opensearch"
+
+    @patch(
+        "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
+        return_value=None,
+    )
+    def test_distro_current_api_unavail_deployment_unavail_all_fallback_to_static_conf(self, _):
         """Current node attributes are to be determined from static config."""
         node = self.charm.opensearch.current()
         assert isinstance(node, Node)
         assert node.app.name == "opensearch"
         assert node.temperature == "hot"
-        assert sorted(node.roles) == sorted(
-            ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
-        )
+        assert sorted(node.roles) == sorted(["cluster_manager", "data", "ingest", "ml"])
+        # NOTE: app is still retrieved from Deployment Description
+        assert node.app.name == "opensearch"
 
     # We pretend that the config file is empty
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.load", return_value={})
@@ -79,9 +92,11 @@ class TestOpenSearchConfig(unittest.TestCase):
         """Current node attributes are to be determined from Deployment State information.
 
         Deployment State information is available from service startup on the Peer Relation Data.
+        YET,we do NOT use Deployment Data roles as it's holiding "desired state".
+        We rather fall back to default settings instead.
         """
         node = self.charm.opensearch.current()
         assert isinstance(node, Node)
         assert node.app.name == "opensearch"
-        assert node.roles == ["deployment_role1", "deployment_role2"]
+        assert node.roles == ["data", "ingest", "ml", "cluster_manager"]
         assert node.temperature == "warm"

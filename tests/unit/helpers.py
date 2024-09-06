@@ -123,7 +123,7 @@ def mock_response_mynode(
                 "build_type": "tar",
                 "build_hash": "30dd870855093c9dca23fc6f8cfd5c0d7c83127d",
                 "total_indexing_buffer": 107374182,
-                "roles": ["cluster_manager", "coordinating_only", "data", "ingest", "ml"],
+                "roles": ["cluster_manager", "data", "ingest", "ml"],
                 "attributes": {
                     "shard_indexing_pressure_enabled": "true",
                     "app_id": "617e5f02-5be5-4e25-85f0-276b2347a5ad/opensearch",
@@ -143,7 +143,6 @@ def mock_response_mynode(
                             "data",
                             "ingest",
                             "ml",
-                            "coordinating_only",
                             "cluster_manager",
                         ],
                     },
