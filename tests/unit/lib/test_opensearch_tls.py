@@ -70,9 +70,13 @@ class TestOpenSearchTLS(unittest.TestCase):
         socket.getfqdn.return_value = "nebula"
 
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.get_host_public_ip")
     @patch("socket.getfqdn")
+    @patch("socket.gethostname")
     @patch("socket.gethostbyaddr")
-    def test_get_sans(self, gethostbyaddr, getfqdn, deployment_desc):
+    def test_get_sans(
+        self, gethostbyaddr, gethostname, getfqdn, get_host_public_ip, deployment_desc
+    ):
         """Test the SANs returned depending on the cert type."""
         deployment_desc.return_value = self.deployment_descriptions["ok"]
 
@@ -82,17 +86,19 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         gethostbyaddr.return_value = (self.charm.unit_name, ["alias"], ["address1", "address2"])
+        gethostname.return_value = "nebula"
         getfqdn.return_value = "nebula"
+        get_host_public_ip.return_value = "XX.XXX.XX.XXX"
 
         base_ips = ["1.1.1.1", "address1", "address2"]
-        base_dns_entries = ["nebula"]
+        base_dns_entries = [self.charm.unit_name, "nebula", "alias"]
 
         unit_http_sans = self.charm.tls._get_sans(CertType.UNIT_HTTP)
         self.assertDictEqual(
             dict((key, sorted(val)) for key, val in unit_http_sans.items()),
             {
                 "sans_oid": ["1.2.3.4.5.5"],
-                "sans_ip": sorted(base_ips),
+                "sans_ip": sorted(base_ips + ["XX.XXX.XX.XXX"]),
                 "sans_dns": sorted(base_dns_entries),
             },
         )
