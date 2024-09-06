@@ -10,7 +10,6 @@ from charms.opensearch.v0.constants_charm import (
     AdminUser,
     COSUser,
     KibanaserverUser,
-    PClusterNoDataNode,
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
 )
@@ -144,9 +143,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         self.refresh_relation_data(event, can_defer=False)
 
-        if data_role_in_cluster_fleet_apps(self.charm):
-            self.charm.status.clear(PClusterNoDataNode)
-
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
         if not self.charm.unit.is_leader():
@@ -177,6 +173,12 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             p_cluster_app=peer_cluster_app,
             trigger_rel_id=event.relation.id,
         )
+
+        if (
+            deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            and "data" in peer_cluster_app.roles
+        ):
+            self.charm.handle_joining_data_node()
 
         if data.get("is_candidate_failover_orchestrator") != "true":
             self.refresh_relation_data(event)
@@ -232,9 +234,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             p_cluster_app=trigger_app,
             trigger_rel_id=event.relation.id,
         )
-
-        if "data" not in self.charm.opensearch_peer_cm.deployment_desc().config.roles:
-            self.charm.status.set(BlockedStatus(PClusterNoDataNode))
 
     def refresh_relation_data(self, event: EventBase, can_defer: bool = True) -> None:
         """Refresh the peer cluster rel data (new cm node, admin password change etc.)."""
@@ -443,13 +442,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             blocked_msg = (
                 "Cannot have 2 'failover'-orchestrators. Relate to the existing failover."
             )
-        elif "data" in deployment_desc.config.roles:
-            if not self.charm.is_admin_user_configured():
-                blocked_msg = f"Admin user not fully configured {message_suffix}."
-            elif not self.charm.tls.is_fully_configured_in_cluster():
-                blocked_msg = f"TLS not fully configured {message_suffix}."
-                should_retry = False
-            elif not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
+        elif not self.charm.is_admin_user_configured():
+            blocked_msg = f"Admin user not fully configured {message_suffix}."
+        elif not self.charm.tls.is_fully_configured_in_cluster():
+            blocked_msg = f"TLS not fully configured {message_suffix}."
+            should_retry = False
+        elif not data_role_in_cluster_fleet_apps(self.charm):
+            if not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
                 blocked_msg = f"Security index not initialized {message_suffix}."
             elif not self.charm.is_every_unit_marked_as_started():
                 blocked_msg = f"Waiting for every unit {message_suffix} to start."

@@ -348,14 +348,22 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # configure clients auth
         self.opensearch_config.set_client_auth()
 
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        # only start the main orchestrator if a data node is available
+        if (
+            deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            and "data" not in deployment_desc.config.roles
+        ):
+            self.status.set(BlockedStatus(PClusterNoDataNode))
+            event.defer()
+            return
+
         # request the start of OpenSearch
         self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
 
-        deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        # if this is the first data node to join, start without getting the lock
         ignore_lock = (
-            "data" not in deployment_desc.config.roles
-            and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-            or "data" in deployment_desc.config.roles
+            "data" in deployment_desc.config.roles
             and self.unit.is_leader()
             and deployment_desc.typ == DeploymentType.OTHER
             and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
@@ -874,7 +882,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.unit.status = BlockedStatus(str(e))
             return
 
-        deployment_desc = self.opensearch_peer_cm.deployment_desc()
         try:
             self.opensearch.start(
                 wait_until_http_200=(
@@ -884,12 +891,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
             self._post_start_init(event)
         except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
-            if "data" not in deployment_desc.config.roles:
-                self.status.set(BlockedStatus(PClusterNoDataNode))
-                self.node_lock.release()
-            if self.opensearch_peer_cm.is_provider():
+            self.node_lock.release()
+            if self.opensearch_peer_cm.is_provider(typ="main"):
                 self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
-            logger.debug("No data role available, deferring start of Opensearch.")
             event.defer()
         except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
             logger.warning(e)
@@ -1509,6 +1513,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "basic_auth": {"username": f"{COSUser}", "password": f"{pwd}"},
             }
         ]
+
+    def handle_joining_data_node(self) -> None:
+        """Start Opensearch on a cluster-manager node when a data-node is joining"""
+        if self.peers_data.get(Scope.UNIT, "started", False):
+            self.status.clear(PClusterNoDataNode)
+        else:
+            self._start_opensearch_event.emit(ignore_lock=True)
 
     @property
     def unit_ip(self) -> str:
