@@ -1,0 +1,160 @@
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  s3-integrator/0 [executing] blocked: Missing parameters: ['access-key', 'secret-key']
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:13:48Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           active           2  opensearch                                 2  no       
+main                               maintenance      1  opensearch                                 1  no       Configuring backup service...
+opensearch                         active           1  opensearch                                 0  no       
+s3-integrator                      active           1  s3-integrator             latest/edge     41  no       
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+failover/0                   active       idle       3        10.54.81.180    9200/tcp  
+failover/1*                  active       idle       4        10.54.81.79     9200/tcp  
+main/0*                      maintenance  executing  2        10.54.81.208    9200/tcp  Configuring backup service...
+opensearch/0*                active       idle       5        10.54.81.58     9200/tcp  
+s3-integrator/0*             active       idle       1        10.54.81.184              
+self-signed-certificates/0*  active       idle       0        10.54.81.201              
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.54.81.201  juju-ac1ed7-0  ubuntu@22.04      Running
+1        started  10.54.81.184  juju-ac1ed7-1  ubuntu@22.04      Running
+2        started  10.54.81.208  juju-ac1ed7-2  ubuntu@22.04      Running
+3        started  10.54.81.180  juju-ac1ed7-3  ubuntu@22.04      Running
+4        started  10.54.81.79   juju-ac1ed7-4  ubuntu@22.04      Running
+5        started  10.54.81.58   juju-ac1ed7-5  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:13:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: main maintenance -- message: Configuring backup service...
+		main-0.517* -- (10.54.81.208) -- [executing (since: 02:13:37)] maintenance: Configuring backup service...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:13:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 02:14:00 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:14:00Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           active       2  opensearch                                 2  no       
+main                               blocked      1  opensearch                                 1  no       Backup setup failed, check logs for details
+opensearch                         active       1  opensearch                                 0  no       
+s3-integrator                      active       1  s3-integrator             latest/edge     41  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+failover/0                   active       executing  3        10.54.81.180    9200/tcp  
+failover/1*                  active       executing  4        10.54.81.79     9200/tcp  
+main/0*                      maintenance  executing  2        10.54.81.208    9200/tcp  Backup setup started.
+opensearch/0*                active       executing  5        10.54.81.58     9200/tcp  
+s3-integrator/0*             active       executing  1        10.54.81.184              
+self-signed-certificates/0*  active       idle       0        10.54.81.201              
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.54.81.201  juju-ac1ed7-0  ubuntu@22.04      Running
+1        started  10.54.81.184  juju-ac1ed7-1  ubuntu@22.04      Running
+2        started  10.54.81.208  juju-ac1ed7-2  ubuntu@22.04      Running
+3        started  10.54.81.180  juju-ac1ed7-3  ubuntu@22.04      Running
+4        started  10.54.81.79   juju-ac1ed7-4  ubuntu@22.04      Running
+5        started  10.54.81.58   juju-ac1ed7-5  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 02:14:04 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:14:04Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           blocked      2  opensearch                                 2  no       This unit should not be related to S3
+main                               blocked      1  opensearch                                 1  no       Backup setup failed, check logs for details
+opensearch                         blocked      1  opensearch                                 0  no       This unit should not be related to S3
+s3-integrator                      active       1  s3-integrator             latest/edge     41  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+failover/0                   active       executing  3        10.54.81.180    9200/tcp  
+failover/1*                  active       executing  4        10.54.81.79     9200/tcp  
+main/0*                      maintenance  executing  2        10.54.81.208    9200/tcp  Configuring backup service...
+opensearch/0*                active       executing  5        10.54.81.58     9200/tcp  
+s3-integrator/0*             active       executing  1        10.54.81.184              
+self-signed-certificates/0*  active       idle       0        10.54.81.201              
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.54.81.201  juju-ac1ed7-0  ubuntu@22.04      Running
+1        started  10.54.81.184  juju-ac1ed7-1  ubuntu@22.04      Running
+2        started  10.54.81.208  juju-ac1ed7-2  ubuntu@22.04      Running
+3        started  10.54.81.180  juju-ac1ed7-3  ubuntu@22.04      Running
+4        started  10.54.81.79   juju-ac1ed7-4  ubuntu@22.04      Running
+5        started  10.54.81.58   juju-ac1ed7-5  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 02:14:05 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:14:06Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           active       2  opensearch                                 2  no       
+main                               blocked      1  opensearch                                 1  no       Backup setup failed, check logs for details
+opensearch                         active       1  opensearch                                 0  no       
+s3-integrator                      active       1  s3-integrator             latest/edge     41  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+failover/0                   active       idle       3        10.54.81.180    9200/tcp  
+failover/1*                  active       executing  4        10.54.81.79     9200/tcp  
+main/0*                      maintenance  executing  2        10.54.81.208    9200/tcp  Configuring backup service...
+opensearch/0*                active       executing  5        10.54.81.58     9200/tcp  
+s3-integrator/0*             active       executing  1        10.54.81.184              
+self-signed-certificates/0*  active       idle       0        10.54.81.201              
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.54.81.201  juju-ac1ed7-0  ubuntu@22.04      Running
+1        started  10.54.81.184  juju-ac1ed7-1  ubuntu@22.04      Running
+2        started  10.54.81.208  juju-ac1ed7-2  ubuntu@22.04      Running
+3        started  10.54.81.180  juju-ac1ed7-3  ubuntu@22.04      Running
+4        started  10.54.81.79   juju-ac1ed7-4  ubuntu@22.04      Running
+5        started  10.54.81.58   juju-ac1ed7-5  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 02:14:08 -- Waiting for model: complete.
