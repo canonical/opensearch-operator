@@ -94,7 +94,7 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str) -> None:
             apps_statuses=["active"],
             units_statuses=["active"],
             wait_for_exact_units={APP_NAME: 3},
-            timeout=1200,
+            timeout=1800,
             idle_period=IDLE_PERIOD,
         )
         return
@@ -114,7 +114,7 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str) -> None:
             FAILOVER_ORCHESTRATOR_NAME: 2,
             APP_NAME: 1,
         },
-        timeout=1200,
+        timeout=1800,
         idle_period=IDLE_PERIOD,
     )
 
