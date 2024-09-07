@@ -3,15 +3,13 @@
 
 """Utility classes and methods for getting cluster info, configuration info and suggestions."""
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import GeneratedRoles
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import App, Node
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from tenacity import retry, stop_after_attempt, wait_exponential
-
-if TYPE_CHECKING:
-    from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
 # The unique Charmhub library identifier, never change it
 LIBID = "80c3b9eff6df437bb4175b1666b73f91"
@@ -44,7 +42,7 @@ class ClusterTopology:
 
     @staticmethod
     def get_cluster_settings(
-        opensearch: "OpenSearchDistribution",
+        opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
         include_defaults: bool = False,
@@ -144,7 +142,7 @@ class ClusterTopology:
 
     @staticmethod
     def nodes(
-        opensearch: "OpenSearchDistribution",
+        opensearch: OpenSearchDistribution,
         use_localhost: bool,
         hosts: Optional[List[str]] = None,
     ) -> List[Node]:
@@ -183,7 +181,7 @@ class ClusterState:
         reraise=True,
     )
     def shards(
-        opensearch: "OpenSearchDistribution",
+        opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
         verbose: bool = False,
@@ -229,7 +227,7 @@ class ClusterState:
         reraise=True,
     )
     def allocation_explain(
-        opensearch: "OpenSearchDistribution",
+        opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
     ) -> List[Dict[str, str]]:
@@ -248,7 +246,7 @@ class ClusterState:
         reraise=True,
     )
     def indices(
-        opensearch: "OpenSearchDistribution",
+        opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
     ) -> Dict[str, Dict[str, str]]:
@@ -275,7 +273,7 @@ class ClusterState:
 
     @staticmethod
     def shards_by_state(
-        opensearch: "OpenSearchDistribution",
+        opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
     ) -> Dict[str, List[str]]:
@@ -292,7 +290,7 @@ class ClusterState:
 
     @staticmethod
     def busy_shards_by_unit(
-        opensearch: "OpenSearchDistribution",
+        opensearch: OpenSearchDistribution,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
     ) -> Dict[str, List[str]]:
@@ -315,7 +313,7 @@ class ClusterState:
 
     @staticmethod
     def health(
-        opensearch: "OpenSearchDistribution",
+        opensearch: OpenSearchDistribution,
         wait_for_green: bool,
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,

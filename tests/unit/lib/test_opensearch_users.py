@@ -7,6 +7,11 @@ import unittest
 from collections import namedtuple
 from unittest.mock import MagicMock, patch
 
+# Imports to simulate designated imports order
+# (Otherwise circular dependency may be reported,
+# that is NOT supposed to ever happen for real by design.
+import charms.opensearch.v0.helper_cluster  # noqa
+import charms.opensearch.v0.opensearch_distro  # noqa
 import pytest
 from charms.opensearch.v0.constants_charm import ClientRelationName, OpenSearchUsers
 from charms.opensearch.v0.opensearch_users import (
