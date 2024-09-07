@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import all_units, run_cmd
+from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -330,25 +331,20 @@ class OpenSearchTLS(Object):
         if cert_type == CertType.APP_ADMIN:
             return sans
 
-        # in order to be able to use the API for reloading TLS certificates it is necessary
-        # to only have one dns name and one ip address in the sans
-        # otherwise the following upstream bug will mess the sorting of these fields
-        # https://github.com/opensearch-project/security/issues/4480
-        dns = {socket.getfqdn()}
+        dns = {self.charm.unit_name, socket.gethostname(), socket.getfqdn()}
         ips = {self.charm.unit_ip}
 
-        # see above, related to https://github.com/opensearch-project/security/issues/4480
-        # host_public_ip = get_host_public_ip()
-        # if cert_type == CertType.UNIT_HTTP and host_public_ip:
-        #    ips.add(host_public_ip)
+        host_public_ip = get_host_public_ip()
+        if cert_type == CertType.UNIT_HTTP and host_public_ip:
+            ips.add(host_public_ip)
 
         for ip in ips.copy():
             try:
                 name, aliases, addresses = socket.gethostbyaddr(ip)
                 ips.update(addresses)
-                # see above, related to https://github.com/opensearch-project/security/issues/4480
-                # dns.add(name)
-                # dns.update(aliases)
+
+                dns.add(name)
+                dns.update(aliases)
             except (socket.herror, socket.gaierror):
                 continue
 
