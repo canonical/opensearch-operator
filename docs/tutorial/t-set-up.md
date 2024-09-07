@@ -19,13 +19,13 @@ Before you start, make sure your machine meets the [minimum system requirements]
 
 The simplest way to get started with Charmed OpenSearch is to set up a local LXD cloud. [LXD](https://documentation.ubuntu.com/lxd/en/latest/) is a system container and virtual machine manager that comes pre-installed on Ubuntu. Juju interfaces with LXD to control the containers on which Charmed OpenSearch runs.
 
-Verify if your Ubuntu system already has LXD installed with the command `which lxd`. If there is no output, then simply install LXD with
+Verify if your Ubuntu system already has LXD installed with the command `which lxd`. If there is no output, then install LXD with
 
 ```shell
 sudo snap install lxd
 ```
 
-After installation, we need to run `lxd init` to perform post-installation tasks. For this tutorial, the default parameters are preferred and the network bridge should be set to have no IPv6 addresses, since Juju does not support IPv6 addresses with LXD:
+After installation, `lxd init` is run to perform post-installation tasks. For this tutorial, the default parameters are preferred and the network bridge should be set to have no IPv6 addresses since Juju does not support IPv6 addresses with LXD:
 
 ```shell
 lxd init --auto
@@ -50,13 +50,13 @@ As with LXD, Juju is installed using a snap package:
 sudo snap install juju --channel 3.4/stable --classic
 ```
 
-Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup or configuration needed, however,  because Juju 3.x is a a [strictly confined snap](https://snapcraft.io/docs/classic-confinement), and is not allowed to create a `~/.local/share` directory, we need to create it manually.
+Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup or configuration needed, however,  because Juju 3.x is a [strictly confined snap](https://snapcraft.io/docs/classic-confinement), and is not allowed to create a `~/.local/share` directory, we need to create it manually.
 
 ```shell
 mkdir -p ~/.local/share
 ```
 
-To list the clouds available to juju, run the following command:
+To list the clouds available to Juju, run the following command:
 
 ```shell
 juju clouds
@@ -104,14 +104,12 @@ You can now view the model you created above by entering the command `juju statu
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  14:57:14Z
-
-Model "admin/tutorial" is empty.
+tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  11:26:13Z
 ```
 
 <a href="#heading--kernel-parameters"><h2 id="heading--kernel-parameters"> Set kernel parameters </h2></a>
 
-Before deploying Charmed OpenSearch, we need to set some [kernel parameters](https://www.kernel.org/doc/Documentation/sysctl/vm.txt). These are necessary requirements for OpenSearch to function correctly. 
+Before deploying Charmed OpenSearch, we need to set some [kernel parameters](https://www.kernel.org/doc/Documentation/sysctl/vm.txt). These are requirements for OpenSearch to function correctly. 
 
 Since we are using LXD containers to deploy our charm, and containers share a kernel with their host, we need to set these kernel parameters on the host machine. We will save the default values, change them to the optimal values for OpenSearch, and add the parameters to the Juju model's configuration.
 
@@ -133,7 +131,7 @@ vm.max_map_count = 262144
 vm.swappiness = 60
 ```
 
-Make note of the above variables so that you can reset them later to their original values. Using the host machine outside of this tutorial without resetting these kernel parameters manually or rebooting may have impacts on the host machine's performance.
+Make note of the above variables so that you can reset them later to their original values. Using the host machine outside of this tutorial without resetting these kernel parameters manually or rebooting may have an impact on the host machine's performance.
 
 ### Set parameters on the host machine
 

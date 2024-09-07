@@ -10,7 +10,7 @@ While this tutorial intends to guide you as you deploy Charmed OpenSearch for th
 * You have some experience using a Linux-based CLI
 * You are familiar with OpenSearch concepts such as indices and users.
   * To learn more, see the official [OpenSearch Documentation](https://opensearch.org/docs/latest/about/)
-* Your computer fulfills the [minimum system requirements](/t/14565)
+* Your computer fulfils the [minimum system requirements](/t/14565)
 
 ## Tutorial contents
 

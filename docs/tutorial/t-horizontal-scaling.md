@@ -15,7 +15,7 @@ Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  17:16:43+02:00
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         active      1  opensearch                2/edge         117  no       
+opensearch                         blocked     1  opensearch                2/edge         117  no       1 or more 'replica' shards are not assigned, please scale your application up.
 self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message

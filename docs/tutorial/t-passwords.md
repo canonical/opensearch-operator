@@ -12,21 +12,21 @@ juju run opensearch/leader get-password
 Running the command above should output something like:
 
 ```yaml
-unit-opensearch-0:
-  UnitId: opensearch/0
-  id: "2"
-  results:
-    ca-chain: |-
-      <certificate>
-    password: <password>
-    username: admin
-  status: completed
-  timing:
-    completed: 2023-04-06 11:36:41 +0000 UTC
-    enqueued: 2023-04-06 11:36:20 +0000 UTC
-    started: 2023-04-06 11:36:36 +0000 UTC
+Running operation 7 with 1 task
+  - task 8 on unit-opensearch-0
+
+Waiting for task 8...
+ca-chain: |-
+  -----BEGIN CERTIFICATE-----
+  MIIDPzCCAiegAwIB...
+  -----END CERTIFICATE-----
+  -----BEGIN CERTIFICATE-----
+  MIIDOzCCAiOgAwIB...
+  -----END CERTIFICATE-----
+password: IbmPfpZthaWMQhxhtm9XyqmSDYGivBpC
+username: admin
 ```
-The admin password is under the result: `admin-password`.
+The admin password is under the result: `password`.
 
 
 ## Rotate the admin password
@@ -40,16 +40,11 @@ juju run opensearch/leader set-password
 Running the command should output:
 
 ```yaml
-unit-opensearch-0:
-  UnitId: opensearch/0
-  id: "8"
-  results:
-    admin-password: n4E4z3Dk19irKJPeZU27B24l1wKoA2sP
-  status: completed
-  timing:
-    completed: 2023-04-06 11:38:22 +0000 UTC
-    enqueued: 2023-04-06 11:38:17 +0000 UTC
-    started: 2023-04-06 11:38:20 +0000 UTC
+Running operation 9 with 1 task
+  - task 10 on unit-opensearch-0
+
+Waiting for task 10...
+admin-password: aW1kMu2pO4GGdw52nfrYHAayu8rn4nn9
 ```
 
 The admin password is under the result: `admin-password`. It should be different from your previous password.
@@ -67,28 +62,23 @@ juju run opensearch/leader set-password password=<password>
 Running the command should output:
 
 ```yaml
-unit-opensearch-0:
-  UnitId: opensearch/0
-  id: "12"
-  results:
-    admin-password: <password>
-  status: completed
-  timing:
-    completed: 2023-04-06 11:39:41 +0000 UTC
-    enqueued: 2023-04-06 11:39:38 +0000 UTC
-    started: 2023-04-06 11:39:40 +0000 UTC
+Running operation 11 with 1 task
+  - task 12 on unit-opensearch-0
+
+Waiting for task 12...
+admin-password: <password>
 ```
 
 The admin password under the result: `admin-password` should match whatever you passed in when you entered the command.
 
 ## Set TLS Private Key
 
-TLS private keys are used for certificate signing requests, and should be recycled in the same way as passwords. There are three types of private keys available to be updated on this charm, and they are as follows:
+TLS private keys are used for certificate signing requests and should be recycled in the same way as passwords. There are three types of private keys available to be updated on this charm, and they are as follows:
 
-- `"app-admin"` is the key used for requesting a certificate with a CSR for the admin user and cluster administration related operations.
+- `"app-admin"` is the key used for requesting a certificate with a CSR for the admin user and cluster administration-related operations.
   - Must only be set on the leader unit.
-- `"unit-transport"` is the key used for requesting, for the target unit, a certificate with a CSR for the transport layer (node to node communication).
-- `"unit-http"` is the key used for requesting, for the target unit, a certificate with a CSR for the admin user and cluster administration related operations.
+- `"unit-transport"` is the key used for requesting, for the target unit, a certificate with a CSR for the transport layer (node-to-node communication).
+- `"unit-http"` is the key used for requesting, for the target unit, a certificate with a CSR for the HTTP layer. This is used for client-to-node communication.
 
 To change a private key to a random value, run the following command, setting `category` equal to your preferred type of private key:
 
@@ -99,15 +89,11 @@ juju run opensearch/leader set-tls-private-key category=<category>
 Running the command should output:
 
 ```yaml
-unit-opensearch-0:
-  UnitId: opensearch/0
-  id: "14"
-  results: {}
-  status: completed
-  timing:
-    completed: 2023-04-06 11:45:32 +0000 UTC
-    enqueued: 2023-04-06 11:45:29 +0000 UTC
-    started: 2023-04-06 11:45:30 +0000 UTC
+Running operation 13 with 1 task
+  - task 14 on unit-opensearch-0
+
+Waiting for task 14...
+
 ```
 
 No certificate data is presented in the results of this action.
@@ -121,15 +107,11 @@ juju run opensearch/leader set-tls-private-key category=<category> key=<key>
 Running the command should output:
 
 ```yaml
-unit-opensearch-0:
-  UnitId: opensearch/0
-  id: "16"
-  results: {}
-  status: completed
-  timing:
-    completed: 2023-04-06 12:07:02 +0000 UTC
-    enqueued: 2023-04-06 12:07:01 +0000 UTC
-    started: 2023-04-06 12:07:01 +0000 UTC
+Running operation 15 with 1 task
+  - task 16 on unit-opensearch-0
+
+Waiting for task 16...
+
 ```
 
 If the key you intend to set has a passphrase, set it like so
@@ -141,15 +123,11 @@ juju run opensearch/leader set-tls-private-key category=<category> password=<pas
 Running the command should output:
 
 ```yaml
-unit-opensearch-0:
-  UnitId: opensearch/0
-  id: "16"
-  results: {}
-  status: completed
-  timing:
-    completed: 2023-04-06 12:37:55 +0000 UTC
-    enqueued: 2023-04-06 12:37:52 +0000 UTC
-    started: 2023-04-06 12:37:54 +0000 UTC
+Running operation 17 with 1 task
+  - task 18 on unit-opensearch-0
+
+Waiting for task 18...
+
 ```
 
 

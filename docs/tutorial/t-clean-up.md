@@ -9,7 +9,7 @@ In this tutorial, we’ve successfully:
 * Rotated user credentials
 * Scaled our deployment
 
-You may now keep your OpenSearch deployment running to continue experimenting, or remove it entirely to free up resources on your machine.
+You may now keep your OpenSearch deployment running to continue experimenting or remove it entirely to free up resources on your machine.
 
 ## Remove Charmed OpenSearch
 [note type="caution"]
@@ -22,7 +22,7 @@ To remove Charmed OpenSearch and the model it is hosted on, run this command:
 juju destroy-model tutorial --destroy-storage --force --no-wait
 ```
 
-Next step is to remove the Juju controller. You can see all of the available controllers by entering `juju controllers`. 
+The next step is to remove the Juju controller. You can see all of the available controllers by entering `juju controllers`. 
 
 To remove the controller created for this tutorial, enter:
 
