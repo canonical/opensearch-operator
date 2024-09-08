@@ -191,14 +191,18 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         on_tls_relation_broken.assert_called_once()
 
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_set_tls_private_key(self, _, __, _request_certificate):
+    def test_on_set_tls_private_key(self, _, __, _request_certificate, deployment_desc):
         """Test _on_set_tls private key event."""
         event_mock = MagicMock(params={"category": "app-admin"})
 
         self.harness.set_leader(is_leader=False)
+        deployment_desc.return_value = self.deployment_descriptions["ko"]
         self.charm.tls._on_set_tls_private_key(event_mock)
         _request_certificate.assert_not_called()
 
