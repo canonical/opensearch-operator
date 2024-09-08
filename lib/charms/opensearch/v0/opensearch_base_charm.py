@@ -1405,8 +1405,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         current_conf = self.opensearch_config.load_node()
+        stored_roles = current_conf["node.roles"] or ["coordinating"]
+        new_conf_roles = new_node_conf.roles or ["coordinating"]
         if (
-            sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles)
+            sorted(stored_roles) == sorted(new_conf_roles)
             and current_conf.get("node.attr.temp") == new_node_conf.temperature
         ):
             # no conf change (roles for now)
