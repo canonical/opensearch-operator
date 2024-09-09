@@ -21,15 +21,12 @@ from charms.opensearch.v0.constants_secrets import (
     S3_CREDENTIALS,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.models import S3RelDataCredentials
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchSecretInsertionError
 from charms.opensearch.v0.opensearch_internal_data import (
     RelationDataStore,
     Scope,
     SecretCache,
 )
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyYetError
-from charms.opensearch.v0.opensearch_plugins import OpenSearchBackupPlugin
 from ops import JujuVersion, Secret, SecretNotFoundError
 from ops.charm import SecretChangedEvent
 from ops.framework import Object
@@ -66,36 +63,6 @@ class OpenSearchSecrets(Object, RelationDataStore):
         self.charm = charm
 
         self.framework.observe(self._charm.on.secret_changed, self._on_secret_changed)
-        self.framework.observe(self._charm.on.secret_remove, self._on_secret_removed)
-
-    def _on_secret_removed(self, event):
-        """Clean secret from the plugin cache."""
-        secret = event.secret
-        secret.get_content()
-
-        if not event.secret.label:
-            logger.info("Secret %s has no label, ignoring it.", event.secret.id)
-            return
-
-        try:
-            label_parts = self.breakdown_label(event.secret.label)
-        except ValueError:
-            logging.info(f"Label {event.secret.label} was meaningless for us, returning")
-            return
-
-        label_key = label_parts["key"]
-
-        if label_key == S3_CREDENTIALS and (
-            s3_creds := self._charm.secrets.get_object(Scope.APP, "s3-creds")
-        ):
-            plugin = OpenSearchBackupPlugin().update_secrets(
-                S3RelDataCredentials.from_dict(s3_creds)
-            )
-            try:
-                self._charm.plugin_manager.apply_config(plugin)
-            except OpenSearchKeystoreNotReadyYetError:
-                logger.info("Keystore not ready yet, retrying later.")
-                event.defer()
 
     def _on_secret_changed(self, event: SecretChangedEvent):  # noqa: C901
         """Refresh secret and re-run corresponding actions if needed."""
@@ -165,10 +132,6 @@ class OpenSearchSecrets(Object, RelationDataStore):
         # broadcast secret updates to related sub-clusters
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
-
-        # all units must persist the s3 access & secret keys in opensearch.yml
-        if label_key == S3_CREDENTIALS:
-            self._charm.backup.manual_update(event)
 
     def _user_from_hash_key(self, key):
         """Which user is referred to by key?"""

@@ -317,6 +317,7 @@ class S3RelData(Model):
 
         data = conf
         if isinstance(conf, dict):
+            # We are
             data = S3RelDataCredentials.from_dict(conf)
 
         for value in data.dict().values():

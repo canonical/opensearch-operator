@@ -80,6 +80,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
+    S3_RELATION,
     BackupConfigureStart,
     BackupDeferRelBrokenAsInProgress,
     BackupInDisabling,
@@ -90,6 +91,7 @@ from charms.opensearch.v0.constants_charm import (
     RestoreInProgress,
     S3RelShouldNotExist,
 )
+from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import DeploymentType
@@ -98,6 +100,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyYetError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import OpenSearchBackupPlugin, PluginState
@@ -124,9 +127,7 @@ if TYPE_CHECKING:
 
 
 # OpenSearch Backups
-S3_RELATION = "s3-credentials"
 S3_REPOSITORY = "s3-repository"
-PEER_CLUSTER_S3_CONFIG_KEY = "s3_credentials"
 
 
 INDICES_TO_EXCLUDE_AT_RESTORE = {
@@ -199,6 +200,10 @@ class OpenSearchBackupBase(Object):
         super().__init__(charm, relation_name)
         self.charm = charm
 
+        # We can reuse the same method, as the plugin manager will apply configs accordingly.
+        self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
+        self.framework.observe(self.charm.on.secret_remove, self._on_secret_changed)
+
         for event in [
             self.charm.on[S3_RELATION].relation_created,
             self.charm.on[S3_RELATION].relation_joined,
@@ -214,17 +219,33 @@ class OpenSearchBackupBase(Object):
         ]:
             self.framework.observe(event, self._on_s3_relation_action)
 
-        # Set the plugin class
-        # This will kickstart the singleton that will exist for this entire hook life
-        self.plugin = OpenSearchBackupPlugin(
-            self.charm.opensearch.paths.plugins,
-            relation_data={},
-            is_main_orchestrator=self.charm.opensearch_peer_cm.deployment_desc()
-            and (
-                self.charm.opensearch_peer_cm.deployment_desc().typ
-                == DeploymentType.MAIN_ORCHESTRATOR
-            ),
-        )
+    def _on_secret_changed(self, event: EventBase) -> None:
+        """Clean secret from the plugin cache."""
+        secret = event.secret
+        secret.get_content()
+
+        if not event.secret.label:
+            logger.info("Secret %s has no label, ignoring it.", event.secret.id)
+            return
+
+        if S3_CREDENTIALS not in event.secret.label:
+            logger.debug("Secret %s is not s3-credentials, ignoring it.", event.secret.id)
+            return
+
+        if not self.charm.secrets.get_object(Scope.APP, "s3-creds"):
+            logger.warning("Secret %s found but missing s3-credentials set.", event.secret.id)
+            return
+
+        try:
+            self._charm.plugin_manager.apply_config(
+                OpenSearchBackupPlugin(
+                    plugin_path=self.charm.opensearch.paths.plugins,
+                    charm=self.charm,
+                ),
+            )
+        except OpenSearchKeystoreNotReadyYetError:
+            logger.info("Keystore not ready yet, retrying later.")
+            event.defer()
 
     def _on_s3_relation_event(self, event: EventBase) -> None:
         """Defers the s3 relation events."""
@@ -436,15 +457,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
         self.s3_client = S3Requirer(self.charm, relation_name)
-
-        # Set the plugin class
-        # This will kickstart the singleton that will exist for this entire hook life
-        self.plugin = OpenSearchBackupPlugin(
-            self.charm.opensearch.paths.plugins,
-            relation_data=self.s3_client.get_s3_connection_info(),
-            is_main_orchestrator=True,
-            meta_clean=True,
-        )
+        self.plugin = OpenSearchBackupPlugin(self.charm)
 
         # s3 relation handles the config options for s3 backups
         self.framework.observe(self.charm.on[S3_RELATION].relation_created, self._on_s3_created)
@@ -457,6 +470,11 @@ class OpenSearchBackup(OpenSearchBackupBase):
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
+
+    @override
+    def _on_secret_changed(self, event: EventBase) -> None:
+        # This method is not needed anymore, as we already listen to credentials_changed event.
+        pass
 
     @override
     def _on_s3_relation_event(self, event: EventBase) -> None:
@@ -790,10 +808,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         3) If the plugin is not enabled, then defer the event
         4) Send the API calls to setup the backup service
         """
-        # Update the plugin with the new s3 data
-        self.plugin.data = self.s3_client.get_s3_connection_info()
-
-        if not self.plugin.is_relation_set():
+        if not self.plugin.is_set():
             # Always check if a relation actually exists and if options are available
             # in this case, seems one of the conditions above is not yet present
             # abandon this restart event, as it will be called later once s3 configuration

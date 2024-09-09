@@ -116,3 +116,4 @@ OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
 S3_REPO_BASE_PATH = "/"
+S3_RELATION = "s3-credentials"

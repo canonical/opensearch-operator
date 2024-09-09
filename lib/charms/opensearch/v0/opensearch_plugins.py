@@ -273,10 +273,12 @@ import logging
 from abc import abstractmethod
 from typing import Any, Dict, List, Optional
 
+from charms.opensearch.v0.constants_charm import S3_RELATION, PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import S3RelData, S3RelDataCredentials
+from charms.opensearch.v0.models import DeploymentType, S3RelData
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from jproperties import Properties
+from overrides import override
 from pydantic import BaseModel, validator
 from pydantic.error_wrappers import ValidationError
 
@@ -314,13 +316,6 @@ class OpenSearchPluginMissingConfigError(OpenSearchPluginError):
 
     The plugin itself should raise a KeyError, to avoid burden in the plugin development.
     """
-
-
-class OpenSearchPluginEventScope(BaseStrEnum):
-    """Defines the scope of the plugin manager."""
-
-    DEFAULT = "default"
-    RELATION_BROKEN_EVENT = "relation-broken-event"
 
 
 class PluginState(BaseStrEnum):
@@ -371,50 +366,18 @@ class OpenSearchPluginConfig(BaseModel):
         return json.dumps(self.config_entries)
 
 
-class OpenSearchPluginMeta(type):
-    """Metaclass to ensure only one instance of each plugin is created.
-
-    To force a cleanup of the plugin, set the meta_clean=True when calling the plugin.
-    """
-
-    _plugins = {}
-
-    def __call__(cls, *args, **kwargs):
-        """Sets singleton class in this hook.
-
-        This singleton guarantees we won't have multiple instances dealing with objects such as
-        relations at once. This is forbidden by the operator framework.
-
-        Besides that, it allows us to have a single instance of each plugin, loaded with particular
-        information at init such as which relation to look for or which config to use. That
-        creation happens either at plugin manager or at the relation manager's creation.
-        """
-        if kwargs.get("meta_clean"):
-            del kwargs["meta_clean"]
-            if cls in cls._plugins:
-                del cls._plugins[cls]
-
-        if cls not in cls._plugins:
-            obj = super().__call__(*args, **kwargs)
-            cls._plugins[cls] = obj
-        return cls._plugins[cls]
-
-
-class OpenSearchPlugin(metaclass=OpenSearchPluginMeta):
+class OpenSearchPlugin:
     """Abstract class describing an OpenSearch plugin."""
 
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
     REMOVE_ON_DISABLE = False
 
-    def __init__(self, plugins_path: str, extra_config: Dict[str, Any] = None):
-        """Creates the OpenSearchPlugin object.
-
-        Arguments:
-          plugins_path: str, path to the plugins folder
-          extra_config: dict, contains config entries coming from optional relation data
-        """
-        self._plugins_path = f"{plugins_path}/{self.name}/{self.PLUGIN_PROPERTIES}"
-        self._extra_config = extra_config
+    def __init__(self, charm):
+        """Creates the OpenSearchPlugin object."""
+        self._plugins_path = (
+            f"{charm.opensearch.paths.plugins}/{self.name}/{self.PLUGIN_PROPERTIES}"
+        )
+        self._extra_config = charm.config
 
     @property
     def version(self) -> str:
@@ -434,6 +397,11 @@ class OpenSearchPlugin(metaclass=OpenSearchPluginMeta):
     def dependencies(self) -> Optional[List[str]]:
         """Returns a list of plugin name dependencies."""
         return []
+
+    @abstractmethod
+    def is_set(self) -> bool:
+        """Returns True if self._extra_config states as enabled."""
+        pass
 
     @abstractmethod
     def config(self) -> OpenSearchPluginConfig:
@@ -460,66 +428,35 @@ class OpenSearchPlugin(metaclass=OpenSearchPluginMeta):
         pass
 
 
-class OpenSearchPluginRelationsHandler(OpenSearchPlugin):
-    """Implements a handler for the relation databag.
+class OpenSearchPluginDataProvider:
+    """Implements the data provider for any charm-related data access.
 
     Plugins may have one or more relations tied to them. This abstract class
     enables different modules to implement a class that can specify which
     relations should plugin manager listen to.
-
-    There is a difference between OpenSearchPluginRelationsHandler.data and
-    OpenSearchPluginRelationsHandler.config/disable: the former is possible to be overridden and
-    it represents the entire data from the relation databag, while the latter represents what
-    the plugin_manager should have access so it can configure /_cluster/settings APIs.
     """
 
-    MODEL = None
-
-    def __init__(self, *args, **kwargs):
+    def __init__(self, charm):
         """Creates the OpenSearchPluginRelationsHandler object."""
-        super().__init__(*args, **kwargs)
-
-    def is_relation_set(self) -> bool:
-        """Returns True if the relation is set, False otherwise.
-
-        It can mean the relation exists or not, simply put; or it can also mean a subset of data
-        exists within a bigger relation. One good example, peer-cluster is a single relation that
-        contains a lot of different data. In this case, we'd be interested in a subset of
-        its entire databag.
-
-        It can also mean there is a secret with content available or not.
-        """
-        return NotImplementedError()
+        self._charm = charm
 
     @property
-    def data(self) -> BaseModel:
+    @abstractmethod
+    def data(self) -> Dict[str, Any]:
         """Returns the data from the relation databag.
 
         Exceptions:
             ValueError: if the data is not valid
         """
-        raise NotImplementedError()
-
-    @data.setter
-    def data(self, value: Dict[str, Any]):
-        """Sets the data from the relation databag.
-
-        Exceptions:
-            ValueError: if the data is not valid
-        """
-        raise NotImplementedError()
-
-    def update_secrets(self, secret_map: Dict[str, Any]) -> bool:
-        """Update the secrets using secret_map.
-
-        The plugin classes should not be aware of charm details, such as OpenSearchSecrets.
-        Therefore, update_secrets is the API to pass the new values to the plugin.
-        """
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class OpenSearchKnn(OpenSearchPlugin):
     """Implements the opensearch-knn plugin."""
+
+    def is_set(self) -> bool:
+        """Returns True if the plugin is enabled."""
+        return self._extra_config["plugin_opensearch_knn"]
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for enabling the current plugin."""
@@ -539,7 +476,37 @@ class OpenSearchKnn(OpenSearchPlugin):
         return "opensearch-knn"
 
 
-class OpenSearchBackupPlugin(OpenSearchPluginRelationsHandler):
+class OpenSearchPluginBackupDataProvider(OpenSearchPluginDataProvider):
+    """Responsible to decide which data to use for the backup plugin.
+
+    Backups should check different relations depending on their role in the cluster:
+    * main orchestrator
+    * failover orchestrator
+    * other
+    """
+
+    def __init__(self, charm):
+        """Creates the OpenSearchPluginRelationsHandler object."""
+        self._charm = charm
+        self._relation = charm.model.get_relation(S3_RELATION)
+        if not charm.opensearch_peer_cm.deployment_desc():
+            # Temporary condition: we are waiting for CM to show up and define which type
+            # of cluster are we. Once we have that defined, then we will process.
+            raise OpenSearchPluginMissingConfigError("Missing deployment description in peer CM")
+        if charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            self._relation = charm.model.get_relation(PeerRelationName)
+
+    @override
+    def data(self) -> Dict[str, Any]:
+        """Returns the data from the relation databag.
+
+        Exceptions:
+            ValueError: if the data is not valid
+        """
+        return self._relation.data[self._charm.unit] or {}
+
+
+class OpenSearchBackupPlugin(OpenSearchPlugin, OpenSearchPluginBackupDataProvider):
     """Manage backup configurations.
 
     This class must load the opensearch plugin: repository-s3 and configure it.
@@ -550,38 +517,41 @@ class OpenSearchBackupPlugin(OpenSearchPluginRelationsHandler):
     """
 
     MODEL = S3RelData
+    MANDATORY_CONFS = [
+        "bucket",
+        "endpoint",
+        "region",
+        "base_path",
+        "protocol",
+        "credentials",
+    ]
+    DATA_PROVIDER = OpenSearchPluginBackupDataProvider
 
-    def __init__(self, plugin_path, relation_data, is_main_orchestrator, repo_name=None):
+    def __init__(self, charm):
         """Creates the OpenSearchBackupPlugin object."""
-        super().__init__(plugin_path, relation_data)
-        self.is_main_orchestrator = is_main_orchestrator
-        self.repo_name = repo_name or "default"
+        super(OpenSearchPluginBackupDataProvider, self).__init__(charm)
+        super(OpenSearchPlugin, self).__init__(charm)
 
-    @property
-    def data(self) -> BaseModel:
-        """Returns the data from the relation databag."""
-        try:
-            return self.MODEL.from_relation(self._extra_config)
-        except ValidationError:
-            return self.MODEL()
+        self.is_main_orchestrator = (
+            charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
+        )
+        self.repo_name = "default"
 
-    @data.setter
-    def data(self, value: Dict[str, Any]):
-        """Sets the data from the relation databag."""
-        self._extra_config = value
-
-    def update_secrets(self, secret_map: Dict[str, Any]) -> bool:
-        """Update the secrets using secret_map."""
-        self.data.credentials = S3RelDataCredentials(**secret_map)
-        return self.data.credentials.access_key and self.data.credentials.secret_key
-
-    def is_relation_set(self) -> bool:
-        """Returns True if the relation is set, False otherwise."""
+    def is_set(self) -> bool:
+        """Returns True if the plugin is enabled."""
         try:
             self.config()
         except OpenSearchPluginMissingConfigError:
             return False
         return True
+
+    @property
+    def data(self) -> BaseModel:
+        """Returns the data from the relation databag."""
+        try:
+            return self.MODEL.from_relation(self._relation.data[self._charm.unit])
+        except ValidationError:
+            return self.MODEL()
 
     @property
     def name(self) -> str:
@@ -591,15 +561,24 @@ class OpenSearchBackupPlugin(OpenSearchPluginRelationsHandler):
     def config(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
         conf = self.data.credentials.dict()
-        if self.is_main_orchestrator:
-            conf = self.data.dict()
+        # First, let's check if credentials are set
         if any([val is None for val in conf.values()]):
             raise OpenSearchPluginMissingConfigError(
-                "Plugin {} missing: {}".format(
+                "Plugin {} missing credentials".format(
                     self.name,
-                    [key for key, val in conf.items() if val is None],
                 )
             )
+
+        if self.is_main_orchestrator:
+            conf = self.data.dict()
+            # Check any mandatory config is missing
+            if any([val is None and key in self.MANDATORY_CONFS for key, val in conf.items()]):
+                raise OpenSearchPluginMissingConfigError(
+                    "Plugin {} missing: {}".format(
+                        self.name,
+                        [key for key, val in conf.items() if val is None],
+                    )
+                )
 
         if not self.is_main_orchestrator:
             return OpenSearchPluginConfig(
@@ -608,6 +587,7 @@ class OpenSearchBackupPlugin(OpenSearchPluginRelationsHandler):
                     f"s3.client.{self.repo_name}.secret_key": self.data.credentials.secret_key,
                 },
             )
+
         # This is the main orchestrator
         return OpenSearchPluginConfig(
             config_entries={

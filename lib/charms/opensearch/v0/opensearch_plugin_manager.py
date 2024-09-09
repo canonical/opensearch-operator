@@ -31,7 +31,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPlugin,
     OpenSearchPluginConfig,
     OpenSearchPluginError,
-    OpenSearchPluginEventScope,
     OpenSearchPluginInstallError,
     OpenSearchPluginMissingConfigError,
     OpenSearchPluginMissingDepsError,
@@ -57,12 +56,10 @@ ConfigExposedPlugins = {
     "opensearch-knn": {
         "class": OpenSearchKnn,
         "config": "plugin_opensearch_knn",
-        "relation_handler": None,
     },
     "repository-s3": {
         "class": OpenSearchBackupPlugin,
         "config": None,
-        "relation_handler": OpenSearchBackupPlugin,
     },
 }
 
@@ -84,34 +81,19 @@ class OpenSearchPluginManager:
         self._opensearch = charm.opensearch
         self._opensearch_config = charm.opensearch_config
         self._charm_config = self._charm.model.config
-        self._plugins_path = self._opensearch.paths.plugins
         self._keystore = OpenSearchKeystore(self._charm)
-        self._event_scope = OpenSearchPluginEventScope.DEFAULT
 
     @functools.cached_property
     def cluster_config(self):
         """Returns the cluster configuration."""
         return ClusterTopology.get_cluster_settings(self._charm.opensearch, include_defaults=True)
 
-    def set_event_scope(self, event_scope: OpenSearchPluginEventScope) -> None:
-        """Sets the event scope of the plugin manager.
-
-        This method should be called at the start of each event handler.
-        """
-        self._event_scope = event_scope
-
-    def reset_event_scope(self) -> None:
-        """Resets the event scope of the plugin manager to the default value."""
-        self._event_scope = OpenSearchPluginEventScope.DEFAULT
-
     @functools.cached_property
     def plugins(self) -> List[OpenSearchPlugin]:
         """Returns List of installed plugins."""
         plugins_list = []
         for plugin_data in ConfigExposedPlugins.values():
-            new_plugin = plugin_data["class"](
-                self._plugins_path, extra_config=self._extra_conf(plugin_data)
-            )
+            new_plugin = plugin_data["class"](self._charm)
             plugins_list.append(new_plugin)
         return plugins_list
 
@@ -132,8 +114,8 @@ class OpenSearchPluginManager:
 
     def _extra_conf(self, plugin_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Returns the config from the relation data of the target plugin if applies."""
-        relation_handler = plugin_data.get("relation_handler")
-        data = relation_handler(self._charm).data.dict() if relation_handler else {}
+        data_provider = plugin_data.get("data_provider")
+        data = data_provider(self._charm).data.dict() if data_provider else {}
         return {
             **data,
             **self._charm_config,
@@ -404,10 +386,7 @@ class OpenSearchPluginManager:
 
     def _user_requested_to_enable(self, plugin: OpenSearchPlugin) -> bool:
         """Returns True if user requested plugin to be enabled."""
-        plugin_data = ConfigExposedPlugins[plugin.name]
-        return self._charm.config.get(plugin_data["config"], False) or (
-            plugin_data["relation_handler"] and plugin_data["relation_handler"]().is_relation_set()
-        )
+        return plugin.is_set()
 
     def _is_enabled(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is enabled.
