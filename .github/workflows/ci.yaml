@@ -72,27 +72,29 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v16.7.0
-    with:
-      artifact-prefix: packed-charm-cache-true
-      cloud: lxd
-      juju-agent-version: 3.5.3
-      _beta_allure_report: true
-    secrets:
-      # GitHub appears to redact each line of a multi-line secret
-      # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
-      integration-test: |
-        { "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
-          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
-          "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
-          "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
-          "GCP_SERVICE_ACCOUNT": "${{ secrets.GCP_SERVICE_ACCOUNT }}", }
-    permissions:
-      contents: write
-  
-  setup-upterm-session:
-    name: Setup Upterm session
-    uses: lhotari/action-upterm@v1
-    with:
-      limit-access-to-actor: true
-      limit-access-to-users: skourta
+    steps:
+      - name: Integration test charm
+        uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v16.7.0
+        with:
+          artifact-prefix: packed-charm-cache-true
+          cloud: lxd
+          juju-agent-version: 3.5.3
+          _beta_allure_report: true
+        secrets:
+          # GitHub appears to redact each line of a multi-line secret
+          # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
+          integration-test: |
+            { "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+              "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
+              "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
+              "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
+              "GCP_SERVICE_ACCOUNT": "${{ secrets.GCP_SERVICE_ACCOUNT }}", }
+        permissions:
+          contents: write
+      
+      - name: setup-ssh-debugging-session
+        if: failure()
+        uses: lhotari/action-upterm@v1
+        with:
+          limit-access-to-actor: true
+          limit-access-to-users: skourta
