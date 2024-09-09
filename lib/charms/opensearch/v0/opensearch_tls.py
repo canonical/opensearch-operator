@@ -98,11 +98,17 @@ class OpenSearchTLS(Object):
         if self.charm.upgrade_in_progress:
             event.fail("Setting private key not supported while upgrade in-progress")
             return
+
         cert_type = CertType(event.params["category"])  # type
         scope = Scope.APP if cert_type == CertType.APP_ADMIN else Scope.UNIT
-
-        if scope == Scope.APP and not self.charm.unit.is_leader():
-            event.log("Only the juju leader unit can set private key for the admin certificates.")
+        if scope == Scope.APP and not (
+            self.charm.unit.is_leader()
+            and self.charm.opensearch_peer_cm.deployment_desc().typ
+            == DeploymentType.MAIN_ORCHESTRATOR
+        ):
+            event.log(
+                "Only the juju leader unit of the main orchestrator can set private key for the admin certificates."
+            )
             return
 
         try:
@@ -144,7 +150,18 @@ class OpenSearchTLS(Object):
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             event.defer()
             return
-        admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
+        # TODO: should this be deleted when the TLS rotation workflow adapted to large deployments?
+        # or is this enough?
+        if (
+            self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR
+            and not (admin_secrets and self.charm.opensearch_peer_cm.is_consumer())
+        ):
+            event.defer()
+            return
+
         if self.charm.unit.is_leader():
             # create passwords for both ca trust_store/admin key_store
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
@@ -152,7 +169,7 @@ class OpenSearchTLS(Object):
                 Scope.APP, CertType.APP_ADMIN, CertType.APP_ADMIN.val
             )
 
-            if admin_cert is None and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            if admin_secrets is None and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
                 self._request_certificate(Scope.APP, CertType.APP_ADMIN)
 
         # create passwords for both unit-http/transport key_stores

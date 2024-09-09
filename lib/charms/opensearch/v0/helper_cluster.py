@@ -37,7 +37,7 @@ class ClusterTopology:
     @staticmethod
     def generated_roles() -> List[str]:
         """Get generated roles for a Node."""
-        return ["data", "ingest", "ml", "coordinating_only", "cluster_manager"]
+        return ["data", "ingest", "ml", "cluster_manager"]
 
     @staticmethod
     def get_cluster_settings(
