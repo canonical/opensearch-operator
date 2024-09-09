@@ -2,12 +2,15 @@
 # See LICENSE file for licensing details.
 
 """Utility classes and methods for getting cluster info, configuration info and suggestions."""
+import json
 import logging
 from typing import Dict, List, Optional
 
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import App, Node
+from charms.opensearch.v0.models import App, Node, PeerClusterApp
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from ops.charm import CharmBase
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # The unique Charmhub library identifier, never change it
@@ -138,6 +141,23 @@ class ClusterTopology:
                 result[role].append(node)
 
         return result
+
+    @staticmethod
+    def data_role_in_cluster_fleet_apps(charm: CharmBase) -> bool:
+        """Look for data-role through all the roles of all the nodes in all applications"""
+        if (
+            all_apps := charm.model.get_relation(PeerRelationName)
+            .data[charm.model.app]
+            .get("cluster_fleet_apps")
+        ):
+            cluster_apps = json.loads(all_apps)
+            for app in cluster_apps.values():
+                logger.debug(f"app: {app}")
+                p_cluster_app = PeerClusterApp.from_dict(app)
+                if "data" in p_cluster_app.roles:
+                    return True
+
+        return False
 
     @staticmethod
     def nodes(

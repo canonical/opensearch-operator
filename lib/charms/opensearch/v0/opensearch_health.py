@@ -13,12 +13,8 @@ from charms.opensearch.v0.constants_charm import (
     WaitingForBusyShards,
     WaitingForSpecificBusyShards,
 )
-from charms.opensearch.v0.helper_charm import (
-    Status,
-    data_role_in_cluster_fleet_apps,
-    trigger_peer_rel_changed,
-)
-from charms.opensearch.v0.helper_cluster import ClusterState
+from charms.opensearch.v0.helper_charm import Status, trigger_peer_rel_changed
+from charms.opensearch.v0.helper_cluster import ClusterState, ClusterTopology
 from charms.opensearch.v0.models import StartMode
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHAError,
@@ -96,7 +92,7 @@ class OpenSearchHealth:
         # compute health only in clusters where data nodes exist
         compute_health = (
             deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-            or data_role_in_cluster_fleet_apps(self._charm)
+            or ClusterTopology.data_role_in_cluster_fleet_apps(self._charm)
             or not local_app_only
         )
         if not compute_health:

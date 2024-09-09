@@ -17,7 +17,6 @@ from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import (
     RelDepartureReason,
     all_units,
-    data_role_in_cluster_fleet_apps,
     format_unit_name,
     relation_departure_reason,
 )
@@ -447,7 +446,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         elif not self.charm.tls.is_fully_configured_in_cluster():
             blocked_msg = f"TLS not fully configured {message_suffix}."
             should_retry = False
-        elif not data_role_in_cluster_fleet_apps(self.charm):
+        elif not ClusterTopology.data_role_in_cluster_fleet_apps(self.charm):
             if not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
                 blocked_msg = f"Security index not initialized {message_suffix}."
             elif not self.charm.is_every_unit_marked_as_started():
@@ -523,6 +522,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         if not (data := event.relation.data.get(event.app)):
             return
+        # todo: remove logger
+        logger.debug(f"event relation data: {data}")
 
         # fetch main and failover clusters relations ids if any
         orchestrators = self._orchestrators(event, data, deployment_desc)

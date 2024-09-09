@@ -162,6 +162,8 @@ class OpenSearchPeerClustersManager:
 
                 hosts.append(p_cluster_app.leader_host)
 
+        # todo: remove logger
+        logger.debug(f"cm nodes: {data.cm_nodes}")
         if data.cm_nodes:
             self._charm.opensearch_config.add_seed_hosts([node.ip for node in data.cm_nodes])
         elif hosts:
