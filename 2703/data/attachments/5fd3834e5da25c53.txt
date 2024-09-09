@@ -1,0 +1,66 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  01:45:34Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         error        3  opensearch                                 0  no       hook failed: "secret-changed"
+s3-integrator                      blocked      1  s3-integrator             latest/edge     41  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports  Message
+opensearch/0*                maintenance  executing  2        10.149.35.126          Waiting for TLS to be fully configured...
+opensearch/1                 maintenance  executing  3        10.149.35.251          Waiting for TLS to be fully configured...
+opensearch/2                 error        idle       4        10.149.35.159          hook failed: "secret-changed"
+s3-integrator/0*             blocked      idle       0        10.149.35.100          Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/0*  active       executing  1        10.149.35.158          
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.149.35.100  juju-04ef63-0  ubuntu@22.04      Running
+1        started  10.149.35.158  juju-04ef63-1  ubuntu@22.04      Running
+2        started  10.149.35.126  juju-04ef63-2  ubuntu@22.04      Running
+3        started  10.149.35.251  juju-04ef63-3  ubuntu@22.04      Running
+4        started  10.149.35.159  juju-04ef63-4  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:43:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:43:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 01:43:29 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:43:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:43:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:43:33 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:43:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:43:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:43:49 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:43:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:43:50 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:43:50 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:43:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:43:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:43:51 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-2: 01:45:27 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:45:28 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:45:28 ERROR unit.opensearch/2.juju-log certificates:4: [Errno 111] Connection refused
+unit-opensearch-2: 01:45:28 ERROR unit.opensearch/2.juju-log certificates:4: CA cert not found, quitting.
+unit-opensearch-2: 01:45:29 ERROR unit.opensearch/2.juju-log certificates:4: CA cert not found, quitting.
+unit-opensearch-1: 01:45:29 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:45:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:45:30 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-2: 01:45:30 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-1: 01:45:30 ERROR unit.opensearch/1.juju-log certificates:4: [Errno 111] Connection refused
+unit-opensearch-1: 01:45:30 ERROR unit.opensearch/1.juju-log certificates:4: CA cert not found, quitting.
+unit-opensearch-1: 01:45:30 ERROR unit.opensearch/1.juju-log certificates:4: CA cert not found, quitting.
+unit-opensearch-2: 01:45:31 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:45:31 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-2: 01:45:31 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-1: 01:45:31 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:45:31 ERROR unit.opensearch/1.juju-log CA cert not found, quitting.
+unit-opensearch-1: 01:45:31 ERROR unit.opensearch/1.juju-log CA cert not found, quitting.
+unit-opensearch-2: 01:45:32 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:45:32 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-2: 01:45:32 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-1: 01:45:32 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:173 Cleaning backups from cloud buckets
