@@ -31,6 +31,7 @@ from charms.opensearch.v0.models import (
     PeerClusterRelDataCredentials,
     PeerClusterRelErrorData,
     S3RelDataCredentials,
+    StartMode,
 )
 from charms.opensearch.v0.opensearch_backups import S3_RELATION
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
@@ -446,7 +447,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         elif not self.charm.tls.is_fully_configured_in_cluster():
             blocked_msg = f"TLS not fully configured {message_suffix}."
             should_retry = False
-        elif not ClusterTopology.data_role_in_cluster_fleet_apps(self.charm):
+        elif (
+            ClusterTopology.data_role_in_cluster_fleet_apps(self.charm)
+            or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+        ):
             if not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
                 blocked_msg = f"Security index not initialized {message_suffix}."
             elif not self.charm.is_every_unit_marked_as_started():
@@ -522,8 +526,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         if not (data := event.relation.data.get(event.app)):
             return
-        # todo: remove logger
-        logger.debug(f"event relation data: {data}")
 
         # fetch main and failover clusters relations ids if any
         orchestrators = self._orchestrators(event, data, deployment_desc)

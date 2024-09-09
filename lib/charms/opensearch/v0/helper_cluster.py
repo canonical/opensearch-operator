@@ -152,7 +152,6 @@ class ClusterTopology:
         ):
             cluster_apps = json.loads(all_apps)
             for app in cluster_apps.values():
-                logger.debug(f"app: {app}")
                 p_cluster_app = PeerClusterApp.from_dict(app)
                 if "data" in p_cluster_app.roles:
                     return True

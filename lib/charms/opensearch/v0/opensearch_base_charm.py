@@ -352,6 +352,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # only start the main orchestrator if a data node is available
         if (
             deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            and not deployment_desc.start == StartMode.WITH_GENERATED_ROLES
             and "data" not in deployment_desc.config.roles
         ):
             self.status.set(BlockedStatus(PClusterNoDataNode))
@@ -907,8 +908,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # this happens only on the first data node to join the cluster
         if (
             self.unit.is_leader()
-            and "data" in self.opensearch_peer_cm.deployment_desc().config.roles
             and not self.peers_data.get(Scope.APP, "security_index_initialised")
+            and (
+                "data" in self.opensearch_peer_cm.deployment_desc().config.roles
+                or self.opensearch_peer_cm.deployment_desc().start
+                == StartMode.WITH_GENERATED_ROLES
+            )
         ):
             admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
             try:
@@ -1157,7 +1162,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             or not self.alt_hosts
         ):
             return self.unit.is_leader() and (
-                deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+                deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+                or deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
                 or deployment_desc.typ == DeploymentType.OTHER
                 and "data" in deployment_desc.config.roles
             )
