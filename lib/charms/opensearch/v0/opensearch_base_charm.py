@@ -1348,7 +1348,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
 
         contribute_to_bootstrap = False
-        if "cluster_manager" in computed_roles:
+        if computed_roles == ["coordinating"]:
+            computed_roles = []  # to mark a node as dedicated coordinating only, we clear the list
+        elif "cluster_manager" in computed_roles:
             cm_names.append(self.unit_name)
             cm_ips.append(self.unit_ip)
 
@@ -1414,8 +1416,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         current_conf = self.opensearch_config.load_node()
+        stored_roles = current_conf["node.roles"] or ["coordinating"]
+        new_conf_roles = new_node_conf.roles or ["coordinating"]
         if (
-            sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles)
+            sorted(stored_roles) == sorted(new_conf_roles)
             and current_conf.get("node.attr.temp") == new_node_conf.temperature
         ):
             # no conf change (roles for now)
