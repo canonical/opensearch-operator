@@ -207,6 +207,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         _request_certificate.assert_not_called()
 
         self.harness.set_leader(is_leader=True)
+        deployment_desc.return_value = self.deployment_descriptions["ok"]
         self.charm.tls._on_set_tls_private_key(event_mock)
         _request_certificate.assert_called_once()
 
