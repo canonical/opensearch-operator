@@ -101,11 +101,10 @@ class OpenSearchTLS(Object):
 
         cert_type = CertType(event.params["category"])  # type
         scope = Scope.APP if cert_type == CertType.APP_ADMIN else Scope.UNIT
-        if (
-            scope == Scope.APP
-            and not self.charm.unit.is_leader()
+        if scope == Scope.APP and not (
+            self.charm.unit.is_leader()
             and self.charm.opensearch_peer_cm.deployment_desc().typ
-            != DeploymentType.MAIN_ORCHESTRATOR
+            == DeploymentType.MAIN_ORCHESTRATOR
         ):
             event.log(
                 "Only the juju leader unit of the main orchestrator can set private key for the admin certificates."
@@ -153,7 +152,9 @@ class OpenSearchTLS(Object):
             return
 
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-        # TODO should this be deleted when the TLS rotation workflow adapted to large deployments
+
+        # TODO: should this be deleted when the TLS rotation workflow adapted to large deployments?
+        # or is this enough?
         if (
             self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR
             and not (admin_secrets and self.charm.opensearch_peer_cm.is_consumer())
