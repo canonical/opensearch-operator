@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import all_units, run_cmd
+from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -73,7 +74,7 @@ class OpenSearchTLS(Object):
         self.jdk_path = jdk_path
         self.certs_path = certs_path
         self.keytool = self.jdk_path + "/bin/keytool"
-        self.certs = TLSCertificatesRequiresV3(charm, TLS_RELATION)
+        self.certs = TLSCertificatesRequiresV3(charm, TLS_RELATION, expiry_notification_time=23)
 
         self.framework.observe(
             self.charm.on.set_tls_private_key_action, self._on_set_tls_private_key
@@ -97,11 +98,17 @@ class OpenSearchTLS(Object):
         if self.charm.upgrade_in_progress:
             event.fail("Setting private key not supported while upgrade in-progress")
             return
+
         cert_type = CertType(event.params["category"])  # type
         scope = Scope.APP if cert_type == CertType.APP_ADMIN else Scope.UNIT
-
-        if scope == Scope.APP and not self.charm.unit.is_leader():
-            event.log("Only the juju leader unit can set private key for the admin certificates.")
+        if scope == Scope.APP and not (
+            self.charm.unit.is_leader()
+            and self.charm.opensearch_peer_cm.deployment_desc().typ
+            == DeploymentType.MAIN_ORCHESTRATOR
+        ):
+            event.log(
+                "Only the juju leader unit of the main orchestrator can set private key for the admin certificates."
+            )
             return
 
         try:
@@ -143,7 +150,18 @@ class OpenSearchTLS(Object):
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             event.defer()
             return
-        admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
+        # TODO: should this be deleted when the TLS rotation workflow adapted to large deployments?
+        # or is this enough?
+        if (
+            self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR
+            and not (admin_secrets and self.charm.opensearch_peer_cm.is_consumer())
+        ):
+            event.defer()
+            return
+
         if self.charm.unit.is_leader():
             # create passwords for both ca trust_store/admin key_store
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
@@ -151,7 +169,7 @@ class OpenSearchTLS(Object):
                 Scope.APP, CertType.APP_ADMIN, CertType.APP_ADMIN.val
             )
 
-            if admin_cert is None and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            if admin_secrets is None and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
                 self._request_certificate(Scope.APP, CertType.APP_ADMIN)
 
         # create passwords for both unit-http/transport key_stores
@@ -302,6 +320,7 @@ class OpenSearchTLS(Object):
         subject = self._get_subject(cert_type)
         organization = self.charm.opensearch_peer_cm.deployment_desc().config.cluster_name
         new_csr = generate_csr(
+            add_unique_id_to_subject_name=False,
             private_key=key,
             private_key_password=(None if key_password is None else key_password.encode("utf-8")),
             subject=subject,
@@ -329,25 +348,20 @@ class OpenSearchTLS(Object):
         if cert_type == CertType.APP_ADMIN:
             return sans
 
-        # in order to be able to use the API for reloading TLS certificates it is necessary
-        # to only have one dns name and one ip address in the sans
-        # otherwise the following upstream bug will mess the sorting of these fields
-        # https://github.com/opensearch-project/security/issues/4480
-        dns = {socket.getfqdn()}
+        dns = {self.charm.unit_name, socket.gethostname(), socket.getfqdn()}
         ips = {self.charm.unit_ip}
 
-        # see above, related to https://github.com/opensearch-project/security/issues/4480
-        # host_public_ip = get_host_public_ip()
-        # if cert_type == CertType.UNIT_HTTP and host_public_ip:
-        #    ips.add(host_public_ip)
+        host_public_ip = get_host_public_ip()
+        if cert_type == CertType.UNIT_HTTP and host_public_ip:
+            ips.add(host_public_ip)
 
         for ip in ips.copy():
             try:
                 name, aliases, addresses = socket.gethostbyaddr(ip)
                 ips.update(addresses)
-                # see above, related to https://github.com/opensearch-project/security/issues/4480
-                # dns.add(name)
-                # dns.update(aliases)
+
+                dns.add(name)
+                dns.update(aliases)
             except (socket.herror, socket.gaierror):
                 continue
 
