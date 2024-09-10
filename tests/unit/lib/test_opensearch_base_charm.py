@@ -7,7 +7,7 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, call, patch
 
-import charms.opensearch.v0.opensearch_locking as opensearch_locking
+from charms.opensearch.v0.constants_charm import NodeLockRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.models import (
     App,
@@ -90,7 +90,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.lock_fallback_rel_id = self.harness.add_relation(
-            opensearch_locking._PeerRelationLock._ENDPOINT_NAME, self.charm.app.name
+            NodeLockRelationName, self.charm.app.name
         )
 
         self.OPENSEARCH_DISTRO = (

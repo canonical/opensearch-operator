@@ -91,6 +91,7 @@ BackupInDisabling = "Disabling backup service..."
 # Relation Interfaces
 ClientRelationName = "opensearch-client"
 PeerRelationName = "opensearch-peers"
+NodeLockRelationName = "node-lock-fallback"
 PeerClusterOrchestratorRelationName = "peer-cluster-orchestrator"
 PeerClusterRelationName = "peer-cluster"
 COSUser = "monitor"
@@ -108,7 +109,7 @@ KibanaserverUser = "kibanaserver"
 KibanaserverRole = "kibana_server"
 
 # Opensearch Snap revision
-OPENSEARCH_SNAP_REVISION = 54  # Keep in sync with `workload_version` file
+OPENSEARCH_SNAP_REVISION = 57  # Keep in sync with `workload_version` file
 
 # User-face Backup ID format
 OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"

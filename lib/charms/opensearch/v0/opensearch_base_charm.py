@@ -537,6 +537,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.opensearch.is_node_up():
             return
 
+        # review available CMs
+        self._add_cm_addresses_to_conf()
+
         # if there are exclusions to be removed
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
@@ -1169,11 +1172,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         try:
             for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(0.5)):
                 with attempt:
-                    resp = self.opensearch.request(
-                        "GET", endpoint=f"/_cat/allocation/{self.unit_name}?format=json"
+                    search_shards_info = self.opensearch.request(
+                        "GET", "/*/_search_shards?expand_wildcards=all"
                     )
-                    for entry in resp:
-                        if entry.get("node") == self.unit_name and entry.get("shards") != 0:
+
+                    # find the node id of the current unit
+                    node_id = None
+                    for node_id, node in search_shards_info["nodes"].items():
+                        if node["name"] == self.unit_name:
+                            break
+                    assert node_id is not None  # should never happen
+
+                    # check if the node has any shards assigned to it
+                    for shard_data in search_shards_info["shards"]:
+                        if shard_data[0]["node"] == node_id:
                             raise Exception
                     return True
         except RetryError:
@@ -1315,7 +1327,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
 
         contribute_to_bootstrap = False
-        if "cluster_manager" in computed_roles:
+        if computed_roles == ["coordinating"]:
+            computed_roles = []  # to mark a node as dedicated coordinating only, we clear the list
+        elif "cluster_manager" in computed_roles:
             cm_names.append(self.unit_name)
             cm_ips.append(self.unit_ip)
 
@@ -1381,8 +1395,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         current_conf = self.opensearch_config.load_node()
+        stored_roles = current_conf["node.roles"] or ["coordinating"]
+        new_conf_roles = new_node_conf.roles or ["coordinating"]
         if (
-            sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles)
+            sorted(stored_roles) == sorted(new_conf_roles)
             and current_conf.get("node.attr.temp") == new_node_conf.temperature
         ):
             # no conf change (roles for now)

@@ -37,7 +37,7 @@ class ClusterTopology:
     @staticmethod
     def generated_roles() -> List[str]:
         """Get generated roles for a Node."""
-        return ["data", "ingest", "ml", "coordinating_only", "cluster_manager"]
+        return ["data", "ingest", "ml", "cluster_manager"]
 
     @staticmethod
     def get_cluster_settings(
@@ -236,10 +236,38 @@ class ClusterState:
         verbose: bool = False,
     ) -> List[Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
-        params = ""
-        if verbose:
-            params = "?v=true&h=index,shard,prirep,state,unassigned.reason&s=state"
-        return opensearch.request("GET", f"/_cat/shards{params}", host=host, alt_hosts=alt_hosts)
+        cluster_state = opensearch.request(
+            "GET", "_cluster/state/routing_table,metadata,nodes", host=host, alt_hosts=alt_hosts
+        )
+
+        nodes = cluster_state["nodes"]
+
+        shards_info = []
+        for index_name, index_data in cluster_state["routing_table"]["indices"].items():
+            for shard_num, shard_data in index_data["shards"].items():
+                for shard in shard_data:
+                    node_data = nodes.get(shard["node"], {})
+                    node_name = node_data.get("name", None)
+                    node_ip = (
+                        node_data["transport_address"].split(":")[0]
+                        if "transport_address" in node_data
+                        else None
+                    )
+
+                    shard_info = {
+                        "index": index_name,
+                        "shard": shard_num,
+                        "prirep": shard["primary"] and "p" or "r",
+                        "state": shard["state"],
+                        "ip": node_ip,
+                        "node": node_name,
+                    }
+                    if verbose:
+                        shard_info["unassigned.reason"] = shard.get("unassigned_info", {}).get(
+                            "reason", None
+                        )
+                    shards_info.append(shard_info)
+        return shards_info
 
     @staticmethod
     @retry(
@@ -272,10 +300,24 @@ class ClusterState:
         alt_hosts: Optional[List[str]] = None,
     ) -> Dict[str, Dict[str, str]]:
         """Get all shards of all indexes in the cluster."""
-        endpoint = "/_cat/indices?expand_wildcards=all"
+        # Get cluster state
+        cluster_state = opensearch.request(
+            "GET", "/_cluster/state/metadata", host=host, alt_hosts=alt_hosts
+        )
+        indices_state = cluster_state["metadata"]["indices"]
+
+        # Get cluster health
+        cluster_health = opensearch.request(
+            "GET", "/_cluster/health?level=indices", host=host, alt_hosts=alt_hosts
+        )
+        indices_health = cluster_health["indices"]
+
         idx = {}
-        for index in opensearch.request("GET", endpoint, host=host, alt_hosts=alt_hosts):
-            idx[index["index"]] = {"health": index["health"], "status": index["status"]}
+        for index in indices_state.keys():
+            idx[index] = {
+                "health": indices_health[index]["status"],
+                "status": indices_state[index]["state"],
+            }
         return idx
 
     @staticmethod

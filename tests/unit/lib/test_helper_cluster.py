@@ -314,3 +314,25 @@ class TestHelperCluster(unittest.TestCase):
             host=None,
             alt_hosts=None,
         )
+
+    @patch("charms.opensearch.v0.helper_cluster.ClusterState.shards")
+    def test_count_shards_by_state(self, shards):
+        """Test the busy shards filtering."""
+        shards.return_value = [
+            {"index": "index1", "state": "STARTED", "node": "opensearch-0"},
+            {"index": "index1", "state": "INITIALIZING", "node": "opensearch-1"},
+            {"index": "index2", "state": "STARTED", "node": "opensearch-0"},
+            {"index": "index2", "state": "RELOCATING", "node": "opensearch-1"},
+            {"index": "index3", "state": "STARTED", "node": "opensearch-0"},
+            {"index": "index3", "state": "STARTED", "node": "opensearch-1"},
+            {"index": "index4", "state": "STARTED", "node": "opensearch-2"},
+            {"index": "index4", "state": "INITIALIZING", "node": "opensearch-2"},
+        ]
+        self.assertDictEqual(
+            ClusterState.shards_by_state(self.opensearch),
+            {
+                "STARTED": 5,
+                "INITIALIZING": 2,
+                "RELOCATING": 1,
+            },
+        )
