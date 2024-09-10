@@ -7,11 +7,7 @@ import logging
 import time
 
 import pytest
-from charms.opensearch.v0.constants_charm import (
-    PClusterNoDataNode,
-    PClusterNoRelation,
-    TLSRelationMissing,
-)
+from charms.opensearch.v0.constants_charm import PClusterNoDataNode, PClusterNoRelation
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import MODEL_CONFIG, SERIES, get_leader_unit_ip
