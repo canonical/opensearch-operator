@@ -337,7 +337,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             app=deployment_desc.app,
             planned_units=self.charm.app.planned_units(),
             units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
-            leader_host=self.charm.unit_ip or "",
+            leader_host=self.charm.opensearch.host,
             roles=deployment_desc.config.roles,
         )
         cluster_fleet_apps.update({current_app.app.id: current_app.to_dict()})
