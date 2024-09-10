@@ -345,7 +345,9 @@ class S3RelData(Model):
         """
         creds = S3RelDataCredentials(**input_dict)
         protocol = S3RelData.get_endpoint_protocol(input_dict.get("endpoint"))
-        return cls.from_dict(input_dict | {"protocol": protocol, "s3-credentials": creds.dict()})
+        return cls.from_dict(
+            dict(input_dict) | {"protocol": protocol, "s3-credentials": creds.dict()}
+        )
 
 
 class PeerClusterRelDataCredentials(Model):

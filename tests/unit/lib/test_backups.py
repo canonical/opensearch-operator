@@ -10,6 +10,7 @@ import charms
 import pytest
 import tenacity
 from charms.opensearch.v0.constants_charm import (
+    S3_RELATION,
     BackupDeferRelBrokenAsInProgress,
     BackupInDisabling,
     PeerRelationName,
@@ -17,10 +18,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.helper_cluster import IndexStateEnum
 from charms.opensearch.v0.models import S3RelData
-
-# from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_backups import (
-    S3_RELATION,
     S3_REPOSITORY,
     BackupServiceState,
     OpenSearchRestoreCheckError,
@@ -50,7 +48,7 @@ from lib.charms.opensearch.v0.models import (
     StartMode,
     State,
 )
-from tests.helpers import patch_network_get
+from tests.helpers import patch_network_get, patch_wait_fixed
 
 TEST_BUCKET_NAME = "s3://bucket-test"
 TEST_BASE_PATH = "/test"
@@ -66,7 +64,7 @@ LIST_BACKUPS_TRIAL = """ backup-id           | backup-status
 deployment_desc = namedtuple("deployment_desc", ["typ"])
 
 
-def create_deployment_desc():
+def create_deployment_desc(*args, **kwargs):
     return DeploymentDescription(
         config=PeerClusterConfig(
             cluster_name="logs", init_hold=False, roles=["cluster_manager", "data"]
@@ -461,7 +459,7 @@ def test_on_s3_broken_steps(
     harness.charm.status.set = MagicMock()
 
     # Call the method
-    harness.charm.backup._on_s3_broken(event)
+    harness.charm.backup._on_s3_relation_broken(event)
 
     if test_type == "s3-still-units-present":
         event.defer.assert_called()
@@ -481,19 +479,24 @@ def test_on_s3_broken_steps(
         harness.charm.backup._execute_s3_broken_calls.assert_called_once()
 
 
-@patch_network_get("1.1.1.1")
 class TestBackups(unittest.TestCase):
     maxDiff = None
 
     def setUp(self) -> None:
+        # Class-level patching
+        self.patcher1 = patch(
+            "charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.is_provider",
+            MagicMock(return_value=True),
+        ).start()
+        self.patcher2 = patch(
+            "charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc",
+            create_deployment_desc,
+        ).start()
+        self.patcher3 = patch_wait_fixed().start()
+        self.patcher4 = patch_network_get("1.1.1.1").start()
+
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
-        charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc = MagicMock(
-            return_value=create_deployment_desc()
-        )
-        charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.is_provider = (
-            MagicMock(return_value=True)
-        )
         self.harness.begin()
 
         self.charm = self.harness.charm
@@ -511,10 +514,6 @@ class TestBackups(unittest.TestCase):
         }
         self.charm.opensearch.is_started = MagicMock(return_value=True)
         self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
-        # Mock retrials to speed up tests
-        charms.opensearch.v0.opensearch_backups.wait_fixed = MagicMock(
-            return_value=tenacity.wait.wait_fixed(0.1)
-        )
         self.charm.status = MagicMock()
 
         # Replace some unused methods that will be called as part of set_leader with mock
@@ -567,10 +566,16 @@ class TestBackups(unittest.TestCase):
             "s3-integrator",
             relation_data,
         )
+
         assert S3RelData.from_relation(relation_data) == self.charm.backup.plugin.data
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
+                config_entries={
+                    "s3.client.default.endpoint": "localhost",
+                    "s3.client.default.protocol": "https",
+                    "s3.client.default.region": "testing-region",
+                },
                 secret_entries={
                     "s3.client.default.access_key": "aaaa",
                     "s3.client.default.secret_key": "bbbb",
@@ -578,10 +583,13 @@ class TestBackups(unittest.TestCase):
             ).__dict__
         )
 
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.update_plugin")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_apply_api_config_if_needed(self, mock_status, _, mock_request) -> None:
+    def test_apply_api_config_if_needed(
+        self, mock_status, _, mock_request, mock_update_plugin
+    ) -> None:
         """Tests the application of post-restart steps."""
         self.harness.update_relation_data(
             self.s3_rel_id,
@@ -596,6 +604,7 @@ class TestBackups(unittest.TestCase):
                 "storage-class": "storageclass",
             },
         )
+
         mock_status.return_value = PluginState.ENABLED
         self.charm.backup.apply_api_config_if_needed()
         mock_request.assert_called_with(
@@ -613,6 +622,11 @@ class TestBackups(unittest.TestCase):
                 },
             },
         )
+        assert mock_update_plugin.call_args_list[0][0][0] == {
+            "s3.client.default.endpoint": "localhost",
+            "s3.client.default.region": "testing-region",
+            "s3.client.default.protocol": "https",
+        }
 
     def test_on_list_backups_action(self):
         event = MagicMock()

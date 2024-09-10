@@ -7,10 +7,15 @@ from types import SimpleNamespace
 from typing import Callable
 from unittest.mock import patch
 
+import tenacity
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
+
+
+def patch_wait_fixed() -> Callable:
+    return patch("charms.opensearch.v0.opensearch_backups.wait_fixed", tenacity.wait.wait_fixed)
 
 
 def patch_network_get(private_address: str = "1.1.1.1") -> Callable:

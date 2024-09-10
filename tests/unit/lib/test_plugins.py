@@ -46,8 +46,8 @@ class TestPlugin(OpenSearchPlugin):
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
 
-    def __init__(self, plugins_path, extra_config):
-        super().__init__(plugins_path, extra_config)
+    def __init__(self, charm):
+        super().__init__(charm)
 
     @property
     def name(self):
@@ -76,8 +76,8 @@ class TestPluginAlreadyInstalled(TestPlugin):
     test_plugin_disable_called = False
     PLUGIN_PROPERTIES = "test_plugin.properties"
 
-    def __init__(self, plugins_path, extra_config):
-        super().__init__(plugins_path, extra_config)
+    def __init__(self, charm):
+        super().__init__(charm)
 
     def config(self):
         return OpenSearchPluginConfig(

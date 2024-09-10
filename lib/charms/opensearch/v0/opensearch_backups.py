@@ -815,9 +815,6 @@ class OpenSearchBackup(OpenSearchBackupBase):
             # is correctly set
             return
 
-        if self.plugin.data.tls_ca_chain is not None:
-            raise NotImplementedError
-
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
         try:
@@ -951,9 +948,6 @@ class OpenSearchBackup(OpenSearchBackupBase):
             logger.error(e)
             event.defer()
             return
-
-        # Let's reset the current plugin
-        self.plugin.data = {}
 
         self.charm.status.clear(BackupInDisabling)
         self.charm.status.clear(PluginConfigError)

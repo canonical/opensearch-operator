@@ -266,7 +266,7 @@ class OpenSearchBaseCharm(CharmBase):
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
 
-"""  # noqa: D405, D410, D411, D214, D412, D416
+"""  # noqa
 
 import json
 import logging
@@ -278,7 +278,6 @@ from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import DeploymentType, S3RelData
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from jproperties import Properties
-from overrides import override
 from pydantic import BaseModel, validator
 from pydantic.error_wrappers import ValidationError
 
@@ -440,9 +439,13 @@ class OpenSearchPluginDataProvider:
         """Creates the OpenSearchPluginRelationsHandler object."""
         self._charm = charm
 
-    @property
     @abstractmethod
-    def data(self) -> Dict[str, Any]:
+    def get_relation(self) -> Any:
+        """Returns the relation object if it's not set yet."""
+        pass
+
+    @abstractmethod
+    def get_data(self) -> Dict[str, Any]:
         """Returns the data from the relation databag.
 
         Exceptions:
@@ -486,24 +489,37 @@ class OpenSearchPluginBackupDataProvider(OpenSearchPluginDataProvider):
     """
 
     def __init__(self, charm):
-        """Creates the OpenSearchPluginRelationsHandler object."""
-        self._charm = charm
-        self._relation = charm.model.get_relation(S3_RELATION)
-        if not charm.opensearch_peer_cm.deployment_desc():
+        """Creates the OpenSearchPluginBackupDataProvider object."""
+        super().__init__(charm)
+        self._relation = None
+        self.is_main_orchestrator = (
+            self._charm.opensearch_peer_cm.deployment_desc().typ
+            == DeploymentType.MAIN_ORCHESTRATOR
+        )
+
+    def get_relation(self) -> Any:
+        """Updates the relation object if needed."""
+        self._relation = self._charm.model.get_relation(S3_RELATION)
+        if not self._charm.opensearch_peer_cm.deployment_desc():
             # Temporary condition: we are waiting for CM to show up and define which type
             # of cluster are we. Once we have that defined, then we will process.
             raise OpenSearchPluginMissingConfigError("Missing deployment description in peer CM")
-        if charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
-            self._relation = charm.model.get_relation(PeerRelationName)
+        if (
+            self._charm.opensearch_peer_cm.deployment_desc().typ
+            != DeploymentType.MAIN_ORCHESTRATOR
+        ):
+            self._relation = self._charm.model.get_relation(PeerRelationName)
+        return self._relation
 
-    @override
-    def data(self) -> Dict[str, Any]:
+    def get_data(self) -> Dict[str, Any]:
         """Returns the data from the relation databag.
 
         Exceptions:
             ValueError: if the data is not valid
         """
-        return self._relation.data[self._charm.unit] or {}
+        if not self.get_relation():
+            return {}
+        return self.get_relation().data[self._relation.app] or {}
 
 
 class OpenSearchBackupPlugin(OpenSearchPlugin, OpenSearchPluginBackupDataProvider):
@@ -529,12 +545,8 @@ class OpenSearchBackupPlugin(OpenSearchPlugin, OpenSearchPluginBackupDataProvide
 
     def __init__(self, charm):
         """Creates the OpenSearchBackupPlugin object."""
-        super(OpenSearchPluginBackupDataProvider, self).__init__(charm)
+        super(self.DATA_PROVIDER, self).__init__(charm)
         super(OpenSearchPlugin, self).__init__(charm)
-
-        self.is_main_orchestrator = (
-            charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
-        )
         self.repo_name = "default"
 
     def is_set(self) -> bool:
@@ -548,8 +560,9 @@ class OpenSearchBackupPlugin(OpenSearchPlugin, OpenSearchPluginBackupDataProvide
     @property
     def data(self) -> BaseModel:
         """Returns the data from the relation databag."""
+        self._relation = self.get_relation()
         try:
-            return self.MODEL.from_relation(self._relation.data[self._charm.unit])
+            return self.MODEL.from_relation(self.get_data())
         except ValidationError:
             return self.MODEL()
 
