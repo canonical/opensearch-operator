@@ -546,7 +546,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             self.opensearch_exclusions.cleanup()
 
-            if (health := self.health.apply(wait_for_green_first=True)) not in [
+            if (health := self.health.apply(wait_for_green_first=False)) not in [
                 HealthColors.GREEN,
                 HealthColors.IGNORE,
             ]:

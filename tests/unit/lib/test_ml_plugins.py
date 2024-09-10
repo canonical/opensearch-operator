@@ -230,6 +230,7 @@ class TestOpenSearchKNN(unittest.TestCase):
             "PUT",
             "/_cluster/settings?flat_settings=true",
             payload='{"persistent": {"knn.plugin.enabled": null} }',
+            retries=3,
         )
         # It means we correctly cleaned the cache
         mock_cluster_config.__delete__.assert_called_once()

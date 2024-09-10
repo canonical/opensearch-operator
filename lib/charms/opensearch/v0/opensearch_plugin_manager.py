@@ -336,7 +336,7 @@ class OpenSearchPluginManager:
                         retries=3,
                     )
                     settings_changed_via_api = True
-                except OpenSearchHttpError as e:
+                except OpenSearchHttpError:
                     logger.debug(f"Failed to apply settings via API for: {config.config_entries}")
 
         # Update the configuration files
