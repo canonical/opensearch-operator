@@ -255,8 +255,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             _set_node_conf.assert_called()
             start.assert_called_once()
             _post_start_init.assert_called_once()
-            # _initialize_security_index.assert_called_once()
-            # self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
 
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackup.is_backup_in_progress")
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackup._is_restore_complete")
