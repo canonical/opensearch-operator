@@ -455,26 +455,26 @@ class OpenSearchDistribution(ABC):
     def missing_sys_requirements(self) -> List[str]:
         """Checks the system requirements."""
 
-        def apply(prop: str, value: str) -> bool:
+        def apply(prop: str, value: int) -> bool:
             """Apply a sysctl value and check if it was set."""
             try:
                 self._run_cmd(f"sysctl -w {prop}={value}")
-                return self._run_cmd(f"sysctl -n {prop}") == value
+                return int(self._run_cmd(f"sysctl -n {prop}")) == value
             except OpenSearchCmdError:
                 return False
 
         missing_requirements = []
 
-        prop, val = "vm.max_map_count", "262144"
-        if self._run_cmd(f"sysctl -n {prop}") < val and not apply(prop, val):
+        prop, val = "vm.max_map_count", 262144
+        if int(self._run_cmd(f"sysctl -n {prop}")) < val and not apply(prop, val):
             missing_requirements.append(f"{prop} should be at least {val}")
 
-        prop, val = "vm.swappiness", "0"
-        if self._run_cmd(f"sysctl -n {prop}") > val and not apply(prop, val):
-            missing_requirements.append(f"{prop} should be {val}")
+        prop, val = "vm.swappiness", 1
+        if int(self._run_cmd(f"sysctl -n {prop}")) > val and not apply(prop, 0):
+            missing_requirements.append(f"{prop} should be at most 1")
 
-        prop, val = "net.ipv4.tcp_retries2", "5"
-        if self._run_cmd(f"sysctl -n {prop}") > val and not apply(prop, val):
+        prop, val = "net.ipv4.tcp_retries2", 5
+        if int(self._run_cmd(f"sysctl -n {prop}")) > val and not apply(prop, val):
             missing_requirements.append(f"{prop} should be at most {val}")
 
         return missing_requirements
