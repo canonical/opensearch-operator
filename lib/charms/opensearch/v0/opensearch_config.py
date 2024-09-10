@@ -64,15 +64,6 @@ class OpenSearchConfig:
             True,
         )
 
-    def set_recover_after_nodes(self, recover_after_nodes: Optional[int] = None):
-        """Add the recover_after_nodes configuration to opensearch.yml."""
-        if not recover_after_nodes:
-            self._opensearch.config.delete(self.CONFIG_YML, "gateway.recover_after_nodes")
-            return
-        self._opensearch.config.put(
-            self.CONFIG_YML, "gateway.recover_after_nodes", recover_after_nodes
-        )
-
     def set_admin_tls_conf(self, secrets: Dict[str, any]):
         """Configures the admin certificate."""
         self._opensearch.config.put(
