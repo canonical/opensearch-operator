@@ -5,7 +5,6 @@
 import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
-import charms
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_internal_data import Scope
@@ -96,6 +95,19 @@ class TestOpenSearchPlugin(unittest.TestCase):
     BASE_LIB_PATH = "charms.opensearch.v0"
 
     def setUp(self) -> None:
+        self.patcher1 = patch(
+            "charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins",
+            new_callable=PropertyMock(
+                return_value={
+                    "test": {
+                        "class": TestPlugin,
+                        "config": "plugin_test",
+                        "relation": None,
+                    },
+                },
+            ),
+        ).start()
+
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
@@ -112,14 +124,6 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.charm.opensearch.paths.plugins = "tests/unit/resources"
         self.plugin_manager = self.charm.plugin_manager
         self.plugin_manager._plugins_path = self.charm.opensearch.paths.plugins
-        # Override the ConfigExposedPlugins
-        charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
-            "test": {
-                "class": TestPlugin,
-                "config": "plugin_test",
-                "relation": None,
-            },
-        }
         self.charm.opensearch.is_started = MagicMock(return_value=True)
         self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
         self.charm.opensearch.version = "2.9.0"
@@ -182,13 +186,18 @@ class TestOpenSearchPlugin(unittest.TestCase):
         mock_status.return_value = PluginState.ENABLING_NEEDED
         self.plugin_manager._opensearch.request = MagicMock(return_value={"status": 200})
         # Override the ConfigExposedPlugins with another class type
-        charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
-            "test": {
-                "class": TestPluginAlreadyInstalled,
-                "config": "plugin_test",
-                "relation": None,
-            },
-        }
+        self.patcher1 = patch(
+            "charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins",
+            new_callable=PropertyMock(
+                return_value={
+                    "test": {
+                        "class": TestPluginAlreadyInstalled,
+                        "config": "plugin_test",
+                        "relation": None,
+                    },
+                },
+            ),
+        ).start()
 
         self.charm._get_nodes = MagicMock(
             return_value={

@@ -436,7 +436,7 @@ class OpenSearchPluginDataProvider:
     """
 
     def __init__(self, charm):
-        """Creates the OpenSearchPluginRelationsHandler object."""
+        """Creates the OpenSearchPluginDataProvider object."""
         self._charm = charm
 
     @abstractmethod
@@ -492,6 +492,11 @@ class OpenSearchPluginBackupDataProvider(OpenSearchPluginDataProvider):
         """Creates the OpenSearchPluginBackupDataProvider object."""
         super().__init__(charm)
         self._relation = None
+        if not self._charm.opensearch_peer_cm.deployment_desc():
+            # Temporary condition: we are waiting for CM to show up and define which type
+            # of cluster are we. Once we have that defined, then we will process.
+            raise OpenSearchPluginMissingConfigError("Missing deployment description in peer CM")
+
         self.is_main_orchestrator = (
             self._charm.opensearch_peer_cm.deployment_desc().typ
             == DeploymentType.MAIN_ORCHESTRATOR
@@ -500,14 +505,7 @@ class OpenSearchPluginBackupDataProvider(OpenSearchPluginDataProvider):
     def get_relation(self) -> Any:
         """Updates the relation object if needed."""
         self._relation = self._charm.model.get_relation(S3_RELATION)
-        if not self._charm.opensearch_peer_cm.deployment_desc():
-            # Temporary condition: we are waiting for CM to show up and define which type
-            # of cluster are we. Once we have that defined, then we will process.
-            raise OpenSearchPluginMissingConfigError("Missing deployment description in peer CM")
-        if (
-            self._charm.opensearch_peer_cm.deployment_desc().typ
-            != DeploymentType.MAIN_ORCHESTRATOR
-        ):
+        if not self.is_main_orchestrator:
             self._relation = self._charm.model.get_relation(PeerRelationName)
         return self._relation
 
@@ -522,7 +520,7 @@ class OpenSearchPluginBackupDataProvider(OpenSearchPluginDataProvider):
         return self.get_relation().data[self._relation.app] or {}
 
 
-class OpenSearchBackupPlugin(OpenSearchPlugin, OpenSearchPluginBackupDataProvider):
+class OpenSearchBackupPlugin(OpenSearchPlugin):
     """Manage backup configurations.
 
     This class must load the opensearch plugin: repository-s3 and configure it.
@@ -545,8 +543,8 @@ class OpenSearchBackupPlugin(OpenSearchPlugin, OpenSearchPluginBackupDataProvide
 
     def __init__(self, charm):
         """Creates the OpenSearchBackupPlugin object."""
-        super(self.DATA_PROVIDER, self).__init__(charm)
-        super(OpenSearchPlugin, self).__init__(charm)
+        super().__init__(charm)
+        self.dp = self.DATA_PROVIDER(charm)
         self.repo_name = "default"
 
     def is_set(self) -> bool:
@@ -560,9 +558,9 @@ class OpenSearchBackupPlugin(OpenSearchPlugin, OpenSearchPluginBackupDataProvide
     @property
     def data(self) -> BaseModel:
         """Returns the data from the relation databag."""
-        self._relation = self.get_relation()
+        self._relation = self.dp.get_relation()
         try:
-            return self.MODEL.from_relation(self.get_data())
+            return self.MODEL.from_relation(self.dp.get_data())
         except ValidationError:
             return self.MODEL()
 
@@ -582,7 +580,7 @@ class OpenSearchBackupPlugin(OpenSearchPlugin, OpenSearchPluginBackupDataProvide
                 )
             )
 
-        if self.is_main_orchestrator:
+        if self.dp.is_main_orchestrator:
             conf = self.data.dict()
             # Check any mandatory config is missing
             if any([val is None and key in self.MANDATORY_CONFS for key, val in conf.items()]):
@@ -593,7 +591,7 @@ class OpenSearchBackupPlugin(OpenSearchPlugin, OpenSearchPluginBackupDataProvide
                     )
                 )
 
-        if not self.is_main_orchestrator:
+        if not self.dp.is_main_orchestrator:
             return OpenSearchPluginConfig(
                 secret_entries={
                     f"s3.client.{self.repo_name}.access_key": self.data.credentials.access_key,

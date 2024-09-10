@@ -15,7 +15,15 @@ from cryptography.x509.oid import NameOID
 
 
 def patch_wait_fixed() -> Callable:
-    return patch("charms.opensearch.v0.opensearch_backups.wait_fixed", tenacity.wait.wait_fixed)
+    def _wait_fixed(*args, **kwargs):
+        """Patch for the not-yet-implemented testing backend needed for `wait_fixed`.
+
+        This patch decorator can be used for cases such as:
+        wait_fixed(5)
+        """
+        return tenacity.wait.wait_fixed(0.1)
+
+    return patch("charms.opensearch.v0.opensearch_backups.wait_fixed", _wait_fixed)
 
 
 def patch_network_get(private_address: str = "1.1.1.1") -> Callable:

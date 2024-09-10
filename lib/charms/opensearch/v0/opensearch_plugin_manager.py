@@ -313,7 +313,7 @@ class OpenSearchPluginManager:
             OpenSearchKeystoreNotReadyYetError: If the keystore is not yet ready.
         """
         keystore_ready = True
-        cluster_settings_changed = False
+        settings_changed_via_api = False
         try:
             # If security is not yet initialized, this code will throw an exception
             self._keystore.update(config.secret_entries)
@@ -327,19 +327,23 @@ class OpenSearchPluginManager:
         current_settings, new_conf = self._compute_settings(config)
         if current_settings and new_conf and current_settings != new_conf:
             if config.config_entries:
-                # Clean to-be-deleted entries
-                self._opensearch.request(
-                    "PUT",
-                    "/_cluster/settings?flat_settings=true",
-                    payload=f'{{"persistent": {str(config)} }}',
-                )
-                cluster_settings_changed = True
+                try:
+                    # Clean to-be-deleted entries
+                    self._opensearch.request(
+                        "PUT",
+                        "/_cluster/settings?flat_settings=true",
+                        payload=f'{{"persistent": {str(config)} }}',
+                        retries=3,
+                    )
+                    settings_changed_via_api = True
+                except OpenSearchHttpError as e:
+                    logger.debug(f"Failed to apply settings via API for: {config.config_entries}")
 
         # Update the configuration files
         if config.config_entries:
             self._opensearch_config.update_plugin(config.config_entries)
 
-        if cluster_settings_changed:
+        if settings_changed_via_api:
             # We have changed the cluster settings, clean up the cache
             del self.cluster_config
 
@@ -350,8 +354,8 @@ class OpenSearchPluginManager:
         # Final conclusion, we return a restart is needed if:
         # (1) configuration changes are needed and applied in the files; and (2)
         # the node is not up. For (2), we already checked if the node was up on
-        # _cluster_settings and, if not, cluster_settings_changed=False.
-        return config.config_entries and not cluster_settings_changed
+        # _cluster_settings and, if not, api_settings_changed_via_api=False.
+        return config.config_entries and not settings_changed_via_api
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""
