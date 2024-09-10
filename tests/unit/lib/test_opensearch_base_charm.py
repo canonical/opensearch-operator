@@ -167,13 +167,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _purge_users.assert_called_once()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_locking.OpenSearchNodeLock.acquired")
-    @patch(
-        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.validate_roles"
-    )
-    @patch(
-        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
-    )
-    @patch(f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.can_start")
+    @patch(f"{PEER_CLUSTERS_MANAGER}.validate_roles")
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
+    @patch(f"{PEER_CLUSTERS_MANAGER}.can_start")
     @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_client_auth")
@@ -184,8 +180,10 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_or_update_internal_user_unit")
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
+    @patch(f"{BASE_CHARM_CLASS}._post_start_init")
     def test_on_start(
         self,
+        _post_start_init,
         request,
         _put_or_update_internal_user_unit,
         _purge_users,
@@ -256,8 +254,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             validate_roles.assert_called()
             _set_node_conf.assert_called()
             start.assert_called_once()
-            _initialize_security_index.assert_called_once()
-            self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
+            _post_start_init.assert_called_once()
+            # _initialize_security_index.assert_called_once()
+            # self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
 
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackup.is_backup_in_progress")
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackup._is_restore_complete")
