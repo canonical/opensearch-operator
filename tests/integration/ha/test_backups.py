@@ -276,12 +276,12 @@ async def test_large_deployment_build_and_deploy(
     main_orchestrator_conf = {
         "cluster_name": "backup-test",
         "init_hold": False,
-        "roles": "cluster_manager",
+        "roles": "cluster_manager,data",
     }
     failover_orchestrator_conf = {
         "cluster_name": "backup-test",
         "init_hold": True,
-        "roles": "cluster_manager",
+        "roles": "cluster_manager,data",
     }
     data_hot_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data.hot"}
 

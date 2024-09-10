@@ -85,7 +85,7 @@ async def _set_config(ops_test: OpsTest, deploy_type: str, conf: dict[str, str])
 async def _wait_for_units(ops_test: OpsTest, deployment_type: str) -> None:
     """Wait for all units to be active.
 
-    This wait will will behavior accordingly to small/large.
+    This wait will behavior accordingly to small/large.
     """
     if deployment_type == "small_deployment":
         await wait_until(
@@ -208,12 +208,12 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
     main_orchestrator_conf = {
         "cluster_name": "plugins-test",
         "init_hold": False,
-        "roles": "cluster_manager",
+        "roles": "cluster_manager,data",
     }
     failover_orchestrator_conf = {
         "cluster_name": "plugins-test",
         "init_hold": True,
-        "roles": "cluster_manager",
+        "roles": "cluster_manager,data",
     }
     data_hot_conf = {"cluster_name": "plugins-test", "init_hold": True, "roles": "data.hot,ml"}
 
@@ -254,7 +254,6 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
     await set_watermark(ops_test, APP_NAME)
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize("deploy_type", LARGE_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
@@ -284,7 +283,6 @@ async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deplo
     assert relation_data["scheme"] == "https"
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize("deploy_type", ALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_monitoring_user_fetch_prometheus_data(ops_test, deploy_type: str):
@@ -307,7 +305,6 @@ async def test_monitoring_user_fetch_prometheus_data(ops_test, deploy_type: str)
     assert len(response_str.split("\n")) > 500
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize("deploy_type", ALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: str):
