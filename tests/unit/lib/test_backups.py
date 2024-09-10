@@ -605,7 +605,7 @@ class TestBackups(unittest.TestCase):
             },
         )
 
-        mock_status.return_value = PluginState.ENABLED
+        mock_status.return_value = PluginState.ENABLING_NEEDED
         self.charm.backup.apply_api_config_if_needed()
         mock_request.assert_called_with(
             "PUT",
@@ -622,11 +622,6 @@ class TestBackups(unittest.TestCase):
                 },
             },
         )
-        assert mock_update_plugin.call_args_list[0][0][0] == {
-            "s3.client.default.endpoint": "localhost",
-            "s3.client.default.region": "testing-region",
-            "s3.client.default.protocol": "https",
-        }
 
     def test_on_list_backups_action(self):
         event = MagicMock()

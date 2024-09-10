@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_plugins import (
@@ -174,7 +175,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
     # Test the integration between opensearch_config and plugin
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
-    def test_reconfigure_and_add_keystore_plugin(
+    def test_reconfigure_and_add_keystore_plugin_with_api_and_without_restart(
         self, mock_put, mock_load, mock_status, mock_ks_update
     ) -> None:
         """Reconfigure the opensearch.yaml and keystore.
@@ -215,6 +216,61 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.plugin_manager._install_if_needed = MagicMock(return_value=False)
         self.plugin_manager._disable_if_needed = MagicMock(return_value=False)
 
+        self.assertFalse(self.plugin_manager._configure_if_needed(self.plugin_manager.plugins[0]))
+        # self.assertTrue(self.plugin_manager._configure_if_needed(self.plugin_manager.plugins[0]))
+
+        mock_ks_update.assert_has_calls([call({"key1": "secret1"})])
+        self.charm.opensearch.config.put.assert_has_calls(
+            [call("opensearch.yml", "param", "tested")]
+        )
+        self.plugin_manager._opensearch.request.assert_has_calls(
+            [call("POST", "_nodes/reload_secure_settings")]
+        )
+
+    @patch("charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.update")
+    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.load_node")
+    # Test the integration between opensearch_config and plugin
+    @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
+    def test_reconfigure_and_add_keystore_plugin_with_restart(
+        self, mock_put, mock_load, mock_status, mock_ks_update
+    ) -> None:
+        """Reconfigure the opensearch.yaml and keystore.
+
+        Should trigger a restart and, hence, run() must return True.
+        """
+        config = {"param": "tested"}
+        mock_put.return_value = config
+        mock_status.return_value = PluginState.ENABLING_NEEDED
+        self.plugin_manager._opensearch.request = MagicMock(return_value={"status": 200})
+
+        self.charm.app.planned_units = MagicMock(return_value=3)
+        self.charm.opensearch.is_node_up = MagicMock(return_value=True)
+        self.charm.plugin_manager._compute_settings = MagicMock(side_effect=OpenSearchHttpError())
+
+        self.patcher1 = patch(
+            "charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins",
+            new_callable=PropertyMock(
+                return_value={
+                    "test": {
+                        "class": TestPluginAlreadyInstalled,
+                        "config": "plugin_test",
+                        "relation": None,
+                    },
+                },
+            ),
+        ).start()
+
+        mock_load.return_value = {}
+        # run is called, but only _configure method really matter:
+        # Set install to false, so only _configure is evaluated
+        self.plugin_manager._install_if_needed = MagicMock(return_value=False)
+        self.plugin_manager._disable_if_needed = MagicMock(return_value=False)
+
+        import pdb
+
+        pdb.set_trace()
+        # self.assertFalse(self.plugin_manager._configure_if_needed(self.plugin_manager.plugins[0]))
         self.assertTrue(self.plugin_manager._configure_if_needed(self.plugin_manager.plugins[0]))
 
         mock_ks_update.assert_has_calls([call({"key1": "secret1"})])

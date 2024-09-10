@@ -302,9 +302,9 @@ class OpenSearchPluginManager:
         and a restart is needed.
 
         Executes the following steps:
-        1) Tries to manage the keystore
-        2) If settings API is available, tries to manage the configuration there
-        3) Inserts / removes the entries from opensearch.yml.
+        1) Inserts / removes the entries from opensearch.yml.
+        2) Tries to manage the keystore
+        3) If settings API is available, tries to manage the configuration there
 
         Given keystore + settings both use APIs to reload data, restart only happens
         if the configuration files have been changed only.
@@ -312,7 +312,10 @@ class OpenSearchPluginManager:
         Raises:
             OpenSearchKeystoreNotReadyYetError: If the keystore is not yet ready.
         """
-        keystore_ready = True
+        # Update the configuration files
+        if config.config_entries:
+            self._opensearch_config.update_plugin(config.config_entries)
+
         settings_changed_via_api = False
         try:
             # If security is not yet initialized, this code will throw an exception
@@ -322,13 +325,14 @@ class OpenSearchPluginManager:
         except (OpenSearchKeystoreNotReadyYetError, OpenSearchHttpError):
             # We've failed to set the keystore, we need to rerun this method later
             # Postpone the exception now and set the remaining config.
-            keystore_ready = False
+            raise OpenSearchKeystoreNotReadyYetError()
 
-        current_settings, new_conf = self._compute_settings(config)
-        if current_settings and new_conf and current_settings != new_conf:
-            if config.config_entries:
-                try:
-                    # Clean to-be-deleted entries
+        try:
+            current_settings, new_conf = self._compute_settings(config)
+            if current_settings and new_conf and current_settings != new_conf:
+                if config.config_entries:
+                    # Set the configuration via API or throw an exception
+                    # and request a restart otherwise
                     self._opensearch.request(
                         "PUT",
                         "/_cluster/settings?flat_settings=true",
@@ -336,26 +340,17 @@ class OpenSearchPluginManager:
                         retries=3,
                     )
                     settings_changed_via_api = True
-                except OpenSearchHttpError:
-                    logger.debug(f"Failed to apply settings via API for: {config.config_entries}")
 
-        # Update the configuration files
-        if config.config_entries:
-            self._opensearch_config.update_plugin(config.config_entries)
+            if settings_changed_via_api:
+                # We have changed the cluster settings, clean up the cache
+                del self.cluster_config
 
-        if settings_changed_via_api:
-            # We have changed the cluster settings, clean up the cache
-            del self.cluster_config
-
-        if not keystore_ready:
-            # We need to rerun this method later
-            raise OpenSearchKeystoreNotReadyYetError()
-
-        # Final conclusion, we return a restart is needed if:
-        # (1) configuration changes are needed and applied in the files; and (2)
-        # the node is not up. For (2), we already checked if the node was up on
-        # _cluster_settings and, if not, api_settings_changed_via_api=False.
-        return config.config_entries and not settings_changed_via_api
+            return False
+        except OpenSearchHttpError:
+            logger.warning(f"Failed to apply via API configuration for: {config.config_entries}")
+            # We only call `apply_config` if we need it, so, in this case, we need a restart
+            # If we have any config keys, then we need to restart
+            return config.config_entries != {}
 
     def status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns the status for a given plugin."""

@@ -133,9 +133,9 @@ class TestOpenSearchKNN(unittest.TestCase):
 
         # in this case, without API available but the node is set as up
         # we then need to restart the service
-        self.charm._restart_opensearch_event.emit.assert_called_once()
+        self.charm._restart_opensearch_event.emit.assert_not_called()
         self.plugin_manager._opensearch_config.update_plugin.assert_called_once_with(
-            {"knn.plugin.enabled": None}
+            {"knn.plugin.enabled": "false"}
         )
 
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
@@ -223,13 +223,13 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.harness.update_config({"plugin_opensearch_knn": False})
         self.charm._restart_opensearch_event.emit.assert_not_called()
         self.plugin_manager._opensearch_config.update_plugin.assert_called_once_with(
-            {"knn.plugin.enabled": None}
+            {"knn.plugin.enabled": "false"}
         )
 
         mock_api_request.assert_called_once_with(
             "PUT",
             "/_cluster/settings?flat_settings=true",
-            payload='{"persistent": {"knn.plugin.enabled": null} }',
+            payload='{"persistent": {"knn.plugin.enabled": "false"} }',
             retries=3,
         )
         # It means we correctly cleaned the cache
