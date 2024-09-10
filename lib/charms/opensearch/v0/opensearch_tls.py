@@ -151,26 +151,21 @@ class OpenSearchTLS(Object):
             event.defer()
             return
 
-        admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
 
-        # TODO: should this be deleted when the TLS rotation workflow adapted to large deployments?
-        # or is this enough?
-        if (
-            self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR
-            and not (admin_secrets and self.charm.opensearch_peer_cm.is_consumer())
-        ):
-            event.defer()
-            return
-
-        if self.charm.unit.is_leader():
+        if self.charm.unit.is_leader() and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             # create passwords for both ca trust_store/admin key_store
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
             self._create_keystore_pwd_if_not_exists(
                 Scope.APP, CertType.APP_ADMIN, CertType.APP_ADMIN.val
             )
 
-            if admin_secrets is None and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            if not admin_secrets:
                 self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+        elif not admin_secrets.get("truststore-password"):
+            logger.debug("Truststore-password from main-orchestrator not available yet.")
+            event.defer()
+            return
 
         # create passwords for both unit-http/transport key_stores
         self._create_keystore_pwd_if_not_exists(
