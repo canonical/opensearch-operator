@@ -70,9 +70,13 @@ class TestOpenSearchTLS(unittest.TestCase):
         socket.getfqdn.return_value = "nebula"
 
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.get_host_public_ip")
     @patch("socket.getfqdn")
+    @patch("socket.gethostname")
     @patch("socket.gethostbyaddr")
-    def test_get_sans(self, gethostbyaddr, getfqdn, deployment_desc):
+    def test_get_sans(
+        self, gethostbyaddr, gethostname, getfqdn, get_host_public_ip, deployment_desc
+    ):
         """Test the SANs returned depending on the cert type."""
         deployment_desc.return_value = self.deployment_descriptions["ok"]
 
@@ -82,17 +86,19 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         gethostbyaddr.return_value = (self.charm.unit_name, ["alias"], ["address1", "address2"])
+        gethostname.return_value = "nebula"
         getfqdn.return_value = "nebula"
+        get_host_public_ip.return_value = "XX.XXX.XX.XXX"
 
         base_ips = ["1.1.1.1", "address1", "address2"]
-        base_dns_entries = ["nebula"]
+        base_dns_entries = [self.charm.unit_name, "nebula", "alias"]
 
         unit_http_sans = self.charm.tls._get_sans(CertType.UNIT_HTTP)
         self.assertDictEqual(
             dict((key, sorted(val)) for key, val in unit_http_sans.items()),
             {
                 "sans_oid": ["1.2.3.4.5.5"],
-                "sans_ip": sorted(base_ips),
+                "sans_ip": sorted(base_ips + ["XX.XXX.XX.XXX"]),
                 "sans_dns": sorted(base_dns_entries),
             },
         )
@@ -192,18 +198,23 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         on_tls_relation_broken.assert_called_once()
 
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._request_certificate")
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
-    def test_on_set_tls_private_key(self, _, __, _request_certificate):
+    def test_on_set_tls_private_key(self, _, __, _request_certificate, deployment_desc):
         """Test _on_set_tls private key event."""
         event_mock = MagicMock(params={"category": "app-admin"})
 
         self.harness.set_leader(is_leader=False)
+        deployment_desc.return_value = self.deployment_descriptions["ko"]
         self.charm.tls._on_set_tls_private_key(event_mock)
         _request_certificate.assert_not_called()
 
         self.harness.set_leader(is_leader=True)
+        deployment_desc.return_value = self.deployment_descriptions["ok"]
         self.charm.tls._on_set_tls_private_key(event_mock)
         _request_certificate.assert_called_once()
 

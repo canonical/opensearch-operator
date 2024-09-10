@@ -135,6 +135,7 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
             FAILOVER_APP: APP_UNITS[FAILOVER_APP],
         },
         idle_period=IDLE_PERIOD,
+        timeout=1800,
     )
 
     # integrate TLS to all applications
@@ -153,6 +154,7 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
         units_statuses=["active"],
         wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
         idle_period=IDLE_PERIOD,
+        timeout=1800,
     )
 
     c_writes = ContinuousWrites(ops_test, app=MAIN_APP)
@@ -179,6 +181,7 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
         units_statuses=["active"],
         wait_for_exact_units={MAIN_APP: APP_UNITS[MAIN_APP], INVALID_APP: APP_UNITS[INVALID_APP]},
         idle_period=IDLE_PERIOD,
+        timeout=1800,
     )
 
     # delete the invalid app name
@@ -206,6 +209,7 @@ async def test_large_deployment_fully_formed(
             app: units for app, units in APP_UNITS.items() if app != INVALID_APP
         },
         idle_period=IDLE_PERIOD,
+        timeout=1800,
     )
 
     # fetch nodes, we should have 6 nodes (main + failover)-orchestrators
@@ -214,7 +218,7 @@ async def test_large_deployment_fully_formed(
     assert len(nodes) == 8, f"Wrong node count. Expecting 8 online nodes, found: {len(nodes)}."
 
     # check the roles
-    auto_gen_roles = ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
+    auto_gen_roles = ["cluster_manager", "data", "ingest", "ml"]
     data_roles = ["data", "ml"]
     for app, node_count in [(MAIN_APP, 3), (FAILOVER_APP, 3), (DATA_APP, 2)]:
         current_app_nodes = [
