@@ -217,7 +217,6 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.plugin_manager._disable_if_needed = MagicMock(return_value=False)
 
         self.assertFalse(self.plugin_manager._configure_if_needed(self.plugin_manager.plugins[0]))
-        # self.assertTrue(self.plugin_manager._configure_if_needed(self.plugin_manager.plugins[0]))
 
         mock_ks_update.assert_has_calls([call({"key1": "secret1"})])
         self.charm.opensearch.config.put.assert_has_calls(
@@ -267,10 +266,6 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.plugin_manager._install_if_needed = MagicMock(return_value=False)
         self.plugin_manager._disable_if_needed = MagicMock(return_value=False)
 
-        import pdb
-
-        pdb.set_trace()
-        # self.assertFalse(self.plugin_manager._configure_if_needed(self.plugin_manager.plugins[0]))
         self.assertTrue(self.plugin_manager._configure_if_needed(self.plugin_manager.plugins[0]))
 
         mock_ks_update.assert_has_calls([call({"key1": "secret1"})])
