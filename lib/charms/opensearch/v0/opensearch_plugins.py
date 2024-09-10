@@ -347,11 +347,15 @@ class OpenSearchPluginConfig(BaseModel):
         """
         result = {}
         for key, val in conf.items():
-            if not val:
-                result[key] = None
-                continue
+            # First, we deal with the case the value is an actual bool
+            # If yes, then we need to convert to a lower case string
             if isinstance(val, bool):
                 result[key] = str(val).lower()
+            elif not val:
+                # Exclude this key from the final settings.
+                # Now, we can process the case where val may be empty.
+                # This way, a val == False will return 'false' instead of None.
+                result[key] = None
             else:
                 result[key] = str(val)
         return result
