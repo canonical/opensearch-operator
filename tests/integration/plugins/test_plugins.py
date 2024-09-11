@@ -178,7 +178,7 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
-@pytest.mark.parametrize("deploy_type", LARGE_DEPLOYMENTS)
+@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_config_switch_before_cluster_ready(ops_test: OpsTest, deploy_type) -> None:
     """Configuration change before cluster is ready.

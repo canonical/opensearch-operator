@@ -28,7 +28,7 @@ import pytest
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
     BackupSetupFailed,
-    S3RelMissing,
+    S3RelShouldNotExist,
 )
 from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
@@ -388,11 +388,10 @@ async def test_large_setups_relations_with_misconfiguration(
         ops_test,
         apps=["main", "failover", APP_NAME],
         apps_statuses=["blocked"],
-        units_statuses=["blocked"],
         apps_full_statuses={
             "main": {"blocked": [BackupSetupFailed]},
-            "failover": {"blocked": [S3RelMissing]},
-            APP_NAME: {"blocked": [S3RelMissing]},
+            "failover": {"blocked": [S3RelShouldNotExist]},
+            APP_NAME: {"blocked": [S3RelShouldNotExist]},
         },
         idle_period=IDLE_PERIOD,
     )

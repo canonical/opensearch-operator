@@ -808,7 +808,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         3) If the plugin is not enabled, then defer the event
         4) Send the API calls to setup the backup service
         """
-        if not self.plugin.is_set():
+        if not self.plugin.requested_to_enable():
             # Always check if a relation actually exists and if options are available
             # in this case, seems one of the conditions above is not yet present
             # abandon this restart event, as it will be called later once s3 configuration

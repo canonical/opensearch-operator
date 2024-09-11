@@ -571,11 +571,7 @@ class TestBackups(unittest.TestCase):
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
-                config_entries={
-                    "s3.client.default.endpoint": "localhost",
-                    "s3.client.default.protocol": "https",
-                    "s3.client.default.region": "testing-region",
-                },
+                config_entries={},
                 secret_entries={
                     "s3.client.default.access_key": "aaaa",
                     "s3.client.default.secret_key": "bbbb",
@@ -684,11 +680,7 @@ class TestBackups(unittest.TestCase):
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(
-                config_entries={
-                    "s3.client.default.endpoint": None,
-                    "s3.client.default.region": None,
-                    "s3.client.default.protocol": None,
-                },
+                config_entries={},
                 secret_entries={
                     "s3.client.default.access_key": None,
                     "s3.client.default.secret_key": None,

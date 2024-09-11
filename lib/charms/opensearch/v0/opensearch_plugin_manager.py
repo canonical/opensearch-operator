@@ -13,7 +13,7 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import copy
 import functools
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Dict, List, Tuple, Type
 
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -111,16 +111,6 @@ class OpenSearchPluginManager:
             if isinstance(plugin, plugin_class):
                 return self.status(plugin)
         raise KeyError(f"Plugin manager did not find plugin: {plugin_class}")
-
-    def _extra_conf(self, plugin_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Returns the config from the relation data of the target plugin if applies."""
-        data_provider = plugin_data.get("data_provider")
-        data = data_provider(self._charm).data.dict() if data_provider else {}
-        return {
-            **data,
-            **self._charm_config,
-            "opensearch-version": self._opensearch.version,
-        }
 
     def is_ready_for_api(self) -> bool:
         """Checks if the plugin manager is ready to run API calls."""
@@ -385,7 +375,7 @@ class OpenSearchPluginManager:
 
     def _user_requested_to_enable(self, plugin: OpenSearchPlugin) -> bool:
         """Returns True if user requested plugin to be enabled."""
-        return plugin.is_set()
+        return plugin.requested_to_enable()
 
     def _is_enabled(self, plugin: OpenSearchPlugin) -> bool:
         """Returns true if plugin is enabled.

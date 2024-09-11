@@ -402,7 +402,7 @@ class OpenSearchPlugin:
         return []
 
     @abstractmethod
-    def is_set(self) -> bool:
+    def requested_to_enable(self) -> bool:
         """Returns True if self._extra_config states as enabled."""
         pass
 
@@ -461,7 +461,7 @@ class OpenSearchPluginDataProvider:
 class OpenSearchKnn(OpenSearchPlugin):
     """Implements the opensearch-knn plugin."""
 
-    def is_set(self) -> bool:
+    def requested_to_enable(self) -> bool:
         """Returns True if the plugin is enabled."""
         return self._extra_config["plugin_opensearch_knn"]
 
@@ -551,13 +551,9 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         self.dp = self.DATA_PROVIDER(charm)
         self.repo_name = "default"
 
-    def is_set(self) -> bool:
+    def requested_to_enable(self) -> bool:
         """Returns True if the plugin is enabled."""
-        try:
-            self.config()
-        except OpenSearchPluginMissingConfigError:
-            return False
-        return True
+        return self.dp.get_relation() is not None
 
     @property
     def data(self) -> BaseModel:
@@ -605,11 +601,7 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
 
         # This is the main orchestrator
         return OpenSearchPluginConfig(
-            config_entries={
-                f"s3.client.{self.repo_name}.endpoint": self.data.endpoint,
-                f"s3.client.{self.repo_name}.region": self.data.region,
-                f"s3.client.{self.repo_name}.protocol": self.data.protocol,
-            },
+            config_entries={},
             secret_entries={
                 f"s3.client.{self.repo_name}.access_key": self.data.credentials.access_key,
                 f"s3.client.{self.repo_name}.secret_key": self.data.credentials.secret_key,
@@ -619,11 +611,7 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
     def disable(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin removal."""
         return OpenSearchPluginConfig(
-            config_entries={
-                f"s3.client.{self.repo_name}.endpoint": None,
-                f"s3.client.{self.repo_name}.region": None,
-                f"s3.client.{self.repo_name}.protocol": None,
-            },
+            config_entries={},
             secret_entries={
                 f"s3.client.{self.repo_name}.access_key": None,
                 f"s3.client.{self.repo_name}.secret_key": None,
