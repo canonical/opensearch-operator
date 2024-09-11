@@ -323,6 +323,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             and "cluster_manager" in self.opensearch.roles
             and not self.opensearch.is_service_started()
         ):
+            # This logic will only be triggered if the service has started (i.e. marked as "started")
+            # if we had a "start" hook (i.e. the actual machine has rebooted)
+            # and we are a cluster_manager with the service down
+            # After these conditions are met, then we can simply restart the service.
             logger.debug(
                 "Start hook: snap already installed and service should be up, but it is not. Restarting it..."
             )
