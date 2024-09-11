@@ -442,7 +442,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     def _on_s3_relation_event(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
         if self.charm.unit.is_leader():
-            self.charm.status.clear(S3RelShouldNotExist, app=True)
+            self.charm.status.set(S3RelShouldNotExist, app=True)
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
 
     @override
@@ -450,7 +450,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         """Processes the non-orchestrator cluster events."""
         self.charm.status.clear(S3RelMissing)
         if self.charm.unit.is_leader():
-            self.charm.status.clear(S3RelShouldNotExist, app=True)
+            self.charm.status.set(S3RelShouldNotExist, app=True)
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
 
 
@@ -854,7 +854,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         try:
             self.apply_api_config_if_needed()
         except OpenSearchBackupError:
-            event.defer()
+            # Finish here and wait for the user to reconfigure it and retrigger a new event
             return
         self.charm.status.clear(PluginConfigError)
         self.charm.status.clear(BackupSetupStart)
