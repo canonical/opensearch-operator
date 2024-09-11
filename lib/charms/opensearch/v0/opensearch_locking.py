@@ -266,16 +266,28 @@ class OpenSearchNodeLock(ops.Object):
         if host or alt_hosts:
             logger.debug("[Node lock] 1+ opensearch nodes online")
             try:
-                online_nodes = len(
-                    ClusterTopology.nodes(
+               node_count = ClusterTopology.nodes_count_by_role(
+                  ClusterTopology.nodes(
                         self._opensearch, use_localhost=host is not None, hosts=alt_hosts
                     )
-                )
+               )
+               online_nodes = 0
+               if (
+                   "cluster_manager" in self._opensearch.roles
+                   or "voting_only" in self._opensearch.roles
+               ):
+                  online_nodes = ClusterTopology.nodes_count_by_role(node_count)["cluster_manager"] + ClusterTopology.nodes_count_by_role(node_count)["voting_only"]
+               elif "data" in self._opensearch.roles:
+                  online_nodes = ClusterTopology.nodes_count_by_role(node_count)["data"]
+               else:
+                  for role in self._opensearch.roles:
+                     if role not in ["cluster_manager", "voting_only", "data"]:
+                        online_nodes += ClusterTopology.nodes_count_by_role(node_count)[role]
+
             except OpenSearchHttpError:
                 logger.exception("Error getting OpenSearch nodes")
                 return False
             logger.debug(f"[Node lock] Opensearch {online_nodes=}")
-            assert online_nodes > 0
             try:
                 unit = self._unit_with_lock(host)
             except OpenSearchHttpError:
