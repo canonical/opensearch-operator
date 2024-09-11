@@ -5,11 +5,13 @@ import json
 import unittest
 from unittest.mock import patch
 
+import pytest
 import responses
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.models import DeploymentState, DeploymentType, State
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
@@ -100,3 +102,38 @@ class TestOpenSearchConfig(unittest.TestCase):
         assert node.app.name == "opensearch"
         assert node.roles == ["data", "ingest", "ml", "cluster_manager"]
         assert node.temperature == "warm"
+
+    # We pretend that the config file is empty
+    @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.load", return_value={})
+    def test_distro_current_api_unavail_static_conf_unavail_deployment_unavail(self, _):
+        """Current node attributes are unavailable.
+
+        Deployment State information NOT is available, neither is the config.
+        (Or if config may be available, it doesn't hold critical data.)
+        """
+        rel = self.harness.charm.model.get_relation(PeerRelationName)
+        rel.data[self.harness.charm.app].pop("deployment-description")
+
+        with pytest.raises(OpenSearchError) as err:
+            self.charm.opensearch.current()
+
+        assert str(err.value) == "Can not determine app details."
+
+    # We pretend that the config file returns app info but not roles
+    @patch(
+        "charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.load",
+        return_value={"node.attr.app_id": "blah"},
+    )
+    def test_distro_current_api_unavail_static_conf_unavail_roles_deployment_unavail(self, _):
+        """Current node attributes are unavailable.
+
+        Deployment State information NOT is available, neither is the config.
+        (Or if config may be available, it doesn't hold critical data.)
+        """
+        rel = self.harness.charm.model.get_relation(PeerRelationName)
+        rel.data[self.harness.charm.app].pop("deployment-description")
+
+        with pytest.raises(OpenSearchError) as err:
+            self.charm.opensearch.current()
+
+        assert str(err.value) == "Can not determine roles."
