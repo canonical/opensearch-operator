@@ -124,7 +124,12 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader():
             return
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
-        self._request_certificate(Scope.APP, CertType.APP_ADMIN, admin_secrets.get("key"), admin_secrets.get("key-password"))
+        self._request_certificate(
+            Scope.APP,
+            CertType.APP_ADMIN,
+            admin_secrets.get("key"),
+            admin_secrets.get("key-password"),
+        )
 
     def request_new_unit_certificates(self) -> None:
         """Requests a new certificate with the given scope and type from the tls operator."""
