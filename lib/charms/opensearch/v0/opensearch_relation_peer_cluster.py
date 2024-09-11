@@ -47,7 +47,6 @@ from ops import (
     RelationJoinedEvent,
     WaitingStatus,
 )
-from ops.model import ModelError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 if TYPE_CHECKING:
@@ -333,16 +332,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         cluster_fleet_apps = (
             self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
         )
-        try:
-            host = self.charm.unit_ip
-        except ModelError:
-            host = ""
 
         current_app = PeerClusterApp(
             app=deployment_desc.app,
             planned_units=self.charm.app.planned_units(),
             units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
-            leader_host=host,
             roles=deployment_desc.config.roles,
         )
         cluster_fleet_apps.update({current_app.app.id: current_app.to_dict()})
@@ -499,6 +493,19 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             use_localhost=self._opensearch.is_node_up(),
             hosts=self.charm.alt_hosts,
         )
+
+        if not nodes:
+            # create a node from the deployment desc and unit data only
+            return [
+                Node(
+                    name=self.charm.unit_name,
+                    roles=deployment_desc.config.roles,
+                    ip=self.charm.unit_ip,
+                    app=deployment_desc.app,
+                    unit_number=self.charm.unit_id,
+                )
+            ]
+
         return [
             node
             for node in nodes
@@ -672,7 +679,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             units=[
                 format_unit_name(unit, app=deployment_desc.app) for unit in all_units(self.charm)
             ],
-            leader_host=self.charm.unit_ip,
             roles=deployment_desc.config.roles,
         )
         self.put_in_rel(data={"app": current_app.to_str()}, rel_id=event.relation.id)

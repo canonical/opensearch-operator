@@ -151,21 +151,7 @@ class OpenSearchPeerClustersManager:
             value=dict(sorted({node.name: node.to_dict() for node in data.cm_nodes}.items())),
             merge=True,
         )
-
-        # create alternative list for seed_hosts cluster-manager-only-nodes
-        hosts = []
-        if all_apps := self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
-            for app in all_apps.values():
-                p_cluster_app = PeerClusterApp.from_dict(app)
-                if "cluster_manager" not in p_cluster_app.roles:
-                    continue
-
-                hosts.append(p_cluster_app.leader_host)
-
-        if data.cm_nodes:
-            self._charm.opensearch_config.add_seed_hosts([node.ip for node in data.cm_nodes])
-        elif hosts:
-            self._charm.opensearch_config.add_seed_hosts(hosts)
+        self._charm.opensearch_config.add_seed_hosts([node.ip for node in data.cm_nodes])
 
         self.apply_status_if_needed(new_deployment_desc)
 

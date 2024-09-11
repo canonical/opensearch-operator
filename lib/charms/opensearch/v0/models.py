@@ -286,7 +286,6 @@ class PeerClusterApp(Model):
     app: App
     planned_units: int
     units: List[str]
-    leader_host: Optional[str]
     roles: List[str]
 
 
