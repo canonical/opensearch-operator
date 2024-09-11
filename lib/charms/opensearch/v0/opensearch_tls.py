@@ -123,8 +123,8 @@ class OpenSearchTLS(Object):
         """Request the generation of a new admin certificate."""
         if not self.charm.unit.is_leader():
             return
-
-        self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        self._request_certificate(Scope.APP, CertType.APP_ADMIN, admin_secrets.get("key"), admin_secrets.get("key-password"))
 
     def request_new_unit_certificates(self) -> None:
         """Requests a new certificate with the given scope and type from the tls operator."""
@@ -159,8 +159,8 @@ class OpenSearchTLS(Object):
                 Scope.APP, CertType.APP_ADMIN, CertType.APP_ADMIN.val
             )
 
-            if not admin_cert:
-                self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+            # if not admin_cert:
+            self._request_certificate(Scope.APP, CertType.APP_ADMIN)
         elif not admin_cert.get("truststore-password"):
             logger.debug("Truststore-password from main-orchestrator not available yet.")
             event.defer()
