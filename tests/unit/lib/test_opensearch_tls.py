@@ -948,7 +948,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         """
         # Units had their certificates already
         old_csr = "old_csr"
-        old_key = "old_key"
+        old_key = create_utf8_encoded_private_key()
         old_subject = "old_subject"
         keystore_password = "keystore_12345"
 
@@ -1024,7 +1024,7 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         assert new_app_admin_secret["csr"] != old_csr
         assert new_app_admin_secret["ca-cert"] == new_ca
-        assert new_app_admin_secret["key"] != old_key
+        assert new_app_admin_secret["key"] == old_key
         assert new_app_admin_secret["subject"] != old_subject
 
         assert generate_csr.call_count == 3
