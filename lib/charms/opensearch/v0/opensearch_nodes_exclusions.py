@@ -10,6 +10,7 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerRelationName,
 )
+from charms.opensearch.v0.helper_charm import format_unit_name
 from charms.opensearch.v0.models import DeploymentType, Node
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 ALLOCS_TO_DELETE = "allocation-exclusions-to-delete"
-VOTING_TO_DELETE = "delete-voting-exclusions"
+CURRENT_EXCLUSIONS = "current-voting-exclusions"
 
 
 class OpenSearchExclusions:
@@ -43,8 +44,9 @@ class OpenSearchExclusions:
 
     def add_current(self, restart: bool = False) -> None:
         """Add Voting and alloc exclusions."""
-        if (self._node.is_cm_eligible() or self._node.is_voting_only()) and not self._add_voting():
-            logger.error(f"Failed to add voting exclusion: {self._node.name}.")
+        if self._node.is_cm_eligible() or self._node.is_voting_only():
+            if not self._add_voting():
+                logger.error(f"Failed to add voting exclusion: {self._node.name}.")
 
         if not restart:
             if self._node.is_data() and not self.add_allocations():
@@ -56,7 +58,7 @@ class OpenSearchExclusions:
             if self._delete_voting():
                 self._charm.peers_data.put(
                     self._scope,
-                    VOTING_TO_DELETE,
+                    CURRENT_EXCLUSIONS,
                     ",".join(self._fetch_voting_exclusions()),
                 )
             else:
@@ -80,24 +82,22 @@ class OpenSearchExclusions:
         deployment_desc = self._charm.opensearch_peer_cm.deployment_desc()
         if not deployment_desc or deployment_desc.typ not in [
             DeploymentType.MAIN_ORCHESTRATOR,
-            DeploymentType.FAILOVER_ORCHESTRATOR,
         ]:
             return []
 
-        short_id = self._charm.opensearch_peer_cm.deployment_desc().app.short_id
         # We do not need to add our own unit as this code is running on it!
         peers = self._charm.model.get_relation(PeerRelationName)
         peers = [] if not peers else peers.units
 
         cms = set(
             [
-                unit.name + "." + short_id
+                format_unit_name(unit)
                 for relation in self._charm.model.relations.get(
                     PeerClusterOrchestratorRelationName
                 )
                 for unit in relation.units
             ]
-            + [unit.name + "." + short_id for unit in peers]
+            + [format_unit_name(unit) for unit in peers]
         )
 
         cleanup_nodes = []
@@ -108,17 +108,10 @@ class OpenSearchExclusions:
 
     def cleanup(self) -> None:
         """Delete all exclusions that failed to be deleted."""
-        need_voting_cleanup = set(
-            self._charm.peers_data.get(self._scope, VOTING_TO_DELETE, "").split(",")
-            + self._removed_units_to_cleanup()
-        )
-        if (
-            need_voting_cleanup
-            and self._delete_voting(to_remove=need_voting_cleanup)
-            and not self._fetch_voting_exclusions()  # called after the entire deletion, must be empty now
-        ):
-            self._charm.peers_data.delete(self._scope, VOTING_TO_DELETE)
+        # Dealing with voting exclusions:
+        self._delete_voting(cleanup_this_node=False)
 
+        # Now, dealing with allocation cleanup
         allocations_to_cleanup = self._charm.peers_data.get(
             self._scope, ALLOCS_TO_DELETE, ""
         ).split(",")
@@ -128,7 +121,7 @@ class OpenSearchExclusions:
     def _add_voting(self, exclusions: Optional[Set[str]] = None) -> bool:
         """Include the current node in the CMs voting exclusions list of nodes."""
         try:
-            to_add = exclusions or set([self._node.name])
+            to_add = exclusions or {self._node.name}
             self._opensearch.request(
                 "POST",
                 f"/_cluster/voting_config_exclusions?node_names={','.join(to_add)}&timeout=1m",
@@ -137,17 +130,21 @@ class OpenSearchExclusions:
                 retries=3,
             )
             logger.debug(f"Added voting for {to_add}: SUCCESS")
+            self._charm.add_to_peer_data(CURRENT_EXCLUSIONS, list(to_add))
+
             return to_add is not None
         except OpenSearchHttpError:
             logger.debug(f"Added voting for {to_add}: FAILED")
             return False
 
-    def _delete_voting(self, to_remove: Optional[Set[str]] = None) -> Optional[Set[str]]:
+    def _delete_voting(self, cleanup_this_node: bool = True) -> Optional[Set[str]]:
         """Remove all the voting exclusions - cannot target 1 exclusion at a time."""
-        # "wait_for_removal" is VERY important, it removes all voting configs immediately
-        # and allows any node to return to the voting config in the future
-        original_exclusions = exclusions = self._fetch_voting_exclusions()
+        # First, we start by calculating the list of exclusions
+        # that will stay, given this node is leaving
+        to_readd = self._cleanup_voting_list([self._node.name])
         try:
+            # "wait_for_removal" is VERY important, it removes all voting configs immediately
+            # and allows any node to return to the voting config in the future
             self._opensearch.request(
                 "DELETE",
                 "/_cluster/voting_config_exclusions?wait_for_removal=false",
@@ -155,19 +152,37 @@ class OpenSearchExclusions:
                 resp_status_code=True,
             )
             logger.debug("Removed voting")
-            remove_set = to_remove or set([self._node.name])
-            nodes = set(remove_set)
-            for node in nodes:
-                if node in exclusions:
-                    exclusions.remove(node)
-                    remove_set.remove(node)
-            if exclusions and exclusions != original_exclusions:
-                logger.debug("Removed voting, adding back voting")
-                self._add_voting(exclusions)
-            return remove_set is None
+            # We've cleaned up the entire list, now we can re-add the ones that should stay
+            if to_readd:
+                self._add_voting(to_readd)
         except OpenSearchHttpError:
             logger.debug("Removed voting: FAILED")
             return False
+
+    def _cleanup_voting_list(self, to_remove: Optional[List[str]] = []) -> Optional[List[str]]:
+        """Cleanup the voting exclusions that are no longer part of the charm.
+
+        1) Recover the list of exclusions set by the charm
+        2) Fetch the list of units in the exclusions that are not part of the charm anymore
+        3) Prepare the cleanup: any unit name present in CURRENT_EXCLUSIONS and in the removed list
+        """
+        current_exclusions = self._charm.peers_data.get(self._scope, CURRENT_EXCLUSIONS, "").split(
+            ","
+        )
+        logger.debug(
+            f"Cleanup voting exclusions - original value in peer data: {current_exclusions}"
+        )
+
+        removed_units = self._removed_units_to_cleanup()
+        for unit in current_exclusions:
+            if unit in removed_units or unit in to_remove:
+                current_exclusions.remove(unit)
+        logger.debug(
+            f"Cleanup voting exclusions - removed: {removed_units} and kept {current_exclusions}"
+        )
+
+        self._update_peer_data(CURRENT_EXCLUSIONS, current_exclusions)
+        return current_exclusions
 
     def _fetch_voting_exclusions(self) -> Set[str]:
         """Fetch the registered voting exclusions."""
@@ -241,3 +256,22 @@ class OpenSearchExclusions:
     def _node(self) -> Node:
         """Returns current node."""
         return self._charm.opensearch.current()
+
+    def _update_peer_data(self, key: str, values: Optional[List[str]]) -> None:
+        """Add a new set of values to the peers data.
+
+        If values == None, then remove key's content.
+        """
+        if not values:
+            self._charm.peers_data.put(
+                self._scope,
+                key,
+                "",
+            )
+            return
+        current_values = self._charm.peers_data.get(self._scope, key, "").split(",")
+        self._charm.peers_data.put(
+            self._scope,
+            key,
+            ",".join(set(current_values + values)),
+        )

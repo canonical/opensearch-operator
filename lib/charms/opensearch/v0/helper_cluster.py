@@ -115,54 +115,6 @@ class ClusterTopology:
         return result
 
     @staticmethod
-    def elected_manager(
-        opensearch: OpenSearchDistribution,
-        use_localhost: bool,
-        hosts: Optional[List[str]] = None,
-    ) -> Node:
-        """Get the list of nodes in a cluster."""
-        host: Optional[str] = None  # defaults to current unit ip
-        alt_hosts: Optional[List[str]] = hosts
-        if not use_localhost and hosts:
-            host = hosts[0]
-            if len(hosts) >= 2:
-                alt_hosts = hosts[1:]
-
-        if use_localhost or host:
-            manager_id = opensearch.request(
-                "GET",
-                "/_cluster/state/cluster_manager_node",
-                host=host,
-                alt_hosts=alt_hosts,
-                retries=3,
-            )
-            if "cluster_manager_node" not in manager_id:
-                return None
-
-            response = opensearch.request(
-                "GET",
-                f"/_nodes/{manager_id['cluster_manager_node']}",
-                host=host,
-                alt_hosts=alt_hosts,
-                retries=3,
-            )
-            if "nodes" in response:
-                for id, obj in response["nodes"].items():
-                    if id != manager_id["cluster_manager_node"]:
-                        return None
-                    node = Node(
-                        name=obj["name"],
-                        roles=obj["roles"],
-                        ip=obj["ip"],
-                        app=App(id=obj["attributes"]["app_id"]),
-                        unit_number=int(obj["name"].split(".")[0].split("-")[-1]),
-                        temperature=obj.get("attributes", {}).get("temp"),
-                    )
-                    return node
-
-            return None
-
-    @staticmethod
     def nodes_count_by_role(nodes: List[Node]) -> Dict[str, int]:
         """Count number of nodes by role."""
         result = {}
