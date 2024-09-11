@@ -89,8 +89,8 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterRelationName,
     PluginConfigError,
     RestoreInProgress,
-    S3RelShouldNotExist,
     S3RelMissing,
+    S3RelShouldNotExist,
 )
 from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
