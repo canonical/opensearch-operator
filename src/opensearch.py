@@ -18,6 +18,7 @@ from typing import Optional
 
 import requests
 from charms.opensearch.v0.constants_charm import OPENSEARCH_SNAP_REVISION
+from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution, Paths
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -86,10 +87,8 @@ class OpenSearchSnap(OpenSearchDistribution):
 
         # Now, we must dig deeper into the actual status of systemd and the JVM process.
         # First, we want to make sure the process is not stopped, dead or zombie.
-        # From: https://github.com/torvalds/linux/blob/master/fs/proc/array.c#L126-L140
-        # "Parked" state is ignored as it applies to threads.
         try:
-            pid = subprocess.check_output(["lsof", "-ti:9200"], text=True).rstrip()
+            pid = run_cmd("lsof", args="-ti:9200").rstrip()
             if not pid or not os.path.exists(f"/proc/{pid}/stat"):
                 return False
             with open(f"/proc/{pid}/stat") as f:
@@ -97,6 +96,19 @@ class OpenSearchSnap(OpenSearchDistribution):
         except subprocess.CalledProcessError:
             return False
 
+        # From: https://github.com/torvalds/linux/blob/ \
+        #     8d8d276ba2fb5f9ac4984f5c10ae60858090babc/fs/proc/array.c#L126-L140
+        # Possible states to consider:
+        # "R (running)",		/* 0x00 */
+        # "S (sleeping)",		/* 0x01 */
+        # "D (disk sleep)",	/* 0x02 */
+        # "T (stopped)",		/* 0x04 */
+        # "t (tracing stop)",	/* 0x08 */
+        # "X (dead)",		/* 0x10 */
+        # "Z (zombie)",		/* 0x20 */
+        # "P (parked)",		/* 0x40 */
+        # "I (idle)",		/* 0x80 */
+        # "Parked" state is ignored as it applies to threads.
         if stat[2] == "T" and paused:
             return True
 

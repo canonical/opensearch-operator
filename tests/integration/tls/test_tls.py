@@ -235,7 +235,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     # we can't use `wait_until` here because the unit might not be idle in the meantime
     # please note: minimum waiting time is 60 minutes, due to limitations on the tls-operator
     logger.info(
-        f"Waiting for certificates to expire. Wait time: {SECRET_EXPIRY_WAIT_TIME/60} minutes."
+        f"Waiting for certificates to expire. Wait time: {SECRET_EXPIRY_WAIT_TIME / 60} minutes."
     )
     time.sleep(SECRET_EXPIRY_WAIT_TIME)
 

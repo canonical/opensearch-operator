@@ -55,6 +55,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHAError,
     OpenSearchHttpError,
+    OpenSearchMissingError,
     OpenSearchNotFullyReadyError,
     OpenSearchStartError,
     OpenSearchStartTimeoutError,
@@ -303,7 +304,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _on_start(self, event: StartEvent):  # noqa C901
         """Triggered when on start. Set the right node role."""
 
-        def __on_start_post_cleanup():
+        def cleanup():
             if self.peers_data.get(Scope.APP, "security_index_initialised"):
                 # in the case where it was on WaitingToStart status, event got deferred
                 # and the service started in between, put status back to active
@@ -314,7 +315,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self._cleanup_bootstrap_conf_if_applies()
 
         if self.opensearch.is_node_up():
-            __on_start_post_cleanup()
+            cleanup()
             return
 
         elif (
@@ -328,12 +329,22 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             # We had a reboot in this node.
             # We execute the same logic as above:
-            __on_start_post_cleanup()
+            cleanup()
 
             # Now, reissue a restart: we should not have stopped in the first place
             # as "started" flag is still set to True.
             # We do not wait for the 200 return, as maybe more than one unit is coming back
-            self.opensearch.start_service_only()
+            try:
+                self.opensearch.start_service_only()
+            except OpenSearchStartError as e:
+                logger.warning(f"Machine restart detected but error at service start with: {e}")
+                # Defer and retry later
+                event.defer()
+                return
+            except OpenSearchMissingError:
+                # This is unlike to happen, unless the snap has been manually removed
+                logger.error("Service previously started but now misses the snap.")
+                return
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():
