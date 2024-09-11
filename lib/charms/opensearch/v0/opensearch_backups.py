@@ -90,6 +90,7 @@ from charms.opensearch.v0.constants_charm import (
     PluginConfigError,
     RestoreInProgress,
     S3RelShouldNotExist,
+    S3RelMissing,
 )
 from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
@@ -440,13 +441,16 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     @override
     def _on_s3_relation_event(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
-        self.charm.status.set(BlockedStatus(S3RelShouldNotExist))
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(S3RelShouldNotExist, app=True)
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
 
     @override
     def _on_s3_relation_broken(self, event: EventBase) -> None:
         """Processes the non-orchestrator cluster events."""
-        self.charm.status.clear(S3RelShouldNotExist)
+        self.charm.status.clear(S3RelMissing)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(S3RelShouldNotExist, app=True)
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
 
 
@@ -869,12 +873,10 @@ class OpenSearchBackup(OpenSearchBackupBase):
         #     (3) based on the response, set the message status
         if state != BackupServiceState.SUCCESS:
             logger.error(f"Failed to setup backup service with state {state}")
-            if self.charm.unit.is_leader():
-                self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
             self.charm.status.clear(BackupConfigureStart)
+            self.charm.status.set(BlockedStatus(BackupSetupFailed))
             raise OpenSearchBackupError()
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupSetupFailed, app=True)
+        self.charm.status.clear(BackupSetupFailed)
         self.charm.status.clear(BackupConfigureStart)
 
     def _on_s3_created(self, _):
