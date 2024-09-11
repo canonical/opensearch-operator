@@ -238,7 +238,7 @@ class OpenSearchBackupBase(Object):
             return
 
         try:
-            self._charm.plugin_manager.apply_config(
+            self.charm.plugin_manager.apply_config(
                 OpenSearchBackupPlugin(
                     plugin_path=self.charm.opensearch.paths.plugins,
                     charm=self.charm,
