@@ -336,6 +336,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # We do not wait for the 200 return, as maybe more than one unit is coming back
             try:
                 self.opensearch.start_service_only()
+                # We're done here, we can return
+                return
             except OpenSearchStartError as e:
                 logger.warning(f"Machine restart detected but error at service start with: {e}")
                 # Defer and retry later
