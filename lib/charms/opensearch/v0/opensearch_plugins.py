@@ -526,7 +526,7 @@ class OpenSearchPluginBackupDataProvider(OpenSearchPluginDataProvider):
         result = dict(self.get_relation().data[self._relation.app]) or {}
         if not self.is_main_orchestrator:
             # Peer relations exchange secrets via peer-cluster secret
-            result |= self._charm.secrets.get_object(Scope.APP, S3_CREDENTIALS)
+            result |= self._charm.secrets.get_object(Scope.APP, S3_CREDENTIALS) or {}
         return result
 
 
