@@ -775,14 +775,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 except OpenSearchHttpError:
                     logger.error("Could not reload TLS certificates via API, will restart.")
                     self._restart_opensearch_event.emit()
-                self.tls.reset_ca_rotation_state()
-                self.status.clear(TLSNotFullyConfigured)
-                # the chain.pem file should only be updated after applying the new certs
-                # otherwise there could be TLS verification errors after renewing the CA
-                self.tls.update_request_ca_bundle()
-                # cleaning the former CA certificate from the truststore
-                # must only be done AFTER all renewed certificates are available and loaded
-                self.tls.remove_old_ca()
+                else:
+                    # the chain.pem file should only be updated after applying the new certs
+                    # otherwise there could be TLS verification errors after renewing the CA
+                    self.tls.update_request_ca_bundle()
+                    self.status.clear(TLSNotFullyConfigured)
+                    self.tls.reset_ca_rotation_state()
+                    # cleaning the former CA certificate from the truststore
+                    # must only be done AFTER all renewed certificates are available and loaded
+                    self.tls.remove_old_ca()
             else:
                 event.defer()
                 return
@@ -1081,6 +1082,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.tls.reset_ca_rotation_state()
         if self.is_tls_full_configured_in_cluster():
             self.status.clear(TLSCaRotation)
+            self.status.clear(TLSNotFullyConfigured)
 
         # request new certificates after rotating the CA
         if self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False) and self.peers_data.get(
@@ -1145,6 +1147,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             self.status.set(WaitingStatus(ServiceIsStopping))
             return
+
+        # we should update the chain.pem file to avoid TLS verification errors
+        # this could happen on restarts after applying a new admin cert
+        if not self.tls.is_ca_rotation_ongoing():
+            self.tls.update_request_ca_bundle()
 
         self._start_opensearch_event.emit()
 
