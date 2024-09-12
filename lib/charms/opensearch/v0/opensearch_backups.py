@@ -233,16 +233,15 @@ class OpenSearchBackupBase(Object):
             logger.debug("Secret %s is not s3-credentials, ignoring it.", event.secret.id)
             return
 
-        if not self.charm.secrets.get_object(Scope.APP, "s3-creds"):
+        if not self.charm.secrets.get_object(Scope.APP, S3_CREDENTIALS):
             logger.warning("Secret %s found but missing s3-credentials set.", event.secret.id)
             return
 
         try:
             self.charm.plugin_manager.apply_config(
                 OpenSearchBackupPlugin(
-                    plugin_path=self.charm.opensearch.paths.plugins,
                     charm=self.charm,
-                ),
+                ).config(),
             )
         except OpenSearchKeystoreNotReadyYetError:
             logger.info("Keystore not ready yet, retrying later.")

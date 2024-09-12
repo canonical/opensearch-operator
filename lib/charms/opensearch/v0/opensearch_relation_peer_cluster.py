@@ -13,6 +13,7 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
 )
+from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import (
     RelDepartureReason,
@@ -600,7 +601,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
 
         if s3_creds := data.credentials.s3:
-            self.charm.secrets.put_object(Scope.APP, "s3-creds", s3_creds.to_dict(by_alias=True))
+            self.charm.secrets.put_object(
+                Scope.APP, S3_CREDENTIALS, s3_creds.to_dict(by_alias=True)
+            )
 
     def _orchestrators(
         self,

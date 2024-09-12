@@ -274,9 +274,11 @@ from abc import abstractmethod
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import S3_RELATION, PeerRelationName
+from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import DeploymentType, S3RelData
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from jproperties import Properties
 from pydantic import BaseModel, validator
 from pydantic.error_wrappers import ValidationError
@@ -521,7 +523,9 @@ class OpenSearchPluginBackupDataProvider(OpenSearchPluginDataProvider):
         """
         if not self.get_relation():
             return {}
-        return self.get_relation().data[self._relation.app] or {}
+        result = dict(self.get_relation().data[self._relation.app]) or {}
+        result[S3_CREDENTIALS] = self._charm.secrets.get_object(Scope.APP, S3_CREDENTIALS)
+        return result
 
 
 class OpenSearchBackupPlugin(OpenSearchPlugin):
