@@ -9,6 +9,7 @@ from hashlib import md5
 from typing import Any, Dict, List, Literal, Optional
 
 from charms.opensearch.v0.constants_charm import S3_REPO_BASE_PATH
+from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
 from pydantic.utils import ROOT_KEY
@@ -343,7 +344,7 @@ class S3RelData(Model):
 
         This method creates a nested S3RelDataCredentials object from the input dict.
         """
-        creds = S3RelDataCredentials(**input_dict)
+        creds = S3RelDataCredentials(**input_dict[S3_CREDENTIALS])
         protocol = S3RelData.get_endpoint_protocol(input_dict.get("endpoint"))
         return cls.from_dict(
             dict(input_dict) | {"protocol": protocol, "s3-credentials": creds.dict()}
