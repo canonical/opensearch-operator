@@ -344,7 +344,13 @@ class S3RelData(Model):
 
         This method creates a nested S3RelDataCredentials object from the input dict.
         """
-        creds = S3RelDataCredentials(**input_dict[S3_CREDENTIALS])
+        if not input_dict:
+            return cls()
+
+        creds = S3RelDataCredentials()
+        if isinstance(input_dict.get(S3_CREDENTIALS), dict):
+            creds = S3RelDataCredentials(**input_dict[S3_CREDENTIALS])
+
         protocol = S3RelData.get_endpoint_protocol(input_dict.get("endpoint"))
         return cls.from_dict(
             dict(input_dict) | {"protocol": protocol, "s3-credentials": creds.dict()}
