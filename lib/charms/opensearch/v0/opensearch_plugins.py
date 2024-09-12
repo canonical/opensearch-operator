@@ -161,6 +161,24 @@ instead:
     }
 
 
+Optionally, we can define an extra class: data provider, to manage the access to
+specific relation databag the plugin needs to configure itself. This class should
+inherit from OpenSearchPluginDataProvider and implement the abstract methods.
+
+
+class MyPluginDataProvider(OpenSearchPluginDataProvider):
+
+    def __init__(self, charm):        
+        super().__init__(charm)
+        self._charm = charm
+
+    def get_relation(self) -> Any:
+        return self._charm.model.get_relation("my-plugin-relation")
+    
+    def get_data(self) -> Dict[str, Any]:
+        return self.get_relation().data[self._charm.unit]
+
+
 -------------------
 
 In case the plugin depends on API calls to finish configuration or a relation to be

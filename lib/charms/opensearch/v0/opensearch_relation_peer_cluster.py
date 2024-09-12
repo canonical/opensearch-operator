@@ -604,6 +604,13 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.secrets.put_object(
                 Scope.APP, S3_CREDENTIALS, s3_creds.to_dict(by_alias=True)
             )
+        else:
+            # Set the S3 credentials to empty
+            self.charm.secrets.put_object(
+                Scope.APP,
+                S3_CREDENTIALS,
+                S3RelDataCredentials().to_dict(by_alias=True),
+            )
 
     def _orchestrators(
         self,

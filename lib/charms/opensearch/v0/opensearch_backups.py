@@ -227,31 +227,7 @@ class OpenSearchBackupBase(Object):
             self.framework.observe(event, self._on_s3_relation_action)
 
     def _on_secret_changed(self, event: EventBase) -> None:
-        """Clean secret from the plugin cache."""
-        secret = event.secret
-        secret.get_content()
-
-        if not event.secret.label:
-            logger.info("Secret %s has no label, ignoring it.", event.secret.id)
-            return
-
-        if S3_CREDENTIALS not in event.secret.label:
-            logger.debug("Secret %s is not s3-credentials, ignoring it.", event.secret.id)
-            return
-
-        if not self.charm.secrets.get_object(Scope.APP, S3_CREDENTIALS):
-            logger.warning("Secret %s found but missing s3-credentials set.", event.secret.id)
-            return
-
-        try:
-            self.charm.plugin_manager.apply_config(
-                OpenSearchBackupPlugin(
-                    charm=self.charm,
-                ).config(),
-            )
-        except OpenSearchKeystoreNotReadyYetError:
-            logger.info("Keystore not ready yet, retrying later.")
-            event.defer()
+        pass
 
     def _on_s3_relation_event(self, event: EventBase) -> None:
         """Defers the s3 relation events."""
@@ -442,6 +418,55 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         self.framework.observe(
             self.charm.on[S3_RELATION].relation_broken, self._on_s3_relation_broken
         )
+
+        for event in [
+            charm.on[PeerClusterRelationName].relation_joined,
+            charm.on[PeerClusterRelationName].relation_changed,
+            charm.on[PeerClusterRelationName].relation_departed,
+        ]:
+            # We need to keep track of the peer-cluster relation
+            # A unit-level secret will not trigger secret changes
+
+            # I've discussed it with @wallyworld and the main idea
+            # is that the unit is already aware of the secret change, why triggering
+            # a new hook in this case?
+            # Now, opensearch_backups.py was originally using opensearch_secrets.py to
+            # update its the s3-credentials secret and inform this class via "manual_update"
+
+            # Listening to the peer cluster relation is another alternative:
+            # Effectively it will call the common method that both _on_secret_changed and
+            # _on_peer_cluster_relation_event uses to update the keystore.
+            self.framework.observe(event, self._on_peer_cluster_relation_event)
+
+    @override
+    def _on_secret_changed(self, event: EventBase) -> None:
+        """Clean secret from the plugin cache."""
+        secret = event.secret
+
+        if not event.secret.label:
+            logger.info("Secret %s has no label, ignoring it.", event.secret.id)
+            return
+
+        if S3_CREDENTIALS not in event.secret.label:
+            logger.debug("Secret %s is not s3-credentials, ignoring it.", event.secret.id)
+            return
+        secret.get_content(refresh=True)
+        self._on_peer_cluster_relation_event(event)
+
+    def _on_peer_cluster_relation_event(self, event: EventBase) -> None:
+        """Processes the peer-cluster relation events."""
+        if not self.charm.secrets.get_object(Scope.APP, S3_CREDENTIALS):
+            logger.warning(f"Secret {S3_CREDENTIALS} found but missing s3-credentials set.")
+            return
+        try:
+            self.charm.plugin_manager.apply_config(
+                OpenSearchBackupPlugin(
+                    charm=self.charm,
+                ).config(),
+            )
+        except OpenSearchKeystoreNotReadyYetError:
+            logger.info("Keystore not ready yet, retrying later.")
+            event.defer()
 
     @override
     def _on_s3_relation_event(self, event: EventBase) -> None:
