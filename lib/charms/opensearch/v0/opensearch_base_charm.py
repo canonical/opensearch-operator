@@ -784,9 +784,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     # cleaning the former CA certificate from the truststore
                     # must only be done AFTER all renewed certificates are available and loaded
                     self.tls.remove_old_ca()
-            else:
-                event.defer()
-                return
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
