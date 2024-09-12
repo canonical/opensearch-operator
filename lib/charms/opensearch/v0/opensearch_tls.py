@@ -249,10 +249,6 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader():
             if self.all_certificates_available():
                 self.store_admin_tls_secrets_if_applies()
-            else:
-                # we need to defer, otherwise the admin cert might never be stored on this unit
-                event.defer()
-                return
 
         # apply the chain.pem file for API requests only if the CA cert has not been updated
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
