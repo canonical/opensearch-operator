@@ -890,6 +890,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             self.apply_api_config_if_needed()
         except OpenSearchBackupError:
             # Finish here and wait for the user to reconfigure it and retrigger a new event
+            event.defer()
             return
         self.charm.status.clear(S3RelDataIncomplete)
         self.charm.status.clear(PluginConfigError)
@@ -1016,16 +1017,15 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
-        return self.get_service_status(
-            self._request(
-                "PUT",
-                f"_snapshot/{S3_REPOSITORY}",
-                payload={
-                    "type": "s3",
-                    "settings": self.plugin.data.dict(exclude={"tls_ca_chain", "credentials"}),
-                },
-            )
+        response = self._request(
+            "PUT",
+            f"_snapshot/{S3_REPOSITORY}",
+            payload={
+                "type": "s3",
+                "settings": self.plugin.data.dict(exclude={"tls_ca_chain", "credentials"}),
+            },
         )
+        return self.get_service_status(response)
 
     def get_service_status(  # noqa: C901
         self, response: dict[str, Any] | None
