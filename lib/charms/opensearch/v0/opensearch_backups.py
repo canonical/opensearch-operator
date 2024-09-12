@@ -41,13 +41,13 @@ s3-credentials:
 --> main charm file
     ...
 
-from charms.opensearch.v0.opensearch_backups import OpenSearchBackup
+from charms.opensearch.v0.opensearch_backups import OpenSearchBackup, backup
 
 
 class OpenSearchBaseCharm(CharmBase):
     def __init__(...):
         ...
-        self.backup = OpenSearchBackupFactory(self)
+        self.backup = backup(self)
 
 ###########################################################################################
 #
@@ -56,7 +56,7 @@ class OpenSearchBaseCharm(CharmBase):
 ###########################################################################################
 
 For developers, there is no meaningful difference between small and large deployments.
-They both use the same backup_factory() to return the correct object for their case.
+They both use the same backup() to return the correct object for their case.
 
 The large deployments expands the original concept of OpenSearchBackup to include other
 juju applications that are not cluster_manager. This means a cluster may be a data-only or
@@ -427,7 +427,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             # We need to keep track of the peer-cluster relation
             # A unit-level secret will not trigger secret changes
 
-            # I've discussed it with @wallyworld and the main idea
+            # I've discussed this offline with @wallyworld and the main idea
             # is that the unit is already aware of the secret change, why triggering
             # a new hook in this case?
             # Now, opensearch_backups.py was originally using opensearch_secrets.py to
