@@ -282,9 +282,7 @@ class S3RelData(Model):
     protocol: Optional[str] = None
     storage_class: Optional[str] = Field(alias="storage-class")
     tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain")
-    credentials: S3RelDataCredentials = Field(
-        alias="s3-credentials", default=S3RelDataCredentials()
-    )
+    credentials: S3RelDataCredentials = Field(alias=S3_CREDENTIALS, default=S3RelDataCredentials())
 
     class Config:
         """Model config of this pydantic model."""
@@ -310,7 +308,7 @@ class S3RelData(Model):
 
         return values
 
-    @validator("s3-credentials", check_fields=False)
+    @validator(S3_CREDENTIALS, check_fields=False)
     def ensure_secret_content(cls, conf: Dict[str, str] | S3RelDataCredentials):  # noqa: N805
         """Ensure the secret content is set."""
         if not conf:
@@ -347,13 +345,10 @@ class S3RelData(Model):
         if not input_dict:
             return cls()
 
-        creds = S3RelDataCredentials()
-        if isinstance(input_dict.get(S3_CREDENTIALS), dict):
-            creds = S3RelDataCredentials(**input_dict[S3_CREDENTIALS])
-
+        creds = S3RelDataCredentials(**input_dict)
         protocol = S3RelData.get_endpoint_protocol(input_dict.get("endpoint"))
         return cls.from_dict(
-            dict(input_dict) | {"protocol": protocol, "s3-credentials": creds.dict()}
+            dict(input_dict) | {"protocol": protocol, S3_CREDENTIALS: creds.dict()}
         )
 
 

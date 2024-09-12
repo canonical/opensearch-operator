@@ -89,6 +89,7 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterRelationName,
     PluginConfigError,
     RestoreInProgress,
+    S3RelDataIncomplete,
     S3RelMissing,
     S3RelShouldNotExist,
 )
@@ -104,7 +105,12 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyYetError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
-from charms.opensearch.v0.opensearch_plugins import OpenSearchBackupPlugin, PluginState
+from charms.opensearch.v0.opensearch_plugins import (
+    OpenSearchBackupPlugin,
+    OpenSearchPluginMissingConfigError,
+    OpenSearchPluginMissingDepsError,
+    PluginState,
+)
 from ops.charm import ActionEvent
 from ops.framework import EventBase, Object
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
@@ -828,6 +834,10 @@ class OpenSearchBackup(OpenSearchBackupBase):
             logger.warning("s3-changed: cluster not ready yet")
             event.defer()
             return
+        except (OpenSearchPluginMissingConfigError, OpenSearchPluginMissingDepsError) as e:
+            self.charm.status.set(BlockedStatus(S3RelDataIncomplete))
+            logger.error(e)
+            return
         except OpenSearchError as e:
             self.charm.status.set(BlockedStatus(PluginConfigError))
             # There was an unexpected error, log it and block the unit
@@ -847,6 +857,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             # Plugin is configured locally for this unit. Now the leader proceed.
             self.charm.status.clear(PluginConfigError)
             self.charm.status.clear(BackupSetupStart)
+            self.charm.status.clear(S3RelDataIncomplete)
             return
 
         # Leader configures this plugin
@@ -855,6 +866,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         except OpenSearchBackupError:
             # Finish here and wait for the user to reconfigure it and retrigger a new event
             return
+        self.charm.status.clear(S3RelDataIncomplete)
         self.charm.status.clear(PluginConfigError)
         self.charm.status.clear(BackupSetupStart)
 
