@@ -350,6 +350,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
         # only start the main orchestrator if a data node is available
+        # this allows for "cluster-manager-only" nodes in large deployments
+        # workflow documentation:
+        # no "data" role in deployment desc -> start gets deferred
+        # when "data" node joins -> start cluster-manager via _on_peer_cluster_relation_changed
+        # cluster-manager notifies "data" node via refresh of peer cluster relation data
+        # "data" node starts and initializes security index
         if (
             deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
             and not deployment_desc.start == StartMode.WITH_GENERATED_ROLES
