@@ -60,6 +60,22 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
         ),
+        "cm-only": DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=["cluster-manager"]),
+            start=StartMode.WITH_PROVIDED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            app=App(model_uuid="model-uuid", name="opensearch"),
+            state=DeploymentState(value=State.ACTIVE),
+        ),
+        "data-only": DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=["data"]),
+            start=StartMode.WITH_PROVIDED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.OTHER,
+            app=App(model_uuid="model-uuid", name="opensearch"),
+            state=DeploymentState(value=State.ACTIVE),
+        ),
     }
 
     def setUp(self) -> None:
@@ -165,6 +181,55 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             [call("admin"), call("kibanaserver")], any_order=True
         )
         _purge_users.assert_called_once()
+
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
+    @patch(f"{BASE_CHARM_CLASS}._initialize_security_index")
+    @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.is_node_up")
+    def test_cluster_manager_only_no_security_initialization(
+        self,
+        deployment_desc,
+        _initialize_security_index,
+        is_node_up,
+    ):
+        """Test that security index is not initialized after starting the cluster manager"""
+        deployment_desc.typ.return_value = DeploymentType.MAIN_ORCHESTRATOR
+        deployment_desc.config.roles.return_value = ["cluster-manager"]
+        self.harness.set_leader(True)
+        start_event = MagicMock()
+
+        self.charm._post_start_init(start_event)
+
+        _initialize_security_index.assert_not_called()
+        is_node_up.return_value = True
+
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
+    @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
+    @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_client_auth")
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
+    @patch(f"{BASE_CHARM_CLASS}._start_opensearch_event")
+    @patch(f"{BASE_CHARM_CLASS}._apply_peer_cm_directives_and_check_if_can_start")
+    def test_data_role_only_on_start(
+        self,
+        is_fully_configured,
+        is_admin_user_configured,
+        set_client_auth,
+        deployment_desc,
+        _start_opensearch_event,
+        _apply_peer_cm_directives_and_check_if_can_start,
+    ):
+        """Test start event for nodes that only have the `data` role."""
+        with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
+            is_node_up.return_value = False
+            _apply_peer_cm_directives_and_check_if_can_start.return_value = True
+            is_fully_configured.return_value = True
+            is_admin_user_configured.return_value = True
+            deployment_desc.typ.return_value = DeploymentType.OTHER
+            deployment_desc.config.roles.return_value = ["data"]
+
+            self.harness.set_leader(True)
+            self.charm.on.start.emit()
+
+            self.charm._start_opensearch_event.emit.assert_called_once()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_locking.OpenSearchNodeLock.acquired")
     @patch(f"{PEER_CLUSTERS_MANAGER}.validate_roles")
