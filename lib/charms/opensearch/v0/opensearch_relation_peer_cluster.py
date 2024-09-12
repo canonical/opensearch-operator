@@ -177,8 +177,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if (
             deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
             and "data" in peer_cluster_app.roles
+            and self.charm.is_admin_user_configured()
+            and self.charm.tls.is_fully_configured()
         ):
-            self.charm.handle_joining_data_node()
+                self.charm.handle_joining_data_node()
 
         if data.get("is_candidate_failover_orchestrator") != "true":
             self.refresh_relation_data(event)
