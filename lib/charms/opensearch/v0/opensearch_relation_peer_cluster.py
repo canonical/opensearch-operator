@@ -335,7 +335,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         cluster_fleet_apps.update({current_app.app.id: current_app.to_dict()})
 
         if p_cluster_app:
-            cluster_fleet_apps.update({p_cluster_app.app.id: p_cluster_app.to_dict()})
+            if p_cluster_app.planned_units == 0:  # app removal
+                cluster_fleet_apps.pop(p_cluster_app.app.id, None)
+            else:
+                cluster_fleet_apps.update({p_cluster_app.app.id: p_cluster_app.to_dict()})
 
         for rel_id in target_relation_ids:
             self.put_in_rel(
@@ -350,7 +353,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             cluster_fleet_apps_rels = (
                 self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps_rels") or {}
             )
-            cluster_fleet_apps_rels.update({str(trigger_rel_id): p_cluster_app.to_dict()})
+            if p_cluster_app.planned_units == 0:
+                cluster_fleet_apps_rels.pop(str(trigger_rel_id))
+            else:
+                cluster_fleet_apps_rels.update({str(trigger_rel_id): p_cluster_app.to_dict()})
 
             self.charm.peers_data.put_object(
                 Scope.APP, "cluster_fleet_apps_rels", cluster_fleet_apps_rels
