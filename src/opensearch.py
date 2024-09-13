@@ -10,12 +10,15 @@ import grp
 import logging
 import os
 import pwd
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import requests
 from charms.opensearch.v0.constants_charm import OPENSEARCH_SNAP_REVISION
+from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution, Paths
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -24,7 +27,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchStartError,
     OpenSearchStopError,
 )
-from charms.operator_libs_linux.v1.systemd import service_failed
+from charms.operator_libs_linux.v1.systemd import service_failed, service_running
 from charms.operator_libs_linux.v2 import snap
 from charms.operator_libs_linux.v2.snap import SnapError
 from overrides import override
@@ -69,6 +72,61 @@ class OpenSearchSnap(OpenSearchDistribution):
         except SnapError as e:
             logger.error(f"Failed to install/upgrade opensearch. \n{e}")
             raise OpenSearchInstallError()
+
+    @override
+    def is_service_started(self, paused: Optional[bool] = False) -> bool:
+        """Check if the snap service and JVM process are running.
+
+        Set paused=True if the process was intentionally paused.
+        """
+        if not self._opensearch.present:
+            return False
+
+        if not service_running("snap.opensearch.daemon.service"):
+            return False
+
+        # Now, we must dig deeper into the actual status of systemd and the JVM process.
+        # First, we want to make sure the process is not stopped, dead or zombie.
+        try:
+            pid = run_cmd("lsof", args="-ti:9200").rstrip()
+            if not pid or not os.path.exists(f"/proc/{pid}/stat"):
+                return False
+            with open(f"/proc/{pid}/stat") as f:
+                stat = f.read()
+        except subprocess.CalledProcessError:
+            return False
+
+        # From: https://github.com/torvalds/linux/blob/ \
+        #     8d8d276ba2fb5f9ac4984f5c10ae60858090babc/fs/proc/array.c#L126-L140
+        # Possible states to consider:
+        # "R (running)",		/* 0x00 */
+        # "S (sleeping)",		/* 0x01 */
+        # "D (disk sleep)",	/* 0x02 */
+        # "T (stopped)",		/* 0x04 */
+        # "t (tracing stop)",	/* 0x08 */
+        # "X (dead)",		/* 0x10 */
+        # "Z (zombie)",		/* 0x20 */
+        # "P (parked)",		/* 0x40 */
+        # "I (idle)",		/* 0x80 */
+        # "Parked" state is ignored as it applies to threads.
+        if stat[2] == "T" and paused:
+            return True
+
+        # We do not check reachability of the service
+        # If that is needed, then use the `is_started` method.
+        return stat[2] not in ["Z", "T", "X"]
+
+    @override
+    def start_service_only(self):
+        """Start the snap service only."""
+        if not self._opensearch.present:
+            raise OpenSearchMissingError()
+
+        try:
+            self._opensearch.start([self.SERVICE_NAME])
+        except SnapError as e:
+            logger.error(f"Failed to start the opensearch.{self.SERVICE_NAME} service. \n{e}")
+            raise OpenSearchStartError()
 
     @override
     def _start_service(self):

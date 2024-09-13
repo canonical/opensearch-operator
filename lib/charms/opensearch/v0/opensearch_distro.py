@@ -146,6 +146,19 @@ class OpenSearchDistribution(ABC):
         """Stop the opensearch service."""
         pass
 
+    @abstractmethod
+    def is_service_started(self, paused: Optional[bool] = False) -> bool:
+        """Check if the snap service and JVM process are running.
+
+        Set paused=True if the process was intentionally paused.
+        """
+        pass
+
+    @abstractmethod
+    def start_service_only(self):
+        """Start the actual service only (snap / pebble)."""
+        pass
+
     def is_started(self) -> bool:
         """Check if OpenSearch is started."""
         reachable = is_reachable(self.host, self.port)
