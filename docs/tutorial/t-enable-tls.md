@@ -28,7 +28,22 @@ juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
 
 Wait until `self-signed-certificates` is active. Use `juju status --watch 1s` to monitor the progress.
 
-<!-- TODO: juju status output-->
+```shell
+Model     Controller       Cloud/Region         Version  SLA          Timestamp
+tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:22:05Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         blocked      1  opensearch                2/beta         117  no       Missing TLS relation with this cluster.
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+
+Unit                         Workload  Agent  Machine  Public address  Ports  Message
+opensearch/0*                blocked   idle   0        10.214.176.107         Missing TLS relation with this cluster.
+self-signed-certificates/0*  active    idle   1        10.214.176.116
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.214.176.107  juju-b0826b-0  ubuntu@22.04      Running
+1        started  10.214.176.116  juju-b0826b-1  ubuntu@22.04      Running
+```
 
 ## Integrate with OpenSearch
 
@@ -40,8 +55,30 @@ To integrate `self-signed-certificates` with `opensearch`, run the following com
 juju integrate self-signed-certificates opensearch
 ```
 
-The OpenSearch service will start. You can see the new integrations with `juju status --relations`.
+The OpenSearch service will start. This might take some time. Once done, you can see the new integrations with `juju status --relations`.
 
-<!-- TODO: juju status output-->
+```shell
+Model     Controller       Cloud/Region         Version  SLA          Timestamp
+tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:23:24Z
 
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      1  opensearch                2/beta         117  no
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   0        10.214.176.107  9200/tcp
+self-signed-certificates/0*  active    idle   1        10.214.176.116
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.214.176.107  juju-b0826b-0  ubuntu@22.04      Running
+1        started  10.214.176.116  juju-b0826b-1  ubuntu@22.04      Running
+
+Integration provider                   Requirer                       Interface           Type     Message
+opensearch:node-lock-fallback          opensearch:node-lock-fallback  node_lock_fallback  peer
+opensearch:opensearch-peers            opensearch:opensearch-peers    opensearch_peers    peer
+opensearch:upgrade-version-a           opensearch:upgrade-version-a   upgrade             peer
+self-signed-certificates:certificates  opensearch:certificates        tls-certificates    regular
+```
+
+Notice the last relation: `self-signed-certificates:certificates  opensearch:certificates        tls-certificates    regular`. 
 > **Next step:** [4. Integrate with a client application](/t/9714)

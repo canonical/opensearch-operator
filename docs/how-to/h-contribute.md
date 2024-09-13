@@ -1,5 +1,5 @@
 [note type="caution"]
-:construction: This page is under construction! More details for each section coming soon.
+This page is under construction - more details for each section coming soon.
 [/note]
 
 # How to contribute
