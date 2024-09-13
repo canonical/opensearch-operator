@@ -913,8 +913,10 @@ class OpenSearchBackup(OpenSearchBackupBase):
             logger.error(f"Failed to setup backup service with state {state}")
             self.charm.status.clear(BackupConfigureStart)
             self.charm.status.set(BlockedStatus(BackupSetupFailed))
+            self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
             raise OpenSearchBackupError()
         self.charm.status.clear(BackupSetupFailed)
+        self.charm.status.clear(BackupSetupFailed, app=True)
         self.charm.status.clear(BackupConfigureStart)
 
     def _on_s3_created(self, _):
