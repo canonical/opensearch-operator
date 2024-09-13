@@ -268,11 +268,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
         if self.peers_data.get(Scope.APP, "security_index_initialised", False):
+            # Leader election event happening after a previous leader got killed
             if not self.opensearch.is_node_up():
                 event.defer()
                 return
 
-            # Leader election event happening after a previous leader got killed
             if self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
                 event.defer()
 
