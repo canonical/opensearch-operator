@@ -1,21 +1,23 @@
-# Charm Testing reference
+[note]
+**Note**: All commands are written for `juju >= v.3.1`. Charmed OpenSearch no longer supports `juju v.2`.
+[/note]
 
-> **:information_source: Hint**: Use [Juju 3](/t/5064). (Charmed OpenSearch dropped support for juju 2.9)
+# Software testing for charms
 
-There are [a lot of test types](https://en.wikipedia.org/wiki/Software_testing) available and most of them are well applicable for Charmed OpenSearch. Here is a list prepared by Canonical:
+Most types of standard [software tests](https://en.wikipedia.org/wiki/Software_testing) are applicable to Charmed OpenSearch.
 
-* Unit tests
-* Integration tests
-* Performance tests
+This reference addresses the following types:
+* [Unit test](#unit-test)
+* [Integration test](#integration-test)
+* [Performance test](#performance-test)
 
-## Unit tests:
-Please check the "[Contributing](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md#testing)" guide and follow `tox run -e unit` examples there.
+## Unit test
+Check the [Contributing](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md#testing) guide and follow `tox run -e unit` examples there.
 
-## Integration tests:
-The integration tests coverage is rather rich in the OpenSearch charm. 
-Please check the "[Contributing](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md#testing)" guide and follow `tox run -e integration` examples there.
+## Integration test
+The integration tests coverage is rather rich in the OpenSearch charm. Check the [Contributing](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md#testing) guide and follow `tox run -e integration` examples there.
 
-For HA related tests - each test serves as an integration as well as a smoke test with continuous writes routine being perpetually ran in parallel of whatever operation the test is involved in. 
+For high availability (HA) related tests, each test serves as an integration as well as a smoke test with continuous writes routine being perpetually ran in parallel of whatever operation the test is involved in. 
 These continuous writes ensure the availability of the service under different conditions. 
 
 HA tests make use of one of the 2 fixtures:
@@ -24,5 +26,5 @@ HA tests make use of one of the 2 fixtures:
 
 After each test completes, the index gets deleted. 
 
-## Performance tests:
+## Performance test
 Refer to the [OpenSearch VM benchmark](https://discourse.charmhub.io/t/load-testing-for-charmed-opensearch/13987) guide for charmed OpenSearch.
