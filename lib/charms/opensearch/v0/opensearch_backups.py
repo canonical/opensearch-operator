@@ -661,12 +661,16 @@ class OpenSearchBackup(OpenSearchBackupBase):
         Raises:
             OpenSearchHttpError: cluster is unreachable
         """
-        output = self.charm.opensearch.request(
-            "GET",
-            f"_snapshot/{S3_REPOSITORY}",
-            retries=6,
-            timeout=10,
-        )
+        try:
+            output = self.charm.opensearch.request(
+                "GET",
+                f"_snapshot/{S3_REPOSITORY}",
+                retries=6,
+                timeout=10,
+            )
+        except OpenSearchHttpError:
+            # Assuming we are busy, as we could not reach the cluster
+            return False
         return self.get_service_status(output) in [
             BackupServiceState.REPO_NOT_CREATED,
             BackupServiceState.REPO_MISSING,
@@ -677,12 +681,15 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
         Essentially, check for each index shard: for all type=SNAPSHOT and stage=DONE, return True.
         """
-        indices_status = self.charm.opensearch.request(
-            "GET",
-            "/_recovery?human",
-            retries=6,
-            timeout=10,
-        )
+        try:
+            indices_status = self.charm.opensearch.request(
+                "GET",
+                "/_recovery?human",
+                retries=6,
+                timeout=10,
+            )
+        except OpenSearchHttpError:
+            raise OpenSearchRestoreCheckError("_is_restore_complete: failed to get indices status")
         if not indices_status:
             # No restore has happened. Raise an exception
             raise OpenSearchRestoreCheckError("_is_restore_complete: failed to get indices status")
@@ -1037,16 +1044,19 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
-        response = self.charm.opensearch.request(
-            "PUT",
-            f"_snapshot/{S3_REPOSITORY}",
-            payload={
-                "type": "s3",
-                "settings": self.plugin.data.dict(exclude={"tls_ca_chain", "credentials"}),
-            },
-            retries=6,
-            timeout=10,
-        )
+        try:
+            response = self.charm.opensearch.request(
+                "PUT",
+                f"_snapshot/{S3_REPOSITORY}",
+                payload={
+                    "type": "s3",
+                    "settings": self.plugin.data.dict(exclude={"tls_ca_chain", "credentials"}),
+                },
+                retries=6,
+                timeout=10,
+            )
+        except OpenSearchHttpError:
+            return BackupServiceState.REPO_ERR_UNKNOWN
         return self.get_service_status(response)
 
     def get_service_status(  # noqa: C901
