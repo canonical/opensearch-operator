@@ -7,6 +7,12 @@
 * A deployed [Charmed OpenSearch operator](/t/9716)
 * A deployed [`cos-lite` bundle in a Kubernetes environment](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
 
+## Summary
+
+* [Offer interfaces via the COS controller](#offer-interfaces-via-the-cos-controller)
+* [Consume offers via the OpenSearch model](#consume-offers-via-the-opensearch-model)
+* [Deploy and integrate Grafana](#deploy-and-integrate-grafana)
+* [Connect to the Grafana web interface](#connect-to-the-grafana-web-interface)
 ---
 
 ## Offer interfaces via the COS controller
@@ -23,9 +29,7 @@ To offer the COS interfaces, run
 
 ```shell
 juju offer grafana:grafana-dashboard
-
 juju offer loki:logging
-
 juju offer prometheus:receive-remote-write
 ```
 
@@ -43,9 +47,7 @@ To consume offers to be reachable in the current model, run
 
 ```shell
 juju consume <k8s_cos_controller>:admin/cos.grafana
-
 juju consume <k8s_cos_controller>:admin/cos.loki
-
 juju consume <k8s_cos_controller>:admin/cos.prometheus
 ```
 
@@ -61,9 +63,7 @@ Then, integrate (previously known as "[relate](https://juju.is/docs/juju/integra
 
 ```shell
 juju integrate grafana-agent grafana
-
 juju integrate grafana-agent loki
-
 juju integrate grafana-agent prometheus
 ```
 
@@ -71,9 +71,7 @@ Finally, integrate `grafana-agent` with consumed COS offers:
 
 ```shell
 juju integrate grafana-agent-k8s opensearch:grafana-dashboard
-
 juju integrate grafana-agent-k8s opensearch:logging
-
 juju integrate grafana-agent-k8s opensearch:metrics-endpoint
 ```
 
@@ -87,9 +85,7 @@ Large deployments run across multiple juju applications. Connect all the units o
 
 It is possible to have the same COS and dashboard for multiple deployments. The dashboard provides selectors to filter which cluster to watch at the time.
 
-## Charmed OpenSearch on Grafana
-
-### Connect Grafana web interface
+## Connect to the Grafana web interface
 
 To connect to the Grafana web interface, follow the [Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s?_ga=2.201254254.1948444620.1704703837-757109492.1701777558#heading--browse-dashboards) section of the MicroK8s "Getting started" guide.
 

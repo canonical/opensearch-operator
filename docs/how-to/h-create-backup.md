@@ -1,28 +1,26 @@
+[note]All commands are written for `juju > v3.1.7+`[/note]
 # How to create a backup
 
-This guide contains recommended steps and useful commands for creating and managing backups to ensure smooth restores:
-
-* Save your current cluster credentials, as you’ll need them for restoring
-* Create backups
-* List backups to check the availability and status of your backups
-
-[note]All commands are written for juju >= v3.1.7[/note]
-
-For more information, check the [Juju Release Notes](https://juju.is/docs/juju/roadmap#heading--juju-releases).
+This guide contains recommended steps and useful commands for creating and managing backups to ensure smooth restores.
 
 ## Prerequisites
-
 * A cluster with at least three nodes deployed
 * Access to an S3-compatible storage
 * Configured settings for the S3-compatible storage
 
+## Summary
+* [Save your current cluster credentials](#save-your-current-cluster-credentials), as you’ll need them for restoring
+* [Create a backup](#create-a-backup)
+* [List backups](#list-backups) to check the availability and status of your backups
+
+--- 
 ## Save your current cluster credentials
 
 For security reasons, charm credentials are not stored inside backups. So, if you plan to restore to a backup at any point in the future, you will need the new user password as well as certificates/keys for your existing cluster.
 
 You can retrieve the credentials of the admin user with the following command:
 
-```
+```none
 juju run opensearch/leader get-password
 Running operation 141 with 1 task
   - task 142 on unit-opensearch-0
@@ -41,13 +39,13 @@ username: admin
 
 For more context about passwords during a restore, check How to restore an external backup.
 
-## Create backups
+## Create a backup
 
 Once you have a three-nodes cluster with configurations set for S3 storage, check that Charmed OpenSearch is active and idle with juju status.
 
-Once Charmed OpenSearch is active and idle, you can create your first backup with the create-backup command:
+Once Charmed OpenSearch is `active` and `idle`, you can create your first backup with the `create-backup` command:
 
-```
+```none
 juju run opensearch/leader create-backup
 Running operation 333 with 1 task
   - task 334 on unit-opensearch-0
@@ -59,7 +57,7 @@ status: Backup is running.
 
 ## List backups
 
-You can list your available, failed, and in progress backups by running the list-backups command:
+You can list your available, failed, and in progress backups by running the `list-backups` command:
 
 ```
 juju run opensearch/leader list-backups
