@@ -664,7 +664,10 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.charm.tls._on_certificate_available(event_mock)
 
         # The new cert is saved to the keystore
-        assert run_cmd.call_count == 2
+        if self.charm.unit.is_leader():
+            assert run_cmd.call_count == 2
+        else:
+            assert run_cmd.call_count == 4
 
         assert re.search(
             "openssl pkcs12 -export .*-out "
@@ -1467,7 +1470,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         if self.charm.unit.is_leader():
             assert run_cmd.call_count == 14
         else:
-            assert run_cmd.call_count == 20
+            assert run_cmd.call_count == 16
 
         assert re.search(
             "openssl pkcs12 -export .* -out "
