@@ -244,30 +244,6 @@ class OpenSearchBackupBase(Object):
         logger.info("Deployment description not yet available, failing actions.")
         event.fail("Failed: deployment description not yet available")
 
-    def _request(self, *args, **kwargs) -> dict[str, Any] | None:
-        """Returns the output of OpenSearchDistribution.request() or throws an error.
-
-        Request method can return one of many: Union[Dict[str, any], List[any], int]
-        and raise multiple types of errors.
-
-        If int is returned, then throws an exception informing the HTTP request failed.
-        If the request fails, returns the error text or None if only status code is found.
-
-        Raises:
-          - ValueError
-        """
-        if "retries" not in kwargs.keys():
-            kwargs["retries"] = 6
-        if "timeout" not in kwargs.keys():
-            kwargs["timeout"] = 10
-        # We are interested to see the entire response
-        kwargs["resp_status_code"] = False
-        try:
-            result = self.charm.opensearch.request(*args, **kwargs)
-        except OpenSearchHttpError as e:
-            return e.response_body
-        return result if isinstance(result, dict) else None
-
     def _is_restore_in_progress(self) -> bool:
         """Checks if the restore is currently in progress.
 
@@ -276,7 +252,12 @@ class OpenSearchBackupBase(Object):
          2) check for each index shard: for all type=SNAPSHOT and stage=DONE, return False.
         """
         try:
-            indices_status = self._request("GET", "/_recovery?human") or {}
+            indices_status = self.charm.opensearch.request(
+                "GET",
+                "/_recovery?human",
+                retries=6,
+                timeout=10,
+            ) or {}
         except OpenSearchHttpError:
             # Defaults to True if we have a failure, to avoid any actions due to
             # intermittent connection issues.
@@ -314,7 +295,12 @@ class OpenSearchBackupBase(Object):
                 with attempt:
                     target = f"_snapshot/{S3_REPOSITORY}/"
                     target += f"{backup_id.lower()}" if backup_id else "_all"
-                    output = self._request("GET", target)
+                    output = self.charm.opensearch.request(
+                        "GET",
+                        target,
+                        retries=6,
+                        timeout=10,
+                    )
                     logger.debug(f"Backup status: {output}")
         except RetryError as e:
             logger.error(f"_request failed with: {e}")
@@ -573,12 +559,14 @@ class OpenSearchBackup(OpenSearchBackupBase):
         if not indices:
             # The indices is empty, we do not need to check
             return True
-        resp = self._request(
+        resp = self.charm.opensearch.request(
             "POST",
             f"{','.join(indices)}/_close",
             payload={
                 "ignore_unavailable": "true",
             },
+            retries=6,
+            timeout=10,
         )
 
         # Trivial case, something went wrong
@@ -636,7 +624,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
     def _restore(self, backup_id: int) -> Dict[str, Any]:
         """Runs the restore and processes the response."""
         backup_indices = self._list_backups().get(backup_id, {}).get("indices", {})
-        output = self._request(
+        output = self.charm.opensearch.request(
             "POST",
             f"_snapshot/{S3_REPOSITORY}/{backup_id.lower()}/_restore?wait_for_completion=true",
             payload={
@@ -645,6 +633,8 @@ class OpenSearchBackup(OpenSearchBackupBase):
                 ),
                 "partial": False,  # It is the default value, but we want to avoid partial restores
             },
+            retries=6,
+            timeout=10,
         )
         logger.debug(f"_restore: restore call returned {output}")
         if (
@@ -668,7 +658,12 @@ class OpenSearchBackup(OpenSearchBackupBase):
         Raises:
             OpenSearchHttpError: cluster is unreachable
         """
-        output = self._request("GET", f"_snapshot/{S3_REPOSITORY}")
+        output = self.charm.opensearch.request(
+            "GET",
+            f"_snapshot/{S3_REPOSITORY}",
+            retries=6,
+            timeout=10,
+        )
         return self.get_service_status(output) in [
             BackupServiceState.REPO_NOT_CREATED,
             BackupServiceState.REPO_MISSING,
@@ -679,7 +674,12 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
         Essentially, check for each index shard: for all type=SNAPSHOT and stage=DONE, return True.
         """
-        indices_status = self._request("GET", "/_recovery?human")
+        indices_status = self.charm.opensearch.request(
+            "GET",
+            "/_recovery?human",
+            retries=6,
+            timeout=10,
+        )
         if not indices_status:
             # No restore has happened. Raise an exception
             raise OpenSearchRestoreCheckError("_is_restore_complete: failed to get indices status")
@@ -778,13 +778,15 @@ class OpenSearchBackup(OpenSearchBackupBase):
             logger.debug(
                 f"Create backup action request id {new_backup_id} response is:"
                 + self.get_service_status(
-                    self._request(
+                    self.charm.opensearch.request(
                         "PUT",
                         f"_snapshot/{S3_REPOSITORY}/{new_backup_id.lower()}?wait_for_completion=false",
                         payload={
                             "indices": "*",  # Take all indices
                             "partial": False,  # It is the default value, but we want to avoid partial backups
                         },
+                        retries=6,
+                        timeout=10,
                     )
                 )
             )
@@ -1000,13 +1002,25 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
     def _check_repo_status(self) -> BackupServiceState:
         try:
-            return self.get_service_status(self._request("GET", f"_snapshot/{S3_REPOSITORY}"))
+            response = self.charm.opensearch.request(
+                "GET",
+                f"_snapshot/{S3_REPOSITORY}",
+                retries=6,
+                timeout=10,
+            )
+            return self.get_service_status(response)
         except OpenSearchHttpError:
             return BackupServiceState.RESPONSE_FAILED_NETWORK
 
     def _check_snapshot_status(self) -> BackupServiceState:
         try:
-            return self.get_snapshot_status(self._request("GET", "/_snapshot/_status"))
+            response = self.charm.opensearch.request(
+                "GET",
+                "/_snapshot/_status",
+                retries=6,
+                timeout=10,
+            )
+            return self.get_snapshot_status(response)
         except OpenSearchHttpError:
             return BackupServiceState.RESPONSE_FAILED_NETWORK
 
@@ -1020,13 +1034,15 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
-        response = self._request(
+        response = self.charm.opensearch.request(
             "PUT",
             f"_snapshot/{S3_REPOSITORY}",
             payload={
                 "type": "s3",
                 "settings": self.plugin.data.dict(exclude={"tls_ca_chain", "credentials"}),
             },
+            retries=6,
+            timeout=10,
         )
         return self.get_service_status(response)
 
