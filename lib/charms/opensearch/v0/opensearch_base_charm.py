@@ -894,6 +894,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         if not self._can_service_start():
+            # after rotating the CA and certificates:
+            # the last host in the cluster to restart might not be able to connect to the other
+            # hosts anymore, because it is the last to renew the pem-file for requests
+            # in this case we update the pem-file to be able to connect and start the host
+            if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+                self.tls.update_request_ca_bundle()
             self.node_lock.release()
             logger.info("Could not start opensearch service. Will retry next event.")
             event.defer()
@@ -926,6 +932,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             self.unit.status = BlockedStatus(str(e))
             return
+
+        # we should update the chain.pem file to avoid TLS verification errors
+        # this happens on restarts after applying a new admin cert on CA rotation
+        if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+            self.tls.update_request_ca_bundle()
 
         try:
             self.opensearch.start(
@@ -1144,11 +1155,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             self.status.set(WaitingStatus(ServiceIsStopping))
             return
-
-        # we should update the chain.pem file to avoid TLS verification errors
-        # this could happen on restarts after applying a new admin cert
-        if not self.tls.is_ca_rotation_ongoing():
-            self.tls.update_request_ca_bundle()
 
         self._start_opensearch_event.emit()
 
