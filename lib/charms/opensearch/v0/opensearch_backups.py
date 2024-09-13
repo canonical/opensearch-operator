@@ -252,12 +252,15 @@ class OpenSearchBackupBase(Object):
          2) check for each index shard: for all type=SNAPSHOT and stage=DONE, return False.
         """
         try:
-            indices_status = self.charm.opensearch.request(
-                "GET",
-                "/_recovery?human",
-                retries=6,
-                timeout=10,
-            ) or {}
+            indices_status = (
+                self.charm.opensearch.request(
+                    "GET",
+                    "/_recovery?human",
+                    retries=6,
+                    timeout=10,
+                )
+                or {}
+            )
         except OpenSearchHttpError:
             # Defaults to True if we have a failure, to avoid any actions due to
             # intermittent connection issues.
