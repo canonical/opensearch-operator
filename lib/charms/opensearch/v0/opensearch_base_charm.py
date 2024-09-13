@@ -1343,7 +1343,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             cm_names.append(self.unit_name)
             cm_ips.append(self.unit_ip)
 
-            if self.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
+            if (
+                self.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
+                and not self.peers_data.get(Scope.APP, "bootstrapped", False)
+            ):
                 cms_in_bootstrap = self.peers_data.get(
                     Scope.APP, "bootstrap_contributors_count", 0
                 )
@@ -1372,6 +1375,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _cleanup_bootstrap_conf_if_applies(self) -> None:
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
+        if self.unit.is_leader():
+            self.peers_data.put(Scope.APP, "bootstrapped", True)
         self.peers_data.delete(Scope.UNIT, "bootstrap_contributor")
         self.opensearch_config.cleanup_bootstrap_conf()
 
