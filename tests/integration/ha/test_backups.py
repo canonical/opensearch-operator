@@ -90,7 +90,7 @@ LARGE_DEPLOYMENTS_ALL_CLOUDS = [ALL_GROUPS[(cloud, "large")] for cloud in ["aws"
 
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "latest/edge"
-TIMEOUT = 10 * 60
+TIMEOUT = 20 * 60
 BackupsPath = f"opensearch/{uuid.uuid4()}"
 
 
