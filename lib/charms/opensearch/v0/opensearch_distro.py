@@ -29,6 +29,7 @@ from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
 from charms.opensearch.v0.models import App, StartMode
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
+    OpenSearchError,
     OpenSearchHttpError,
     OpenSearchStartTimeoutError,
 )

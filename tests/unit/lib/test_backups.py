@@ -595,7 +595,7 @@ class TestBackups(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_apply_api_config_if_needed(self, mock_status, _, mock_request, __) -> None:
+    def test_apply_api_config_if_needed(self, mock_status, _, mock_request, __, ___) -> None:
         """Tests the application of post-restart steps."""
         self.harness.update_relation_data(
             self.s3_rel_id,
