@@ -562,6 +562,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # register main and failover cm app names if any
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
 
+        # let the charm know this is an already bootstrapped cluster
+        self.charm.peers_data.put(Scope.APP, "bootstrapped", True)
+
         # store the security related settings in secrets, peer_data, disk
         self._set_security_conf(data)
 
