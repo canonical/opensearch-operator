@@ -759,9 +759,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
         )
         if departing_orchestrator == "main":
-            cluster_fleet_apps.pop(orchestrators.main_app.id)
+            cluster_fleet_apps.pop(orchestrators.main_app.id, None)
         else:
-            cluster_fleet_apps.pop(orchestrators.failover_app.id)
+            cluster_fleet_apps.pop(orchestrators.failover_app.id, None)
         self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)
 
     def _promote_failover(self, orchestrators: PeerClusterOrchestrators, cms: List[Node]) -> None:
