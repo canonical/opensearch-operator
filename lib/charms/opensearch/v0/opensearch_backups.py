@@ -668,9 +668,8 @@ class OpenSearchBackup(OpenSearchBackupBase):
                 retries=6,
                 timeout=10,
             )
-        except OpenSearchHttpError:
-            # Assuming we are busy, as we could not reach the cluster
-            return False
+        except OpenSearchHttpError as e:
+            return e.response_body if e.response_body else None
         return self.get_service_status(output) in [
             BackupServiceState.REPO_NOT_CREATED,
             BackupServiceState.REPO_MISSING,
