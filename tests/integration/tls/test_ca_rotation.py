@@ -197,7 +197,7 @@ async def test_rollout_new_ca_large_deployment(ops_test: OpsTest) -> None:
         units_statuses=["active"],
         wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
         timeout=2400,
-        idle_period=IDLE_PERIOD
+        idle_period=IDLE_PERIOD,
     )
 
     more_writes = await c_writes.count()
