@@ -35,7 +35,7 @@ DATA_APP = "opensearch-data"
 
 CLUSTER_NAME = "log-app"
 
-APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 2}
+APP_UNITS = {MAIN_APP: 2, FAILOVER_APP: 1, DATA_APP: 2}
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
@@ -128,7 +128,7 @@ async def test_build_large_deployment(ops_test: OpsTest) -> None:
         ops_test.model.deploy(
             my_charm,
             application_name=MAIN_APP,
-            num_units=1,
+            num_units=2,
             series=SERIES,
             config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager,data"},
         ),
@@ -188,12 +188,16 @@ async def test_rollout_new_ca_large_deployment(ops_test: OpsTest) -> None:
 
     await wait_until(
         ops_test,
-        apps=[APP_NAME],
-        apps_statuses=["active"],
+        apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
+        apps_full_statuses={
+            MAIN_APP: {"active": []},
+            DATA_APP: {"active": []},
+            FAILOVER_APP: {"active": []},
+        },
         units_statuses=["active"],
-        timeout=1800,
-        idle_period=60,
-        wait_for_exact_units=len(UNIT_IDS),
+        wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
+        timeout=2400,
+        idle_period=IDLE_PERIOD
     )
 
     more_writes = await c_writes.count()
