@@ -119,12 +119,12 @@ class OpenSearchExclusions:
                 f"/_cluster/voting_config_exclusions?node_names={','.join(to_add)}&timeout=1m",
                 alt_hosts=self._charm.alt_hosts,
                 resp_status_code=True,
-                retries=3,
             )
             logger.debug("Added voting, response: %s", response)
 
-            self._charm.add_to_peer_data(VOTING_TO_DELETE, list(self._node.name))
-            return "Acknowledged" in response
+            self._charm.peers_data.put(self._scope, VOTING_TO_DELETE, ",".join(to_add))
+            # The voting excl. API returns a status only
+            return response >= 200 and response < 300
         except OpenSearchHttpError:
             return False
 
@@ -153,10 +153,12 @@ class OpenSearchExclusions:
                 alt_hosts=self._charm.alt_hosts,
                 resp_status_code=True,
             )
-            logger.debug("Removed voting, response %s", response)
-            if to_stay and self._add_voting(to_stay):
-                self._charm.add_to_peer_data(VOTING_TO_DELETE, ",".join(exclusions))
-                return True
+            if response < 200 or response >= 300:
+                logger.debug("Failed to remove voting exclusions, response %s", response)
+                return False
+
+            logger.debug("Removed voting for: %s", to_stay)
+            return to_stay and self._add_voting(to_stay)
         except OpenSearchHttpError:
             pass
         return False
