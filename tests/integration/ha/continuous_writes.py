@@ -5,6 +5,7 @@ import asyncio
 import logging
 import os
 import time
+from enum import Enum
 from multiprocessing import Event, Process, Queue, log_to_stderr
 from types import SimpleNamespace
 from typing import Optional
@@ -29,6 +30,14 @@ logging.getLogger("opensearch").setLevel(logging.ERROR)
 logging.getLogger("opensearchpy.helpers").setLevel(logging.ERROR)
 
 
+class ReplicationMode(Enum):
+    """Replication mode for the index."""
+
+    DEFAULT = "default"
+    WITH_AT_LEAST_0_REPL = "0-all"
+    WITH_AT_LEAST_1_REPL = "1-all"
+
+
 class ContinuousWrites:
     """Utility class for managing continuous writes."""
 
@@ -49,15 +58,15 @@ class ContinuousWrites:
         wait=wait_fixed(wait=5) + wait_random(0, 5),
         stop=stop_after_attempt(5),
     )
-    async def start(self, repl_on_all_nodes: bool = False, is_bulk: bool = True) -> None:
+    async def start(self, repl_mode: ReplicationMode, is_bulk: bool = True) -> None:
         """Run continuous writes in the background."""
         if not self._is_stopped:
             await self.clear()
 
         # create index if custom conf needed
-        if repl_on_all_nodes:
+        if repl_mode == ReplicationMode.WITH_AT_LEAST_1_REPL:
             await self._create_fully_replicated_index()
-        else:
+        elif repl_mode == ReplicationMode.WITH_AT_LEAST_0_REPL:
             await self._create_index_with_0_all_replicas()
 
         # create process
@@ -142,9 +151,6 @@ class ContinuousWrites:
                 },
                 wait_for_active_shards="all",
             )
-        except opensearchpy.exceptions.RequestError as e:
-            if e.error != "resource_already_exists_exception":
-                raise
         finally:
             client.close()
 
