@@ -66,7 +66,11 @@ class OpenSearchExclusions:
 
     def cleanup(self) -> None:
         """Delete all exclusions that failed to be deleted."""
-        self._delete_voting(self._units_to_cleanup())
+        self._delete_voting(
+            self._units_to_cleanup(
+                self._charm.peers_data.get(self._scope, VOTING_TO_DELETE, "").split(",")
+            )
+        )
 
         allocations_to_cleanup = self._charm.peers_data.get(
             self._scope, ALLOCS_TO_DELETE, ""
@@ -74,12 +78,15 @@ class OpenSearchExclusions:
         if allocations_to_cleanup and self._delete_allocations(allocations_to_cleanup):
             self._charm.peers_data.delete(self._scope, ALLOCS_TO_DELETE)
 
-    def _units_to_cleanup(self) -> Optional[List[str]]:
+    def _units_to_cleanup(self, removable = List[str]) -> Optional[Set[str]]:
         """Deletes all units that have left the cluster via Juju.
 
         This method ensures we keep a small list of voting exclusions at all times.
         """
-        if not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc()):
+        if (
+            not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc())
+            or not removable
+        ):
             return {}
 
         if self._charm.opensearch_peer_cm.is_provider(typ="main") and (
@@ -96,11 +103,12 @@ class OpenSearchExclusions:
 
         # Now, we need to remove the units that were marked for deletion and are not in the
         # cluster anymore.
-        to_remove = self._charm.peers_data.get(self._scope, VOTING_TO_DELETE, "").split(",")
-        for node in to_remove:
-            if node in units:
-                to_remove.remove(node)
-        return to_remove
+        to_remove = []
+        for node in removable:
+            if node not in units:
+                # Unit still exists
+                to_remove.append(node)
+        return set(to_remove)
 
     def _add_voting(self, exclusions: Optional[Set[str]] = None) -> bool:
         """Include the current node in the CMs voting exclusions list of nodes."""
@@ -125,8 +133,13 @@ class OpenSearchExclusions:
 
         The API does not allow to remove a subset of the voting exclusions, at once.
         """
-        to_stay = self._fetch_voting() - exclusions
-        if self._fetch_voting() == to_stay:
+        current_excl = self._fetch_voting()
+        logger.debug("Current voting exclusions: %s", current_excl)
+        if not current_excl:
+            to_stay = None
+        else:
+            to_stay = self._fetch_voting() - exclusions
+        if current_excl == to_stay:
             # Nothing to do
             logger.debug("No voting exclusions to delete, current set is %s", to_stay)
             return True
@@ -141,7 +154,7 @@ class OpenSearchExclusions:
                 resp_status_code=True,
             )
             logger.debug("Removed voting, response %s", response)
-            if self._add_voting(to_stay):
+            if to_stay and self._add_voting(to_stay):
                 self._charm.add_to_peer_data(VOTING_TO_DELETE, ",".join(exclusions))
                 return True
         except OpenSearchHttpError:

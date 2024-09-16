@@ -572,9 +572,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self._add_cm_addresses_to_conf()
 
         # if there are exclusions to be removed
+        # each unit should check its own exclusions' list
+        self.opensearch_exclusions.cleanup()
         if self.unit.is_leader():
-            self.opensearch_exclusions.cleanup()
-
             if (health := self.health.apply(wait_for_green_first=True)) not in [
                 HealthColors.GREEN,
                 HealthColors.IGNORE,
@@ -1052,7 +1052,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # and re-using storage
                 if len(nodes) > 1:
                     # 1. Add current node to the voting + alloc exclusions
-                    self.opensearch_exclusions.add_current(restart=restart)
+                    self.opensearch_exclusions.add_current()
             except OpenSearchHttpError:
                 logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
 
