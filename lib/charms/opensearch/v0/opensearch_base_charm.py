@@ -103,6 +103,7 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 import lifecycle
 import upgrade
@@ -531,6 +532,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 pass
         try:
             self._stop_opensearch()
+            # Now, we can clean-up the voting / allocation exclusions
+            # We need to save them as we have a count limit
+            for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
+                with attempt:
+                    nodes = self._get_nodes(True)
+                    if len(nodes) == 0:
+                        break
+                    self.opensearch_exclusions.delete_current()
 
             # safeguards in case planned_units > 0
             if self.app.planned_units() > 0:
@@ -1040,7 +1049,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-    def _stop_opensearch(self, *, restart=False) -> None:
+    def _stop_opensearch(self) -> None:
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 

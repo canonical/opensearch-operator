@@ -44,25 +44,37 @@ class OpenSearchExclusions:
         self._opensearch = self._charm.opensearch
         self._scope = Scope.APP if self._charm.unit.is_leader() else Scope.UNIT
 
-    def add_current(self, voting: bool = True, allocation: bool = True) -> None:
+    def add_current(
+        self, voting: bool = True, allocation: bool = True, raise_error: bool = False
+    ) -> None:
         """Add Voting and alloc exclusions."""
         if voting and (self._node.is_cm_eligible() or self._node.is_voting_only()):
             if not self._add_voting():
                 logger.error(f"Failed to add voting exclusion: {self._node.name}.")
+                if raise_error:
+                    raise OpenSearchExclusionsException("Failed to add voting exclusion.")
 
         if allocation and self._node.is_data():
             if not self._add_allocations():
                 logger.error(f"Failed to add shard allocation exclusion: {self._node.name}.")
+                if raise_error:
+                    raise OpenSearchExclusionsException("Failed to add allocation exclusion.")
 
-    def delete_current(self, voting: bool = True, allocation: bool = True) -> None:
+    def delete_current(
+        self, voting: bool = True, allocation: bool = True, raise_error: bool = False
+    ) -> None:
         """Add Voting and alloc exclusions."""
         if voting and (self._node.is_cm_eligible() or self._node.is_voting_only()):
             if not self._delete_voting({self._node.name}):
                 logger.error(f"Failed to add voting exclusion: {self._node.name}.")
+                if raise_error:
+                    raise OpenSearchExclusionsException("Failed to add allocation exclusion.")
 
         if allocation and self._node.is_data():
             if not self._delete_allocations():
                 logger.error(f"Failed to add shard allocation exclusion: {self._node.name}.")
+                if raise_error:
+                    raise OpenSearchExclusionsException("Failed to add allocation exclusion.")
 
     def cleanup(self) -> None:
         """Delete all exclusions that failed to be deleted."""
@@ -78,7 +90,7 @@ class OpenSearchExclusions:
         if allocations_to_cleanup and self._delete_allocations(allocations_to_cleanup):
             self._charm.peers_data.delete(self._scope, ALLOCS_TO_DELETE)
 
-    def _units_to_cleanup(self, removable = List[str]) -> Optional[Set[str]]:
+    def _units_to_cleanup(self, removable: List[str]) -> Optional[Set[str]]:
         """Deletes all units that have left the cluster via Juju.
 
         This method ensures we keep a small list of voting exclusions at all times.
