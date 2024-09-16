@@ -79,18 +79,21 @@ class OpenSearchExclusions:
 
         This method ensures we keep a small list of voting exclusions at all times.
         """
-        units = {format_unit_name(u) for u in all_units(self._charm)}
+        if not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc()):
+            return {}
+
         if self._charm.opensearch_peer_cm.is_provider(typ="main") and (
             apps_in_fleet := self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
         ):
             apps_in_fleet = [PeerClusterApp.from_dict(app) for app in apps_in_fleet.values()]
-            units.union(
-                {
-                    format_unit_name(u, p_cluster_app.app)
-                    for p_cluster_app in apps_in_fleet
-                    for u in p_cluster_app.units
-                }
-            )
+            units = {
+                format_unit_name(u, p_cluster_app.app)
+                for p_cluster_app in apps_in_fleet
+                for u in p_cluster_app.units
+            }
+        else:
+            units = {format_unit_name(u, deployment_desc.app) for u in all_units(self._charm)}
+
         # Now, we need to remove the units that were marked for deletion and are not in the
         # cluster anymore.
         to_remove = self._charm.peers_data.get(self._scope, VOTING_TO_DELETE, "").split(",")
