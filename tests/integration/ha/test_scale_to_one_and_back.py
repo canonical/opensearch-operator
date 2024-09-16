@@ -72,7 +72,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_scale_down(ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner) -> None:
+async def test_scale_down(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_0_repl_writes_runner
+) -> None:
     """Tests the shutdown of a node, and see the voting exclusions to be applied.
 
     This test will remove the elected cluster manager.
@@ -136,7 +138,7 @@ async def test_scale_down(ops_test: OpsTest, c_writes: ContinuousWrites, c_write
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_scale_back_up(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_0_repl_writes_runner
 ) -> None:
     """Tests the scaling back to 3x node-cluster and see the voting exclusions to be applied."""
     app = (await app_name(ops_test)) or APP_NAME

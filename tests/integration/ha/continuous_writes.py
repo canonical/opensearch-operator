@@ -58,7 +58,9 @@ class ContinuousWrites:
         wait=wait_fixed(wait=5) + wait_random(0, 5),
         stop=stop_after_attempt(5),
     )
-    async def start(self, repl_mode: ReplicationMode, is_bulk: bool = True) -> None:
+    async def start(
+        self, repl_mode: ReplicationMode = ReplicationMode.DEFAULT, is_bulk: bool = True
+    ) -> None:
         """Run continuous writes in the background."""
         if not self._is_stopped:
             await self.clear()
