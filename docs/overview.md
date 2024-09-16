@@ -46,35 +46,36 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 | Level | Path                       | Navlink                                      |
 |----------|-------------------------|----------------------------------------------|
 | 1     | tutorial                   | [Tutorial]()                                 |
-| 2     | t-overview                 | [Overview](/t/9722)                   |
-| 2     | t-set-up        | [1. Set up the environment](/t/9724)         |
-| 2     | t-deploy-opensearch        | [2. Deploy OpenSearch](/t/9716)              |
-| 2     | t-enable-tls               | [3. Enable encryption](/t/9718)              |
-| 2     | t-integrate | [4. Integrate with a client application](/t/9714)          |
-| 2     | t-passwords          | [5. Manage passwords](/t/9728)                    |
+| 2     | t-overview                 | [Overview](/t/9722) |
+| 2     | t-set-up        | [1. Set up the environment](/t/9724) |
+| 2     | t-deploy-opensearch        | [2. Deploy OpenSearch](/t/9716) |
+| 2     | t-enable-tls               | [3. Enable encryption](/t/9718) |
+| 2     | t-integrate | [4. Integrate with a client application](/t/9714) |
+| 2     | t-passwords          | [5. Manage passwords](/t/9728) |
 | 2     | t-horizontal-scaling       | [6. Scale horizontally](/t/9720)  |
-| 2     | t-clean-up                 | [7. Clean up the environment](/t/9726)       |
-| 1     | how-to                     | [How To]()                                   |
-| 2     | h-deploy-lxd | [Deploy on LXD](/t/14575) |
-| 2     | h-horizontal-scaling  | [Scale horizontally](/t/10994)          |
-| 2     | h-enable-tls   | [Enable TLS encryption](/t/14783)          |
-| 2     | h-rotate-tls-ca-certificates   | [Rotate TLS/CA certificates](/t/15422)          |
-| 2     | h-enable-monitoring | [Enable monitoring](/t/14560) |
-| 2     | h-load-testing | [Perform load testing](/t/13987) |
-| 2     | h-backups                   | [Back up and restore]()                           |
-| 3     | h-configure-s3             | [Configure S3](/t/14097)                     |
-| 3     | h-create-backup            | [Create a backup](/t/14098)                  |
-| 3     | h-restore-backup     | [Restore a local backup](/t/14099)           |
-| 3     | h-migrate-cluster          | [Migrate a cluster](/t/14100)                |
-| 2     | h-contribute | [Contribute](/t/14557) |
-| 1     | reference                  | [Reference]()                                |
+| 2     | t-clean-up                 | [7. Clean up the environment](/t/9726) |
+| 1     | how-to                     | [How To]() |
+| 2     | h-deploy-lxd          | [Deploy on LXD](/t/14575) |
+| 2     | h-horizontal-scaling  | [Scale horizontally](/t/10994) |
+| 2     | h-integrate                | [Integrate with your charm](/t/15333) |
+| 2     | h-enable-tls                | [Enable TLS encryption](/t/14783) |
+| 2     | h-rotate-tls-ca-certificates   | [Rotate TLS/CA certificates](/t/15422) |
+| 2     | h-enable-monitoring             | [Enable monitoring](/t/14560) |
+| 2     | h-load-testing            | [Perform load testing](/t/13987) |
+| 2     | h-backups                   | [Back up and restore]() |
+| 3     | h-configure-s3             | [Configure S3](/t/14097) |
+| 3     | h-create-backup            | [Create a backup](/t/14098) |
+| 3     | h-restore-backup     | [Restore a local backup](/t/14099) |
+| 3     | h-migrate-cluster          | [Migrate a cluster](/t/14100) |
+| 2     | h-upgrade                  | [Upgrade]() |
+| 3     | h-minor-upgrade     | [Perform a minor upgrade](/t/14141) |
+| 3     | h-minor-rollback      | [Perform a minor rollback](/t/14142) |
+| 1     | reference                  | [Reference]() |
 | 2     | r-system-requirements | [System requirements](/t/14565) |
-| 2     | r-software-testing                  | [Charm testing](/t/14109)                                |
+| 2     | r-software-testing                  | [Charm testing](/t/14109) |
 
 [/details]
 
-<!-- Add when done: 
-How to perform a minor upgrade: /t/15334
-How to perform a minor rollback: /t/15335
-How to integrate with your charm: /t/15333
+<!-- 
+| 2     | h-contribute | [Contribute](/t/14557) |
 -->
