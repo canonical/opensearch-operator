@@ -103,7 +103,6 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 import lifecycle
 import upgrade
@@ -457,12 +456,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # register new cm addresses on every node
         self._add_cm_addresses_to_conf()
-
-        # TODO remove the data role of the first CM to start if applies needed
-        # we no longer need this once we delay the security index init to *after* the
-        # first data node joins
-        # if self._remove_data_role_from_dedicated_cm_if_needed(event):
-        #    return
 
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
@@ -1174,66 +1167,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # meaning it's a new cluster, so we can safely start the OpenSearch service
             pass
 
-        return True
-
-    def _remove_data_role_from_dedicated_cm_if_needed(  # noqa: C901
-        self, event: EventBase
-    ) -> bool:
-        """Remove the data role from the first started CM node."""
-        # TODO: this method should be deleted in favor of delaying the init of the sec. index
-        # until after a node with the "data" role joined the cluster.
-        deployment_desc = self.opensearch_peer_cm.deployment_desc()
-        if not deployment_desc or deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
-            return False
-
-        if not self.peers_data.get(Scope.UNIT, "remove-data-role", default=False):
-            return False
-
-        try:
-            nodes = self._get_nodes(self.opensearch.is_node_up())
-        except OpenSearchHttpError:
-            return False
-
-        if len([node for node in nodes if node.is_data() and node.name != self.unit_name]) == 0:
-            event.defer()
-            return False
-
-        if not self.is_every_unit_marked_as_started():
-            return False
-
-        self.peers_data.delete(Scope.UNIT, "remove-data-role")
-        self.opensearch_config.remove_temporary_data_role()
-
-        # wait until data moves out completely
-        self.opensearch_exclusions.add_allocations(allocations={self.unit_name})
-
-        try:
-            for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(0.5)):
-                with attempt:
-                    search_shards_info = self.opensearch.request(
-                        "GET", "/*/_search_shards?expand_wildcards=all"
-                    )
-
-                    # find the node id of the current unit
-                    node_id = None
-                    for node_id, node in search_shards_info["nodes"].items():
-                        if node["name"] == self.unit_name:
-                            break
-                    assert node_id is not None  # should never happen
-
-                    # check if the node has any shards assigned to it
-                    for shard_data in search_shards_info["shards"]:
-                        if shard_data[0]["node"] == node_id:
-                            raise Exception
-                    return True
-        except RetryError:
-            self.opensearch_exclusions.delete_allocations(allocations={self.unit_name})
-            event.defer()
-            return False
-
-        self.opensearch_exclusions.delete_allocations(allocations={self.unit_name})
-        self.status.set(WaitingStatus(WaitingToStart))
-        self._restart_opensearch_event.emit()
         return True
 
     def _purge_users(self):
