@@ -16,6 +16,7 @@ from ..helpers import (
     cluster_health,
     cluster_voting_config_exclusions,
     execute_update_status_manually,
+    get_application_unit_ids_ips,
     get_leader_unit_ip,
     set_watermark,
 )
@@ -80,6 +81,7 @@ async def test_scale_down(
     This test will remove the elected cluster manager.
     """
     app = (await app_name(ops_test)) or APP_NAME
+    ids_ips = await get_application_unit_ids_ips(ops_test, app)
 
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     voting_exclusions = await cluster_voting_config_exclusions(ops_test, unit_ip=leader_unit_ip)
@@ -90,9 +92,11 @@ async def test_scale_down(
         # find unit currently elected cluster_manager
         leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
         elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
+        del ids_ips[elected_cm_unit_id]
 
         # remove the service in the chosen unit
         await ops_test.model.applications[app].destroy_unit(f"{app}/{elected_cm_unit_id}")
+
         await wait_until(
             ops_test,
             apps=[app],
@@ -100,6 +104,7 @@ async def test_scale_down(
             wait_for_exact_units=init_count - 1,
             idle_period=IDLE_PERIOD,
         )
+        assert len(voting_exclusions) == 0
 
         # get initial cluster health - expected to be all good: green
         leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -108,18 +113,6 @@ async def test_scale_down(
         )
         assert cluster_health_resp["status"] == "green"
         assert cluster_health_resp["unassigned_shards"] == 0
-
-        voting_exclusions = await cluster_voting_config_exclusions(
-            ops_test, unit_ip=leader_unit_ip
-        )
-
-        if init_count == 3:
-            # Down to 2x units only
-            assert len(voting_exclusions) == 1
-
-        elif init_count == 2:
-            # Down to 1x unit only
-            assert len(voting_exclusions) == 2
 
         # Make sure we continue to be writable
         await assert_continuous_writes_increasing(c_writes)

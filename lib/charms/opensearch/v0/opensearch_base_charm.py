@@ -536,10 +536,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # We need to save them as we have a count limit
             for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
                 with attempt:
-                    nodes = self._get_nodes(True)
-                    if len(nodes) == 0:
+                    if not self.alt_hosts:
+                        # No neighbors found and this unit is stopped
                         break
-                    self.opensearch_exclusions.delete_current()
+                    self.opensearch_exclusions.delete_current(raise_error=True)
 
             # safeguards in case planned_units > 0
             if self.app.planned_units() > 0:
@@ -1081,7 +1081,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         try:
-            self._stop_opensearch(restart=True)
+            self._stop_opensearch()
         except OpenSearchStopError as e:
             logger.exception(e)
             self.node_lock.release()
@@ -1123,7 +1123,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         logger.debug("Stopping OpenSearch before upgrade")
         try:
-            self._stop_opensearch(restart=True)
+            self._stop_opensearch()
         except OpenSearchStopError as e:
             logger.exception(e)
             self.node_lock.release()
