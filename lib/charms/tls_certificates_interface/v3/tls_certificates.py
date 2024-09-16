@@ -318,7 +318,7 @@ LIBAPI = 3
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 19
+LIBPATCH = 20
 
 PYDEPS = ["cryptography", "jsonschema"]
 
@@ -1449,9 +1449,7 @@ class TLSCertificatesProvidesV3(Object):
         Returns:
             None
         """
-        provider_certificates = self.get_unsolicited_certificates(
-            relation_id=relation_id
-        )
+        provider_certificates = self.get_unsolicited_certificates(relation_id=relation_id)
         for provider_certificate in provider_certificates:
             self.on.certificate_revocation_request.emit(
                 certificate=provider_certificate.certificate,
@@ -2028,7 +2026,7 @@ class TLSCertificatesRequiresV3(Object):
     def _get_csr_from_secret(self, secret: Secret) -> str:
         """Extract the CSR from the secret label or content.
 
-        This function is a workaround to maintain backwards compatiblity
+        This function is a workaround to maintain backwards compatibility
         and fix the issue reported in
         https://github.com/canonical/tls-certificates-interface/issues/228
         """
