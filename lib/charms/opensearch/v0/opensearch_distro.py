@@ -25,6 +25,7 @@ from charms.opensearch.v0.helper_charm import (
 )
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
+from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
 from charms.opensearch.v0.models import App, StartMode
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -249,16 +250,18 @@ class OpenSearchDistribution(ABC):
 
         def call(urls: List[str]) -> requests.Response:
             """Performs an HTTP request."""
+            random.shuffle(urls)
+
             for attempt in Retrying(
                 retry=retry_if_exception_type(requests.RequestException)
                 | retry_if_exception_type(urllib3.exceptions.HTTPError),
                 stop=stop_after_attempt(retries),
                 wait=wait_fixed(1),
+                before_sleep=error_http_retry_log(logger, retries, method, urls, payload),
                 reraise=True,
             ):
                 with attempt, requests.Session() as s:
-                    random.shuffle(urls)
-                    url = urls[0]
+                    url = urls[(attempt.retry_state.attempt_number - 1) % len(urls)]
                     admin_field = self._charm.secrets.password_key("admin")
                     if cert_files:
                         s.cert = cert_files
