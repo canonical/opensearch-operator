@@ -280,8 +280,8 @@ class TestHelperCluster(unittest.TestCase):
         self.assertEqual(raw_node.roles, from_json_node.roles)
         self.assertEqual(raw_node.ip, from_json_node.ip)
 
-    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
-    def test_get_cluster_settings(self, request_mock):
+    @patch("charms.opensearch.v0.helper_cluster.OpenSearchDistribution.request")
+    def test_get_cluster_settings(self):
         """Test the get_cluster_settings method."""
         request_mock.return_value = {
             "defaults": {

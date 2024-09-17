@@ -2,7 +2,9 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import asyncio
 import logging
+import shlex
 import subprocess
 
 import pytest
@@ -70,6 +72,9 @@ async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy a couple of OpenSearch units."""
     my_charm = await ops_test.build_charm(".")
+    model_config = MODEL_CONFIG
+    model_config["update-status-hook-interval"] = "1m"
+
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
@@ -324,6 +329,50 @@ async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_remove_application(ops_test: OpsTest) -> None:
-    """Removes the application with two units."""
-    await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+async def test_add_users_and_calling_update_status(ops_test: OpsTest) -> None:
+    """Add users and call update status."""
+    leader_id = await get_leader_unit_id(ops_test)
+    leader_ip = await get_leader_unit_ip(ops_test)
+    test_url = f"https://{leader_ip}:9200/_plugins/_security/api/internalusers/my_user"
+
+    http_resp_code = await http_request(
+        ops_test,
+        "PUT",
+        test_url,
+        resp_status_code=True,
+        payload={"hash": "1234"},
+    )
+    assert http_resp_code >= 200 and http_resp_code < 300
+
+    cmd = '"export JUJU_DISPATCH_PATH=hooks/update-status; ./dispatch"'
+    exec_cmd = f"juju exec -u opensearch/{leader_id} -m {ops_test.model.name} -- {cmd}"
+    try:
+        subprocess.run(shlex.split(exec_cmd))
+    except Exception as e:
+        logger.error(
+            f"Failed to apply state: process exited with {e.returncode}; "
+            f"stdout = {e.stdout}; "
+            f"stderr = {e.stderr}.",
+        )
+
+    # try:
+    #     subprocess.check_output(
+    #         [
+    #             "juju",
+    #             "exec",
+    #             "-m",
+    #             ops_test.model.name,
+    #             "--unit",
+    #             f"opensearch/{leader_id}",
+    #             "--",
+    #             '"export JUJU_DISPATCH_PATH=hooks/update-status; ./dispatch"',
+    #         ],
+    #         text=True,
+    #     )
+    # except Exception as e:
+    #     print(e)
+    #     raise
+    await asyncio.sleep(300)
+    http_resp_code = await http_request(ops_test, "GET", test_url, resp_status_code=True)
+    assert http_resp_code >= 200 and http_resp_code < 300
+>>>>>>> 0ee22000 (Add fix for user management)

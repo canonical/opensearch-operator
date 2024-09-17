@@ -253,15 +253,29 @@ class OpenSearchUserManager:
             return
 
         relations = self.model.relations.get(ClientRelationName, [])
-        relation_users = set(
+        relation_users_to_keep = set(
             [
                 f"{ClientRelationName}_{relation.id}"
                 for relation in relations
                 if relation.id != departed_relation_id
             ]
         )
-        self._remove_lingering_users(relation_users)
-        self._remove_lingering_roles(relation_users)
+        relation_roles_to_keep = []
+        for key, val in self.get_users().items():
+            if key not in relation_users_to_keep or not key.startswith(f"{ClientRelationName}_"):
+                continue
+            # We may have multiple categories
+            # e.g. opensearch_security_roles, backend_roles, etc
+            for cat, data in val.items():
+                if not cat.endswith("roles"):
+                    continue
+                if isinstance(data, list):
+                    relation_roles_to_keep += data
+                else:
+                    relation_roles_to_keep += [data]
+
+        self._remove_lingering_users(relation_users_to_keep)
+        self._remove_lingering_roles(set(relation_roles_to_keep))
 
     def update_user_password(self, username: str, hashed_pwd: str = None):
         """Change user hashed password."""
@@ -323,6 +337,8 @@ class OpenSearchUserManager:
             return
 
         for username in database_users - app_users:
+            if not username.startswith(f"{ClientRelationName}_"):
+                continue
             try:
                 self.remove_user(username)
             except OpenSearchUserMgmtError:
