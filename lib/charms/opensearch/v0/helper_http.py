@@ -23,7 +23,7 @@ def error_http_retry_log(
     """Return a custom log function to run before a new Tenacity retry."""
 
     def log_error(retry_state: RetryCallState):
-        logger.error(
+        logger.debug(
             f"Request {method} to {url} with payload: {payload} failed."
             f"(Attempts left: {retry_max - retry_state.attempt_number})\n"
             f"\tError: {retry_state.outcome.exception()}"
