@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import pathlib
+import random
 import socket
 import subprocess
 import time
@@ -310,6 +311,7 @@ class OpenSearchDistribution(ABC):
 
         resp = None
         try:
+            random.shuffle(urls)
             resp = call(urls[0])
             if resp_status_code:
                 return resp.status_code
