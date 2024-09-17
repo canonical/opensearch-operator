@@ -497,6 +497,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             event.defer()
 
+        if not self.unit.is_leader():
+            return
+
+        # Now, we register in the leader application the presence of departing unit's name
+        # We need to save them as we have a count limit
+        for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
+            with attempt:
+                if not self.alt_hosts:
+                    # No neighbors found, it means this is the last unit to go away.
+                    break
+                self.opensearch_exclusions.add_exclusions(unit_name=event.departing_unit)
+
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
         if self.upgrade_in_progress:
@@ -532,14 +544,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 pass
         try:
             self._stop_opensearch()
-            # Now, we can clean-up the voting / allocation exclusions
-            # We need to save them as we have a count limit
-            for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
-                with attempt:
-                    if not self.alt_hosts:
-                        # No neighbors found and this unit is stopped
-                        break
-                    self.opensearch_exclusions.delete_current(raise_error=True)
+            if self.alt_hosts:
+                # There is enough peers available for us to try removing the unit
+                self.opensearch_exclusions.delete_current()
 
             # safeguards in case planned_units > 0
             if self.app.planned_units() > 0:

@@ -44,6 +44,35 @@ class OpenSearchExclusions:
         self._opensearch = self._charm.opensearch
         self._scope = Scope.APP if self._charm.unit.is_leader() else Scope.UNIT
 
+    def add_exclusions(self, unit_name: str) -> None:
+        """Add Voting and alloc exclusions for a target unit.
+
+        This method is just a clean-up-later routine. We (re)add the unit to the exclusions and,
+        hence, the leader of this app will be aware of this unit's removal and log it into its
+        app-level peer data.
+        """
+        # First, find out the correct name of the node
+        if not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc()):
+            # No deployment description present
+            # that may happen in the very last stages of the application removal
+            return
+        node_name = format_unit_name(unit_name, deployment_desc.app)
+
+        # We cannot assume the node details, e.g. roles, are still available
+        # Therefore, we assume the node is both CM and data: if that is not the case, then we will
+        # get an error that converts itself as a logger info below
+        if not self._add_voting(exclusions={node_name}):
+            logger.info(
+                f"Tried to remove from voting but failed for: {node_name}."
+                "We cannot retrieve its roles, so we will silently ignore this error."
+            )
+
+        if not self._add_allocations(allocations={node_name}):
+            logger.info(
+                f"Tried to remove from allocations but failed for: {node_name}."
+                "We cannot retrieve its roles, so we will silently ignore this error."
+            )
+
     def add_current(
         self, voting: bool = True, allocation: bool = True, raise_error: bool = False
     ) -> None:
@@ -66,15 +95,15 @@ class OpenSearchExclusions:
         """Add Voting and alloc exclusions."""
         if voting and (self._node.is_cm_eligible() or self._node.is_voting_only()):
             if not self._delete_voting({self._node.name}):
-                logger.error(f"Failed to add voting exclusion: {self._node.name}.")
+                logger.error(f"Failed to delete voting exclusion: {self._node.name}.")
                 if raise_error:
-                    raise OpenSearchExclusionsException("Failed to add allocation exclusion.")
+                    raise OpenSearchExclusionsException("Failed to delete voting exclusion.")
 
         if allocation and self._node.is_data():
             if not self._delete_allocations():
-                logger.error(f"Failed to add shard allocation exclusion: {self._node.name}.")
+                logger.error(f"Failed to delete shard allocation exclusion: {self._node.name}.")
                 if raise_error:
-                    raise OpenSearchExclusionsException("Failed to add allocation exclusion.")
+                    raise OpenSearchExclusionsException("Failed to delete allocation exclusion.")
 
     def cleanup(self) -> None:
         """Delete all exclusions that failed to be deleted."""
