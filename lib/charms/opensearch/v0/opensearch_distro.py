@@ -248,7 +248,7 @@ class OpenSearchDistribution(ABC):
             OpenSearchHttpError if hosts are unreachable
         """
 
-        def call(url: str) -> requests.Response:
+        def call(urls: List[str]) -> requests.Response:
             """Performs an HTTP request."""
             for attempt in Retrying(
                 retry=retry_if_exception_type(requests.RequestException)
@@ -259,6 +259,8 @@ class OpenSearchDistribution(ABC):
                 reraise=True,
             ):
                 with attempt, requests.Session() as s:
+                    random.shuffle(urls)
+                    url = urls[0]
                     admin_field = self._charm.secrets.password_key("admin")
                     if cert_files:
                         s.cert = cert_files
@@ -311,8 +313,7 @@ class OpenSearchDistribution(ABC):
 
         resp = None
         try:
-            random.shuffle(urls)
-            resp = call(urls[0])
+            resp = call(urls)
             if resp_status_code:
                 return resp.status_code
 
