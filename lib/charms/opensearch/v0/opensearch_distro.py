@@ -25,7 +25,6 @@ from charms.opensearch.v0.helper_charm import (
 )
 from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
-from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
 from charms.opensearch.v0.models import App, StartMode
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -255,7 +254,6 @@ class OpenSearchDistribution(ABC):
                 | retry_if_exception_type(urllib3.exceptions.HTTPError),
                 stop=stop_after_attempt(retries),
                 wait=wait_fixed(1),
-                before_sleep=error_http_retry_log(logger, retries, method, url, payload),
                 reraise=True,
             ):
                 with attempt, requests.Session() as s:
