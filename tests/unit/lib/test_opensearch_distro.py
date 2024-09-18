@@ -62,7 +62,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         node = self.charm.opensearch.current()
         assert isinstance(node, Node)
         assert node.app.name == "opensearch"
-        assert node.roles == ["cluster_manager", "data", "ingest", "ml"]
+        assert node.roles == ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
         assert not node.temperature
 
     def test_distro_current_api_unavail_primary_fallback_to_static_conf(self):
@@ -70,7 +70,9 @@ class TestOpenSearchConfig(unittest.TestCase):
         node = self.charm.opensearch.current()
         assert isinstance(node, Node)
         assert node.temperature == "hot"
-        assert sorted(node.roles) == sorted(["cluster_manager", "data", "ingest", "ml"])
+        assert sorted(node.roles) == sorted(
+            ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
+        )
         # NOTE: app is still retrieved from Deployment Description
         assert node.app.name == "opensearch"
 
@@ -84,7 +86,9 @@ class TestOpenSearchConfig(unittest.TestCase):
         assert isinstance(node, Node)
         assert node.app.name == "opensearch"
         assert node.temperature == "hot"
-        assert sorted(node.roles) == sorted(["cluster_manager", "data", "ingest", "ml"])
+        assert sorted(node.roles) == sorted(
+            ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
+        )
         # NOTE: app is still retrieved from Deployment Description
         assert node.app.name == "opensearch"
 
