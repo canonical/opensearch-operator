@@ -1,0 +1,345 @@
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.234.4.34:9200/
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.234.4.131:9200/
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.234.4.221:9200/
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.234.4.34:9200/_nodes
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.234.4.34:9200/_cluster/health
+[32mINFO    [0m integration.ha.helpers:helpers.py:247 Continuous writes result: namespace(max_stored_id=200, count=201, last_expected_id=200)
+[32mINFO    [0m integration.helpers:helpers.py:347 Calling: GET -- https://10.234.4.34:9200/series_index/_search_shards
+[32mINFO    [0m integration.ha.conftest:conftest.py:48 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:07:57Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      3  opensearch                                 0  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   1        10.234.4.34     9200/tcp  
+opensearch/1                 active    idle   2        10.234.4.131    9200/tcp  
+opensearch/2                 active    idle   3        10.234.4.221    9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.234.4.110              
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.234.4.110  juju-f8d704-0  ubuntu@22.04      Running
+1        started  10.234.4.34   juju-f8d704-1  ubuntu@22.04      Running
+2        started  10.234.4.131  juju-f8d704-2  ubuntu@22.04      Running
+3        started  10.234.4.221  juju-f8d704-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:37:03 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:37:03 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:37:04 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:37:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:37:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:37:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:37:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:37:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:37:38 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:38:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:38:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:38:52 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-0: 01:39:51 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:39:52 ERROR unit.opensearch/0.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-0: 01:39:53 ERROR unit.opensearch/0.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-0: 01:39:54 ERROR unit.opensearch/0.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-0: 01:39:58 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:39:59 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:00 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:01 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:01 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:01 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:01 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:40:01 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:02 ERROR unit.opensearch/2.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:02 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:02 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:40:02 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:03 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:03 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:40:03 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:03 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:06 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:06 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:06 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:07 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:08 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:09 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:09 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:09 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:09 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:09 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:10 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:10 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:10 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:11 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:11 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:11 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:12 ERROR unit.opensearch/2.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:12 ERROR unit.opensearch/2.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:12 ERROR unit.opensearch/2.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:12 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:12 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:13 ERROR unit.opensearch/2.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:13 ERROR unit.opensearch/2.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:13 ERROR unit.opensearch/2.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:15 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:15 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:15 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:15 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:15 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:16 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:16 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:16 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:17 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:17 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:17 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:18 ERROR unit.opensearch/0.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:40:18 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:18 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:18 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:18 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:19 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:19 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:19 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:21 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:21 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:21 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:22 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:22 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:22 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:23 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:23 ERROR unit.opensearch/2.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:23 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:23 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:24 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:24 ERROR unit.opensearch/2.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:24 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:25 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:25 ERROR unit.opensearch/2.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:25 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:25 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:25 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:25 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:26 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:26 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:26 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:27 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:27 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:27 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:28 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:28 ERROR unit.opensearch/2.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:28 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:29 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:29 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:29 ERROR unit.opensearch/2.juju-log [Errno 111] Connection refused
+unit-opensearch-2: 01:40:31 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:31 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:31 ERROR unit.opensearch/2.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:32 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:32 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:32 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:33 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:33 ERROR unit.opensearch/2.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:33 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:33 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:34 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:34 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:34 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:34 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:34 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:34 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:34 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:35 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:35 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:35 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:35 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:35 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:35 ERROR unit.opensearch/2.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:40:36 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:39 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:42 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:45 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:47 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:47 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:47 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:47 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:47 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:48 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:50 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:51 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:51 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:51 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:55 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:55 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:56 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:56 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:56 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:56 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:56 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:56 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:58 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:58 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:58 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:58 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:58 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:40:58 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:58 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:58 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:59 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:40:59 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:00 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:00 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:00 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:01 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:03 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:03 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:03 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:04 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:04 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:04 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:05 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:05 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:05 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:05 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:05 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:09 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:11 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:12 ERROR unit.opensearch/1.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:15 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-0: 01:41:15 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:15 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:16 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:16 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-2: 01:41:16 ERROR unit.opensearch/2.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:16 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:16 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-0: 01:41:16 ERROR unit.opensearch/0.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:16 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:17 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:18 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:18 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:18 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:19 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:19 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:19 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:20 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:20 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:20 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:20 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:21 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:21 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:21 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:21 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:22 ERROR unit.opensearch/1.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:22 ERROR unit.opensearch/1.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:22 ERROR unit.opensearch/1.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:23 ERROR unit.opensearch/1.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:23 ERROR unit.opensearch/1.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:23 ERROR unit.opensearch/1.juju-log certificates:3: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:25 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:25 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:25 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:25 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:26 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:26 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:26 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:26 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:27 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:27 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:27 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:28 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:28 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:28 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+unit-opensearch-1: 01:41:29 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:29 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:29 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:29 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:30 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:30 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:30 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:30 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:31 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:31 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:31 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:32 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:32 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:32 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:33 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:33 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:33 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:33 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:34 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:34 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:34 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:34 ERROR unit.opensearch/1.juju-log upgrade-version-a:1: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:35 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:35 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:35 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:36 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:36 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:36 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:37 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:37 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:37 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:37 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:38 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:38 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:38 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:38 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:39 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:39 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:39 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:40 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:40 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:40 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:41 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:42 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:42 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:42 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:42 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:43 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:43 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:43 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:43 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:43 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:43 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:43 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:43 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:43 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:43 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:44 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:44 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:41:44 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:47 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:50 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:53 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:56 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:41:59 ERROR unit.opensearch/1.juju-log opensearch-peers:2: [Errno 111] Connection refused
+unit-opensearch-1: 01:49:42 ERROR unit.opensearch/1.juju-log Request GET to https://10.234.4.131:9200/_nodes with payload: None failed.(Attempts left: 2)
+	Error: HTTPSConnectionPool(host='10.234.4.131', port=9200): Read timed out. (read timeout=5)
+unit-opensearch-0: 01:52:51 ERROR unit.opensearch/0.juju-log Request GET to https://10.234.4.34:9200/_nodes with payload: None failed.(Attempts left: 2)
+	Error: HTTPSConnectionPool(host='10.234.4.34', port=9200): Read timed out. (read timeout=5)
+unit-opensearch-0: 01:52:57 ERROR unit.opensearch/0.juju-log Request GET to https://10.234.4.34:9200/_nodes with payload: None failed.(Attempts left: 1)
+	Error: HTTPSConnectionPool(host='10.234.4.34', port=9200): Read timed out. (read timeout=5)
+unit-opensearch-1: 02:05:23 ERROR unit.opensearch/1.juju-log [Errno 111] Connection refused
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
