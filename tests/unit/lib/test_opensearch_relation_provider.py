@@ -453,11 +453,6 @@ class TestOpenSearchProvider(unittest.TestCase):
         mock_response_root(self.charm.unit_name, self.charm.opensearch.host)
         mock_response_nodes(self.charm.unit_name, self.charm.opensearch.host)
 
-        # self.harness.charm.opensearch_provider.user_manager_create_user = MagicMock()
-        # self.harness.charm.opensearch_provider.user_manager.create_role = MagicMock()
-        # self.harness.charm.opensearch_provider.user_manager.remove_role = MagicMock()
-        # self.harness.charm.opensearch_provider.user_manager.remove_user = MagicMock()
-
         # 1. Testing relation user creation
         self.harness.charm.opensearch_provider.create_opensearch_users(
             username=relation_user1,
