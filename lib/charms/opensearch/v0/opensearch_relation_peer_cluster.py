@@ -497,11 +497,16 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         )
 
         if not nodes:
-            # create a node from the deployment desc and unit data only
+            # create a node from the deployment desc or generated roles and unit data only
+            if deployment_desc.start == StartMode.WITH_PROVIDED_ROLES:
+                computed_roles = deployment_desc.config.roles
+            else:
+                computed_roles = ClusterTopology.generated_roles()
+
             return [
                 Node(
                     name=self.charm.unit_name,
-                    roles=deployment_desc.config.roles,
+                    roles=computed_roles,
                     ip=self.charm.unit_ip,
                     app=deployment_desc.app,
                     unit_number=self.charm.unit_id,

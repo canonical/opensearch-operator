@@ -192,15 +192,15 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         is_node_up,
     ):
         """Test that security index is not initialized after starting the cluster manager"""
-        deployment_desc.typ.return_value = DeploymentType.MAIN_ORCHESTRATOR
         deployment_desc.config.roles.return_value = ["cluster-manager"]
+        deployment_desc.start.return_value = StartMode.WITH_PROVIDED_ROLES
         self.harness.set_leader(True)
         start_event = MagicMock()
 
-        self.charm._post_start_init(start_event)
-
-        _initialize_security_index.assert_not_called()
-        is_node_up.return_value = True
+        with patch(f"{self.BASE_CHARM_CLASS}._get_nodes") as _get_nodes:
+            _get_nodes.side_effect = OpenSearchHttpError()
+            self.charm._post_start_init(start_event)
+            _initialize_security_index.assert_not_called()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
     @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")

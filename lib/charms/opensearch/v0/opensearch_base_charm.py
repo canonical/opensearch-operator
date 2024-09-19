@@ -937,6 +937,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._post_start_init(event)
         except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
             self.node_lock.release()
+            # In large deployments with cluster-manager-only-nodes, the startup might fail
+            # for the cluster-manager if a joining data node did not yet initialize the
+            # security index. We still want to update and broadcast the latest relation data.
             if self.opensearch_peer_cm.is_provider(typ="main"):
                 self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
             event.defer()
@@ -1208,8 +1211,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return self.unit.is_leader() and (
                 deployment_desc.start == StartMode.WITH_GENERATED_ROLES
                 or deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-                or deployment_desc.typ == DeploymentType.OTHER
-                and "data" in deployment_desc.config.roles
+                or "data" in deployment_desc.config.roles
             )
 
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
@@ -1323,9 +1325,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _get_nodes(self, use_localhost: bool) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
         # This means it's the first unit on the cluster.
+        if self.opensearch_peer_cm.deployment_desc().start == StartMode.WITH_PROVIDED_ROLES:
+            computed_roles = self.opensearch_peer_cm.deployment_desc().config.roles
+        else:
+            computed_roles = ClusterTopology.generated_roles()
+
         if (
             self.unit.is_leader()
-            and "data" in self.opensearch_peer_cm.deployment_desc().config.roles
+            and "data" in computed_roles
             and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
         ):
             return []
