@@ -35,7 +35,7 @@ DATA_APP = "opensearch-data"
 
 CLUSTER_NAME = "log-app"
 
-APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 2}
+APP_UNITS = {MAIN_APP: 2, FAILOVER_APP: 1, DATA_APP: 2}
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
@@ -128,7 +128,7 @@ async def test_build_large_deployment(ops_test: OpsTest) -> None:
         ops_test.model.deploy(
             my_charm,
             application_name=MAIN_APP,
-            num_units=1,
+            num_units=2,
             series=SERIES,
             config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager,data"},
         ),
@@ -137,7 +137,7 @@ async def test_build_large_deployment(ops_test: OpsTest) -> None:
             application_name=FAILOVER_APP,
             num_units=1,
             series=SERIES,
-            config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "cluster_manager"},
+            config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "cluster_manager,data"},
         ),
         ops_test.model.deploy(
             my_charm,
