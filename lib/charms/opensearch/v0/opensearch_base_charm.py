@@ -502,12 +502,22 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # Now, we register in the leader application the presence of departing unit's name
         # We need to save them as we have a count limit
+        if (
+            not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc())
+            or not event.departing_unit
+        ):
+            # No deployment description present
+            # that may happen in the very last stages of the application removal
+            return
         for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
             with attempt:
                 if not self.alt_hosts:
                     # No neighbors found, it means this is the last unit to go away.
                     break
-                self.opensearch_exclusions.add_exclusions(unit_name=event.departing_unit)
+                if not self.opensearch_exclusions.add(
+                    unit_name=format_unit_name(event.departing_unit.name, deployment_desc.app)
+                ):
+                    raise Exception
 
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
@@ -1056,7 +1066,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-    def _stop_opensearch(self) -> None:
+    def _stop_opensearch(self, *, restart: bool = False) -> None:
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
@@ -1068,7 +1078,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # and re-using storage
                 if len(nodes) > 1:
                     # 1. Add current node to the voting + alloc exclusions
-                    self.opensearch_exclusions.add_current()
+                    self.opensearch_exclusions.add_current(voting=True, allocation=not restart)
             except OpenSearchHttpError:
                 logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
 
@@ -1088,7 +1098,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         try:
-            self._stop_opensearch()
+            self._stop_opensearch(restart=True)
         except OpenSearchStopError as e:
             logger.exception(e)
             self.node_lock.release()
@@ -1130,7 +1140,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         logger.debug("Stopping OpenSearch before upgrade")
         try:
-            self._stop_opensearch()
+            self._stop_opensearch(restart=True)
         except OpenSearchStopError as e:
             logger.exception(e)
             self.node_lock.release()

@@ -44,34 +44,19 @@ class OpenSearchExclusions:
         self._opensearch = self._charm.opensearch
         self._scope = Scope.APP if self._charm.unit.is_leader() else Scope.UNIT
 
-    def add_exclusions(self, unit_name: str) -> None:
+    def add(self, unit_name: str) -> bool:
         """Add Voting and alloc exclusions for a target unit.
 
         This method is just a clean-up-later routine. We (re)add the unit to the exclusions and,
         hence, the leader of this app will be aware of this unit's removal and log it into its
         app-level peer data.
         """
-        # First, find out the correct name of the node
-        if not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc()):
-            # No deployment description present
-            # that may happen in the very last stages of the application removal
-            return
-        node_name = format_unit_name(unit_name, deployment_desc.app)
-
         # We cannot assume the node details, e.g. roles, are still available
         # Therefore, we assume the node is both CM and data: if that is not the case, then we will
         # get an error that converts itself as a logger info below
-        if not self._add_voting(exclusions={node_name}):
-            logger.info(
-                f"Tried to remove from voting but failed for: {node_name}."
-                "We cannot retrieve its roles, so we will silently ignore this error."
-            )
-
-        if not self._add_allocations(allocations={node_name}):
-            logger.info(
-                f"Tried to remove from allocations but failed for: {node_name}."
-                "We cannot retrieve its roles, so we will silently ignore this error."
-            )
+        return not self._add_voting(exclusions={unit_name}) or not self._add_allocations(
+            allocations={unit_name}
+        )
 
     def add_current(
         self, voting: bool = True, allocation: bool = True, raise_error: bool = False
@@ -160,12 +145,13 @@ class OpenSearchExclusions:
                 f"/_cluster/voting_config_exclusions?node_names={','.join(to_add)}&timeout=1m",
                 alt_hosts=self._charm.alt_hosts,
                 resp_status_code=True,
+                retries=3,
             )
             logger.debug("Added voting, response: %s", response)
 
             self._charm.peers_data.put(self._scope, VOTING_TO_DELETE, ",".join(to_add))
             # The voting excl. API returns a status only
-            return response >= 200 and response < 300
+            return response < 400
         except OpenSearchHttpError:
             return False
 
@@ -194,15 +180,14 @@ class OpenSearchExclusions:
                 alt_hosts=self._charm.alt_hosts,
                 resp_status_code=True,
             )
-            if response < 200 or response >= 300:
+            if response >= 400:
                 logger.debug("Failed to remove voting exclusions, response %s", response)
                 return False
 
             logger.debug("Removed voting for: %s", to_stay)
             return to_stay and self._add_voting(to_stay)
         except OpenSearchHttpError:
-            pass
-        return False
+            return False
 
     def _fetch_voting(self) -> Set[str]:
         """Fetch the registered voting exclusions."""
