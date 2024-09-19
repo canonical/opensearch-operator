@@ -664,7 +664,10 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.charm.tls._on_certificate_available(event_mock)
 
         # The new cert is saved to the keystore
-        assert run_cmd.call_count == 2
+        if self.charm.unit.is_leader():
+            assert run_cmd.call_count == 2
+        else:
+            assert run_cmd.call_count == 4
 
         assert re.search(
             "openssl pkcs12 -export .*-out "
@@ -948,7 +951,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         """
         # Units had their certificates already
         old_csr = "old_csr"
-        old_key = "old_key"
+        old_key = create_utf8_encoded_private_key()
         old_subject = "old_subject"
         keystore_password = "keystore_12345"
 
@@ -1024,7 +1027,7 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         assert new_app_admin_secret["csr"] != old_csr
         assert new_app_admin_secret["ca-cert"] == new_ca
-        assert new_app_admin_secret["key"] != old_key
+        assert new_app_admin_secret["key"] == old_key
         assert new_app_admin_secret["subject"] != old_subject
 
         assert generate_csr.call_count == 3
@@ -1331,6 +1334,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             )
         )
     )
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.reload_tls_certificates")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
@@ -1353,6 +1357,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         _read_stored_ca,
         deployment_desc,
         run_cmd,
+        reload_tls_certificates,
     ):
         """Test CA rotation 3rd stage -- *unit* certificate.
 
@@ -1452,6 +1457,7 @@ class TestOpenSearchTLS(unittest.TestCase):
                 self.rel_id, "opensearch/0", {"tls_ca_renewing": "True", "tls_ca_renewed": "True"}
             )
 
+        reload_tls_certificates.side_effect = None
         mock_response_put_transport_cert("1.1.1.1")
         mock_response_put_http_cert("1.1.1.1")
         original_status = self.harness.model.unit.status
@@ -1461,7 +1467,10 @@ class TestOpenSearchTLS(unittest.TestCase):
         # Saving new cert, cleaning up CA renewal flag, removing old CA from keystore
         # Note: the high number of operations come from the fact that on each certificate received
         # the 'issuer' is checked on each certificate that is saved on the disk.
-        assert run_cmd.call_count == 14
+        if self.charm.unit.is_leader():
+            assert run_cmd.call_count == 14
+        else:
+            assert run_cmd.call_count == 16
 
         assert re.search(
             "openssl pkcs12 -export .* -out "
