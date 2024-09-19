@@ -775,14 +775,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 except OpenSearchHttpError:
                     logger.error("Could not reload TLS certificates via API, will restart.")
                     self._restart_opensearch_event.emit()
-                self.tls.reset_ca_rotation_state()
-                self.status.clear(TLSNotFullyConfigured)
-                # the chain.pem file should only be updated after applying the new certs
-                # otherwise there could be TLS verification errors after renewing the CA
-                self.tls.update_request_ca_bundle()
-                # cleaning the former CA certificate from the truststore
-                # must only be done AFTER all renewed certificates are available and loaded
-                self.tls.remove_old_ca()
+                else:
+                    # the chain.pem file should only be updated after applying the new certs
+                    # otherwise there could be TLS verification errors after renewing the CA
+                    self.tls.update_request_ca_bundle()
+                    self.status.clear(TLSNotFullyConfigured)
+                    self.tls.reset_ca_rotation_state()
+                    # cleaning the former CA certificate from the truststore
+                    # must only be done AFTER all renewed certificates are available and loaded
+                    self.tls.remove_old_ca()
             else:
                 event.defer()
                 return
@@ -896,6 +897,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         if not self._can_service_start():
+            # after rotating the CA and certificates:
+            # the last host in the cluster to restart might not be able to connect to the other
+            # hosts anymore, because it is the last to renew the pem-file for requests
+            # in this case we update the pem-file to be able to connect and start the host
+            if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+                self.tls.update_request_ca_bundle()
             self.node_lock.release()
             logger.info("Could not start opensearch service. Will retry next event.")
             event.defer()
@@ -928,6 +935,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             self.unit.status = BlockedStatus(str(e))
             return
+
+        # we should update the chain.pem file to avoid TLS verification errors
+        # this happens on restarts after applying a new admin cert on CA rotation
+        if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+            self.tls.update_request_ca_bundle()
 
         try:
             self.opensearch.start(
@@ -1081,6 +1093,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.tls.reset_ca_rotation_state()
         if self.is_tls_full_configured_in_cluster():
             self.status.clear(TLSCaRotation)
+            self.status.clear(TLSNotFullyConfigured)
 
         # request new certificates after rotating the CA
         if self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False) and self.peers_data.get(
