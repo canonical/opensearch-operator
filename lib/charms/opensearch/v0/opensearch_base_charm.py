@@ -503,7 +503,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Now, we register in the leader application the presence of departing unit's name
         # We need to save them as we have a count limit
         if (
-            not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc())
+            not (deployment_desc := self.opensearch_peer_cm.deployment_desc())
             or not event.departing_unit
         ):
             # No deployment description present
