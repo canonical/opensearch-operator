@@ -445,8 +445,7 @@ class OpenSearchProvider(Object):
         and their name is saved in the databag for later reference.
         """
         self.user_manager.create_role(role_name=user, permissions=permissions)
-        if not (users := self.charm.peers_data.get_object(Scope.APP, ClientUsersDict)):
-            users = {}
+        users = self.charm.peers_data.get_object(Scope.APP, ClientUsersDict) or {}
 
         if users.get(relation_id):
             logger.warning(
@@ -471,21 +470,20 @@ class OpenSearchProvider(Object):
         if not self.opensearch.is_node_up() or not self.unit.is_leader():
             return
 
-        if not (relation_users := self.charm.peers_data.get_object(Scope.APP, ClientUsersDict)):
-            relation_users = {}
+        relation_users = self.charm.peers_data.get_object(Scope.APP, ClientUsersDict) or {}
 
-            if departed_relation_id:
-                logging.warning(
-                    "User for relation %d wasn't registered in internal cham workflows.",
-                    departed_relation_id,
-                )
+        if departed_relation_id and (not relation_users or departed_relation_id not in relation_users):
+            logging.warning(
+                "User for relation %d wasn't registered in internal cham workflows.",
+                departed_relation_id,
+            )
 
         clearnup_rel_ids = []
         if departed_relation_id:
             clearnup_rel_ids = [str(departed_relation_id)]
-        else:
-            rel_ids = [str(relation.id) for relation in self.opensearch_provides.relations]
-            clearnup_rel_ids = list(set(relation_users.keys()) - set(rel_ids))
+
+        rel_ids = [str(relation.id) for relation in self.opensearch_provides.relations]
+        clearnup_rel_ids += list(set(relation_users.keys()) - set(rel_ids))
 
         for rel_id in clearnup_rel_ids:
             if username := relation_users.get(rel_id):
@@ -499,6 +497,6 @@ class OpenSearchProvider(Object):
                 except OpenSearchUserMgmtError:
                     logger.error(f"failed to remove role {username}")
 
-            del relation_users[rel_id]
+                del relation_users[rel_id]
 
         self.charm.peers_data.put_object(Scope.APP, ClientUsersDict, relation_users)
