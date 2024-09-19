@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Dict, List, Optional
 
-from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.constants_charm import GeneratedRoles, PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import App, Node, PeerClusterApp
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -40,7 +40,7 @@ class ClusterTopology:
     @staticmethod
     def generated_roles() -> List[str]:
         """Get generated roles for a Node."""
-        return ["data", "ingest", "ml", "cluster_manager"]
+        return GeneratedRoles
 
     @staticmethod
     def get_cluster_settings(

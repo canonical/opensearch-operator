@@ -99,6 +99,7 @@ COSUser = "monitor"
 COSRelationName = "cos-agent"
 COSRole = "readall_and_monitor"
 COSPort = "9200"
+GeneratedRoles = ["data", "ingest", "ml", "cluster_manager"]
 
 
 # Opensearch Users

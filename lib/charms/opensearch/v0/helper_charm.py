@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, List, Union
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import App
+from charms.opensearch.v0.models import App, PeerClusterApp
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import CharmBase
@@ -134,6 +134,31 @@ def format_unit_name(unit: Union[Unit, str], app: App) -> str:
     if isinstance(unit, Unit):
         unit = unit.name
     return f"{unit.replace('/', '-')}.{app.short_id}"
+
+
+def all_units_names(charm: "OpenSearchBaseCharm") -> List[Unit]:
+    """Fetch the list of units for the current app."""
+    deployment_desc = charm.opensearch_peer_cm.deployment_desc()
+    if not deployment_desc:
+        # Called too early in the lifecycle
+        return []
+
+    # fetch current app description
+    current_app = charm.opensearch_peer_cm.deployment_desc().app
+    current_app_units = [format_unit_name(unit, app=current_app) for unit in all_units(charm)]
+
+    # handle case of large deployments
+    other_apps_units = []
+    if all_apps := charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
+        for app in all_apps.values():
+            p_cluster_app = PeerClusterApp.from_dict(app)
+            if p_cluster_app.app.id == current_app.id:
+                continue
+
+            units = [format_unit_name(unit, app=p_cluster_app.app) for unit in p_cluster_app.units]
+            other_apps_units.extend(units)
+
+    return set(other_apps_units + current_app_units)
 
 
 def all_units(charm: "OpenSearchBaseCharm") -> List[Unit]:

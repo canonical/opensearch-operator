@@ -1,27 +1,38 @@
-## Horizontally Scale Charmed OpenSearch
+>[Charmed OpenSearch Tutorial](/t/9722) > 6. Scale horizontally
+
+# Scale Charmed OpenSearch horizontally
 
 After having indexed some data in our previous section, let's take a look at the status of our charm:
 
-```bash
+```shell
 juju status --color
 ```
 
-Which should result in the following output (notice the `blocked` status and application message):
+This should result in the following output (notice the `blocked` status and application message):
 
-```bash
+```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  14:52:07Z
+tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  17:16:43+02:00
 
-App                        Version  Status   Scale  Charm                      Channel  Rev  Exposed  Message
-opensearch                          blocked      1  opensearch                 edge      21  no       1 or more 'replica' shards are not assigned, please scale your application up.
-tls-certificates-operator           active       1  tls-certificates-operator  stable    22  no
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         blocked     1  opensearch                2/edge         117  no       1 or more 'replica' shards are not assigned, please scale your application up.
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   0        10.121.127.140  9200/tcp  
+self-signed-certificates/0*  active    idle   1        10.121.127.164            
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.127.140  juju-454312-0  ubuntu@22.04      Running
+1        started  10.121.127.164  juju-454312-1  ubuntu@22.04      Running
 ```
 
 Out of curiosity, let's take a look at the health of the current 1 node OpenSearch cluster:
 
-```bash
+```shell
 curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/_cluster/health
 ```
+
 You should get a similar output to the following:
 
 ```json
@@ -56,49 +67,46 @@ In order to have a healthy cluster `"status": "green"` we need to scale our clus
 
 You could also list the shards in your cluster and visualize which one is not assigned.
 
-```bash
+```shell
 curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/_cat/shards
 ```
 
 Which should result in the following output:
 
-```
+```shell
 .opensearch-observability 0 p STARTED     0   208b 10.111.61.68 opensearch-0
 albums                    0 p STARTED     4 10.6kb 10.111.61.68 opensearch-0
 albums                    0 r UNASSIGNED
 .opendistro_security      0 p STARTED    10 68.4kb 10.111.61.68 opensearch-0
 ```
-
+## Add node
 You can add two additional nodes to your deployed OpenSearch application with the following command:
 
-```bash
+```shell
 juju add-unit opensearch -n 2
 ```
 
 You can now watch the new units join the cluster with: `watch -c juju status --color`. It usually takes a few minutes for the new nodes to be added to the cluster formation. You’ll know that all three nodes are ready when `watch -c juju status --color` reports:
 
-```bash
+```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:46:15Z
+tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  17:28:02+02:00
 
-App                        Version  Status  Scale  Charm                      Channel  Rev  Exposed  Message
-data-integrator                     active      1  data-integrator            edge      11  no
-opensearch                          active      3  opensearch                 edge      22  no
-tls-certificates-operator           active      1  tls-certificates-operator  stable    22  no
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      3  opensearch                2/edge         117  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
 
-Unit                          Workload  Agent  Machine  Public address  Ports  Message
-data-integrator/0*            active    idle   2        10.180.162.96
-opensearch/0*                 active    idle   0        10.180.162.97
-opensearch/1                  active    idle   3        10.180.162.177
-opensearch/2                  active    idle   4        10.180.162.142
-tls-certificates-operator/0*  active    idle   1        10.180.162.44
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0*                active    idle       0        10.121.127.140  9200/tcp  
+opensearch/1                 active    idle       3        10.121.127.126  9200/tcp  
+opensearch/2                 active    executing  4        10.121.127.102  9200/tcp  
+self-signed-certificates/0*  active    idle       1        10.121.127.164            
 
-Machine  State    Address         Inst id        Series  AZ  Message
-0        started  10.180.162.97   juju-3305a8-0  jammy       Running
-1        started  10.180.162.44   juju-3305a8-1  jammy       Running
-2        started  10.180.162.96   juju-3305a8-2  jammy       Running
-3        started  10.180.162.177  juju-3305a8-3  jammy       Running
-4        started  10.180.162.142  juju-3305a8-4  jammy       Running
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.127.140  juju-454312-0  ubuntu@22.04      Running
+1        started  10.121.127.164  juju-454312-1  ubuntu@22.04      Running
+3        started  10.121.127.126  juju-454312-3  ubuntu@22.04      Running
+4        started  10.121.127.102  juju-454312-4  ubuntu@22.04      Running
 ```
 
 You will now notice that the application message regarding unassigned replica shards disappeared from the output of `juju status`.
@@ -107,13 +115,13 @@ You can trust that Charmed OpenSearch added these nodes correctly, and that your
 
 You can also query the shards as shown previously:
 
-```bash
+```shell
 curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/_cat/shards
 ```
 
 Which should result in the following output:
 
-```
+```shell
 .opensearch-observability 0 r STARTED  0   208b 10.111.61.76 opensearch-1
 .opensearch-observability 0 r STARTED  0   208b 10.111.61.79 opensearch-2
 .opensearch-observability 0 p STARTED  0   208b 10.111.61.68 opensearch-0
@@ -124,42 +132,40 @@ albums                    0 p STARTED  4 10.6kb 10.111.61.68 opensearch-0
 .opendistro_security      0 p STARTED 10 68.4kb 10.111.61.68 opensearch-0
 ```
 
-### Removing Nodes
+## Remove nodes
+[note type="caution"]
+**Note:** Refer to [safe-horizontal-scaling guide](/t/10994) to understand how to safely remove units in a production environment.
+[/note]
 
-***Note:** please refer to [safe-horizontal-scaling guide](/t/how-to-safe-horizontal-scaling/10994) to understand how to safely remove units in a production environment.*
+[note type="caution"]
+**Warning:** In highly available deployment, only scaling down to 3 nodes is safe. If only 2 nodes are online, neither can be unavailable nor removed. The service will become **unavailable** and **data may be lost**  if scaling below 2 nodes.
+[/note]
 
 Removing a unit from the Juju application scales down your OpenSearch cluster by one node. Before we scale down the nodes we no longer need, list all the units with `juju status`. Here you will see three units / nodes: `opensearch/0`, `opensearch/1`, and `opensearch/2`. To remove the unit `opensearch/2` run:
 
-```bash
+```shell
 juju remove-unit opensearch/2
 ```
 
 You’ll know that the node was successfully removed when `watch -c juju status --color` reports:
 
-```bash
+```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:51:30Z
+tutorial  opensearch-demo  localhost/localhost  3.4.4    unsupported  17:30:45+02:00
 
-App                        Version  Status  Scale  Charm                      Channel  Rev  Exposed  Message
-data-integrator                     active      1  data-integrator            edge      11  no
-opensearch                          active      2  opensearch                 edge      22  no
-tls-certificates-operator           active      1  tls-certificates-operator  stable    22  no
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      2  opensearch                2/edge         117  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
 
-Unit                          Workload  Agent  Machine  Public address  Ports  Message
-data-integrator/0*            active    idle   2        10.180.162.96
-opensearch/0*                 active    idle   0        10.180.162.97
-opensearch/1                  active    idle   3        10.180.162.177
-tls-certificates-operator/0*  active    idle   1        10.180.162.44
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   0        10.121.127.140  9200/tcp  
+opensearch/1                 active    idle   3        10.121.127.126  9200/tcp  
+self-signed-certificates/0*  active    idle   1        10.121.127.164            
 
-Machine  State    Address         Inst id        Series  AZ  Message
-0        started  10.180.162.97   juju-3305a8-0  jammy       Running
-1        started  10.180.162.44   juju-3305a8-1  jammy       Running
-2        started  10.180.162.96   juju-3305a8-2  jammy       Running
-3        started  10.180.162.177  juju-3305a8-3  jammy       Running
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.127.140  juju-454312-0  ubuntu@22.04      Running
+1        started  10.121.127.164  juju-454312-1  ubuntu@22.04      Running
+3        started  10.121.127.126  juju-454312-3  ubuntu@22.04      Running
 ```
 
----
-
-## Next Steps
-
-The next stage in this tutorial is about removing the OpenSearch charm and tearing down your Juju deployment, and can be found [here](/t/charmed-opensearch-tutorial-teardown/9726).
+>**Next step**: [7. Clean up the environment](/t/9726).
