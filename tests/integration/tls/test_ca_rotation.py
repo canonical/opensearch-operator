@@ -137,7 +137,11 @@ async def test_build_large_deployment(ops_test: OpsTest) -> None:
             application_name=FAILOVER_APP,
             num_units=1,
             series=SERIES,
-            config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "cluster_manager,data"},
+            config={
+                "cluster_name": CLUSTER_NAME,
+                "init_hold": True,
+                "roles": "cluster_manager,data",
+            },
         ),
         ops_test.model.deploy(
             my_charm,
