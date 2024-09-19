@@ -252,6 +252,7 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charm.OpenSearchOperatorCharm._purge_users")
     def test_update_endpoints(self, _, __, _nodes, _is_node_up, _set_endpoints):
         self.harness.set_leader(True)
+        self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
         node1 = MagicMock()
         node1.ip = "4.4.4.4"
         node2 = MagicMock()
