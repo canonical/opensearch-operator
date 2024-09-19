@@ -7,7 +7,7 @@ To see an example of scaling down a real deployment scenario, check the followin
 [note type="caution"]
 **Warning:**
 * The following steps are for removing one single Juju unit (node). This may be repeated as many times as necessary, but **never remove multiple units in the same command.** 
-* In highly available deployments, **it is not safe to scale below 3 nodes**. If only 2 nodes are online, neither can be unavailable nor removed at all time. The service will become **unavailable** and **data may be lost**  if scaling below 2 nodes.
+* In highly available deployments, **it is not safe to scale below 3 nodes**. 
 [/note]
 
 ## Summary
