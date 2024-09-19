@@ -218,7 +218,7 @@ async def test_large_deployment_fully_formed(
     assert len(nodes) == 8, f"Wrong node count. Expecting 8 online nodes, found: {len(nodes)}."
 
     # check the roles
-    auto_gen_roles = ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
+    auto_gen_roles = ["cluster_manager", "data", "ingest", "ml"]
     data_roles = ["data", "ml"]
     for app, node_count in [(MAIN_APP, 3), (FAILOVER_APP, 3), (DATA_APP, 2)]:
         current_app_nodes = [

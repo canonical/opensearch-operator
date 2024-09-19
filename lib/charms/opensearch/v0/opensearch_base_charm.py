@@ -56,6 +56,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHAError,
     OpenSearchHttpError,
+    OpenSearchMissingError,
     OpenSearchNotFullyReadyError,
     OpenSearchStartError,
     OpenSearchStartTimeoutError,
@@ -301,9 +302,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.status.clear(AdminUserInitProgress)
 
-    def _on_start(self, event: StartEvent):
+    def _on_start(self, event: StartEvent):  # noqa C901
         """Triggered when on start. Set the right node role."""
-        if self.opensearch.is_node_up():
+
+        def cleanup():
             if self.peers_data.get(Scope.APP, "security_index_initialised"):
                 # in the case where it was on WaitingToStart status, event got deferred
                 # and the service started in between, put status back to active
@@ -313,7 +315,43 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.peers_data.get(Scope.UNIT, "bootstrap_contributor"):
                 self._cleanup_bootstrap_conf_if_applies()
 
+        if self.opensearch.is_node_up():
+            cleanup()
             return
+
+        elif (
+            self.peers_data.get(Scope.UNIT, "started")
+            and "cluster_manager" in self.opensearch.roles
+            and not self.opensearch.is_service_started()
+        ):
+            # This logic will only be triggered if the service has started (i.e. "started")
+            # if we had a "start" hook (i.e. the actual machine has rebooted)
+            # and we are a cluster_manager with the service down
+            # After these conditions are met, then we can simply restart the service.
+            logger.debug(
+                "Start hook: snap already installed and service should be up, but it is not. Restarting it..."
+            )
+
+            # We had a reboot in this node.
+            # We execute the same logic as above:
+            cleanup()
+
+            # Now, reissue a restart: we should not have stopped in the first place
+            # as "started" flag is still set to True.
+            # We do not wait for the 200 return, as maybe more than one unit is coming back
+            try:
+                self.opensearch.start_service_only()
+                # We're done here, we can return
+                return
+            except OpenSearchStartError as e:
+                logger.warning(f"Machine restart detected but error at service start with: {e}")
+                # Defer and retry later
+                event.defer()
+                return
+            except OpenSearchMissingError:
+                # This is unlike to happen, unless the snap has been manually removed
+                logger.error("Service previously started but now misses the snap.")
+                return
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():
@@ -737,14 +775,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 except OpenSearchHttpError:
                     logger.error("Could not reload TLS certificates via API, will restart.")
                     self._restart_opensearch_event.emit()
-                self.tls.reset_ca_rotation_state()
-                self.status.clear(TLSNotFullyConfigured)
-                # the chain.pem file should only be updated after applying the new certs
-                # otherwise there could be TLS verification errors after renewing the CA
-                self.tls.update_request_ca_bundle()
-                # cleaning the former CA certificate from the truststore
-                # must only be done AFTER all renewed certificates are available and loaded
-                self.tls.remove_old_ca()
+                else:
+                    # the chain.pem file should only be updated after applying the new certs
+                    # otherwise there could be TLS verification errors after renewing the CA
+                    self.tls.update_request_ca_bundle()
+                    self.status.clear(TLSNotFullyConfigured)
+                    self.tls.reset_ca_rotation_state()
+                    # cleaning the former CA certificate from the truststore
+                    # must only be done AFTER all renewed certificates are available and loaded
+                    self.tls.remove_old_ca()
             else:
                 event.defer()
                 return
@@ -858,6 +897,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         if not self._can_service_start():
+            # after rotating the CA and certificates:
+            # the last host in the cluster to restart might not be able to connect to the other
+            # hosts anymore, because it is the last to renew the pem-file for requests
+            # in this case we update the pem-file to be able to connect and start the host
+            if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+                self.tls.update_request_ca_bundle()
             self.node_lock.release()
             logger.info("Could not start opensearch service. Will retry next event.")
             event.defer()
@@ -890,6 +935,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             self.unit.status = BlockedStatus(str(e))
             return
+
+        # we should update the chain.pem file to avoid TLS verification errors
+        # this happens on restarts after applying a new admin cert on CA rotation
+        if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+            self.tls.update_request_ca_bundle()
 
         try:
             self.opensearch.start(
@@ -1043,6 +1093,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.tls.reset_ca_rotation_state()
         if self.is_tls_full_configured_in_cluster():
             self.status.clear(TLSCaRotation)
+            self.status.clear(TLSNotFullyConfigured)
 
         # request new certificates after rotating the CA
         if self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False) and self.peers_data.get(
@@ -1385,21 +1436,29 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
 
         contribute_to_bootstrap = False
-        if "cluster_manager" in computed_roles:
+        if computed_roles == ["coordinating"]:
+            computed_roles = []  # to mark a node as dedicated coordinating only, we clear the list
+        elif "cluster_manager" in computed_roles:
             cm_names.append(self.unit_name)
             cm_ips.append(self.unit_ip)
 
-            cms_in_bootstrap = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
-            if cms_in_bootstrap < self.app.planned_units():
-                contribute_to_bootstrap = True
+            if (
+                self.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
+                and not self.peers_data.get(Scope.APP, "bootstrapped", False)
+            ):
+                cms_in_bootstrap = self.peers_data.get(
+                    Scope.APP, "bootstrap_contributors_count", 0
+                )
+                if cms_in_bootstrap < self.app.planned_units():
+                    contribute_to_bootstrap = True
 
-                if self.unit.is_leader():
-                    self.peers_data.put(
-                        Scope.APP, "bootstrap_contributors_count", cms_in_bootstrap + 1
-                    )
+                    if self.unit.is_leader():
+                        self.peers_data.put(
+                            Scope.APP, "bootstrap_contributors_count", cms_in_bootstrap + 1
+                        )
 
-                # indicates that this unit is part of the "initial cm nodes"
-                self.peers_data.put(Scope.UNIT, "bootstrap_contributor", True)
+                    # indicates that this unit is part of the "initial cm nodes"
+                    self.peers_data.put(Scope.UNIT, "bootstrap_contributor", True)
 
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
         self.opensearch_config.set_node(
@@ -1415,6 +1474,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _cleanup_bootstrap_conf_if_applies(self) -> None:
         """Remove some conf props in the CM nodes that contributed to the cluster bootstrapping."""
+        if self.unit.is_leader():
+            self.peers_data.put(Scope.APP, "bootstrapped", True)
         self.peers_data.delete(Scope.UNIT, "bootstrap_contributor")
         self.opensearch_config.cleanup_bootstrap_conf()
 
@@ -1451,8 +1512,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         current_conf = self.opensearch_config.load_node()
+        stored_roles = current_conf["node.roles"] or ["coordinating"]
+        new_conf_roles = new_node_conf.roles or ["coordinating"]
         if (
-            sorted(current_conf["node.roles"]) == sorted(new_node_conf.roles)
+            sorted(stored_roles) == sorted(new_conf_roles)
             and current_conf.get("node.attr.temp") == new_node_conf.temperature
         ):
             # no conf change (roles for now)

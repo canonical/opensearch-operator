@@ -5,15 +5,23 @@
 import shutil
 import unittest
 from typing import Dict
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
-from charms.opensearch.v0.models import App
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
+from lib.charms.opensearch.v0.models import (
+    App,
+    DeploymentDescription,
+    DeploymentState,
+    DeploymentType,
+    PeerClusterConfig,
+    StartMode,
+    State,
+)
 from tests.helpers import copy_file_content_to_tmp
 
 
@@ -160,9 +168,23 @@ class TestOpenSearchConfig(unittest.TestCase):
         opensearch_conf = self.yaml_conf_setter.load(self.opensearch_yml)
         self.assertCountEqual(opensearch_conf["plugins.security.nodes_dn"], ["10.10.10.10"])
 
-    def test_set_node_and_cleanup_if_bootstrapped(self):
+    @patch(
+        "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
+    def test_set_node_and_cleanup_if_bootstrapped(self, mock_deployment_desc):
         """Test setting the core config of a node."""
         app = App(model_uuid=self.charm.model.uuid, name=self.charm.app.name)
+        mock_deployment_desc.return_value = DeploymentDescription(
+            config=PeerClusterConfig(
+                cluster_name="logs", init_hold=False, roles=["cluster_manager", "data"]
+            ),
+            start=StartMode.WITH_PROVIDED_ROLES,
+            pending_directives=[],
+            app=App(model_uuid="model-uuid", name="opensearch"),
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            state=DeploymentState(value=State.ACTIVE),
+        )
+
         self.opensearch_config.set_node(
             app=app,
             cluster_name="opensearch-dev",

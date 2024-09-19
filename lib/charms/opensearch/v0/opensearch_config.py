@@ -152,7 +152,9 @@ class OpenSearchConfig:
                 self.CONFIG_YML, "network.publish_host", self._opensearch.host
             )
 
-        self._opensearch.config.put(self.CONFIG_YML, "node.roles", roles)
+        self._opensearch.config.put(
+            self.CONFIG_YML, "node.roles", roles, inline_array=len(roles) == 0
+        )
         if node_temperature:
             self._opensearch.config.put(self.CONFIG_YML, "node.attr.temp", node_temperature)
         else:

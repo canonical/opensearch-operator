@@ -140,7 +140,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
-        self.refresh_relation_data(event, can_defer=False)
+        self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
@@ -228,7 +228,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             trigger_rel_id=event.relation.id,
         )
 
-    def refresh_relation_data(self, event: EventBase, can_defer: bool = True) -> None:
+    def refresh_relation_data(
+        self, event: EventBase, event_rel_id: int | None = None, can_defer: bool = True
+    ) -> None:
         """Refresh the peer cluster rel data (new cm node, admin password change etc.)."""
         if not self.charm.unit.is_leader():
             return
@@ -250,7 +252,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         rel_data = self._rel_data(deployment_desc, orchestrators)
 
         # exit if current cluster should not have been considered a provider
-        if self._notify_if_wrong_integration(rel_data, all_relation_ids):
+        if self._notify_if_wrong_integration(rel_data, all_relation_ids) and event_rel_id:
+            self.delete_from_rel("trigger", rel_id=event_rel_id)
             return
 
         # store the main/failover-cm planned units count
@@ -259,6 +262,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         cluster_type = (
             "main" if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR else "failover"
         )
+
+        # flag the trigger of the rel changed update on the consumer side
+        if event_rel_id:
+            self.put_in_rel({"trigger": cluster_type}, rel_id=event_rel_id)
 
         # update reported orchestrators on local orchestrator
         orchestrators = orchestrators.to_dict()
@@ -514,8 +521,11 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if not (data := event.relation.data.get(event.app)):
             return
 
+        # fetch the trigger of this event
+        trigger = data.get("trigger")
+
         # fetch main and failover clusters relations ids if any
-        orchestrators = self._orchestrators(event, data, deployment_desc)
+        orchestrators = self._orchestrators(event, data, trigger)
 
         # should we add a check where only the failover rel has data while the main has none yet?
         if orchestrators.failover_app and not orchestrators.main_app:
@@ -551,6 +561,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # register main and failover cm app names if any
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
+
+        # let the charm know this is an already bootstrapped cluster
+        self.charm.peers_data.put(Scope.APP, "bootstrapped", True)
 
         # store the security related settings in secrets, peer_data, disk
         self._set_security_conf(data)
@@ -597,31 +610,32 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self,
         event: RelationChangedEvent,
         data: MutableMapping[str, str],
-        deployment_desc: DeploymentDescription,
+        trigger: Optional[str],
     ) -> PeerClusterOrchestrators:
         """Fetch related orchestrator IDs and App names."""
-        orchestrators = self.get_obj_from_rel(key="orchestrators", rel_id=event.relation.id)
+        remote_orchestrators = self.get_obj_from_rel(key="orchestrators", rel_id=event.relation.id)
+        if not remote_orchestrators:
+            remote_orchestrators = json.loads(data["orchestrators"])
 
         # fetch the (main/failover)-cluster-orchestrator relations
-        cm_relations = [rel.id for rel in self.model.relations[self.relation_name]]
+        cm_relations = [
+            rel.id
+            for rel in self.model.relations[self.relation_name]
+            if rel.id != event.relation.id
+        ]
         for rel_id in cm_relations:
-            orchestrators.update(self.get_obj_from_rel(key="orchestrators", rel_id=rel_id))
+            remote_orchestrators.update(self.get_obj_from_rel(key="orchestrators", rel_id=rel_id))
 
-        if not orchestrators:
-            orchestrators = json.loads(data["orchestrators"])
-
-        # handle case where the current is a designated failover
-        if deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR:
-            local_orchestrators = PeerClusterOrchestrators.from_dict(
-                self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
+        local_orchestrators = self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
+        if trigger in {"main", "failover"}:
+            local_orchestrators.update(
+                {
+                    f"{trigger}_rel_id": event.relation.id,
+                    f"{trigger}_app": remote_orchestrators[f"{trigger}_app"],
+                }
             )
-            if (
-                local_orchestrators.failover_app
-                and local_orchestrators.failover_app.id == deployment_desc.app.id
-            ):
-                orchestrators["failover_app"] = local_orchestrators.failover_app.to_dict()
 
-        return PeerClusterOrchestrators.from_dict(orchestrators)
+        return PeerClusterOrchestrators.from_dict(local_orchestrators)
 
     def _put_current_app(
         self, event: RelationEvent, deployment_desc: DeploymentDescription

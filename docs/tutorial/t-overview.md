@@ -1,12 +1,8 @@
 # Charmed OpenSearch Tutorial
 
-This section of our documentation contains comprehensive, hands-on tutorials to help you learn how to deploy Charmed OpenSearch and become familiar with its available operations.
+This tutorial is designed to help you learn how to deploy Charmed OpenSearch and become familiar with its available operations.
 
 >To get started right away, go to [**Step 1. Set up the environment**](/t/9724).
-
-[note type="caution"]
-:construction: **Note:** This tutorial is currently being updated, so you may notice some inconsistencies in the UI.
-[/note]
 
 ## Prerequisites
 While this tutorial intends to guide you as you deploy Charmed OpenSearch for the first time, it will be most beneficial if:
@@ -14,7 +10,7 @@ While this tutorial intends to guide you as you deploy Charmed OpenSearch for th
 * You have some experience using a Linux-based CLI
 * You are familiar with OpenSearch concepts such as indices and users.
   * To learn more, see the official [OpenSearch Documentation](https://opensearch.org/docs/latest/about/)
-* Your computer fulfills the [minimum system requirements](/t/14565)
+* Your computer fulfils the [minimum system requirements](/t/14565)
 
 ## Tutorial contents
 

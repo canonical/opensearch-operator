@@ -30,6 +30,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import all_units, run_cmd
+from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -102,11 +103,17 @@ class OpenSearchTLS(Object):
         if self.charm.upgrade_in_progress:
             event.fail("Setting private key not supported while upgrade in-progress")
             return
+
         cert_type = CertType(event.params["category"])  # type
         scope = Scope.APP if cert_type == CertType.APP_ADMIN else Scope.UNIT
-
-        if scope == Scope.APP and not self.charm.unit.is_leader():
-            event.log("Only the juju leader unit can set private key for the admin certificates.")
+        if scope == Scope.APP and not (
+            self.charm.unit.is_leader()
+            and self.charm.opensearch_peer_cm.deployment_desc().typ
+            == DeploymentType.MAIN_ORCHESTRATOR
+        ):
+            event.log(
+                "Only the juju leader unit of the main orchestrator can set private key for the admin certificates."
+            )
             return
 
         try:
@@ -120,8 +127,13 @@ class OpenSearchTLS(Object):
         """Request the generation of a new admin certificate."""
         if not self.charm.unit.is_leader():
             return
-
-        self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        self._request_certificate(
+            Scope.APP,
+            CertType.APP_ADMIN,
+            admin_secrets.get("key"),
+            admin_secrets.get("key-password"),
+        )
 
     def request_new_unit_certificates(self) -> None:
         """Requests a new certificate with the given scope and type from the tls operator."""
@@ -156,8 +168,7 @@ class OpenSearchTLS(Object):
                 Scope.APP, CertType.APP_ADMIN, CertType.APP_ADMIN.val
             )
 
-            if not admin_cert:
-                self._request_certificate(Scope.APP, CertType.APP_ADMIN)
+            self._request_certificate(Scope.APP, CertType.APP_ADMIN)
         elif not admin_cert.get("truststore-password"):
             logger.debug("Truststore-password from main-orchestrator not available yet.")
             event.defer()
@@ -240,16 +251,19 @@ class OpenSearchTLS(Object):
             cert_type, self.charm.secrets.get_object(scope, cert_type.val)
         )
 
-        # in case we do not update to a new CA, we can apply the chain.pem file for requests now
+        # apply the chain.pem file for API requests, only if the CA cert has not been updated
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
         if admin_secrets.get("chain") and not self._read_stored_ca(alias="old-ca"):
             self.update_request_ca_bundle()
-            # store the admin certificates in non-leader units
-            if not self.charm.unit.is_leader():
-                self.store_admin_tls_secrets_if_applies()
-        else:
-            # wait for the admin-cert to be updated by the leader
-            event.defer()
+
+        # store the admin certificates in non-leader units
+        # if admin cert not available we need to defer, otherwise it will never be stored
+        if not self.charm.unit.is_leader():
+            if admin_secrets.get("cert"):
+                self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
+            else:
+                event.defer()
+                return
 
         for relation in self.charm.opensearch_provider.relations:
             self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
@@ -368,25 +382,20 @@ class OpenSearchTLS(Object):
         if cert_type == CertType.APP_ADMIN:
             return sans
 
-        # in order to be able to use the API for reloading TLS certificates it is necessary
-        # to only have one dns name and one ip address in the sans
-        # otherwise the following upstream bug will mess the sorting of these fields
-        # https://github.com/opensearch-project/security/issues/4480
-        dns = {socket.getfqdn()}
+        dns = {self.charm.unit_name, socket.gethostname(), socket.getfqdn()}
         ips = {self.charm.unit_ip}
 
-        # see above, related to https://github.com/opensearch-project/security/issues/4480
-        # host_public_ip = get_host_public_ip()
-        # if cert_type == CertType.UNIT_HTTP and host_public_ip:
-        #    ips.add(host_public_ip)
+        host_public_ip = get_host_public_ip()
+        if cert_type == CertType.UNIT_HTTP and host_public_ip:
+            ips.add(host_public_ip)
 
         for ip in ips.copy():
             try:
                 name, aliases, addresses = socket.gethostbyaddr(ip)
                 ips.update(addresses)
-                # see above, related to https://github.com/opensearch-project/security/issues/4480
-                # dns.add(name)
-                # dns.update(aliases)
+
+                dns.add(name)
+                dns.update(aliases)
             except (socket.herror, socket.gaierror):
                 continue
 
@@ -659,7 +668,7 @@ class OpenSearchTLS(Object):
                 -out {store_path} \
                 -name {cert_name}
             """
-            args = f"-passout pass:{secrets.get(f'keystore-password')}"
+            args = f"-passout pass:{secrets.get('keystore-password')}"
             if secrets.get("key-password"):
                 args = f"{args} -passin pass:{secrets.get('key-password')}"
 

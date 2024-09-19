@@ -77,7 +77,6 @@ async def test_set_roles_manually(
     for node in nodes:
         assert sorted(node.roles) == [
             "cluster_manager",
-            "coordinating_only",
             "data",
             "ingest",
             "ml",
@@ -163,7 +162,6 @@ async def test_switch_back_to_auto_generated_roles(
     for node in nodes:
         assert sorted(node.roles) == [
             "cluster_manager",
-            "coordinating_only",
             "data",
             "ingest",
             "ml",

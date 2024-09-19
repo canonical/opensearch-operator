@@ -1,27 +1,26 @@
+[note]All commands are written for `juju v.3.1.7+`[/note]
+
 # How to migrate to a new cluster via restore
 
 This is a guide on how to restore a backup that was made from a different cluster, (i.e. cluster migration via restore).
 
-To perform a basic restore (from a local backup), see Charmed OpenSearch | How to restore a local backup.
-
-[note]All commands are written for juju >= v.3.1.7[/note]
-
-For more information, check the [Juju Release Notes](https://juju.is/docs/juju/roadmap#heading--juju-releases).
+To perform a basic restore (from a local backup), see [How to restore a local backup](/t/14099).
 
 ## Prerequisites
 
 Restoring a backup from a previous cluster to a current cluster requires:
-
 * At least 3x Charmed OpenSearch units deployed and running
 * Access to an S3-compatible storage
 * Configured settings for the S3-compatible storage
 * Backups from the previous cluster in your S3-compatible storage
 
+---
+
 ## List backups
 
-To view the available backups to restore, use the command list-backups:
+To view the available backups to restore, use the command `list-backups`:
 
-```
+```none
 juju run opensearch/leader list-backups
 Running operation 335 with 1 task
   - task 336 on unit-opensearch-0
@@ -36,9 +35,9 @@ backups: |2-
 
 ## Restore backup
 
-To restore your current cluster to the state of the previous cluster, run the restore command and pass the correct backup-id (from the previously returned list) to the command:
+To restore your current cluster to the state of the previous cluster, run the `restore` command and pass the correct `backup-id` (from the previously returned list) to the command:
 
-```
+```none
 juju run opensearch/leader restore backup-id="2024-04-25T21:16:26Z"
 Running operation 339 with 1 task
   - task 340 on unit-opensearch-0
@@ -49,6 +48,6 @@ closed-indices: '{''.opensearch-sap-log-types-config'', ''series_index'', ''.plu
 status: Restore is complete
 ```
 
-Your restore has been restored.
+Your backup has been restored.
 
 If the restore takes too long, the Juju CLI above will time out but the `juju status` command will provide a view if the charm is still running the restore action or not.

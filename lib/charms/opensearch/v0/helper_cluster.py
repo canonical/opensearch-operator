@@ -5,6 +5,7 @@
 import logging
 from typing import Dict, List, Optional
 
+from charms.opensearch.v0.constants_charm import GeneratedRoles
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import App, Node
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -37,7 +38,7 @@ class ClusterTopology:
     @staticmethod
     def generated_roles() -> List[str]:
         """Get generated roles for a Node."""
-        return ["data", "ingest", "ml", "coordinating_only", "cluster_manager"]
+        return GeneratedRoles
 
     @staticmethod
     def get_cluster_settings(

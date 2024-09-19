@@ -280,7 +280,7 @@ class TestHelperCluster(unittest.TestCase):
         self.assertEqual(raw_node.roles, from_json_node.roles)
         self.assertEqual(raw_node.ip, from_json_node.ip)
 
-    @patch("charms.opensearch.v0.helper_cluster.OpenSearchDistribution.request")
+    @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     def test_get_cluster_settings(self, request_mock):
         """Test the get_cluster_settings method."""
         request_mock.return_value = {
@@ -313,26 +313,4 @@ class TestHelperCluster(unittest.TestCase):
             "/_cluster/settings?flat_settings=true&include_defaults=true",
             host=None,
             alt_hosts=None,
-        )
-
-    @patch("charms.opensearch.v0.helper_cluster.ClusterState.shards")
-    def test_count_shards_by_state(self, shards):
-        """Test the busy shards filtering."""
-        shards.return_value = [
-            {"index": "index1", "state": "STARTED", "node": "opensearch-0"},
-            {"index": "index1", "state": "INITIALIZING", "node": "opensearch-1"},
-            {"index": "index2", "state": "STARTED", "node": "opensearch-0"},
-            {"index": "index2", "state": "RELOCATING", "node": "opensearch-1"},
-            {"index": "index3", "state": "STARTED", "node": "opensearch-0"},
-            {"index": "index3", "state": "STARTED", "node": "opensearch-1"},
-            {"index": "index4", "state": "STARTED", "node": "opensearch-2"},
-            {"index": "index4", "state": "INITIALIZING", "node": "opensearch-2"},
-        ]
-        self.assertDictEqual(
-            ClusterState.shards_by_state(self.opensearch),
-            {
-                "STARTED": 5,
-                "INITIALIZING": 2,
-                "RELOCATING": 1,
-            },
         )

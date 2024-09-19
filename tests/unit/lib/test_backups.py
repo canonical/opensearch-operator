@@ -81,38 +81,40 @@ def create_deployment_desc():
 @pytest.fixture(scope="function")
 def harness():
     harness_obj = Harness(OpenSearchOperatorCharm)
-    charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc = (
-        MagicMock(return_value=create_deployment_desc())
-    )
-    harness_obj.begin()
-    charm = harness_obj.charm
-    # Override the config to simulate the TestPlugin
-    # As config.yaml does not exist, the setup below simulates it
-    charm.plugin_manager._charm_config = harness_obj.model._config
-    # Override the ConfigExposedPlugins
-    charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
-        "repository-s3": {
-            "class": OpenSearchBackupPlugin,
-            "config": None,
-            "relation": "s3-credentials",
-        },
-    }
-    charm.opensearch.is_started = MagicMock(return_value=True)
-    charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
-    # Mock retrials to speed up tests
-    charms.opensearch.v0.opensearch_backups.wait_fixed = MagicMock(
-        return_value=tenacity.wait.wait_fixed(0.1)
-    )
+    with patch(
+        "charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc",
+        return_value=create_deployment_desc(),
+    ):
+        harness_obj.begin()
+        charm = harness_obj.charm
+        # Override the config to simulate the TestPlugin
+        # As config.yaml does not exist, the setup below simulates it
+        charm.plugin_manager._charm_config = harness_obj.model._config
+        # Override the ConfigExposedPlugins
+        charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
+            "repository-s3": {
+                "class": OpenSearchBackupPlugin,
+                "config": None,
+                "relation": "s3-credentials",
+            },
+        }
+        charm.opensearch.is_started = MagicMock(return_value=True)
+        charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
+        # Mock retrials to speed up tests
+        charms.opensearch.v0.opensearch_backups.wait_fixed = MagicMock(
+            return_value=tenacity.wait.wait_fixed(0.1)
+        )
 
-    # Replace some unused methods that will be called as part of set_leader with mock
-    charm._put_admin_user = MagicMock()
-    charm._put_kibanaserver_user = MagicMock()
-    charm._put_or_update_internal_user_leader = MagicMock()
+        # Replace some unused methods that will be called as part of set_leader with mock
+        charm._put_admin_user = MagicMock()
+        charm._put_kibanaserver_user = MagicMock()
+        charm._put_or_update_internal_user_leader = MagicMock()
 
-    harness_obj.add_relation(PeerRelationName, "opensearch")
-    harness_obj.set_leader(is_leader=True)
+        harness_obj.add_relation(PeerRelationName, "opensearch")
+        harness_obj.set_leader(is_leader=True)
 
-    return harness_obj
+        yield harness_obj
+        # return harness_obj
 
 
 @pytest.fixture(scope="function")
@@ -478,44 +480,49 @@ def test_on_s3_broken_steps(
 
 
 @patch_network_get("1.1.1.1")
+@patch(
+    "charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc",
+    return_value=create_deployment_desc(),
+)
 class TestBackups(unittest.TestCase):
     maxDiff = None
 
     def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
-        charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc = MagicMock(
-            return_value=create_deployment_desc()
-        )
-        self.harness.begin()
+        with patch(
+            "charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc",
+            return_value=create_deployment_desc(),
+        ):
+            self.harness.begin()
 
-        self.charm = self.harness.charm
-        # Override the config to simulate the TestPlugin
-        # As config.yaml does not exist, the setup below simulates it
-        self.charm.plugin_manager._charm_config = self.harness.model._config
-        self.plugin_manager = self.charm.plugin_manager
-        # Override the ConfigExposedPlugins
-        charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
-            "repository-s3": {
-                "class": OpenSearchBackupPlugin,
-                "config": None,
-                "relation": "s3-credentials",
-            },
-        }
-        self.charm.opensearch.is_started = MagicMock(return_value=True)
-        self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
-        # Mock retrials to speed up tests
-        charms.opensearch.v0.opensearch_backups.wait_fixed = MagicMock(
-            return_value=tenacity.wait.wait_fixed(0.1)
-        )
-        self.charm.status = MagicMock()
+            self.charm = self.harness.charm
+            # Override the config to simulate the TestPlugin
+            # As config.yaml does not exist, the setup below simulates it
+            self.charm.plugin_manager._charm_config = self.harness.model._config
+            self.plugin_manager = self.charm.plugin_manager
+            # Override the ConfigExposedPlugins
+            charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
+                "repository-s3": {
+                    "class": OpenSearchBackupPlugin,
+                    "config": None,
+                    "relation": "s3-credentials",
+                },
+            }
+            self.charm.opensearch.is_started = MagicMock(return_value=True)
+            self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
+            # Mock retrials to speed up tests
+            charms.opensearch.v0.opensearch_backups.wait_fixed = MagicMock(
+                return_value=tenacity.wait.wait_fixed(0.1)
+            )
+            self.charm.status = MagicMock()
 
-        # Replace some unused methods that will be called as part of set_leader with mock
-        self.charm._put_admin_user = MagicMock()
-        self.charm._put_kibanaserver_user = MagicMock()
-        self.charm._put_or_update_internal_user_leader = MagicMock()
-        self.peer_id = self.harness.add_relation(PeerRelationName, "opensearch")
-        self.harness.set_leader(is_leader=True)
+            # Replace some unused methods that will be called as part of set_leader with mock
+            self.charm._put_admin_user = MagicMock()
+            self.charm._put_kibanaserver_user = MagicMock()
+            self.charm._put_or_update_internal_user_leader = MagicMock()
+            self.peer_id = self.harness.add_relation(PeerRelationName, "opensearch")
+            self.harness.set_leader(is_leader=True)
 
         # Relate and run first check
         with patch(
@@ -525,7 +532,7 @@ class TestBackups(unittest.TestCase):
             self.harness.add_relation_unit(self.s3_rel_id, "s3-integrator/0")
             mock_pm_run.assert_not_called()
 
-    def test_get_endpoint_protocol(self) -> None:
+    def test_get_endpoint_protocol(self, _) -> None:
         """Tests the get_endpoint_protocol method."""
         assert self.charm.backup._get_endpoint_protocol("http://10.0.0.1:8000") == "http"
         assert self.charm.backup._get_endpoint_protocol("https://10.0.0.2:8000") == "https"
@@ -539,7 +546,7 @@ class TestBackups(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.apply_config")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version")
     def test_00_update_relation_data(
-        self, __, mock_apply_config, _, mock_status, mock_pm_ready
+        self, _, mock_apply_config, __, mock_status, mock_pm_ready, ___
     ) -> None:
         """Tests if new relation without data returns."""
         mock_pm_ready.return_value = True
@@ -570,7 +577,7 @@ class TestBackups(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
-    def test_apply_api_config_if_needed(self, mock_status, _, mock_request) -> None:
+    def test_apply_api_config_if_needed(self, mock_status, _, mock_request, __) -> None:
         """Tests the application of post-restart steps."""
         self.harness.update_relation_data(
             self.s3_rel_id,
@@ -603,7 +610,7 @@ class TestBackups(unittest.TestCase):
             },
         )
 
-    def test_on_list_backups_action(self):
+    def test_on_list_backups_action(self, _):
         event = MagicMock()
         event.params = {"output": "table"}
         self.charm.backup._list_backups = MagicMock(return_value={"backup1": {"state": "SUCCESS"}})
@@ -613,7 +620,7 @@ class TestBackups(unittest.TestCase):
         self.charm.backup._on_list_backups_action(event)
         event.set_results.assert_called_with({"backups": "backup1 | finished"})
 
-    def test_on_list_backups_action_in_json_format(self):
+    def test_on_list_backups_action_in_json_format(self, _):
         event = MagicMock()
         event.params = {"output": "json"}
         self.charm.backup._list_backups = MagicMock(return_value={"backup1": {"state": "SUCCESS"}})
@@ -623,7 +630,7 @@ class TestBackups(unittest.TestCase):
         self.charm.backup._on_list_backups_action(event)
         event.set_results.assert_called_with({"backups": '{"backup1": {"state": "SUCCESS"}}'})
 
-    def test_is_restore_complete(self):
+    def test_is_restore_complete(self, _):
         rel = MagicMock()
         rel.data = {self.charm.app: {"restore_in_progress": "index1,index2"}}
         self.charm.model.get_relation = MagicMock(return_value=rel)
@@ -649,6 +656,7 @@ class TestBackups(unittest.TestCase):
         mock_request,
         mock_apply_config,
         _,
+        __,
     ) -> None:
         """Tests broken relation unit."""
         mock_request.side_effects = [
@@ -671,7 +679,7 @@ class TestBackups(unittest.TestCase):
             ).__dict__
         )
 
-    def test_format_backup_list(self):
+    def test_format_backup_list(self, _):
         """Tests the format of the backup list."""
         self.charm.opensearch.request = MagicMock(
             return_value={
@@ -687,7 +695,7 @@ class TestBackups(unittest.TestCase):
             self.charm.backup._generate_backup_list_output(backups), LIST_BACKUPS_TRIAL
         )
 
-    def test_can_unit_perform_backup_success(self):
+    def test_can_unit_perform_backup_success(self, _):
         plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchBackup._plugin_status"
         event = MagicMock()
         with patch(plugin_method, new_callable=PropertyMock) as mock_plugin_status:
@@ -702,7 +710,7 @@ class TestBackups(unittest.TestCase):
 
     @patch("charms.opensearch.v0.opensearch_backups.datetime")
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchBackup._request")
-    def test_on_create_backup_action_success(self, mock_request, mock_time):
+    def test_on_create_backup_action_success(self, mock_request, mock_time, _):
         event = MagicMock()
         mock_time.now().strftime.return_value = "2023-01-01T00:00:00Z"
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
@@ -718,13 +726,13 @@ class TestBackups(unittest.TestCase):
             {"backup-id": "2023-01-01T00:00:00Z", "status": "Backup is running."}
         )
 
-    def test_on_create_backup_action_failure(self):
+    def test_on_create_backup_action_failure(self, _):
         event = MagicMock()
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=False)
         self.charm.backup._on_create_backup_action(event)
         event.fail.assert_called_with("Failed: backup service is not configured or busy")
 
-    def test_on_create_backup_action_backup_in_progress(self):
+    def test_on_create_backup_action_backup_in_progress(self, _):
         event = MagicMock()
         self.charm.backup._check_repo_status = MagicMock(return_value=BackupServiceState.SUCCESS)
         self.charm.backup.is_backup_in_progress = MagicMock(return_value=True)
@@ -735,7 +743,7 @@ class TestBackups(unittest.TestCase):
             mock_plugin_status.assert_called_once()
         event.fail.assert_called_with("Failed: backup service is not configured or busy")
 
-    def test_on_create_backup_action_exception(self):
+    def test_on_create_backup_action_exception(self, _):
         event = MagicMock()
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
         self.charm.backup.is_backup_in_progress = MagicMock(return_value=False)
@@ -747,7 +755,7 @@ class TestBackups(unittest.TestCase):
             "Failed with exception: HTTP error self.response_code='Internal Server Error'\nself.response_text=500"
         )
 
-    def test_on_restore_backup_action(self):
+    def test_on_restore_backup_action(self, _):
         """Runs the entire restore backup action successfully."""
         event = MagicMock()
         event.params = {"backup-id": "2023-01-01T00:00:00Z"}
@@ -779,7 +787,7 @@ class TestBackups(unittest.TestCase):
         self.charm.backup._close_indices_if_needed.assert_called_once_with("2023-01-01T00:00:00Z")
         self.charm.backup._restore.assert_called_once_with("2023-01-01T00:00:00Z")
 
-    def test_on_restore_backup_action_backup_service_not_configured(self):
+    def test_on_restore_backup_action_backup_service_not_configured(self, _):
         # Mocking helper method
         event = MagicMock()
         event.params = {"backup-id": "2023-01-01T00:00:00Z"}
@@ -799,7 +807,7 @@ class TestBackups(unittest.TestCase):
         event.fail.assert_called_once_with("Failed: backup service is not configured yet")
         event.set_results.assert_not_called()
 
-    def test_on_restore_backup_action_previous_restore_in_progress(self):
+    def test_on_restore_backup_action_previous_restore_in_progress(self, _):
         event = MagicMock()
         event.params = {"backup-id": "2023-01-01T00:00:00Z"}
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
@@ -816,7 +824,7 @@ class TestBackups(unittest.TestCase):
         event.fail.assert_called_once_with("Failed: previous restore is still in progress")
         event.set_results.assert_not_called()
 
-    def test_on_restore_backup_action_backup_id_not_available(self):
+    def test_on_restore_backup_action_backup_id_not_available(self, _):
         event = MagicMock()
         event.params = {"backup-id": "2023-01-01T00:00:00Z"}
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
@@ -834,7 +842,7 @@ class TestBackups(unittest.TestCase):
         event.fail.assert_called_once_with("Failed: no backup-id 2023-01-01T00:00:00Z")
         event.set_results.assert_not_called()
 
-    def test_on_restore_backup_action_restore_failed(self):
+    def test_on_restore_backup_action_restore_failed(self, _):
         event = MagicMock()
         event.params = {"backup-id": "2023-01-01T00:00:00Z"}
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)

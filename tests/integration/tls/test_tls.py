@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import subprocess
 import time
 
 import pytest
@@ -34,8 +35,10 @@ logger = logging.getLogger(__name__)
 
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
-# wait time for secret expiry = 65 * 60
-SECRET_EXPIRY_WAIT_TIME = 4200
+# The expiry time of the secret carrying the certificate is set to 3 minutes for testing
+SECRET_EXPIRY_TIME = 180
+# Wait time for the secret to expire and be renewed
+SECRET_EXPIRY_WAIT_TIME = SECRET_EXPIRY_TIME + 60
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
@@ -166,10 +169,15 @@ async def test_tls_renewal(ops_test: OpsTest) -> None:
 async def test_tls_expiration(ops_test: OpsTest) -> None:
     """Test that expiring TLS certificates are renewed."""
     # before we can run this test, need to clean up and deploy with different config
-    await ops_test.model.remove_application(APP_NAME, block_until_done=True)
-    await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
+    if APP_NAME in ops_test.model.applications:
+        logger.info(f"Removing application {APP_NAME}")
+        await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+    if TLS_CERTIFICATES_APP_NAME in ops_test.model.applications:
+        logger.info(f"Removing application {TLS_CERTIFICATES_APP_NAME}")
+        await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
 
     # Deploy TLS Certificates operator
+    logger.info("Deploying TLS Certificates operator")
     config = {"ca-common-name": "CN_CA", "certificate-validity": "1"}
     await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
     await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
@@ -177,6 +185,8 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     # Deploy Opensearch operator
     await ops_test.model.set_config(MODEL_CONFIG)
     my_charm = await ops_test.build_charm(".")
+
+    logger.info("Deploying OpenSearch")
     await ops_test.model.deploy(
         my_charm,
         num_units=1,
@@ -190,7 +200,18 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
         wait_for_exact_units=1,
     )
 
+    # Change the expiry time of the secret carrying the certificate to 3 minutes for testing
+    logger.info("Changing the expiry time of the secret carrying the certificate to 3 minutes")
+    unit_id = get_application_unit_ids(ops_test, APP_NAME)[0]
+    search_expression = "expire=self._get_next_secret_expiry_time\\(certificate\\)"
+    replace_expression = f"expire=timedelta\\(seconds={SECRET_EXPIRY_TIME}\\)"
+    lib_file = f"/var/lib/juju/agents/unit-opensearch-{unit_id}/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py"
+    cmd = f"juju ssh {APP_NAME}/{unit_id} sudo sed -i 's/{search_expression}/{replace_expression}/g' {lib_file}"
+    logger.info(f"Running command: {cmd}")
+    subprocess.check_output(cmd, shell=True)
+
     # Relate OpenSearch to TLS and wait until all is settled
+    logger.info("Integrating OpenSearch with TLS Certificates operator")
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
     await wait_until(
@@ -201,6 +222,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     )
 
     # wait for the unit to be ready and API's available
+    logger.info("Test cluster health")
     unit_ip = await get_leader_unit_ip(ops_test)
     cluster_health_resp = await cluster_health(ops_test, unit_ip, wait_for_green_first=True)
     assert cluster_health_resp["status"] == "green"
@@ -213,15 +235,17 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     # we can't use `wait_until` here because the unit might not be idle in the meantime
     # please note: minimum waiting time is 60 minutes, due to limitations on the tls-operator
     logger.info(
-        f"Waiting for certificates to expire. Wait time: {SECRET_EXPIRY_WAIT_TIME/60} minutes."
+        f"Waiting for certificates to expire. Wait time: {SECRET_EXPIRY_WAIT_TIME / 60} minutes."
     )
     time.sleep(SECRET_EXPIRY_WAIT_TIME)
 
+    logger.info("Test cluster health after certificate expiry")
     cluster_health_resp = await cluster_health(ops_test, unit_ip, wait_for_green_first=True)
     assert cluster_health_resp["status"] == "green"
 
     # now compare the current certificates against the earlier ones and see if they were updated
     updated_certs = await get_loaded_tls_certificates(ops_test, unit_ip)
+    logger.info("Comparing certificates before and after expiry")
     logger.info(f"Certs: {current_certs}, {updated_certs}")
     assert (
         updated_certs["transport_certificates_list"][0]["not_before"]
