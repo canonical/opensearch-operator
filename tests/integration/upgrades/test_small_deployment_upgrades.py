@@ -29,12 +29,12 @@ OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
 OPENSEARCH_CHANNEL = "2/edge"
 
 
-STARTING_VERSION = "2.14.0"
+STARTING_VERSION = "2.15.0"
 
 
 VERSION_TO_REVISION = {
-    STARTING_VERSION: 143,
-    "2.15.0": 144,
+    STARTING_VERSION: 144,
+    "2.16.0": 160,
 }
 
 
@@ -273,10 +273,12 @@ async def test_upgrade_rollback_from_local(
         )
 
         # Wait until we are set in an idle state and can rollback the revision.
+        # app status blocked: that will happen if we are jumping N-2 versions in our test
+        # app status active: that will happen if we are jumping N-1 in our test
         await wait_until(
             ops_test,
             apps=[app],
-            apps_statuses=["blocked"],
+            apps_statuses=["active", "blocked"],
             units_statuses=["active"],
             wait_for_exact_units={
                 APP_NAME: 3,
