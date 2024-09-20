@@ -276,7 +276,7 @@ async def test_upgrade_rollback_from_local(
         await wait_until(
             ops_test,
             apps=[app],
-            apps_statuses=["blocked"],
+            apps_statuses=["active"],
             units_statuses=["active"],
             wait_for_exact_units={
                 APP_NAME: 3,
