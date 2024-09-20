@@ -480,14 +480,14 @@ class OpenSearchProvider(Object):
                 departed_relation_id,
             )
 
-        clearnup_rel_ids = []
+        cleanup_rel_ids = []
         if departed_relation_id:
-            clearnup_rel_ids = [str(departed_relation_id)]
+            cleanup_rel_ids = [str(departed_relation_id)]
 
         rel_ids = [str(relation.id) for relation in self.opensearch_provides.relations]
-        clearnup_rel_ids += list(set(relation_users.keys()) - set(rel_ids))
+        cleanup_rel_ids += list(set(relation_users.keys()) - set(rel_ids))
 
-        for rel_id in clearnup_rel_ids:
+        for rel_id in cleanup_rel_ids:
             if username := relation_users.get(rel_id):
                 try:
                     self.user_manager.remove_user(username)
