@@ -472,7 +472,9 @@ class OpenSearchProvider(Object):
 
         relation_users = self.charm.peers_data.get_object(Scope.APP, ClientUsersDict) or {}
 
-        if departed_relation_id and (not relation_users or departed_relation_id not in relation_users):
+        if departed_relation_id and (
+            not relation_users or departed_relation_id not in relation_users
+        ):
             logging.warning(
                 "User for relation %d wasn't registered in internal cham workflows.",
                 departed_relation_id,
