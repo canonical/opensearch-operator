@@ -7,11 +7,10 @@ These functions wrap around some API calls used for user management.
 """
 
 import logging
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import (
     AdminUser,
-    ClientRelationName,
     COSRole,
     COSUser,
     KibanaserverUser,
@@ -242,27 +241,6 @@ class OpenSearchUserManager:
 
         return resp
 
-    def remove_users_and_roles(self, departed_relation_id: Optional[int] = None):
-        """Removes lingering relation users and roles from opensearch.
-
-        Args:
-            departed_relation_id: if a relation is departing, pass in the ID and its user will be
-                deleted.
-        """
-        if not self.opensearch.is_node_up() or not self.unit.is_leader():
-            return
-
-        relations = self.model.relations.get(ClientRelationName, [])
-        relation_users = set(
-            [
-                f"{ClientRelationName}_{relation.id}"
-                for relation in relations
-                if relation.id != departed_relation_id
-            ]
-        )
-        self._remove_lingering_users(relation_users)
-        self._remove_lingering_roles(relation_users)
-
     def update_user_password(self, username: str, hashed_pwd: str = None):
         """Change user hashed password."""
         resp = self.opensearch.request(
@@ -272,6 +250,10 @@ class OpenSearchUserManager:
         )
         if resp.get("status") != "OK":
             raise OpenSearchError(f"{resp}")
+
+    ##########################################################################
+    # Dedicated functionalities
+    ##########################################################################
 
     def put_internal_user(self, user: str, hashed_pwd: str):
         """User creation for specific system users."""
@@ -314,33 +296,3 @@ class OpenSearchUserManager:
                 COSUser,
                 [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
             )
-
-    def _remove_lingering_users(self, relation_users: Set[str]):
-        app_users = relation_users | OpenSearchUsers
-        try:
-            database_users = set(self.get_users().keys())
-        except OpenSearchUserMgmtError:
-            logger.error("failed to get users")
-            return
-
-        for username in database_users - app_users:
-            try:
-                self.remove_user(username)
-            except OpenSearchUserMgmtError:
-                logger.error(f"failed to remove user {username}")
-
-    def _remove_lingering_roles(self, roles: Set[str]):
-        try:
-            database_roles = set(self.get_roles().keys())
-        except (OpenSearchUserMgmtError, OpenSearchHttpError):
-            logger.error("failed to get roles")
-            return
-
-        for role in database_roles - roles:
-            if not role.startswith(f"{ClientRelationName}_"):
-                # This role was not created by this charm, so leave it alone
-                continue
-            try:
-                self.remove_role(role)
-            except OpenSearchUserMgmtError:
-                logger.error(f"failed to remove role {role}")

@@ -325,7 +325,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackup._is_restore_complete")
     @patch(f"{BASE_CHARM_CLASS}._stop_opensearch")
     @patch(f"{BASE_LIB_PATH}.opensearch_base_charm.cert_expiration_remaining_hours")
-    @patch(f"{BASE_LIB_PATH}.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_relation_provider.OpenSearchProvider.remove_lingering_relation_users_and_roles"
+    )
     def test_on_update_status(self, _, cert_expiration_remaining_hours, _stop_opensearch, __, ___):
         """Test on update status."""
         with patch(

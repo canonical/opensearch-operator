@@ -617,13 +617,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if self.upgrade_in_progress:
-            logger.debug("Skipping `remove_users_and_roles()` because upgrade is in-progress")
+            logger.debug(
+                "Skipping `remove_lingering_users_and_roles()` because upgrade is in-progress"
+            )
         elif (
             self.unit.is_leader()
             and deployment_desc
             and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
         ):
-            self.user_manager.remove_users_and_roles()
+            self.opensearch_provider.remove_lingering_relation_users_and_roles()
 
         # If relation not broken - leave
         if self.model.get_relation("certificates") is not None:
