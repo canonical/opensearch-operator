@@ -44,19 +44,19 @@ class OpenSearchExclusions:
         self._opensearch = self._charm.opensearch
         self._scope = Scope.APP if self._charm.unit.is_leader() else Scope.UNIT
 
-    def add(self, unit_name: str) -> bool:
+    def add(self, unit_name: str) -> None:
         """Add Voting and alloc exclusions for a target unit.
 
         This method is just a clean-up-later routine. We (re)add the unit to the exclusions and,
         hence, the leader of this app will be aware of this unit's removal and log it into its
         app-level peer data.
         """
-        # We cannot assume the node details, e.g. roles, are still available
-        # Therefore, we assume the node is both CM and data: if that is not the case, then we will
-        # get an error that converts itself as a logger info below
-        return not self._add_voting(exclusions={unit_name}) or not self._add_allocations(
-            allocations={unit_name}
-        )
+        for lst in [ALLOCS_TO_DELETE, VOTING_TO_DELETE]:
+            current_set = set(self._charm.peers_data.get(self._scope, lst, "").split(",")).union(
+                {unit_name}
+            )
+
+            self._charm.peers_data.put(self._scope, lst, ",".join(current_set))
 
     def add_current(
         self, voting: bool = True, allocation: bool = True, raise_error: bool = False
@@ -87,6 +87,14 @@ class OpenSearchExclusions:
         if allocation and self._node.is_data():
             if not self._delete_allocations():
                 logger.error(f"Failed to delete shard allocation exclusion: {self._node.name}.")
+                current_allocations = set(
+                    self._charm.peers_data.get(self._scope, ALLOCS_TO_DELETE, "").split(",")
+                )
+                current_allocations.add(self._node.name)
+
+                self._charm.peers_data.put(
+                    self._scope, ALLOCS_TO_DELETE, ",".join(current_allocations)
+                )
                 if raise_error:
                     raise OpenSearchExclusionsException("Failed to delete allocation exclusion.")
 
@@ -149,7 +157,19 @@ class OpenSearchExclusions:
             )
             logger.debug("Added voting, response: %s", response)
 
-            self._charm.peers_data.put(self._scope, VOTING_TO_DELETE, ",".join(to_add))
+            self._charm.peers_data.put(
+                self._scope,
+                VOTING_TO_DELETE,
+                ",".join(
+                    to_add.union(
+                        set(
+                            self._charm.peers_data.get(self._scope, VOTING_TO_DELETE, "").split(
+                                ","
+                            )
+                        )
+                    )
+                ),
+            )
             # The voting excl. API returns a status only
             return response < 400
         except OpenSearchHttpError:

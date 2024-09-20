@@ -105,7 +105,6 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
-from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 import lifecycle
 import upgrade
@@ -535,17 +534,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             or not event.departing_unit
         ):
             # No deployment description present
-            # that may happen in the very last stages of the application removal
+            # that happens in the very last stages of the application removal
             return
-        for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
-            with attempt:
-                if not self.alt_hosts:
-                    # No neighbors found, it means this is the last unit to go away.
-                    break
-                if not self.opensearch_exclusions.add(
-                    unit_name=format_unit_name(event.departing_unit.name, deployment_desc.app)
-                ):
-                    raise Exception
+        self.opensearch_exclusions.add(
+            unit_name=format_unit_name(event.departing_unit.name, deployment_desc.app)
+        )
 
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
