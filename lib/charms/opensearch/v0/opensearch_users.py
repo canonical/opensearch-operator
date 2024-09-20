@@ -282,6 +282,7 @@ class OpenSearchUserManager:
             # reserved: False, prevents this resource from being update-protected from:
             # updates made on the dashboard or the rest api.
             # we grant the admin user all opensearch access + security_rest_api_access
+            logger.debug("putting admin to internal_users.yml")
             self.opensearch.config.put(
                 "opensearch-security/internal_users.yml",
                 "admin",

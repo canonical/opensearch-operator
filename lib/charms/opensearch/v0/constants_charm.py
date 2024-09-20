@@ -59,6 +59,7 @@ DataRoleRemovalForbidden = (
 PClusterNoRelation = "Cannot start. Waiting for peer cluster relation..."
 PClusterWrongRelation = "Cluster name don't match with related cluster. Remove relation."
 PClusterWrongRolesProvided = "Cannot start cluster with current set of roles."
+PClusterNoDataNode = "Cannot run cluster with current roles. Waiting for data node..."
 PClusterWrongNodesCountForQuorum = (
     "Even number of members in quorum if current unit started. Add or remove 1 unit."
 )

@@ -173,6 +173,13 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
         event_mock = MagicMock()
 
+        truststore_password = "12345"
+        self.secret_store.put_object(
+            Scope.APP,
+            CertType.APP_ADMIN.val,
+            {"truststore-password": truststore_password},
+        )
+
         self.harness.set_leader(is_leader=False)
         self.charm.tls._on_tls_relation_created(event_mock)
         self.assertEqual(

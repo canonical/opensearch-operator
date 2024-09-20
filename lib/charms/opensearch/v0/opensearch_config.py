@@ -208,9 +208,12 @@ class OpenSearchConfig:
     def add_seed_hosts(self, cm_ips: List[str]):
         """Add CM nodes ips / host names to the seed host list of this unit."""
         cm_ips_set = set(cm_ips)
-        with open(self._opensearch.paths.seed_hosts, "w+") as f:
-            lines = "\n".join([entry for entry in cm_ips_set if entry.strip()])
-            f.write(f"{lines}\n")
+
+        # only update the file if there is data to update
+        if cm_ips_set:
+            with open(self._opensearch.paths.seed_hosts, "w+") as f:
+                lines = "\n".join([entry for entry in cm_ips_set if entry.strip()])
+                f.write(f"{lines}\n")
 
     def cleanup_bootstrap_conf(self):
         """Remove some conf entries when the cluster is bootstrapped."""
