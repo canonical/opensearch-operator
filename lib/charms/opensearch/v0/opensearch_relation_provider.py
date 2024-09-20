@@ -409,7 +409,12 @@ class OpenSearchProvider(Object):
         """Updates endpoints in the databag for the given relation."""
         # we can only set endpoints if we're the leader, and we can only get endpoints if the node
         # is running.
-        if not self.unit.is_leader() or not self.opensearch.is_node_up() or not relation.app:
+        if (
+            not self.unit.is_leader()
+            or not self.opensearch.is_node_up()
+            or not relation.app
+            or not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False)
+        ):
             return
 
         if not omit_endpoints:
