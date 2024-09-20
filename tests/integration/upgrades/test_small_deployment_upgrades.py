@@ -273,10 +273,12 @@ async def test_upgrade_rollback_from_local(
         )
 
         # Wait until we are set in an idle state and can rollback the revision.
+        # app status blocked: that will happen if we are jumping N-2 versions in our test
+        # app status active: that will happen if we are jumping N-1 in our test
         await wait_until(
             ops_test,
             apps=[app],
-            apps_statuses=["active"],
+            apps_statuses=["active", "blocked"],
             units_statuses=["active"],
             wait_for_exact_units={
                 APP_NAME: 3,
