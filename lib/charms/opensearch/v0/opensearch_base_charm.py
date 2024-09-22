@@ -1337,6 +1337,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _get_nodes(self, use_localhost: bool) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
+
+        if self.app.planned_units() == 0 and not self.opensearch_peer_cm.deployment_desc():
+            # This app is going away and the -broken event already happened
+            return []
+
         # This means it's the first unit on the cluster.
         if self.opensearch_peer_cm.deployment_desc().start == StartMode.WITH_PROVIDED_ROLES:
             computed_roles = self.opensearch_peer_cm.deployment_desc().config.roles
