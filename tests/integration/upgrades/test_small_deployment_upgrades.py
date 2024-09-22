@@ -4,9 +4,11 @@
 
 import logging
 import subprocess
+from typing import Optional
 
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from ..ha.continuous_writes import ContinuousWrites
 from ..ha.helpers import app_name
@@ -61,6 +63,36 @@ charm = None
 #  Auxiliary functions
 #
 #######################################################################
+async def _refresh(
+    ops_test: OpsTest, *,
+    revision: Optional[int] = None,
+    switch: Optional[str] = None,
+    channel: Optional[str] = None,
+    path: Optional[str] = None,
+) -> None:
+    # due to: https://github.com/juju/python-libjuju/issues/1057
+    # the following call does not work:
+    # application = ops_test.model.applications[APP_NAME]
+    # await application.refresh(
+    #     revision=rev,
+    # )
+
+    # Point to the right model, as we are calling the juju cli directly
+    args = [f"--model={ops_test.model.info.name}"]
+    if revision:
+        args.append(f"--revision={revision}")
+    if switch:
+        args.append(f"--switch={switch}")
+    if channel:
+        args.append(f"--channel={channel}")
+    if path:
+        args.append(f"--path={path}")
+
+    for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(wait=30)):
+        with attempt:
+            cmd = ["juju", "refresh"]
+            cmd.extend(args)
+            subprocess.check_output(cmd)
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
@@ -137,12 +169,7 @@ async def test_upgrade_between_versions(
 
         async with ops_test.fast_forward():
             logger.info("Refresh the charm")
-            # due to: https://github.com/juju/python-libjuju/issues/1057
-            # application = ops_test.model.applications[APP_NAME]
-            # await application.refresh(
-            #     revision=rev,
-            # )
-            subprocess.check_output(f"juju refresh opensearch --revision={rev}".split())
+            await _refresh(ops_test, revision=rev)
 
             await wait_until(
                 ops_test,
@@ -238,12 +265,7 @@ async def test_upgrade_rollback_from_local(
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
-        # due to: https://github.com/juju/python-libjuju/issues/1057
-        # application = ops_test.model.applications[APP_NAME]
-        # await application.refresh(
-        #     revision=new_rev,
-        # )
-        subprocess.check_output(f"juju refresh opensearch --path={charm}".split())
+        await _refresh(ops_test, path=charm)
 
         await wait_until(
             ops_test,
@@ -258,20 +280,11 @@ async def test_upgrade_rollback_from_local(
         )
 
         logger.info(f"Rolling back to {version}")
-        # due to: https://github.com/juju/python-libjuju/issues/1057
-        # await application.refresh(
-        #     revision=rev,
-        # )
-
-        # Rollback operation
-        # We must first switch back to the upstream charm, then rollback to the original
-        # revision we were using.
-        subprocess.check_output(
-            f"""juju refresh opensearch
-                 --switch={OPENSEARCH_ORIGINAL_CHARM_NAME}
-                 --channel={OPENSEARCH_CHANNEL}""".split()
+        await _refresh(
+            ops_test,
+            switch=OPENSEARCH_ORIGINAL_CHARM_NAME,
+            channel=OPENSEARCH_CHANNEL,
         )
-
         # Wait until we are set in an idle state and can rollback the revision.
         # app status blocked: that will happen if we are jumping N-2 versions in our test
         # app status active: that will happen if we are jumping N-1 in our test
@@ -286,9 +299,9 @@ async def test_upgrade_rollback_from_local(
             timeout=1400,
             idle_period=IDLE_PERIOD,
         )
-
-        subprocess.check_output(
-            f"juju refresh opensearch --revision={VERSION_TO_REVISION[version]}".split()
+        await _refresh(
+            ops_test,
+            revision=VERSION_TO_REVISION[version],
         )
 
         await wait_until(
