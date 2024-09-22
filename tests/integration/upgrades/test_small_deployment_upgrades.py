@@ -172,7 +172,7 @@ async def test_upgrade_between_versions(
 
         async with ops_test.fast_forward():
             logger.info("Refresh the charm")
-            await _refresh(ops_test, revision=rev)
+            await _refresh(ops_test, app, revision=rev)
 
             await wait_until(
                 ops_test,
@@ -268,7 +268,7 @@ async def test_upgrade_rollback_from_local(
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
-        await _refresh(ops_test, path=charm)
+        await _refresh(ops_test, app, path=charm)
 
         await wait_until(
             ops_test,
@@ -285,6 +285,7 @@ async def test_upgrade_rollback_from_local(
         logger.info(f"Rolling back to {version}")
         await _refresh(
             ops_test,
+            app,
             switch=OPENSEARCH_ORIGINAL_CHARM_NAME,
             channel=OPENSEARCH_CHANNEL,
         )
@@ -304,6 +305,7 @@ async def test_upgrade_rollback_from_local(
         )
         await _refresh(
             ops_test,
+            app,
             revision=VERSION_TO_REVISION[version],
         )
 
