@@ -867,6 +867,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _start_opensearch(self, event: _StartOpenSearch) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
+        if not self.opensearch_peer_cm.deployment_desc():
+            # canonical/opensearch-operator#444
+            # https://bugs.launchpad.net/juju/+bug/2076599
+            # This condition is a corner case where we have:
+            #   1) a single-node cluster
+            #   2) an unfinished (re)start: yet to run _post_start_init() method
+            #   3) LP#2076599: remove-application was called in-between and peer databag is empty
+            # TODO: remove this IF condition once LP#2076599 is fixed in Juju.
+            event.defer()
+            return
+
         if self.opensearch.is_started():
             try:
                 self._post_start_init(event)
@@ -894,17 +905,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 logger.debug("Lock to start opensearch not acquired. Will retry next event")
                 event.defer()
                 return
-
-        if not self.opensearch_peer_cm.deployment_desc():
-            # canonical/opensearch-operator#444
-            # https://bugs.launchpad.net/juju/+bug/2076599
-            # This condition is a corner case where we have:
-            #   1) a single-node cluster
-            #   2) an unfinished (re)start: yet to run _post_start_init() method
-            #   3) LP#2076599: remove-application was called in-between and peer databag is empty
-            # TODO: remove this IF condition once LP#2076599 is fixed in Juju.
-            event.defer()
-            return
 
         if not self._can_service_start():
             self.node_lock.release()
