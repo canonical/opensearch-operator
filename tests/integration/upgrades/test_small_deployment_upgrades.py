@@ -64,7 +64,8 @@ charm = None
 #
 #######################################################################
 async def _refresh(
-    ops_test: OpsTest, *,
+    ops_test: OpsTest,
+    *,
     revision: Optional[int] = None,
     switch: Optional[str] = None,
     channel: Optional[str] = None,
