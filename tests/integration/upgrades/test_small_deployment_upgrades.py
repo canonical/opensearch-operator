@@ -65,6 +65,7 @@ charm = None
 #######################################################################
 async def _refresh(
     ops_test: OpsTest,
+    app_name: str,
     *,
     revision: Optional[int] = None,
     switch: Optional[str] = None,
@@ -93,6 +94,7 @@ async def _refresh(
         with attempt:
             cmd = ["juju", "refresh"]
             cmd.extend(args)
+            cmd.append(app_name)
             subprocess.check_output(cmd)
 
 
