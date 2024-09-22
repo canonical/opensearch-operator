@@ -1337,7 +1337,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _get_nodes(self, use_localhost: bool) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
-
         if self.app.planned_units() == 0 and not self.opensearch_peer_cm.deployment_desc():
             # This app is going away and the -broken event already happened
             return []
