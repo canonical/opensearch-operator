@@ -3,8 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import subprocess
-from typing import Optional
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -22,7 +20,7 @@ from ..helpers import (
 )
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
-from .helpers import assert_upgrade_to_local
+from .helpers import assert_upgrade_to_local, refresh
 
 logger = logging.getLogger(__name__)
 
@@ -63,41 +61,6 @@ charm = None
 #  Auxiliary functions
 #
 #######################################################################
-async def _refresh(
-    ops_test: OpsTest,
-    app_name: str,
-    *,
-    revision: Optional[int] = None,
-    switch: Optional[str] = None,
-    channel: Optional[str] = None,
-    path: Optional[str] = None,
-) -> None:
-    # due to: https://github.com/juju/python-libjuju/issues/1057
-    # the following call does not work:
-    # application = ops_test.model.applications[APP_NAME]
-    # await application.refresh(
-    #     revision=rev,
-    # )
-
-    # Point to the right model, as we are calling the juju cli directly
-    args = [f"--model={ops_test.model.info.name}"]
-    if revision:
-        args.append(f"--revision={revision}")
-    if switch:
-        args.append(f"--switch={switch}")
-    if channel:
-        args.append(f"--channel={channel}")
-    if path:
-        args.append(f"--path={path}")
-
-    for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(wait=30)):
-        with attempt:
-            cmd = ["juju", "refresh"]
-            cmd.extend(args)
-            cmd.append(app_name)
-            subprocess.check_output(cmd)
-
-
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 async def _build_env(ops_test: OpsTest, version: str) -> None:
     """Deploy OpenSearch cluster from a given revision."""
@@ -172,7 +135,7 @@ async def test_upgrade_between_versions(
 
         async with ops_test.fast_forward():
             logger.info("Refresh the charm")
-            await _refresh(ops_test, app, revision=rev)
+            await refresh(ops_test, app, revision=rev)
 
             await wait_until(
                 ops_test,
@@ -268,7 +231,7 @@ async def test_upgrade_rollback_from_local(
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
-        await _refresh(ops_test, app, path=charm)
+        await refresh(ops_test, app, path=charm)
 
         await wait_until(
             ops_test,
@@ -283,7 +246,7 @@ async def test_upgrade_rollback_from_local(
         )
 
         logger.info(f"Rolling back to {version}")
-        await _refresh(
+        await refresh(
             ops_test,
             app,
             switch=OPENSEARCH_ORIGINAL_CHARM_NAME,
@@ -303,7 +266,7 @@ async def test_upgrade_rollback_from_local(
             timeout=1400,
             idle_period=IDLE_PERIOD,
         )
-        await _refresh(
+        await refresh(
             ops_test,
             app,
             revision=VERSION_TO_REVISION[version],
