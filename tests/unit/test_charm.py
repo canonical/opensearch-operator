@@ -41,6 +41,7 @@ class TestCharm(TestOpenSearchBaseCharm):
                     "ca-cert": "ca",
                     "cert": unit_resources.cert,
                     "key": unit_resources.key,
+                    "chain": "chain",
                 },
             )
 

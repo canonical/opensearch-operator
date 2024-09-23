@@ -31,6 +31,7 @@ from charms.opensearch.v0.models import (
     PeerClusterRelDataCredentials,
     PeerClusterRelErrorData,
     S3RelDataCredentials,
+    StartMode,
 )
 from charms.opensearch.v0.opensearch_backups import S3_RELATION
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
@@ -172,6 +173,14 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             p_cluster_app=peer_cluster_app,
             trigger_rel_id=event.relation.id,
         )
+
+        if (
+            deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            and "data" in peer_cluster_app.roles
+            and self.charm.is_admin_user_configured()
+            and self.charm.tls.is_fully_configured()
+        ):
+            self.charm.handle_joining_data_node()
 
         if data.get("is_candidate_failover_orchestrator") != "true":
             self.refresh_relation_data(event)
@@ -330,6 +339,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             app=deployment_desc.app,
             planned_units=self.charm.app.planned_units(),
             units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
+            roles=deployment_desc.config.roles,
         )
         cluster_fleet_apps.update({current_app.app.id: current_app.to_dict()})
 
@@ -445,19 +455,27 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         elif not self.charm.tls.is_fully_configured_in_cluster():
             blocked_msg = f"TLS not fully configured {message_suffix}."
             should_retry = False
-        elif not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
-            blocked_msg = f"Security index not initialized {message_suffix}."
-        elif not self.charm.is_every_unit_marked_as_started():
-            blocked_msg = f"Waiting for every unit {message_suffix} to start."
-        elif not self.charm.secrets.get(Scope.APP, self.charm.secrets.password_key(COSUser)):
-            blocked_msg = f"'{COSUser}' user not created yet."
-        else:
-            try:
-                if not self._fetch_local_cm_nodes(deployment_desc):
-                    blocked_msg = f"No 'cluster_manager' eligible nodes found {message_suffix}"
-            except OpenSearchHttpError as e:
-                logger.error(e)
-                blocked_msg = f"Could not fetch nodes {message_suffix}"
+        elif (
+            "data" in deployment_desc.config.roles
+            or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+        ):
+            if not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
+                blocked_msg = f"Security index not initialized {message_suffix}."
+        elif (
+            ClusterTopology.data_role_in_cluster_fleet_apps(self.charm)
+            or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+        ):
+            if not self.charm.is_every_unit_marked_as_started():
+                blocked_msg = f"Waiting for every unit {message_suffix} to start."
+            elif not self.charm.secrets.get(Scope.APP, self.charm.secrets.password_key(COSUser)):
+                blocked_msg = f"'{COSUser}' user not created yet."
+            else:
+                try:
+                    if not self._fetch_local_cm_nodes(deployment_desc):
+                        blocked_msg = f"No 'cluster_manager' eligible nodes found {message_suffix}"
+                except OpenSearchHttpError as e:
+                    logger.error(e)
+                    blocked_msg = f"Could not fetch nodes {message_suffix}"
 
         if not blocked_msg:
             return None
@@ -477,6 +495,24 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             use_localhost=self._opensearch.is_node_up(),
             hosts=self.charm.alt_hosts,
         )
+
+        if not nodes:
+            # create a node from the deployment desc or generated roles and unit data only
+            if deployment_desc.start == StartMode.WITH_PROVIDED_ROLES:
+                computed_roles = deployment_desc.config.roles
+            else:
+                computed_roles = ClusterTopology.generated_roles()
+
+            return [
+                Node(
+                    name=self.charm.unit_name,
+                    roles=computed_roles,
+                    ip=self.charm.unit_ip,
+                    app=deployment_desc.app,
+                    unit_number=self.charm.unit_id,
+                )
+            ]
+
         return [
             node
             for node in nodes
@@ -532,8 +568,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
-        # check errors sent by providers
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
+            # check errors sent by providers
             return
 
         # fetch the success data
@@ -566,7 +602,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.peers_data.put(Scope.APP, "bootstrapped", True)
 
         # store the security related settings in secrets, peer_data, disk
-        self._set_security_conf(data)
+        if data.credentials.admin_tls:
+            self._set_security_conf(data)
 
         # check if there are any security misconfigurations / violations
         if self._error_set_from_tls(data):
@@ -599,9 +636,15 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
         self.charm.tls.update_request_ca_bundle()
 
-        # set user and security_index initialized flags
+        # take over the internal users from the main orchestrator
+        self.charm.user_manager.put_internal_user(AdminUser, data.credentials.admin_password_hash)
+        self.charm.user_manager.put_internal_user(
+            KibanaserverUser, data.credentials.kibana_password_hash
+        )
+
         self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
-        self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
+        if self.charm.alt_hosts:
+            self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
 
         if s3_creds := data.credentials.s3:
             self.charm.secrets.put_object(Scope.APP, "s3-creds", s3_creds.to_dict(by_alias=True))
@@ -647,6 +690,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             units=[
                 format_unit_name(unit, app=deployment_desc.app) for unit in all_units(self.charm)
             ],
+            roles=deployment_desc.config.roles,
         )
         self.put_in_rel(data={"app": current_app.to_str()}, rel_id=event.relation.id)
 

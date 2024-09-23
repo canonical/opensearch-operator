@@ -59,6 +59,7 @@ DataRoleRemovalForbidden = (
 PClusterNoRelation = "Cannot start. Waiting for peer cluster relation..."
 PClusterWrongRelation = "Cluster name don't match with related cluster. Remove relation."
 PClusterWrongRolesProvided = "Cannot start cluster with current set of roles."
+PClusterNoDataNode = "Cannot run cluster with current roles. Waiting for data node..."
 PClusterWrongNodesCountForQuorum = (
     "Even number of members in quorum if current unit started. Add or remove 1 unit."
 )
@@ -109,9 +110,11 @@ OpenSearchRoles = set()
 AdminUser = "admin"
 KibanaserverUser = "kibanaserver"
 KibanaserverRole = "kibana_server"
+ClientUsersDict = "client_relation_users"
+
 
 # Opensearch Snap revision
-OPENSEARCH_SNAP_REVISION = 57  # Keep in sync with `workload_version` file
+OPENSEARCH_SNAP_REVISION = 58  # Keep in sync with `workload_version` file
 
 # User-face Backup ID format
 OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
