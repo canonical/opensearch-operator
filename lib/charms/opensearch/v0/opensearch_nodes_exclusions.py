@@ -132,7 +132,7 @@ class OpenSearchExclusions:
             not (deployment_desc := self._charm.opensearch_peer_cm.deployment_desc())
             or not removable
         ):
-            return {}
+            return set()
 
         if self._charm.opensearch_peer_cm.is_provider(typ="main") and (
             apps_in_fleet := self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
