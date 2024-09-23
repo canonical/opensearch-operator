@@ -104,6 +104,10 @@ async def test_scale_down(
             wait_for_exact_units=init_count - 1,
             idle_period=IDLE_PERIOD,
         )
+        voting_exclusions = await cluster_voting_config_exclusions(ops_test, unit_ip=leader_unit_ip)
+        assert len(voting_exclusions) == 0
+        await execute_update_status_manually(ops_test, app=app)
+        voting_exclusions = await cluster_voting_config_exclusions(ops_test, unit_ip=leader_unit_ip)
         assert len(voting_exclusions) == 0
 
         # get initial cluster health - expected to be all good: green
@@ -118,11 +122,6 @@ async def test_scale_down(
         await assert_continuous_writes_increasing(c_writes)
 
         init_count = len(ops_test.model.applications[app].units)
-
-    # Make sure update status is executed and fixes the voting exclusions
-    await execute_update_status_manually(ops_test, app=app)
-    voting_exclusions = await cluster_voting_config_exclusions(ops_test, unit_ip=leader_unit_ip)
-    assert len(voting_exclusions) == 0
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
@@ -159,6 +158,7 @@ async def test_scale_back_up(
         assert cluster_health_resp["status"] == "green"
         assert cluster_health_resp["unassigned_shards"] == 0
 
+        # Adding new units should not trigger a new voting exclusion
         voting_exclusions = await cluster_voting_config_exclusions(
             ops_test, unit_ip=leader_unit_ip
         )
