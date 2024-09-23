@@ -52,9 +52,11 @@ class OpenSearchExclusions:
         app-level peer data.
         """
         for lst in [ALLOCS_TO_DELETE, VOTING_TO_DELETE]:
-            current_set = set(self._charm.peers_data.get(self._scope, lst, "").split(",")).union(
-                {unit_name}
+            # Load the content of the list, avoiding '' entries
+            current_set = set(
+                filter(None, self._charm.peers_data.get(self._scope, lst, "").split(","))
             )
+            current_set = current_set.union({unit_name})
 
             self._charm.peers_data.put(self._scope, lst, ",".join(current_set))
 
@@ -87,8 +89,12 @@ class OpenSearchExclusions:
         if allocation and self._node.is_data():
             if not self._delete_allocations():
                 logger.error(f"Failed to delete shard allocation exclusion: {self._node.name}.")
+                # Load the content of the list, avoiding '' entries
                 current_allocations = set(
-                    self._charm.peers_data.get(self._scope, ALLOCS_TO_DELETE, "").split(",")
+                    filter(
+                        None,
+                        self._charm.peers_data.get(self._scope, ALLOCS_TO_DELETE, "").split(","),
+                    )
                 )
                 current_allocations.add(self._node.name)
 
@@ -102,13 +108,18 @@ class OpenSearchExclusions:
         """Delete all exclusions that failed to be deleted."""
         self._delete_voting(
             self._units_to_cleanup(
-                self._charm.peers_data.get(self._scope, VOTING_TO_DELETE, "").split(",")
+                list(
+                    filter(
+                        None,
+                        self._charm.peers_data.get(self._scope, VOTING_TO_DELETE, "").split(","),
+                    )
+                )
             )
         )
 
-        allocations_to_cleanup = self._charm.peers_data.get(
-            self._scope, ALLOCS_TO_DELETE, ""
-        ).split(",")
+        allocations_to_cleanup = list(
+            filter(None, self._charm.peers_data.get(self._scope, ALLOCS_TO_DELETE, "").split(","))
+        )
         if allocations_to_cleanup and self._delete_allocations(allocations_to_cleanup):
             self._charm.peers_data.delete(self._scope, ALLOCS_TO_DELETE)
 
@@ -144,6 +155,15 @@ class OpenSearchExclusions:
                 to_remove.append(node)
         return set(to_remove)
 
+    def _get_voting_to_delete(self) -> Set[str]:
+        """Return the list of voting exclusions to delete."""
+        return set(
+            filter(
+                None,
+                self._charm.peers_data.get(self._scope, VOTING_TO_DELETE, "").split(","),
+            )
+        )
+
     def _add_voting(self, exclusions: Optional[Set[str]] = None) -> bool:
         """Include the current node in the CMs voting exclusions list of nodes."""
         try:
@@ -160,15 +180,7 @@ class OpenSearchExclusions:
             self._charm.peers_data.put(
                 self._scope,
                 VOTING_TO_DELETE,
-                ",".join(
-                    to_add.union(
-                        set(
-                            self._charm.peers_data.get(self._scope, VOTING_TO_DELETE, "").split(
-                                ","
-                            )
-                        )
-                    )
-                ),
+                ",".join(to_add.union(self._get_voting_to_delete())),
             )
             # The voting excl. API returns a status only
             return response < 400
@@ -204,8 +216,26 @@ class OpenSearchExclusions:
                 logger.debug("Failed to remove voting exclusions, response %s", response)
                 return False
 
-            logger.debug("Removed voting for: %s", to_stay)
-            return to_stay and self._add_voting(to_stay)
+            logger.debug("Removed voting for:  %s", exclusions)
+            # Now, we register the units that should stay
+            response = self._opensearch.request(
+                "POST",
+                f"/_cluster/voting_config_exclusions?node_names={','.join(sorted(to_stay))}&timeout=1m",
+                alt_hosts=self._charm.alt_hosts,
+                resp_status_code=True,
+                retries=3,
+            )
+            if response >= 400:
+                logger.debug("Failed to remove voting exclusions, response %s", response)
+                return False
+
+            # Finally, we clean up the VOTING_TO_DELETE
+            self._charm.peers_data.put(
+                self._scope,
+                VOTING_TO_DELETE,
+                ",".join(self._get_voting_to_delete() - exclusions),
+            )
+            return response < 400
         except OpenSearchHttpError:
             return False
 
