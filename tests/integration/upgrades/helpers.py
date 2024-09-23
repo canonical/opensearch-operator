@@ -5,9 +5,9 @@
 import logging
 import subprocess
 from typing import Optional
-from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from ..ha.continuous_writes import ContinuousWrites
 from ..ha.helpers import (
