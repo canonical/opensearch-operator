@@ -867,10 +867,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _start_opensearch(self, event: _StartOpenSearch) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
-        if (
-            not self.opensearch_peer_cm.deployment_desc()
-            and self._charm.app.planned_units() == 0
-        ):
+        if not self.opensearch_peer_cm.deployment_desc() and self._charm.app.planned_units() == 0:
             # canonical/opensearch-operator#444
             # https://bugs.launchpad.net/juju/+bug/2076599
             # This condition is a corner case where we have:
