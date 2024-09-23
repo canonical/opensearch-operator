@@ -126,7 +126,6 @@ async def test_rollout_new_ca(ops_test: OpsTest) -> None:
     assert new_config["ca-common-name"] in data["http_certificates_list"][0]["issuer_dn"]
 
 
-@pytest.mark.skip()
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -189,7 +188,6 @@ async def test_build_large_deployment(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.skip()
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
