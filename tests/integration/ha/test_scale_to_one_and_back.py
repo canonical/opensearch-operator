@@ -16,7 +16,6 @@ from ..helpers import (
     cluster_health,
     cluster_voting_config_exclusions,
     execute_update_status_manually,
-    get_application_unit_ids_ips,
     get_leader_unit_ip,
     set_watermark,
 )
