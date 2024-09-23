@@ -204,8 +204,22 @@ async def test_rollout_new_ca_large_deployment(ops_test: OpsTest) -> None:
         idle_period=IDLE_PERIOD,
     )
 
+    # Check if the continuous-writes client works with the new certs as well
+    with open(ContinuousWrites.CERT_PATH, "r") as f:
+        orig_cert = f.read()
+    await c_writes.stop()
+
+    await c_writes.start()  # Forces the Cont. Writes to pick the new cert
+    start_value = await c_writes.count()
+
+    with open(ContinuousWrites.CERT_PATH, "r") as f:
+        new_cert = f.read()
+
+    assert orig_cert != new_cert, "New cert was not picked up"
+    await asyncio.sleep(30)
     more_writes = await c_writes.count()
     await c_writes.stop()
+    assert more_writes > start_value, "Writes did not continue after picking up the new cert"
     assert more_writes > writes_count, "Writes have not continued during CA rotation"
 
     # using the SSL API requires authentication with app-admin cert and key
