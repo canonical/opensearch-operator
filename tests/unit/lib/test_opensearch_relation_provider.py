@@ -1,17 +1,29 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import unittest
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import ANY, MagicMock, PropertyMock, patch
 
+import responses
 from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
+    ClientUsersDict,
     KibanaserverRole,
     KibanaserverUser,
     NodeLockRelationName,
     PeerRelationName,
 )
 from charms.opensearch.v0.helper_security import generate_password
+from charms.opensearch.v0.models import (
+    App,
+    DeploymentDescription,
+    DeploymentState,
+    DeploymentType,
+    PeerClusterConfig,
+    StartMode,
+    State,
+)
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_users import OpenSearchUserMgmtError
 from ops.model import ActiveStatus, BlockedStatus
@@ -19,6 +31,7 @@ from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
 from tests.helpers import patch_network_get
+from tests.unit.helpers import mock_response_nodes, mock_response_root
 
 DASHBOARDS_CHARM = "opensearch-dashboards"
 
@@ -44,6 +57,18 @@ class TestOpenSearchProvider(unittest.TestCase):
         # Define an opensearch_provider relation
         self.client_rel_id = self.harness.add_relation(ClientRelationName, "application")
         self.harness.add_relation_unit(self.client_rel_id, "application/0")
+
+        def mock_deployment_desc():
+            return DeploymentDescription(
+                config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+                start=StartMode.WITH_GENERATED_ROLES,
+                pending_directives=[],
+                typ=DeploymentType.MAIN_ORCHESTRATOR,
+                app=App(model_uuid="model-uuid", name="opensearch"),
+                state=DeploymentState(value=State.ACTIVE),
+            )
+
+        self.charm.opensearch_peer_cm.deployment_desc = mock_deployment_desc
 
     @patch("charm.OpenSearchOperatorCharm._purge_users")
     @patch("charms.opensearch.v0.opensearch_distro.YamlConfigSetter.put")
@@ -97,7 +122,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         event.index = "test_index"
         self.unit.status = ActiveStatus()
         self.opensearch_provider._on_index_requested(event)
-        _create_users.assert_called_with(username, hashed_pw, event.index, event.extra_user_roles)
+        _create_users.assert_called_with(
+            username, hashed_pw, event.index, event.extra_user_roles, relation_id=event.relation.id
+        )
         _set_credentials.assert_called_with(event.relation.id, username, password)
         _set_version.assert_called_with(event.relation.id, _opensearch_version())
         self.assertNotIsInstance(self.unit.status, BlockedStatus)
@@ -183,10 +210,10 @@ class TestOpenSearchProvider(unittest.TestCase):
         patches = [
             {"op": "replace", "path": "/opendistro_security_roles", "value": roles},
         ]
-
         self.opensearch_provider.create_opensearch_users(
-            username, hashed_pw, index, extra_user_roles
+            username, hashed_pw, index, extra_user_roles, relation_id=0
         )
+
         # permissions and action groups are in extra_user_roles, so we create a new role.
         _create_role.assert_called_with(
             role_name=username,
@@ -196,6 +223,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         )
         _create_user.assert_called_with(username, roles, hashed_pw)
         _patch_user.assert_called_with(username, patches)
+        assert self.harness.get_relation_data(self.peers_rel_id, self.charm.app.name)[
+            ClientUsersDict
+        ] == json.dumps({self.peers_rel_id: username})
 
     def test_on_relation_departed(self):
         event = MagicMock()
@@ -215,7 +245,9 @@ class TestOpenSearchProvider(unittest.TestCase):
         )
 
     @patch("charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider._unit_departing")
-    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
+    @patch(
+        "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider.remove_lingering_relation_users_and_roles"
+    )
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
@@ -359,3 +391,120 @@ class TestOpenSearchProvider(unittest.TestCase):
         assert peer_password == new_pwd
         assert peer_password == rel1_secret.peek_content().get("password")
         assert peer_password == rel2_secret.peek_content().get("password")
+
+    @responses.activate
+    # Mocks we are interested about
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_role")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_role")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_user")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_user")
+    # Mocks to remove network operations
+    @patch("socket.socket.connect")
+    def test_avoid_removing_non_charmed_users_and_roles(
+        self, _, mock_create_user, mock_remove_user, mock_create_role, mock_remove_role
+    ):
+
+        self.client_second_rel_id = self.harness.add_relation(ClientRelationName, "application")
+        relation_user1 = f"{ClientRelationName}_{self.client_rel_id}"
+        relation_user2 = f"{ClientRelationName}_{self.client_second_rel_id}"
+
+        responses.add(
+            method="PUT",
+            url=f"https://{self.charm.opensearch.host}:9200/_plugins/_security/api/roles/{relation_user1}",
+            json={"status": "CREATED", "message": f"User {relation_user1} created"},
+        )
+
+        responses.add(
+            method="PUT",
+            url=f"https://{self.charm.opensearch.host}:9200/_plugins/_security/api/roles/{relation_user2}",
+            json={"status": "CREATED", "message": f"User {relation_user2} created"},
+        )
+
+        responses.add(
+            method="PUT",
+            url=f"https://{self.charm.opensearch.host}:9200/_plugins/_security/api/internalusers/{relation_user1}",
+            json={"status": "OK", "message": f"User {relation_user1} updated"},
+        )
+        responses.add(
+            method="PUT",
+            url=f"https://{self.charm.opensearch.host}:9200/_plugins/_security/api/internalusers/{relation_user2}",
+            json={"status": "OK", "message": f"User {relation_user2} updated"},
+        )
+
+        responses.add(
+            method="PATCH",
+            url=f"https://{self.charm.opensearch.host}:9200/_plugins/_security/api/internalusers/{relation_user1}",
+            json={"status": "OK", "message": f"User {relation_user1} updated"},
+        )
+        responses.add(
+            method="PATCH",
+            url=f"https://{self.charm.opensearch.host}:9200/_plugins/_security/api/internalusers/{relation_user2}",
+            json={"status": "OK", "message": f"User {relation_user2} updated"},
+        )
+
+        with self.harness.hooks_disabled():
+            self.harness.set_leader(is_leader=True)
+            # Faking that there was a "leftover" user from a relation that's gone
+            self.harness.update_relation_data(
+                self.peers_rel_id,
+                f"{self.charm.app.name}",
+                {ClientUsersDict: json.dumps({999: f"{ClientRelationName}_lingering"})},
+            )
+
+        mock_response_root(self.charm.unit_name, self.charm.opensearch.host)
+        mock_response_nodes(self.charm.unit_name, self.charm.opensearch.host)
+
+        # 1. Testing relation user creation
+        self.harness.charm.opensearch_provider.create_opensearch_users(
+            username=relation_user1,
+            hashed_pwd="pw1",
+            index="some_index",
+            extra_user_roles="admin, somerole",
+            relation_id=self.client_rel_id,
+        )
+        mock_create_user.assert_called_with(relation_user1, [relation_user1], "pw1")
+        mock_create_role.assert_called_with(role_name=relation_user1, permissions=ANY)
+
+        self.harness.charm.opensearch_provider.create_opensearch_users(
+            username=relation_user2,
+            hashed_pwd="pw2",
+            index="some_index2",
+            extra_user_roles="somerole2",
+            relation_id=self.client_second_rel_id,
+        )
+        mock_create_user.assert_called_with(relation_user2, [relation_user2], "pw2")
+        mock_create_role.assert_called_with(role_name=relation_user2, permissions=ANY)
+
+        assert self.harness.get_relation_data(self.peers_rel_id, f"{self.charm.app.name}") == {
+            ClientUsersDict: json.dumps(
+                {
+                    self.client_rel_id: f"{relation_user1}",
+                    self.client_second_rel_id: f"{relation_user2}",
+                    999: f"{ClientRelationName}_lingering",
+                }
+            )
+        }
+
+        # 2/a. Removing lingering users w/o relation specified (used on 'update-status')
+        self.harness.charm.opensearch_provider.remove_lingering_relation_users_and_roles()
+
+        # Mocks called as expected
+        mock_remove_user.assert_called_once_with(f"{ClientRelationName}_lingering")
+        mock_remove_role.assert_called_once_with(f"{ClientRelationName}_lingering")
+
+        # 2/b. Removing lingering users of a specific relation that's removed
+        # (on 'relation-broken', 'relation-departed')
+        mock_remove_user.reset_mock()
+        mock_remove_role.reset_mock()
+
+        self.harness.remove_relation(self.client_second_rel_id)
+        assert self.harness.get_relation_data(self.peers_rel_id, f"{self.charm.app.name}") == {
+            ClientUsersDict: json.dumps({self.client_rel_id: f"{relation_user1}"})
+        }
+
+        mock_remove_user.assert_called_once_with(
+            f"{ClientRelationName}_{self.client_second_rel_id}"
+        )
+        mock_remove_role.assert_called_once_with(
+            f"{ClientRelationName}_{self.client_second_rel_id}"
+        )

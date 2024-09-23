@@ -109,9 +109,11 @@ OpenSearchRoles = set()
 AdminUser = "admin"
 KibanaserverUser = "kibanaserver"
 KibanaserverRole = "kibana_server"
+ClientUsersDict = "client_relation_users"
+
 
 # Opensearch Snap revision
-OPENSEARCH_SNAP_REVISION = 57  # Keep in sync with `workload_version` file
+OPENSEARCH_SNAP_REVISION = 58  # Keep in sync with `workload_version` file
 
 # User-face Backup ID format
 OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
