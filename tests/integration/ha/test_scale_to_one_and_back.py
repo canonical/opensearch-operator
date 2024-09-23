@@ -104,10 +104,14 @@ async def test_scale_down(
             wait_for_exact_units=init_count - 1,
             idle_period=IDLE_PERIOD,
         )
-        voting_exclusions = await cluster_voting_config_exclusions(ops_test, unit_ip=leader_unit_ip)
+        voting_exclusions = await cluster_voting_config_exclusions(
+            ops_test, unit_ip=leader_unit_ip
+        )
         assert len(voting_exclusions) == 0
         await execute_update_status_manually(ops_test, app=app)
-        voting_exclusions = await cluster_voting_config_exclusions(ops_test, unit_ip=leader_unit_ip)
+        voting_exclusions = await cluster_voting_config_exclusions(
+            ops_test, unit_ip=leader_unit_ip
+        )
         assert len(voting_exclusions) == 0
 
         # get initial cluster health - expected to be all good: green
