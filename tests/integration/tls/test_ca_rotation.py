@@ -188,7 +188,7 @@ async def test_rollout_new_ca_large_deployment(ops_test: OpsTest) -> None:
     new_config = {"ca-common-name": "EVEN_NEWER_CA"}
     await ops_test.model.applications[TLS_CERTIFICATES_APP_NAME].set_config(new_config)
 
-    writes_count = await c_writes.count()
+    start_count = await c_writes.count()
 
     await wait_until(
         ops_test,
@@ -210,17 +210,17 @@ async def test_rollout_new_ca_large_deployment(ops_test: OpsTest) -> None:
     await c_writes.stop()
 
     await c_writes.start()  # Forces the Cont. Writes to pick the new cert
-    start_value = await c_writes.count()
+    intermediate_count = await c_writes.count()
 
     with open(ContinuousWrites.CERT_PATH, "r") as f:
         new_cert = f.read()
 
     assert orig_cert != new_cert, "New cert was not picked up"
-    await asyncio.sleep(30)
-    more_writes = await c_writes.count()
+    await asyncio.sleep(120)
+    final_count = await c_writes.count()
     await c_writes.stop()
-    assert more_writes > start_value, "Writes did not continue after picking up the new cert"
-    assert more_writes > writes_count, "Writes have not continued during CA rotation"
+    assert final_count > start_count, "Writes did not continue after picking up the new cert"
+    assert final_count > intermediate_count, "Writes have not continued during CA rotation"
 
     # using the SSL API requires authentication with app-admin cert and key
     leader_unit_ip = await get_leader_unit_ip(ops_test, DATA_APP)

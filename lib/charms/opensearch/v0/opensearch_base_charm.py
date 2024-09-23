@@ -784,9 +784,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     # cleaning the former CA certificate from the truststore
                     # must only be done AFTER all renewed certificates are available and loaded
                     self.tls.remove_old_ca()
-            else:
-                event.defer()
-                return
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
@@ -1088,6 +1085,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
+        # before resetting the CA rotation state, we remove the old ca from the truststore
+        if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+            self.tls.remove_old_ca()
 
         # update the peer relation data for TLS CA rotation routine
         self.tls.reset_ca_rotation_state()
