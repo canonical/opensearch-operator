@@ -81,7 +81,6 @@ async def test_scale_down(
     This test will remove the elected cluster manager.
     """
     app = (await app_name(ops_test)) or APP_NAME
-    ids_ips = await get_application_unit_ids_ips(ops_test, app)
 
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
     voting_exclusions = await cluster_voting_config_exclusions(ops_test, unit_ip=leader_unit_ip)
@@ -90,9 +89,7 @@ async def test_scale_down(
     init_count = len(ops_test.model.applications[app].units)
     while init_count > 1:
         # find unit currently elected cluster_manager
-        leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
         elected_cm_unit_id = await get_elected_cm_unit_id(ops_test, leader_unit_ip)
-        del ids_ips[elected_cm_unit_id]
 
         # remove the service in the chosen unit
         await ops_test.model.applications[app].destroy_unit(f"{app}/{elected_cm_unit_id}")
@@ -104,10 +101,14 @@ async def test_scale_down(
             wait_for_exact_units=init_count - 1,
             idle_period=IDLE_PERIOD,
         )
+
+        # Check voting exclusions
+        leader_unit_ip = await get_leader_unit_ip(ops_test, app=app)
         voting_exclusions = await cluster_voting_config_exclusions(
             ops_test, unit_ip=leader_unit_ip
         )
         assert len(voting_exclusions) == 0
+        # Test the cleanup() method
         await execute_update_status_manually(ops_test, app=app)
         voting_exclusions = await cluster_voting_config_exclusions(
             ops_test, unit_ip=leader_unit_ip
