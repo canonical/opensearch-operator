@@ -217,17 +217,18 @@ class OpenSearchExclusions:
                 return False
 
             logger.debug("Removed voting for:  %s", exclusions)
-            # Now, we register the units that should stay
-            response = self._opensearch.request(
-                "POST",
-                f"/_cluster/voting_config_exclusions?node_names={','.join(sorted(to_stay))}&timeout=1m",
-                alt_hosts=self._charm.alt_hosts,
-                resp_status_code=True,
-                retries=3,
-            )
-            if response >= 400:
-                logger.debug("Failed to remove voting exclusions, response %s", response)
-                return False
+            if to_stay:
+                # Now, we register the units that should stay
+                response = self._opensearch.request(
+                    "POST",
+                    f"/_cluster/voting_config_exclusions?node_names={','.join(sorted(to_stay))}&timeout=1m",
+                    alt_hosts=self._charm.alt_hosts,
+                    resp_status_code=True,
+                    retries=3,
+                )
+                if response >= 400:
+                    logger.debug("Failed to remove voting exclusions, response %s", response)
+                    return False
 
             # Finally, we clean up the VOTING_TO_DELETE
             self._charm.peers_data.put(
