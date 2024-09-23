@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import subprocess
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -20,7 +19,7 @@ from ..helpers import (
 )
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
-from .helpers import assert_upgrade_to_local
+from .helpers import assert_upgrade_to_local, refresh
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +60,6 @@ charm = None
 #  Auxiliary functions
 #
 #######################################################################
-
-
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 async def _build_env(ops_test: OpsTest, version: str) -> None:
     """Deploy OpenSearch cluster from a given revision."""
@@ -137,12 +134,7 @@ async def test_upgrade_between_versions(
 
         async with ops_test.fast_forward():
             logger.info("Refresh the charm")
-            # due to: https://github.com/juju/python-libjuju/issues/1057
-            # application = ops_test.model.applications[APP_NAME]
-            # await application.refresh(
-            #     revision=rev,
-            # )
-            subprocess.check_output(f"juju refresh opensearch --revision={rev}".split())
+            await refresh(ops_test, app, revision=rev)
 
             await wait_until(
                 ops_test,
@@ -238,12 +230,7 @@ async def test_upgrade_rollback_from_local(
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
-        # due to: https://github.com/juju/python-libjuju/issues/1057
-        # application = ops_test.model.applications[APP_NAME]
-        # await application.refresh(
-        #     revision=new_rev,
-        # )
-        subprocess.check_output(f"juju refresh opensearch --path={charm}".split())
+        await refresh(ops_test, app, path=charm)
 
         await wait_until(
             ops_test,
@@ -258,20 +245,12 @@ async def test_upgrade_rollback_from_local(
         )
 
         logger.info(f"Rolling back to {version}")
-        # due to: https://github.com/juju/python-libjuju/issues/1057
-        # await application.refresh(
-        #     revision=rev,
-        # )
-
-        # Rollback operation
-        # We must first switch back to the upstream charm, then rollback to the original
-        # revision we were using.
-        subprocess.check_output(
-            f"""juju refresh opensearch
-                 --switch={OPENSEARCH_ORIGINAL_CHARM_NAME}
-                 --channel={OPENSEARCH_CHANNEL}""".split()
+        await refresh(
+            ops_test,
+            app,
+            switch=OPENSEARCH_ORIGINAL_CHARM_NAME,
+            channel=OPENSEARCH_CHANNEL,
         )
-
         # Wait until we are set in an idle state and can rollback the revision.
         # app status blocked: that will happen if we are jumping N-2 versions in our test
         # app status active: that will happen if we are jumping N-1 in our test
@@ -286,9 +265,10 @@ async def test_upgrade_rollback_from_local(
             timeout=1400,
             idle_period=IDLE_PERIOD,
         )
-
-        subprocess.check_output(
-            f"juju refresh opensearch --revision={VERSION_TO_REVISION[version]}".split()
+        await refresh(
+            ops_test,
+            app,
+            revision=VERSION_TO_REVISION[version],
         )
 
         await wait_until(
