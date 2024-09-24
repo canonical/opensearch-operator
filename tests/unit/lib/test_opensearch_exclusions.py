@@ -6,7 +6,7 @@ import os
 import unittest
 from unittest.mock import PropertyMock, patch
 
-from charms.opensearch.v0.constants_charm import NodeLockRelationName, PeerRelationName
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.models import DeploymentState, DeploymentType, State
 from charms.opensearch.v0.opensearch_internal_data import Scope
@@ -27,8 +27,6 @@ class TestOpenSearchExclusions(unittest.TestCase):
 
         self.charm = self.harness.charm
         self.peer_rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
-        self.lock_rel_id = self.harness.add_relation(NodeLockRelationName, self.charm.app.name)
-        self.harness.add_relation_unit(self.lock_rel_id, f"{self.charm.app.name}/1")
 
         self.config_path = "tests/unit/resources/config"
         self.charm.opensearch.config = YamlConfigSetter(base_path=self.config_path)
@@ -54,9 +52,9 @@ class TestOpenSearchExclusions(unittest.TestCase):
 
     def test_add(self):
         with self.harness.hooks_disabled():
-            self.charm.opensearch_exclusions.add("unit1")
-            self.charm.opensearch_exclusions.add("unit2")
-            self.charm.opensearch_exclusions.add("unit3")
+            self.charm.opensearch_exclusions.add_to_cleanup_list("unit1")
+            self.charm.opensearch_exclusions.add_to_cleanup_list("unit2")
+            self.charm.opensearch_exclusions.add_to_cleanup_list("unit3")
 
         assert sorted(self.charm.peers_data.get(Scope.APP, VOTING_TO_DELETE).split(",")) == [
             "unit1",
@@ -103,9 +101,9 @@ class TestOpenSearchExclusions(unittest.TestCase):
             self.charm.opensearch_exclusions._scope = Scope.APP
 
             # Populate the voting_to_delete with some units
-            self.charm.opensearch_exclusions.add("unit1")
-            self.charm.opensearch_exclusions.add("unit2")
-            self.charm.opensearch_exclusions.add("unit3")
+            self.charm.opensearch_exclusions.add_to_cleanup_list("unit1")
+            self.charm.opensearch_exclusions.add_to_cleanup_list("unit2")
+            self.charm.opensearch_exclusions.add_to_cleanup_list("unit3")
             # Simulating the unit stop
             self.charm.opensearch_exclusions.add_current(voting=True, allocation=False)
             mock_request.assert_called_with(

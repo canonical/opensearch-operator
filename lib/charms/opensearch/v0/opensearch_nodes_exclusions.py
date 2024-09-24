@@ -44,7 +44,7 @@ class OpenSearchExclusions:
         self._opensearch = self._charm.opensearch
         self._scope = Scope.APP if self._charm.unit.is_leader() else Scope.UNIT
 
-    def add(self, unit_name: str) -> None:
+    def add_to_cleanup_list(self, unit_name: str) -> None:
         """Add Voting and alloc exclusions for a target unit.
 
         This method is just a clean-up-later routine. We (re)add the unit to the exclusions and,
@@ -63,7 +63,7 @@ class OpenSearchExclusions:
     def add_current(
         self, voting: bool = True, allocation: bool = True, raise_error: bool = False
     ) -> None:
-        """Add Voting and alloc exclusions."""
+        """Add voting and alloc exclusions."""
         if voting and (self._node.is_cm_eligible() or self._node.is_voting_only()):
             if not self._add_voting():
                 logger.error(f"Failed to add voting exclusion: {self._node.name}.")
@@ -79,7 +79,7 @@ class OpenSearchExclusions:
     def delete_current(
         self, voting: bool = True, allocation: bool = True, raise_error: bool = False
     ) -> None:
-        """Add Voting and alloc exclusions."""
+        """Delete voting and alloc exclusions."""
         if voting and (self._node.is_cm_eligible() or self._node.is_voting_only()):
             if not self._delete_voting({self._node.name}):
                 logger.error(f"Failed to delete voting exclusion: {self._node.name}.")
@@ -197,7 +197,7 @@ class OpenSearchExclusions:
         if not current_excl:
             to_stay = None
         else:
-            to_stay = self._fetch_voting() - exclusions
+            to_stay = current_excl - exclusions
         if current_excl == to_stay:
             # Nothing to do
             logger.debug("No voting exclusions to delete, current set is %s", to_stay)

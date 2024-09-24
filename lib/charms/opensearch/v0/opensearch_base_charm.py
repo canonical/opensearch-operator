@@ -532,7 +532,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # No deployment description present
             # that happens in the very last stages of the application removal
             return
-        self.opensearch_exclusions.add(
+        self.opensearch_exclusions.add_to_cleanup_list(
             unit_name=format_unit_name(event.departing_unit.name, deployment_desc.app)
         )
 
