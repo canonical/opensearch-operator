@@ -33,13 +33,14 @@ from charms.opensearch.v0.constants_charm import (
     ServiceIsStopping,
     ServiceStartError,
     ServiceStopped,
+    TLSCaRotation,
     TLSNewCertsRequested,
     TLSNotFullyConfigured,
     TLSRelationBrokenError,
     TLSRelationMissing,
     WaitingToStart,
 )
-from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
+from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
@@ -189,7 +190,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = OpenSearchSecrets(self, PeerRelationName)
         self.tls = OpenSearchTLS(
-            self, TLS_RELATION, self.opensearch.paths.jdk, self.opensearch.paths.certs
+            self, PeerRelationName, self.opensearch.paths.jdk, self.opensearch.paths.certs
         )
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
@@ -448,9 +449,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
 
-        # Store the "Admin" certificate, key and CA on the disk of the new unit
-        self.tls.store_admin_tls_secrets_if_applies()
-
     def _on_peer_relation_joined(self, event: RelationJoinedEvent):
         """Event received by all units when a new node joins the cluster."""
         if self.upgrade_in_progress:
@@ -460,8 +458,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changes."""
-        self.tls.store_admin_tls_secrets_if_applies()
-
         if self.unit.is_leader() and self.opensearch.is_node_up():
             health = self.health.apply()
             if self._is_peer_rel_changed_deferred:
@@ -576,7 +572,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # release lock
                 self.node_lock.release()
 
-    def _on_update_status(self, event: UpdateStatusEvent):
+    def _on_update_status(self, event: UpdateStatusEvent):  # noqa: C901
         """On update status event.
 
         We want to periodically check for the following:
@@ -758,6 +754,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             }
         )
 
+    def on_tls_ca_rotation(self):
+        """Called when adding new CA to the trust store."""
+        self.status.set(MaintenanceStatus(TLSCaRotation))
+        self._restart_opensearch_event.emit()
+
     def on_tls_conf_set(
         self, event: CertificateAvailableEvent, scope: Scope, cert_type: CertType, renewal: bool
     ):
@@ -790,12 +791,25 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.tls.store_admin_tls_secrets_if_applies()
 
         # In case of renewal of the unit transport layer cert - restart opensearch
-        if renewal and self.is_admin_user_configured() and self.tls.is_fully_configured():
-            try:
-                self.tls.reload_tls_certificates()
-            except OpenSearchHttpError:
-                logger.error("Could not reload TLS certificates via API, will restart.")
-                self._restart_opensearch_event.emit()
+        if renewal and self.is_admin_user_configured():
+            if self.tls.is_fully_configured():
+                try:
+                    self.tls.reload_tls_certificates()
+                except OpenSearchHttpError:
+                    logger.error("Could not reload TLS certificates via API, will restart.")
+                    self._restart_opensearch_event.emit()
+                else:
+                    # the chain.pem file should only be updated after applying the new certs
+                    # otherwise there could be TLS verification errors after renewing the CA
+                    self.tls.update_request_ca_bundle()
+                    self.status.clear(TLSNotFullyConfigured)
+                    self.tls.reset_ca_rotation_state()
+                    # cleaning the former CA certificate from the truststore
+                    # must only be done AFTER all renewed certificates are available and loaded
+                    self.tls.remove_old_ca()
+            else:
+                event.defer()
+                return
 
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
@@ -826,6 +840,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return len(current_app_nodes) == self.app.planned_units()
         except OpenSearchHttpError:
             return False
+
+    def is_tls_full_configured_in_cluster(self) -> bool:
+        """Check if TLS is configured in all the units of the current cluster."""
+        rel = self.model.get_relation(PeerRelationName)
+        for unit in all_units(self):
+            if (
+                rel.data[unit].get("tls_configured") != "True"
+                or "tls_ca_renewing" in rel.data[unit]
+                or "tls_ca_renewed" in rel.data[unit]
+            ):
+                return False
+        return True
 
     def is_admin_user_configured(self) -> bool:
         """Check if admin user configured."""
@@ -895,18 +921,23 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.peers_data.delete(Scope.UNIT, "started")
 
-        if not self.node_lock.acquired:
-            # (Attempt to acquire lock even if `event.ignore_lock`)
-            if event.ignore_lock:
-                # Only used for force upgrades
-                logger.debug("Starting without lock")
-            else:
-                logger.debug("Lock to start opensearch not acquired. Will retry next event")
-                event.defer()
-                return
+        if event.ignore_lock:
+            # Only used for force upgrades
+            logger.debug("Starting without lock")
+        elif not self.node_lock.acquired:
+            logger.debug("Lock to start opensearch not acquired. Will retry next event")
+            event.defer()
+            return
 
         if not self._can_service_start():
+            # after rotating the CA and certificates:
+            # the last host in the cluster to restart might not be able to connect to the other
+            # hosts anymore, because it is the last to renew the pem-file for requests
+            # in this case we update the pem-file to be able to connect and start the host
+            if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+                self.tls.update_request_ca_bundle()
             self.node_lock.release()
+            logger.info("Could not start opensearch service. Will retry next event.")
             event.defer()
             return
 
@@ -939,6 +970,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.unit.status = BlockedStatus(str(e))
             return
 
+        # we should update the chain.pem file to avoid TLS verification errors
+        # this happens on restarts after applying a new admin cert on CA rotation
+        if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+            self.tls.update_request_ca_bundle()
+
         try:
             self.opensearch.start(
                 wait_until_http_200=(
@@ -947,7 +983,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 )
             )
             self._post_start_init(event)
-        except (OpenSearchHttpError, OpenSearchStartTimeoutError, OpenSearchNotFullyReadyError):
+        except (
+            OpenSearchHttpError,
+            OpenSearchStartTimeoutError,
+            OpenSearchNotFullyReadyError,
+        ) as e:
             self.node_lock.release()
             # In large deployments with cluster-manager-only-nodes, the startup might fail
             # for the cluster-manager if a joining data node did not yet initialize the
@@ -955,6 +995,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.opensearch_peer_cm.is_provider(typ="main"):
                 self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
             event.defer()
+            logger.warning(e)
         except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
             logger.warning(e)
             self.node_lock.release()
@@ -992,7 +1033,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         try:
             nodes = self._get_nodes(use_localhost=self.opensearch.is_node_up())
         except OpenSearchHttpError:
-            logger.debug("Failed to get online nodes")
+            logger.info("Failed to get online nodes")
             event.defer()
             return
 
@@ -1043,6 +1084,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # clear waiting to start status
         self.status.clear(WaitingToStart)
+        self.status.clear(ServiceStartError)
         self.status.clear(PClusterNoDataNode)
 
         if event.after_upgrade:
@@ -1100,6 +1142,23 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
+        # update the peer relation data for TLS CA rotation routine
+        self.tls.reset_ca_rotation_state()
+        if self.is_tls_full_configured_in_cluster():
+            self.status.clear(TLSCaRotation)
+            self.status.clear(TLSNotFullyConfigured)
+
+        # request new certificates after rotating the CA
+        if self.peers_data.get(Scope.UNIT, "tls_ca_renewing", False) and self.peers_data.get(
+            Scope.UNIT, "tls_ca_renewed", False
+        ):
+            self.status.set(MaintenanceStatus(TLSNotFullyConfigured))
+            self.tls.request_new_unit_certificates()
+            if self.unit.is_leader():
+                self.tls.request_new_admin_certificate()
+            else:
+                self.tls.store_admin_tls_secrets_if_applies()
+
     def _stop_opensearch(self, *, restart=False) -> None:
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
@@ -1144,7 +1203,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         try:
             self._stop_opensearch(restart=True)
+            logger.info("Restarting OpenSearch.")
         except OpenSearchStopError as e:
+            logger.info(f"Error while Restarting Opensearch: {e}")
             logger.exception(e)
             self.node_lock.release()
             event.defer()

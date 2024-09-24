@@ -123,7 +123,7 @@ def mock_response_mynode(
                 "build_type": "tar",
                 "build_hash": "30dd870855093c9dca23fc6f8cfd5c0d7c83127d",
                 "total_indexing_buffer": 107374182,
-                "roles": ["cluster_manager", "data", "ingest", "ml"],
+                "roles": ["cluster_manager", "coordinating_only", "data", "ingest", "ml"],
                 "attributes": {
                     "shard_indexing_pressure_enabled": "true",
                     "app_id": "617e5f02-5be5-4e25-85f0-276b2347a5ad/opensearch",
@@ -143,6 +143,7 @@ def mock_response_mynode(
                             "data",
                             "ingest",
                             "ml",
+                            "coordinating_only",
                             "cluster_manager",
                         ],
                     },
@@ -168,6 +169,63 @@ def mock_response_mynode(
         url=f"https://{host}:9200/_nodes/{node_id}",
         json=expected_response_mynode,
         status=200,
+    )
+
+
+def mock_response_lock_not_requested(host):
+    expected_response = {"unit-name": ""}
+
+    responses.add(
+        method="GET",
+        url=f"https://{host}:9200/.charm_node_lock/_source/0",
+        json=expected_response,
+        status=200,
+    )
+
+
+def mock_response_health_green(host, cluster_name: str = CLUSTER_NAME):
+    expected_response = {
+        "cluster_name": cluster_name,
+        "status": "green",
+        "timed_out": False,
+        "number_of_nodes": 2,
+        "number_of_data_nodes": 2,
+        "discovered_master": True,
+        "active_primary_shards": 6,
+        "active_shards": 12,
+        "relocating_shards": 0,
+        "initializing_shards": 0,
+        "unassigned_shards": 0,
+        "delayed_unassigned_shards": 0,
+        "number_of_pending_tasks": 0,
+        "number_of_in_flight_fetch": 0,
+        "task_max_waiting_in_queue_millis": 0,
+        "active_shards_percent_as_number": 100.0,
+    }
+
+    responses.add(
+        method="GET",
+        url=f"https://{host}:9200/_cluster/health",
+        json=expected_response,
+        status=200,
+    )
+
+
+def mock_response_put_http_cert(host):
+    responses.add(
+        method="PUT",
+        url=f"https://{host}:9200/_plugins/_security/api/ssl/http/reloadcerts",
+        json={"status": "OK", "message": "updated transport certs"},
+        status=201,
+    )
+
+
+def mock_response_put_transport_cert(host):
+    responses.add(
+        method="PUT",
+        url=f"https://{host}:9200/_plugins/_security/api/ssl/transport/reloadcerts",
+        json={"status": "OK", "message": "updated transport certs"},
+        status=201,
     )
 
 

@@ -192,7 +192,8 @@ class OpenSearchDistribution(ABC):
                 timeout=1,
             )
             return resp_code < 400
-        except (OpenSearchHttpError, Exception):
+        except (OpenSearchHttpError, Exception) as e:
+            logger.debug(f"Error when checking if host {host} is up: {e}")
             return False
 
     def run_bin(self, bin_script_name: str, args: str = None, stdin: str = None) -> str:
