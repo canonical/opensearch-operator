@@ -867,6 +867,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _start_opensearch(self, event: _StartOpenSearch) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
+        if not self.opensearch_peer_cm.deployment_desc() and self.app.planned_units() == 0:
+            # canonical/opensearch-operator#444
+            # https://bugs.launchpad.net/juju/+bug/2076599
+            # This condition is a corner case where we have:
+            #   1) a single-node cluster
+            #   2) an unfinished (re)start: yet to run _post_start_init() method
+            #   3) LP#2076599: remove-application was called in-between and peer databag is empty
+            # TODO: remove this IF condition once LP#2076599 is fixed in Juju.
+            return
+
         if self.opensearch.is_started():
             try:
                 self._post_start_init(event)
@@ -1326,6 +1336,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _get_nodes(self, use_localhost: bool) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
+        if self.app.planned_units() == 0 and not self.opensearch_peer_cm.deployment_desc():
+            # This app is going away and the -broken event already happened
+            return []
+
         # This means it's the first unit on the cluster.
         if self.opensearch_peer_cm.deployment_desc().start == StartMode.WITH_PROVIDED_ROLES:
             computed_roles = self.opensearch_peer_cm.deployment_desc().config.roles
