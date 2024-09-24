@@ -357,12 +357,16 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.reload_tls_certificates")
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.update_request_ca_bundle")
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.remove_old_ca")
     def test_reload_tls_certs_without_restart(
         self,
         store_admin_tls_secrets_if_applies,
         is_admin_user_configured,
         is_fully_configured,
         reload_tls_certificates,
+        update_request_ca_bundle,
+        remove_old_ca,
     ):
         """Test that tls configuration set does not trigger restart."""
         cert = "cert_12345"
@@ -375,6 +379,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         store_admin_tls_secrets_if_applies.assert_called_once()
         reload_tls_certificates.assert_called_once()
+        update_request_ca_bundle.assert_called_once()
+
+        remove_old_ca.assert_called_once()
         self.charm._restart_opensearch_event.emit.assert_not_called()
 
     def test_app_peers_data(self):
