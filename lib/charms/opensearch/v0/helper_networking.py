@@ -92,7 +92,7 @@ def is_reachable(host: str, port: int) -> bool:
         s.connect((host, port))
         return True
     except Exception as e:
-        logger.error(e)
+        logger.debug(f"Connection to {host}:{port} fails with: {e}")
         return False
     finally:
         s.close()

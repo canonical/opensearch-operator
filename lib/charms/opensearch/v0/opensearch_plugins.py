@@ -261,7 +261,7 @@ class OpenSearchBaseCharm(CharmBase):
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
-        self.user_manager.remove_users_and_roles()
+        self.opensearch_provider.remove_lingering_relation_users_and_roles()
         # If relation not broken - leave
         if self.model.get_relation("certificates") is not None:
             return
