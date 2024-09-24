@@ -23,7 +23,11 @@ import typing
 from os.path import exists
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.constants_charm import (
+    PeerClusterOrchestratorRelationName,
+    PeerClusterRelationName,
+    PeerRelationName,
+)
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import all_units, run_cmd
 from charms.opensearch.v0.helper_networking import get_host_public_ip
@@ -236,6 +240,9 @@ class OpenSearchTLS(Object):
             # -> delete both tls_ca_renewing and tls_ca_renewed
             if current_stored_ca:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
+                self.update_ca_rotation_flag_to_peer_cluster_relation(
+                    flag="tls_ca_renewing", operation="add"
+                )
                 self.charm.on_tls_ca_rotation()
                 return
 
@@ -831,20 +838,35 @@ class OpenSearchTLS(Object):
         if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
             self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewing")
             self.charm.peers_data.delete(Scope.UNIT, "tls_ca_renewed")
+            self.update_ca_rotation_flag_to_peer_cluster_relation(
+                flag="tls_ca_renewing", operation="remove"
+            )
+            self.update_ca_rotation_flag_to_peer_cluster_relation(
+                flag="tls_ca_renewed", operation="remove"
+            )
         else:
             # this means only the CA rotation completed, still need to create certificates
             self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewed", True)
+            self.update_ca_rotation_flag_to_peer_cluster_relation(
+                flag="tls_ca_renewed", operation="add"
+            )
 
     def ca_rotation_complete_in_cluster(self) -> bool:
         """Check whether the CA rotation completed in all units."""
         rotation_complete = True
-        rel = self.model.get_relation(PeerRelationName)
-
-        for unit in rel.units:
-            if not rel.data[unit].get("tls_ca_renewed"):
-                logger.debug(f"TLS CA rotation not complete for unit {unit}.")
-                rotation_complete = False
-                break
+        for relation_type in [
+            PeerRelationName,
+            PeerClusterRelationName,
+            PeerClusterOrchestratorRelationName,
+        ]:
+            for relation in self.model.relations[relation_type]:
+                for unit in relation.units:
+                    if relation.data[unit].get("tls_ca_renewing") and not relation.data[unit].get(
+                        "tls_ca_renewed"
+                    ):
+                        logger.debug(f"TLS CA rotation not complete for unit {unit}.")
+                        rotation_complete = False
+                        break
 
         return rotation_complete
 
@@ -860,3 +882,12 @@ class OpenSearchTLS(Object):
             return True
 
         return False
+
+    def update_ca_rotation_flag_to_peer_cluster_relation(self, flag: str, operation: str) -> None:
+        """Add a CA rotation flag to all related peer clusters in large deployments."""
+        for relation_type in [PeerClusterRelationName, PeerClusterOrchestratorRelationName]:
+            for relation in self.model.relations[relation_type]:
+                if operation == "add":
+                    relation.data[self.charm.unit][flag] = "True"
+                elif operation == "remove":
+                    relation.data[self.charm.unit].pop(flag, None)

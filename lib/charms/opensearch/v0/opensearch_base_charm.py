@@ -1161,6 +1161,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
+        # before resetting the CA rotation state, we remove the old ca from the truststore
+        if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
+            self.tls.remove_old_ca()
+
         # update the peer relation data for TLS CA rotation routine
         self.tls.reset_ca_rotation_state()
         if self.is_tls_full_configured_in_cluster():
