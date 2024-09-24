@@ -1042,6 +1042,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 logger.debug(f"Error when initializing the security index: {e.out}")
                 event.defer()
                 return
+            except OpenSearchStartError:
+                logger.debug("Cluster not ready yet: missing deployment-description")
+                event.defer()
+                return
 
         # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
         # may be thrown when calling a node - we want to ensure this node is perfectly ready
@@ -1383,6 +1387,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         IMPORTANT: must only run once per cluster, otherwise the index gets overrode
         """
+        if not self.opensearch_peer_cm.deployment_desc():
+            raise OpenSearchStartError()
+
         args = [
             f"-cd {self.opensearch.paths.conf}/opensearch-security/",
             f"-cn {self.opensearch_peer_cm.deployment_desc().config.cluster_name}",
