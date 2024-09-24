@@ -520,6 +520,22 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             event.defer()
 
+        if not self.unit.is_leader():
+            return
+
+        # Now, we register in the leader application the presence of departing unit's name
+        # We need to save them as we have a count limit
+        if (
+            not (deployment_desc := self.opensearch_peer_cm.deployment_desc())
+            or not event.departing_unit
+        ):
+            # No deployment description present
+            # that happens in the very last stages of the application removal
+            return
+        self.opensearch_exclusions.add_to_cleanup_list(
+            unit_name=format_unit_name(event.departing_unit.name, deployment_desc.app)
+        )
+
     def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
         if self.upgrade_in_progress:
@@ -555,6 +571,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 pass
         try:
             self._stop_opensearch()
+            if self.alt_hosts:
+                # There is enough peers available for us to try removing the unit
+                self.opensearch_exclusions.delete_current()
 
             # safeguards in case planned_units > 0
             if self.app.planned_units() > 0:
@@ -596,9 +615,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self._add_cm_addresses_to_conf()
 
         # if there are exclusions to be removed
+        # each unit should check its own exclusions' list
+        self.opensearch_exclusions.cleanup()
         if self.unit.is_leader():
-            self.opensearch_exclusions.cleanup()
-
             if (health := self.health.apply(wait_for_green_first=True)) not in [
                 HealthColors.GREEN,
                 HealthColors.IGNORE,
@@ -1159,7 +1178,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             else:
                 self.tls.store_admin_tls_secrets_if_applies()
 
-    def _stop_opensearch(self, *, restart=False) -> None:
+    def _stop_opensearch(self, *, restart: bool = False) -> None:
         """Stop OpenSearch if possible."""
         self.status.set(WaitingStatus(ServiceIsStopping))
 
@@ -1171,7 +1190,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # and re-using storage
                 if len(nodes) > 1:
                     # 1. Add current node to the voting + alloc exclusions
-                    self.opensearch_exclusions.add_current(restart=restart)
+                    self.opensearch_exclusions.add_current(voting=True, allocation=not restart)
             except OpenSearchHttpError:
                 logger.debug("Failed to get online nodes, voting and alloc exclusions not added")
 
@@ -1182,17 +1201,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch.stop()
         self.peers_data.delete(Scope.UNIT, "started")
         self.status.set(WaitingStatus(ServiceStopped))
-
-        # 3. Remove the exclusions
-        if not restart:
-            try:
-                self.opensearch_exclusions.delete_current()
-            except Exception:
-                # It is purposefully broad - as this can fail for HTTP reasons,
-                # or if the config wasn't set on disk etc. In any way, this operation is on
-                # a best attempt basis, as this is called upon start as well,
-                # failure is not blocking at this point of the lifecycle
-                pass
 
     def _restart_opensearch(self, event: _RestartOpenSearch) -> None:
         """Restart OpenSearch if possible."""

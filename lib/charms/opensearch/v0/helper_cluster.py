@@ -166,7 +166,9 @@ class ClusterTopology:
         host: Optional[str] = None  # defaults to current unit ip
         alt_hosts: Optional[List[str]] = hosts
         if not use_localhost and hosts:
-            host, alt_hosts = hosts[0], hosts[1:]
+            host = hosts[0]
+            if len(hosts) >= 2:
+                alt_hosts = hosts[1:]
 
         nodes: List[Node] = []
         if use_localhost or host:

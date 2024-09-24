@@ -4,6 +4,7 @@
 import json
 import logging
 import random
+import shlex
 import subprocess
 import tempfile
 from hashlib import md5
@@ -55,6 +56,25 @@ def model_conf_with_short_update_schedule():
     model_conf = MODEL_CONFIG.copy()
     model_conf["update-status-hook-interval"] = "2m"
     return model_conf
+
+
+async def execute_update_status_manually(ops_test: OpsTest, app: str):
+    """Execute the update-status hook manually."""
+    leader_id = await get_leader_unit_id(ops_test, app)
+
+    cmd = '"export JUJU_DISPATCH_PATH=hooks/update-status; ./dispatch"'
+    exec_cmd = f"juju exec -u opensearch/{leader_id} -m {ops_test.model.name} -- {cmd}"
+    try:
+        # The "normal" subprocess.run with "export ...; ..." cmd was failing
+        # Noticed that, for this case, canonical/jhack uses shlex instead to split.
+        # Adding it fixed the issue.
+        subprocess.run(shlex.split(exec_cmd))
+    except Exception as e:
+        logger.error(
+            f"Failed to apply state: process exited with {e.returncode}; "
+            f"stdout = {e.stdout}; "
+            f"stderr = {e.stderr}.",
+        )
 
 
 async def app_name(ops_test: OpsTest) -> Optional[str]:
@@ -554,3 +574,23 @@ def get_conf_as_dict(ops_test: OpsTest, unit: str, filename: str) -> dict[str, s
     """Convert a yml config file to a dict."""
     config = get_file_contents(ops_test, unit, filename)
     return yaml.safe_load(str(config.decode("utf-8")).replace("ll", ""))
+
+
+@retry(
+    wait=wait_fixed(wait=15) + wait_random(0, 5),
+    stop=stop_after_attempt(25),
+)
+async def cluster_voting_config_exclusions(
+    ops_test: OpsTest, unit_ip: str
+) -> List[Dict[str, str]]:
+    """Fetch the cluster allocation of shards."""
+    result = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_cluster/state/metadata/voting_config_exclusions",
+    )
+    return (
+        result.get("metadata", {})
+        .get("cluster_coordination", {})
+        .get("voting_config_exclusions", {})
+    )
