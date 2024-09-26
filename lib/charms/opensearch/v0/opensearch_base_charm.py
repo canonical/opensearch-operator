@@ -412,7 +412,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             "data" in deployment_desc.config.roles
             and self.unit.is_leader()
             and deployment_desc.typ == DeploymentType.OTHER
-            and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
+            and (
+                not self.peers_data.get(Scope.APP, "security_index_initialised", False)
+                or (
+                    # in case all data-nodes are powered down after being previously started
+                    # ignore the lock to get a data-node started, as it holds security index
+                    self.peers_data.get(Scope.UNIT, "STARTED")
+                    and not self.opensearch.is_service_started())
+            )
         )
         self._start_opensearch_event.emit(ignore_lock=ignore_lock)
 
