@@ -61,7 +61,7 @@ jobs:
         path:
         - .
         - ./tests/integration/relations/opensearch_provider/application-charm/
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v21.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@get-opensearch-systemd-logs
     with:
       path-to-charm-directory: ${{ matrix.path }}
       cache: true
@@ -72,7 +72,7 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v21.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@get-opensearch-systemd-logs
     with:
       artifact-prefix: packed-charm-cache-true
       cloud: lxd
