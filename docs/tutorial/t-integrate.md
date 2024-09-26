@@ -23,29 +23,40 @@ juju deploy data-integrator --channel=edge --config index-name=test-index --conf
 The expected output:
 
 ```shell
-Deployed "data-integrator" from charm-hub charm "data-integrator", revision 43 in channel latest/edge on ubuntu@22.04/stable
+Deployed "data-integrator" from charm-hub charm "data-integrator", revision 59 in channel latest/edge on ubuntu@22.04/stable
 ```
 
 Wait for `juju status --watch 1s` to show:
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:27:49Z
+tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:43:22Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    blocked      1  data-integrator           latest/edge     43  no       Please relate the data-integrator with the desired product
-opensearch                         active       1  opensearch                2/beta         117  no
+data-integrator                    blocked      1  data-integrator           latest/edge     59  no       Please relate the data-integrator with the desired product
+opensearch                         active       3  opensearch                2/beta         117  no
 self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-data-integrator/0*           blocked   idle   2        10.214.176.202            Please relate the data-integrator with the desired product
-opensearch/0*                active    idle   0        10.214.176.107  9200/tcp
-self-signed-certificates/0*  active    idle   1        10.214.176.116
+data-integrator/0*           blocked   idle   4        10.95.38.22               Please relate the data-integrator with the desired product
+opensearch/0*                active    idle   0        10.95.38.94     9200/tcp
+opensearch/1                 active    idle   1        10.95.38.139    9200/tcp
+opensearch/2                 active    idle   2        10.95.38.212    9200/tcp
+self-signed-certificates/0*  active    idle   3        10.95.38.54
 
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.107  juju-b0826b-0  ubuntu@22.04      Running
-1        started  10.214.176.116  juju-b0826b-1  ubuntu@22.04      Running
-2        started  10.214.176.202  juju-b0826b-2  ubuntu@22.04      Running
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
+3        started  10.95.38.54   juju-be3883-3  ubuntu@22.04      Running
+4        started  10.95.38.22   juju-be3883-4  ubuntu@22.04      Running
+
+Integration provider                   Requirer                               Interface              Type     Message
+data-integrator:data-integrator-peers  data-integrator:data-integrator-peers  data-integrator-peers  peer
+opensearch:node-lock-fallback          opensearch:node-lock-fallback          node_lock_fallback     peer
+opensearch:opensearch-peers            opensearch:opensearch-peers            opensearch_peers       peer
+opensearch:upgrade-version-a           opensearch:upgrade-version-a           upgrade                peer
+self-signed-certificates:certificates  opensearch:certificates                tls-certificates       regular
 ```
 Notice that the status of the `data-integrator` application is `blocked`. This is because it is waiting for a relation to be established with another application namely `opensearch`.
 
@@ -63,22 +74,26 @@ Wait for `juju status --relations --watch 1s` to show that the `data-integrator`
 
 ```bash
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:28:43Z
+tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:44:43Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    active      1  data-integrator           latest/edge     43  no
-opensearch                         active      1  opensearch                2/beta         117  no
+data-integrator                    active      1  data-integrator           latest/edge     59  no
+opensearch                         active      3  opensearch                2/beta         117  no
 self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-data-integrator/0*           active    idle   2        10.214.176.202
-opensearch/0*                active    idle   0        10.214.176.107  9200/tcp
-self-signed-certificates/0*  active    idle   1        10.214.176.116
+data-integrator/0*           active    idle   4        10.95.38.22
+opensearch/0*                active    idle   0        10.95.38.94     9200/tcp
+opensearch/1                 active    idle   1        10.95.38.139    9200/tcp
+opensearch/2                 active    idle   2        10.95.38.212    9200/tcp
+self-signed-certificates/0*  active    idle   3        10.95.38.54
 
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.107  juju-b0826b-0  ubuntu@22.04      Running
-1        started  10.214.176.116  juju-b0826b-1  ubuntu@22.04      Running
-2        started  10.214.176.202  juju-b0826b-2  ubuntu@22.04      Running
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
+3        started  10.95.38.54   juju-be3883-3  ubuntu@22.04      Running
+4        started  10.95.38.22   juju-be3883-4  ubuntu@22.04      Running
 
 Integration provider                   Requirer                               Interface              Type     Message
 data-integrator:data-integrator-peers  data-integrator:data-integrator-peers  data-integrator-peers  peer
@@ -109,18 +124,17 @@ ok: "True"
 opensearch:
   data: '{"extra-user-roles": "admin", "index": "test-index", "requested-secrets":
     "[\"username\", \"password\", \"tls\", \"tls-ca\", \"uris\"]"}'
-  endpoints: 10.214.176.107:9200
+  endpoints: 10.95.38.139:9200,10.95.38.212:9200,10.95.38.94:9200
   index: test-index
-  password: BX4QD3GNYAQrFxFXtuXF5wz1ruxmU1iY
+  password: j3JWFnDkoumCxn0CtKZRCmdRMUlYTZFI
   tls-ca: |-
     -----BEGIN CERTIFICATE-----
-    MIIDPzCCAiegAwIB...
     -----END CERTIFICATE-----
     -----BEGIN CERTIFICATE-----
-    MIIDOzCCAiOgAwIB...
     -----END CERTIFICATE-----
   username: opensearch-client_5
   version: 2.14.0
+
 ```
 
 Save the CA certificate (value of `tls-ca` in the previous response), username, and password, because you will need them in the next section.
@@ -139,9 +153,9 @@ Sending a `GET` request to this `/` endpoint should return some basic informatio
 
 ```json
 {
-  "name" : "opensearch-0.c6e",
-  "cluster_name" : "opensearch-qjae",
-  "cluster_uuid" : "Hs6XAFVVSkKjUSkuYPKCPA",
+  "name" : "opensearch-2.0f3",
+  "cluster_name" : "opensearch-x3y6",
+  "cluster_uuid" : "yFS58g6hTbS0VxzJi0u7_g",
   "version" : {
     "distribution" : "opensearch",
     "number" : "2.14.0",
@@ -199,20 +213,17 @@ This call should output something like the following:
 
 ```json
 {
-    "_index": "albums",
-    "_id": "1",
-    "_version": 1,
-    "_seq_no": 0,
-    "_primary_term": 1,
-    "found": true,
-    "_source": {
-        "artist": "Vulfpeck",
-        "genre": [
-            "Funk",
-            "Jazz"
- ],
-        "title": "Thrill of the Arts"
- }
+  "_index": "albums",
+  "_id": "1",
+  "_version": 1,
+  "_seq_no": 0,
+  "_primary_term": 1,
+  "found": true,
+  "_source": {
+    "artist": "Vulfpeck",
+    "genre": ["Funk", "Jazz"],
+    "title": "Thrill of the Arts"
+  }
 }
 ```
 
@@ -238,7 +249,7 @@ curl --cacert demo-ca.pem -XPOST https://username:password@opensearch_node_ip:92
 This should return a JSON response with the results of the bulk indexing operation:
 ```
 {
-  "took": 16,
+  "took": 17,
   "errors": false,
   "items": [ ... ]
 }
@@ -315,37 +326,38 @@ To remove the user used in the previous calls, remove the relation. Removing the
 juju remove-relation opensearch data-integrator
 ```
 
-if you run `juju status --relations` you will see that the relation has been removed and that the `data-integrator` application is now in a blocked state.
+if you run `juju status --relations` you will see that the relation has been removed and that the `data-integrator` application is now in a `blocked` state.
 
 ```bash
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:35:12Z
+tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:48:08Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    blocked      1  data-integrator           latest/edge     43  no       Please relate the data-integrator with the desired product
-opensearch                         blocked      1  opensearch                2/beta         117  no       1 or more 'replica' shards are not assigned, please scale your application up.
+data-integrator                    blocked      1  data-integrator           latest/edge     59  no       Please relate the data-integrator with the desired product
+opensearch                         active       3  opensearch                2/beta         117  no
 self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-data-integrator/0*           blocked   idle   2        10.214.176.202            Please relate the data-integrator with the desired product
-opensearch/0*                active    idle   0        10.214.176.107  9200/tcp
-self-signed-certificates/0*  active    idle   1        10.214.176.116
+data-integrator/0*           blocked   idle   4        10.95.38.22               Please relate the data-integrator with the desired product
+opensearch/0*                active    idle   0        10.95.38.94     9200/tcp
+opensearch/1                 active    idle   1        10.95.38.139    9200/tcp
+opensearch/2                 active    idle   2        10.95.38.212    9200/tcp
+self-signed-certificates/0*  active    idle   3        10.95.38.54
 
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.107  juju-b0826b-0  ubuntu@22.04      Running
-1        started  10.214.176.116  juju-b0826b-1  ubuntu@22.04      Running
-2        started  10.214.176.202  juju-b0826b-2  ubuntu@22.04      Running
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
+3        started  10.95.38.54   juju-be3883-3  ubuntu@22.04      Running
+4        started  10.95.38.22   juju-be3883-4  ubuntu@22.04      Running
 
 Integration provider                   Requirer                               Interface              Type     Message
 data-integrator:data-integrator-peers  data-integrator:data-integrator-peers  data-integrator-peers  peer
 opensearch:node-lock-fallback          opensearch:node-lock-fallback          node_lock_fallback     peer
-opensearch:opensearch-client           data-integrator:opensearch             opensearch_client      regular
 opensearch:opensearch-peers            opensearch:opensearch-peers            opensearch_peers       peer
 opensearch:upgrade-version-a           opensearch:upgrade-version-a           upgrade                peer
 self-signed-certificates:certificates  opensearch:certificates                tls-certificates       regular
 ```
-
-Do not mind the `blocked` status of the `opensearch` application. We will fix it in a next tutorial.
 
 Now try again to connect in the same way as the previous section
 
@@ -363,7 +375,7 @@ If you wanted to recreate this user all you would need to do is relate the two a
 
 ```shell
 juju integrate data-integrator opensearch
-juju run-action data-integrator/leader get-credentials
+juju run data-integrator/leader get-credentials
 ```
 
 You can now connect to the database with this new username and password:

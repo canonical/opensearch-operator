@@ -3,8 +3,11 @@
 # See LICENSE file for licensing details.
 
 import logging
+import subprocess
+from typing import Optional
 
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from ..ha.continuous_writes import ContinuousWrites
 from ..ha.helpers import (
@@ -21,6 +24,41 @@ RESTART_DELAY = 360
 
 
 logger = logging.getLogger(__name__)
+
+
+async def refresh(
+    ops_test: OpsTest,
+    app_name: str,
+    *,
+    revision: Optional[int] = None,
+    switch: Optional[str] = None,
+    channel: Optional[str] = None,
+    path: Optional[str] = None,
+) -> None:
+    # due to: https://github.com/juju/python-libjuju/issues/1057
+    # the following call does not work:
+    # application = ops_test.model.applications[APP_NAME]
+    # await application.refresh(
+    #     revision=rev,
+    # )
+
+    # Point to the right model, as we are calling the juju cli directly
+    args = [f"--model={ops_test.model.info.name}"]
+    if revision:
+        args.append(f"--revision={revision}")
+    if switch:
+        args.append(f"--switch={switch}")
+    if channel:
+        args.append(f"--channel={channel}")
+    if path:
+        args.append(f"--path={path}")
+
+    for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(wait=30)):
+        with attempt:
+            cmd = ["juju", "refresh"]
+            cmd.extend(args)
+            cmd.append(app_name)
+            subprocess.check_output(cmd)
 
 
 async def assert_upgrade_to_local(

@@ -861,7 +861,9 @@ class OpenSearchTLS(Object):
         ]:
             for relation in self.model.relations[relation_type]:
                 for unit in relation.units:
-                    if not relation.data[unit].get("tls_ca_renewed"):
+                    if relation.data[unit].get("tls_ca_renewing") and not relation.data[unit].get(
+                        "tls_ca_renewed"
+                    ):
                         logger.debug(f"TLS CA rotation not complete for unit {unit}.")
                         rotation_complete = False
                         break

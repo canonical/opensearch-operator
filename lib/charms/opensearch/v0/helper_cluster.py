@@ -3,12 +3,13 @@
 
 """Utility classes and methods for getting cluster info, configuration info and suggestions."""
 import logging
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import GeneratedRoles
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import App, Node
+from charms.opensearch.v0.models import App, Node, PeerClusterApp
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # The unique Charmhub library identifier, never change it
@@ -23,6 +24,10 @@ LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
+
+
+if TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 
 class IndexStateEnum(BaseStrEnum):
@@ -141,6 +146,17 @@ class ClusterTopology:
         return result
 
     @staticmethod
+    def data_role_in_cluster_fleet_apps(charm: "OpenSearchBaseCharm") -> bool:
+        """Look for data-role through all the roles of all the nodes in all applications"""
+        if cluster_apps := charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
+            for app in cluster_apps.values():
+                p_cluster_app = PeerClusterApp.from_dict(app)
+                if "data" in p_cluster_app.roles:
+                    return True
+
+        return False
+
+    @staticmethod
     def nodes(
         opensearch: OpenSearchDistribution,
         use_localhost: bool,
@@ -150,7 +166,9 @@ class ClusterTopology:
         host: Optional[str] = None  # defaults to current unit ip
         alt_hosts: Optional[List[str]] = hosts
         if not use_localhost and hosts:
-            host, alt_hosts = hosts[0], hosts[1:]
+            host = hosts[0]
+            if len(hosts) >= 2:
+                alt_hosts = hosts[1:]
 
         nodes: List[Node] = []
         if use_localhost or host:

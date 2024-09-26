@@ -6,13 +6,40 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+# Imports to simulate designated imports order
+# (Otherwise circular dependency may be reported,
+# that is NOT supposed to ever happen for real by design.
+import charms.opensearch.v0.helper_cluster  # noqa
+import charms.opensearch.v0.opensearch_distro  # noqa
 import pytest
+from charms.opensearch.v0.constants_charm import ClientRelationName, PeerRelationName
+from charms.opensearch.v0.models import (
+    App,
+    DeploymentDescription,
+    DeploymentState,
+    DeploymentType,
+    PeerClusterConfig,
+    StartMode,
+    State,
+)
 from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserManager,
     OpenSearchUserMgmtError,
 )
+from ops.testing import Harness
 
+from charm import OpenSearchOperatorCharm
 from tests.helpers import patch_network_get
+
+PEERS_USER_DICT_JSON = f"""{{
+    "0": ["{ClientRelationName}_2"],
+    "1": ["{ClientRelationName}_1"]
+}}"""  # returns user list
+
+PEERS_ROLE_DICT_JSON = f"""{{
+    "0": ["admin", "other_role1", "{ClientRelationName}_remove_pls"],
+    "1": ["admin", "other_role1", "{ClientRelationName}_test"]
+}}"""  # returns role list
 
 
 @patch_network_get("1.1.1.1")
@@ -21,6 +48,25 @@ class TestOpenSearchUserManager(unittest.TestCase):
         self.charm = MagicMock()
         self.opensearch = self.charm.opensearch
         self.mgr = OpenSearchUserManager(self.charm)
+
+        self.harness = Harness(OpenSearchOperatorCharm)
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+
+        self.charm = self.harness.charm
+        self.peer_rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
+
+        def mock_deployment_desc():
+            return DeploymentDescription(
+                config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+                start=StartMode.WITH_GENERATED_ROLES,
+                pending_directives=[],
+                typ=DeploymentType.MAIN_ORCHESTRATOR,
+                app=App(model_uuid="model-uuid", name="opensearch"),
+                state=DeploymentState(value=State.ACTIVE),
+            )
+
+        self.charm.opensearch_peer_cm.deployment_desc = mock_deployment_desc
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     def test_create_role(self, _):

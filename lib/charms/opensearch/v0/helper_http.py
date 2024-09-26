@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 """File containing http related helpers."""
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from tenacity import RetryCallState
 
@@ -18,12 +18,13 @@ LIBPATCH = 1
 
 
 def error_http_retry_log(
-    logger, retry_max: int, method: str, url: str, payload: Optional[Dict[str, Any]]
+    logger, retry_max: int, method: str, urls: List[str], payload: Optional[Dict[str, Any]]
 ):
     """Return a custom log function to run before a new Tenacity retry."""
 
     def log_error(retry_state: RetryCallState):
-        logger.error(
+        url = urls[(retry_state.attempt_number - 1) % len(urls)]
+        logger.debug(
             f"Request {method} to {url} with payload: {payload} failed."
             f"(Attempts left: {retry_max - retry_state.attempt_number})\n"
             f"\tError: {retry_state.outcome.exception()}"

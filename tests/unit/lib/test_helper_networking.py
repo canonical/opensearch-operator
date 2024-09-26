@@ -52,6 +52,8 @@ class TestHelperNetworking(unittest.TestCase):
         self.harness.add_relation_unit(self.rel_id, f"{self.charm.app.name}/1")
         self.harness.add_relation_unit(self.rel_id, f"{self.charm.app.name}/2")
 
+        self.charm.opensearch_exclusions._delete_voting = MagicMock()
+        self.charm.opensearch_exclusions._removed_units_to_cleanup = MagicMock(return_value=[])
         self.charm.opensearch_config = MagicMock()
         self.harness.update_relation_data(
             self.rel_id, f"{self.charm.app.name}/1", {"private-address": "2.2.2.2"}
