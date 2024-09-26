@@ -235,11 +235,6 @@ class TestOpenSearchTLS(unittest.TestCase):
             state=DeploymentState(value=State.ACTIVE),
         )
         event_mock = MagicMock()
-        self.secret_store.put_object(
-            Scope.APP,
-            CertType.APP_ADMIN.val,
-            {"truststore-password": "abc"},
-        )
 
         truststore_password = "12345"
         self.secret_store.put_object(
