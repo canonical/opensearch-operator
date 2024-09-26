@@ -36,6 +36,8 @@ logger = logging.getLogger(__name__)
 
 OPENSEARCH_MAIN_APP_NAME = "main"
 OPENSEARCH_FAILOVER_APP_NAME = "failover"
+REL_ORCHESTRATOR = "peer-cluster-orchestrator"
+REL_PEER = "peer-cluster"
 
 
 charm = None
@@ -60,16 +62,16 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
     tls_config = {"ca-common-name": "CN_CA"}
 
     main_orchestrator_conf = {
-        "cluster_name": "backup-test",
+        "cluster_name": "upgrade-test",
         "init_hold": False,
-        "roles": "cluster_manager",
+        "roles": "cluster_manager,data",
     }
     failover_orchestrator_conf = {
-        "cluster_name": "backup-test",
+        "cluster_name": "upgrade-test",
         "init_hold": True,
-        "roles": "cluster_manager",
+        "roles": "cluster_manager,data",
     }
-    data_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data"}
+    data_conf = {"cluster_name": "upgrade-test", "init_hold": True, "roles": "data"}
 
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
@@ -99,17 +101,28 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
         ),
     )
 
+    # integrate TLS to all applications
+    for app in [OPENSEARCH_MAIN_APP_NAME, OPENSEARCH_FAILOVER_APP_NAME, APP_NAME]:
+        await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
+
+    # create the peer-cluster-relation
+    await ops_test.model.integrate(
+        f"{APP_NAME}:{REL_PEER}", f"{OPENSEARCH_MAIN_APP_NAME}:{REL_ORCHESTRATOR}"
+    )
+    await ops_test.model.integrate(
+        f"{OPENSEARCH_FAILOVER_APP_NAME}:{REL_PEER}",
+        f"{OPENSEARCH_MAIN_APP_NAME}:{REL_ORCHESTRATOR}",
+    )
+    await ops_test.model.integrate(
+        f"{APP_NAME}:{REL_PEER}", f"{OPENSEARCH_FAILOVER_APP_NAME}:{REL_ORCHESTRATOR}"
+    )
+
     # Large deployment setup
     await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
     await ops_test.model.integrate("main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
     await ops_test.model.integrate(
         "failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
     )
-
-    # TLS setup
-    await ops_test.model.integrate("main", TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.integrate("failover", TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
     # Charms except s3-integrator should be active
     await wait_until(
