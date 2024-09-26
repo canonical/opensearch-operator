@@ -4,7 +4,7 @@ This guide will go over the steps for load testing your OpenSearch deployment wi
 
 ## Prerequisites
 * `juju v3.0+`
-  * This guide was written using `v3.4`
+  * This guide was written using `v3.5.3`
 * [`jq` command-line tool](https://jqlang.github.io/jq/)  
 * If not already available, [a VPC set up on AWS](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-getting-started.html) (or the equivalent environment in your cloud of choice)
 * `ACCESS_KEY` and `SECRET_KEY` for AWS. 

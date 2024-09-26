@@ -5,10 +5,14 @@
 To deploy Charmed OpenSearch, all you need to do is run the following command:
 
 ```shell
-juju deploy opensearch --channel 2/beta
+juju deploy opensearch -n 3 --channel 2/beta
 ```
 
-The command will fetch the charm from [Charmhub](https://charmhub.io/opensearch?channel=beta) and deploy it to the LXD cloud. This process can take several minutes depending on your machine. 
+[note]
+**Note:** The `-n` flag is optional and specifies the number of units to deploy. In this case, we are deploying three units of Charmed OpenSearch. We recommend deploying at least three units for high availability.
+[/note]
+
+The command will fetch the charm from [Charmhub](https://charmhub.io/opensearch?channel=beta) and deploy 3 units to the LXD cloud. This process can take several minutes depending on your machine. 
 
 You can track the progress by running:
 
@@ -22,17 +26,20 @@ When the application is ready, `juju status` will show something similar to the 
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:20:34Z
+tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:36:56Z
 
-App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         blocked      1  opensearch                2/beta         117  no       Missing TLS relation with this cluster.
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+App         Version  Status   Scale  Charm       Channel  Rev  Exposed  Message
+opensearch           blocked      3  opensearch  2/beta   117  no       Missing TLS relation with this cluster.
 
-Unit                         Workload  Agent  Machine  Public address  Ports  Message
-opensearch/0*                blocked   idle   0        10.214.176.107         Missing TLS relation with this cluster.
+Unit           Workload  Agent      Machine  Public address  Ports  Message
+opensearch/0*  blocked   idle       0        10.95.38.94            Missing TLS relation with this cluster.
+opensearch/1   blocked   executing  1        10.95.38.139           Missing TLS relation with this cluster.
+opensearch/2   blocked   idle       2        10.95.38.212           Missing TLS relation with this cluster.
 
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.107  juju-b0826b-0  ubuntu@22.04      Running
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
 ```
 
 To exit the `juju status` screen, enter `Ctrl + C`.
