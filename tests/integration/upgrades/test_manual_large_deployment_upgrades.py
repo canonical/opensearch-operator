@@ -67,9 +67,9 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
     failover_orchestrator_conf = {
         "cluster_name": "backup-test",
         "init_hold": True,
-        "roles": "voting_only",
+        "roles": "cluster_manager",
     }
-    data_hot_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data.hot"}
+    data_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data"}
 
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
@@ -95,7 +95,7 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
             num_units=WORKLOAD[APP_NAME],
             series=SERIES,
             channel=OPENSEARCH_CHANNEL,
-            config=data_hot_conf,
+            config=data_conf,
         ),
     )
 
