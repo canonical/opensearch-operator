@@ -117,13 +117,6 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
         f"{APP_NAME}:{REL_PEER}", f"{OPENSEARCH_FAILOVER_APP_NAME}:{REL_ORCHESTRATOR}"
     )
 
-    # Large deployment setup
-    await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
-    await ops_test.model.integrate("main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
-    await ops_test.model.integrate(
-        "failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
-    )
-
     # Charms except s3-integrator should be active
     await wait_until(
         ops_test,
