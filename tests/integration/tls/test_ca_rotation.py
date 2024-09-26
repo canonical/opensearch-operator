@@ -218,7 +218,7 @@ async def test_rollout_new_ca(ops_test: OpsTest, deploy_type) -> None:
     # using the SSL API requires authentication with app-admin cert and key
     leader_unit_ip = await get_leader_unit_ip(ops_test, app)
     url = f"https://{leader_unit_ip}:9200/_plugins/_security/api/ssl/certs"
-    admin_secret = await get_secret_by_label(ops_test, "opensearch-data:app:app-admin")
+    admin_secret = await get_secret_by_label(ops_test, f"{app}:app:app-admin")
 
     with open("admin.cert", "w") as cert:
         cert.write(admin_secret["cert"])
