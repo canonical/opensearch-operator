@@ -5,9 +5,7 @@ This guide goes shows you how to deploy Charmed OpenSearch on [LXD](https://ubun
 ## Prerequisites
 
 * Charmed OpenSearch VM Revision 108+
-* Canonical LXD 5.21 or higher
-* Ubuntu 20.04 LTS or higher
-* Fulfil the general [system requirements](/t/14565)
+* Fulfil the [system requirements](/t/14565)
 
 ## Summary
 * [Configure LXD](#configure-lxd)

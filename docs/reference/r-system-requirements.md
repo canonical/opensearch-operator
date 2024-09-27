@@ -5,7 +5,9 @@ The following are the minimum software and hardware requirements to run Charmed 
 ## Software
 
 * Ubuntu 22.04 LTS (Jammy) or later
-* Juju `v.3.1.7+` 
+* Juju `v.3.5.3+` 
+  * Older minor versions of Juju 3 may be compatible, but are not officially supported. Use at your own risk.
+* LXD `6.1+`
 
 ## Hardware
 
