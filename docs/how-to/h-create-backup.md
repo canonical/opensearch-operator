@@ -37,11 +37,9 @@ password: <pass>
 username: admin
 ```
 
-For more context about passwords during a restore, check How to restore an external backup.
-
 ## Create a backup
 
-Once you have a three-nodes cluster with configurations set for S3 storage, check that Charmed OpenSearch is active and idle with juju status.
+Once you have a three-node cluster with configurations set for S3 storage, check that Charmed OpenSearch is active and idle with juju status.
 
 Once Charmed OpenSearch is `active` and `idle`, you can create your first backup with the `create-backup` command:
 
