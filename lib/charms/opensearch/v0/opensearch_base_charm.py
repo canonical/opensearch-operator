@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
+    PERFORMANCE_PROFILE,
     AdminUser,
     AdminUserInitProgress,
     AdminUserNotConfigured,
@@ -49,7 +50,7 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
-from charms.opensearch.v0.models import DeploymentDescription, DeploymentType
+from charms.opensearch.v0.models import DeploymentDescription, DeploymentType, PerformanceType
 from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -354,6 +355,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # This is unlike to happen, unless the snap has been manually removed
                 logger.error("Service previously started but now misses the snap.")
                 return
+
+        # Store the current perf. profile we are applying
+        self.peers_data.put(
+            Scope.UNIT,
+            PERFORMANCE_PROFILE,
+            PerformanceType(self._charm.config.get(PERFORMANCE_PROFILE, "production")),
+        )
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():
@@ -676,6 +684,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.plugin_manager.check_plugin_manager_ready():
             return
 
+        if self.upgrade_in_progress:
+            # Deferring right now is too late anyways
+            logger.warning(
+                "Changing config during an upgrade is not supported. The charm may be in a broken, "
+                "unrecoverable state"
+            )
+            event.defer()
+            return
+
         try:
             if not self.plugin_manager.check_plugin_manager_ready():
                 raise OpenSearchNotFullyReadyError()
@@ -683,15 +700,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
 
-            if self.plugin_manager.run():
-                if self.upgrade_in_progress:
-                    logger.warning(
-                        "Changing config during an upgrade is not supported. The charm may be in a broken, "
-                        "unrecoverable state"
-                    )
-                    event.defer()
-                    return
+            restart_requested = self.plugin_manager.run()
+            if (
+                PerformanceType(self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE))
+                != self.opensearch.perf_profile
+            ):
+                # If we have a running service, and our profile changed
+                # then we need a restart to apply the new profile
+                self.opensearch_config.apply_performance_profile(self.opensearch.perf_profile)
+                self.peers_data.put(Scope.UNIT, PERFORMANCE_PROFILE, self.opensearch.perf_profile)
+                restart_requested = self.opensearch.is_service_started()
 
+            if restart_requested:
                 self._restart_opensearch_event.emit()
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):

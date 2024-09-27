@@ -69,6 +69,16 @@ class OpenSearchConfig:
             "-Djdk.tls.client.protocols=TLSv1.2",
         )
 
+        self._opensearch.config.append(
+            self.JVM_OPTIONS,
+            f"-Xms{str(self._opensearch.perf_profile.heap_size)}",
+        )
+
+        self._opensearch.config.append(
+            self.JVM_OPTIONS,
+            f"-Xmx{str(self._opensearch.perf_profile.heap_size)}",
+        )
+
     def set_admin_tls_conf(self, secrets: Dict[str, any]):
         """Configures the admin certificate."""
         self._opensearch.config.put(

@@ -5,8 +5,9 @@
 import json
 from abc import ABC
 from datetime import datetime
+from enum import Enum
 from hashlib import md5
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
@@ -151,6 +152,14 @@ class DeploymentType(BaseStrEnum):
     MAIN_ORCHESTRATOR = "main-orchestrator"
     FAILOVER_ORCHESTRATOR = "failover-orchestrator"
     OTHER = "other"
+
+
+class PerformanceType(BaseStrEnum):
+    """Performance types available."""
+
+    PRODUCTION = "production"
+    STAGING = "staging"
+    TESTING = "testing"
 
 
 class StartMode(BaseStrEnum):
@@ -346,3 +355,208 @@ class PeerClusterOrchestrators(Model):
         self.main_app = self.failover_app
         self.main_rel_id = self.failover_rel_id
         self.delete("failover")
+
+
+class ByteUnit(Enum):
+    """As per docs, Java uses the byte format.
+
+    Converts the *B and *iB to the same raw values. For example, can be written as:
+    - 6m: 6 * 1024 * 1024
+    - 6144k: 6144 * 1024
+    - 6291456: 6291456 bytes
+
+    More info: https://dev.java/learn/jvm/tools/core/java/#overview
+    """
+
+    B = 1  # noqa: N815
+    kB = 1024  # noqa: N815
+    mB = 1024 * kB  # noqa: N815
+    gB = 1024 * mB  # noqa: N815
+
+    @staticmethod
+    def get(name: str) -> int:
+        """Convert the value to the required unit."""
+        val = name.lower()
+        if val == "kb" or val == "k":
+            return ByteUnit.kB
+        if val == "mb" or val == "m":
+            return ByteUnit.mB
+        if val == "gb" or val == "g":
+            return ByteUnit.gB
+        return ByteUnit.B
+
+    @staticmethod
+    def to_int(value: tuple[str, str]) -> int:
+        """Convert the value to the bytes unit."""
+        unit = ByteUnit.get(value[1]).value
+        return int(value[0]) * unit
+
+    @staticmethod
+    def unit(value: int) -> Tuple[int, Any]:
+        """Return the next value of the unit."""
+        inter_value = value
+        for u in [ByteUnit.B, ByteUnit.kB, ByteUnit.mB, ByteUnit.gB]:
+            if inter_value < 1024:
+                break
+            inter_value = value // 1024
+        return (inter_value, u)
+
+
+class JavaByteSize:
+    """Java Byte Size tuple representation."""
+    def __init__(self, value: str | int | None = None, unit: str | ByteUnit | None = None):
+        """Constructor of JavaByteSize.
+
+        Args:
+            value: the value of the size
+            unit: the unit of the size
+        """
+        if not value and not unit:
+            self.value = 0
+            self.unit = ByteUnit.B
+            return
+
+        u = unit
+        if isinstance(unit, str):
+            u = ByteUnit.get(unit)
+        self.value, self.unit = ByteUnit.unit(int(value) * u.value)
+
+    def percent(self, percentage: float) -> int:
+        """Return the percentage of the JavaByteSize."""
+        return JavaByteSize(str(int(self.value * percentage)), self.unit)
+
+    def __eq__(self, other: Any) -> bool:
+        """Check if the JavaByteSize is equal to the other value."""
+        if not isinstance(other, JavaByteSize):
+            raise TypeError("Cannot compare JavaByteSize with other types.")
+        return ByteUnit.to_int((self.value, self.unit)) == ByteUnit.to_int(
+            (other.value, other.unit)
+        )
+
+    def __lt__(self, other: Any) -> bool:
+        """Check if the JavaByteSize is less than the other value."""
+        if not isinstance(other, JavaByteSize):
+            raise TypeError("Cannot compare JavaByteSize with other types.")
+        return ByteUnit.to_int((self.value, self.unit)) < ByteUnit.to_int(
+            (other.value, other.unit)
+        )
+
+    def __gt__(self, other: Any) -> bool:
+        """Check if the JavaByteSize is greater than the other value."""
+        if not isinstance(other, JavaByteSize):
+            raise TypeError("Cannot compare JavaByteSize with other types.")
+        return ByteUnit.to_int((self.value, self.unit)) > ByteUnit.to_int(
+            (other.value, other.unit)
+        )
+
+    def __str__(self) -> str:
+        """Return the string representation of the JavaByteSize."""
+        return f"{self.value}{self.unit[:1]}"
+
+
+class OpenSearchPerfProfile(Model):
+    """Generates an immutable description of the performance profile."""
+    class Config:
+        arbitrary_types_allowed = True
+
+    typ: PerformanceType
+    heap_size: JavaByteSize|None = None
+    opensearch_yml: Dict[str, str] = {}
+    charmed_index_template: Dict[str, str] = {}
+    charmed_component_templates: Dict[str, str] = {}
+
+    @classmethod
+    def from_str(cls, input_str: str):
+        """Create a new instance of this class from a stringified json/dict repr."""
+        return cls(typ=input_str)
+
+    @root_validator
+    def set_options(cls, values):  # noqa: N805
+        """Generate the attributes depending on the input."""
+        heap = JavaByteSize(
+            OpenSearchPerfProfile.meminfo()["MemTotal"][0],
+            OpenSearchPerfProfile.meminfo()["MemTotal"][1],
+        )
+        val = values["typ"]
+        if isinstance(val, str):
+            val = PerformanceType(val)
+
+        if val == PerformanceType.PRODUCTION:
+            values["heap_size"] = heap.percent(0.25)
+
+        if val == PerformanceType.STAGING:
+            values["heap_size"] = heap.percent(0.1)
+
+        if val == PerformanceType.TESTING:
+            values["heap_size"] = JavaByteSize("1", "gB")
+
+        if val != PerformanceType.TESTING:
+            values["opensearch_yml"] = {"indices.memory.index_buffer_size": "25%"}
+
+            values["charmed_index_template"] = {
+                "charmed-index-tpl": {
+                    "index_patterns": ["*"],
+                    "template": {
+                        "settings": {
+                            "number_of_replicas": "1-all",
+                        },
+                    },
+                },
+            }
+
+            values["charmed_component_templates"] = {
+                "charmed-default-tpl": {
+                    "template": {
+                        "settings": {
+                            "number_of_replicas": "1-all",
+                            "index": {
+                                "codec": "zstd_no_dict",
+                            },
+                        },
+                    },
+                },
+                "charmed-vector-tpl": {
+                    "template": {
+                        "settings": {
+                            "number_of_replicas": "1-all",
+                            "index": {
+                                "codec": "default",
+                            },
+                        },
+                    },
+                },
+                "charmed-ingest-tpl": {
+                    "template": {
+                        "settings": {
+                            "number_of_replicas": "1-all",
+                            "index": {
+                                "codec": "zstd_no_dict",
+                                "flush_threshold_size": (
+                                    str(values["heap_size"].percent(0.25))
+                                    if values["heap_size"].percent(0.25)
+                                    > JavaByteSize("512", "mB")
+                                    else "512m"
+                                ),
+                            },
+                        },
+                    },
+                },
+            }
+
+        return values
+
+    @staticmethod
+    def meminfo() -> dict[str, JavaByteSize]:
+        """Read the /proc/meminfo file and return the values."""
+        with open("/proc/meminfo") as f:
+            meminfo = f.read()
+        return {
+            line.split()[0][:-1].lower(): ByteUnit(
+                (
+                    line.split()[1],
+                    line.split()[2],
+                )
+            )
+            for line in meminfo.split("\n")
+            if line
+        }
