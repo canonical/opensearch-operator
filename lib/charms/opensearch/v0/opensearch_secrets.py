@@ -40,7 +40,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 
 if TYPE_CHECKING:
@@ -368,3 +368,8 @@ class OpenSearchSecrets(Object, RelationDataStore):
         self._remove_juju_secret(scope, key)
 
         logging.debug(f"Deleted secret {scope}:{key}")
+
+    def get_secret_id(self, scope: Scope, key: str) -> Optional[str]:
+        """Get the secret ID from the cache."""
+        label = self.label(scope, key)
+        return self._charm.peers_data.get(scope, label)

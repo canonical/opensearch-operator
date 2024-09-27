@@ -39,6 +39,7 @@ from charms.opensearch.v0.models import (
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
+from charms.opensearch.v0.opensearch_relation_peer_cluster import rel_data_from_secret
 from ops import BlockedStatus
 from shortuuid import ShortUUID
 
@@ -522,10 +523,10 @@ class OpenSearchPeerClustersManager:
         rel = self._charm.model.get_relation(
             PeerClusterOrchestratorRelationName, orchestrators.main_rel_id
         )
-        if not (data := rel.data[rel.app].get("data")):
+        if not (secret_id := rel.data[rel.app].get("data")):
             return None
 
-        return PeerClusterRelData.from_str(data)
+        return rel_data_from_secret(self._charm, secret_id)
 
     def _pre_validate_roles_change(self, new_roles: List[str], prev_roles: List[str]):
         """Validate that the config changes of roles are allowed to happen."""
