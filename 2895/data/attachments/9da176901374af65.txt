@@ -1,0 +1,186 @@
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:490 Remove s3-credentials relation
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:502 Re-add s3-credentials relation
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [executing] maintenance: Configuring backup service...
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:511 Syncing credentials for aws
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  main/0 [idle] active: 
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.13.107.232:9200/_recovery?human
+[32mINFO    [0m integration.ha.helpers:helpers.py:247 Continuous writes result: namespace(max_stored_id=338, count=339, last_expected_id=338)
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.13.107.232:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: POST -- https://10.13.107.232:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.13.107.232:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.13.107.232:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: POST -- https://10.13.107.232:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.13.107.232:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:591 Testing restore for series_index - original count pre-restore: 339, and now, new count: 309
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: POST -- https://10.13.107.232:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.13.107.232:9200/series_index/_count
+[32mINFO    [0m integration.ha.conftest:conftest.py:39 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:08:17Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           active      2  opensearch                                 0  no       
+main                               active      1  opensearch                                 2  no       
+opensearch                         active      1  opensearch                                 1  no       
+s3-integrator                      active      1  s3-integrator             latest/edge     57  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/0                   active    idle   2        10.13.107.241   9200/tcp  
+failover/1*                  active    idle   3        10.13.107.125   9200/tcp  
+main/0*                      active    idle   4        10.13.107.232   9200/tcp  
+opensearch/0*                active    idle   5        10.13.107.18    9200/tcp  
+s3-integrator/0*             active    idle   1        10.13.107.71              
+self-signed-certificates/0*  active    idle   0        10.13.107.244             
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.13.107.244  juju-c92695-0  ubuntu@22.04      Running
+1        started  10.13.107.71   juju-c92695-1  ubuntu@22.04      Running
+2        started  10.13.107.241  juju-c92695-2  ubuntu@22.04      Running
+3        started  10.13.107.125  juju-c92695-3  ubuntu@22.04      Running
+4        started  10.13.107.232  juju-c92695-4  ubuntu@22.04      Running
+5        started  10.13.107.18   juju-c92695-5  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 01:54:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:54:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 01:54:55 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:54:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:54:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:54:57 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:55:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:55:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-main-0: 01:55:08 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 01:55:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:55:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:55:10 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:55:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:55:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-1: 01:55:10 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:55:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:55:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-0: 01:55:13 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-main-0: 01:56:17 ERROR unit.main/0.juju-log certificates:13: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-main-0: 01:56:23 ERROR unit.main/0.juju-log certificates:13: Cannot connect to the OpenSearch server...
+unit-main-0: 01:56:23 ERROR unit.main/0.juju-log certificates:13: Cannot connect to the OpenSearch server...
+unit-main-0: 01:56:24 ERROR unit.main/0.juju-log certificates:13: Cannot connect to the OpenSearch server...
+unit-main-0: 01:56:27 ERROR unit.main/0.juju-log certificates:13: Cannot connect to the OpenSearch server...
+unit-main-0: 01:56:30 ERROR unit.main/0.juju-log certificates:13: Cannot connect to the OpenSearch server...
+unit-main-0: 01:56:33 ERROR unit.main/0.juju-log certificates:13: Cannot connect to the OpenSearch server...
+unit-main-0: 01:56:36 ERROR unit.main/0.juju-log certificates:13: Cannot connect to the OpenSearch server...
+unit-failover-0: 01:57:05 ERROR unit.failover/0.juju-log certificates:14: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-failover-1: 01:57:07 ERROR unit.failover/1.juju-log certificates:14: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-failover-0: 01:57:09 ERROR unit.failover/0.juju-log Cannot connect to the OpenSearch server...
+unit-failover-0: 01:57:11 ERROR unit.failover/0.juju-log Cannot connect to the OpenSearch server...
+unit-failover-1: 01:57:12 ERROR unit.failover/1.juju-log opensearch-peers:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:57:14 ERROR unit.opensearch/0.juju-log certificates:15: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-failover-1: 01:57:14 ERROR unit.failover/1.juju-log Cannot connect to the OpenSearch server...
+unit-failover-1: 01:57:15 ERROR unit.failover/1.juju-log Cannot connect to the OpenSearch server...
+unit-failover-1: 01:57:16 ERROR unit.failover/1.juju-log opensearch-peers:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:57:18 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:57:19 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:57:21 ERROR unit.opensearch/0.juju-log peer-cluster:12: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:57:22 ERROR unit.opensearch/0.juju-log opensearch-peers:7: Cannot connect to the OpenSearch server...
+unit-failover-1: 01:57:30 ERROR unit.failover/1.juju-log opensearch-peers:3: Cannot connect to the OpenSearch server...
+unit-failover-1: 01:57:32 ERROR unit.failover/1.juju-log opensearch-peers:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:57:48 ERROR unit.opensearch/0.juju-log peer-cluster:12: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:57:49 ERROR unit.opensearch/0.juju-log peer-cluster:12: Cannot connect to the OpenSearch server...
+unit-main-0: 02:00:47 ERROR unit.main/0.juju-log s3-credentials:16: Plugin repository-s3 missing: ['access-key', 'secret-key']
+unit-main-0: 02:00:50 ERROR unit.main/0.juju-log s3-credentials:16: Plugin repository-s3 missing: ['access-key', 'secret-key']
+unit-main-0: 02:00:52 ERROR unit.main/0.juju-log s3-credentials:16: Plugin repository-s3 missing: ['access-key', 'secret-key']
+unit-main-0: 02:01:08 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state repository s3 is unreachable
+unit-opensearch-0: 02:01:19 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "9bc5aefe-059e-43c0-84dd-adca6ec92695:r#18#s3-integrator": settings 9bc5aefe-059e-43c0-84dd-adca6ec92695:r#18#s3-integrator not found (not found)
+unit-main-0: 02:01:24 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state repository s3 is unreachable
+unit-opensearch-0: 02:01:48 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-1: 02:01:49 ERROR unit.failover/1.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:01:50 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-1: 02:01:50 ERROR unit.failover/1.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:01:51 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-1: 02:01:52 ERROR unit.failover/1.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:01:53 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-1: 02:01:53 ERROR unit.failover/1.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:01:54 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-1: 02:01:54 ERROR unit.failover/1.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:01:56 ERROR unit.opensearch/0.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-failover-1: 02:01:56 ERROR unit.failover/1.juju-log /snap/opensearch/current/usr/share/opensearch/bin/opensearch-keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:173 Cleaning backups from cloud buckets
