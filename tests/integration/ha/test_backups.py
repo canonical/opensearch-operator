@@ -37,9 +37,9 @@ from ..ha.continuous_writes import ContinuousWrites
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
 from ..helpers import (
     APP_NAME,
+    CONFIG_OPTS,
     MODEL_CONFIG,
     SERIES,
-    CONFIG_OPTS,
     get_leader_unit_id,
     get_leader_unit_ip,
     http_request,
@@ -304,7 +304,11 @@ async def test_large_deployment_build_and_deploy(
             config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm, application_name=APP_NAME, num_units=1, series=SERIES, config=data_hot_conf | CONFIG_OPTS
+            my_charm,
+            application_name=APP_NAME,
+            num_units=1,
+            series=SERIES,
+            config=data_hot_conf | CONFIG_OPTS,
         ),
     )
 
