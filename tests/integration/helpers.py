@@ -37,6 +37,8 @@ IDLE_PERIOD = 75
 
 TARBALL_INSTALL_CERTS_DIR = "/etc/opensearch/config/certificates"
 
+CONFIG_OPTS = {"profile": "testing"}
+
 MODEL_CONFIG = {
     "logging-config": "<root>=INFO;unit=DEBUG",
     "update-status-hook-interval": "5m",

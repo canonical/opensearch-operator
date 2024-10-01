@@ -39,6 +39,7 @@ from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    CONFIG_OPTS,
     get_leader_unit_id,
     get_leader_unit_ip,
     http_request,
@@ -235,7 +236,7 @@ async def test_small_deployment_build_and_deploy(
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
-        ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
+        ops_test.model.deploy(my_charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -293,17 +294,17 @@ async def test_large_deployment_build_and_deploy(
             application_name="main",
             num_units=1,
             series=SERIES,
-            config=main_orchestrator_conf,
+            config=main_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             my_charm,
             application_name="failover",
             num_units=2,
             series=SERIES,
-            config=failover_orchestrator_conf,
+            config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm, application_name=APP_NAME, num_units=1, series=SERIES, config=data_hot_conf
+            my_charm, application_name=APP_NAME, num_units=1, series=SERIES, config=data_hot_conf | CONFIG_OPTS
         ),
     )
 
