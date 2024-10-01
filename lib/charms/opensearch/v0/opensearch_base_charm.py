@@ -50,7 +50,11 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
-from charms.opensearch.v0.models import DeploymentDescription, DeploymentType, PerformanceType
+from charms.opensearch.v0.models import (
+    DeploymentDescription,
+    DeploymentType,
+    PerformanceType,
+)
 from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution

@@ -27,12 +27,7 @@ from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
-from charms.opensearch.v0.models import (
-    App,
-    OpenSearchPerfProfile,
-    PerformanceType,
-    StartMode,
-)
+from charms.opensearch.v0.models import App, OpenSearchPerfProfile, StartMode
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
@@ -103,8 +98,8 @@ class OpenSearchDistribution(ABC):
         self.config = YamlConfigSetter(base_path=self.paths.conf)
         self._charm = charm
         self._peer_relation_name = peer_relation_name
-        self.perf_profile = OpenSearchPerfProfile(
-            typ=PerformanceType(self._charm.config.get(PERFORMANCE_PROFILE, "production")),
+        self.perf_profile = OpenSearchPerfProfile.from_str(
+            self._charm.config.get(PERFORMANCE_PROFILE, "production")
         )
 
     def install(self):

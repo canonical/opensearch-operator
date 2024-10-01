@@ -3,6 +3,7 @@
 
 """Cluster-related data structures / model classes."""
 import json
+import math
 from abc import ABC
 from datetime import datetime
 from enum import Enum
@@ -386,25 +387,52 @@ class ByteUnit(Enum):
         return ByteUnit.B
 
     @staticmethod
-    def to_int(value: tuple[str, str]) -> int:
+    def previous(val):
+        """Return the previous value of the unit."""
+        if val == ByteUnit.kB:
+            return ByteUnit.B
+        if val == ByteUnit.mB:
+            return ByteUnit.kB
+        if val == ByteUnit.gB:
+            return ByteUnit.mB
+        return ByteUnit.B
+
+    @staticmethod
+    def to_int(value: tuple[str, any]) -> int:
         """Convert the value to the bytes unit."""
+        if isinstance(value[1], ByteUnit):
+            return value[0] * value[1].value
+
         unit = ByteUnit.get(value[1]).value
         return int(value[0]) * unit
 
     @staticmethod
-    def unit(value: int) -> Tuple[int, Any]:
-        """Return the next value of the unit."""
-        inter_value = value
+    def unit(value: int | float) -> Tuple[float, Any]:
+        """Return the next value of the unit.
+
+        This value must be an integer. If we have a decimal part, then we should round it up.
+        """
+        inter_value = float(value)
         for u in [ByteUnit.B, ByteUnit.kB, ByteUnit.mB, ByteUnit.gB]:
             if inter_value < 1024:
                 break
-            inter_value = value // 1024
-        return (inter_value, u)
+            inter_value /= 1024
+
+        # Now, we calculate the rounding
+        if u == ByteUnit.B:
+            # We are already in the lowest unit possible, return a rounded value
+            return (int(inter_value), u)
+        # Check if we have a decimal part, if yes, then we multiply the value by 1024
+        dec, _ = math.modf(inter_value)
+        if dec != 0.0:
+            return (int(inter_value * 1024), ByteUnit.previous(u))
+        return (int(inter_value), u)
 
 
 class JavaByteSize:
     """Java Byte Size tuple representation."""
-    def __init__(self, value: str | int | None = None, unit: str | ByteUnit | None = None):
+
+    def __init__(self, value: str | float | int | None = None, unit: str | ByteUnit | None = None):
         """Constructor of JavaByteSize.
 
         Args:
@@ -419,11 +447,12 @@ class JavaByteSize:
         u = unit
         if isinstance(unit, str):
             u = ByteUnit.get(unit)
-        self.value, self.unit = ByteUnit.unit(int(value) * u.value)
+        self.value, self.unit = ByteUnit.unit(float(value) * u.value)
 
     def percent(self, percentage: float) -> int:
         """Return the percentage of the JavaByteSize."""
-        return JavaByteSize(str(int(self.value * percentage)), self.unit)
+        val = ByteUnit.to_int((self.value, self.unit)) * percentage
+        return JavaByteSize(val, ByteUnit.B)
 
     def __eq__(self, other: Any) -> bool:
         """Check if the JavaByteSize is equal to the other value."""
@@ -451,16 +480,19 @@ class JavaByteSize:
 
     def __str__(self) -> str:
         """Return the string representation of the JavaByteSize."""
-        return f"{self.value}{self.unit[:1]}"
+        return f"{self.value}{str(self.unit.name.lower())[:1]}"
 
 
 class OpenSearchPerfProfile(Model):
     """Generates an immutable description of the performance profile."""
+
     class Config:
+        """Pydantic config for this model."""
+
         arbitrary_types_allowed = True
 
     typ: PerformanceType
-    heap_size: JavaByteSize|None = None
+    heap_size: JavaByteSize | None = None
     opensearch_yml: Dict[str, str] = {}
     charmed_index_template: Dict[str, str] = {}
     charmed_component_templates: Dict[str, str] = {}
@@ -482,10 +514,18 @@ class OpenSearchPerfProfile(Model):
             val = PerformanceType(val)
 
         if val == PerformanceType.PRODUCTION:
-            values["heap_size"] = heap.percent(0.25)
+            values["heap_size"] = (
+                heap.percent(0.25)
+                if heap.percent(0.25) > JavaByteSize("1", "g")
+                else JavaByteSize("1", "g")
+            )
 
         if val == PerformanceType.STAGING:
-            values["heap_size"] = heap.percent(0.1)
+            values["heap_size"] = (
+                heap.percent(0.1)
+                if heap.percent(0.1) > JavaByteSize("1", "g")
+                else JavaByteSize("1", "g")
+            )
 
         if val == PerformanceType.TESTING:
             values["heap_size"] = JavaByteSize("1", "gB")
@@ -551,11 +591,9 @@ class OpenSearchPerfProfile(Model):
         with open("/proc/meminfo") as f:
             meminfo = f.read()
         return {
-            line.split()[0][:-1].lower(): ByteUnit(
-                (
-                    line.split()[1],
-                    line.split()[2],
-                )
+            line.split()[0][:-1]: (
+                int(line.split()[1]),
+                ByteUnit.get(line.split()[2] if len(line.split()) > 2 else "b"),
             )
             for line in meminfo.split("\n")
             if line
