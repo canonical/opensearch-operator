@@ -85,6 +85,9 @@ class OpenSearchConfig:
             regex=True,
         )
 
+        for key, val in profile.opensearch_yml.items():
+            self._opensearch.config.put(self.CONFIG_YML, key, val)
+
     def set_admin_tls_conf(self, secrets: Dict[str, any]):
         """Configures the admin certificate."""
         self._opensearch.config.put(

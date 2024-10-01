@@ -114,5 +114,5 @@ class TestPerformanceProfile(unittest.TestCase):
             mock_write = m_open.return_value.__enter__.return_value.write = MagicMock()
             self.charm.opensearch_config.apply_performance_profile(profile=self.test_profile)
 
-            mock_write.assert_any_call('-Xms3840m\n-Xmx1g')
-            mock_write.assert_any_call('-Xms1g\n-Xmx3840m')
+            mock_write.assert_any_call("-Xms3840m\n-Xmx1g")
+            mock_write.assert_any_call("-Xms1g\n-Xmx3840m")

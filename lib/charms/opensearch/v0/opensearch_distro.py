@@ -27,7 +27,12 @@ from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
-from charms.opensearch.v0.models import App, OpenSearchPerfProfile, StartMode
+from charms.opensearch.v0.models import (
+    App,
+    OpenSearchPerfProfile,
+    PerformanceType,
+    StartMode,
+)
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
@@ -400,6 +405,35 @@ class OpenSearchDistribution(ABC):
     def _build_paths(self) -> Paths:
         """Build the Paths object."""
         pass
+
+    def apply_perf_templates_if_needed(self):  # noqa: C901
+        """Apply performance templates if needed."""
+        if self.perf_profile.typ == PerformanceType.TESTING:
+            # We try to remove the index and components' templates
+            for endpoint in [
+                "/_index_template/charmed-index-tpl",
+                "/_component_template/charmed-default-tpl",
+                "/_component_template/charmed-vector-tpl",
+                "/_component_template/charmed-ingest-tpl",
+            ]:
+                try:
+                    self.request("DELETE", endpoint)
+                except OpenSearchHttpError:
+                    pass
+            # Nothing to do anymore
+            return
+
+        for idx, template in self.perf_profile.charmed_index_template.items():
+            try:
+                self.request("POST", f"/_index_template/{idx}", template)
+            except OpenSearchHttpError as e:
+                logger.error(f"Failed to apply index template: {e}")
+
+        for idx, template in self.perf_profile.charmed_component_templates.items():
+            try:
+                self.request("POST", f"/_component_template/{idx}", template)
+            except OpenSearchHttpError as e:
+                logger.error(f"Failed to apply component template: {e}")
 
     def _set_env_variables(self):
         """Set the necessary environment variables."""

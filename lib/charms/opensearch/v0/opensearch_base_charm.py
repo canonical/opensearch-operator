@@ -53,6 +53,7 @@ from charms.opensearch.v0.helper_security import (
 from charms.opensearch.v0.models import (
     DeploymentDescription,
     DeploymentType,
+    OpenSearchPerfProfile,
     PerformanceType,
 )
 from charms.opensearch.v0.opensearch_backups import backup
@@ -709,9 +710,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 PerformanceType(self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE))
                 != self.opensearch.perf_profile
             ):
+                self.opensearch.perf_profile = OpenSearchPerfProfile.from_str(
+                    self._charm.config.get(PERFORMANCE_PROFILE)
+                )
                 # If we have a running service, and our profile changed
                 # then we need a restart to apply the new profile
                 self.opensearch_config.apply_performance_profile(self.opensearch.perf_profile)
+
+                # Configure templates if needed
+                self.opensearch.apply_perf_templates_if_neeeded()
+
                 self.peers_data.put(Scope.UNIT, PERFORMANCE_PROFILE, self.opensearch.perf_profile)
                 restart_requested = self.opensearch.is_service_started()
 
