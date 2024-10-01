@@ -509,6 +509,7 @@ class OpenSearchPerfProfile(Model):
             OpenSearchPerfProfile.meminfo()["MemTotal"][0],
             OpenSearchPerfProfile.meminfo()["MemTotal"][1],
         )
+
         val = values["typ"]
         if isinstance(val, str):
             val = PerformanceType(val)

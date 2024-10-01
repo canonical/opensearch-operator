@@ -89,7 +89,7 @@ def test_perf_profile_5g():
 JVM_OPTIONS = """-Xms1g
 -Xmx1g"""
 
-MEMINFO = """MemTotal:        15360 kB
+MEMINFO = """MemTotal:        15360 mB
 MemFree:          1234 kB
 NotValid:         0
 """
@@ -105,12 +105,14 @@ class TestPerformanceProfile(unittest.TestCase):
             self.harness.begin()
             self.charm = self.harness.charm
             self.opensearch = self.charm.opensearch
+            self.test_profile = OpenSearchPerfProfile.from_str("production")
 
     @patch("charms.opensearch.v0.helper_conf_setter.exists")
     def test_update_jvm_options(self, _):
         """Test the update of the JVM options."""
-        with patch("builtins.open", mock_open(read_data=MEMINFO)) as m_open:
+        with patch("builtins.open", mock_open(read_data=JVM_OPTIONS)) as m_open:
             mock_write = m_open.return_value.__enter__.return_value.write = MagicMock()
-            self.charm.opensearch_config.apply_performance_profile("production")
-            mock_write.assert_any_call("\n-Xms1g")
-            mock_write.assert_any_call("\n-Xmx1g")
+            self.charm.opensearch_config.apply_performance_profile(profile=self.test_profile)
+
+            mock_write.assert_any_call('-Xms3840m\n-Xmx1g')
+            mock_write.assert_any_call('-Xms1g\n-Xmx3840m')

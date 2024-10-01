@@ -71,14 +71,18 @@ class OpenSearchConfig:
 
     def apply_performance_profile(self, profile: OpenSearchPerfProfile):
         """Apply the performance profile to the opensearch config."""
-        self._opensearch.config.append(
+        self._opensearch.config.replace(
             self.JVM_OPTIONS,
+            "-Xms[0-9]+[kmgKMG]",
             f"-Xms{str(profile.heap_size)}",
+            regex=True,
         )
 
-        self._opensearch.config.append(
+        self._opensearch.config.replace(
             self.JVM_OPTIONS,
+            "-Xmx[0-9]+[kmgKMG]",
             f"-Xmx{str(profile.heap_size)}",
+            regex=True,
         )
 
     def set_admin_tls_conf(self, secrets: Dict[str, any]):
