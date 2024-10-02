@@ -4,6 +4,7 @@
 """Peer clusters relation related classes for OpenSearch."""
 import json
 import logging
+from hashlib import sha1
 from typing import TYPE_CHECKING, Any, Dict, List, MutableMapping, Optional, Union
 
 from charms.opensearch.v0.constants_charm import (
@@ -313,7 +314,17 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             # there is no error to broadcast - we clear any previously broadcasted error
             if isinstance(rel_data, PeerClusterRelData):
                 self.delete_from_rel("error_data", rel_id=rel_id)
-                self.put_in_rel(data={"data": rel_data_secret.id}, rel_id=rel_id)
+                # we add the hash of the rel_data to only emit a change event
+                # if the data has actually changed
+                self.put_in_rel(
+                    data={
+                        "data": rel_data_secret.id,
+                        "rel_data_hash": sha1(
+                            json.dumps(rel_data.to_dict(), sort_keys=True).encode()
+                        ).hexdigest(),
+                    },
+                    rel_id=rel_id,
+                )
                 rel_data_secret.grant(self.get_rel(rel_id=rel_id))
 
             else:
