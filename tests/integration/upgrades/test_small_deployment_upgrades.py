@@ -14,42 +14,23 @@ from ..helpers import (
     IDLE_PERIOD,
     MODEL_CONFIG,
     SERIES,
+    get_leader_unit_id,
     run_action,
     set_watermark,
 )
-from ..helpers_deployments import get_application_units, wait_until
+from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
-from .helpers import assert_upgrade_to_local, refresh
+from .helpers import (
+    OPENSEARCH_CHANNEL,
+    OPENSEARCH_ORIGINAL_CHARM_NAME,
+    STARTING_VERSION,
+    UPGRADE_INITIAL_VERSION,
+    VERSION_TO_REVISION,
+    assert_upgrade_to_local,
+    refresh,
+)
 
 logger = logging.getLogger(__name__)
-
-
-OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
-OPENSEARCH_CHANNEL = "2/edge"
-
-
-STARTING_VERSION = "2.15.0"
-
-
-VERSION_TO_REVISION = {
-    STARTING_VERSION: 144,
-    "2.16.0": 160,
-}
-
-
-FROM_VERSION_PREFIX = "from_v{}_to_local"
-
-
-UPGRADE_INITIAL_VERSION = [
-    (
-        pytest.param(
-            version,
-            id=FROM_VERSION_PREFIX.format(version),
-            marks=pytest.mark.group(FROM_VERSION_PREFIX.format(version)),
-        )
-    )
-    for version in VERSION_TO_REVISION.keys()
-]
 
 
 charm = None
@@ -114,8 +95,7 @@ async def test_upgrade_between_versions(
 ) -> None:
     """Test upgrade from upstream to currently locally built version."""
     app = (await app_name(ops_test)) or APP_NAME
-    units = await get_application_units(ops_test, app)
-    leader_id = [u.id for u in units if u.is_leader][0]
+    leader_id = get_leader_unit_id(ops_test, app)
 
     for version, rev in VERSION_TO_REVISION.items():
         if version == STARTING_VERSION:
@@ -212,8 +192,7 @@ async def test_upgrade_rollback_from_local(
 ) -> None:
     """Test upgrade and rollback to each version available."""
     app = (await app_name(ops_test)) or APP_NAME
-    units = await get_application_units(ops_test, app)
-    leader_id = [u.id for u in units if u.is_leader][0]
+    leader_id = await get_leader_unit_id(ops_test, app)
 
     action = await run_action(
         ops_test,
