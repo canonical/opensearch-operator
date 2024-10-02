@@ -20,7 +20,7 @@ def test_perf_profile_15g():
 
         profile = OpenSearchPerfProfile.from_str("production")
         assert profile.typ == PerformanceType.PRODUCTION
-        assert str(profile.heap_size) == "3840m"
+        assert str(profile.heap_size) == "7680m"
         assert profile.opensearch_yml == {"indices.memory.index_buffer_size": "25%"}
         assert profile.charmed_index_template == {
             "charmed-index-tpl": {
@@ -58,7 +58,7 @@ def test_perf_profile_5g():
 
         profile = OpenSearchPerfProfile.from_str("production")
         assert profile.typ == PerformanceType.PRODUCTION
-        assert str(profile.heap_size) == "1280m"
+        assert str(profile.heap_size) == "2560m"
         assert profile.opensearch_yml == {"indices.memory.index_buffer_size": "25%"}
         assert profile.charmed_index_template == {
             "charmed-index-tpl": {

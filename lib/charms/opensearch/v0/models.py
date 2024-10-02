@@ -516,15 +516,15 @@ class OpenSearchPerfProfile(Model):
 
         if val == PerformanceType.PRODUCTION:
             values["heap_size"] = (
-                heap.percent(0.25)
-                if heap.percent(0.25) > JavaByteSize("1", "g")
+                heap.percent(0.5)
+                if heap.percent(0.5) > JavaByteSize("1", "g")
                 else JavaByteSize("1", "g")
             )
 
         if val == PerformanceType.STAGING:
             values["heap_size"] = (
-                heap.percent(0.1)
-                if heap.percent(0.1) > JavaByteSize("1", "g")
+                heap.percent(0.2)
+                if heap.percent(0.2) > JavaByteSize("1", "g")
                 else JavaByteSize("1", "g")
             )
 
@@ -539,7 +539,7 @@ class OpenSearchPerfProfile(Model):
                     "index_patterns": ["*"],
                     "template": {
                         "settings": {
-                            "number_of_replicas": "1-all",
+                            "number_of_replicas": "1",
                         },
                     },
                 },
@@ -549,7 +549,6 @@ class OpenSearchPerfProfile(Model):
                 "charmed-default-tpl": {
                     "template": {
                         "settings": {
-                            "number_of_replicas": "1-all",
                             "index": {
                                 "codec": "zstd_no_dict",
                             },
@@ -559,7 +558,6 @@ class OpenSearchPerfProfile(Model):
                 "charmed-vector-tpl": {
                     "template": {
                         "settings": {
-                            "number_of_replicas": "1-all",
                             "index": {
                                 "codec": "default",
                             },
@@ -569,7 +567,6 @@ class OpenSearchPerfProfile(Model):
                 "charmed-ingest-tpl": {
                     "template": {
                         "settings": {
-                            "number_of_replicas": "1-all",
                             "index": {
                                 "codec": "zstd_no_dict",
                                 "flush_threshold_size": (

@@ -365,7 +365,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.peers_data.put(
             Scope.UNIT,
             PERFORMANCE_PROFILE,
-            PerformanceType(self._charm.config.get(PERFORMANCE_PROFILE, "production")),
+            PerformanceType(self.config.get(PERFORMANCE_PROFILE, "production")),
         )
 
         # apply the directives computed and emitted by the peer cluster manager
@@ -707,7 +707,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             restart_requested = self.plugin_manager.run()
             if (
-                PerformanceType(self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE))
+                self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE)
+                and PerformanceType(self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE))
                 != self.opensearch.perf_profile
             ):
                 self.opensearch.perf_profile = OpenSearchPerfProfile.from_str(
