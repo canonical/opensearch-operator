@@ -13,6 +13,19 @@ parts:
   files:
     plugin: dump
     source: .
+    build-packages:
+      - git
+    override-build: |
+      # Workaround to add unique identifier (git hash) to charm version while specification
+      # DA053 - Charm versioning
+      # (https://docs.google.com/document/d/1Jv1jhWLl8ejK3iJn7Q3VbCIM9GIhp8926bgXpdtx-Sg/edit?pli=1)
+      # is pending review.
+      python3 -c 'import pathlib; import shutil; import subprocess; git_hash=subprocess.run(["git", "describe", "--always", "--dirty"], capture_output=True, check=True, encoding="utf-8").stdout; file = pathlib.Path("charm_version"); shutil.copy(file, pathlib.Path("charm_version.backup")); version = file.read_text().strip(); file.write_text(f"{version}+{git_hash}")'
+      craftctl default
+    stage:
+      # Exclude requirements.txt file during staging
+      # Workaround for https://github.com/canonical/charmcraft/issues/1389 on charmcraft 2
+      - -requirements.txt
     prime:
       - charm_version
       - workload_version
