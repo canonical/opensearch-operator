@@ -5,7 +5,7 @@ name: Release to latest/edge
 on:
   push:
     branches:
-      - main
+      - 2/edge
 
 jobs:
   ci-tests:
@@ -15,32 +15,15 @@ jobs:
     permissions:
       contents: write  # Needed for Allure Report beta
 
-  # release-libraries:
-  #   name: Release libraries
-  #   needs:
-  #     - ci-tests
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 60
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0
-  #     - name: Release charm libraries
-  #       uses: canonical/charming-actions/release-libraries@2.3.0
-  #       with:
-  #         credentials: ${{ secrets.CHARMHUB_TOKEN }}
-  #         github-token: ${{ secrets.GITHUB_TOKEN }}
-
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v21.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v22.0.0
 
   release:
     name: Release charm
     needs:
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v21.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v22.0.0
     with:
       channel: 2/edge
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
