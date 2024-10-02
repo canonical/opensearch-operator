@@ -25,17 +25,17 @@ def test_perf_profile_15g():
         assert profile.charmed_index_template == {
             "charmed-index-tpl": {
                 "index_patterns": ["*"],
-                "template": {"settings": {"number_of_replicas": "1-all"}},
+                "template": {"settings": {"number_of_replicas": "1"}},
             }
         }
 
         profile = OpenSearchPerfProfile.from_str("staging")
         assert profile.typ == PerformanceType.STAGING
-        assert str(profile.heap_size) == "1536m"
+        assert str(profile.heap_size) == "3g"
         assert profile.charmed_index_template == {
             "charmed-index-tpl": {
                 "index_patterns": ["*"],
-                "template": {"settings": {"number_of_replicas": "1-all"}},
+                "template": {"settings": {"number_of_replicas": "1"}},
             }
         }
         assert profile.opensearch_yml == {"indices.memory.index_buffer_size": "25%"}
@@ -63,7 +63,7 @@ def test_perf_profile_5g():
         assert profile.charmed_index_template == {
             "charmed-index-tpl": {
                 "index_patterns": ["*"],
-                "template": {"settings": {"number_of_replicas": "1-all"}},
+                "template": {"settings": {"number_of_replicas": "1"}},
             }
         }
 
@@ -73,7 +73,7 @@ def test_perf_profile_5g():
         assert profile.charmed_index_template == {
             "charmed-index-tpl": {
                 "index_patterns": ["*"],
-                "template": {"settings": {"number_of_replicas": "1-all"}},
+                "template": {"settings": {"number_of_replicas": "1"}},
             }
         }
         assert profile.opensearch_yml == {"indices.memory.index_buffer_size": "25%"}
@@ -107,12 +107,12 @@ class TestPerformanceProfile(unittest.TestCase):
             self.opensearch = self.charm.opensearch
             self.test_profile = OpenSearchPerfProfile.from_str("production")
 
+    @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")
     @patch("charms.opensearch.v0.helper_conf_setter.exists")
-    def test_update_jvm_options(self, _):
+    def test_update_jvm_options(self, _, __):
         """Test the update of the JVM options."""
         with patch("builtins.open", mock_open(read_data=JVM_OPTIONS)) as m_open:
             mock_write = m_open.return_value.__enter__.return_value.write = MagicMock()
             self.charm.opensearch_config.apply_performance_profile(profile=self.test_profile)
-
-            mock_write.assert_any_call("-Xms3840m\n-Xmx1g")
-            mock_write.assert_any_call("-Xms1g\n-Xmx3840m")
+            mock_write.assert_any_call("-Xms7680m\n-Xmx1g")
+            mock_write.assert_any_call("-Xms1g\n-Xmx7680m")
