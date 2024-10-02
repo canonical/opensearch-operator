@@ -10,10 +10,9 @@ from unittest import mock
 from unittest.mock import MagicMock, Mock, patch
 
 import responses
-from charms.opensearch.v0.constants_charm import (
+from charms.opensearch.v0.constants_charm import (  # TLSNotFullyConfigured,
     PeerRelationName,
     TLSCaRotation,
-    TLSNotFullyConfigured,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
@@ -1016,7 +1015,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         mock_response_lock_not_requested("1.1.1.1")
         mock_response_health_green("1.1.1.1")
         event = MagicMock(after_upgrade=False)
-        original_status = self.harness.model.unit.status
+        # original_status = self.harness.model.unit.status
 
         self.charm._post_start_init(event)
 
@@ -1164,7 +1163,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         mock_response_lock_not_requested("1.1.1.1")
         mock_response_health_green("1.1.1.1")
         event = MagicMock(after_upgrade=False)
-        original_status = self.harness.model.unit.status
+        # original_status = self.harness.model.unit.status
 
         self.charm._post_start_init(event)
 
@@ -1187,7 +1186,8 @@ class TestOpenSearchTLS(unittest.TestCase):
         # renew_cert.assert_called_with(old_certificate_signing_renew=b"csr-transport")
 
         # assert (
-        #     self.secret_store.get_object(Scope.UNIT, CertType.UNIT_HTTP.val)["csr"] != csr_http_old
+        #     self.secret_store.get_object(
+        #       Scope.UNIT, CertType.UNIT_HTTP.val)["csr"] != csr_http_old
         # )
         # assert (
         #     self.secret_store.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)["csr"]
