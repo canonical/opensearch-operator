@@ -73,7 +73,6 @@ jobs:
         juju:
           # This runs on all runs
           - agent: 3.5.3 # renovate: juju-agent-pin-minor
-            snap_channel: 3.5/stable
             allure_report: true
           # This runs only on scheduled runs, DPW 21 specifics (scheduled + 3.6/X)
           - snap_channel: 3.6/beta
@@ -85,6 +84,7 @@ jobs:
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v22.0.0
     with:
+      juju-agent-version: ${{ matrix.juju.agent }}
       juju-snap-channel: ${{ matrix.juju.snap_channel }}
       _beta_allure_report: ${{ matrix.juju.allure_report }}
       artifact-prefix: packed-charm-cache-true
