@@ -72,12 +72,12 @@ jobs:
       matrix:
         juju:
           # This runs on all runs
-          - snap_channel: 3.5/stable
+          - agent: 3.5.4 # renovate: juju-agent-pin-minor
             allure_report: true
           # This runs only on scheduled runs, DPW 21 specifics (scheduled + 3.6/X)
           - snap_channel: 3.6/beta
             allure_report: false
-    name: Integration test charm | ${{ matrix.juju.snap_channel }}
+    name: Integration test charm | ${{ matrix.juju.agent || matrix.juju.snap_channel }}
     needs:
       - lint
       - unit-test
