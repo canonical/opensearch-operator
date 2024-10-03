@@ -1,0 +1,854 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:734 Connecting to existing model localhost-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2097 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m juju.model:model.py:2097 Deploying local:jammy/opensearch-2
+[32mINFO    [0m juju.model:model.py:2097 Deploying local:jammy/opensearch-0
+[32mINFO    [0m juju.model:model.py:2097 Deploying local:jammy/opensearch-1
+[32mINFO    [0m juju.model:model.py:2097 Deploying local:jammy/opensearch-3
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:00:03Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-data                    waiting    0/2  opensearch                                 0  no       waiting for machine
+opensearch-failover                waiting    0/3  opensearch                                 2  no       waiting for machine
+opensearch-invalid                 waiting    0/1  opensearch                                 3  no       waiting for machine
+opensearch-main                    waiting    0/3  opensearch                                 1  no       waiting for machine
+self-signed-certificates           waiting    0/1  self-signed-certificates  latest/stable  155  no       waiting for machine
+
+Unit                        Workload  Agent       Machine  Public address  Ports  Message
+opensearch-data/0           waiting   allocating  4                               waiting for machine
+opensearch-data/1           waiting   allocating                                  waiting for machine
+opensearch-failover/0       waiting   allocating  1                               waiting for machine
+opensearch-failover/1       waiting   allocating  2                               waiting for machine
+opensearch-failover/2       waiting   allocating  3                               waiting for machine
+opensearch-invalid/0        waiting   allocating                                  waiting for machine
+opensearch-main/0           waiting   allocating                                  waiting for machine
+opensearch-main/1           waiting   allocating                                  waiting for machine
+opensearch-main/2           waiting   allocating                                  waiting for machine
+self-signed-certificates/0  waiting   allocating  0        10.39.145.180          waiting for machine
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        pending  10.39.145.180  juju-2e9949-0  ubuntu@22.04      Running
+1        pending                 pending        ubuntu@22.04      Creating container
+2        pending                 pending        ubuntu@22.04      Creating container
+3        pending                 pending        ubuntu@22.04      acquiring LXD image
+4        pending                 pending        ubuntu@22.04      
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:00:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: self-signed-certificates - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: self waiting -- message: waiting for machine
+		self-signed-certificates-0.531  -- (10.39.145.180) -- [allocating (since: 01:59:39)] waiting: waiting for machine
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:04:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: self-signed-certificates - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: self active -- message: None
+		self-signed-certificates-0.531* -- (10.39.145.180) -- [idle (since: 02:03:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:04:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: self-signed-certificates - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: self active -- message: None
+		self-signed-certificates-0.531* -- (10.39.145.180) -- [idle (since: 02:03:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:04:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 02:04:40 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:04:40Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-data                    maintenance      2  opensearch                                 0  no       Installing OpenSearch...
+opensearch-failover                maintenance      3  opensearch                                 2  no       Installing OpenSearch...
+opensearch-invalid                 maintenance      1  opensearch                                 3  no       Installing OpenSearch...
+opensearch-main                    maintenance      3  opensearch                                 1  no       Installing OpenSearch...
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports  Message
+opensearch-data/0            maintenance  executing  4        10.39.145.235          (install) Installing OpenSearch...
+opensearch-data/1*           maintenance  executing  5        10.39.145.147          (install) Installing OpenSearch...
+opensearch-failover/0        maintenance  executing  1        10.39.145.26           (install) Installing OpenSearch...
+opensearch-failover/1        maintenance  executing  2        10.39.145.6            (install) Installing OpenSearch...
+opensearch-failover/2*       maintenance  executing  3        10.39.145.51           (install) Installing OpenSearch...
+opensearch-invalid/0*        maintenance  executing  9        10.39.145.194          (install) Installing OpenSearch...
+opensearch-main/0            maintenance  executing  6        10.39.145.245          (install) Installing OpenSearch...
+opensearch-main/1*           maintenance  executing  7        10.39.145.176          (install) Installing OpenSearch...
+opensearch-main/2            maintenance  executing  8        10.39.145.224          (install) Installing OpenSearch...
+self-signed-certificates/0*  active       idle       0        10.39.145.180          
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.39.145.180  juju-2e9949-0  ubuntu@22.04      Running
+1        started  10.39.145.26   juju-2e9949-1  ubuntu@22.04      Running
+2        started  10.39.145.6    juju-2e9949-2  ubuntu@22.04      Running
+3        started  10.39.145.51   juju-2e9949-3  ubuntu@22.04      Running
+4        started  10.39.145.235  juju-2e9949-4  ubuntu@22.04      Running
+5        started  10.39.145.147  juju-2e9949-5  ubuntu@22.04      Running
+6        started  10.39.145.245  juju-2e9949-6  ubuntu@22.04      Running
+7        started  10.39.145.176  juju-2e9949-7  ubuntu@22.04      Running
+8        started  10.39.145.224  juju-2e9949-8  ubuntu@22.04      Running
+9        started  10.39.145.194  juju-2e9949-9  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:04:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Installing OpenSearch...
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [executing (since: 02:03:49)] maintenance: Installing OpenSearch...
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:04:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Installing OpenSearch...
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [executing (since: 02:03:49)] maintenance: Installing OpenSearch...
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:05:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Installing OpenSearch...
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [executing (since: 02:03:49)] maintenance: Installing OpenSearch...
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:05:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Installing OpenSearch...
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [executing (since: 02:03:49)] maintenance: Installing OpenSearch...
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:05:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Installing OpenSearch...
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [executing (since: 02:03:49)] maintenance: Installing OpenSearch...
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:05:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [executing (since: 02:05:40)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:05:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:05:41)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:06:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:05:41)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:06:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:05:41)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:06:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:05:41)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:06:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:05:41)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:06:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:05:41)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:07:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:05:41)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:07:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:05:41)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:07:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:05:41)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:07:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:05:41)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:07:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:05:41)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:04:11)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:08:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:07:59)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [executing (since: 02:08:03)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:08:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:07:59)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:08:07)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:08:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:07:59)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:08:07)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:08:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:07:59)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:08:07)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:08:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] maintenance: Installing OpenSearch...
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:07:59)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:08:07)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:09:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:04:08)] active: 
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:07:59)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:08:07)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:09:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [executing (since: 02:09:15)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:09:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [idle (since: 02:09:23)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:09:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [idle (since: 02:09:23)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:09:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [idle (since: 02:09:23)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:10:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [idle (since: 02:09:23)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:10:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [idle (since: 02:09:23)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:10:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.aac  -- (10.39.145.245) -- [idle (since: 02:09:23)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.aac* -- (10.39.145.176) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.aac  -- (10.39.145.224) -- [idle (since: 02:09:10)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:10:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:10:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:11:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:11:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:11:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:11:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:12:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:12:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:12:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:12:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:12:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:13:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:13:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:13:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:13:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:14:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:15:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:15:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:15:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:15:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:16:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:16:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:16:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:16:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:17:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:17:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:17:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:07:38)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:04:12)] maintenance: Installing OpenSearch...
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:07:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:17:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:17:41)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [executing (since: 02:17:46)] active: 
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:17:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:17:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:17:41)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [idle (since: 02:17:54)] active: 
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:17:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:18:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:17:41)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [idle (since: 02:17:54)] active: 
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:17:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:18:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:17:41)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [idle (since: 02:17:54)] active: 
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:17:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:18:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:17:41)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [idle (since: 02:17:54)] active: 
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:17:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:18:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch blocked -- message: Cannot start. Waiting for peer cluster relation...
+		opensearch-failover-0.4ea  -- (10.39.145.26) -- [idle (since: 02:17:41)] active: 
+		opensearch-failover-1.4ea  -- (10.39.145.6) -- [idle (since: 02:17:54)] active: 
+		opensearch-failover-2.4ea* -- (10.39.145.51) -- [idle (since: 02:17:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+02:19:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 02:19:12 -- Waiting for model: complete.
