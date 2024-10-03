@@ -77,14 +77,13 @@ jobs:
           # This runs only on scheduled runs, DPW 21 specifics (scheduled + 3.6/X)
           - snap_channel: 3.6/beta
             allure_report: false
-    name: Integration test charm | ${{ matrix.juju.agent || matrix.juju.snap_channel }}
+    name: Integration test charm | ${{ matrix.juju.snap_channel }}
     needs:
       - lint
       - unit-test
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v22.0.0
     with:
-      juju-agent-version: ${{ matrix.juju.agent }}
       juju-snap-channel: ${{ matrix.juju.snap_channel }}
       _beta_allure_report: ${{ matrix.juju.allure_report }}
       artifact-prefix: packed-charm-cache-true
