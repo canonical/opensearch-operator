@@ -1,0 +1,72 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  03:26:37Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         blocked      2  opensearch                                 0  no       1 or more 'replica' shards are not assigned, please scale your application up.
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+opensearch/3*                active       executing  4        10.89.1.216     9200/tcp  (get-password) 
+opensearch/4                 maintenance  executing  5        10.89.1.12                (install) Installing OpenSearch...
+self-signed-certificates/0*  active       idle       0        10.89.1.71                
+
+Machine  State    Address      Inst id        Base          AZ  Message
+0        started  10.89.1.71   juju-1d2b20-0  ubuntu@22.04      Running
+4        started  10.89.1.216  juju-1d2b20-4  ubuntu@22.04      Running
+5        started  10.89.1.12   juju-1d2b20-5  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:06:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:06:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:06:52 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:07:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:07:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 02:07:07 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-0: 02:09:17 ERROR unit.opensearch/0.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-0: 02:09:22 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:09:23 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:09:23 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:09:26 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:09:29 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:09:32 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:09:35 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+machine-2: 02:13:59 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:13:59 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:13:59 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-1: 02:22:20 ERROR unit.opensearch/1.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-1: 02:22:26 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:25:29 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:26:34 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:29:41 ERROR unit.opensearch/1.juju-log certificates:3: Error reading secret: 'NoneType' object has no attribute 'get'
+machine-3: 02:36:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:36:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 02:36:22 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-2: 02:39:18 ERROR unit.opensearch/2.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-2: 02:39:32 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:42:57 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:45:43 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:46:36 ERROR juju.worker.uniter resolver loop error: preparing operation "run storage-detaching (opensearch-data/0) hook" for opensearch/0: secret "secret:crvksjlh3og1jrbckjf0" not found (not found)
+unit-opensearch-0: 02:46:36 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "run storage-detaching (opensearch-data/0) hook" for opensearch/0: secret "secret:crvksjlh3og1jrbckjf0" not found (not found)
+unit-opensearch-0: 02:46:45 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:46:49 ERROR unit.opensearch/2.juju-log certificates:3: Error reading secret: 'NoneType' object has no attribute 'get'
+unit-opensearch-0: 02:46:50 ERROR unit.opensearch/0.juju-log certificates:3: Error reading secret: 'NoneType' object has no attribute 'get'
+machine-4: 02:49:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:49:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-3: 02:49:56 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-3: 02:52:08 ERROR unit.opensearch/3.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-3: 02:52:13 ERROR unit.opensearch/3.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-3: 02:52:13 ERROR unit.opensearch/3.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-3: 02:52:30 ERROR unit.opensearch/3.juju-log err:  / out: keytool error: java.lang.Exception: Alias <old-ca> does not exist
+
+machine-5: 02:59:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:59:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-4: 02:59:33 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
