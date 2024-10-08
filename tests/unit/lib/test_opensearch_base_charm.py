@@ -231,6 +231,35 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
             self.charm._start_opensearch_event.emit.assert_called_once()
 
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
+    @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
+    @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_client_auth")
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
+    @patch(f"{BASE_CHARM_CLASS}._start_opensearch_event")
+    @patch(f"{BASE_CHARM_CLASS}._apply_peer_cm_directives_and_check_if_can_start")
+    def test_failover_orchestrator_with_data_role_on_start(
+        self,
+        is_fully_configured,
+        is_admin_user_configured,
+        set_client_auth,
+        deployment_desc,
+        _start_opensearch_event,
+        _apply_peer_cm_directives_and_check_if_can_start,
+    ):
+        """Test start event for failover orchestrator with `data` role."""
+        with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
+            is_node_up.return_value = False
+            _apply_peer_cm_directives_and_check_if_can_start.return_value = True
+            is_fully_configured.return_value = True
+            is_admin_user_configured.return_value = True
+            deployment_desc.typ.return_value = DeploymentType.FAILOVER_ORCHESTRATOR
+            deployment_desc.config.roles.return_value = ["cluster-manager", "data"]
+
+            self.harness.set_leader(True)
+            self.charm.on.start.emit()
+
+            self.charm._start_opensearch_event.emit.assert_called_once()
+
     @patch(f"{BASE_LIB_PATH}.opensearch_locking.OpenSearchNodeLock.acquired")
     @patch(f"{PEER_CLUSTERS_MANAGER}.validate_roles")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
