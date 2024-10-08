@@ -272,14 +272,13 @@ class YamlConfigSetter(ConfigSetter):
             output_file: Target file for the result config, by default same as config_file
         """
         path = f"{self.base_path}{config_file}"
-
         if not exists(path):
             raise FileNotFoundError(f"{path} not found.")
 
         with open(path, "r+") as f:
             data = f.read()
 
-            if regex and old_val and re.compile(old_val).match(data):
+            if regex and old_val and re.compile(old_val, re.MULTILINE).findall(data):
                 data = re.sub(r"{}".format(old_val), f"{new_val}", data)
             elif old_val and old_val in data:
                 data = data.replace(old_val, new_val)
