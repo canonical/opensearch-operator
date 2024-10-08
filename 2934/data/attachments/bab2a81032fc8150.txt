@@ -1,0 +1,1615 @@
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: PUT -- https://10.246.64.68:9200/test_end_to_end_with_ivf_faiss_training
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: PUT -- https://10.246.64.68:9200/_bulk
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: POST -- https://10.246.64.68:9200/_plugins/_knn/models/test_end_to_end_with_ivf_faiss_model/_train
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.246.64.68:9200/_plugins/_knn/models/test_end_to_end_with_ivf_faiss_model
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: PUT -- https://10.246.64.68:9200/test_end_to_end_with_ivf_faiss_target
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: PUT -- https://10.246.64.68:9200/_bulk
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:516 KNN test starting with False
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  03:11:12Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+grafana-agent                      blocked      3  grafana-agent             latest/edge    286  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch                         active       3  opensearch                                 0  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0                 active    executing  1        10.246.64.166   9200/tcp  (config-changed) 
+  grafana-agent/0*           blocked   idle                10.246.64.166             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/1                 active    executing  2        10.246.64.123   9200/tcp  (config-changed) 
+  grafana-agent/1            blocked   idle                10.246.64.123             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/2*                active    executing  3        10.246.64.68    9200/tcp  (config-changed) 
+  grafana-agent/3            blocked   idle                10.246.64.68              Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+self-signed-certificates/0*  active    idle       0        10.246.64.131             
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.246.64.131  juju-035ccb-0  ubuntu@22.04      Running
+1        started  10.246.64.166  juju-035ccb-1  ubuntu@22.04      Running
+2        started  10.246.64.123  juju-035ccb-2  ubuntu@22.04      Running
+3        started  10.246.64.68   juju-035ccb-3  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:11:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:11:11)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:11:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:11:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Plugin configuration check.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:11:11)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:11:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:11:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Plugin configuration check.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:11:11)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:11:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:11:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:11:11)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service is stopping.
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:11:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:11:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:12:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:12:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:12:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:12:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:12:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:13:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:13:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:13:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:13:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:13:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:14:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:14:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:14:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:14:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:14:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:15:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:11:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:11:11)] waiting: Waiting for OpenSearch to start...
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:11:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:15:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service is stopping.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:15:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:15:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:15:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:16:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:16:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:16:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:16:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:16:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:17:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:17:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:17:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:17:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:17:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:17:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:18:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:18:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:18:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:15:07)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:15:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:15:11)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:18:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:18:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:19:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:19:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:19:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:19:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:19:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:20:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:20:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:20:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:20:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:20:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:21:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:21:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:21:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:21:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:21:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:18:40)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:18:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:22:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:22:02)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:22:02)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:18:34)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:22:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:22:13)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:22:13)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:22:12)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:22:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:22:13)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:22:13)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:22:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:22:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:22:13)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:22:13)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:22:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:22:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:22:13)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:22:13)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:22:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:23:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:22:13)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:22:13)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:22:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:23:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:22:13)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:22:13)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:22:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:23:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:22:13)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:22:13)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:22:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:23:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 03:23:36 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.246.64.68:9200/_nodes
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:529 Restart finished and was successful
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.246.64.68:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.246.64.68:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.246.64.68:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:516 KNN test starting with True
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:329 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:330 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  03:24:05Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+grafana-agent                      blocked      3  grafana-agent             latest/edge    286  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch                         active       3  opensearch                                 0  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0                 active    executing  1        10.246.64.166   9200/tcp  (config-changed) 
+  grafana-agent/0*           blocked   idle                10.246.64.166             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/1                 active    executing  2        10.246.64.123   9200/tcp  (config-changed) 
+  grafana-agent/1            blocked   idle                10.246.64.123             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/2*                active    executing  3        10.246.64.68    9200/tcp  (config-changed) 
+  grafana-agent/3            blocked   idle                10.246.64.68              Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+self-signed-certificates/0*  active    idle       0        10.246.64.131             
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.246.64.131  juju-035ccb-0  ubuntu@22.04      Running
+1        started  10.246.64.166  juju-035ccb-1  ubuntu@22.04      Running
+2        started  10.246.64.123  juju-035ccb-2  ubuntu@22.04      Running
+3        started  10.246.64.68   juju-035ccb-3  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:24:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:24:05)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:24:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:24:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch maintenance -- message: Plugin configuration check.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:24:05)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:24:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:24:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service is stopping.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:24:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:24:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:25:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:25:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:25:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:25:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:25:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:26:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:26:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:26:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:26:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:26:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:26:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:27:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:27:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: The OpenSearch service stopped.
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:27:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:24:24)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: Waiting for OpenSearch to start...
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:27:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:24:05)] waiting: Waiting for OpenSearch to start...
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:24:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:27:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:27:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:28:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:28:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:28:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:28:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:28:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:29:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:29:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:29:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:29:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:29:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:30:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:30:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:30:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:30:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:30:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: The OpenSearch service stopped.
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:31:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:261 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:262 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:27:49)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:31:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:27:45)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:31:12)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service is stopping.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:31:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:31:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:31:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:32:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:32:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:32:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:32:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:32:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:32:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:33:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:33:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:33:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:33:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:33:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:34:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:34:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:34:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:31:19)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:31:21)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:27:57)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:34:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [executing (since: 03:34:42)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [executing (since: 03:34:42)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [executing (since: 03:34:37)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:34:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:34:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:34:47)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:34:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:35:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:34:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:34:47)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:34:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:35:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:34:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:34:47)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:34:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:35:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:34:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:34:47)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:34:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:35:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:34:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:34:47)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:34:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:35:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:277 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:278 
+	app: opensearch active -- message: None
+		opensearch-0.b24  -- (10.246.64.166) -- [idle (since: 03:34:47)] active: 
+		opensearch-1.b24  -- (10.246.64.123) -- [idle (since: 03:34:47)] active: 
+		opensearch-2.b24* -- (10.246.64.68) -- [idle (since: 03:34:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:337 
+
+
+03:36:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:348 03:36:06 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.246.64.68:9200/_nodes
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:529 Restart finished and was successful
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.246.64.68:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  03:36:13Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+grafana-agent                      blocked      3  grafana-agent             latest/edge    286  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch                         active       3  opensearch                                 0  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 active    idle   1        10.246.64.166   9200/tcp  
+  grafana-agent/0*           blocked   idle            10.246.64.166             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/1                 active    idle   2        10.246.64.123   9200/tcp  
+  grafana-agent/1            blocked   idle            10.246.64.123             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/2*                active    idle   3        10.246.64.68    9200/tcp  
+  grafana-agent/3            blocked   idle            10.246.64.68              Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+self-signed-certificates/0*  active    idle   0        10.246.64.131             
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.246.64.131  juju-035ccb-0  ubuntu@22.04      Running
+1        started  10.246.64.166  juju-035ccb-1  ubuntu@22.04      Running
+2        started  10.246.64.123  juju-035ccb-2  ubuntu@22.04      Running
+3        started  10.246.64.68   juju-035ccb-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:49:37 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:49:37 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:49:37 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:49:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:49:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 02:49:51 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:49:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:49:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 02:49:54 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:49:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:49:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:49:55 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-2: 02:56:58 ERROR unit.opensearch/2.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-2: 02:57:05 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:57:05 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:06 ERROR unit.opensearch/0.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-2: 02:57:06 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:57:06 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:57:09 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:10 ERROR unit.opensearch/1.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-0: 02:57:11 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:12 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:57:12 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:13 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:14 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:15 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:57:15 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:15 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:16 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:17 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:17 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:18 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:57:18 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:18 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:19 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:19 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:20 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:20 ERROR unit.opensearch/1.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:21 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:22 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:23 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:23 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:24 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:24 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:25 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:25 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:26 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:26 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:27 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:28 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:28 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:29 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:29 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:30 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:31 ERROR unit.opensearch/1.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:31 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:31 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:33 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:34 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:37 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:37 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:39 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:39 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:41 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:42 ERROR unit.opensearch/0.juju-log upgrade-version-a:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:47 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:50 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:56 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:57:58 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-grafana-agent-0: 02:59:57 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/jammy/grafana-agent-286" for grafana-agent/0: failed to download charm "ch:amd64/jammy/grafana-agent-286" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 02:59:57 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/jammy/grafana-agent-286" for grafana-agent/1: failed to download charm "ch:amd64/jammy/grafana-agent-286" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 02:59:57 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/jammy/grafana-agent-286" for grafana-agent/3: failed to download charm "ch:amd64/jammy/grafana-agent-286" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-0: 02:59:57 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-grafana-agent-1: 02:59:57 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-grafana-agent-3: 02:59:57 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-2: 03:04:50 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:04:50 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:04:52 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:05:17 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:05:17 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:05:18 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:05:40 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:05:40 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:05:41 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:07:56 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:07:56 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:07:57 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:08:19 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:08:19 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:08:21 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:08:44 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:08:44 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:08:46 ERROR unit.opensearch/1.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:11:51 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:11:51 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:14:54 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:15:15 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:15:15 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:18:19 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:18:43 ERROR unit.opensearch/2.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:18:43 ERROR unit.opensearch/2.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:21:46 ERROR unit.opensearch/2.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:24:29 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:24:29 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 03:27:32 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:27:53 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:27:53 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:30:57 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:31:19 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:31:19 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:34:22 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

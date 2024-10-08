@@ -1,0 +1,76 @@
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.180.17.192:9200/
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.180.17.136:9200/
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.180.17.92:9200/
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.180.17.136:9200/_nodes
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.180.17.136:9200/_cluster/health
+[32mINFO    [0m integration.ha.helpers:helpers.py:247 Continuous writes result: namespace(max_stored_id=174, count=175, last_expected_id=174)
+[32mINFO    [0m integration.helpers:helpers.py:367 Calling: GET -- https://10.180.17.136:9200/series_index/_search_shards
+[32mINFO    [0m integration.ha.conftest:conftest.py:57 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  03:27:37Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      3  opensearch                                 0  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 active    idle   1        10.180.17.192   9200/tcp  
+opensearch/1*                active    idle   2        10.180.17.136   9200/tcp  
+opensearch/2                 active    idle   3        10.180.17.92    9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.180.17.66              
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.180.17.66   juju-ec469a-0  ubuntu@22.04      Running
+1        started  10.180.17.192  juju-ec469a-1  ubuntu@22.04      Running
+2        started  10.180.17.136  juju-ec469a-2  ubuntu@22.04      Running
+3        started  10.180.17.92   juju-ec469a-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:56:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:56:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:56:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:56:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:56:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:56:53 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:57:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:57:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 02:57:48 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:57:49 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:57:49 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 02:57:50 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-1: 02:59:13 ERROR unit.opensearch/1.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-1: 02:59:20 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:59:21 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:59:21 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:59:21 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:59:24 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:59:27 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:59:30 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:59:33 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:59:36 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:00:08 ERROR unit.opensearch/0.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-0: 03:00:15 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:00:16 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:00:17 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:00:18 ERROR unit.opensearch/0.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:00:19 ERROR unit.opensearch/0.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:00:21 ERROR unit.opensearch/0.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:02:19 ERROR unit.opensearch/2.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-2: 03:02:25 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 03:02:27 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
