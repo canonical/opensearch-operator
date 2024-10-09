@@ -8,6 +8,8 @@ from datetime import datetime
 from hashlib import md5
 from typing import Any, Dict, List, Literal, Optional
 
+from charms.opensearch.v0.constants_charm import S3_REPO_BASE_PATH
+from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
 from pydantic.utils import ROOT_KEY
@@ -258,13 +260,96 @@ class DeploymentDescription(Model):
 class S3RelDataCredentials(Model):
     """Model class for credentials passed on the PCluster relation."""
 
-    access_key: str = Field(alias="access-key")
-    secret_key: str = Field(alias="secret-key")
+    access_key: str = Field(alias="access-key", default=None)
+    secret_key: str = Field(alias="secret-key", default=None)
 
     class Config:
         """Model config of this pydantic model."""
 
         allow_population_by_field_name = True
+
+
+class S3RelData(Model):
+    """Model class for the S3 relation data.
+
+    This model should receive the data directly from the relation and map it to a model.
+    """
+
+    bucket: str = Field(default="")
+    endpoint: str = Field(default="")
+    region: Optional[str] = None
+    base_path: Optional[str] = Field(alias="path", default=S3_REPO_BASE_PATH)
+    protocol: Optional[str] = None
+    storage_class: Optional[str] = Field(alias="storage-class")
+    tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain")
+    credentials: S3RelDataCredentials = Field(alias=S3_CREDENTIALS, default=S3RelDataCredentials())
+
+    class Config:
+        """Model config of this pydantic model."""
+
+        allow_population_by_field_name = True
+
+    @root_validator
+    def validate_core_fields(cls, values):  # noqa: N805
+        """Validate the core fields of the S3 relation data."""
+        # Do not raise an exception if we are missing all the fields:
+        if (
+            not (s3_creds := values.get("credentials"))
+            and not s3_creds.access_key
+            and not s3_creds.secret_key
+        ):
+            raise ValueError("Missing fields: access_key, secret_key")
+
+        # Both bucket and endpoint must be set, or not.
+        if values.get("bucket") and not values.get("endpoint"):
+            raise ValueError("Missing field: endpoint")
+        if values.get("endpoint") and not values.get("bucket"):
+            raise ValueError("Missing field: bucket")
+
+        return values
+
+    @validator(S3_CREDENTIALS, check_fields=False)
+    def ensure_secret_content(cls, conf: Dict[str, str] | S3RelDataCredentials):  # noqa: N805
+        """Ensure the secret content is set."""
+        if not conf:
+            return None
+
+        data = conf
+        if isinstance(conf, dict):
+            # We are
+            data = S3RelDataCredentials.from_dict(conf)
+
+        for value in data.dict().values():
+            if value.startswith("secret://"):
+                raise ValueError(f"The secret content must be passed, received {value} instead")
+        return data
+
+    @staticmethod
+    def get_endpoint_protocol(endpoint: str) -> str:
+        """Returns the protocol based on the endpoint."""
+        if not endpoint:
+            return "http"
+
+        if endpoint.startswith("http://"):
+            return "http"
+        if endpoint.startswith("https://"):
+            return "https"
+        return "https"
+
+    @classmethod
+    def from_relation(cls, input_dict: Optional[Dict[str, Any]]):
+        """Create a new instance of this class from a json/dict repr.
+
+        This method creates a nested S3RelDataCredentials object from the input dict.
+        """
+        if not input_dict:
+            return cls()
+
+        creds = S3RelDataCredentials(**input_dict)
+        protocol = S3RelData.get_endpoint_protocol(input_dict.get("endpoint"))
+        return cls.from_dict(
+            dict(input_dict) | {"protocol": protocol, S3_CREDENTIALS: creds.dict()}
+        )
 
 
 class PeerClusterRelDataCredentials(Model):

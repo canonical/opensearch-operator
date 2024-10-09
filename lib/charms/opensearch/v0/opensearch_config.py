@@ -239,15 +239,13 @@ class OpenSearchConfig:
                 result[key] = loaded_configs[key]
         return result
 
-    def add_plugin(self, plugin_config: Dict[str, str]) -> None:
-        """Adds plugin configuration to opensearch.yml."""
+    def update_plugin(self, plugin_config: Dict[str, Any]) -> None:
+        """Adds or removes plugin configuration to opensearch.yml."""
         for key, val in plugin_config.items():
-            self._opensearch.config.put(self.CONFIG_YML, key, val)
-
-    def delete_plugin(self, plugin_config: List[str]) -> None:
-        """Removes plugin configuration from opensearch.yml."""
-        for key in plugin_config:
-            self._opensearch.config.delete(self.CONFIG_YML, key)
+            if not val:
+                self._opensearch.config.delete(self.CONFIG_YML, key)
+            else:
+                self._opensearch.config.put(self.CONFIG_YML, key, val)
 
     def update_host_if_needed(self) -> bool:
         """Update the opensearch config with the current network hosts, after having started.

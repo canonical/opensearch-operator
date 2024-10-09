@@ -16,7 +16,10 @@ from charms.opensearch.v0.constants_charm import (
     KibanaserverUser,
     OpenSearchUsers,
 )
-from charms.opensearch.v0.opensearch_distro import OpenSearchError, OpenSearchHttpError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchError,
+    OpenSearchHttpError,
+)
 
 logger = logging.getLogger(__name__)
 

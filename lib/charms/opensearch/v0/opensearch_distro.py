@@ -552,10 +552,8 @@ class OpenSearchDistribution(ABC):
         Raises:
             OpenSearchError if the GET request fails.
         """
-        try:
-            return self.request("GET", "/").get("version").get("number")
-        except OpenSearchHttpError:
-            logger.error(
-                "failed to get root endpoint, implying that this node is offline. Retry once node is online."
-            )
-            raise OpenSearchError()
+        # Will have a format similar to:
+        # Version: 2.14.0, Build: tar/.../2024-05-27T21:17:37.476666822Z, JVM: 21.0.2
+        output = self.run_bin("opensearch", "--version 2>/dev/null")
+        logger.debug(f"version call output: {output}")
+        return output.split(", ")[0].split(": ")[1]

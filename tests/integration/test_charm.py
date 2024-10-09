@@ -285,6 +285,8 @@ async def test_check_workload_version(ops_test: OpsTest) -> None:
             [
                 "juju",
                 "ssh",
+                "-m",
+                ops_test.model.info.name,
                 f"opensearch/{leader_id}",
                 "--",
                 "sudo",
