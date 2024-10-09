@@ -32,7 +32,7 @@ async def service_start_time(ops_test: OpsTest, app: str, unit_id: int) -> float
     _, unit_boot_time, _ = await ops_test.juju(*boot_time_cmd.split(), check=True)
     unit_boot_time = int(unit_boot_time.strip())
 
-    active_since_cmd = f"exec --unit {unit_name} -- systemctl show snap.opensearch.daemon --property=ActiveEnterTimestampMonotonic --value"
+    active_since_cmd = f"exec --unit {unit_name} -- systemctl show snap.wazuh-indexer.daemon --property=ActiveEnterTimestampMonotonic --value"
     _, active_time_since_boot, _ = await ops_test.juju(*active_since_cmd.split(), check=True)
     active_time_since_boot = int(active_time_since_boot.strip()) / 1000000
 

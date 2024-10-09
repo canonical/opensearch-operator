@@ -67,19 +67,19 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
 
         self.harness.set_leader(True)
 
-        event.secret.label = "opensearch:unit:0:key"
+        event.secret.label = "wazuh-indexer:unit:0:key"
         self.secrets._on_secret_changed(event)
         mock_store_tls_resources.assert_not_called()
 
-        event.secret.label = "opensearch:app:key"
+        event.secret.label = "wazuh-indexer:app:key"
         self.secrets._on_secret_changed(event)
         mock_store_tls_resources.assert_not_called()
 
-        event.secret.label = f"opensearch:app:{CertType.APP_ADMIN.val}"
+        event.secret.label = f"wazuh-indexer:app:{CertType.APP_ADMIN.val}"
         self.secrets._on_secret_changed(event)
         mock_store_tls_resources.assert_not_called()
 
-        event.secret.label = f"opensearch:app:{KibanaserverUser}-password"
+        event.secret.label = f"wazuh-indexer:app:{KibanaserverUser}-password"
         self.secrets._on_secret_changed(event)
         mock_update_dashboard_pw.assert_called()
 
@@ -90,15 +90,15 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
 
         self.harness.set_leader(False)
 
-        event.secret.label = "opensearch:app:key"
+        event.secret.label = "wazuh-indexer:app:key"
         self.secrets._on_secret_changed(event)
         mock_store_tls_resources.assert_not_called()
 
-        event.secret.label = f"opensearch:unit:{self.charm.unit_id}:key"
+        event.secret.label = f"wazuh-indexer:unit:{self.charm.unit_id}:key"
         self.secrets._on_secret_changed(event)
         mock_store_tls_resources.assert_not_called()
 
-        event.secret.label = f"opensearch:app:{CertType.APP_ADMIN.val}"
+        event.secret.label = f"wazuh-indexer:app:{CertType.APP_ADMIN.val}"
         self.secrets._on_secret_changed(event)
         mock_store_tls_resources.assert_not_called()
 
@@ -137,19 +137,19 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
     def test_label_app(self):
         scope = Scope.APP
         label = self.store.label(scope, "key1")
-        self.assertEqual(label, f"opensearch:{scope}:key1")
+        self.assertEqual(label, f"wazuh-indexer:{scope}:key1")
         self.assertEqual(
             self.store.breakdown_label(label),
-            {"application_name": "opensearch", "scope": scope, "unit_id": None, "key": "key1"},
+            {"application_name": "wazuh-indexer", "scope": scope, "unit_id": None, "key": "key1"},
         )
 
     def test_label_unit(self):
         scope = Scope.UNIT
         label = self.store.label(scope, "key1")
-        self.assertEqual(self.store.label(scope, "key1"), f"opensearch:{scope}:0:key1")
+        self.assertEqual(self.store.label(scope, "key1"), f"wazuh-indexer:{scope}:0:key1")
         self.assertEqual(
             self.store.breakdown_label(label),
-            {"application_name": "opensearch", "scope": scope, "unit_id": 0, "key": "key1"},
+            {"application_name": "wazuh-indexer", "scope": scope, "unit_id": 0, "key": "key1"},
         )
 
     @parameterized.expand([Scope.APP, Scope.UNIT])

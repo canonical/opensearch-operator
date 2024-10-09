@@ -20,7 +20,7 @@ def mock_deployment_desc(
         "app": {
             "id": f"{model_uuid}/opensearch",
             "model_uuid": model_uuid,
-            "name": "opensearch",
+            "name": "wazuh-indexer",
             "short_id": "5a5",
         },
         "config": {
@@ -47,7 +47,7 @@ def mock_response_root(unit_name: str, host: str, cluster_name: str = CLUSTER_NA
         "cluster_name": cluster_name,
         "cluster_uuid": "TYji6UEuSw2tnIL-z8xEOg",
         "version": {
-            "distribution": "opensearch",
+            "distribution": "wazuh-indexer",
             "number": "2.14.0",
             "build_type": "tar",
             "build_hash": "30dd870855093c9dca23fc6f8cfd5c0d7c83127d",
@@ -148,9 +148,9 @@ def mock_response_mynode(
                         ],
                     },
                     "path": {
-                        "data": ["/var/snap/opensearch/common/var/lib/opensearch"],
-                        "logs": "/var/snap/opensearch/common/var/log/opensearch",
-                        "home": "/var/snap/opensearch/current/usr/share/opensearch",
+                        "data": ["/var/snap/wazuh-indexer/common/var/lib/opensearch"],
+                        "logs": "/var/snap/wazuh-indexer/common/var/log/opensearch",
+                        "home": "/var/snap/wazuh-indexer/current/usr/share/opensearch",
                     },
                     "discovery": {"seed_providers": "file"},
                     "client": {"type": "node"},

@@ -63,7 +63,7 @@ async def execute_update_status_manually(ops_test: OpsTest, app: str):
     leader_id = await get_leader_unit_id(ops_test, app)
 
     cmd = '"export JUJU_DISPATCH_PATH=hooks/update-status; ./dispatch"'
-    exec_cmd = f"juju exec -u opensearch/{leader_id} -m {ops_test.model.name} -- {cmd}"
+    exec_cmd = f"juju exec -u wazuh-indexer/{leader_id} -m {ops_test.model.name} -- {cmd}"
     try:
         # The "normal" subprocess.run with "export ...; ..." cmd was failing
         # Noticed that, for this case, canonical/jhack uses shlex instead to split.
@@ -80,13 +80,13 @@ async def execute_update_status_manually(ops_test: OpsTest, app: str):
 async def app_name(ops_test: OpsTest) -> Optional[str]:
     """Returns the name of the cluster running OpenSearch.
 
-    This is important since not all deployments of the OpenSearch charm have the
-    application name "opensearch".
+    This is important since not all deployments of the Wazuh Indexer charm have the
+    application name "wazuh-indexer".
     Note: if multiple clusters are running OpenSearch this will return the one first found.
     """
     status = await ops_test.model.get_status()
     for app in ops_test.model.applications:
-        if "opensearch" in status["applications"][app]["charm"]:
+        if "wazuh-indexer" in status["applications"][app]["charm"]:
             return app
 
     return None
@@ -408,7 +408,7 @@ async def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
     ids_ips = await get_application_unit_ids_ips(ops_test, app=app)
     unit_id = [u_id for u_id, u_ip in ids_ips.items() if u_ip == unit_ip][0]
 
-    root = "/var/snap/opensearch"
+    root = "/var/snap/wazuh-indexer"
     files_to_debug = [
         f"{root}/common/logs/{app}-{ops_test.model_name}.log",
         f"{root}/current/config/opensearch.yml",

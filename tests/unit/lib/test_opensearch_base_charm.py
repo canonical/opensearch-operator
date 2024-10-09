@@ -49,7 +49,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
-            app=App(model_uuid="model-uuid", name="opensearch"),
+            app=App(model_uuid="model-uuid", name="wazuh-indexer"),
             state=DeploymentState(value=State.ACTIVE),
         ),
         "ko": DeploymentDescription(
@@ -57,7 +57,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
             typ=DeploymentType.OTHER,
-            app=App(model_uuid="model-uuid", name="opensearch"),
+            app=App(model_uuid="model-uuid", name="wazuh-indexer"),
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
         ),
         "cm-only": DeploymentDescription(
@@ -65,7 +65,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
-            app=App(model_uuid="model-uuid", name="opensearch"),
+            app=App(model_uuid="model-uuid", name="wazuh-indexer"),
             state=DeploymentState(value=State.ACTIVE),
         ),
         "data-only": DeploymentDescription(
@@ -73,7 +73,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
             typ=DeploymentType.OTHER,
-            app=App(model_uuid="model-uuid", name="opensearch"),
+            app=App(model_uuid="model-uuid", name="wazuh-indexer"),
             state=DeploymentState(value=State.ACTIVE),
         ),
     }
@@ -87,7 +87,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         for typ in ["ok", "ko"]:
             self.deployment_descriptions[typ].app = App(
-                model_uuid=self.charm.model.uuid, name="opensearch"
+                model_uuid=self.charm.model.uuid, name="wazuh-indexer"
             )
 
         self.opensearch = self.charm.opensearch

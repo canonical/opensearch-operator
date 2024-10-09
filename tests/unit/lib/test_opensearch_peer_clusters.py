@@ -51,11 +51,11 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
     }
 
     p_units = [
-        PatchedUnit(name="opensearch/0"),
-        PatchedUnit(name="opensearch/1"),
-        PatchedUnit(name="opensearch/2"),
-        PatchedUnit(name="opensearch/3"),
-        PatchedUnit(name="opensearch/4"),
+        PatchedUnit(name="wazuh-indexer/0"),
+        PatchedUnit(name="wazuh-indexer/1"),
+        PatchedUnit(name="wazuh-indexer/2"),
+        PatchedUnit(name="wazuh-indexer/3"),
+        PatchedUnit(name="wazuh-indexer/4"),
     ]
 
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")

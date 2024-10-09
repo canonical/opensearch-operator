@@ -74,7 +74,7 @@ class TestOpenSearchConfig(unittest.TestCase):
             ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
         )
         # NOTE: app is still retrieved from Deployment Description
-        assert node.app.name == "opensearch"
+        assert node.app.name == "wazuh-indexer"
 
     @patch(
         "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
@@ -103,7 +103,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         """
         node = self.charm.opensearch.current()
         assert isinstance(node, Node)
-        assert node.app.name == "opensearch"
+        assert node.app.name == "wazuh-indexer"
         assert node.roles == ["data", "ingest", "ml", "cluster_manager"]
         assert node.temperature == "warm"
 

@@ -17,7 +17,7 @@ from ..ha.helpers import (
 from ..helpers import APP_NAME, IDLE_PERIOD, app_name, run_action
 from ..helpers_deployments import get_application_units, wait_until
 
-OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
+OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.wazuh-indexer.daemon.service"
 ORIGINAL_RESTART_DELAY = 20
 SECOND_APP_NAME = "second-opensearch"
 RESTART_DELAY = 360

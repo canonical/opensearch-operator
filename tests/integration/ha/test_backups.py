@@ -91,7 +91,7 @@ LARGE_DEPLOYMENTS_ALL_CLOUDS = [ALL_GROUPS[(cloud, "large")] for cloud in ["aws"
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "latest/edge"
 TIMEOUT = 10 * 60
-BackupsPath = f"opensearch/{uuid.uuid4()}"
+BackupsPath = f"wazuh-indexer/{uuid.uuid4()}"
 
 
 # We use this global variable to track the current relation of:

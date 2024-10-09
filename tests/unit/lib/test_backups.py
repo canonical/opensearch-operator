@@ -72,7 +72,7 @@ def create_deployment_desc():
         ),
         start=StartMode.WITH_PROVIDED_ROLES,
         pending_directives=[],
-        app=App(model_uuid="model-uuid", name="opensearch"),
+        app=App(model_uuid="model-uuid", name="wazuh-indexer"),
         typ=DeploymentType.MAIN_ORCHESTRATOR,
         state=DeploymentState(value=State.ACTIVE),
     )
@@ -110,7 +110,7 @@ def harness():
         charm._put_kibanaserver_user = MagicMock()
         charm._put_or_update_internal_user_leader = MagicMock()
 
-        harness_obj.add_relation(PeerRelationName, "opensearch")
+        harness_obj.add_relation(PeerRelationName, "wazuh-indexer")
         harness_obj.set_leader(is_leader=True)
 
         yield harness_obj
@@ -521,7 +521,7 @@ class TestBackups(unittest.TestCase):
             self.charm._put_admin_user = MagicMock()
             self.charm._put_kibanaserver_user = MagicMock()
             self.charm._put_or_update_internal_user_leader = MagicMock()
-            self.peer_id = self.harness.add_relation(PeerRelationName, "opensearch")
+            self.peer_id = self.harness.add_relation(PeerRelationName, "wazuh-indexer")
             self.harness.set_leader(is_leader=True)
 
         # Relate and run first check

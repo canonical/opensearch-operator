@@ -11,16 +11,14 @@ import logging
 import time
 import typing
 
-import charms.opensearch.v0.constants_charm as constants_charm
 import ops
 
 import upgrade
-from opensearch import OpenSearchSnap
+from opensearch import SNAP_REVISION, OpenSearchSnap
 
 logger = logging.getLogger(__name__)
 
 FORCE_ACTION_NAME = "force-upgrade"
-_SNAP_REVISION = str(constants_charm.OPENSEARCH_SNAP_REVISION)
 
 
 class Upgrade(upgrade.Upgrade):
@@ -86,7 +84,7 @@ class Upgrade(upgrade.Upgrade):
     @property
     def _app_workload_container_version(self) -> str:
         """Snap revision for current charm code"""
-        return _SNAP_REVISION
+        return SNAP_REVISION
 
     @property
     def _unit_workload_version(self) -> typing.Optional[str]:
@@ -192,16 +190,16 @@ class Upgrade(upgrade.Upgrade):
         logger.debug("Upgrading unit")
         self.unit_state = upgrade.UnitState.UPGRADING
         snap.install()
-        self._unit_workload_container_version = _SNAP_REVISION
+        self._unit_workload_container_version = SNAP_REVISION
         self._unit_workload_version = self._current_versions["workload"]
         logger.debug(
-            f'Saved {_SNAP_REVISION=} and {self._current_versions["workload"]=} in unit databag after upgrade'
+            f'Saved {SNAP_REVISION=} and {self._current_versions["workload"]=} in unit databag after upgrade'
         )
 
     def save_snap_revision_after_first_install(self):
         """Set snap revision on first install"""
-        self._unit_workload_container_version = _SNAP_REVISION
+        self._unit_workload_container_version = SNAP_REVISION
         self._unit_workload_version = self._current_versions["workload"]
         logger.debug(
-            f'Saved {_SNAP_REVISION=} and {self._current_versions["workload"]=} in unit databag after first install'
+            f'Saved {SNAP_REVISION=} and {self._current_versions["workload"]=} in unit databag after first install'
         )

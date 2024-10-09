@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Optional
 
 import requests
-from charms.opensearch.v0.constants_charm import OPENSEARCH_SNAP_REVISION
 from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution, Paths
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -37,14 +36,16 @@ from utils import extract_tarball
 
 logger = logging.getLogger(__name__)
 
+SNAP_REVISION = "3"
+
 
 class OpenSearchSnap(OpenSearchDistribution):
     """Snap distribution of opensearch, only overrides properties and logic proper to the snap."""
 
-    _BASE_SNAP_DIR = "/var/snap/opensearch"
+    _BASE_SNAP_DIR = "/var/snap/wazuh-indexer"
     _SNAP_DATA = f"{_BASE_SNAP_DIR}/current"
     _SNAP_COMMON = f"{_BASE_SNAP_DIR}/common"
-    _SNAP = "/snap/opensearch/current"
+    _SNAP = "/snap/wazuh-indexer/current"
 
     def __init__(self, charm, peer_relation: str):
         super().__init__(charm, peer_relation)
@@ -52,7 +53,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=5)):
             with attempt:
                 cache = snap.SnapCache()
-                self._opensearch = cache["opensearch"]
+                self._opensearch = cache["wazuh-indexer"]
 
     @retry(
         stop=stop_after_attempt(3),
@@ -63,8 +64,13 @@ class OpenSearchSnap(OpenSearchDistribution):
     def install(self):
         """Install/upgrade opensearch from the snapcraft store."""
         try:
-            self._opensearch.ensure(snap.SnapState.Latest, revision=OPENSEARCH_SNAP_REVISION)
+            self._opensearch.ensure(snap.SnapState.Latest, revision=SNAP_REVISION)
             self._opensearch.connect("process-control")
+            self._opensearch.connect("log-observe")
+            self._opensearch.connect("mount-observe")
+            self._opensearch.connect("system-observe")
+            self._opensearch.connect("sys-fs-cgroup-service")
+            self._opensearch.connect("shmem-perf-analyzer")
             if not self._opensearch.held:
                 # hold the snap in charm determined revision
                 self._opensearch.hold()
@@ -82,7 +88,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         if not self._opensearch.present:
             return False
 
-        if not service_running("snap.opensearch.daemon.service"):
+        if not service_running("snap.wazuh-indexer.daemon.service"):
             return False
 
         # Now, we must dig deeper into the actual status of systemd and the JVM process.
@@ -161,7 +167,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         if not self._opensearch.present:
             raise OpenSearchMissingError()
 
-        return service_failed("snap.opensearch.daemon.service")
+        return service_failed("snap.wazuh-indexer.daemon.service")
 
     @override
     def _set_env_variables(self):
@@ -188,13 +194,13 @@ class OpenSearchSnap(OpenSearchDistribution):
           - OPENSEARCH_CONF: writeable by root or snap_daemon ($SNAP_COMMON) where config files are
         """
         return Paths(
-            home=f"{self._SNAP_DATA}/usr/share/opensearch",
-            conf=f"{self._SNAP_DATA}/etc/opensearch",
-            data=f"{self._SNAP_COMMON}/var/lib/opensearch",
-            logs=f"{self._SNAP_COMMON}/var/log/opensearch",
+            home=f"{self._SNAP_DATA}/usr/share/wazuh-indexer",
+            conf=f"{self._SNAP_DATA}/etc/wazuh-indexer",
+            data=f"{self._SNAP_COMMON}/var/lib/wazuh-indexer",
+            logs=f"{self._SNAP_COMMON}/var/log/wazuh-indexer",
             jdk=f"{self._SNAP}/usr/lib/jvm/java-21-openjdk-amd64",
             tmp=f"{self._SNAP_COMMON}/usr/share/tmp",
-            bin=f"{self._SNAP}/usr/share/opensearch/bin",
+            bin=f"{self._SNAP}/usr/share/wazuh-indexer/bin",
         )
 
     def write_file(self, path: str, data: str, override: bool = True):
@@ -308,7 +314,7 @@ class OpenSearchTarball(OpenSearchDistribution):
         """
 
         self.write_file(
-            "/etc/systemd/system/opensearch.service",
+            "/etc/systemd/system/wazuh-indexer.service",
             "\n".join([line.strip() for line in unit_content.split("\n")]),
         )
 

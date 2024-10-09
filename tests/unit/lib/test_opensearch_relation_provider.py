@@ -64,7 +64,7 @@ class TestOpenSearchProvider(unittest.TestCase):
                 start=StartMode.WITH_GENERATED_ROLES,
                 pending_directives=[],
                 typ=DeploymentType.MAIN_ORCHESTRATOR,
-                app=App(model_uuid="model-uuid", name="opensearch"),
+                app=App(model_uuid="model-uuid", name="wazuh-indexer"),
                 state=DeploymentState(value=State.ACTIVE),
             )
 
@@ -357,7 +357,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         )
 
         # Check the relations have the correct Kibanaserver password
-        peer_secret_label = "opensearch:app:kibanaserver-password"
+        peer_secret_label = "wazuh-indexer:app:kibanaserver-password"
         rel1_secret_label = f"opensearch-client.{opensearch_relation1}.user.secret"
         rel2_secret_label = f"opensearch-client.{opensearch_relation2}.user.secret"
 

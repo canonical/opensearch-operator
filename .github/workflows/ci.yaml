@@ -32,27 +32,6 @@ jobs:
       - name: Run tests
         run: tox run -e unit
 
-
-  lib-check:
-    name: Check libraries
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - run: |
-          # Workaround for https://github.com/canonical/charmcraft/issues/1389#issuecomment-1880921728
-          touch requirements.txt
-      - name: Check libs
-        uses: canonical/charming-actions/check-libraries@2.4.0
-        with:
-          credentials: ${{ secrets.CHARMHUB_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          use-labels: false
-          fail-build: ${{ github.event_name == 'pull_request' }}
-
   build:
     name: Build charm
     strategy:

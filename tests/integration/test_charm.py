@@ -10,7 +10,6 @@ import subprocess
 import pytest
 import yaml
 from charms.opensearch.v0.constants_charm import (
-    OPENSEARCH_SNAP_REVISION,
     OpenSearchSystemUsers,
     TLSRelationMissing,
 )
@@ -256,12 +255,12 @@ async def test_check_pinned_revision(ops_test: OpsTest) -> None:
             [
                 "juju",
                 "ssh",
-                f"opensearch/{leader_id}",
+                f"wazuh-indexer/{leader_id}",
                 "--",
                 "sudo",
                 "snap",
                 "info",
-                "opensearch",
+                "wazuh-indexer",
                 "--color=never",
                 "--unicode=always",
             ],
@@ -269,7 +268,7 @@ async def test_check_pinned_revision(ops_test: OpsTest) -> None:
         ).replace("\r\n", "\n")
     )["installed"].split()
     logger.info(f"Installed snap: {installed_info}")
-    assert installed_info[1] == f"({OPENSEARCH_SNAP_REVISION})"
+    assert installed_info[1] == "(3)"
     assert installed_info[3] == "held"
 
 
@@ -285,12 +284,12 @@ async def test_check_workload_version(ops_test: OpsTest) -> None:
             [
                 "juju",
                 "ssh",
-                f"opensearch/{leader_id}",
+                f"wazuh-indexer/{leader_id}",
                 "--",
                 "sudo",
                 "snap",
                 "info",
-                "opensearch",
+                "wazuh-indexer",
                 "--color=never",
                 "--unicode=always",
             ],
@@ -313,7 +312,9 @@ async def test_all_units_have_all_local_users(ops_test: OpsTest) -> None:
     # Get the leader's version of internal_users.yml
     leader_id = await get_leader_unit_id(ops_test)
     leader_name = f"{APP_NAME}/{leader_id}"
-    filename = "/var/snap/opensearch/current/etc/opensearch/opensearch-security/internal_users.yml"
+    filename = (
+        "/var/snap/wazuh-indexer/current/etc/wazuh-indexer/opensearch-security/internal_users.yml"
+    )
     leader_conf = get_conf_as_dict(ops_test, leader_name, filename)
 
     # Check on all units if they have the same
@@ -331,7 +332,9 @@ async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
     # Get the leader's version of internal_users.yml
     leader_id = await get_leader_unit_id(ops_test)
     leader_name = f"{APP_NAME}/{leader_id}"
-    filename = "/var/snap/opensearch/current/etc/opensearch/opensearch-security/internal_users.yml"
+    filename = (
+        "/var/snap/wazuh-indexer/current/etc/wazuh-indexer/opensearch-security/internal_users.yml"
+    )
     leader_conf = get_conf_as_dict(ops_test, leader_name, filename)
 
     # Check on all units if they have the same
@@ -358,7 +361,7 @@ async def test_add_users_and_calling_update_status(ops_test: OpsTest) -> None:
     assert http_resp_code >= 200 and http_resp_code < 300
 
     cmd = '"export JUJU_DISPATCH_PATH=hooks/update-status; ./dispatch"'
-    exec_cmd = f"juju exec -u opensearch/{leader_id} -m {ops_test.model.name} -- {cmd}"
+    exec_cmd = f"juju exec -u wazuh-indexer/{leader_id} -m {ops_test.model.name} -- {cmd}"
     try:
         # The "normal" subprocess.run with "export ...; ..." cmd was failing
         # Noticed that, for this case, canonical/jhack uses shlex instead to split.

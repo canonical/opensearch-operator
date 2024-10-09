@@ -34,7 +34,7 @@ from ..helpers import (
 from .continuous_writes import ContinuousWrites
 from .helpers_data import index_docs_count
 
-OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
+OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.wazuh-indexer.daemon.service"
 ORIGINAL_RESTART_DELAY = 20
 SECOND_APP_NAME = "second-opensearch"
 RESTART_DELAY = 360
@@ -58,9 +58,9 @@ class Shard:
 async def app_name(ops_test: OpsTest) -> Optional[str]:
     """Returns the name of the cluster running OpenSearch.
 
-    This is important since not all deployments of the OpenSearch charm have the
-    application name "opensearch".
-    Note: if multiple clusters are running OpenSearch this will return the one first found.
+    This is important since not all deployments of the Wazuh Indexer charm have the
+    application name "wazuh-indexer".
+    Note: if multiple clusters are running Wazuh Indexer this will return the one first found.
     """
     apps = json.loads(
         subprocess.check_output(
@@ -69,7 +69,7 @@ async def app_name(ops_test: OpsTest) -> Optional[str]:
     )["applications"]
 
     opensearch_apps = {
-        name: desc for name, desc in apps.items() if desc["charm-name"] == "opensearch"
+        name: desc for name, desc in apps.items() if desc["charm-name"] == "wazuh-indexer"
     }
     for name, desc in opensearch_apps.items():
         if name == "opensearch-main":
@@ -462,7 +462,7 @@ def storage_id(ops_test: OpsTest, app: str, unit_id: int):
 
 async def print_logs(ops_test: OpsTest, app: str, unit_id: int, msg: str) -> str:
     unit_name = f"{app}/{unit_id}"
-    snap_path = "/var/snap/opensearch"
+    snap_path = "/var/snap/wazuh-indexer"
 
     unicast_hosts = f"ssh {unit_name} -- sudo cat {snap_path}/current/config/unicast_hosts.txt"
     return_code, stdout, stderr = await ops_test.juju(*unicast_hosts.split(), check=False)

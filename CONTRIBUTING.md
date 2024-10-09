@@ -8,7 +8,7 @@ this operator.
 <!-- TEMPLATE-TODO: Update the URL for issue creation -->
 
 - Generally, before developing enhancements to this charm, you should consider [opening an issue
-  ](https://github.com/canonical/operator-opensearch/issues) explaining your use case.
+  ](https://github.com/canonical/wazuh-indexer-operator/issues) explaining your use case.
 - If you would like to chat with us about your use-cases or proposed implementation, you can reach
   us at [Canonical Mattermost public channel](https://chat.charmhub.io/charmhub/channels/charm-dev)
   or [Discourse](https://discourse.charmhub.io/).
@@ -165,11 +165,11 @@ juju config \
     certificate-validity=365 \
     root-ca-validity=365
     
-# Deploy the opensearch charm
-juju deploy -n 1 ./opensearch_ubuntu-22.04-amd64.charm --series jammy --show-log --verbose
+# Deploy the Wazuh Indexer charm
+juju deploy -n 1 ./wazuh_indexer_ubuntu-22.04-amd64.charm --series jammy --show-log --verbose
 
-# Relate the opensearch charm with the self-signed-certificates operator
-juju integrate self-signed-certificates opensearch
+# Relate the Wazuh Indexer charm with the self-signed-certificates operator
+juju integrate self-signed-certificates wazuh-indexer
 ```
 
 **Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the self-signed-certificates Operator [here](https://charmhub.io/self-signed-certificates).

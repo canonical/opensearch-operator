@@ -29,7 +29,7 @@ class TestOpenSearchKeystore(unittest.TestCase):
         self.charm.opensearch.run_bin = MagicMock(
             side_effect=OpenSearchCmdError(
                 "ERROR: OpenSearch keystore not found at ["
-                "/snap/opensearch/current/config/opensearch.keystore]. "
+                "/snap/wazuh-indexer/current/config/opensearch.keystore]. "
                 "Use 'create' command to create one."
             )
         )

@@ -127,8 +127,6 @@ async def test_tls_renewal(ops_test: OpsTest) -> None:
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units=len(UNIT_IDS),
-        idle_period=15,
-        timeout=60,
     )
 
     updated_certs = await get_loaded_tls_certificates(ops_test, leader_unit_ip)
@@ -153,7 +151,6 @@ async def test_tls_renewal(ops_test: OpsTest) -> None:
         units_statuses=["active"],
         wait_for_exact_units=len(UNIT_IDS),
         idle_period=5,
-        timeout=30,
     )
 
     updated_certs = await get_loaded_tls_certificates(ops_test, units[non_leader_id])
@@ -205,7 +202,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     unit_id = get_application_unit_ids(ops_test, APP_NAME)[0]
     search_expression = "expire=self._get_next_secret_expiry_time\\(certificate\\)"
     replace_expression = f"expire=timedelta\\(seconds={SECRET_EXPIRY_TIME}\\)"
-    lib_file = f"/var/lib/juju/agents/unit-opensearch-{unit_id}/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py"
+    lib_file = f"/var/lib/juju/agents/unit-wazuh-indexer-{unit_id}/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py"
     cmd = f"juju ssh {APP_NAME}/{unit_id} sudo sed -i 's/{search_expression}/{replace_expression}/g' {lib_file}"
     logger.info(f"Running command: {cmd}")
     subprocess.check_output(cmd, shell=True)

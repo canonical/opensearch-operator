@@ -63,7 +63,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
-            app=App(model_uuid="model-uuid", name="opensearch"),
+            app=App(model_uuid="model-uuid", name="wazuh-indexer"),
             state=DeploymentState(value=State.ACTIVE),
         ),
         "ko": DeploymentDescription(
@@ -71,7 +71,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
             typ=DeploymentType.OTHER,
-            app=App(model_uuid="model-uuid", name="opensearch"),
+            app=App(model_uuid="model-uuid", name="wazuh-indexer"),
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
         ),
     }
@@ -533,11 +533,11 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         assert re.search(
             "openssl pkcs12 -export .*-out "
-            "/var/snap/opensearch/current/etc/opensearch/certificates/app-admin.p12 .*-name app-admin",
+            "/var/snap/wazuh-indexer/current/etc/wazuh-indexer/certificates/app-admin.p12 .*-name app-admin",
             run_cmd.call_args_list[0].args[0],
         )
         assert (
-            "sudo chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/app-admin.p12"
+            "sudo chmod +r /var/snap/wazuh-indexer/current/etc/wazuh-indexer/certificates/app-admin.p12"
             in run_cmd.call_args_list[1].args[0]
         )
 
@@ -673,11 +673,11 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         assert re.search(
             "openssl pkcs12 -export .*-out "
-            f"/var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12 .*-name {cert_type}",
+            f"/var/snap/wazuh-indexer/current/etc/wazuh-indexer/certificates/{cert_type}.p12 .*-name {cert_type}",
             run_cmd.call_args_list[0].args[0],
         )
         assert (
-            f"sudo chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12"
+            f"sudo chmod +r /var/snap/wazuh-indexer/current/etc/wazuh-indexer/certificates/{cert_type}.p12"
             in run_cmd.call_args_list[1].args[0]
         )
 
@@ -797,14 +797,14 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
         assert re.search("keytool *-importcert.* *-alias ca", run_cmd.call_args_list[1].args[0])
         assert (
-            "chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12"
+            "chmod +r /var/snap/wazuh-indexer/current/etc/wazuh-indexer/certificates/ca.p12"
             in run_cmd.call_args_list[2].args[0]
         )
         # NOTE: The new cert and chain are NOT saved into the keystore (disk)
 
         # Set flag, set status, restart
         assert (
-            self.harness.get_relation_data(self.rel_id, "opensearch/0")["tls_ca_renewing"]
+            self.harness.get_relation_data(self.rel_id, "wazuh-indexer/0")["tls_ca_renewing"]
             == "True"
         )
         assert isinstance(self.harness.model.unit.status, MaintenanceStatus)
@@ -990,12 +990,12 @@ class TestOpenSearchTLS(unittest.TestCase):
         with self.harness.hooks_disabled():
             self.harness.set_leader(is_leader=True)
             self.harness.update_relation_data(
-                self.rel_id, "opensearch", {"security_index_initialised": "True"}
+                self.rel_id, "wazuh-indexer", {"security_index_initialised": "True"}
             )
 
             # We passed the 1st stage of the certificate renewalV
             self.harness.update_relation_data(
-                self.rel_id, "opensearch/0", {"tls_ca_renewing": "True"}
+                self.rel_id, "wazuh-indexer/0", {"tls_ca_renewing": "True"}
             )
 
         # Applies to ANY deployment type
@@ -1022,7 +1022,8 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # 'tls_ca_renewed' flag is set, new unit certificates were requested
         assert (
-            self.harness.get_relation_data(self.rel_id, "opensearch/0")["tls_ca_renewed"] == "True"
+            self.harness.get_relation_data(self.rel_id, "wazuh-indexer/0")["tls_ca_renewed"]
+            == "True"
         )
 
         new_app_admin_secret = self.secret_store.get_object(Scope.APP, CertType.APP_ADMIN.val)
@@ -1138,12 +1139,12 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.harness.set_leader(is_leader=False)
         with self.harness.hooks_disabled():
             self.harness.update_relation_data(
-                self.rel_id, "opensearch", {"security_index_initialised": "True"}
+                self.rel_id, "wazuh-indexer", {"security_index_initialised": "True"}
             )
 
             # We passed the 1st stage of the certificate renewalV
             self.harness.update_relation_data(
-                self.rel_id, "opensearch/0", {"tls_ca_renewing": "True"}
+                self.rel_id, "wazuh-indexer/0", {"tls_ca_renewing": "True"}
             )
 
         # Applies to ANY deployment type
@@ -1170,11 +1171,12 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # 'tls_ca_renewed' flag is set, new unit certificates were requested
         assert (
-            self.harness.get_relation_data(self.rel_id, "opensearch/0")["tls_ca_renewed"] == "True"
+            self.harness.get_relation_data(self.rel_id, "wazuh-indexer/0")["tls_ca_renewed"]
+            == "True"
         )
         # Note that the old flag is left intact
         assert (
-            self.harness.get_relation_data(self.rel_id, "opensearch/0")["tls_ca_renewing"]
+            self.harness.get_relation_data(self.rel_id, "wazuh-indexer/0")["tls_ca_renewing"]
             == "True"
         )
 
@@ -1276,12 +1278,14 @@ class TestOpenSearchTLS(unittest.TestCase):
         with self.harness.hooks_disabled():
             self.harness.set_leader(is_leader=True)
             self.harness.update_relation_data(
-                self.rel_id, "opensearch", {"security_index_initialised": "True"}
+                self.rel_id, "wazuh-indexer", {"security_index_initialised": "True"}
             )
 
             # We passed the 1st stage of the certificate renewalV
             self.harness.update_relation_data(
-                self.rel_id, "opensearch/0", {"tls_ca_renewing": "True", "tls_ca_renewed": "True"}
+                self.rel_id,
+                "wazuh-indexer/0",
+                {"tls_ca_renewing": "True", "tls_ca_renewed": "True"},
             )
 
         self.charm.tls._on_certificate_available(event_mock)
@@ -1292,19 +1296,20 @@ class TestOpenSearchTLS(unittest.TestCase):
         # Exporting new certs
         assert re.search(
             "openssl pkcs12 -export .* -out "
-            "/var/snap/opensearch/current/etc/opensearch/certificates/app-admin.p12 .* -name app-admin",
+            "/var/snap/wazuh-indexer/current/etc/wazuh-indexer/certificates/app-admin.p12 .* -name app-admin",
             run_cmd.call_args_list[0].args[0],
         )
         assert (
-            "chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/app-admin.p12"
+            "chmod +r /var/snap/wazuh-indexer/current/etc/wazuh-indexer/certificates/app-admin.p12"
             in run_cmd.call_args_list[1].args[0]
         )
         assert (
-            self.harness.get_relation_data(self.rel_id, "opensearch/0")["tls_ca_renewed"] == "True"
+            self.harness.get_relation_data(self.rel_id, "wazuh-indexer/0")["tls_ca_renewed"]
+            == "True"
         )
         # Note that the old flag is left intact
         assert (
-            self.harness.get_relation_data(self.rel_id, "opensearch/0")["tls_ca_renewing"]
+            self.harness.get_relation_data(self.rel_id, "wazuh-indexer/0")["tls_ca_renewing"]
             == "True"
         )
 
@@ -1450,13 +1455,15 @@ class TestOpenSearchTLS(unittest.TestCase):
             self.harness.set_leader(is_leader=leader)
             self.harness.update_relation_data(
                 self.rel_id,
-                "opensearch",
+                "wazuh-indexer",
                 {"security_index_initialised": "True", "admin_user_initialized": "True"},
             )
 
             # We passed the 1st stage of the certificate renewalV
             self.harness.update_relation_data(
-                self.rel_id, "opensearch/0", {"tls_ca_renewing": "True", "tls_ca_renewed": "True"}
+                self.rel_id,
+                "wazuh-indexer/0",
+                {"tls_ca_renewing": "True", "tls_ca_renewed": "True"},
             )
 
         reload_tls_certificates.side_effect = None
@@ -1476,17 +1483,21 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         assert re.search(
             "openssl pkcs12 -export .* -out "
-            f"/var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12 .* -name {cert_type}",
+            f"/var/snap/wazuh-indexer/current/etc/wazuh-indexer/certificates/{cert_type}.p12 .* -name {cert_type}",
             run_cmd.call_args_list[0].args[0],
         )
         assert (
-            f"chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12"
+            f"chmod +r /var/snap/wazuh-indexer/current/etc/wazuh-indexer/certificates/{cert_type}.p12"
             in run_cmd.call_args_list[1].args[0]
         )
         assert re.search("keytool .*-delete .*-alias old-ca", run_cmd.call_args_list[-1].args[0])
 
-        assert "tls_ca_renewing" not in self.harness.get_relation_data(self.rel_id, "opensearch/0")
-        assert "tls_ca_renewed" not in self.harness.get_relation_data(self.rel_id, "opensearch/0")
+        assert "tls_ca_renewing" not in self.harness.get_relation_data(
+            self.rel_id, "wazuh-indexer/0"
+        )
+        assert "tls_ca_renewed" not in self.harness.get_relation_data(
+            self.rel_id, "wazuh-indexer/0"
+        )
 
         assert self.harness.model.unit.status.message == ""
         assert self.harness.model.unit.status, MaintenanceStatus != original_status

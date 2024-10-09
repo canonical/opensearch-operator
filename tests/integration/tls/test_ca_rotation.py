@@ -89,8 +89,8 @@ async def test_rollout_new_ca(ops_test: OpsTest) -> None:
         apps=[APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        timeout=1800,
-        idle_period=60,
+        timeout=2400,
+        idle_period=IDLE_PERIOD,
         wait_for_exact_units=len(UNIT_IDS),
     )
 
@@ -113,7 +113,7 @@ async def test_rollout_new_ca(ops_test: OpsTest) -> None:
     # using the SSL API requires authentication with app-admin cert and key
     leader_unit_ip = await get_leader_unit_ip(ops_test)
     url = f"https://{leader_unit_ip}:9200/_plugins/_security/api/ssl/certs"
-    admin_secret = await get_secret_by_label(ops_test, "opensearch:app:app-admin")
+    admin_secret = await get_secret_by_label(ops_test, "wazuh-indexer:app:app-admin")
 
     with open("admin.cert", "w") as cert:
         cert.write(admin_secret["cert"])

@@ -184,12 +184,12 @@ async def test_small_deployments_prometheus_exporter_cos_relation(ops_test, depl
         ops_test, cos_leader_name, leader_name, COS_RELATION_NAME, "config"
     )
     relation_data = json.loads(relation_data_raw)["metrics_scrape_jobs"][0]
-    secret = await get_secret_by_label(ops_test, "opensearch:app:monitor-password")
+    secret = await get_secret_by_label(ops_test, "wazuh-indexer:app:monitor-password")
 
     assert relation_data["basic_auth"]["username"] == "monitor"
     assert relation_data["basic_auth"]["password"] == secret["monitor-password"]
 
-    admin_secret = await get_secret_by_label(ops_test, "opensearch:app:app-admin")
+    admin_secret = await get_secret_by_label(ops_test, "wazuh-indexer:app:app-admin")
     assert relation_data["tls_config"]["ca"] == admin_secret["ca-cert"]
     assert relation_data["scheme"] == "https"
 
@@ -273,12 +273,12 @@ async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deplo
         ops_test, f"{COS_APP_NAME}/{cos_leader_id}", leader_name, COS_RELATION_NAME, "config"
     )
     relation_data = json.loads(relation_data_raw)["metrics_scrape_jobs"][0]
-    secret = await get_secret_by_label(ops_test, "opensearch:app:monitor-password")
+    secret = await get_secret_by_label(ops_test, "wazuh-indexer:app:monitor-password")
 
     assert relation_data["basic_auth"]["username"] == "monitor"
     assert relation_data["basic_auth"]["password"] == secret["monitor-password"]
 
-    admin_secret = await get_secret_by_label(ops_test, "opensearch:app:app-admin")
+    admin_secret = await get_secret_by_label(ops_test, "wazuh-indexer:app:app-admin")
     assert relation_data["tls_config"]["ca"] == admin_secret["ca-cert"]
     assert relation_data["scheme"] == "https"
 
@@ -289,7 +289,7 @@ async def test_monitoring_user_fetch_prometheus_data(ops_test, deploy_type: str)
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
     endpoint = f"https://{leader_unit_ip}:9200/_prometheus/metrics"
 
-    secret = await get_secret_by_label(ops_test, "opensearch:app:monitor-password")
+    secret = await get_secret_by_label(ops_test, "wazuh-indexer:app:monitor-password")
     response = await http_request(
         ops_test,
         "get",
@@ -368,6 +368,7 @@ async def test_knn_enabled_disabled(ops_test, deploy_type: str):
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
+@pytest.mark.skip("The knn plugin is not installed")
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -412,6 +413,7 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
+@pytest.mark.skip("The knn plugin is not installed")
 async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the NMSLIB KNNEngine."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -456,6 +458,7 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) 
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
+@pytest.mark.skip("The knn plugin is not installed")
 async def test_knn_training_search(ops_test: OpsTest, deploy_type: str) -> None:
     """Tests the entire cycle of KNN plugin.
 

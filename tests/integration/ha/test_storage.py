@@ -88,7 +88,7 @@ async def test_storage_reuse_after_scale_down(
     unit_storage_id = storage_id(ops_test, app, unit_id)
 
     # create a testfile on the newly added unit to check if data in storage is persistent
-    testfile = "/var/snap/opensearch/common/testfile"
+    testfile = "/var/snap/wazuh-indexer/common/testfile"
     create_testfile_cmd = f"juju ssh {app}/{unit_id} -q sudo touch {testfile}"
     subprocess.run(create_testfile_cmd, shell=True)
 

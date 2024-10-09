@@ -180,7 +180,7 @@ class TestOpenSearchConfig(unittest.TestCase):
             ),
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
-            app=App(model_uuid="model-uuid", name="opensearch"),
+            app=App(model_uuid="model-uuid", name="wazuh-indexer"),
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             state=DeploymentState(value=State.ACTIVE),
         )
