@@ -1580,10 +1580,9 @@ class TestOpenSearchTLS(unittest.TestCase):
             state=DeploymentState(value=State.ACTIVE),
         )
 
-        event_mock = MagicMock(
+        self.charm.on.certificate_available = MagicMock(
             certificate_signing_request=csr, chain=chain, certificate=cert, ca=ca
         )
-        self.charm.on.certificate_available = MagicMock()
 
         self.harness.set_leader(is_leader=leader)
         original_status = self.harness.model.unit.status
@@ -1594,15 +1593,15 @@ class TestOpenSearchTLS(unittest.TestCase):
                 self.rel_id, f"{self.charm.unit.name}", {"tls_ca_renewing": "True"}
             )
 
-        self.charm.tls._on_certificate_available(event_mock)
+        self.charm.tls._on_certificate_available(self.charm.on.certificate_available)
 
         # No action taken, no change on status or certificates
         assert run_cmd.call_count == 0
         assert self.harness.model.unit.status == original_status
         if leader:
-            event_mock.defer.assert_called_once()
+            self.charm.on.certificate_available.defer.assert_called_once()
         else:
-            event_mock.defer.assert_not_called()
+            self.charm.on.certificate_available.defer.assert_not_called()
         assert self.secret_store.get_object(Scope.APP, CertType.APP_ADMIN.val) == {
             "csr": csr,
             "keystore-password": "keystore_12345",
@@ -1677,10 +1676,9 @@ class TestOpenSearchTLS(unittest.TestCase):
             state=DeploymentState(value=State.ACTIVE),
         )
 
-        event_mock = MagicMock(
+        self.charm.on.certificate_available = MagicMock(
             certificate_signing_request=csr, chain=chain, certificate=cert, ca=ca
         )
-        self.charm.on.certificate_available = MagicMock()
 
         self.harness.set_leader(is_leader=leader)
         original_status = self.harness.model.unit.status
@@ -1696,15 +1694,15 @@ class TestOpenSearchTLS(unittest.TestCase):
                 self.rel_id, f"{self.charm.app.name}/1", {"tls_ca_renewing": "True"}
             )
 
-        self.charm.tls._on_certificate_available(event_mock)
+        self.charm.tls._on_certificate_available(self.charm.on.certificate_available)
 
         # No action taken, no change on status or certificates
         assert run_cmd.call_count == 0
         assert self.harness.model.unit.status == original_status
         if leader:
-            event_mock.defer.assert_called_once()
+            self.charm.on.certificate_available.defer.assert_called_once()
         else:
-            event_mock.defer.assert_not_called()
+            self.charm.on.certificate_available.defer.assert_not_called()
         assert self.secret_store.get_object(Scope.APP, CertType.APP_ADMIN.val) == {
             "csr": csr,
             "keystore-password": "keystore_12345",
