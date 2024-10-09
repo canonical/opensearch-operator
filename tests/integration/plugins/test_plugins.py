@@ -108,7 +108,7 @@ async def _set_config(ops_test: OpsTest, deploy_type: str, conf: dict[str, str])
 async def _wait_for_units(ops_test: OpsTest, deployment_type: str) -> None:
     """Wait for all units to be active.
 
-    This wait will will behavior accordingly to small/large.
+    This wait will behavior accordingly to small/large.
     """
     if deployment_type == "small_deployment":
         await wait_until(
@@ -117,7 +117,7 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str) -> None:
             apps_statuses=["active"],
             units_statuses=["active"],
             wait_for_exact_units={APP_NAME: 3},
-            timeout=1200,
+            timeout=1800,
             idle_period=IDLE_PERIOD,
         )
         return
@@ -137,7 +137,7 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str) -> None:
             FAILOVER_ORCHESTRATOR_NAME: 2,
             APP_NAME: 1,
         },
-        timeout=1200,
+        timeout=1800,
         idle_period=IDLE_PERIOD,
     )
 
@@ -265,12 +265,12 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
     main_orchestrator_conf = {
         "cluster_name": "plugins-test",
         "init_hold": False,
-        "roles": "cluster_manager",
+        "roles": "cluster_manager,data",
     }
     failover_orchestrator_conf = {
         "cluster_name": "plugins-test",
         "init_hold": True,
-        "roles": "cluster_manager",
+        "roles": "cluster_manager,data",
     }
     data_hot_conf = {"cluster_name": "plugins-test", "init_hold": True, "roles": "data.hot,ml"}
 

@@ -60,6 +60,22 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
         ),
+        "cm-only": DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=["cluster-manager"]),
+            start=StartMode.WITH_PROVIDED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            app=App(model_uuid="model-uuid", name="opensearch"),
+            state=DeploymentState(value=State.ACTIVE),
+        ),
+        "data-only": DeploymentDescription(
+            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=["data"]),
+            start=StartMode.WITH_PROVIDED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.OTHER,
+            app=App(model_uuid="model-uuid", name="opensearch"),
+            state=DeploymentState(value=State.ACTIVE),
+        ),
     }
 
     def setUp(self) -> None:
@@ -166,14 +182,59 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         )
         _purge_users.assert_called_once()
 
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
+    @patch(f"{BASE_CHARM_CLASS}._initialize_security_index")
+    @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.is_node_up")
+    def test_cluster_manager_only_no_security_initialization(
+        self,
+        deployment_desc,
+        _initialize_security_index,
+        is_node_up,
+    ):
+        """Test that security index is not initialized after starting the cluster manager"""
+        deployment_desc.config.roles.return_value = ["cluster-manager"]
+        deployment_desc.start.return_value = StartMode.WITH_PROVIDED_ROLES
+        self.harness.set_leader(True)
+        start_event = MagicMock()
+
+        with patch(f"{self.BASE_CHARM_CLASS}._get_nodes") as _get_nodes:
+            _get_nodes.side_effect = OpenSearchHttpError()
+            self.charm._post_start_init(start_event)
+            _initialize_security_index.assert_not_called()
+
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
+    @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
+    @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_client_auth")
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
+    @patch(f"{BASE_CHARM_CLASS}._start_opensearch_event")
+    @patch(f"{BASE_CHARM_CLASS}._apply_peer_cm_directives_and_check_if_can_start")
+    def test_data_role_only_on_start(
+        self,
+        is_fully_configured,
+        is_admin_user_configured,
+        set_client_auth,
+        deployment_desc,
+        _start_opensearch_event,
+        _apply_peer_cm_directives_and_check_if_can_start,
+    ):
+        """Test start event for nodes that only have the `data` role."""
+        with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
+            is_node_up.return_value = False
+            _apply_peer_cm_directives_and_check_if_can_start.return_value = True
+            is_fully_configured.return_value = True
+            is_admin_user_configured.return_value = True
+            deployment_desc.typ.return_value = DeploymentType.OTHER
+            deployment_desc.config.roles.return_value = ["data"]
+
+            self.harness.set_leader(True)
+            self.charm.on.start.emit()
+
+            self.charm._start_opensearch_event.emit.assert_called_once()
+
     @patch(f"{BASE_LIB_PATH}.opensearch_locking.OpenSearchNodeLock.acquired")
-    @patch(
-        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.validate_roles"
-    )
-    @patch(
-        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
-    )
-    @patch(f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.can_start")
+    @patch(f"{PEER_CLUSTERS_MANAGER}.validate_roles")
+    @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
+    @patch(f"{PEER_CLUSTERS_MANAGER}.can_start")
     @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_client_auth")
@@ -184,8 +245,10 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._purge_users")
     @patch(f"{BASE_CHARM_CLASS}._put_or_update_internal_user_unit")
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
+    @patch(f"{BASE_CHARM_CLASS}._post_start_init")
     def test_on_start(
         self,
+        _post_start_init,
         request,
         _put_or_update_internal_user_unit,
         _purge_users,
@@ -256,14 +319,15 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             validate_roles.assert_called()
             _set_node_conf.assert_called()
             start.assert_called_once()
-            _initialize_security_index.assert_called_once()
-            self.assertTrue(self.peers_data.get(Scope.APP, "security_index_initialised"))
+            _post_start_init.assert_called_once()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackup.is_backup_in_progress")
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackup._is_restore_complete")
     @patch(f"{BASE_CHARM_CLASS}._stop_opensearch")
     @patch(f"{BASE_LIB_PATH}.opensearch_base_charm.cert_expiration_remaining_hours")
-    @patch(f"{BASE_LIB_PATH}.opensearch_users.OpenSearchUserManager.remove_users_and_roles")
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_relation_provider.OpenSearchProvider.remove_lingering_relation_users_and_roles"
+    )
     def test_on_update_status(self, _, cert_expiration_remaining_hours, _stop_opensearch, __, ___):
         """Test on update status."""
         with patch(
@@ -293,12 +357,16 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.reload_tls_certificates")
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.update_request_ca_bundle")
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.remove_old_ca")
     def test_reload_tls_certs_without_restart(
         self,
         store_admin_tls_secrets_if_applies,
         is_admin_user_configured,
         is_fully_configured,
         reload_tls_certificates,
+        update_request_ca_bundle,
+        remove_old_ca,
     ):
         """Test that tls configuration set does not trigger restart."""
         cert = "cert_12345"
@@ -311,6 +379,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         store_admin_tls_secrets_if_applies.assert_called_once()
         reload_tls_certificates.assert_called_once()
+        update_request_ca_bundle.assert_called_once()
+
+        remove_old_ca.assert_called_once()
         self.charm._restart_opensearch_event.emit.assert_not_called()
 
     def test_app_peers_data(self):

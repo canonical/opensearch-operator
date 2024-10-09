@@ -360,8 +360,8 @@ class PeerClusterRelDataCredentials(Model):
     admin_password_hash: str
     kibana_password: str
     kibana_password_hash: str
-    monitor_password: str
-    admin_tls: Dict[str, Optional[str]]
+    monitor_password: Optional[str]
+    admin_tls: Optional[Dict[str, Optional[str]]]
     s3: Optional[S3RelDataCredentials]
 
 
@@ -371,6 +371,7 @@ class PeerClusterApp(Model):
     app: App
     planned_units: int
     units: List[str]
+    roles: List[str]
 
 
 class PeerClusterFleetApps(Model):

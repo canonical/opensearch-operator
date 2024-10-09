@@ -41,6 +41,7 @@ class TestCharm(TestOpenSearchBaseCharm):
                     "ca-cert": "ca",
                     "cert": unit_resources.cert,
                     "key": unit_resources.key,
+                    "chain": "chain",
                 },
             )
 
@@ -58,5 +59,5 @@ class TestCharm(TestOpenSearchBaseCharm):
                 },
             )
 
-            self.assertTrue(exists(f"{tmp_dir}/chain.pem"))
+            self.assertFalse(exists(f"{tmp_dir}/chain.pem"))
             self.assertTrue(exists(f"{tmp_dir}/unit-transport.p12"))

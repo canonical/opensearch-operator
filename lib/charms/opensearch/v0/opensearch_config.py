@@ -64,6 +64,11 @@ class OpenSearchConfig:
             True,
         )
 
+        self._opensearch.config.append(
+            self.JVM_OPTIONS,
+            "-Djdk.tls.client.protocols=TLSv1.2",
+        )
+
     def set_admin_tls_conf(self, secrets: Dict[str, any]):
         """Configures the admin certificate."""
         self._opensearch.config.put(
@@ -89,12 +94,11 @@ class OpenSearchConfig:
                 f"{self._opensearch.paths.certs_relative}/{cert if cert == 'ca' else cert_type}.p12",
             )
 
-        for store_type, certificate_type in [("keystore", cert_type.val), ("truststore", "ca")]:
-            self._opensearch.config.put(
-                self.CONFIG_YML,
-                f"plugins.security.ssl.{target_conf_layer}.{store_type}_alias",
-                certificate_type,
-            )
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            f"plugins.security.ssl.{target_conf_layer}.keystore_alias",
+            cert_type.val,
+        )
 
         for store_type, pwd in [("keystore", keystore_pwd), ("truststore", truststore_pwd)]:
             self._opensearch.config.put(
@@ -102,6 +106,12 @@ class OpenSearchConfig:
                 f"plugins.security.ssl.{target_conf_layer}.{store_type}_password",
                 pwd,
             )
+
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            f"plugins.security.ssl.{target_conf_layer}.enabled_protocols",
+            "TLSv1.2",
+        )
 
     def append_transport_node(self, ip_pattern_entries: List[str], append: bool = True):
         """Set the IP address of the new unit in nodes_dn."""
@@ -208,9 +218,12 @@ class OpenSearchConfig:
     def add_seed_hosts(self, cm_ips: List[str]):
         """Add CM nodes ips / host names to the seed host list of this unit."""
         cm_ips_set = set(cm_ips)
-        with open(self._opensearch.paths.seed_hosts, "w+") as f:
-            lines = "\n".join([entry for entry in cm_ips_set if entry.strip()])
-            f.write(f"{lines}\n")
+
+        # only update the file if there is data to update
+        if cm_ips_set:
+            with open(self._opensearch.paths.seed_hosts, "w+") as f:
+                lines = "\n".join([entry for entry in cm_ips_set if entry.strip()])
+                f.write(f"{lines}\n")
 
     def cleanup_bootstrap_conf(self):
         """Remove some conf entries when the cluster is bootstrapped."""

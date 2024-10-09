@@ -30,19 +30,23 @@ Wait until `self-signed-certificates` is active. Use `juju status --watch 1s` to
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:22:05Z
+tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:39:22Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         blocked      1  opensearch                2/beta         117  no       Missing TLS relation with this cluster.
+opensearch                         blocked      3  opensearch                2/beta         117  no       Missing TLS relation with this cluster.
 self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports  Message
-opensearch/0*                blocked   idle   0        10.214.176.107         Missing TLS relation with this cluster.
-self-signed-certificates/0*  active    idle   1        10.214.176.116
+opensearch/0*                blocked   idle   0        10.95.38.94            Missing TLS relation with this cluster.
+opensearch/1                 blocked   idle   1        10.95.38.139           Missing TLS relation with this cluster.
+opensearch/2                 blocked   idle   2        10.95.38.212           Missing TLS relation with this cluster.
+self-signed-certificates/0*  active    idle   3        10.95.38.54
 
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.107  juju-b0826b-0  ubuntu@22.04      Running
-1        started  10.214.176.116  juju-b0826b-1  ubuntu@22.04      Running
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
+3        started  10.95.38.54   juju-be3883-3  ubuntu@22.04      Running
 ```
 
 ## Integrate with OpenSearch
@@ -59,19 +63,23 @@ The OpenSearch service will start. This might take some time. Once done, you can
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:23:24Z
+tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:41:22Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         active      1  opensearch                2/beta         117  no
+opensearch                         active      3  opensearch                2/beta         117  no
 self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/0*                active    idle   0        10.214.176.107  9200/tcp
-self-signed-certificates/0*  active    idle   1        10.214.176.116
+opensearch/0*                active    idle   0        10.95.38.94     9200/tcp
+opensearch/1                 active    idle   1        10.95.38.139    9200/tcp
+opensearch/2                 active    idle   2        10.95.38.212    9200/tcp
+self-signed-certificates/0*  active    idle   3        10.95.38.54
 
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.107  juju-b0826b-0  ubuntu@22.04      Running
-1        started  10.214.176.116  juju-b0826b-1  ubuntu@22.04      Running
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
+3        started  10.95.38.54   juju-be3883-3  ubuntu@22.04      Running
 
 Integration provider                   Requirer                       Interface           Type     Message
 opensearch:node-lock-fallback          opensearch:node-lock-fallback  node_lock_fallback  peer

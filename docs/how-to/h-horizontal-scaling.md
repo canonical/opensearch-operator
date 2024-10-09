@@ -7,7 +7,7 @@ To see an example of scaling down a real deployment scenario, check the followin
 [note type="caution"]
 **Warning:**
 * The following steps are for removing one single Juju unit (node). This may be repeated as many times as necessary, but **never remove multiple units in the same command.** 
-* In highly available deployments, **it is not safe to scale below 3 nodes**. If only 2 nodes are online, neither can be unavailable nor removed at all time. The service will become **unavailable** and **data may be lost**  if scaling below 2 nodes.
+* In highly available deployments, **it is not safe to scale below 3 nodes**. 
 [/note]
 
 ## Summary
@@ -32,12 +32,22 @@ Below is a sample output of the command `juju status --watch 1s` when the cluste
  
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  2.9.42   unsupported  15:46:15Z
+tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  14:29:04Z
 
-App                        Version  Status  Scale  Charm                      Channel  Rev  Exposed  Message
-data-integrator                     active      1  data-integrator            edge      11  no
-opensearch                          blocked     2  opensearch                 edge      22  no       1 or more 'replica' shards are not assigned, please scale your application up.
-tls-certificates-operator           active      1  tls-certificates-operator  stable    22  no
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+data-integrator                    active       1  data-integrator           latest/edge     59  no
+opensearch                         blocked      1  opensearch                2/beta         117  no       1 or more 'replica' shards are not assigned, please scale your application up.
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+data-integrator/0*           active    idle   2        10.95.38.174
+opensearch/0*                active    idle   1        10.95.38.230    9200/tcp
+self-signed-certificates/0*  active    idle   0        10.95.38.94
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.95.38.94   juju-4dad5c-0  ubuntu@22.04      Running
+1        started  10.95.38.230  juju-4dad5c-1  ubuntu@22.04      Running
+2        started  10.95.38.174  juju-4dad5c-2  ubuntu@22.04      Running
 ```
 In this case, the cluster is not in good health because the status is `blocked`, and the message says `1 or more 'replica' shards are not assigned, please scale your application up`.
 

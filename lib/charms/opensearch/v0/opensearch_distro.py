@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import pathlib
+import random
 import socket
 import subprocess
 import time
@@ -191,7 +192,8 @@ class OpenSearchDistribution(ABC):
                 timeout=1,
             )
             return resp_code < 400
-        except (OpenSearchHttpError, Exception):
+        except (OpenSearchHttpError, Exception) as e:
+            logger.debug(f"Error when checking if host {host} is up: {e}")
             return False
 
     def run_bin(self, bin_script_name: str, args: str = None, stdin: str = None) -> str:
@@ -247,17 +249,20 @@ class OpenSearchDistribution(ABC):
             OpenSearchHttpError if hosts are unreachable
         """
 
-        def call(url: str) -> requests.Response:
+        def call(urls: List[str]) -> requests.Response:
             """Performs an HTTP request."""
+            random.shuffle(urls)
+
             for attempt in Retrying(
                 retry=retry_if_exception_type(requests.RequestException)
                 | retry_if_exception_type(urllib3.exceptions.HTTPError),
                 stop=stop_after_attempt(retries),
                 wait=wait_fixed(1),
-                before_sleep=error_http_retry_log(logger, retries, method, url, payload),
+                before_sleep=error_http_retry_log(logger, retries, method, urls, payload),
                 reraise=True,
             ):
                 with attempt, requests.Session() as s:
+                    url = urls[(attempt.retry_state.attempt_number - 1) % len(urls)]
                     admin_field = self._charm.secrets.password_key("admin")
                     if cert_files:
                         s.cert = cert_files
@@ -310,7 +315,7 @@ class OpenSearchDistribution(ABC):
 
         resp = None
         try:
-            resp = call(urls[0])
+            resp = call(urls)
             if resp_status_code:
                 return resp.status_code
 

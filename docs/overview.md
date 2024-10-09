@@ -23,11 +23,10 @@ The upper portion of this page describes the Operating System (OS) where the cha
 | [**Reference**](/t/14109) </br> Technical information such as [system requirements](/t/14565) | <!--[Explanation]() </br> Concepts - discussion and clarification of key topics-->  |
 
 ## Project & community
-If you find a bug in this operator or want to request a specific feature, here are the useful links:
-- Raise the issue or feature request in the [Canonical Github repository](https://github.com/canonical/opensearch-operator/issues).
-- Meet the community and chat with us if there are issues and feature requests in our [Mattermost Channel](https://chat.charmhub.io/charmhub/channels/data-platform)
-and join the [Discourse Forum](https://discourse.charmhub.io/tag/opensearch).
-- To learn about contribution guidelines, check the Charmed OpenSearch [CONTRIBUTING.md](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) on GitHub and read the Ubuntu Community's [Code of Conduct](https://ubuntu.com/community/code-of-conduct).
+Charmed OpenSearch is an official distribution of OpenSearch . It’s an open-source project that welcomes community contributions, suggestions, fixes and constructive feedback.
+- Raise an issue or feature request in the [Github repository](https://github.com/canonical/opensearch-operator/issues).
+- Meet the community and chat with us in our [Matrix channel](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or [leave a comment](https://discourse.charmhub.io/t/charmed-opensearch-documentation/9729).
+- See the Charmed OpenSearch [contribution guidelines](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) on GitHub and read the Ubuntu Community's [Code of Conduct](https://ubuntu.com/community/code-of-conduct).
 
 ## License & trademark
 The Charmed OpenSearch ROCK, Charmed OpenSearch Snap, and Charmed OpenSearch Operator are free software, distributed under the 
@@ -45,36 +44,37 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 
 | Level | Path                       | Navlink                                      |
 |----------|-------------------------|----------------------------------------------|
-| 1     | tutorial                   | [Tutorial]()                                 |
-| 2     | t-overview                 | [Overview](/t/9722)                   |
-| 2     | t-set-up        | [1. Set up the environment](/t/9724)         |
-| 2     | t-deploy-opensearch        | [2. Deploy OpenSearch](/t/9716)              |
-| 2     | t-enable-tls               | [3. Enable encryption](/t/9718)              |
-| 2     | t-integrate | [4. Integrate with a client application](/t/9714)          |
-| 2     | t-passwords          | [5. Manage passwords](/t/9728)                    |
-| 2     | t-horizontal-scaling       | [6. Scale horizontally](/t/9720)  |
-| 2     | t-clean-up                 | [7. Clean up the environment](/t/9726)       |
-| 1     | how-to                     | [How To]()                                   |
-| 2     | h-deploy-lxd | [Deploy on LXD](/t/14575) |
-| 2     | h-horizontal-scaling  | [Scale horizontally](/t/10994)          |
-| 2     | h-enable-tls   | [Enable TLS encryption](/t/14783)          |
-| 2     | h-rotate-tls-ca-certificates   | [Rotate TLS/CA certificates](/t/15422)          |
-| 2     | h-enable-monitoring | [Enable monitoring](/t/14560) |
-| 2     | h-load-testing | [Perform load testing](/t/13987) |
-| 2     | h-backups                   | [Back up and restore]()                           |
-| 3     | h-configure-s3             | [Configure S3](/t/14097)                     |
-| 3     | h-create-backup            | [Create a backup](/t/14098)                  |
-| 3     | h-restore-backup     | [Restore a local backup](/t/14099)           |
-| 3     | h-migrate-cluster          | [Migrate a cluster](/t/14100)                |
-| 2     | h-contribute | [Contribute](/t/14557) |
-| 1     | reference                  | [Reference]()                                |
-| 2     | r-system-requirements | [System requirements](/t/14565) |
-| 2     | r-software-testing                  | [Charm testing](/t/14109)                                |
+| 1 | tutorial | [Tutorial]()                                 |
+| 2 | t-overview | [Overview](/t/9722) |
+| 2 | t-set-up | [1. Set up the environment](/t/9724) |
+| 2 | t-deploy-opensearch | [2. Deploy OpenSearch](/t/9716) |
+| 2 | t-enable-tls | [3. Enable encryption](/t/9718) |
+| 2 | t-integrate | [4. Integrate with a client application](/t/9714) |
+| 2 | t-passwords | [5. Manage passwords](/t/9728) |
+| 2 | t-horizontal-scaling | [6. Scale horizontally](/t/9720)  |
+| 2 | t-clean-up | [7. Clean up the environment](/t/9726) |
+| 1 | how-to | [How To]() |
+| 2 | h-deploy-lxd | [Deploy on LXD](/t/14575) |
+| 2 | h-large-deployment | [Launch a large deployment](/t/15573) |
+| 2 | h-horizontal-scaling  | [Scale horizontally](/t/10994) |
+| 2 | h-integrate | [Integrate with your charm](/t/15333) |
+| 2 | h-enable-tls | [Enable TLS encryption](/t/14783) |
+| 2 | h-rotate-tls-ca-certificates   | [Rotate TLS/CA certificates](/t/15422) |
+| 2 | h-enable-monitoring | [Enable monitoring](/t/14560) |
+| 2 | h-load-testing | [Perform load testing](/t/13987) |
+| 2 | h-attached-storage| [Recover from attached storage](/t/15616) |
+| 2 | h-backups | [Back up and restore]() |
+| 3 | h-configure-s3 | [Configure S3](/t/14097) |
+| 3 | h-create-backup | [Create a backup](/t/14098) |
+| 3 | h-restore-backup | [Restore a local backup](/t/14099) |
+| 3 | h-migrate-cluster | [Migrate a cluster](/t/14100) |
+| 2 | h-upgrade | [Upgrade]() |
+| 3 | h-minor-upgrade | [Perform a minor upgrade](/t/14141) |
+| 3 | h-minor-rollback | [Perform a minor rollback](/t/14142) |
+| 1 | reference | [Reference]() |
+| 2 | release-notes| [Release notes]() |
+| 3 | revision-168| [Revision 168](/t/14050) |
+| 2 | r-system-requirements | [System requirements](/t/14565) |
+| 2 | r-software-testing | [Charm testing](/t/14109) |
 
 [/details]
-
-<!-- Add when done: 
-How to perform a minor upgrade: /t/15334
-How to perform a minor rollback: /t/15335
-How to integrate with your charm: /t/15333
--->
