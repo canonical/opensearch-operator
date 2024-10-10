@@ -54,15 +54,14 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 | 2 | t-horizontal-scaling | [6. Scale horizontally](/t/9720)  |
 | 2 | t-clean-up | [7. Clean up the environment](/t/9726) |
 | 1 | how-to | [How To]() |
-| 2 | h-deploy-lxd | [Deploy on LXD](/t/14575) |
-| 2 | h-large-deployment | [Launch a large deployment](/t/15573) |
+| 2 | h-deploy | [Deploy]() |
+| 3 | h-deploy-lxd | [Deploy on LXD](/t/14575) |
+| 3 | h-large-deployment | [Launch a large deployment](/t/15573) |
+| 2 | h-tls| [TLS encryption]() |
+| 3 | h-enable-tls | [Enable TLS encryption](/t/14783) |
+| 3 | h-rotate-tls-ca-certificates   | [Rotate TLS/CA certificates](/t/15422) |
 | 2 | h-horizontal-scaling  | [Scale horizontally](/t/10994) |
-| 2 | h-integrate | [Integrate with your charm](/t/15333) |
-| 2 | h-enable-tls | [Enable TLS encryption](/t/14783) |
-| 2 | h-rotate-tls-ca-certificates   | [Rotate TLS/CA certificates](/t/15422) |
-| 2 | h-enable-monitoring | [Enable monitoring](/t/14560) |
-| 2 | h-load-testing | [Perform load testing](/t/13987) |
-| 2 | h-attached-storage| [Recover from attached storage](/t/15616) |
+| 2 | h-integrate | [Integrate with an application](/t/15333) |
 | 2 | h-backups | [Back up and restore]() |
 | 3 | h-configure-s3 | [Configure S3](/t/14097) |
 | 3 | h-create-backup | [Create a backup](/t/14098) |
@@ -71,6 +70,9 @@ This documentation follows the [Diataxis Framework](https://canonical.com/blog/d
 | 2 | h-upgrade | [Upgrade]() |
 | 3 | h-minor-upgrade | [Perform a minor upgrade](/t/14141) |
 | 3 | h-minor-rollback | [Perform a minor rollback](/t/14142) |
+| 2 | h-load-testing | [Perform load testing](/t/13987) |
+| 2 | h-attached-storage| [Recover from attached storage](/t/15616) |
+| 2 | h-enable-monitoring | [Enable monitoring](/t/14560) |
 | 1 | reference | [Reference]() |
 | 2 | release-notes| [Release notes]() |
 | 3 | revision-168| [Revision 168](/t/14050) |
