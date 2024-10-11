@@ -6,9 +6,9 @@ import itertools
 import re
 import socket
 import unittest
+import uuid
 from unittest import mock
 from unittest.mock import MagicMock, Mock, call, patch
-import uuid
 
 import responses
 from charms.opensearch.v0.constants_charm import (
