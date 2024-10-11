@@ -12,11 +12,11 @@ from pytest_operator.plugin import OpsTest
 from ..ha.continuous_writes import ContinuousWrites
 from ..helpers import (
     APP_NAME,
+    CONFIG_OPTS,
     IDLE_PERIOD,
     MODEL_CONFIG,
     SERIES,
     UNIT_IDS,
-    CONFIG_OPTS,
     get_leader_unit_ip,
     get_secret_by_label,
 )

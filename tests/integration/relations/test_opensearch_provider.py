@@ -13,9 +13,9 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers import APP_NAME as OPENSEARCH_APP_NAME
 from ..helpers import (
+    CONFIG_OPTS,
     MODEL_CONFIG,
     SERIES,
-    CONFIG_OPTS,
     get_application_unit_ids,
     get_leader_unit_id,
     get_leader_unit_ip,

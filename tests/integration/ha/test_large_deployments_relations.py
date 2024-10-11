@@ -10,7 +10,7 @@ import pytest
 from charms.opensearch.v0.constants_charm import PClusterNoRelation, TLSRelationMissing
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import MODEL_CONFIG, SERIES, get_leader_unit_ip, CONFIG_OPTS
+from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES, get_leader_unit_ip
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
@@ -67,14 +67,16 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             application_name=DATA_APP,
             num_units=2,
             series=SERIES,
-            config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data.hot,ml"} | CONFIG_OPTS,
+            config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data.hot,ml"}
+            | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             my_charm,
             application_name=INVALID_APP,
             num_units=1,
             series=SERIES,
-            config={"cluster_name": INVALID_CLUSTER_NAME, "init_hold": True, "roles": "data.cold"} | CONFIG_OPTS,
+            config={"cluster_name": INVALID_CLUSTER_NAME, "init_hold": True, "roles": "data.cold"}
+            | CONFIG_OPTS,
         ),
     )
 

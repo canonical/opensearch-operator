@@ -11,10 +11,10 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
     APP_NAME,
+    CONFIG_OPTS,
     MODEL_CONFIG,
     SERIES,
     UNIT_IDS,
-    CONFIG_OPTS,
     check_cluster_formation_successful,
     cluster_health,
     get_application_unit_ids,

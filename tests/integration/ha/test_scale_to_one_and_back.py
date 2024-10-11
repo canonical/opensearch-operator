@@ -11,9 +11,9 @@ from pytest_operator.plugin import OpsTest
 from ..ha.helpers import get_elected_cm_unit_id
 from ..helpers import (
     APP_NAME,
+    CONFIG_OPTS,
     MODEL_CONFIG,
     SERIES,
-    CONFIG_OPTS,
     cluster_health,
     cluster_voting_config_exclusions,
     execute_update_status_manually,

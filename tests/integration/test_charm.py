@@ -23,9 +23,9 @@ from .ha.helpers import (
 )
 from .helpers import (
     APP_NAME,
+    CONFIG_OPTS,
     MODEL_CONFIG,
     SERIES,
-    CONFIG_OPTS,
     get_application_unit_ids,
     get_conf_as_dict,
     get_leader_unit_id,

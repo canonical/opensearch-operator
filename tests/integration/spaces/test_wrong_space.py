@@ -12,10 +12,10 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
     APP_NAME,
+    CONFIG_OPTS,
     IDLE_PERIOD,
     MODEL_CONFIG,
     SERIES,
-    CONFIG_OPTS,
     get_application_unit_ids,
 )
 from ..helpers_deployments import wait_until

@@ -21,10 +21,10 @@ from ..ha.helpers import (
 )
 from ..helpers import (
     APP_NAME,
+    CONFIG_OPTS,
     IDLE_PERIOD,
     MODEL_CONFIG,
     SERIES,
-    CONFIG_OPTS,
     app_name,
     check_cluster_formation_successful,
     cluster_health,

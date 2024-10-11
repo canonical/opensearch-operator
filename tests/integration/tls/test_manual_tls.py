@@ -8,7 +8,7 @@ import pytest
 from juju.application import Application
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, UNIT_IDS, CONFIG_OPTS
+from ..helpers import APP_NAME, CONFIG_OPTS, MODEL_CONFIG, SERIES, UNIT_IDS
 from ..helpers_deployments import wait_until
 from .helpers_manual_tls import MANUAL_TLS_CERTIFICATES_APP_NAME, ManualTLSAgent
 

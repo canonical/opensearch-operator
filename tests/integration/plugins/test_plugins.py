@@ -15,9 +15,9 @@ from ..ha.helpers_data import bulk_insert, create_index, search
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
 from ..helpers import (
     APP_NAME,
+    CONFIG_OPTS,
     MODEL_CONFIG,
     SERIES,
-    CONFIG_OPTS,
     check_cluster_formation_successful,
     get_application_unit_ids_ips,
     get_application_unit_names,
