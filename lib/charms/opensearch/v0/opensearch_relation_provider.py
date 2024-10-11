@@ -218,12 +218,10 @@ class OpenSearchProvider(Object):
             self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
             if (
-                (
-                    e.response_code == 400
-                    and e.response_body.get("error", {}).get("type")
-                    != "resource_already_exists_exception"
-                ) or e.response_code != 400
-            ):
+                e.response_code == 400
+                and e.response_body.get("error", {}).get("type")
+                != "resource_already_exists_exception"
+            ) or e.response_code != 400:
                 logger.error(
                     IndexCreationFailed.format(index=event.index) + f"\nresponse error: {e}"
                 )
