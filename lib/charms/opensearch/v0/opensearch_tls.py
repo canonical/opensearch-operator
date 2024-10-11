@@ -21,6 +21,7 @@ import socket
 import tempfile
 import typing
 from os.path import exists
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from charms.opensearch.v0.constants_charm import (
@@ -61,7 +62,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 
@@ -556,6 +557,8 @@ class OpenSearchTLS(Object):
                 logging.error(f"Error storing the ca-cert: {e}")
                 return False
 
+        self._add_ca_to_request_bundle(secrets.get("chain"))
+
         return True
 
     def _read_stored_ca(self, alias: str = "ca") -> Optional[str]:
@@ -608,6 +611,8 @@ class OpenSearchTLS(Object):
             if f"Alias <{old_alias}> does not exist" in e.out:
                 return
 
+        old_ca_content = self._read_stored_ca(alias=old_alias)
+
         run_cmd(
             f"""{keytool} \
             -delete \
@@ -617,6 +622,8 @@ class OpenSearchTLS(Object):
             -storetype PKCS12"""
         )
         logger.info(f"Removed {old_alias} from truststore.")
+        # remove it from the request bundle
+        self._remove_ca_from_request_bundle(old_ca_content)
 
     def update_request_ca_bundle(self) -> None:
         """Create a new chain.pem file for requests module"""
@@ -870,6 +877,38 @@ class OpenSearchTLS(Object):
 
         return rotation_complete
 
+    def ca_and_certs_rotation_complete_in_cluster(self) -> bool:
+        """Check whether the CA rotation completed in all units."""
+        rotation_complete = True
+
+        # the current unit is not in the relation.units list
+        if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing") or self.charm.peers_data.get(
+            Scope.UNIT,
+            "tls_ca_renewed" or self.charm.peers_data.get(Scope.UNIT, "tls_configured") != "True",
+        ):
+            logger.debug("TLS CA rotation ongoing on this unit.")
+            return False
+
+        for relation_type in [
+            PeerRelationName,
+            PeerClusterRelationName,
+            PeerClusterOrchestratorRelationName,
+        ]:
+            for relation in self.model.relations[relation_type]:
+                logger.debug(f"Checking relation {relation}: units: {relation.units}")
+                for unit in relation.units:
+                    if (
+                        "tls_ca_renewing" in relation.data[unit]
+                        or "tls_ca_renewed" in relation.data[unit]
+                        or relation.data[unit].get("tls_configured") != "True"
+                    ):
+                        logger.debug(
+                            f"TLS CA rotation not complete for unit {unit}: {relation} | tls_ca_renewing: {relation.data[unit].get('tls_ca_renewing')} | tls_ca_renewed: {relation.data[unit].get('tls_ca_renewed')} | tls_configured: {relation.data[unit].get('tls_configured')}"
+                        )
+                        rotation_complete = False
+                        break
+        return rotation_complete
+
     def is_ca_rotation_ongoing(self) -> bool:
         """Check whether the CA rotation is currently in progress."""
         if (
@@ -884,10 +923,35 @@ class OpenSearchTLS(Object):
         return False
 
     def update_ca_rotation_flag_to_peer_cluster_relation(self, flag: str, operation: str) -> None:
-        """Add a CA rotation flag to all related peer clusters in large deployments."""
+        """Add or remove a CA rotation flag to all related peer clusters in large deployments."""
         for relation_type in [PeerClusterRelationName, PeerClusterOrchestratorRelationName]:
             for relation in self.model.relations[relation_type]:
                 if operation == "add":
                     relation.data[self.charm.unit][flag] = "True"
                 elif operation == "remove":
                     relation.data[self.charm.unit].pop(flag, None)
+
+    def on_ca_certs_rotation_complete(self) -> None:
+        """Handle the completion of CA rotation."""
+        logger.info("CA rotation completed. Deleting old CA and updating request bundle.")
+        self.remove_old_ca()
+        self.update_request_ca_bundle()
+
+    def _add_ca_to_request_bundle(self, ca_cert: str) -> None:
+        """Add the CA cert to the request bundle for the requests module."""
+        bundle_path = Path(self.certs_path) / "chain.pem"
+        if not bundle_path.exists():
+            return
+
+        bundle_content = bundle_path.read_text()
+        if ca_cert not in bundle_content:
+            bundle_path.write_text(f"{bundle_content}\n{ca_cert}")
+
+    def _remove_ca_from_request_bundle(self, ca_cert: str) -> None:
+        """Remove the CA cert from the request bundle for the requests module."""
+        bundle_path = Path(self.certs_path) / "chain.pem"
+        if not bundle_path.exists():
+            return
+
+        bundle_content = bundle_path.read_text()
+        bundle_path.write_text(bundle_content.replace(ca_cert, ""))

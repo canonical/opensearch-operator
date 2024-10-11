@@ -118,7 +118,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 
 SERVICE_MANAGER = "service"
@@ -642,6 +642,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         ):
             self.opensearch_provider.remove_lingering_relation_users_and_roles()
 
+        # If the unit reloads its certs but the other units are not ready yet
+        # we need to wait for them all to be ready before deleting the old CA
+        if (
+            self.tls._read_stored_ca("old-ca")
+            and self.tls.ca_and_certs_rotation_complete_in_cluster()
+        ):
+            logger.debug("update_status: Detected CA rotation complete in cluster")
+            self.tls.on_ca_certs_rotation_complete()
         # If relation not broken - leave
         if self.model.get_relation("certificates") is not None:
             return
@@ -818,14 +826,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     logger.error("Could not reload TLS certificates via API, will restart.")
                     self._restart_opensearch_event.emit()
                 else:
-                    # the chain.pem file should only be updated after applying the new certs
-                    # otherwise there could be TLS verification errors after renewing the CA
-                    self.tls.update_request_ca_bundle()
                     self.status.clear(TLSNotFullyConfigured)
                     self.tls.reset_ca_rotation_state()
-                    # cleaning the former CA certificate from the truststore
-                    # must only be done AFTER all renewed certificates are available and loaded
-                    self.tls.remove_old_ca()
+                    # if all certs are stored and CA rotation is complete in the cluster
+                    # we delete the old ca and update the chain to only include the new one
+                    if (
+                        self.tls._read_stored_ca("old-ca")
+                        and self.tls.ca_and_certs_rotation_complete_in_cluster()
+                    ):
+                        logger.info("on_tls_conf_set: Detected CA rotation complete in cluster")
+                        self.tls.on_ca_certs_rotation_complete()
+
             else:
                 event.defer()
                 return
@@ -949,12 +960,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         if not self._can_service_start():
-            # after rotating the CA and certificates:
-            # the last host in the cluster to restart might not be able to connect to the other
-            # hosts anymore, because it is the last to renew the pem-file for requests
-            # in this case we update the pem-file to be able to connect and start the host
-            if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
-                self.tls.update_request_ca_bundle()
             self.node_lock.release()
             logger.info("Could not start opensearch service. Will retry next event.")
             event.defer()
@@ -988,11 +993,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             self.unit.status = BlockedStatus(str(e))
             return
-
-        # we should update the chain.pem file to avoid TLS verification errors
-        # this happens on restarts after applying a new admin cert on CA rotation
-        if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
-            self.tls.update_request_ca_bundle()
 
         try:
             self.opensearch.start(
@@ -1161,10 +1161,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-        # before resetting the CA rotation state, we remove the old ca from the truststore
-        if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
-            self.tls.remove_old_ca()
-
         # update the peer relation data for TLS CA rotation routine
         self.tls.reset_ca_rotation_state()
         if self.is_tls_full_configured_in_cluster():
@@ -1181,6 +1177,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.tls.request_new_admin_certificate()
             else:
                 self.tls.store_admin_tls_secrets_if_applies()
+        # If the reload through API failed, we restart the service
+        # We remove the old CA and update the chain to only include the new one
+        # if all certs are stored and CA rotation is complete in the cluster
+        if (
+            self.tls._read_stored_ca("old-ca")
+            and self.tls.ca_and_certs_rotation_complete_in_cluster()
+        ):
+            logger.info("post_start_init: Detected CA rotation complete in cluster")
+            self.tls.on_ca_certs_rotation_complete()
 
     def _stop_opensearch(self, *, restart: bool = False) -> None:
         """Stop OpenSearch if possible."""
