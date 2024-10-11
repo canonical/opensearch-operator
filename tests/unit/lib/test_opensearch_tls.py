@@ -8,6 +8,7 @@ import socket
 import unittest
 from unittest import mock
 from unittest.mock import MagicMock, Mock, call, patch
+import uuid
 
 import responses
 from charms.opensearch.v0.constants_charm import (
@@ -951,6 +952,7 @@ class TestOpenSearchTLS(unittest.TestCase):
          - any deployment types
          - LEADER ONLY
         """
+        generate_csr.return_value = uuid.uuid4().hex.encode()
         # Units had their certificates already
         old_csr = "old_csr"
         old_key = create_utf8_encoded_private_key()
@@ -1111,6 +1113,7 @@ class TestOpenSearchTLS(unittest.TestCase):
          - any deployment types
          - any units
         """
+        generate_csr.return_value = uuid.uuid4().hex.encode()
         # Units had their certificates already
         csr = "old_csr"
         ca = "new_ca"
