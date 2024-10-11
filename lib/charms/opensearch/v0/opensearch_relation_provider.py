@@ -217,20 +217,20 @@ class OpenSearchProvider(Object):
         try:
             self.opensearch.request("PUT", f"/{event.index}")
         except OpenSearchHttpError as e:
-            if not (
-                e.response_code == 400
-                and e.response_body.get("error", {}).get("type")
-                != "resource_already_exists_exception"
+            if (
+                (
+                    e.response_code == 400
+                    and e.response_body.get("error", {}).get("type")
+                    != "resource_already_exists_exception"
+                ) or e.response_code != 400
             ):
-                logger.error(IndexCreationFailed.format(index=event.index) + f"\nresponse error: {e}")
+                logger.error(
+                    IndexCreationFailed.format(index=event.index) + f"\nresponse error: {e}"
+                )
                 self.charm.status.set(BlockedStatus(IndexCreationFailed.format(index=event.index)))
                 event.defer()
                 return
-            elif not (
-                e.response_code == 400
-                and e.response_body.get("error", {}).get("type")
-                == "resource_already_exists_exception"
-            ):
+            else:
                 logger.warning("Index failed to be created as it already exists, continuing...")
 
         extra_user_roles = event.extra_user_roles.lower() if event.extra_user_roles else "default"
