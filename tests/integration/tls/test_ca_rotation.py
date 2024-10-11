@@ -16,6 +16,7 @@ from ..helpers import (
     MODEL_CONFIG,
     SERIES,
     UNIT_IDS,
+    CONFIG_OPTS,
     get_leader_unit_ip,
     get_secret_by_label,
 )
@@ -74,6 +75,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
         my_charm,
         num_units=len(UNIT_IDS),
         series=SERIES,
+        config=CONFIG_OPTS,
     )
 
     # Deploy TLS Certificates operator.

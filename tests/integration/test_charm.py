@@ -25,6 +25,7 @@ from .helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    CONFIG_OPTS,
     get_application_unit_ids,
     get_conf_as_dict,
     get_leader_unit_id,
@@ -54,6 +55,7 @@ async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
         my_charm,
         num_units=1,
         series=SERIES,
+        config=CONFIG_OPTS,
     )
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}

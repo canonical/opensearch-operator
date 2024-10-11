@@ -15,6 +15,7 @@ from ..helpers import (
     IDLE_PERIOD,
     MODEL_CONFIG,
     SERIES,
+    CONFIG_OPTS,
     get_application_unit_ids,
 )
 from ..helpers_deployments import wait_until
@@ -49,6 +50,7 @@ async def test_build_and_deploy(ops_test: OpsTest, lxd_spaces) -> None:
         series=SERIES,
         constraints="spaces=alpha,client,cluster,backup",
         bind={"": "cluster"},
+        config=CONFIG_OPTS,
     )
     config = {"ca-common-name": "CN_CA"}
     await ops_test.model.deploy(

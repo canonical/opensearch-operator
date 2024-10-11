@@ -17,7 +17,7 @@ from ..ha.helpers import (
     storage_type,
 )
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
-from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, get_application_unit_ids
+from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, get_application_unit_ids, CONFIG_OPTS
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
@@ -44,7 +44,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(my_charm, num_units=1, series=SERIES, storage=storage),
+        ops_test.model.deploy(my_charm, num_units=1, series=SERIES, storage=storage, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.

@@ -17,6 +17,7 @@ from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
     SERIES,
+    CONFIG_OPTS,
     check_cluster_formation_successful,
     get_application_unit_ids_ips,
     get_application_unit_names,
@@ -77,9 +78,9 @@ async def _set_config(ops_test: OpsTest, deploy_type: str, conf: dict[str, str])
     if deploy_type == "small_deployment":
         await ops_test.model.applications[APP_NAME].set_config(conf)
         return
-    await ops_test.model.applications[MAIN_ORCHESTRATOR_NAME].set_config(conf)
-    await ops_test.model.applications[FAILOVER_ORCHESTRATOR_NAME].set_config(conf)
-    await ops_test.model.applications[APP_NAME].set_config(conf)
+    await ops_test.model.applications[MAIN_ORCHESTRATOR_NAME].set_config(conf | CONFIG_OPTS)
+    await ops_test.model.applications[FAILOVER_ORCHESTRATOR_NAME].set_config(conf | CONFIG_OPTS)
+    await ops_test.model.applications[APP_NAME].set_config(conf | CONFIG_OPTS)
 
 
 async def _wait_for_units(ops_test: OpsTest, deployment_type: str) -> None:

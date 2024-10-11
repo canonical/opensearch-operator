@@ -412,9 +412,6 @@ class OpenSearchDistribution(ABC):
             # We try to remove the index and components' templates
             for endpoint in [
                 "/_index_template/charmed-index-tpl",
-                "/_component_template/charmed-default-tpl",
-                "/_component_template/charmed-vector-tpl",
-                "/_component_template/charmed-ingest-tpl",
             ]:
                 try:
                     self.request("DELETE", endpoint)
