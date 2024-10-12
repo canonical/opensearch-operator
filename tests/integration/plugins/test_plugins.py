@@ -20,11 +20,13 @@ from ..helpers import (
     SERIES,
     check_cluster_formation_successful,
     get_application_unit_ids_ips,
+    get_application_unit_ids_start_time,
     get_application_unit_names,
     get_leader_unit_id,
     get_leader_unit_ip,
     get_secret_by_label,
     http_request,
+    is_each_unit_restarted,
     run_action,
     set_watermark,
 )
@@ -32,8 +34,6 @@ from ..helpers_deployments import wait_until
 from ..plugins.helpers import (
     create_index_and_bulk_insert,
     generate_bulk_training_data,
-    get_application_unit_ids_start_time,
-    is_each_unit_restarted,
     is_knn_training_complete,
     run_knn_training,
 )
@@ -142,7 +142,10 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
-            my_charm, num_units=3, series=SERIES, config={"plugin_opensearch_knn": True}
+            my_charm,
+            num_units=3,
+            series=SERIES,
+            config={"plugin_opensearch_knn": True} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
     )
@@ -225,17 +228,21 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
             application_name=MAIN_ORCHESTRATOR_NAME,
             num_units=1,
             series=SERIES,
-            config=main_orchestrator_conf,
+            config=main_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             my_charm,
             application_name=FAILOVER_ORCHESTRATOR_NAME,
             num_units=2,
             series=SERIES,
-            config=failover_orchestrator_conf,
+            config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm, application_name=APP_NAME, num_units=1, series=SERIES, config=data_hot_conf
+            my_charm,
+            application_name=APP_NAME,
+            num_units=1,
+            series=SERIES,
+            config=data_hot_conf | CONFIG_OPTS,
         ),
     )
 

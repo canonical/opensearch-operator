@@ -172,12 +172,21 @@ class _UpgradeOpenSearch(_StartOpenSearch):
         super().__init__(handle, ignore_lock=ignore_lock)
 
 
+class _ApplyProfileTemplatesOpenSearch(EventBase):
+    """Attempt to acquire lock & restart OpenSearch.
+
+    The main reason to have a separate event, is to be able to wait for the cluster.
+    It defers otherwise and only defers the execution of this particular task.
+    """
+
+
 class OpenSearchBaseCharm(CharmBase, abc.ABC):
     """Base class for OpenSearch charms."""
 
     _start_opensearch_event = EventSource(_StartOpenSearch)
     _restart_opensearch_event = EventSource(_RestartOpenSearch)
     _upgrade_opensearch_event = EventSource(_UpgradeOpenSearch)
+    _apply_profile_templates_event = EventSource(_ApplyProfileTemplatesOpenSearch)
 
     def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
         super().__init__(*args)
@@ -213,6 +222,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.framework.observe(self._start_opensearch_event, self._start_opensearch)
         self.framework.observe(self._restart_opensearch_event, self._restart_opensearch)
         self.framework.observe(self._upgrade_opensearch_event, self._upgrade_opensearch)
+
+        self.framework.observe(
+            self._apply_profile_templates_event, self._on_apply_profile_templates
+        )
 
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
@@ -255,6 +268,24 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
+
+    def _on_apply_profile_templates(self, event: EventBase):
+        """Apply the profile templates.
+
+        The main reason to have a separate event, is to be able to wait for the cluster. It
+        defers otherwise and only defers the execution of this particular task.
+        """
+        if not self.opensearch_peer_cm.deployment_desc():
+            logger.info("Applying profile templates but cluster not ready yet.")
+            event.defer()
+            return
+
+        if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            logger.info("Applying profile templates but not the main orchestrator.")
+            return
+
+        # Configure templates if needed
+        self.opensearch.apply_perf_templates_if_needed()
 
     @property
     @abc.abstractmethod
@@ -362,11 +393,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
 
         # Store the current perf. profile we are applying
-        self.peers_data.put(
-            Scope.UNIT,
-            PERFORMANCE_PROFILE,
-            PerformanceType(self.config.get(PERFORMANCE_PROFILE, "production")),
-        )
+        if self.unit.is_leader():
+            self.peers_data.put(
+                Scope.APP,
+                PERFORMANCE_PROFILE,
+                PerformanceType(self.config.get(PERFORMANCE_PROFILE, PerformanceType.PRODUCTION)),
+            )
+        self._apply_profile_templates_event.emit()
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():
@@ -690,7 +723,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         if self.upgrade_in_progress:
-            # Deferring right now is too late anyways
+            # The following changes in _on_config_changed are not supported during an upgrade
+            # Therefore, we leave now
             logger.warning(
                 "Changing config during an upgrade is not supported. The charm may be in a broken, "
                 "unrecoverable state"
@@ -707,24 +741,30 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             restart_requested = self.plugin_manager.run()
             if (
-                self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE)
-                and PerformanceType(self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE))
-                != self.opensearch.perf_profile
+                self.peers_data.get(Scope.APP, PERFORMANCE_PROFILE)
+                and PerformanceType(self.peers_data.get(Scope.APP, PERFORMANCE_PROFILE))
+                != self.opensearch.perf_profile.typ
             ):
                 self.opensearch.perf_profile = OpenSearchPerfProfile.from_str(
-                    self._charm.config.get(PERFORMANCE_PROFILE)
+                    self.config.get(PERFORMANCE_PROFILE)
                 )
                 # If we have a running service, and our profile changed
                 # then we need a restart to apply the new profile
                 self.opensearch_config.apply_performance_profile(self.opensearch.perf_profile)
+                self._apply_profile_templates_event.emit()
+                if self.unit.is_leader():
+                    self.peers_data.put(
+                        Scope.APP,
+                        PERFORMANCE_PROFILE,
+                        PerformanceType(
+                            self.config.get(PERFORMANCE_PROFILE, PerformanceType.PRODUCTION)
+                        ),
+                    )
+                restart_requested = True
 
-                # Configure templates if needed
-                self.opensearch.apply_perf_templates_if_neeeded()
-
-                self.peers_data.put(Scope.UNIT, PERFORMANCE_PROFILE, self.opensearch.perf_profile)
-                restart_requested = self.opensearch.is_service_started()
-
-            if restart_requested:
+            # Finally, we only need to restart in this case if we have already requested a restart
+            # and the service is actually running
+            if restart_requested and self.opensearch.is_service_started():
                 self._restart_opensearch_event.emit()
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):

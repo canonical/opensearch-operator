@@ -580,7 +580,7 @@ async def test_restore_to_new_cluster(
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
-        ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
+        ops_test.model.deploy(my_charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -682,7 +682,7 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest) -> None:
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
-        ops_test.model.deploy(my_charm, num_units=3, series=SERIES),
+        ops_test.model.deploy(my_charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.

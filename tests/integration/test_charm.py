@@ -15,6 +15,7 @@ from charms.opensearch.v0.constants_charm import (
     TLSRelationMissing,
 )
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_attempt, wait_fixed, wait_random
 
 from .ha.continuous_writes import ContinuousWrites
 from .ha.helpers import (
@@ -27,11 +28,13 @@ from .helpers import (
     MODEL_CONFIG,
     SERIES,
     get_application_unit_ids,
+    get_application_unit_ids_start_time,
     get_conf_as_dict,
     get_leader_unit_id,
     get_leader_unit_ip,
     get_secrets,
     http_request,
+    is_each_unit_restarted,
     run_action,
 )
 from .helpers_deployments import wait_until
@@ -96,6 +99,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         my_charm,
         num_units=DEFAULT_NUM_UNITS,
         series=SERIES,
+        config=CONFIG_OPTS,
     )
     await wait_until(
         ops_test,
@@ -273,6 +277,30 @@ async def test_check_pinned_revision(ops_test: OpsTest) -> None:
     logger.info(f"Installed snap: {installed_info}")
     assert installed_info[1] == f"({OPENSEARCH_SNAP_REVISION})"
     assert installed_info[3] == "held"
+
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_switch_performance_profiles(ops_test: OpsTest) -> None:
+    """Test check the pinned revision."""
+    ts = await get_application_unit_ids_start_time(ops_test, APP_NAME)
+
+    ops_test.model.config["performance-profile"] = "production"
+
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=DEFAULT_NUM_UNITS,
+    )
+
+    for attempt in Retrying(
+        stop=stop_after_attempt(3), wait=wait_fixed(wait=30) + wait_random(0, 5)
+    ):
+        with attempt:  # Raises RetryError if failed after "retries"
+            assert await is_each_unit_restarted(ops_test, APP_NAME, ts)
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
