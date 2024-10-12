@@ -220,16 +220,16 @@ class OpenSearchProvider(Object):
             if (
                 e.response_code == 400
                 and e.response_body.get("error", {}).get("type")
-                != "resource_already_exists_exception"
-            ) or e.response_code != 400:
+                == "resource_already_exists_exception"
+            ):
+                logger.warning("Index failed to be created as it already exists, continuing...")
+            else:
                 logger.error(
                     IndexCreationFailed.format(index=event.index) + f"\nresponse error: {e}"
                 )
                 self.charm.status.set(BlockedStatus(IndexCreationFailed.format(index=event.index)))
                 event.defer()
                 return
-            else:
-                logger.warning("Index failed to be created as it already exists, continuing...")
 
         extra_user_roles = event.extra_user_roles.lower() if event.extra_user_roles else "default"
         if extra_user_roles == KibanaserverRole:
