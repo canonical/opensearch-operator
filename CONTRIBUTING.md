@@ -45,7 +45,7 @@ tox -e build-dev
 To run the traditional build only using `charmcraft`, run the following command:
 
 ```shell
-tox -e build-production
+charmcraftcache pack
 ```
 
 ## Developing
