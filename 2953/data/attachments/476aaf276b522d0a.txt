@@ -1,0 +1,35 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  03:21:45Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-data                    blocked    1/2  opensearch                                 2  no       Cannot start. Waiting for peer cluster relation...
+opensearch-failover                waiting    0/1  opensearch                                 0  no       waiting for machine
+opensearch-main                    waiting    0/1  opensearch                                 1  no       waiting for machine
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent       Machine  Public address  Ports  Message
+opensearch-data/0*           active    idle        3        10.163.41.28           
+opensearch-data/1            waiting   allocating  4        10.163.41.96           waiting for machine
+opensearch-failover/0        waiting   allocating  1        10.163.41.83           waiting for machine
+opensearch-main/0            waiting   allocating  2        10.163.41.45           waiting for machine
+self-signed-certificates/0*  active    idle        0        10.163.41.233          
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.163.41.233  juju-f8823f-0  ubuntu@22.04      Running
+1        pending  10.163.41.83   juju-f8823f-1  ubuntu@22.04      Running
+2        pending  10.163.41.45   juju-f8823f-2  ubuntu@22.04      Running
+3        started  10.163.41.28   juju-f8823f-3  ubuntu@22.04      Running
+4        pending  10.163.41.96   juju-f8823f-4  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-3: 02:46:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:46:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-data-0: 02:46:27 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 02:46:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:46:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:46:33 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
