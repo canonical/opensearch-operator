@@ -8,6 +8,7 @@ import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_attempt, wait_fixed, wait_random
 
 from ..helpers import (
     APP_NAME,
@@ -18,9 +19,11 @@ from ..helpers import (
     cluster_health,
     get_application_unit_ids,
     get_application_unit_ids_ips,
+    get_application_unit_ids_start_time,
     get_application_unit_names,
     get_leader_unit_ip,
     get_reachable_unit_ips,
+    is_each_unit_restarted,
     is_up,
 )
 from ..helpers_deployments import wait_until
@@ -44,6 +47,9 @@ from .test_horizontal_scaling import IDLE_PERIOD
 logger = logging.getLogger(__name__)
 
 
+NUM_HA_UNITS = 3
+
+
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -61,7 +67,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(my_charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(my_charm, num_units=NUM_HA_UNITS, series=SERIES, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -72,7 +78,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 3
+    assert len(ops_test.model.applications[APP_NAME].units) == NUM_HA_UNITS
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
@@ -615,3 +621,28 @@ async def test_full_cluster_restart(
 
     # continuous writes checks
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
+
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_assert_switch_performance_profiles(
+    ops_test: OpsTest,
+) -> None:
+    """Test check the pinned revision."""
+    ts = await get_application_unit_ids_start_time(ops_test, APP_NAME)
+    ops_test.model.applications[APP_NAME].set_config({"profile": "staging"})
+
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=NUM_HA_UNITS,
+    )
+    # Now, check if we have restarted all units
+    for attempt in Retrying(
+        stop=stop_after_attempt(3), wait=wait_fixed(wait=30) + wait_random(0, 5)
+    ):
+        with attempt:  # Raises RetryError if failed after "retries"
+            assert await is_each_unit_restarted(ops_test, APP_NAME, ts)
