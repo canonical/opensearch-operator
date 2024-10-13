@@ -6,13 +6,15 @@ import itertools
 import re
 import socket
 import unittest
+import uuid
 from unittest import mock
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, call, patch
 
 import responses
-from charms.opensearch.v0.constants_charm import (  # TLSNotFullyConfigured,
+from charms.opensearch.v0.constants_charm import (
     PeerRelationName,
     TLSCaRotation,
+    TLSNotFullyConfigured,
 )
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
@@ -950,6 +952,7 @@ class TestOpenSearchTLS(unittest.TestCase):
          - any deployment types
          - LEADER ONLY
         """
+        generate_csr.return_value = uuid.uuid4().hex.encode()
         # Units had their certificates already
         old_csr = "old_csr"
         old_key = create_utf8_encoded_private_key()
@@ -1015,7 +1018,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         mock_response_lock_not_requested("1.1.1.1")
         mock_response_health_green("1.1.1.1")
         event = MagicMock(after_upgrade=False)
-        # original_status = self.harness.model.unit.status
+        original_status = self.harness.model.unit.status
 
         self.charm._post_start_init(event)
 
@@ -1031,26 +1034,36 @@ class TestOpenSearchTLS(unittest.TestCase):
         assert new_app_admin_secret["key"] == old_key
         assert new_app_admin_secret["subject"] != old_subject
 
+        # 1 for admin cert, 2 for unit certs
         assert generate_csr.call_count == 3
-        # revoke_cert.assert_called_with(
-        #     private_key=bytes(new_app_admin_secret["csr"], encoding="utf-8")
-        # )
-        # revoke_cert.assert_called_with(private_key=b"key-http")
-        # revoke_cert.assert_called_with(private_key=b"key-transport")
 
-        # assert create_cert.call_count == 1
-        # create_cert.assert_called_with(certificate_signing_request=new_app_admin_secret["csr"])
+        # new unit certs
+        assert revoke_cert.call_count == 2
+        revoke_cert.assert_has_calls([call(b"csr-http"), call(b"csr-transport")])
 
-        # assert revoke_cert.call_count == 2
-        # revoke_cert.assert_called_with(b"csr-http")
-        # revoke_cert.assert_called_with(b"csr-transport")
+        assert renew_cert.call_count == 2
+        renew_cert.assert_has_calls(
+            [
+                call(
+                    old_certificate_signing_request=b"csr-http",
+                    new_certificate_signing_request=generate_csr(),
+                ),
+                call(
+                    old_certificate_signing_request=b"csr-transport",
+                    new_certificate_signing_request=generate_csr(),
+                ),
+            ]
+        )
 
-        # assert renew_cert.call_count == 2
-        # renew_cert.assert_called_with(old_certificate_signing_renew=b"csr-http")
-        # renew_cert.assert_called_with(old_certificate_signing_renew=b"csr-transport")
+        # new admin cert
+        assert create_cert.call_count == 1
+        # we store the decoded csr in the secret but pass it as bytes to the function
+        create_cert.call_args.kwargs[
+            "certificate_signing_request"
+        ].decode() == new_app_admin_secret["csr"]
 
-        # assert self.harness.model.unit.status.message == TLSNotFullyConfigured
-        # assert self.harness.model.unit.status, MaintenanceStatus != original_status
+        assert self.harness.model.unit.status.message == TLSNotFullyConfigured
+        assert self.harness.model.unit.status, MaintenanceStatus != original_status
 
     # Mocks on functions we want to investigate
     # NOTE: Syntax: parametrized has to be the outermost decorator
@@ -1100,6 +1113,7 @@ class TestOpenSearchTLS(unittest.TestCase):
          - any deployment types
          - any units
         """
+        generate_csr.return_value = uuid.uuid4().hex.encode()
         # Units had their certificates already
         csr = "old_csr"
         ca = "new_ca"
@@ -1163,7 +1177,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         mock_response_lock_not_requested("1.1.1.1")
         mock_response_health_green("1.1.1.1")
         event = MagicMock(after_upgrade=False)
-        # original_status = self.harness.model.unit.status
+        original_status = self.harness.model.unit.status
 
         self.charm._post_start_init(event)
 
@@ -1177,25 +1191,35 @@ class TestOpenSearchTLS(unittest.TestCase):
             == "True"
         )
 
-        # assert revoke_cert.call_count == 2
-        # revoke_cert.assert_called_with(b"csr-http")
-        # revoke_cert.assert_called_with(b"csr-transport")
+        assert revoke_cert.call_count == 2
+        revoke_cert.assert_has_calls(
+            [call(csr_http_old.encode()), call(csr_transport_old.encode())]
+        )
 
-        # assert renew_cert.call_count == 2
-        # renew_cert.assert_called_with(old_certificate_signing_renew=b"csr-http")
-        # renew_cert.assert_called_with(old_certificate_signing_renew=b"csr-transport")
+        assert renew_cert.call_count == 2
+        renew_cert.assert_has_calls(
+            [
+                call(
+                    old_certificate_signing_request=csr_http_old.encode(),
+                    new_certificate_signing_request=generate_csr(),
+                ),
+                call(
+                    old_certificate_signing_request=csr_transport_old.encode(),
+                    new_certificate_signing_request=generate_csr(),
+                ),
+            ]
+        )
 
-        # assert (
-        #     self.secret_store.get_object(
-        #       Scope.UNIT, CertType.UNIT_HTTP.val)["csr"] != csr_http_old
-        # )
-        # assert (
-        #     self.secret_store.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)["csr"]
-        #     != csr_transport_old
-        # )
+        assert (
+            self.secret_store.get_object(Scope.UNIT, CertType.UNIT_HTTP.val)["csr"] != csr_http_old
+        )
+        assert (
+            self.secret_store.get_object(Scope.UNIT, CertType.UNIT_TRANSPORT.val)["csr"]
+            != csr_transport_old
+        )
 
-        # assert self.harness.model.unit.status.message == TLSNotFullyConfigured
-        # assert self.harness.model.unit.status, MaintenanceStatus != original_status
+        assert self.harness.model.unit.status.message == TLSNotFullyConfigured
+        assert self.harness.model.unit.status, MaintenanceStatus != original_status
 
     # Mocks to investigate/compare/alter
     # NOTE: Syntax: parametrized has to be the outermost decorator
@@ -1559,10 +1583,9 @@ class TestOpenSearchTLS(unittest.TestCase):
             state=DeploymentState(value=State.ACTIVE),
         )
 
-        event_mock = MagicMock(
+        self.charm.on.certificate_available = MagicMock(
             certificate_signing_request=csr, chain=chain, certificate=cert, ca=ca
         )
-        self.charm.on.certificate_available = MagicMock()
 
         self.harness.set_leader(is_leader=leader)
         original_status = self.harness.model.unit.status
@@ -1573,16 +1596,15 @@ class TestOpenSearchTLS(unittest.TestCase):
                 self.rel_id, f"{self.charm.unit.name}", {"tls_ca_renewing": "True"}
             )
 
-        self.charm.tls._on_certificate_available(event_mock)
+        self.charm.tls._on_certificate_available(self.charm.on.certificate_available)
 
         # No action taken, no change on status or certificates
         assert run_cmd.call_count == 0
         assert self.harness.model.unit.status == original_status
         if leader:
-            # The event is deferred
-            event_mock.defer.assert_called_once()
+            self.charm.on.certificate_available.defer.assert_called_once()
         else:
-            event_mock.defer.assert_not_called()
+            self.charm.on.certificate_available.defer.assert_not_called()
         assert self.secret_store.get_object(Scope.APP, CertType.APP_ADMIN.val) == {
             "csr": csr,
             "keystore-password": "keystore_12345",
@@ -1657,10 +1679,9 @@ class TestOpenSearchTLS(unittest.TestCase):
             state=DeploymentState(value=State.ACTIVE),
         )
 
-        event_mock = MagicMock(
+        self.charm.on.certificate_available = MagicMock(
             certificate_signing_request=csr, chain=chain, certificate=cert, ca=ca
         )
-        self.charm.on.certificate_available = MagicMock()
 
         self.harness.set_leader(is_leader=leader)
         original_status = self.harness.model.unit.status
@@ -1676,15 +1697,15 @@ class TestOpenSearchTLS(unittest.TestCase):
                 self.rel_id, f"{self.charm.app.name}/1", {"tls_ca_renewing": "True"}
             )
 
-        self.charm.tls._on_certificate_available(event_mock)
+        self.charm.tls._on_certificate_available(self.charm.on.certificate_available)
 
         # No action taken, no change on status or certificates
         assert run_cmd.call_count == 0
         assert self.harness.model.unit.status == original_status
         if leader:
-            event_mock.defer.assert_called_once()
+            self.charm.on.certificate_available.defer.assert_called_once()
         else:
-            event_mock.defer.assert_not_called()
+            self.charm.on.certificate_available.defer.assert_not_called()
         assert self.secret_store.get_object(Scope.APP, CertType.APP_ADMIN.val) == {
             "csr": csr,
             "keystore-password": "keystore_12345",
