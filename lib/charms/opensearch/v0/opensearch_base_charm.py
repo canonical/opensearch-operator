@@ -268,6 +268,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
+        self._apply_profile_templates_has_been_called = False
 
     def _on_apply_profile_templates(self, event: EventBase):
         """Apply the profile templates.
@@ -275,7 +276,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         The main reason to have a separate event, is to be able to wait for the cluster. It
         defers otherwise and only defers the execution of this particular task.
         """
-        if not self.opensearch_peer_cm.deployment_desc():
+        if self._apply_profile_templates_has_been_called:
+            # we can safely abandon this event as we already had a previous call on the same hook
+            return
+        self._apply_profile_templates_has_been_called = True
+
+        if not self.opensearch_peer_cm.deployment_desc() or not self.opensearch.is_node_up():
             logger.info("Applying profile templates but cluster not ready yet.")
             event.defer()
             return
@@ -285,7 +291,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         # Configure templates if needed
-        self.opensearch.apply_perf_templates_if_needed()
+        if not self.opensearch.apply_perf_templates_if_needed():
+            logger.debug("Failed to apply templates. Will retry later.")
+            event.defer()
 
     @property
     @abc.abstractmethod
@@ -393,13 +401,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
 
         # Store the current perf. profile we are applying
+        self.opensearch_config.apply_performance_profile(self.opensearch.perf_profile)
+        self._apply_profile_templates_event.emit()
         if self.unit.is_leader():
             self.peers_data.put(
                 Scope.APP,
                 PERFORMANCE_PROFILE,
                 PerformanceType(self.config.get(PERFORMANCE_PROFILE, PerformanceType.PRODUCTION)),
             )
-        self._apply_profile_templates_event.emit()
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():

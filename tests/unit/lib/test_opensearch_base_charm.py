@@ -218,7 +218,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _apply_peer_cm_directives_and_check_if_can_start,
     ):
         """Test start event for nodes that only have the `data` role."""
-        with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
+        with (
+            patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+            ) as perf_profile,
+        ):
             is_node_up.return_value = False
             _apply_peer_cm_directives_and_check_if_can_start.return_value = True
             is_fully_configured.return_value = True
@@ -229,6 +234,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             self.harness.set_leader(True)
             self.charm.on.start.emit()
 
+            perf_profile.assert_called_once()
             self.charm._start_opensearch_event.emit.assert_called_once()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_locking.OpenSearchNodeLock.acquired")
@@ -265,7 +271,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         lock_acquired,
     ):
         """Test on start event."""
-        with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
+        with (
+            patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+            ) as perf_profile,
+        ):
             # test when setup complete
             is_node_up.return_value = True
             self.peers_data.put(Scope.APP, "security_index_initialised", True)
@@ -280,25 +291,37 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             is_admin_user_configured.return_value = False
             self.charm.on.start.emit()
             set_client_auth.assert_not_called()
+            perf_profile.assert_called_once()
 
-        # when _get_nodes fails
-        _get_nodes.side_effect = OpenSearchHttpError()
-        self.charm.on.start.emit()
-        _set_node_conf.assert_not_called()
+        with (
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+            ) as perf_profile,
+        ):
+            # when _get_nodes fails
+            _get_nodes.side_effect = OpenSearchHttpError()
+            self.charm.on.start.emit()
+            _set_node_conf.assert_not_called()
+            perf_profile.assert_called_once()
 
-        _get_nodes.reset_mock()
+            _get_nodes.reset_mock()
 
-        # _get_nodes succeeds
-        is_fully_configured.return_value = True
-        is_admin_user_configured.return_value = True
-        _get_nodes.side_effect = None
-        _can_service_start.return_value = False
-        self.charm.on.start.emit()
-        _get_nodes.assert_called_once()
-        _set_node_conf.assert_not_called()
-        _initialize_security_index.assert_not_called()
+            # _get_nodes succeeds
+            is_fully_configured.return_value = True
+            is_admin_user_configured.return_value = True
+            _get_nodes.side_effect = None
+            _can_service_start.return_value = False
+            self.charm.on.start.emit()
+            _get_nodes.assert_called_once()
+            _set_node_conf.assert_not_called()
+            _initialize_security_index.assert_not_called()
 
-        with patch(f"{self.OPENSEARCH_DISTRO}.start") as start:
+        with (
+            patch(f"{self.OPENSEARCH_DISTRO}.start") as start,
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+            ) as perf_profile,
+        ):
             # initialisation of the security index
             _get_nodes.reset_mock()
             _set_node_conf.reset_mock()

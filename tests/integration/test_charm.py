@@ -343,6 +343,7 @@ async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
         assert leader_conf == unit_conf
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_add_users_and_calling_update_status(ops_test: OpsTest) -> None:
