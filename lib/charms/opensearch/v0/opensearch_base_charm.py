@@ -762,9 +762,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     )
                 restart_requested = True
 
-            # Finally, we only need to restart in this case if we have already requested a restart
-            # and the service is actually running
-            if restart_requested and self.opensearch.is_service_started():
+            if restart_requested:
                 self._restart_opensearch_event.emit()
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):

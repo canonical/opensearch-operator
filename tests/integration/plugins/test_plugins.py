@@ -154,6 +154,7 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await _wait_for_units(ops_test, deploy_type)
     assert len(ops_test.model.applications[APP_NAME].units) == 3
+    await set_watermark(ops_test, APP_NAME)
 
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
