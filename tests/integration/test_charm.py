@@ -46,6 +46,28 @@ logger = logging.getLogger(__name__)
 DEFAULT_NUM_UNITS = 2
 
 
+async def _assert_switch_performance_profiles(
+    ops_test: OpsTest, new_profile: str = "staging"
+) -> None:
+    """Test check the pinned revision."""
+    ts = await get_application_unit_ids_start_time(ops_test, APP_NAME)
+    ops_test.model.applications[APP_NAME].set_config({"performance-profile": new_profile})
+
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=DEFAULT_NUM_UNITS,
+    )
+    # Now, check if we have restarted all units
+    for attempt in Retrying(
+        stop=stop_after_attempt(3), wait=wait_fixed(wait=30) + wait_random(0, 5)
+    ):
+        with attempt:  # Raises RetryError if failed after "retries"
+            assert await is_each_unit_restarted(ops_test, APP_NAME, ts)
+
+
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -78,6 +100,10 @@ async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
     await c_writes.start()
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME])
+
+    # Try to switch the performance profile and assert the unit has been correctly restarted
+    # Use a single unit as each consumes 25% of the RAM
+    await _assert_switch_performance_profiles(ops_test)
 
     # Now, clean up
     await ops_test.model.remove_application(APP_NAME, block_until_done=True)
@@ -277,30 +303,6 @@ async def test_check_pinned_revision(ops_test: OpsTest) -> None:
     logger.info(f"Installed snap: {installed_info}")
     assert installed_info[1] == f"({OPENSEARCH_SNAP_REVISION})"
     assert installed_info[3] == "held"
-
-
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_switch_performance_profiles(ops_test: OpsTest) -> None:
-    """Test check the pinned revision."""
-    ts = await get_application_unit_ids_start_time(ops_test, APP_NAME)
-
-    ops_test.model.config["performance-profile"] = "production"
-
-    await wait_until(
-        ops_test,
-        apps=[APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units=DEFAULT_NUM_UNITS,
-    )
-
-    for attempt in Retrying(
-        stop=stop_after_attempt(3), wait=wait_fixed(wait=30) + wait_random(0, 5)
-    ):
-        with attempt:  # Raises RetryError if failed after "retries"
-            assert await is_each_unit_restarted(ops_test, APP_NAME, ts)
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
