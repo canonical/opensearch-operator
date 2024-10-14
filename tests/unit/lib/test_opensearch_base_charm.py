@@ -360,7 +360,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(
         f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.ca_and_certs_rotation_complete_in_cluster"
     )
-    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS._read_stored_ca")
+    @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.on_ca_certs_rotation_complete")
     def test_reload_tls_certs_without_restart(
         self,
@@ -369,7 +369,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         is_fully_configured,
         reload_tls_certificates,
         ca_and_certs_rotation_complete_in_cluster,
-        _read_stored_ca,
+        read_stored_ca,
         on_ca_certs_rotation_complete,
     ):
         """Test that tls configuration set does not trigger restart."""
@@ -381,7 +381,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         is_admin_user_configured.return_value = True
         is_fully_configured.return_value = True
         ca_and_certs_rotation_complete_in_cluster.return_value = True
-        _read_stored_ca.return_value = "ca_1234"
+        read_stored_ca.return_value = "ca_1234"
 
         store_admin_tls_secrets_if_applies.assert_called_once()
         reload_tls_certificates.assert_called_once()
