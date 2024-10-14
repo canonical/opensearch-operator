@@ -1500,7 +1500,7 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         assert re.search(
             "openssl pkcs12 -export .* -out "
-            f"\/var\/snap\/opensearch\/current\/etc\/opensearch\/certificates\/{cert_type}.p12 .* -name {cert_type}",
+            rf"/var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12 .* -name {cert_type}",
             run_cmd.call_args_list[0].args[0],
         )
         assert (
