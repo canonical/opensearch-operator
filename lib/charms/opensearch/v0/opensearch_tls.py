@@ -62,7 +62,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 
@@ -228,7 +228,7 @@ class OpenSearchTLS(Object):
             merge=True,
         )
 
-        current_stored_ca = self._read_stored_ca()
+        current_stored_ca = self.read_stored_ca()
         if current_stored_ca != event.ca:
             if not self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val)):
                 logger.debug("Could not store new CA certificate.")
@@ -254,7 +254,7 @@ class OpenSearchTLS(Object):
 
         # apply the chain.pem file for API requests, only if the CA cert has not been updated
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
-        if admin_secrets.get("chain") and not self._read_stored_ca(alias="old-ca"):
+        if admin_secrets.get("chain") and not self.read_stored_ca(alias="old-ca"):
             self.update_request_ca_bundle()
 
         # store the admin certificates in non-leader units
@@ -273,7 +273,7 @@ class OpenSearchTLS(Object):
         if self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-        renewal = self._read_stored_ca(alias="old-ca") is not None or (
+        renewal = self.read_stored_ca(alias="old-ca") is not None or (
             old_cert is not None and old_cert != event.certificate
         )
 
@@ -561,7 +561,7 @@ class OpenSearchTLS(Object):
 
         return True
 
-    def _read_stored_ca(self, alias: str = "ca") -> Optional[str]:
+    def read_stored_ca(self, alias: str = "ca") -> Optional[str]:
         """Load stored CA cert."""
         secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
@@ -611,7 +611,7 @@ class OpenSearchTLS(Object):
             if f"Alias <{old_alias}> does not exist" in e.out:
                 return
 
-        old_ca_content = self._read_stored_ca(alias=old_alias)
+        old_ca_content = self.read_stored_ca(alias=old_alias)
 
         run_cmd(
             f"""{keytool} \
@@ -696,7 +696,7 @@ class OpenSearchTLS(Object):
 
         # compare issuer of the cert with the issuer of the CA
         # if they don't match, certs are not up-to-date and need to be renewed after CA rotation
-        if not (current_ca := self._read_stored_ca()):
+        if not (current_ca := self.read_stored_ca()):
             return False
 
         # to make sure the content is processed correctly by openssl, temporary store it in a file
@@ -882,9 +882,13 @@ class OpenSearchTLS(Object):
         rotation_complete = True
 
         # the current unit is not in the relation.units list
-        if self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing") or self.charm.peers_data.get(
-            Scope.UNIT,
-            "tls_ca_renewed" or self.charm.peers_data.get(Scope.UNIT, "tls_configured") != "True",
+        if (
+            self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewing")
+            or self.charm.peers_data.get(
+                Scope.UNIT,
+                "tls_ca_renewed",
+            )
+            or self.charm.peers_data.get(Scope.UNIT, "tls_configured") != "True"
         ):
             logger.debug("TLS CA rotation ongoing on this unit.")
             return False
@@ -903,7 +907,10 @@ class OpenSearchTLS(Object):
                         or relation.data[unit].get("tls_configured") != "True"
                     ):
                         logger.debug(
-                            f"TLS CA rotation not complete for unit {unit}: {relation} | tls_ca_renewing: {relation.data[unit].get('tls_ca_renewing')} | tls_ca_renewed: {relation.data[unit].get('tls_ca_renewed')} | tls_configured: {relation.data[unit].get('tls_configured')}"
+                            f"TLS CA rotation not complete for unit {unit}: {relation} \
+                                | tls_ca_renewing: {relation.data[unit].get('tls_ca_renewing')} \
+                                | tls_ca_renewed: {relation.data[unit].get('tls_ca_renewed')} \
+                                | tls_configured: {relation.data[unit].get('tls_configured')}"
                         )
                         rotation_complete = False
                         break

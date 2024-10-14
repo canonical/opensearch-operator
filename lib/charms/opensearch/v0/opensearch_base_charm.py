@@ -118,7 +118,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 2
 
 
 SERVICE_MANAGER = "service"
@@ -645,7 +645,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # If the unit reloads its certs but the other units are not ready yet
         # we need to wait for them all to be ready before deleting the old CA
         if (
-            self.tls._read_stored_ca("old-ca")
+            self.tls.read_stored_ca("old-ca")
             and self.tls.ca_and_certs_rotation_complete_in_cluster()
         ):
             logger.debug("update_status: Detected CA rotation complete in cluster")
@@ -831,7 +831,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     # if all certs are stored and CA rotation is complete in the cluster
                     # we delete the old ca and update the chain to only include the new one
                     if (
-                        self.tls._read_stored_ca("old-ca")
+                        self.tls.read_stored_ca("old-ca")
                         and self.tls.ca_and_certs_rotation_complete_in_cluster()
                     ):
                         logger.info("on_tls_conf_set: Detected CA rotation complete in cluster")
@@ -1181,7 +1181,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # We remove the old CA and update the chain to only include the new one
         # if all certs are stored and CA rotation is complete in the cluster
         if (
-            self.tls._read_stored_ca("old-ca")
+            self.tls.read_stored_ca("old-ca")
             and self.tls.ca_and_certs_rotation_complete_in_cluster()
         ):
             logger.info("post_start_init: Detected CA rotation complete in cluster")
