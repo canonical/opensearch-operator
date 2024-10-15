@@ -50,6 +50,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await wait_until(
+        ops_test,
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
@@ -80,6 +81,7 @@ async def test_storage_reuse_after_scale_down(
     # scale up to 2 units
     await ops_test.model.applications[app].add_unit(count=1)
     await wait_until(
+        ops_test,
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
@@ -104,6 +106,7 @@ async def test_storage_reuse_after_scale_down(
     # scale-down to 1
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
     await wait_until(
+        ops_test,
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
@@ -122,6 +125,7 @@ async def test_storage_reuse_after_scale_down(
     assert return_code == 0, "Failed to add unit with storage"
 
     await wait_until(
+        ops_test,
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
@@ -172,6 +176,7 @@ async def test_storage_reuse_after_scale_to_zero(
         time.sleep(60)
 
     await wait_until(
+        ops_test,
         apps=[app],
         apps_statuses=["active"],
         timeout=1000,
@@ -189,6 +194,7 @@ async def test_storage_reuse_after_scale_to_zero(
         await ops_test.model.wait_for_idle(apps=[app], timeout=1000)
 
     await wait_until(
+        ops_test,
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
@@ -229,6 +235,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
         await ops_test.model.applications[app].add_unit(count=3 - len(unit_ids))
 
         await wait_until(
+            ops_test,
             apps=[app],
             apps_statuses=["active"],
             units_statuses=["active"],
