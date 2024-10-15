@@ -168,21 +168,12 @@ class _UpgradeOpenSearch(_StartOpenSearch):
         super().__init__(handle, ignore_lock=ignore_lock)
 
 
-class _ApplyProfileTemplatesOpenSearch(EventBase):
-    """Attempt to acquire lock & restart OpenSearch.
-
-    The main reason to have a separate event, is to be able to wait for the cluster.
-    It defers otherwise and only defers the execution of this particular task.
-    """
-
-
 class OpenSearchBaseCharm(CharmBase, abc.ABC):
     """Base class for OpenSearch charms."""
 
     _start_opensearch_event = EventSource(_StartOpenSearch)
     _restart_opensearch_event = EventSource(_RestartOpenSearch)
     _upgrade_opensearch_event = EventSource(_UpgradeOpenSearch)
-    _apply_profile_templates_event = EventSource(_ApplyProfileTemplatesOpenSearch)
 
     def __init__(self, *args, distro: Type[OpenSearchDistribution] = None):
         super().__init__(*args)
