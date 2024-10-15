@@ -50,12 +50,7 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
-from charms.opensearch.v0.models import (
-    DeploymentDescription,
-    DeploymentType,
-    OpenSearchPerfProfile,
-    PerformanceType,
-)
+from charms.opensearch.v0.models import DeploymentDescription, DeploymentType
 from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -80,6 +75,7 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchProvidedRolesException,
     StartMode,
 )
+from charms.opensearch.v0.opensearch_performance_profile import OpenSearchPerformance
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
 from charms.opensearch.v0.opensearch_relation_peer_cluster import (
@@ -223,10 +219,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.framework.observe(self._restart_opensearch_event, self._restart_opensearch)
         self.framework.observe(self._upgrade_opensearch_event, self._upgrade_opensearch)
 
-        self.framework.observe(
-            self._apply_profile_templates_event, self._on_apply_profile_templates
-        )
-
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
@@ -265,35 +257,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             metrics_rules_dir="./src/alert_rules/prometheus",
             log_slots=["opensearch:logs"],
         )
+
+        self.performance_profile = OpenSearchPerformance(self)
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
-        self._apply_profile_templates_has_been_called = False
-
-    def _on_apply_profile_templates(self, event: EventBase):
-        """Apply the profile templates.
-
-        The main reason to have a separate event, is to be able to wait for the cluster. It
-        defers otherwise and only defers the execution of this particular task.
-        """
-        if self._apply_profile_templates_has_been_called:
-            # we can safely abandon this event as we already had a previous call on the same hook
-            return
-        self._apply_profile_templates_has_been_called = True
-
-        if not self.opensearch_peer_cm.deployment_desc() or not self.opensearch.is_node_up():
-            logger.info("Applying profile templates but cluster not ready yet.")
-            event.defer()
-            return
-
-        if self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
-            logger.info("Applying profile templates but not the main orchestrator.")
-            return
-
-        # Configure templates if needed
-        if not self.opensearch.apply_perf_templates_if_needed():
-            logger.debug("Failed to apply templates. Will retry later.")
-            event.defer()
 
     @property
     @abc.abstractmethod
@@ -401,14 +369,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
 
         # Store the current perf. profile we are applying
-        self.opensearch_config.apply_performance_profile(self.opensearch.perf_profile)
-        self._apply_profile_templates_event.emit()
-        if self.unit.is_leader():
-            self.peers_data.put(
-                Scope.APP,
-                PERFORMANCE_PROFILE,
-                PerformanceType(self.config.get(PERFORMANCE_PROFILE, PerformanceType.PRODUCTION)),
-            )
+        # This must happen solely on the beginning of the charm lifecycle.
+        # Therefore, we check if the unit is down.
+        # This IF ensures we are not running a late deferred _on_start call
+        if not self.opensearch.is_service_started():
+            self.performance_profile.apply(self.config.get(PERFORMANCE_PROFILE))
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():
@@ -748,30 +713,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
 
-            restart_requested = self.plugin_manager.run()
-            if (
-                self.peers_data.get(Scope.APP, PERFORMANCE_PROFILE)
-                and PerformanceType(self.peers_data.get(Scope.APP, PERFORMANCE_PROFILE))
-                != self.opensearch.perf_profile.typ
-            ):
-                self.opensearch.perf_profile = OpenSearchPerfProfile.from_str(
-                    self.config.get(PERFORMANCE_PROFILE)
-                )
-                # If we have a running service, and our profile changed
-                # then we need a restart to apply the new profile
-                self.opensearch_config.apply_performance_profile(self.opensearch.perf_profile)
-                self._apply_profile_templates_event.emit()
-                if self.unit.is_leader():
-                    self.peers_data.put(
-                        Scope.APP,
-                        PERFORMANCE_PROFILE,
-                        PerformanceType(
-                            self.config.get(PERFORMANCE_PROFILE, PerformanceType.PRODUCTION)
-                        ),
-                    )
-                restart_requested = True
-
-            if restart_requested:
+            if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
+                # We cannot proceed without the deployment description
+                event.defer()
+                return
+            plugin_needs_restart = self.plugin_manager.run()
+            perf_profile_needs_restart = self.performance_profile.apply(deployment_desc.profile)
+            if plugin_needs_restart or perf_profile_needs_restart:
                 self._restart_opensearch_event.emit()
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):

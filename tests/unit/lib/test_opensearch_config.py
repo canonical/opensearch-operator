@@ -183,6 +183,7 @@ class TestOpenSearchConfig(unittest.TestCase):
             app=App(model_uuid="model-uuid", name="opensearch"),
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         self.opensearch_config.set_node(

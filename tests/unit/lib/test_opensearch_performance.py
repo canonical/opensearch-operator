@@ -1,13 +1,77 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import unittest
 from unittest.mock import mock_open, patch
 
-from charms.opensearch.v0.models import OpenSearchPerfProfile, PerformanceType
+import pytest
+from charms.opensearch.v0.models import (
+    MAX_HEAP_SIZE,
+    MIN_HEAP_SIZE,
+    OpenSearchPerfProfile,
+    PerformanceType,
+)
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
+
+
+@pytest.fixture
+def mock_meminfo():
+    with patch("charms.opensearch.v0.models.OpenSearchPerfProfile.meminfo") as mock:
+        mock.return_value = {"MemTotal": 8000000}  # 8 GB in kB
+        yield mock
+
+
+def test_production_profile_type():
+    """Tests the different formats of creating an object out of a model."""
+    OpenSearchPerfProfile.from_dict({"typ": "production"})
+    OpenSearchPerfProfile.from_str(json.dumps({"typ": "production"}))
+
+
+def test_invalid_profile_type():
+    with pytest.raises(AttributeError):
+        OpenSearchPerfProfile.from_dict({"typ": "INVALID_TYPE"})
+
+
+def test_production_profile(mock_meminfo):
+    profile = OpenSearchPerfProfile(typ=PerformanceType.PRODUCTION)
+    assert profile.heap_size_in_kb == min(int(0.50 * 8000000), MAX_HEAP_SIZE)
+    assert profile.opensearch_yml == {"indices.memory.index_buffer_size": "25%"}
+    assert profile.charmed_index_template == {
+        "charmed-index-tpl": {
+            "index_patterns": ["*"],
+            "template": {
+                "settings": {
+                    "number_of_replicas": "1",
+                },
+            },
+        },
+    }
+
+
+def test_staging_profile(mock_meminfo):
+    profile = OpenSearchPerfProfile(typ=PerformanceType.STAGING)
+    assert profile.heap_size_in_kb == min(int(0.25 * 8000000), MAX_HEAP_SIZE)
+    assert profile.opensearch_yml == {"indices.memory.index_buffer_size": "25%"}
+    assert profile.charmed_index_template == {
+        "charmed-index-tpl": {
+            "index_patterns": ["*"],
+            "template": {
+                "settings": {
+                    "number_of_replicas": "1",
+                },
+            },
+        },
+    }
+
+
+def test_testing_profile(mock_meminfo):
+    profile = OpenSearchPerfProfile(typ=PerformanceType.TESTING)
+    assert profile.heap_size_in_kb == MIN_HEAP_SIZE
+    assert profile.opensearch_yml == {}
+    assert profile.charmed_index_template == {}
 
 
 def test_perf_profile_15g():
@@ -18,29 +82,29 @@ def test_perf_profile_15g():
     with patch("charms.opensearch.v0.models.OpenSearchPerfProfile.meminfo") as mock_perf_profile:
         mock_perf_profile.return_value = {"MemTotal": 15360.0 * 1024}
 
-        profile = OpenSearchPerfProfile.from_str("production")
+        profile = OpenSearchPerfProfile(typ=PerformanceType.PRODUCTION)
         assert profile.typ == PerformanceType.PRODUCTION
         assert str(profile.heap_size_in_kb) == "7864320"
         assert profile.opensearch_yml == {"indices.memory.index_buffer_size": "25%"}
         assert profile.charmed_index_template == {
             "charmed-index-tpl": {
                 "index_patterns": ["*"],
-                "template": {"settings": {"number_of_replicas": "2"}},
+                "template": {"settings": {"number_of_replicas": "1"}},
             }
         }
 
-        profile = OpenSearchPerfProfile.from_str("staging")
+        profile = OpenSearchPerfProfile(typ=PerformanceType.STAGING)
         assert profile.typ == PerformanceType.STAGING
         assert str(profile.heap_size_in_kb) == "3932160"
         assert profile.charmed_index_template == {
             "charmed-index-tpl": {
                 "index_patterns": ["*"],
-                "template": {"settings": {"number_of_replicas": "2"}},
+                "template": {"settings": {"number_of_replicas": "1"}},
             }
         }
         assert profile.opensearch_yml == {"indices.memory.index_buffer_size": "25%"}
 
-        profile = OpenSearchPerfProfile.from_str("testing")
+        profile = OpenSearchPerfProfile(typ=PerformanceType.TESTING)
         assert profile.typ == PerformanceType.TESTING
         assert str(profile.heap_size_in_kb) == "1048576"
         assert profile.charmed_index_template == {}
@@ -56,29 +120,29 @@ def test_perf_profile_5g():
     with patch("charms.opensearch.v0.models.OpenSearchPerfProfile.meminfo") as mock_perf_profile:
         mock_perf_profile.return_value = {"MemTotal": 5120.0 * 1024}
 
-        profile = OpenSearchPerfProfile.from_str("production")
+        profile = OpenSearchPerfProfile(typ=PerformanceType.PRODUCTION)
         assert profile.typ == PerformanceType.PRODUCTION
         assert str(profile.heap_size_in_kb) == "2621440"
         assert profile.opensearch_yml == {"indices.memory.index_buffer_size": "25%"}
         assert profile.charmed_index_template == {
             "charmed-index-tpl": {
                 "index_patterns": ["*"],
-                "template": {"settings": {"number_of_replicas": "2"}},
+                "template": {"settings": {"number_of_replicas": "1"}},
             }
         }
 
-        profile = OpenSearchPerfProfile.from_str("staging")
+        profile = OpenSearchPerfProfile(typ=PerformanceType.STAGING)
         assert profile.typ == PerformanceType.STAGING
         assert str(profile.heap_size_in_kb) == "1310720"
         assert profile.charmed_index_template == {
             "charmed-index-tpl": {
                 "index_patterns": ["*"],
-                "template": {"settings": {"number_of_replicas": "2"}},
+                "template": {"settings": {"number_of_replicas": "1"}},
             }
         }
         assert profile.opensearch_yml == {"indices.memory.index_buffer_size": "25%"}
 
-        profile = OpenSearchPerfProfile.from_str("testing")
+        profile = OpenSearchPerfProfile(typ=PerformanceType.TESTING)
         assert profile.typ == PerformanceType.TESTING
         assert str(profile.heap_size_in_kb) == "1048576"
         assert profile.charmed_index_template == {}
@@ -105,7 +169,7 @@ class TestPerformanceProfile(unittest.TestCase):
             self.harness.begin()
             self.charm = self.harness.charm
             self.opensearch = self.charm.opensearch
-            self.test_profile = OpenSearchPerfProfile.from_str("production")
+            self.test_profile = OpenSearchPerfProfile(typ=PerformanceType.PRODUCTION)
 
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.replace")
     @patch("charms.opensearch.v0.helper_conf_setter.YamlConfigSetter.put")

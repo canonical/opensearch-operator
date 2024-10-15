@@ -95,6 +95,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
                 app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
                 typ=DeploymentType.MAIN_ORCHESTRATOR,
                 state=DeploymentState(value=State.ACTIVE),
+                profile="production",
             )
             can_start = self.peer_cm.can_start(deployment_desc)
             self.assertEqual(can_start, expected)
@@ -120,6 +121,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             app=App(model_uuid=self.charm.model.uuid, name="logs"),
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
         with self.assertRaises(OpenSearchProvidedRolesException):
             # on scale up
@@ -185,6 +187,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             app=App(model_uuid=self.charm.model.uuid, name="logs"),
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         alt_hosts.return_value = []

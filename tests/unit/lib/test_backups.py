@@ -75,6 +75,7 @@ def create_deployment_desc():
         app=App(model_uuid="model-uuid", name="opensearch"),
         typ=DeploymentType.MAIN_ORCHESTRATOR,
         state=DeploymentState(value=State.ACTIVE),
+        profile="production",
     )
 
 

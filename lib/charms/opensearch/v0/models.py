@@ -257,6 +257,7 @@ class DeploymentDescription(Model):
     typ: DeploymentType
     state: DeploymentState = DeploymentState(value=State.ACTIVE)
     promotion_time: Optional[float]
+    profile: str
 
     @root_validator
     def set_promotion_time(cls, values):  # noqa: N805
@@ -363,45 +364,30 @@ class PeerClusterOrchestrators(Model):
 class OpenSearchPerfProfile(Model):
     """Generates an immutable description of the performance profile."""
 
-    class Config:
-        """Pydantic config for this model."""
-
-        arbitrary_types_allowed = True
-
     typ: PerformanceType
     heap_size_in_kb: int = MIN_HEAP_SIZE
     opensearch_yml: Dict[str, str] = {}
     charmed_index_template: Dict[str, str] = {}
     charmed_component_templates: Dict[str, str] = {}
 
-    @classmethod
-    def from_str(cls, input_str: str):
-        """Create a new instance of this class from a stringified json/dict repr."""
-        return cls(typ=PerformanceType(input_str))
-
     @root_validator
     def set_options(cls, values):  # noqa: N805
         """Generate the attributes depending on the input."""
-        val = values["typ"]
-        if isinstance(val, str):
-            val = PerformanceType(val)
+        # Check if PerformanceType has been rendered correctly
+        # if an user creates the OpenSearchPerfProfile
+        if "typ" not in values:
+            raise AttributeError("Missing 'typ' attribute.")
 
-        if val == PerformanceType.PRODUCTION:
-            values["heap_size_in_kb"] = min(
-                int(0.50 * OpenSearchPerfProfile.meminfo()["MemTotal"]),
-                MAX_HEAP_SIZE,
-            )
-
-        if val == PerformanceType.STAGING:
-            values["heap_size_in_kb"] = min(
-                int(0.25 * OpenSearchPerfProfile.meminfo()["MemTotal"]),
-                MAX_HEAP_SIZE,
-            )
-
-        if val == PerformanceType.TESTING:
+        if values["typ"] == PerformanceType.TESTING:
             values["heap_size_in_kb"] = MIN_HEAP_SIZE
+            return values
 
-        if val != PerformanceType.TESTING:
+        mem_total = OpenSearchPerfProfile.meminfo()["MemTotal"]
+        mem_percent = 0.50 if values["typ"] == PerformanceType.PRODUCTION else 0.25
+
+        values["heap_size_in_kb"] = min(int(mem_percent * mem_total), MAX_HEAP_SIZE)
+
+        if values["typ"] != PerformanceType.TESTING:
             values["opensearch_yml"] = {"indices.memory.index_buffer_size": "25%"}
 
             values["charmed_index_template"] = {
@@ -409,7 +395,7 @@ class OpenSearchPerfProfile(Model):
                     "index_patterns": ["*"],
                     "template": {
                         "settings": {
-                            "number_of_replicas": "2",
+                            "number_of_replicas": "1",
                         },
                     },
                 },
@@ -426,8 +412,7 @@ class OpenSearchPerfProfile(Model):
                 2a130b7e1fcdd83633c4aa70998c314d7c38b476/fs/proc/meminfo.c#L31
         """
         with open("/proc/meminfo") as f:
-            meminfo = f.read()
+            meminfo = f.read().split("\n")
+            meminfo = [line.split() for line in meminfo if line.strip()]
 
-        return {
-            line.split()[0][:-1]: float(line.split()[1]) for line in meminfo.split("\n") if line
-        }
+        return {line[0][:-1]: float(line[1]) for line in meminfo}
