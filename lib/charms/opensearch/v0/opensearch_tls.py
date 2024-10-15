@@ -888,7 +888,7 @@ class OpenSearchTLS(Object):
                 Scope.UNIT,
                 "tls_ca_renewed",
             )
-            or self.charm.peers_data.get(Scope.UNIT, "tls_configured") != "True"
+            or self.charm.peers_data.get(Scope.UNIT, "tls_configured") is not True
         ):
             logger.debug("TLS CA rotation ongoing on this unit.")
             return False
