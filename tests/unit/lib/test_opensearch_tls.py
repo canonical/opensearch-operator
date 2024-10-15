@@ -1490,13 +1490,13 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         self.charm.tls._on_certificate_available(event_mock)
 
-        # Saving new cert, cleaning up CA renewal flag
+        # Saving new cert, cleaning up CA renewal flag, removing old CA from keystore
         # Note: the high number of operations come from the fact that on each certificate received
         # the 'issuer' is checked on each certificate that is saved on the disk.
         if self.charm.unit.is_leader():
-            assert run_cmd.call_count == 12
-        else:
             assert run_cmd.call_count == 14
+        else:
+            assert run_cmd.call_count == 16
 
         assert re.search(
             "openssl pkcs12 -export .* -out "
@@ -1507,6 +1507,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             f"chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12"
             in run_cmd.call_args_list[1].args[0]
         )
+        assert re.search("keytool .*-delete .*-alias old-ca", run_cmd.call_args_list[-1].args[0])
 
         assert "tls_ca_renewing" not in self.harness.get_relation_data(self.rel_id, "opensearch/0")
         assert "tls_ca_renewed" not in self.harness.get_relation_data(self.rel_id, "opensearch/0")
