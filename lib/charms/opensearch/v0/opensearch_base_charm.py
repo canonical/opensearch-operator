@@ -309,6 +309,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_start(self, event: StartEvent):  # noqa C901
         """Triggered when on start. Set the right node role."""
+        # Store the current perf. profile we are applying
+        # This must happen solely on the beginning of the charm lifecycle.
+        # Therefore, we check if the unit is down.
+        # This IF ensures we are not running a late deferred _on_start call
+        if not self.opensearch.is_service_started():
+            self.performance_profile.apply(self.config.get(PERFORMANCE_PROFILE))
 
         def cleanup():
             if self.peers_data.get(Scope.APP, "security_index_initialised"):
@@ -358,13 +364,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # This is unlike to happen, unless the snap has been manually removed
                 logger.error("Service previously started but now misses the snap.")
                 return
-
-        # Store the current perf. profile we are applying
-        # This must happen solely on the beginning of the charm lifecycle.
-        # Therefore, we check if the unit is down.
-        # This IF ensures we are not running a late deferred _on_start call
-        if not self.opensearch.is_service_started():
-            self.performance_profile.apply(self.config.get(PERFORMANCE_PROFILE))
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():

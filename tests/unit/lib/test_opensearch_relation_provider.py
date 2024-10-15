@@ -5,6 +5,10 @@ import json
 import unittest
 from unittest.mock import ANY, MagicMock, PropertyMock, patch
 
+# Imports to simulate designated imports order
+# (Otherwise circular dependency may be reported,
+import charms.opensearch.v0.helper_cluster  # noqa
+import charms.opensearch.v0.opensearch_distro  # noqa
 import responses
 from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
@@ -66,6 +70,7 @@ class TestOpenSearchProvider(unittest.TestCase):
                 typ=DeploymentType.MAIN_ORCHESTRATOR,
                 app=App(model_uuid="model-uuid", name="opensearch"),
                 state=DeploymentState(value=State.ACTIVE),
+                profile="production",
             )
 
         self.charm.opensearch_peer_cm.deployment_desc = mock_deployment_desc

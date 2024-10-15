@@ -280,6 +280,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
             ) as perf_profile,
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
+            ),
         ):
             # test when setup complete
             is_node_up.return_value = True
@@ -301,12 +304,15 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
             ) as perf_profile,
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
+            ),
         ):
             # when _get_nodes fails
             _get_nodes.side_effect = OpenSearchHttpError()
             self.charm.on.start.emit()
             _set_node_conf.assert_not_called()
-            perf_profile.assert_called_once()
+            perf_profile.assert_not_called()  # not called as the profile has been already set
 
             _get_nodes.reset_mock()
 
@@ -325,6 +331,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
             ) as perf_profile,
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
+            ),
         ):
             # initialisation of the security index
             _get_nodes.reset_mock()

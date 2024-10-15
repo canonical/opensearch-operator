@@ -202,6 +202,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         # Check if we had any other exception
         assert succeeded is True
 
+    @patch(f"{BASE_LIB_PATH}.opensearch_performance_profile.OpenSearchPerformance.apply")
     @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
@@ -209,13 +210,12 @@ class TestOpenSearchPlugin(unittest.TestCase):
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
-    def test_check_plugin_called_on_config_changed(self, mock_version, deployment_desc) -> None:
+    def test_check_plugin_called_on_config_changed(self, mock_version, deployment_desc, _) -> None:
         """Triggers a config change and should call plugin manager."""
         self.harness.set_leader(True)
         self.peers_data.put(Scope.APP, "security_index_initialised", True)
         self.harness.set_leader(False)
 
-        deployment_desc.return_value = "something"
         self.plugin_manager.run = MagicMock(return_value=False)
         self.charm.opensearch_config.update_host_if_needed = MagicMock(return_value=False)
         self.charm.opensearch.is_started = MagicMock(return_value=True)

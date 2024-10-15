@@ -15,6 +15,7 @@ def mock_deployment_desc(
     typ: str,
     temperature: str | None = None,
     cluster_name: str = CLUSTER_NAME,
+    profile: str = "production",
 ) -> dict[str, str]:
     return {
         "app": {
@@ -34,6 +35,7 @@ def mock_deployment_desc(
         "start": "start-with-generated-roles",
         "state": {"message": "", "value": "active"},
         "typ": typ,
+        "profile": profile,
     }
 
 

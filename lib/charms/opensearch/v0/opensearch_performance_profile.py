@@ -3,15 +3,23 @@
 
 """Represents the performance profile of the OpenSearch cluster.
 
-The main goals of this library are:
-- Provide a way to manage the performance profile of the OpenSearch cluster.
+The main goals of this library is to provide a way to manage the performance
+profile of the OpenSearch cluster.
 
+There are two ways the charm can learn about its profile and when it changes:
+1) If this is the MAIN_ORCHESTRATOR: config-changed -> the user has switched the profile directly
+2) If not the MAIN_ORCHESTRATOR: peer-cluster-relation-changed -> the main orchestrator has
+                                 switched the profile
+
+The charm will then apply the profile and restart the OpenSearch service if needed.
 """
-
 import logging
 
 import ops
-from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE
+from charms.opensearch.v0.constants_charm import (
+    PERFORMANCE_PROFILE,
+    PeerClusterRelationName,
+)
 from charms.opensearch.v0.models import (
     DeploymentType,
     OpenSearchPerfProfile,
@@ -54,9 +62,24 @@ class OpenSearchPerformance(ops.Object):
         self.peers_data = self.charm.peers_data
 
         self.framework.observe(
+            charm.on[PeerClusterRelationName].relation_changed,
+            self._on_peer_cluster_relation_changed,
+        )
+        self.framework.observe(
             self._apply_profile_templates_event, self._on_apply_profile_templates
         )
         self._apply_profile_templates_has_been_called = False
+
+    def _on_peer_cluster_relation_changed(self, _: EventBase):
+        """Handle the peer cluster relation changed event."""
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            # Deployment description not available yet
+            # Nothing to do
+            return
+
+        if self.apply(deployment_desc.performance_profile):
+            # We need to restart
+            self.charm.restart_event.emit()
 
     @property
     def current(self) -> OpenSearchPerfProfile | None:
@@ -78,7 +101,7 @@ class OpenSearchPerformance(ops.Object):
         elif isinstance(value, str):
             # Ensure the value is a valid one
             value = PerformanceType(value)
-        self.peers_data.put(Scope.UNIT, str(value), PERFORMANCE_PROFILE)
+        self.peers_data.put(Scope.UNIT, PERFORMANCE_PROFILE, str(value))
 
     def apply(self, profile_name: str) -> bool:
         """Apply the performance profile.
@@ -97,6 +120,7 @@ class OpenSearchPerformance(ops.Object):
         self.charm.opensearch_config.apply_performance_profile(new_profile)
         self._apply_profile_templates_event.emit()
         self.current = new_profile
+        return True
 
     def _on_apply_profile_templates(self, event: EventBase):
         """Apply the profile templates.
@@ -121,7 +145,6 @@ class OpenSearchPerformance(ops.Object):
             self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR
             and not self.charm.unit.is_leader()
         ):
-            logger.info("Applying profile templates but not the main orchestrator.")
             return
 
         # Configure templates if needed

@@ -166,6 +166,7 @@ class TestOpenSearchInternalData(unittest.TestCase):
                 app=App(model_uuid="model-uuid", name=self.charm.app.name),
                 typ=DeploymentType.MAIN_ORCHESTRATOR,
                 state=DeploymentState(value=State.ACTIVE),
+                profile="production",
             )
             self.store.put_object(scope, "deployment", deployment.to_dict())
             fetched_deployment = DeploymentDescription.from_dict(
