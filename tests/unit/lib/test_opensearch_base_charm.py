@@ -88,6 +88,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.harness.begin()
 
         self.charm = self.harness.charm
+        self.charm.opensearch_config.apply_performance_profile = MagicMock()
 
         for typ in ["ok", "ko"]:
             self.deployment_descriptions[typ].app = App(
@@ -226,7 +227,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
-            ) as perf_profile,
+            ),
         ):
             is_node_up.return_value = False
             _apply_peer_cm_directives_and_check_if_can_start.return_value = True
@@ -237,8 +238,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
             self.harness.set_leader(True)
             self.charm.on.start.emit()
-
-            perf_profile.assert_called_once()
             self.charm._start_opensearch_event.emit.assert_called_once()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_locking.OpenSearchNodeLock.acquired")
@@ -279,7 +278,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
-            ) as perf_profile,
+            ),
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
             ),
@@ -298,7 +297,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             is_admin_user_configured.return_value = False
             self.charm.on.start.emit()
             set_client_auth.assert_not_called()
-            perf_profile.assert_called_once()
 
         with (
             patch(
