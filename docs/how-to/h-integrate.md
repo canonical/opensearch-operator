@@ -1,4 +1,4 @@
-# How to integrate OpenSearch with your charm
+# How to integrate OpenSearch with an application
 
 [Integrations](https://juju.is/docs/juju/relation) (formerly "relations") are connections between two applications with compatible endpoints. These connections simplify creating and managing users, passwords, and other shared data.
 
