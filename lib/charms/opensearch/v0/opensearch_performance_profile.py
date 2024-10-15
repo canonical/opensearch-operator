@@ -78,7 +78,7 @@ class OpenSearchPerformance(ops.Object):
         elif isinstance(value, str):
             # Ensure the value is a valid one
             value = PerformanceType(value)
-        self.peers_data.put(Scope.APP, str(value), PERFORMANCE_PROFILE)
+        self.peers_data.put(Scope.UNIT, str(value), PERFORMANCE_PROFILE)
 
     def apply(self, profile_name: str) -> bool:
         """Apply the performance profile.

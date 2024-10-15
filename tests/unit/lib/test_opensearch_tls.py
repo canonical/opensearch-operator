@@ -66,6 +66,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         ),
         "ko": DeploymentDescription(
             config=PeerClusterConfig(cluster_name="logs", init_hold=True, roles=["ml"]),
@@ -74,6 +75,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=DeploymentType.OTHER,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
+            profile="production",
         ),
     }
 
@@ -168,6 +170,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
         event_mock = MagicMock()
 
@@ -199,6 +202,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=DeploymentType.OTHER,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
         # Truststore password is required
         self.secret_store.put_object(
@@ -234,6 +238,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
         event_mock = MagicMock()
 
@@ -359,6 +364,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         event_mock = MagicMock(certificate=cert)
@@ -393,6 +399,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         event_mock = MagicMock(certificate=cert)
@@ -436,6 +443,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=DeploymentType.OTHER,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
         secret = {"key": "secret_12345"}
 
@@ -515,6 +523,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         self.harness.set_leader(is_leader=True)
@@ -657,6 +666,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         self.harness.set_leader(is_leader=leader)
@@ -781,6 +791,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         self.charm._restart_opensearch_event = MagicMock()
@@ -877,6 +888,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         self.harness.set_leader(is_leader=False)
@@ -1008,6 +1020,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
         upgrade_mock = MagicMock(app_status=ActiveStatus())
         upgrade_mock.get_unit_juju_status.return_value = ActiveStatus()
@@ -1167,6 +1180,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
         upgrade_mock = MagicMock(app_status=ActiveStatus())
         upgrade_mock.get_unit_juju_status.return_value = ActiveStatus()
@@ -1291,6 +1305,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         self.charm._restart_opensearch_event = MagicMock()
@@ -1465,6 +1480,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         self.charm._restart_opensearch_event = MagicMock()
@@ -1581,6 +1597,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         self.charm.on.certificate_available = MagicMock(
@@ -1677,6 +1694,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         self.charm.on.certificate_available = MagicMock(

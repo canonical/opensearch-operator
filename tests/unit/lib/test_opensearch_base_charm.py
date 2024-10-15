@@ -51,6 +51,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.ACTIVE),
+            profile="prodution",
         ),
         "ko": DeploymentDescription(
             config=PeerClusterConfig(cluster_name="logs", init_hold=True, roles=["ml"]),
@@ -59,6 +60,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             typ=DeploymentType.OTHER,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
+            profile="prodution",
         ),
         "cm-only": DeploymentDescription(
             config=PeerClusterConfig(cluster_name="", init_hold=False, roles=["cluster-manager"]),
@@ -67,6 +69,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.ACTIVE),
+            profile="prodution",
         ),
         "data-only": DeploymentDescription(
             config=PeerClusterConfig(cluster_name="", init_hold=False, roles=["data"]),
@@ -75,6 +78,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             typ=DeploymentType.OTHER,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.ACTIVE),
+            profile="prodution",
         ),
     }
 
