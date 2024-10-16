@@ -98,11 +98,6 @@ class OpenSearchDistribution(ABC):
         self.config = YamlConfigSetter(base_path=self.paths.conf)
         self._charm = charm
         self._peer_relation_name = peer_relation_name
-        self.perf_profile = OpenSearchPerfProfile.from_dict(
-            {
-                "typ": self._charm.config.get(PERFORMANCE_PROFILE, "production"),
-            }
-        )
 
     def install(self):
         """Install the package."""
