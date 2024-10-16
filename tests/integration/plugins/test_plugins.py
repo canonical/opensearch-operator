@@ -83,7 +83,9 @@ async def _set_config(ops_test: OpsTest, deploy_type: str, conf: dict[str, str])
 
 
 async def _wait_for_units(
-    ops_test: OpsTest, deployment_type: str, wait_for_cos: bool = False,
+    ops_test: OpsTest,
+    deployment_type: str,
+    wait_for_cos: bool = False,
 ) -> None:
     """Wait for all units to be active.
 
