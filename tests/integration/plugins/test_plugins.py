@@ -100,8 +100,7 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str, wait_for_cos=
             await wait_until(
                 ops_test,
                 apps=[COS_APP_NAME],
-                apps_statuses=["active", "blocked"],
-                units_statuses=["active", "blocked"],
+                units_statuses=["blocked"],
                 timeout=1800,
                 idle_period=IDLE_PERIOD,
             )
@@ -123,8 +122,7 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str, wait_for_cos=
         await wait_until(
             ops_test,
             apps=[COS_APP_NAME],
-            apps_statuses=["active", "blocked"],
-            units_statuses=["active", "blocked"],
+            units_statuses=["blocked"],
             timeout=1800,
             idle_period=IDLE_PERIOD,
         )
