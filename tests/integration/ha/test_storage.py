@@ -57,11 +57,17 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
-        status="active",
+        apps_statuses=["active"],
+        units_statuses=["active"],
         timeout=1000,
         idle_period=IDLE_PERIOD,
+        wait_for_exact_units={
+            TLS_CERTIFICATES_APP_NAME: 1,
+            my_charm: 1,
+        },
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
@@ -82,11 +88,16 @@ async def test_storage_reuse_after_scale_down(
 
     # scale up to 2 units
     await ops_test.model.applications[app].add_unit(count=1)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
+        apps_statuses=["active"],
+        units_statuses=["active"],
         timeout=1000,
-        wait_for_exact_units=2,
+        idle_period=IDLE_PERIOD,
+        wait_for_exact_units={
+            app: 2,
+        },
     )
 
     writes_result = await c_writes.stop()
@@ -102,12 +113,16 @@ async def test_storage_reuse_after_scale_down(
 
     # scale-down to 1
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
-    await ops_test.model.wait_for_idle(
-        # app status will not be active because after scaling down not all shards are assigned
+    await wait_until(
+        ops_test,
         apps=[app],
+        apps_statuses=["active"],
+        units_statuses=["active"],
         timeout=1000,
-        wait_for_exact_units=1,
         idle_period=IDLE_PERIOD,
+        wait_for_exact_units={
+            app: 1,
+        },
     )
 
     # add unit with storage attached
@@ -117,12 +132,16 @@ async def test_storage_reuse_after_scale_down(
     return_code, _, _ = await ops_test.juju(*add_unit_cmd.split())
     assert return_code == 0, "Failed to add unit with storage"
 
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
+        apps_statuses=["active"],
+        units_statuses=["active"],
         timeout=1000,
-        wait_for_exact_units=2,
         idle_period=IDLE_PERIOD,
+        wait_for_exact_units={
+            app: 2,
+        },
     )
 
     # check the storage of the new unit
@@ -164,11 +183,15 @@ async def test_storage_reuse_after_scale_to_zero(
         # give some time for removing each unit
         time.sleep(60)
 
-    await ops_test.model.wait_for_idle(
-        # app status will not be active because after scaling down not all shards are assigned
+    await wait_until(
+        ops_test,
         apps=[app],
+        apps_statuses=["active", "blocked"],
         timeout=1000,
-        wait_for_exact_units=0,
+        idle_period=IDLE_PERIOD,
+        wait_for_exact_units={
+            app: 0,
+        },
     )
 
     # scale up again
@@ -178,11 +201,16 @@ async def test_storage_reuse_after_scale_to_zero(
         assert return_code == 0, f"Failed to add unit with storage {storage_ids[unit_id]}"
         await ops_test.model.wait_for_idle(apps=[app], timeout=1000)
 
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[app],
-        status="active",
+        apps_statuses=["active"],
+        units_statuses=["active"],
         timeout=1000,
-        wait_for_exact_units=len(unit_ids),
+        idle_period=IDLE_PERIOD,
+        wait_for_exact_units={
+            app: len(unit_ids),
+        },
     )
 
     # check if data is also imported
@@ -214,12 +242,16 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     if len(unit_ids) < 3:
         await ops_test.model.applications[app].add_unit(count=3 - len(unit_ids))
 
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=[app],
-            status="active",
+            apps_statuses=["active"],
+            units_statuses=["active"],
             timeout=1000,
-            wait_for_exact_units=3,
             idle_period=IDLE_PERIOD,
+            wait_for_exact_units={
+                app: 3,
+            },
         )
     else:
         # wait for enough data to be written
