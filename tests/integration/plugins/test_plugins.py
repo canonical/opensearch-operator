@@ -94,6 +94,7 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str, wait_for_cos:
             apps_statuses=["active"],
             units_statuses=["active"],
             timeout=1800,
+            wait_for_exact_units={APP_NAME: 3},
             idle_period=IDLE_PERIOD,
         )
         if wait_for_cos:
@@ -104,7 +105,7 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str, wait_for_cos:
                 timeout=1800,
                 idle_period=IDLE_PERIOD,
             )
-            return
+        return
     await wait_until(
         ops_test,
         apps=[
@@ -113,6 +114,12 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str, wait_for_cos:
             FAILOVER_ORCHESTRATOR_NAME,
             APP_NAME,
         ],
+        wait_for_exact_units={
+            TLS_CERTIFICATES_APP_NAME: 1,
+            MAIN_ORCHESTRATOR_NAME: 1,
+            FAILOVER_ORCHESTRATOR_NAME: 2,
+            APP_NAME: 1,
+        },
         apps_statuses=["active"],
         units_statuses=["active"],
         timeout=1800,
