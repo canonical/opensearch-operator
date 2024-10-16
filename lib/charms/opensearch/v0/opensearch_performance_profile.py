@@ -174,7 +174,7 @@ class OpenSearchPerformance(ops.Object):
             return
 
         # Configure templates if needed
-        if not self.charm.opensearch.apply_perf_templates_if_needed():
+        if not self.apply_perf_templates_if_needed():
             logger.debug("Failed to apply templates. Will retry later.")
             event.defer()
 
