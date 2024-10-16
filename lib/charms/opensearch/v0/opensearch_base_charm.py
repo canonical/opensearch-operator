@@ -718,7 +718,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.status.clear(PluginConfigChangeError, app=True)
 
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            # Only the main orchestrator can change the performance profile
+            # TODO extend later. For now, only the main orchestrator can change the perf. profile 
             perf_profile_needs_restart = self.performance_profile.apply(
                 self.config.get(PERFORMANCE_PROFILE)
             )
