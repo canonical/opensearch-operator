@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 import requests
 import urllib3.exceptions
-from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE, GeneratedRoles
+from charms.opensearch.v0.constants_charm import GeneratedRoles
 from charms.opensearch.v0.helper_charm import (
     format_unit_name,
     mask_sensitive_information,
@@ -27,7 +27,7 @@ from charms.opensearch.v0.helper_cluster import Node
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
 from charms.opensearch.v0.helper_http import error_http_retry_log
 from charms.opensearch.v0.helper_networking import get_host_ip, is_reachable
-from charms.opensearch.v0.models import App, OpenSearchPerfProfile, StartMode
+from charms.opensearch.v0.models import App, StartMode
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
