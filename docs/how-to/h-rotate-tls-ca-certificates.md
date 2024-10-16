@@ -78,7 +78,10 @@ juju run manual-tls-certificates/leader provide-certificate \
   unit-name="<unit-name>"
 ```
 
-Once the new certificate is provided to the OpenSearch cluster, the OpenSearch cluster will automatically detect the new CA certificate and trigger a CA rotation on the node which results in new CSRs being generated. You can then sign the new CSRs using the new CA certificate and provide the new certificates to the OpenSearch node using the `manual-tls operator`.
+Once the new certificate is provided to the OpenSearch cluster, the OpenSearch cluster will automatically detect the new CA certificate and trigger a CA rotation on the node which results in new CSRs being generated. You can then sign the new CSRs using the new CA certificate and provide the new certificates to the OpenSearch node using the `manual-tls operator`. 
+[note  type="caution"]
+The distribution of certificates must follow a specific order. The leader unit is first followed by the remaining nodes.
+[/note]
 
 This process needs to be repeated for each unit in the OpenSearch cluster. Once all the units have the new CA certificate, the OpenSearch cluster will update the TLS certificates on the nodes, either by reloading them via API or by triggering a rolling restart of the OpenSearch cluster. Restarting to apply the new TLS certificates is only required if the issuer, the subject or the subject alternative names (sans) of the new certificate are different than before. If they stay the same, the new TLS certificates can be reloaded on the fly.
 
