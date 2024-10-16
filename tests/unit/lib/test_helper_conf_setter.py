@@ -15,6 +15,9 @@ obj:
     - elt2
 """
 
+JVM_OPTIONS = """-Xms1g
+-Xmx1g"""
+
 
 class TestHelperConfSetter(unittest.TestCase):
     def setUp(self) -> None:
@@ -119,6 +122,30 @@ class TestHelperConfSetter(unittest.TestCase):
         handle.write.assert_called_with(
             "simple_key: simple_value\nobj:\n  simple_array:\n    - elt1\n    - elt2\nnew_value\n"
         )
+
+    @patch("charms.opensearch.v0.helper_conf_setter.exists")
+    @patch("builtins.open", new_callable=mock_open, read_data=JVM_OPTIONS)
+    def test_multiline_replace(self, mock_file, mock_exists):
+        mock_exists.return_value = True
+
+        self.conf.replace(
+            "jvm.options",
+            "-Xms[0-9]+[kmgKMG]",
+            "-Xms7680k",
+            regex=True,
+        )
+        self.conf.replace(
+            "jvm.options",
+            "-Xmx[0-9]+[kmgKMG]",
+            "-Xmx7680k",
+            regex=True,
+        )
+
+        mock_file.assert_called_with("jvm.options", "w")
+        handle = mock_file()
+
+        handle.write.assert_any_call("-Xms7680k\n-Xmx1g")
+        handle.write.assert_any_call("-Xms1g\n-Xmx7680k")
 
     def tearDown(self) -> None:
         """Cleanup."""
