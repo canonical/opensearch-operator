@@ -82,7 +82,9 @@ async def _set_config(ops_test: OpsTest, deploy_type: str, conf: dict[str, str])
     await ops_test.model.applications[APP_NAME].set_config(conf)
 
 
-async def _wait_for_units(ops_test: OpsTest, deployment_type: str, wait_for_cos: bool = False) -> None:
+async def _wait_for_units(
+    ops_test: OpsTest, deployment_type: str, wait_for_cos: bool = False,
+) -> None:
     """Wait for all units to be active.
 
     This wait will behavior accordingly to small/large.
