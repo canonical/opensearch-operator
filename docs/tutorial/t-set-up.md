@@ -47,7 +47,7 @@ You can list all LXD containers by executing the command `lxc list`. At this poi
 As with LXD, Juju is installed using a snap package:
 
 ```shell
-sudo snap install juju --channel 3.4/stable --classic
+sudo snap install juju --channel 3.5/stable --classic
 ```
 
 Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup or configuration needed, however,  because Juju 3.x is a [strictly confined snap](https://snapcraft.io/docs/classic-confinement), and is not allowed to create a `~/.local/share` directory, we need to create it manually.

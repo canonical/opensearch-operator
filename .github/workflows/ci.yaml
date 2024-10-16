@@ -10,7 +10,7 @@ on:
   pull_request:
   schedule:
     - cron: '53 0 * * *' # Daily at 00:53 UTC
-  # Triggered on push to branch "main" by .github/workflows/release.yaml
+  # Triggered on push to branch "2/edge" by .github/workflows/release.yaml
   workflow_call:
 
 jobs:
@@ -28,15 +28,26 @@ jobs:
       cache: true
 
   integration-test:
-    name: Integration test charm | 3.5.3
+    strategy:
+      fail-fast: false
+      matrix:
+        juju:
+          # This runs on all runs
+          - agent: 3.5.3 # renovate: juju-agent-pin-minor
+            allure_report: true
+          # This runs only on scheduled runs, DPW 21 specifics (scheduled + 3.6/X)
+          - snap_channel: 3.6/beta
+            allure_report: false
+    name: Integration test charm | ${{ matrix.juju.agent || matrix.juju.snap_channel }}
     needs:
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@get-opensearch-systemd-logs
     with:
+      juju-agent-version: ${{ matrix.juju.agent }}
+      juju-snap-channel: ${{ matrix.juju.snap_channel }}
+      _beta_allure_report: ${{ matrix.juju.allure_report }}
       artifact-prefix: packed-charm-cache-true
       cloud: lxd
-      juju-agent-version: 3.5.3
-      _beta_allure_report: true
     secrets:
       # GitHub appears to redact each line of a multi-line secret
       # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
