@@ -278,23 +278,21 @@ class YamlConfigSetter(ConfigSetter):
         with open(path, "r+") as f:
             data = f.read()
 
-            if regex and old_val and re.compile(old_val, re.MULTILINE).findall(data):
-                data = re.sub(r"{}".format(old_val), f"{new_val}", data)
-            elif old_val and old_val in data:
-                data = data.replace(old_val, new_val)
-            elif add_line_if_missing:
-                data += f"{data.rstrip()}\n{new_val}\n"
+        if regex and old_val and re.compile(old_val, re.MULTILINE).findall(data):
+            data = re.sub(r"{}".format(old_val), f"{new_val}", data)
+        elif old_val and old_val in data:
+            data = data.replace(old_val, new_val)
+        elif add_line_if_missing:
+            data = f"{data.rstrip()}\n{new_val}\n"
 
-            if output_type in [OutputType.console, OutputType.all]:
-                logger.info(data)
+        if output_type in [OutputType.console, OutputType.all]:
+            logger.info(data)
 
-            if output_type in [OutputType.file, OutputType.all]:
-                if output_file is None or output_file == config_file:
-                    f.seek(0)
-                    f.write(data)
-                else:
-                    with open(output_file, "w") as g:
-                        g.write(data)
+        if output_file is None:
+            output_file = config_file
+
+        with open(output_file, "w") as f:
+            f.write(data)
 
     @override
     def append(
