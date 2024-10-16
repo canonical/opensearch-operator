@@ -188,11 +188,9 @@ class OpenSearchPerformance(ops.Object):
                 try:
                     self.charm.opensearch.request("DELETE", endpoint)
                 except OpenSearchHttpError as e:
-                    if e.response_code == 404:
-                        # Nothing to do, this error means the template does not exist
-                        pass
-                    logger.warning(f"Failed to delete index template: {e}")
-                    return False
+                    if e.response_code != 404:
+                        logger.warning(f"Failed to delete index template: {e}")
+                        return False
             # Nothing to do anymore
             return True
 

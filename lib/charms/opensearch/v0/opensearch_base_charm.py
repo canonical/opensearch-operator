@@ -724,7 +724,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
             if self.opensearch_peer_cm.is_provider(typ="main") and perf_profile_needs_restart:
                 # Update the peer-cluster-orchestrator as needed
-                self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+                self.peer_cluster_provider.refresh_relation_data(event)
         if plugin_needs_restart or perf_profile_needs_restart:
             self._restart_opensearch_event.emit()
 
