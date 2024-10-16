@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
+    PERFORMANCE_PROFILE,
     AdminUser,
     AdminUserInitProgress,
     AdminUserNotConfigured,
@@ -675,10 +676,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
             self._handle_change_to_main_orchestrator_if_needed(event, previous_deployment_desc)
 
-        # todo: handle gracefully configuration setting at start of the charm
-        if not self.plugin_manager.check_plugin_manager_ready():
-            return
-
         if self.upgrade_in_progress:
             # The following changes in _on_config_changed are not supported during an upgrade
             # Therefore, we leave now
@@ -689,6 +686,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
+        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
+            # We cannot proceed without the deployment description
+            event.defer()
+            return
+
+        perf_profile_needs_restart = False
+        plugin_needs_restart = False
+
         try:
             if not self.plugin_manager.check_plugin_manager_ready():
                 raise OpenSearchNotFullyReadyError()
@@ -696,14 +701,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
 
-            if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
-                # We cannot proceed without the deployment description
-                event.defer()
-                return
             plugin_needs_restart = self.plugin_manager.run()
-            perf_profile_needs_restart = self.performance_profile.apply(deployment_desc.profile)
-            if plugin_needs_restart or perf_profile_needs_restart:
-                self._restart_opensearch_event.emit()
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
                 logger.warning("Plugin management: cluster not ready yet at config changed")
@@ -714,11 +712,21 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # config-changed is called again.
             if self.unit.is_leader():
                 self.status.clear(PluginConfigCheck, app=True)
-            return
+        else:
+            if self.unit.is_leader():
+                self.status.clear(PluginConfigCheck, app=True)
+                self.status.clear(PluginConfigChangeError, app=True)
 
-        if self.unit.is_leader():
-            self.status.clear(PluginConfigCheck, app=True)
-            self.status.clear(PluginConfigChangeError, app=True)
+        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            # Only the main orchestrator can change the performance profile
+            perf_profile_needs_restart = self.performance_profile.apply(
+                self.config.get(PERFORMANCE_PROFILE)
+            )
+            if self.opensearch_peer_cm.is_provider(typ="main") and perf_profile_needs_restart:
+                # Update the peer-cluster-orchestrator as needed
+                self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+        if plugin_needs_restart or perf_profile_needs_restart:
+            self._restart_opensearch_event.emit()
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
