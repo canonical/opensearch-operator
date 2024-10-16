@@ -4,8 +4,16 @@
 """Unit test for the helper_conf_setter library."""
 import os
 import unittest
+from unittest.mock import mock_open, patch
 
 from charms.opensearch.v0.helper_conf_setter import YamlConfigSetter
+
+REPLACE_TEST_CONTENT = """simple_key: simple_value
+obj:
+  simple_array:
+    - elt1
+    - elt2
+"""
 
 
 class TestHelperConfSetter(unittest.TestCase):
@@ -81,6 +89,36 @@ class TestHelperConfSetter(unittest.TestCase):
         complex_array = self.conf.load(output_file)["obj"]["complex_array"]
         for elt in complex_array:
             self.assertNotEqual(elt["name"], "name1")
+
+    @patch("builtins.open", new_callable=mock_open, read_data=REPLACE_TEST_CONTENT)
+    def test_replace(self, mock_file):
+        """Test replacing values in a file."""
+        input_file = "tests/unit/resources/test_conf.yaml"
+        output_file = "tests/unit/resources/produced.yaml"
+
+        # Test with smaller file size
+        self.conf.replace(input_file, "simple_key", "test", output_file=output_file)
+        mock_file.assert_called_with(output_file, "w")
+        handle = mock_file()
+        handle.write.assert_called_with(
+            "test: simple_value\nobj:\n  simple_array:\n    - elt1\n    - elt2\n"
+        )
+
+        self.conf.replace(input_file, "elt2", "replaced_elt", output_file=output_file)
+        handle.write.assert_called_with(
+            "simple_key: simple_value\nobj:\n  simple_array:\n    - elt1\n    - replaced_elt\n"
+        )
+
+        self.conf.replace(
+            input_file,
+            "non_existing",
+            "new_value",
+            add_line_if_missing=True,
+            output_file=output_file,
+        )
+        handle.write.assert_called_with(
+            "simple_key: simple_value\nobj:\n  simple_array:\n    - elt1\n    - elt2\nnew_value\n"
+        )
 
     def tearDown(self) -> None:
         """Cleanup."""
