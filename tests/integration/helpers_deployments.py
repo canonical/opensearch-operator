@@ -164,6 +164,60 @@ async def get_application_units(ops_test: OpsTest, app: str) -> List[Unit]:
     return units
 
 
+async def get_application_subordinate_units(
+    ops_test: OpsTest, principal_app: str, app: str
+) -> List[Unit]:
+    """Get fully detailed units of an application."""
+    # Juju incorrectly reports the IP addresses after the network is restored this is reported as a
+    # bug here: https://github.com/juju/python-libjuju/issues/738. Once this bug is resolved use of
+    # `get_unit_ip` should be replaced with `.public_address`
+    raw_app = get_raw_application(ops_test, app)
+    units = []
+    for principal_unit in get_raw_application(ops_test, principal_app)["units"].values():
+        u_name, unit = None, None
+        for u_name, unit in principal_unit["subordinates"].items():
+            if app in u_name:
+                break
+        else:
+            raise ValueError(f"Subordinate unit for {app} not found in {principal_app}")
+
+        unit_id = int(u_name.split("/")[-1])
+
+        if not unit.get("public-address"):
+            # unit not ready yet...
+            continue
+
+        app_id = f"{ops_test.model.uuid}/{app}"
+        app_short_id = md5(app_id.encode()).hexdigest()[:3]
+        unit = Unit(
+            id=unit_id,
+            short_name=u_name.replace("/", "-"),
+            name=f"{u_name.replace('/', '-')}.{app_short_id}",
+            ip=unit["public-address"],
+            hostname=await get_unit_hostname(ops_test, unit_id, app),
+            is_leader=unit.get("leader", False),
+            machine_id=-1,
+            workload_status=Status(
+                value=unit["workload-status"]["current"],
+                since=unit["workload-status"]["since"],
+                message=unit["workload-status"].get("message"),
+            ),
+            agent_status=Status(
+                value=unit["juju-status"]["current"],
+                since=unit["juju-status"]["since"],
+            ),
+            app_status=Status(
+                value=raw_app["application-status"]["current"],
+                since=raw_app["application-status"]["since"],
+                message=raw_app["application-status"].get("message"),
+            ),
+        )
+
+        units.append(unit)
+
+    return units
+
+
 def _is_every_condition_on_app_met(
     ops_test: OpsTest,
     app: str,
@@ -245,8 +299,18 @@ async def _is_every_condition_met(
 ) -> bool:
     """Evaluate if all the deployment status conditions are met."""
     for app in apps:
+        app_dict = get_raw_application(ops_test, app)
         expected_units = wait_for_exact_units[app]
-        units = await get_application_units(ops_test, app)
+        if "subordinate-to" in app_dict:
+            logger.debug(f"Subordinate app: {app}")
+            # In this case, we must search for the principal app
+            units = await get_application_subordinate_units(
+                ops_test, app_dict["subordinate-to"][0], app
+            )
+        else:
+            logger.debug(f"This is a principal app: {app}")
+            units = await get_application_units(ops_test, app)
+
         if -1 < expected_units != len(units):
             logger.info(f"{app} -- expected units: {expected_units} -- current: {len(units)}")
             return False
