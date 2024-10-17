@@ -116,10 +116,12 @@ class OpenSearchPerformance(ops.Object):
         if not self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE):
             return None
 
-        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             # Could not set the profile
             # Fallback to the
-            return self.charm.config.get(PERFORMANCE_PROFILE)
+            return OpenSearchPerfProfile.from_dict(
+                {"typ": self.charm.config.get(PERFORMANCE_PROFILE)}
+            )
 
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             return OpenSearchPerfProfile.from_dict(
