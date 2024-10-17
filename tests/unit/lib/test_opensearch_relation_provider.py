@@ -64,13 +64,14 @@ class TestOpenSearchProvider(unittest.TestCase):
 
         def mock_deployment_desc():
             return DeploymentDescription(
-                config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+                config=PeerClusterConfig(
+                    cluster_name="", init_hold=False, roles=[], profile="production"
+                ),
                 start=StartMode.WITH_GENERATED_ROLES,
                 pending_directives=[],
                 typ=DeploymentType.MAIN_ORCHESTRATOR,
                 app=App(model_uuid="model-uuid", name="opensearch"),
                 state=DeploymentState(value=State.ACTIVE),
-                profile="production",
             )
 
         self.charm.opensearch_peer_cm.deployment_desc = mock_deployment_desc

@@ -29,13 +29,13 @@ def mock_deployment_desc(
             "data_temperature": temperature,
             "init_hold": False,
             "roles": roles,
+            "profile": profile,
         },
         "pending_directives": [],
         "promotion_time": 1721391694.387948,
         "start": "start-with-generated-roles",
         "state": {"message": "", "value": "active"},
         "typ": typ,
-        "profile": profile,
     }
 
 

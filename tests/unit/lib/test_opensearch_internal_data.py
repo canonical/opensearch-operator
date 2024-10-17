@@ -159,7 +159,10 @@ class TestOpenSearchInternalData(unittest.TestCase):
             datetime.now.return_value.timestamp.return_value = 12345788.12
             deployment = DeploymentDescription(
                 config=PeerClusterConfig(
-                    cluster_name="logs", init_hold=False, roles=["cluster_manager", "data"]
+                    cluster_name="logs",
+                    init_hold=False,
+                    roles=["cluster_manager", "data"],
+                    profile="production",
                 ),
                 start=StartMode.WITH_PROVIDED_ROLES,
                 pending_directives=[],

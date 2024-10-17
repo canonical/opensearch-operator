@@ -60,22 +60,24 @@ class TestOpenSearchTLS(unittest.TestCase):
 
     deployment_descriptions = {
         "ok": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         ),
         "ko": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="logs", init_hold=True, roles=["ml"]),
+            config=PeerClusterConfig(
+                cluster_name="logs", init_hold=True, roles=["ml"], profile="production"
+            ),
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
             typ=DeploymentType.OTHER,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
-            profile="production",
         ),
     }
 
@@ -164,13 +166,14 @@ class TestOpenSearchTLS(unittest.TestCase):
     def test_on_relation_created_admin(self, _, __, _request_certificate, deployment_desc):
         """Test on certificate relation created event."""
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
         event_mock = MagicMock()
 
@@ -196,13 +199,14 @@ class TestOpenSearchTLS(unittest.TestCase):
     ):
         """Test on certificate relation created event."""
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.OTHER,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
         # Truststore password is required
         self.secret_store.put_object(
@@ -232,13 +236,14 @@ class TestOpenSearchTLS(unittest.TestCase):
     def test_on_relation_created_non_admin(self, _, __, _request_certificate, deployment_desc):
         """Test on certificate relation created event."""
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
         event_mock = MagicMock()
 
@@ -358,13 +363,14 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
 
         event_mock = MagicMock(certificate=cert)
@@ -393,13 +399,14 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
 
         event_mock = MagicMock(certificate=cert)
@@ -437,13 +444,14 @@ class TestOpenSearchTLS(unittest.TestCase):
         self, _, __, _create_keystore_pwd_if_not_exists, deployment_desc
     ):
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.OTHER,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
         secret = {"key": "secret_12345"}
 
@@ -517,13 +525,14 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
 
         self.harness.set_leader(is_leader=True)
@@ -660,13 +669,14 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
 
         self.harness.set_leader(is_leader=leader)
@@ -785,13 +795,14 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
 
         self.charm._restart_opensearch_event = MagicMock()
@@ -882,13 +893,14 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
 
         self.harness.set_leader(is_leader=False)
@@ -1014,13 +1026,14 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
         upgrade_mock = MagicMock(app_status=ActiveStatus())
         upgrade_mock.get_unit_juju_status.return_value = ActiveStatus()
@@ -1174,13 +1187,14 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
         upgrade_mock = MagicMock(app_status=ActiveStatus())
         upgrade_mock.get_unit_juju_status.return_value = ActiveStatus()
@@ -1299,13 +1313,14 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
 
         self.charm._restart_opensearch_event = MagicMock()
@@ -1474,13 +1489,14 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
 
         self.charm._restart_opensearch_event = MagicMock()
@@ -1591,13 +1607,14 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
 
         self.charm.on.certificate_available = MagicMock(
@@ -1688,13 +1705,14 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
             app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
 
         self.charm.on.certificate_available = MagicMock(

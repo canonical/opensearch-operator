@@ -139,7 +139,6 @@ class OpenSearchPeerClustersManager:
             typ=current_deployment_desc.typ,
             state=deployment_state,
             start=current_deployment_desc.start,
-            profile=self._charm.performance_profile.current.typ.value,
         )
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", new_deployment_desc.to_dict()
@@ -166,6 +165,7 @@ class OpenSearchPeerClustersManager:
                 for option in self._charm.config.get("roles", "").split(",")
                 if option
             ],
+            profile=self._charm.performance_profile.current.typ.value,
         )
 
     def _new_cluster_setup(self, config: PeerClusterConfig) -> DeploymentDescription:
@@ -197,7 +197,6 @@ class OpenSearchPeerClustersManager:
                 pending_directives=directives,
                 typ=self._deployment_type(config, start_mode),
                 state=deployment_state,
-                profile=self._charm.performance_profile.current.typ.value,
             )
 
         cluster_name = (
@@ -224,12 +223,12 @@ class OpenSearchPeerClustersManager:
                 init_hold=config.init_hold,
                 roles=config.roles,
                 data_temperature=config.data_temperature,
+                profile=self._charm.performance_profile.current.typ.value,
             ),
             start=start_mode,
             pending_directives=directives,
             typ=self._deployment_type(config, start_mode),
             state=deployment_state,
-            profile=self._charm.performance_profile.current.typ.value,
         )
 
     def _existing_cluster_setup(
@@ -273,6 +272,7 @@ class OpenSearchPeerClustersManager:
                 init_hold=prev_deployment.config.init_hold,
                 roles=config.roles,
                 data_temperature=config.data_temperature,
+                profile=self._charm.performance_profile.current.typ.value,
             ),
             start=start_mode,
             state=deployment_state,
@@ -283,7 +283,6 @@ class OpenSearchPeerClustersManager:
                 if deployment_type == DeploymentType.MAIN_ORCHESTRATOR
                 else None
             ),
-            profile=self._charm.performance_profile.current.typ.value,
         )
 
     def can_start(self, deployment_desc: Optional[DeploymentDescription] = None) -> bool:

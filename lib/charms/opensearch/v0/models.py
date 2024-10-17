@@ -216,6 +216,7 @@ class PeerClusterConfig(Model):
     cluster_name: str
     init_hold: bool
     roles: List[str]
+    profile: PerformanceType
     data_temperature: Optional[str] = None
 
     @root_validator
@@ -257,7 +258,6 @@ class DeploymentDescription(Model):
     typ: DeploymentType
     state: DeploymentState = DeploymentState(value=State.ACTIVE)
     promotion_time: Optional[float]
-    profile: str
 
     @root_validator
     def set_promotion_time(cls, values):  # noqa: N805

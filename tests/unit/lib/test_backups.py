@@ -68,14 +68,16 @@ deployment_desc = namedtuple("deployment_desc", ["typ"])
 def create_deployment_desc():
     return DeploymentDescription(
         config=PeerClusterConfig(
-            cluster_name="logs", init_hold=False, roles=["cluster_manager", "data"]
+            cluster_name="logs",
+            init_hold=False,
+            roles=["cluster_manager", "data"],
+            profile="production",
         ),
         start=StartMode.WITH_PROVIDED_ROLES,
         pending_directives=[],
         app=App(model_uuid="model-uuid", name="opensearch"),
         typ=DeploymentType.MAIN_ORCHESTRATOR,
         state=DeploymentState(value=State.ACTIVE),
-        profile="production",
     )
 
 

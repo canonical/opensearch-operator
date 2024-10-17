@@ -115,9 +115,17 @@ class OpenSearchPerformance(ops.Object):
         """
         if not self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE):
             return None
-        return OpenSearchPerfProfile.from_dict(
-            {"typ": self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE)}
-        )
+
+        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
+            # Could not set the profile
+            # Fallback to the
+            return self.charm.config.get(PERFORMANCE_PROFILE)
+
+        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            return OpenSearchPerfProfile.from_dict(
+                {"typ": self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE)}
+            )
+        return OpenSearchPerfProfile.from_dict({"typ": deployment_desc.config.profile})
 
     @current.setter
     def current(self, value: OpenSearchPerfProfile | str):
@@ -127,6 +135,7 @@ class OpenSearchPerformance(ops.Object):
         elif isinstance(value, str):
             # Ensure the value is a valid one
             value = PerformanceType(value)
+
         self.peers_data.put(Scope.UNIT, PERFORMANCE_PROFILE, str(value))
 
     def apply(self, profile_name: str) -> bool:

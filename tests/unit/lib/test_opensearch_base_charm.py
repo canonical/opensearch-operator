@@ -45,40 +45,44 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
     deployment_descriptions = {
         "ok": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.ACTIVE),
-            profile="prodution",
         ),
         "ko": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="logs", init_hold=True, roles=["ml"]),
+            config=PeerClusterConfig(
+                cluster_name="logs", init_hold=True, roles=["ml"], profile="production"
+            ),
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
             typ=DeploymentType.OTHER,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
-            profile="prodution",
         ),
         "cm-only": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=["cluster-manager"]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=["cluster-manager"], profile="production"
+            ),
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.ACTIVE),
-            profile="prodution",
         ),
         "data-only": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=["data"]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=["data"], profile="production"
+            ),
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
             typ=DeploymentType.OTHER,
             app=App(model_uuid="model-uuid", name="opensearch"),
             state=DeploymentState(value=State.ACTIVE),
-            profile="prodution",
         ),
     }
 

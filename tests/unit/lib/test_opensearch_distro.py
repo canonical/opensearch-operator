@@ -42,7 +42,6 @@ class TestOpenSearchConfig(unittest.TestCase):
             state=DeploymentState(value=State.ACTIVE),
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             temperature="warm",
-            profile="production",
         )
 
         with self.harness.hooks_disabled():
