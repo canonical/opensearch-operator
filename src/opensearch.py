@@ -88,7 +88,7 @@ class OpenSearchSnap(OpenSearchDistribution):
         # Now, we must dig deeper into the actual status of systemd and the JVM process.
         # First, we want to make sure the process is not stopped, dead or zombie.
         try:
-            pid = run_cmd("lsof", args="-ti:9200").rstrip()
+            pid = run_cmd("lsof", args="-ti:9200").out.rstrip()
             if not pid or not os.path.exists(f"/proc/{pid}/stat"):
                 return False
             with open(f"/proc/{pid}/stat") as f:

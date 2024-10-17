@@ -64,7 +64,9 @@ class TestOpenSearchProvider(unittest.TestCase):
 
         def mock_deployment_desc():
             return DeploymentDescription(
-                config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+                config=PeerClusterConfig(
+                    cluster_name="", init_hold=False, roles=[], profile="production"
+                ),
                 start=StartMode.WITH_GENERATED_ROLES,
                 pending_directives=[],
                 typ=DeploymentType.MAIN_ORCHESTRATOR,

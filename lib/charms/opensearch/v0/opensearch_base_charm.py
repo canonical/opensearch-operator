@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
+    PERFORMANCE_PROFILE,
     AdminUser,
     AdminUserInitProgress,
     AdminUserNotConfigured,
@@ -74,6 +75,7 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchProvidedRolesException,
     StartMode,
 )
+from charms.opensearch.v0.opensearch_performance_profile import OpenSearchPerformance
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
 from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
 from charms.opensearch.v0.opensearch_relation_peer_cluster import (
@@ -246,6 +248,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             metrics_rules_dir="./src/alert_rules/prometheus",
             log_slots=["opensearch:logs"],
         )
+
+        self.performance_profile = OpenSearchPerformance(self)
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
@@ -657,6 +661,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
 
+    def trigger_restart(self):
+        """Trigger a restart of the service."""
+        self._restart_opensearch_event.emit()
+
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
         if self.opensearch_config.update_host_if_needed():
@@ -671,7 +679,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 RelationJoinedEvent(event.handle, PeerRelationName, self.app, self.unit)
             )
 
-        previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        perf_profile_needs_restart = None
+        if (
+            (previous_deployment_desc := self.opensearch_peer_cm.deployment_desc())
+            and previous_deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            and not self.upgrade_in_progress
+        ):
+            perf_profile_needs_restart = self.performance_profile.apply(
+                self.config.get(PERFORMANCE_PROFILE)
+            )
+        else:
+            # We defer this event, as we need to eventually process the performance profile
+            # Do not return, as other steps must be executed.
+            event.defer()
+
         if self.unit.is_leader():
             # run peer cluster manager processing
             # todo add check here if the diff can be known from now on already
@@ -680,10 +701,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
             self._handle_change_to_main_orchestrator_if_needed(event, previous_deployment_desc)
 
-        # todo: handle gracefully configuration setting at start of the charm
-        if not self.plugin_manager.check_plugin_manager_ready():
+        if self.upgrade_in_progress:
+            # The following changes in _on_config_changed are not supported during an upgrade
+            # Therefore, we leave now
+            logger.warning(
+                "Changing config during an upgrade is not supported. The charm may be in a broken, "
+                "unrecoverable state"
+            )
+            event.defer()
             return
 
+        plugin_needs_restart = False
         try:
             if not self.plugin_manager.check_plugin_manager_ready():
                 raise OpenSearchNotFullyReadyError()
@@ -691,16 +719,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.unit.is_leader():
                 self.status.set(MaintenanceStatus(PluginConfigCheck), app=True)
 
-            if self.plugin_manager.run():
-                if self.upgrade_in_progress:
-                    logger.warning(
-                        "Changing config during an upgrade is not supported. The charm may be in a broken, "
-                        "unrecoverable state"
-                    )
-                    event.defer()
-                    return
-
-                self._restart_opensearch_event.emit()
+            plugin_needs_restart = self.plugin_manager.run()
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
                 logger.warning("Plugin management: cluster not ready yet at config changed")
@@ -711,11 +730,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # config-changed is called again.
             if self.unit.is_leader():
                 self.status.clear(PluginConfigCheck, app=True)
-            return
+        else:
+            if self.unit.is_leader():
+                self.status.clear(PluginConfigCheck, app=True)
+                self.status.clear(PluginConfigChangeError, app=True)
 
-        if self.unit.is_leader():
-            self.status.clear(PluginConfigCheck, app=True)
-            self.status.clear(PluginConfigChangeError, app=True)
+        # Finally, check if we need a restart
+        if plugin_needs_restart or perf_profile_needs_restart:
+            self._restart_opensearch_event.emit()
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""

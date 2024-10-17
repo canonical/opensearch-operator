@@ -23,6 +23,7 @@ from .ha.helpers import (
 )
 from .helpers import (
     APP_NAME,
+    CONFIG_OPTS,
     MODEL_CONFIG,
     SERIES,
     get_application_unit_ids,
@@ -54,6 +55,7 @@ async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
         my_charm,
         num_units=1,
         series=SERIES,
+        config=CONFIG_OPTS,
     )
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
@@ -68,6 +70,20 @@ async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
         wait_for_exact_units=1,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
+
+    await ops_test.model.deploy(
+        my_charm,
+        num_units=1,
+        series=SERIES,
+        config={"profile": "staging"},
+    )
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=1,
+    )
 
     c_writes = ContinuousWrites(ops_test, APP_NAME)
     await c_writes.start()
@@ -94,6 +110,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         my_charm,
         num_units=DEFAULT_NUM_UNITS,
         series=SERIES,
+        config=CONFIG_OPTS,
     )
     await wait_until(
         ops_test,
@@ -340,6 +357,7 @@ async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
         assert leader_conf == unit_conf
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_add_users_and_calling_update_status(ops_test: OpsTest) -> None:
