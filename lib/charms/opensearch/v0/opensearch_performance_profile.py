@@ -20,6 +20,7 @@ import ops
 from charms.opensearch.v0.constants_charm import (
     PERFORMANCE_PROFILE,
     PeerClusterRelationName,
+    PeerRelationName,
 )
 from charms.opensearch.v0.models import (
     DeploymentType,
@@ -71,6 +72,10 @@ class OpenSearchPerformance(ops.Object):
             self._on_peer_cluster_relation_changed,
         )
         self.framework.observe(
+            charm.on[PeerRelationName].relation_changed,
+            self._on_peer_cluster_relation_changed,
+        )
+        self.framework.observe(
             self._apply_profile_templates_event, self._on_apply_profile_templates
         )
         self._apply_profile_templates_has_been_called = False
@@ -103,9 +108,20 @@ class OpenSearchPerformance(ops.Object):
             # Nothing to do
             return
 
+        if (
+            deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
+            and (rel_data := self.charm.opensearch_peer_cm.rel_data())
+            and rel_data.deployment_desc
+        ):
+            # Not the main orchestrator: set the profile from the peer-cluster
+            if self.apply(rel_data.deployment_desc.config.profile):
+                # We need to restart
+                self.charm.trigger_restart()
+            return
+
         if self.apply(deployment_desc.config.profile):
             # We need to restart
-            self.charm.restart_event.emit()
+            self.charm.trigger_restart()
 
     @property
     def current(self) -> OpenSearchPerfProfile | None:
@@ -118,7 +134,7 @@ class OpenSearchPerformance(ops.Object):
 
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             # Could not set the profile
-            # Fallback to the
+            # Fallback to the config value
             return OpenSearchPerfProfile.from_dict(
                 {"typ": self.charm.config.get(PERFORMANCE_PROFILE)}
             )
