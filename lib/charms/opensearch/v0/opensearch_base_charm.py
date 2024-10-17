@@ -667,18 +667,19 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 RelationJoinedEvent(event.handle, PeerRelationName, self.app, self.unit)
             )
 
-        # First, we check if the user has changed the performance profile
-        # This is going to be used later in the self.opensearch_peer_cm.run()
-        perf_profile_needs_restart = False
-        if not (previous_deployment_desc := self.opensearch_peer_cm.deployment_desc()):
-            # We cannot proceed without the deployment description
-            event.defer()
-            return
-
-        if previous_deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+        perf_profile_needs_restart = None
+        if (
+            (previous_deployment_desc := self.opensearch_peer_cm.deployment_desc())
+            and previous_deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            and not self.upgrade_in_progress
+        ):
             perf_profile_needs_restart = self.performance_profile.apply(
                 self.config.get(PERFORMANCE_PROFILE)
             )
+        else:
+            # We defer this event, as we need to eventually process the performance profile
+            # Do not return, as other steps must be executed.
+            event.defer()
 
         if self.unit.is_leader():
             # run peer cluster manager processing
@@ -722,6 +723,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.status.clear(PluginConfigCheck, app=True)
                 self.status.clear(PluginConfigChangeError, app=True)
 
+        # Finally, check if we need a restart
         if plugin_needs_restart or perf_profile_needs_restart:
             self._restart_opensearch_event.emit()
 
