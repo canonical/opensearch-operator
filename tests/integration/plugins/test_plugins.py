@@ -82,7 +82,11 @@ async def _set_config(ops_test: OpsTest, deploy_type: str, conf: dict[str, str])
     await ops_test.model.applications[APP_NAME].set_config(conf)
 
 
-async def _wait_for_units(ops_test: OpsTest, deployment_type: str, wait_for_cos=False) -> None:
+async def _wait_for_units(
+    ops_test: OpsTest,
+    deployment_type: str,
+    wait_for_cos: bool = False,
+) -> None:
     """Wait for all units to be active.
 
     This wait will behavior accordingly to small/large.
@@ -94,6 +98,7 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str, wait_for_cos=
             apps_statuses=["active"],
             units_statuses=["active"],
             timeout=1800,
+            wait_for_exact_units={APP_NAME: 3},
             idle_period=IDLE_PERIOD,
         )
         if wait_for_cos:
@@ -104,7 +109,7 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str, wait_for_cos=
                 timeout=1800,
                 idle_period=IDLE_PERIOD,
             )
-            return
+        return
     await wait_until(
         ops_test,
         apps=[
@@ -113,6 +118,12 @@ async def _wait_for_units(ops_test: OpsTest, deployment_type: str, wait_for_cos=
             FAILOVER_ORCHESTRATOR_NAME,
             APP_NAME,
         ],
+        wait_for_exact_units={
+            TLS_CERTIFICATES_APP_NAME: 1,
+            MAIN_ORCHESTRATOR_NAME: 1,
+            FAILOVER_ORCHESTRATOR_NAME: 2,
+            APP_NAME: 1,
+        },
         apps_statuses=["active"],
         units_statuses=["active"],
         timeout=1800,
@@ -180,7 +191,7 @@ async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_small_deployments_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
-    await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
+    await ops_test.model.deploy(COS_APP_NAME, channel="edge", series=SERIES),
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
     await _wait_for_units(ops_test, deploy_type, wait_for_cos=True)
 
@@ -267,7 +278,7 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
 @pytest.mark.abort_on_fail
 async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
     # Check that the correct settings were successfully communicated to grafana-agent
-    await ops_test.model.deploy(COS_APP_NAME, channel="edge"),
+    await ops_test.model.deploy(COS_APP_NAME, channel="edge", series=SERIES),
     await ops_test.model.integrate(FAILOVER_ORCHESTRATOR_NAME, COS_APP_NAME)
     await ops_test.model.integrate(MAIN_ORCHESTRATOR_NAME, COS_APP_NAME)
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
