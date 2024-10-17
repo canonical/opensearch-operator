@@ -1,0 +1,52 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:10:51Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           maintenance      2  opensearch                                 1  no       Installing OpenSearch...
+main                               active           1  opensearch                                 0  no       
+opensearch                         maintenance      1  opensearch                                 2  no       Installing OpenSearch...
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+failover/0*                  maintenance  executing  2        10.181.46.15              (install) Installing OpenSearch...
+failover/1                   maintenance  executing  3        10.181.46.52              (install) Installing OpenSearch...
+main/1*                      active       idle       4        10.181.46.188   9200/tcp  
+opensearch/0*                maintenance  executing  1        10.181.46.108             (install) Installing OpenSearch...
+self-signed-certificates/0*  active       idle       0        10.181.46.122             
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.181.46.122  juju-4e3334-0  ubuntu@22.04      Running
+1        started  10.181.46.108  juju-4e3334-1  ubuntu@22.04      Running
+2        started  10.181.46.15   juju-4e3334-2  ubuntu@22.04      Running
+3        started  10.181.46.52   juju-4e3334-3  ubuntu@22.04      Running
+4        started  10.181.46.188  juju-4e3334-4  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 01:46:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:46:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:46:34 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:48:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:48:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-0: 01:48:06 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:49:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:49:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-main-1: 01:49:10 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:49:32 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:49:32 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:49:32 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:49:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:49:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-1: 01:49:41 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-main-1: 02:09:05 ERROR unit.main/1.juju-log certificates:15: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-main-1: 02:09:10 ERROR unit.main/1.juju-log certificates:15: Cannot connect to the OpenSearch server...
+unit-main-1: 02:09:10 ERROR unit.main/1.juju-log certificates:15: Cannot connect to the OpenSearch server...
+unit-main-1: 02:09:10 ERROR unit.main/1.juju-log certificates:15: Cannot connect to the OpenSearch server...
+unit-main-1: 02:09:13 ERROR unit.main/1.juju-log certificates:15: Cannot connect to the OpenSearch server...
+unit-main-1: 02:09:16 ERROR unit.main/1.juju-log certificates:15: Cannot connect to the OpenSearch server...
+unit-main-1: 02:09:19 ERROR unit.main/1.juju-log certificates:15: Cannot connect to the OpenSearch server...
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
