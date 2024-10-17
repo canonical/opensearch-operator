@@ -667,7 +667,19 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 RelationJoinedEvent(event.handle, PeerRelationName, self.app, self.unit)
             )
 
-        previous_deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        # First, we check if the user has changed the performance profile
+        # This is going to be used later in the self.opensearch_peer_cm.run()
+        perf_profile_needs_restart = False
+        if not (previous_deployment_desc := self.opensearch_peer_cm.deployment_desc()):
+            # We cannot proceed without the deployment description
+            event.defer()
+            return
+
+        if previous_deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            perf_profile_needs_restart = self.performance_profile.apply(
+                self.config.get(PERFORMANCE_PROFILE)
+            )
+
         if self.unit.is_leader():
             # run peer cluster manager processing
             # todo add check here if the diff can be known from now on already
@@ -686,14 +698,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
-            # We cannot proceed without the deployment description
-            event.defer()
-            return
-
-        perf_profile_needs_restart = False
         plugin_needs_restart = False
-
         try:
             if not self.plugin_manager.check_plugin_manager_ready():
                 raise OpenSearchNotFullyReadyError()
@@ -717,14 +722,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.status.clear(PluginConfigCheck, app=True)
                 self.status.clear(PluginConfigChangeError, app=True)
 
-        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            # TODO extend later. For now, only the main orchestrator can change the perf. profile
-            perf_profile_needs_restart = self.performance_profile.apply(
-                self.config.get(PERFORMANCE_PROFILE)
-            )
-            if self.opensearch_peer_cm.is_provider(typ="main") and perf_profile_needs_restart:
-                # Update the peer-cluster-orchestrator as needed
-                self.peer_cluster_provider.refresh_relation_data(event)
         if plugin_needs_restart or perf_profile_needs_restart:
             self._restart_opensearch_event.emit()
 

@@ -103,7 +103,7 @@ class OpenSearchPerformance(ops.Object):
             # Nothing to do
             return
 
-        if self.apply(deployment_desc.profile):
+        if self.apply(deployment_desc.config.profile):
             # We need to restart
             self.charm.restart_event.emit()
 
