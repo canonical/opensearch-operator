@@ -46,7 +46,6 @@ from ops import (
     RelationDepartedEvent,
     RelationEvent,
     RelationJoinedEvent,
-    Secret,
     WaitingStatus,
 )
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
@@ -264,16 +263,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # if rel_data is an error, prepare to broadcast it to all related clusters
         if isinstance(rel_data, PeerClusterRelData):
-            rel_data_secret_content = self._rel_data_secret_content(rel_data)
-
-            # check if a secret already exists for this orchestrator's relations
-            # and update it if so
-            rel_data_secret = self._update_or_create_rel_data_secret(
-                rel_data_secret_content, all_relation_ids
-            )
+            rel_data_redacted_dict = self._rel_data_redacted_dict(rel_data)
 
             # grant the secrets inside the rel_data to all the related clusters
-            self._grant_rel_data_secrets(rel_data_secret_content, all_relation_ids)
+            self._grant_rel_data_secrets(rel_data_redacted_dict, all_relation_ids)
 
         # exit if current cluster should not have been considered a provider
         if self._notify_if_wrong_integration(rel_data, all_relation_ids) and event_rel_id:
@@ -318,15 +311,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 # if the data has actually changed
                 self.put_in_rel(
                     data={
-                        "data": rel_data_secret.id,
+                        "data": json.dumps(rel_data_redacted_dict),
                         "rel_data_hash": sha1(
                             json.dumps(rel_data.to_dict(), sort_keys=True).encode()
                         ).hexdigest(),
                     },
                     rel_id=rel_id,
                 )
-                rel_data_secret.grant(self.get_rel(rel_id=rel_id))
-
             else:
                 self.put_in_rel(data={"error_data": rel_data.to_str()}, rel_id=rel_id)
 
@@ -546,14 +537,16 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if node.is_cm_eligible() and node.app.id == deployment_desc.app.id
         ]
 
-    def _rel_data_secret_content(self, rel_data: PeerClusterRelData) -> dict[str, str]:
+    def _rel_data_redacted_dict(self, rel_data: PeerClusterRelData) -> dict[str, Any]:
         """Convert the secret data to a dict for storage in a secret."""
         # If we use the values of the secrets then the size of the secret
         # would be too large for juju we store the secret ids instead and
         # fetch the secrets when needed in the requirer side
         secrets = self.charm.secrets
 
-        credentials = {
+        redacted_dict = rel_data.to_dict()
+
+        redacted_dict["credentials"] = {
             "admin-username": AdminUser,
             "admin-password": secrets.get_secret_id(Scope.APP, secrets.password_key(AdminUser)),
             "admin-password-hash": secrets.get_secret_id(Scope.APP, secrets.hash_key(AdminUser)),
@@ -566,46 +559,26 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         }
 
         if monitor_password := secrets.get_secret_id(Scope.APP, secrets.password_key(COSUser)):
-            credentials["monitor-password"] = monitor_password
+            redacted_dict["credentials"]["monitor-password"] = monitor_password
         if admin_tls := secrets.get_secret_id(Scope.APP, CertType.APP_ADMIN.val):
-            credentials["admin-tls"] = admin_tls
+            redacted_dict["credentials"]["admin-tls"] = admin_tls
 
-        if s3_creds := rel_data.credentials.s3:
-            credentials["s3"] = {
-                "access-key": s3_creds.access_key,
-                "secret-key": s3_creds.secret_key,
+        if rel_data.credentials.s3:
+            redacted_dict["credentials"]["s3"] = {
+                "access-key": secrets.get_secret_id(Scope.APP, "access-key"),
+                "secret-key": secrets.get_secret_id(Scope.APP, "access-key"),
             }
 
-        return {
-            "cluster-name": rel_data.cluster_name,
-            "cm-nodes": json.dumps([node.to_dict() for node in rel_data.cm_nodes]),
-            "credentials": json.dumps(credentials),
-            "deployment-desc": json.dumps(rel_data.deployment_desc.to_dict()),
-        }
-
-    def _update_or_create_rel_data_secret(
-        self, rel_data_secret_content: dict[str, str], all_rel_ids: list[int]
-    ) -> Secret:
-        """Update or create the secret for the peer cluster relation data."""
-        for rel_id in all_rel_ids:
-            rel_data_secret_id = self.get_from_rel("data", rel_id=rel_id)
-            if rel_data_secret_id:
-                rel_data_secret = self.model.get_secret(id=rel_data_secret_id)
-                if rel_data_secret_content != rel_data_secret.get_content():
-                    rel_data_secret.set_content(rel_data_secret_content)
-
-                return rel_data_secret
-
-        return self.model.app.add_secret(rel_data_secret_content)
+        return redacted_dict
 
     def _grant_rel_data_secrets(
-        self, rel_data_secret_content: dict[str, str], all_rel_ids: list[int]
+        self, rel_data_secret_content: dict[str, Any], all_rel_ids: list[int]
     ):
         """Grant the secrets to all the related apps."""
-        credentials = json.loads(rel_data_secret_content["credentials"])
+        credentials = rel_data_secret_content["credentials"]
         for key, secret_id in credentials.items():
             # s3 and admin-username are not secrets
-            if key == "s3" or key == "admin-username":
+            if key == "admin-username":
                 continue
 
             secret = self.model.get_secret(id=secret_id)
@@ -667,7 +640,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             return
 
         # fetch the success data
-        data = rel_data_from_secret(self.charm, data["data"])
+        data = rel_data_from_redacted_str(self.charm, data["data"])
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
             return
@@ -899,11 +872,11 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             if rel_id == -1:
                 continue
 
-            secret_id = self.get_from_rel(key="data", rel_id=rel_id, remote_app=True)
-            if not secret_id:  # not ready yet
+            redacted_dict_str = self.get_from_rel(key="data", rel_id=rel_id, remote_app=True)
+            if not redacted_dict_str:  # not ready yet
                 continue
 
-            data = rel_data_from_secret(self.charm, secret_id)
+            data = rel_data_from_redacted_str(self.charm, redacted_dict_str)
             cm_nodes = {**cm_nodes, **{node.name: node for node in data.cm_nodes}}
 
         # attempt to have an opensearch reported list of CMs - the response
@@ -1055,16 +1028,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.peers_data.delete(Scope.APP, error_label)
 
 
-def rel_data_from_secret(
-    charm: "OpenSearchBaseCharm", secret_id: str
+def rel_data_from_redacted_str(
+    charm: "OpenSearchBaseCharm", redacted_dict_str: str
 ) -> PeerClusterRelData | None:
     """Construct the peer cluster rel data from the secret data."""
-    secret = charm.model.get_secret(id=secret_id)
-    if not secret:
-        return None
-
-    content = secret.get_content()
-    credentials = json.loads(content["credentials"])
+    content = json.loads(redacted_dict_str)
+    credentials = content["credentials"]
 
     secrets = charm.secrets
 
@@ -1112,8 +1081,8 @@ def rel_data_from_secret(
         )
 
     return PeerClusterRelData(
-        cluster_name=content["cluster-name"],
-        cm_nodes=[Node.from_dict(node) for node in json.loads(content["cm-nodes"])],
+        cluster_name=content["cluster_name"],
+        cm_nodes=[Node.from_dict(node) for node in content["cm_nodes"]],
         credentials=PeerClusterRelDataCredentials(
             admin_username=AdminUser,
             admin_password=admin_password,
@@ -1124,5 +1093,5 @@ def rel_data_from_secret(
             admin_tls=admin_tls,
             s3=s3,
         ),
-        deployment_desc=DeploymentDescription.from_dict(json.loads(content["deployment-desc"])),
+        deployment_desc=DeploymentDescription.from_dict(content["deployment_desc"]),
     )
