@@ -459,14 +459,14 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
-    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
     def test_on_certificate_available_leader_app_cert_full_workflow(
         self,
         # NOTE: Syntax: parametrized parameter comes first
         deployment_type,
         _,
-        _read_stored_ca,
+        read_stored_ca,
         deployment_desc,
         run_cmd,
     ):
@@ -505,7 +505,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         # There was no change of the CA (certificate), the event matches the one on disk
-        _read_stored_ca.return_value = ca
+        read_stored_ca.return_value = ca
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
@@ -571,7 +571,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
-    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
     def test_on_certificate_available_any_node_unit_cert_full_workflow(
         self,
@@ -580,7 +580,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         leader,
         cert_type,
         _,
-        _read_stored_ca,
+        read_stored_ca,
         deployment_desc,
         run_cmd,
     ):
@@ -647,7 +647,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         # There was no change of the CA (certificate), the event matches the one on disk
-        _read_stored_ca.return_value = ca
+        read_stored_ca.return_value = ca
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
@@ -708,7 +708,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         ]
     )
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
-    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
@@ -718,7 +718,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         deployment_type,
         _,
         deployment_desc,
-        _read_stored_ca,
+        read_stored_ca,
         run_cmd,
     ):
         """Test CA rotation 1st stage.
@@ -771,7 +771,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         # The CA stored in the keystore is still the old one
-        _read_stored_ca.return_value = "old_ca"
+        read_stored_ca.return_value = "old_ca"
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
@@ -832,14 +832,14 @@ class TestOpenSearchTLS(unittest.TestCase):
         ]
     )
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
-    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     def test_on_certificate_available_ca_rotation_first_stage_any_cluster_non_leader(
         # NOTE: Syntax: parametrized parameter comes first
         self,
         deployment_type,
         deployment_desc,
-        _read_stored_ca,
+        read_stored_ca,
         run_cmd,
     ):
         """'certificate-available' with an app cert and/or a CA cert.
@@ -867,7 +867,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             certificate_signing_request=csr, chain=chain, certificate=cert, ca=ca
         )
 
-        _read_stored_ca.return_value = "stored_ca"
+        read_stored_ca.return_value = "stored_ca"
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
@@ -916,7 +916,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch(
         "charms.tls_certificates_interface.v3.tls_certificates.TLSCertificatesRequiresV3.request_certificate_creation"
     )
-    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Necessary mocks to simulate a smotth startup
     @patch("machine_upgrade.Upgrade")
@@ -931,7 +931,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         __,
         upgrade,
         deployment_desc,
-        _read_stored_ca,
+        read_stored_ca,
         create_cert,
         revoke_cert,
         renew_cert,
@@ -1083,7 +1083,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     )
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
-    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     # Necessary mocks to simulate a smooth startup
     @patch("machine_upgrade.Upgrade")
     @patch("socket.socket.connect")
@@ -1094,7 +1094,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         deployment_type,
         _,
         upgrade,
-        _read_stored_ca,
+        read_stored_ca,
         deployment_desc,
         revoke_cert,
         renew_cert,
@@ -1233,14 +1233,14 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
-    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
     def test_on_certificate_available_ca_rotation_third_stage_leader_cert_app(
         self,
         # NOTE: Syntax: parametrized parameter comes first
         deployment_type,
         _,
-        _read_stored_ca,
+        read_stored_ca,
         deployment_desc,
         run_cmd,
     ):
@@ -1281,7 +1281,7 @@ class TestOpenSearchTLS(unittest.TestCase):
                 return "old_ca_cert"
             return ca
 
-        _read_stored_ca.side_effect = mock_stored_ca
+        read_stored_ca.side_effect = mock_stored_ca
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
@@ -1364,7 +1364,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
-    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch("charms.opensearch.v0.opensearch_tls.exists", return_value=True)
     @patch("opensearch.OpenSearchSnap.write_file")
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
@@ -1380,7 +1380,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         __,
         ___,
         _____,
-        _read_stored_ca,
+        read_stored_ca,
         deployment_desc,
         run_cmd,
         reload_tls_certificates,
@@ -1455,7 +1455,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         # The new CA cert has been saved to the keystore earlier
-        _read_stored_ca.return_value = ca
+        read_stored_ca.return_value = ca
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
@@ -1500,7 +1500,7 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         assert re.search(
             "openssl pkcs12 -export .* -out "
-            f"/var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12 .* -name {cert_type}",
+            rf"/var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12 .* -name {cert_type}",
             run_cmd.call_args_list[0].args[0],
         )
         assert (
@@ -1533,7 +1533,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mock to avoid I/O
-    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
     def test_on_certificate_available_rotation_ongoing_on_this_unit(
         # NOTE: Syntax: parametrized parameter comes first
@@ -1541,7 +1541,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         deployment_type,
         leader,
         _,
-        _read_stored_ca,
+        read_stored_ca,
         deployment_desc,
         run_cmd,
     ):
@@ -1571,7 +1571,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             },
         )
 
-        _read_stored_ca.return_value = "stored_ca"
+        read_stored_ca.return_value = "stored_ca"
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
@@ -1629,7 +1629,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mock to avoid I/O
-    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._read_stored_ca")
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
     def test_on_certificate_available_rotation_ongoing_on_another_unit(
         # NOTE: Syntax: parametrized parameter comes first
@@ -1637,7 +1637,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         deployment_type,
         leader,
         _,
-        _read_stored_ca,
+        read_stored_ca,
         deployment_desc,
         run_cmd,
     ):
@@ -1667,7 +1667,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             },
         )
 
-        _read_stored_ca.return_value = "stored_ca"
+        read_stored_ca.return_value = "stored_ca"
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
