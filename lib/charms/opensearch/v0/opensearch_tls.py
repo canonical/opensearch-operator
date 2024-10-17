@@ -867,7 +867,7 @@ class OpenSearchTLS(Object):
             rotation_happening = True
         if not self.charm.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
             logger.debug(
-                f"TLS CA rotation ongoing in unit: {self.charm.unit_name}, will not update tls certificates."
+                f"TLS CA rotation ongoing in unit: {self.charm.unit.name}, will not update tls certificates."
             )
             rotation_complete = False
 
