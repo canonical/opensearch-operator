@@ -97,9 +97,7 @@ class OpenSearchPerformance(ops.Object):
         if not self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE):
             return None
         return OpenSearchPerfProfile.from_dict(
-            {
-                "typ": self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE)
-            }
+            {"typ": self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE)}
         )
 
     @current.setter
