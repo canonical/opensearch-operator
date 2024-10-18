@@ -53,15 +53,16 @@ async def refresh(
         args.append(f"--channel={channel}")
     if path:
         args.append(f"--path={path}")
-    if config:
-        for key, val in config.items():
-            args.append(f"--config {key}={val}")
 
     for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(wait=30)):
         with attempt:
             cmd = ["juju", "refresh"]
             cmd.extend(args)
             cmd.append(app_name)
+            if config:
+                for key, val in config.items():
+                    args.append(f"--config {key}={val}")
+
             subprocess.check_output(cmd)
 
 

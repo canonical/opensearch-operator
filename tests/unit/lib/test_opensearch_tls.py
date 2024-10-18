@@ -89,8 +89,6 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.harness.add_network("1.1.1.1", endpoint=TLS_RELATION)
         self.harness.begin()
         self.charm = self.harness.charm
-        self.charm.tls._remove_ca_from_request_bundle = MagicMock()
-        self.charm.tls._add_ca_to_request_bundle = MagicMock()
 
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.harness.add_relation_unit(self.rel_id, f"{self.charm.app.name}/0")
