@@ -77,17 +77,14 @@ class OpenSearchPerformance(ops.Object):
     def _on_peer_cluster_relation_changed(self, _: EventBase):
         """Handle the peer cluster relation changed event."""
         if (
-            not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc())
-            or deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-            or not (rel_data := self.charm.opensearch_peer_cm.rel_data())
+            not (rel_data := self.charm.opensearch_peer_cm.rel_data())
             or not rel_data.deployment_desc
         ):
-            # This method only applies to non main orchestrators
-            # and we must have all the data before moving forward.
+            # We must have all the data before moving forward.
             # Otherwise, we should count another event will happen.
             return
 
-        if self.apply(deployment_desc.config.profile):
+        if self.apply(rel_data.deployment_desc.config.profile):
             # We need to restart
             self.charm.trigger_restart()
 
