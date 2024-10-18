@@ -207,6 +207,9 @@ class OpenSearchPerformance(ops.Object):
 
     def apply_perf_templates_if_needed(self) -> bool:  # noqa: C901
         """Apply performance templates if needed."""
+        if not self.current:
+            return False
+
         if self.current.typ == PerformanceType.TESTING:
             # We try to remove the index and components' templates
             for endpoint in [
