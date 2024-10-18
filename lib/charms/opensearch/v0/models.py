@@ -216,7 +216,10 @@ class PeerClusterConfig(Model):
     cluster_name: str
     init_hold: bool
     roles: List[str]
-    profile: PerformanceType
+    # We have a breaking change in the model
+    # For older charms, this field will not exist and they will be set in the
+    # profile called "testing".
+    profile: Optional[PerformanceType] = PerformanceType.TESTING
     data_temperature: Optional[str] = None
 
     @root_validator
