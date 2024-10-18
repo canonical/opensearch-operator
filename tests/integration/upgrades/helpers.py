@@ -74,7 +74,6 @@ async def assert_upgrade_to_local(
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
 
-    application = ops_test.model.applications[app]
     action = await run_action(
         ops_test,
         leader_id,
