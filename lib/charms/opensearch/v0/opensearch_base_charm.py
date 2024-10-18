@@ -50,7 +50,11 @@ from charms.opensearch.v0.helper_security import (
     generate_hashed_password,
     generate_password,
 )
-from charms.opensearch.v0.models import DeploymentDescription, DeploymentType
+from charms.opensearch.v0.models import (
+    DeploymentDescription,
+    DeploymentType,
+    PerformanceType,
+)
 from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
@@ -667,6 +671,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
+        if not self.performance_profile.current:
+            # We are running (1) install or (2) an upgrade on instance that pre-dates profile
+            # First, we set this unit's effective profile -> 1G heap and no index templates.
+            # Our goal is to make sure this value exists once the refresh is finished
+            # and it represents the accurate value for this unit.
+            self.performance_profile.current = PerformanceType.TESTING
+
         if self.opensearch_config.update_host_if_needed():
             self.status.set(MaintenanceStatus(TLSNewCertsRequested))
             self.tls.delete_stored_tls_resources()

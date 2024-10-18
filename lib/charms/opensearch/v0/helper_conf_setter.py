@@ -288,8 +288,11 @@ class YamlConfigSetter(ConfigSetter):
         if output_type in [OutputType.console, OutputType.all]:
             logger.info(data)
 
-        if output_file and output_file != config_file:
+        if output_file is None:
+            output_file = config_file
+        elif output_file != config_file:
             path = f"{self.base_path}{output_file}"
+
         with open(path, "w") as f:
             f.write(data)
 

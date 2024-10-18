@@ -14,7 +14,6 @@ There are two ways the charm can learn about its profile and when it changes:
 The charm will then apply the profile and restart the OpenSearch service if needed.
 """
 import logging
-import os
 
 import ops
 from charms.opensearch.v0.constants_charm import (
@@ -62,11 +61,6 @@ class OpenSearchPerformance(ops.Object):
         super().__init__(charm, None)
         self.charm = charm
         self.peers_data = self.charm.peers_data
-
-        self.framework.observe(
-            charm.on.install,
-            self._on_install,
-        )
         self.framework.observe(
             charm.on[PeerClusterRelationName].relation_changed,
             self._on_peer_cluster_relation_changed,
@@ -79,27 +73,6 @@ class OpenSearchPerformance(ops.Object):
             self._apply_profile_templates_event, self._on_apply_profile_templates
         )
         self._apply_profile_templates_has_been_called = False
-
-    def _on_install(self, event: EventBase):
-        """Handle install event.
-
-        Execute it on install, as defined in the docs, it is the first hook to run:
-           https://juju.is/docs/sdk/config-changed-event
-
-        install -> config-changed -> start
-
-        Store the current perf. profile we are applying. This must happen solely
-        on the beginning of the charm lifecycle. Therefore, we check if the unit is down.
-        """
-        if not os.path.exists(
-            os.path.join(
-                self.charm.opensearch.paths.conf,
-                self.charm.opensearch_config.JVM_OPTIONS,
-            )
-        ):
-            event.defer()
-            return
-        self.apply(self.charm.config.get(PERFORMANCE_PROFILE))
 
     def _on_peer_cluster_relation_changed(self, _: EventBase):
         """Handle the peer cluster relation changed event."""
