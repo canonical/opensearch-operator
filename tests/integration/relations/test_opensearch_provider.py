@@ -13,6 +13,7 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers import APP_NAME as OPENSEARCH_APP_NAME
 from ..helpers import (
+    CONFIG_OPTS,
     MODEL_CONFIG,
     SERIES,
     get_application_unit_ids,
@@ -84,6 +85,7 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
             application_name=OPENSEARCH_APP_NAME,
             num_units=NUM_UNITS,
             series=SERIES,
+            config=CONFIG_OPTS,
         ),
     )
     await ops_test.model.integrate(OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)

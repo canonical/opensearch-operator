@@ -45,7 +45,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
     deployment_descriptions = {
         "ok": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
@@ -53,7 +55,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             state=DeploymentState(value=State.ACTIVE),
         ),
         "ko": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="logs", init_hold=True, roles=["ml"]),
+            config=PeerClusterConfig(
+                cluster_name="logs", init_hold=True, roles=["ml"], profile="production"
+            ),
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
             typ=DeploymentType.OTHER,
@@ -61,7 +65,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             state=DeploymentState(value=State.BLOCKED_CANNOT_START_WITH_ROLES, message="error"),
         ),
         "cm-only": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=["cluster-manager"]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=["cluster-manager"], profile="production"
+            ),
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
@@ -69,7 +75,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             state=DeploymentState(value=State.ACTIVE),
         ),
         "data-only": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=["data"]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=["data"], profile="production"
+            ),
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
             typ=DeploymentType.OTHER,
@@ -84,6 +92,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.harness.begin()
 
         self.charm = self.harness.charm
+        self.charm.opensearch_config.apply_performance_profile = MagicMock()
 
         for typ in ["ok", "ko"]:
             self.deployment_descriptions[typ].app = App(
@@ -218,7 +227,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _apply_peer_cm_directives_and_check_if_can_start,
     ):
         """Test start event for nodes that only have the `data` role."""
-        with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
+        with (
+            patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+            ),
+        ):
             is_node_up.return_value = False
             _apply_peer_cm_directives_and_check_if_can_start.return_value = True
             is_fully_configured.return_value = True
@@ -228,7 +242,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
             self.harness.set_leader(True)
             self.charm.on.start.emit()
-
             self.charm._start_opensearch_event.emit.assert_called_once()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
@@ -294,7 +307,15 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         lock_acquired,
     ):
         """Test on start event."""
-        with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
+        with (
+            patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+            ),
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
+            ),
+        ):
             # test when setup complete
             is_node_up.return_value = True
             self.peers_data.put(Scope.APP, "security_index_initialised", True)
@@ -310,24 +331,41 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             self.charm.on.start.emit()
             set_client_auth.assert_not_called()
 
-        # when _get_nodes fails
-        _get_nodes.side_effect = OpenSearchHttpError()
-        self.charm.on.start.emit()
-        _set_node_conf.assert_not_called()
+        with (
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+            ) as perf_profile,
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
+            ),
+        ):
+            # when _get_nodes fails
+            _get_nodes.side_effect = OpenSearchHttpError()
+            self.charm.on.start.emit()
+            _set_node_conf.assert_not_called()
+            perf_profile.assert_not_called()  # not called as the profile has been already set
 
-        _get_nodes.reset_mock()
+            _get_nodes.reset_mock()
 
-        # _get_nodes succeeds
-        is_fully_configured.return_value = True
-        is_admin_user_configured.return_value = True
-        _get_nodes.side_effect = None
-        _can_service_start.return_value = False
-        self.charm.on.start.emit()
-        _get_nodes.assert_called_once()
-        _set_node_conf.assert_not_called()
-        _initialize_security_index.assert_not_called()
+            # _get_nodes succeeds
+            is_fully_configured.return_value = True
+            is_admin_user_configured.return_value = True
+            _get_nodes.side_effect = None
+            _can_service_start.return_value = False
+            self.charm.on.start.emit()
+            _get_nodes.assert_called_once()
+            _set_node_conf.assert_not_called()
+            _initialize_security_index.assert_not_called()
 
-        with patch(f"{self.OPENSEARCH_DISTRO}.start") as start:
+        with (
+            patch(f"{self.OPENSEARCH_DISTRO}.start") as start,
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+            ) as perf_profile,
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
+            ),
+        ):
             # initialisation of the security index
             _get_nodes.reset_mock()
             _set_node_conf.reset_mock()

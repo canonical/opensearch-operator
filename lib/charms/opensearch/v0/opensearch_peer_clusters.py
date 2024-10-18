@@ -165,6 +165,7 @@ class OpenSearchPeerClustersManager:
                 for option in self._charm.config.get("roles", "").split(",")
                 if option
             ],
+            profile=self._charm.performance_profile.current.typ.value,
         )
 
     def _new_cluster_setup(self, config: PeerClusterConfig) -> DeploymentDescription:
@@ -222,6 +223,7 @@ class OpenSearchPeerClustersManager:
                 init_hold=config.init_hold,
                 roles=config.roles,
                 data_temperature=config.data_temperature,
+                profile=self._charm.performance_profile.current.typ.value,
             ),
             start=start_mode,
             pending_directives=directives,
@@ -270,6 +272,7 @@ class OpenSearchPeerClustersManager:
                 init_hold=prev_deployment.config.init_hold,
                 roles=config.roles,
                 data_temperature=config.data_temperature,
+                profile=self._charm.performance_profile.current.typ.value,
             ),
             start=start_mode,
             state=deployment_state,

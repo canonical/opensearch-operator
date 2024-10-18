@@ -272,7 +272,6 @@ class YamlConfigSetter(ConfigSetter):
             output_file: Target file for the result config, by default same as config_file
         """
         path = f"{self.base_path}{config_file}"
-
         if not exists(path):
             raise FileNotFoundError(f"{path} not found.")
 
@@ -291,8 +290,10 @@ class YamlConfigSetter(ConfigSetter):
 
         if output_file is None:
             output_file = config_file
+        elif output_file != config_file:
+            path = f"{self.base_path}{output_file}"
 
-        with open(output_file, "w") as f:
+        with open(path, "w") as f:
             f.write(data)
 
     @override

@@ -12,6 +12,7 @@ from pytest_operator.plugin import OpsTest
 from ..ha.continuous_writes import ContinuousWrites
 from ..helpers import (
     APP_NAME,
+    CONFIG_OPTS,
     IDLE_PERIOD,
     MODEL_CONFIG,
     SERIES,
@@ -74,6 +75,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
         my_charm,
         num_units=len(UNIT_IDS),
         series=SERIES,
+        config=CONFIG_OPTS,
     )
 
     # Deploy TLS Certificates operator.
