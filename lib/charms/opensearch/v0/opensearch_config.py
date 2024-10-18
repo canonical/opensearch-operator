@@ -73,14 +73,14 @@ class OpenSearchConfig:
         """Apply the performance profile to the opensearch config."""
         self._opensearch.config.replace(
             self.JVM_OPTIONS,
-            "-Xms[0-9]+[kmgKMG]",
+            "^-Xms[0-9]+[kmgKMG]",
             f"-Xms{str(profile.heap_size_in_kb)}k",
             regex=True,
         )
 
         self._opensearch.config.replace(
             self.JVM_OPTIONS,
-            "-Xmx[0-9]+[kmgKMG]",
+            "^-Xmx[0-9]+[kmgKMG]",
             f"-Xmx{str(profile.heap_size_in_kb)}k",
             regex=True,
         )

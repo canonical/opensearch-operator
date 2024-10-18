@@ -34,6 +34,7 @@ async def refresh(
     switch: Optional[str] = None,
     channel: Optional[str] = None,
     path: Optional[str] = None,
+    config: Optional[dict[str, str]] = None,
 ) -> None:
     # due to: https://github.com/juju/python-libjuju/issues/1057
     # the following call does not work:
@@ -52,6 +53,9 @@ async def refresh(
         args.append(f"--channel={channel}")
     if path:
         args.append(f"--path={path}")
+    if config:
+        for key, val in config.items():
+            args.append(f"--config {key}={val}")
 
     for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(wait=30)):
         with attempt:
@@ -80,7 +84,7 @@ async def assert_upgrade_to_local(
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
-        await application.refresh(path=local_charm)
+        await application.refresh(path=local_charm, config={"profile": "testing"})
 
         await wait_until(
             ops_test,

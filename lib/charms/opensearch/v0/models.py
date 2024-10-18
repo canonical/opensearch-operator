@@ -216,7 +216,10 @@ class PeerClusterConfig(Model):
     cluster_name: str
     init_hold: bool
     roles: List[str]
-    profile: PerformanceType
+    # TODO: remove this field as optional once opensearch 2.15 and 2.16 are EOL
+    # This field is optional and defaults to PerformanceType.TESTING to ensure
+    # backwards compatibility when upgrading from older opensearch versions.
+    profile: Optional[PerformanceType] = PerformanceType.TESTING
     data_temperature: Optional[str] = None
 
     @root_validator
