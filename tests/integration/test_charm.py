@@ -71,20 +71,6 @@ async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
-    await ops_test.model.deploy(
-        my_charm,
-        num_units=1,
-        series=SERIES,
-        config={"profile": "staging"},
-    )
-    await wait_until(
-        ops_test,
-        apps=[APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units=1,
-    )
-
     c_writes = ContinuousWrites(ops_test, APP_NAME)
     await c_writes.start()
     await assert_continuous_writes_increasing(c_writes)
