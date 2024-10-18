@@ -85,7 +85,7 @@ async def assert_upgrade_to_local(
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
-        await application.refresh(path=local_charm, config={"profile": "testing"})
+        await refresh(ops_test, app, path=local_charm, config={"profile": "testing"})
 
         await wait_until(
             ops_test,
