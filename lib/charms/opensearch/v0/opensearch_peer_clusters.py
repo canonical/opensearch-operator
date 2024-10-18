@@ -2,14 +2,18 @@
 # See LICENSE file for licensing details.
 
 """Class for Managing simple or large deployments and configuration related changes."""
+import json
 import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Literal, Optional
 
 from charms.opensearch.v0.constants_charm import (
+    AdminUser,
     CMRoleRemovalForbidden,
     CmVoRolesProvidedInvalid,
+    COSUser,
     DataRoleRemovalForbidden,
+    KibanaserverUser,
     PClusterNoRelation,
     PClusterWrongNodesCountForQuorum,
     PClusterWrongRelation,
@@ -34,14 +38,12 @@ from charms.opensearch.v0.models import (
     PeerClusterConfig,
     PeerClusterOrchestrators,
     PeerClusterRelData,
+    S3RelDataCredentials,
     StartMode,
     State,
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.opensearch.v0.opensearch_relation_peer_cluster import (
-    rel_data_from_redacted_str,
-)
 from ops import BlockedStatus
 from shortuuid import ShortUUID
 
@@ -528,7 +530,7 @@ class OpenSearchPeerClustersManager:
         if not (redacted_dict_str := rel.data[rel.app].get("data")):
             return None
 
-        return rel_data_from_redacted_str(self._charm, redacted_dict_str)
+        return self.rel_data_from_redacted_str(redacted_dict_str)
 
     def _pre_validate_roles_change(self, new_roles: List[str], prev_roles: List[str]):
         """Validate that the config changes of roles are allowed to happen."""
@@ -590,3 +592,52 @@ class OpenSearchPeerClustersManager:
             if not config.init_hold
             else DeploymentType.FAILOVER_ORCHESTRATOR
         )
+
+    def rel_data_from_redacted_str(self, redacted_dict_str: str) -> PeerClusterRelData | None:
+        """Construct the peer cluster rel data from the secret data."""
+        content = json.loads(redacted_dict_str)
+        credentials = content["credentials"]
+
+        credentials["admin_password"] = (
+            self._charm.model.get_secret(id=credentials["admin_password"])
+            .get_content()
+            .get(self._charm.secrets.password_key(AdminUser))
+        )
+
+        credentials["admin_password_hash"] = (
+            self._charm.model.get_secret(id=credentials["admin_password_hash"])
+            .get_content()
+            .get(self._charm.secrets.hash_key(AdminUser))
+        )
+
+        credentials["kibana_password"] = (
+            self._charm.model.get_secret(id=credentials["kibana_password"])
+            .get_content()
+            .get(self._charm.secrets.password_key(KibanaserverUser))
+        )
+
+        credentials["kibana_password_hash"] = (
+            self._charm.model.get_secret(id=credentials["kibana_password_hash"])
+            .get_content()
+            .get(self._charm.secrets.hash_key(KibanaserverUser))
+        )
+
+        if "monitor_password" in credentials:
+            credentials["monitor_password"] = (
+                self._charm.model.get_secret(id=credentials["monitor_password"])
+                .get_content()
+                .get(self._charm.secrets.password_key(COSUser))
+            )
+
+        if "admin_tls" in credentials:
+            credentials["admin_tls"] = self._charm.model.get_secret(
+                id=credentials["admin_tls"]
+            ).get_content()
+
+        if "s3" in credentials:
+            credentials["s3"] = S3RelDataCredentials(
+                access_key=credentials["s3"]["access_key"],
+                secret_key=credentials["s3"]["secret_key"],
+            )
+
+        return PeerClusterRelData.from_dict(content)

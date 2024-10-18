@@ -65,7 +65,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 1
 
 
 class OpenSearchPeerClusterRelation(Object):
@@ -76,6 +76,7 @@ class OpenSearchPeerClusterRelation(Object):
         self.relation_name = relation_name
         self.charm = charm
         self.peer_cm = charm.opensearch_peer_cm
+        self.secrets = self.charm.secrets
 
     def get_from_rel(
         self, key: str, rel_id: int = None, remote_app: bool = False
@@ -419,20 +420,27 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # peer rel data for requirers to show a blocked status until it's fully
         # ready (will receive a subsequent
         try:
-            secrets = self.charm.secrets
             return PeerClusterRelData(
                 cluster_name=deployment_desc.config.cluster_name,
                 cm_nodes=self._fetch_local_cm_nodes(deployment_desc),
                 credentials=PeerClusterRelDataCredentials(
                     admin_username=AdminUser,
-                    admin_password=secrets.get(Scope.APP, secrets.password_key(AdminUser)),
-                    admin_password_hash=secrets.get(Scope.APP, secrets.hash_key(AdminUser)),
-                    kibana_password=secrets.get(Scope.APP, secrets.password_key(KibanaserverUser)),
-                    kibana_password_hash=secrets.get(
-                        Scope.APP, secrets.hash_key(KibanaserverUser)
+                    admin_password=self.secrets.get(
+                        Scope.APP, self.secrets.password_key(AdminUser)
                     ),
-                    monitor_password=secrets.get(Scope.APP, secrets.password_key(COSUser)),
-                    admin_tls=secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
+                    admin_password_hash=self.secrets.get(
+                        Scope.APP, self.secrets.hash_key(AdminUser)
+                    ),
+                    kibana_password=self.secrets.get(
+                        Scope.APP, self.secrets.password_key(KibanaserverUser)
+                    ),
+                    kibana_password_hash=self.secrets.get(
+                        Scope.APP, self.secrets.hash_key(KibanaserverUser)
+                    ),
+                    monitor_password=self.secrets.get(
+                        Scope.APP, self.secrets.password_key(COSUser)
+                    ),
+                    admin_tls=self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
                     s3=self._s3_credentials(deployment_desc),
                 ),
                 deployment_desc=deployment_desc,
@@ -542,31 +550,35 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # If we use the values of the secrets then the size of the secret
         # would be too large for juju we store the secret ids instead and
         # fetch the secrets when needed in the requirer side
-        secrets = self.charm.secrets
-
         redacted_dict = rel_data.to_dict()
 
         redacted_dict["credentials"] = {
-            "admin-username": AdminUser,
-            "admin-password": secrets.get_secret_id(Scope.APP, secrets.password_key(AdminUser)),
-            "admin-password-hash": secrets.get_secret_id(Scope.APP, secrets.hash_key(AdminUser)),
-            "kibana-password": secrets.get_secret_id(
-                Scope.APP, secrets.password_key(KibanaserverUser)
+            "admin_username": AdminUser,
+            "admin_password": self.secrets.get_secret_id(
+                Scope.APP, self.secrets.password_key(AdminUser)
             ),
-            "kibana-password-hash": secrets.get_secret_id(
-                Scope.APP, secrets.hash_key(KibanaserverUser)
+            "admin_password_hash": self.secrets.get_secret_id(
+                Scope.APP, self.secrets.hash_key(AdminUser)
+            ),
+            "kibana_password": self.secrets.get_secret_id(
+                Scope.APP, self.secrets.password_key(KibanaserverUser)
+            ),
+            "kibana_password_hash": self.secrets.get_secret_id(
+                Scope.APP, self.secrets.hash_key(KibanaserverUser)
             ),
         }
 
-        if monitor_password := secrets.get_secret_id(Scope.APP, secrets.password_key(COSUser)):
-            redacted_dict["credentials"]["monitor-password"] = monitor_password
-        if admin_tls := secrets.get_secret_id(Scope.APP, CertType.APP_ADMIN.val):
-            redacted_dict["credentials"]["admin-tls"] = admin_tls
+        if monitor_password := self.secrets.get_secret_id(
+            Scope.APP, self.secrets.password_key(COSUser)
+        ):
+            redacted_dict["credentials"]["monitor_password"] = monitor_password
+        if admin_tls := self.secrets.get_secret_id(Scope.APP, CertType.APP_ADMIN.val):
+            redacted_dict["credentials"]["admin_tls"] = admin_tls
 
         if rel_data.credentials.s3:
             redacted_dict["credentials"]["s3"] = {
-                "access-key": secrets.get_secret_id(Scope.APP, "access-key"),
-                "secret-key": secrets.get_secret_id(Scope.APP, "access-key"),
+                "access_key": self.secrets.get_secret_id(Scope.APP, "access-key"),
+                "secret_key": self.secrets.get_secret_id(Scope.APP, "access-key"),
             }
 
         return redacted_dict
@@ -578,7 +590,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         credentials = rel_data_secret_content["credentials"]
         for key, secret_id in credentials.items():
             # s3 and admin-username are not secrets
-            if key == "admin-username":
+            if key == "admin_username":
                 continue
 
             secret = self.model.get_secret(id=secret_id)
@@ -640,7 +652,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             return
 
         # fetch the success data
-        data = rel_data_from_redacted_str(self.charm, data["data"])
+        data = self.peer_cm.rel_data_from_redacted_str(data["data"])
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
             return
@@ -685,18 +697,27 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     def _set_security_conf(self, data: PeerClusterRelData) -> None:
         """Store security related config."""
         # set admin secrets
-        secrets = self.charm.secrets
-        secrets.put(Scope.APP, secrets.password_key(AdminUser), data.credentials.admin_password)
-        secrets.put(Scope.APP, secrets.hash_key(AdminUser), data.credentials.admin_password_hash)
-        secrets.put(
-            Scope.APP, secrets.password_key(KibanaserverUser), data.credentials.kibana_password
+        self.secrets.put(
+            Scope.APP, self.secrets.password_key(AdminUser), data.credentials.admin_password
         )
-        secrets.put(
-            Scope.APP, secrets.hash_key(KibanaserverUser), data.credentials.kibana_password_hash
+        self.secrets.put(
+            Scope.APP, self.secrets.hash_key(AdminUser), data.credentials.admin_password_hash
         )
-        secrets.put(Scope.APP, secrets.password_key(COSUser), data.credentials.monitor_password)
+        self.secrets.put(
+            Scope.APP,
+            self.secrets.password_key(KibanaserverUser),
+            data.credentials.kibana_password,
+        )
+        self.secrets.put(
+            Scope.APP,
+            self.secrets.hash_key(KibanaserverUser),
+            data.credentials.kibana_password_hash,
+        )
+        self.secrets.put(
+            Scope.APP, self.secrets.password_key(COSUser), data.credentials.monitor_password
+        )
 
-        secrets.put_object(Scope.APP, CertType.APP_ADMIN.val, data.credentials.admin_tls)
+        self.secrets.put_object(Scope.APP, CertType.APP_ADMIN.val, data.credentials.admin_tls)
 
         # store the app admin TLS resources if not stored
         self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
@@ -876,7 +897,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             if not redacted_dict_str:  # not ready yet
                 continue
 
-            data = rel_data_from_redacted_str(self.charm, redacted_dict_str)
+            data = self.peer_cm.rel_data_from_redacted_str(redacted_dict_str)
             cm_nodes = {**cm_nodes, **{node.name: node for node in data.cm_nodes}}
 
         # attempt to have an opensearch reported list of CMs - the response
@@ -1026,72 +1047,3 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             error = self.charm.peers_data.get(Scope.APP, error_label, "")
             self.charm.status.clear(error, app=True)
             self.charm.peers_data.delete(Scope.APP, error_label)
-
-
-def rel_data_from_redacted_str(
-    charm: "OpenSearchBaseCharm", redacted_dict_str: str
-) -> PeerClusterRelData | None:
-    """Construct the peer cluster rel data from the secret data."""
-    content = json.loads(redacted_dict_str)
-    credentials = content["credentials"]
-
-    secrets = charm.secrets
-
-    admin_password = (
-        charm.model.get_secret(id=credentials["admin-password"])
-        .get_content()
-        .get(secrets.password_key(AdminUser))
-    )
-
-    admin_password_hash = (
-        charm.model.get_secret(id=credentials["admin-password-hash"])
-        .get_content()
-        .get(secrets.hash_key(AdminUser))
-    )
-
-    kibana_password = (
-        charm.model.get_secret(id=credentials["kibana-password"])
-        .get_content()
-        .get(secrets.password_key(KibanaserverUser))
-    )
-
-    kibana_password_hash = (
-        charm.model.get_secret(id=credentials["kibana-password-hash"])
-        .get_content()
-        .get(secrets.hash_key(KibanaserverUser))
-    )
-
-    monitor_password = None
-    if "monitor-password" in credentials:
-        monitor_password = (
-            charm.model.get_secret(id=credentials["monitor-password"])
-            .get_content()
-            .get(secrets.password_key(COSUser))
-        )
-
-    admin_tls = None
-    if "admin-tls" in credentials:
-        admin_tls = charm.model.get_secret(id=credentials["admin-tls"]).get_content()
-
-    s3 = None
-    if "s3" in credentials:
-        s3 = S3RelDataCredentials(
-            access_key=credentials["s3"]["access-key"],
-            secret_key=credentials["s3"]["secret-key"],
-        )
-
-    return PeerClusterRelData(
-        cluster_name=content["cluster_name"],
-        cm_nodes=[Node.from_dict(node) for node in content["cm_nodes"]],
-        credentials=PeerClusterRelDataCredentials(
-            admin_username=AdminUser,
-            admin_password=admin_password,
-            admin_password_hash=admin_password_hash,
-            kibana_password=kibana_password,
-            kibana_password_hash=kibana_password_hash,
-            monitor_password=monitor_password,
-            admin_tls=admin_tls,
-            s3=s3,
-        ),
-        deployment_desc=DeploymentDescription.from_dict(content["deployment_desc"]),
-    )
