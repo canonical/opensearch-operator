@@ -42,12 +42,7 @@ from charms.opensearch.v0.constants_charm import (
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_charm import (
-    Status,
-    all_units,
-    format_unit_name,
-    trigger_peer_rel_changed,
-)
+from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.helper_security import (
@@ -755,8 +750,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 and perf_profile_needs_restart
                 and self.unit.is_leader()
             ):
-                # Update the peer-cluster-orchestrator as needed
-                trigger_peer_rel_changed(self, on_other_units=False, on_current_unit=True)
+                # run peer cluster manager processing: update the peer and peer-cluster
+                # TODO: add check here if the diff can be known from now on already
+                self.opensearch_peer_cm.run()
         if plugin_needs_restart or perf_profile_needs_restart:
             self._restart_opensearch_event.emit()
 
