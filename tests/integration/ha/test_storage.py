@@ -175,14 +175,12 @@ async def test_storage_reuse_after_scale_to_zero(
         # give some time for removing each unit
         time.sleep(60)
 
-    await wait_until(
-        ops_test,
+    # using wait_until doesn't really work well here with 0 units
+    await ops_test.model.wait_for_idle(
+        # app status will not be active because after scaling down not all shards are assigned
         apps=[app],
-        apps_statuses=["active", "blocked"],
         timeout=1000,
-        wait_for_exact_units={
-            app: 0,
-        },
+        wait_for_exact_units=0,
     )
 
     # scale up again
