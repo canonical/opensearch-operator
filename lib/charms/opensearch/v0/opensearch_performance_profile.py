@@ -129,9 +129,10 @@ class OpenSearchPerformance(ops.Object):
 
         The profile is saved as a string in the charm peer databag.
         """
-        if not self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE) or not (
-            deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()
-        ):
+        if not self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE):
+            return None
+
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             # Could not set the profile
             # Fallback to the config value
             return OpenSearchPerfProfile.from_dict(
