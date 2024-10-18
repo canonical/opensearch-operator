@@ -417,7 +417,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 or (
                     # in case all data-nodes are powered down after being previously started
                     # ignore the lock to get a data-node started, as it holds security index
-                    self.peers_data.get(Scope.UNIT, "STARTED")
+                    self.peers_data.get(Scope.UNIT, "started")
                     and not self.opensearch.is_service_started()
                 )
             )
