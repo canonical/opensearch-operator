@@ -178,8 +178,8 @@ class TestPerformanceProfile(unittest.TestCase):
         """Test the update of the JVM options."""
         self.charm.opensearch_config.apply_performance_profile(profile=self.test_profile)
         mock_replace.assert_any_call(
-            "jvm.options", "^-Xms[0-9]+[kmgKMG]", "-Xms7864320k", regex=True
+            "jvm.options", "-Xms[0-9]+[kmgKMG]", "-Xms7864320k", regex=True
         )
         mock_replace.assert_any_call(
-            "jvm.options", "^-Xmx[0-9]+[kmgKMG]", "-Xmx7864320k", regex=True
+            "jvm.options", "-Xmx[0-9]+[kmgKMG]", "-Xmx7864320k", regex=True
         )
