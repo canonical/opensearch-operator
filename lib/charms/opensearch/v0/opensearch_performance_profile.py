@@ -116,6 +116,7 @@ class OpenSearchPerformance(ops.Object):
 
         If returns True, then the caller must execute a restart.
         """
+        logger.info(f"Current profile: {str(self.current)}, new proposed profile: {profile_name}")
         new_profile = OpenSearchPerfProfile.from_dict(
             {
                 "typ": profile_name,
@@ -136,6 +137,7 @@ class OpenSearchPerformance(ops.Object):
         The main reason to have a separate event, is to be able to wait for the cluster. It
         defers otherwise and only defers the execution of this particular task.
         """
+        logger.info("Applying profile-templates")
         if self._apply_profile_templates_has_been_called:
             # we can safely abandon this event as we already had a previous call on the same hook
             return
