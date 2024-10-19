@@ -294,7 +294,6 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
         apps_statuses=["active", "blocked"],
         units_statuses=["active"],
         wait_for_exact_units=1,
-        idle_period=IDLE_PERIOD,
         timeout=2400,
     )
 
