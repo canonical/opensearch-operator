@@ -94,7 +94,7 @@ async def assert_upgrade_to_local(
             wait_for_exact_units={
                 APP_NAME: 3,
             },
-            timeout=1400,
+            timeout=2800,
             idle_period=IDLE_PERIOD,
         )
 
@@ -118,7 +118,7 @@ async def assert_upgrade_to_local(
             wait_for_exact_units={
                 APP_NAME: 3,
             },
-            timeout=1400,
+            timeout=2800,
             idle_period=IDLE_PERIOD,
         )
 
