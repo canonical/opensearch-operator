@@ -266,10 +266,9 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     await wait_until(
         ops_test,
         apps=[app],
-        apps_statuses=["active"],
+        apps_statuses=["active", "blocked"],
         units_statuses=["active"],
         timeout=1000,
-        idle_period=IDLE_PERIOD,
         wait_for_exact_units={
             app: 1,
         },
