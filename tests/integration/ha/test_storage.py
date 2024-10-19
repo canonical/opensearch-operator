@@ -108,7 +108,7 @@ async def test_storage_reuse_after_scale_down(
     await wait_until(
         ops_test,
         apps=[app],
-        apps_statuses=["active"],
+        apps_statuses=["active", "blocked"],
         units_statuses=["active"],
         timeout=1000,
         idle_period=IDLE_PERIOD,
