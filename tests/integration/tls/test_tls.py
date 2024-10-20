@@ -45,13 +45,13 @@ SECRET_EXPIRY_WAIT_TIME = SECRET_EXPIRY_TIME + 60
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
-async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
-    """Build and deploy one unit of OpenSearch."""
+@pytest.mark.skip_if_ed
+async def test_build_and__active(ops_test: OpsTest) -> None:
+    """Build and  one unit of OpenSearch."""
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
-    await ops_test.model.deploy(
+    await ops_test.model.(
         my_charm,
         num_units=len(UNIT_IDS),
         series=SERIES,
@@ -193,6 +193,7 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
         my_charm,
         num_units=1,
         series=SERIES,
+        config=CONFIG_OPTS,
     )
 
     await wait_until(
