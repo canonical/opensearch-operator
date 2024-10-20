@@ -104,6 +104,7 @@ async def test_storage_reuse_after_scale_down(
     subprocess.run(create_testfile_cmd, shell=True)
 
     # scale-down to 1
+    # app status might be blocked because after scaling down not all shards are assigned
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
     await wait_until(
         ops_test,
@@ -263,6 +264,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     for unit_id in unit_ids[1:]:
         await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
 
+    # app status might be blocked because after scaling down not all shards are assigned
     await wait_until(
         ops_test,
         apps=[app],
@@ -287,6 +289,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
 
     # wait for cluster to be deployed
+    # app status might be blocked because not all shards are assigned
     await wait_until(
         ops_test,
         apps=[app],
