@@ -108,7 +108,7 @@ async def test_build_large_deployment(ops_test: OpsTest) -> None:
             application_name=MAIN_APP,
             num_units=3,
             series=SERIES,
-            config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager,data"},
+            config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager,data"} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             my_charm,
@@ -119,14 +119,14 @@ async def test_build_large_deployment(ops_test: OpsTest) -> None:
                 "cluster_name": CLUSTER_NAME,
                 "init_hold": True,
                 "roles": "cluster_manager,data",
-            },
+            } | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             my_charm,
             application_name=DATA_APP,
             num_units=1,
             series=SERIES,
-            config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data"},
+            config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data"} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,
