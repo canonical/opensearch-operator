@@ -74,7 +74,9 @@ async def test_multi_clusters_db_isolation(
 
     # deploy new cluster
     my_charm = await ops_test.build_charm(".")
-    await ops_test.model.deploy(my_charm, num_units=1, application_name=SECOND_APP_NAME, config=CONFIG_OPTS)
+    await ops_test.model.deploy(
+        my_charm, num_units=1, application_name=SECOND_APP_NAME, config=CONFIG_OPTS
+    )
     await ops_test.model.integrate(SECOND_APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
     # wait
