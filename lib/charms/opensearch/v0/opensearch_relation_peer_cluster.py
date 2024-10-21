@@ -589,14 +589,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         """Grant the secrets to all the related apps."""
         credentials = rel_data_secret_content["credentials"]
         for key, secret_id in credentials.items():
-            # s3 and admin-username are not secrets
+            # admin-username is not secrets
             if key == "admin_username":
                 continue
 
-            secret = self.model.get_secret(id=secret_id)
             for rel_id in all_rel_ids:
                 if relation := self.get_rel(rel_id=rel_id):
-                    secret.grant(relation)
+                    self.secrets.grant_secret_to_relation(secret_id, relation)
 
 
 class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):

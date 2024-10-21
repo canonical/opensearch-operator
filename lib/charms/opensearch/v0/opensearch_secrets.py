@@ -27,7 +27,7 @@ from charms.opensearch.v0.opensearch_internal_data import (
     Scope,
     SecretCache,
 )
-from ops import JujuVersion, Secret, SecretNotFoundError
+from ops import JujuVersion, Relation, Secret, SecretNotFoundError
 from ops.charm import SecretChangedEvent
 from ops.framework import Object
 from overrides import override
@@ -373,3 +373,8 @@ class OpenSearchSecrets(Object, RelationDataStore):
         """Get the secret ID from the cache."""
         label = self.label(scope, key)
         return self._charm.peers_data.get(scope, label)
+
+    def grant_secret_to_relation(self, secret_id: int, relation: Relation):
+        """Grant a secret to a relation."""
+        secret = self._charm.model.get_secret(id=secret_id)
+        secret.grant(relation)
