@@ -709,11 +709,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
-            # We cannot proceed without the deployment description
-            event.defer()
-            return
-
         perf_profile_needs_restart = False
         plugin_needs_restart = False
 
@@ -740,19 +735,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.status.clear(PluginConfigCheck, app=True)
                 self.status.clear(PluginConfigChangeError, app=True)
 
-        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            # Only the main orchestrator can change the performance profile
-            perf_profile_needs_restart = self.performance_profile.apply(
-                self.config.get(PERFORMANCE_PROFILE)
-            )
-            if (
-                self.opensearch_peer_cm.is_provider(typ="main")
-                and perf_profile_needs_restart
-                and self.unit.is_leader()
-            ):
-                # run peer cluster manager processing: update the peer and peer-cluster
-                # TODO: add check here if the diff can be known from now on already
-                self.opensearch_peer_cm.run()
+        perf_profile_needs_restart = self.performance_profile.apply(
+            self.config.get(PERFORMANCE_PROFILE)
+        )
         if plugin_needs_restart or perf_profile_needs_restart:
             self._restart_opensearch_event.emit()
 

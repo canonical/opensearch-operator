@@ -16,11 +16,7 @@ The charm will then apply the profile and restart the OpenSearch service if need
 import logging
 
 import ops
-from charms.opensearch.v0.constants_charm import (
-    PERFORMANCE_PROFILE,
-    PeerClusterRelationName,
-    PeerRelationName,
-)
+from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE
 from charms.opensearch.v0.models import (
     DeploymentType,
     OpenSearchPerfProfile,
@@ -62,31 +58,8 @@ class OpenSearchPerformance(ops.Object):
         self.charm = charm
         self.peers_data = self.charm.peers_data
         self.framework.observe(
-            charm.on[PeerClusterRelationName].relation_changed,
-            self._on_peer_cluster_relation_changed,
-        )
-        self.framework.observe(
-            charm.on[PeerRelationName].relation_changed,
-            self._on_peer_cluster_relation_changed,
-        )
-        self.framework.observe(
             self._apply_profile_templates_event, self._on_apply_profile_templates
         )
-        self._apply_profile_templates_has_been_called = False
-
-    def _on_peer_cluster_relation_changed(self, _: EventBase):
-        """Handle the peer cluster relation changed event."""
-        if (
-            not (rel_data := self.charm.opensearch_peer_cm.rel_data())
-            or not rel_data.deployment_desc
-        ):
-            # We must have all the data before moving forward.
-            # Otherwise, we should count another event will happen.
-            return
-
-        if self.apply(rel_data.deployment_desc.config.profile):
-            # We need to restart
-            self.charm.trigger_restart()
 
     @property
     def current(self) -> OpenSearchPerfProfile | None:
@@ -127,7 +100,8 @@ class OpenSearchPerformance(ops.Object):
             return False
 
         self.charm.opensearch_config.apply_performance_profile(new_profile)
-        self._apply_profile_templates_event.emit()
+        if self.charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
+            self._apply_profile_templates_event.emit()
         self.current = new_profile
         return True
 
@@ -138,6 +112,10 @@ class OpenSearchPerformance(ops.Object):
         defers otherwise and only defers the execution of this particular task.
         """
         logger.info("Applying profile-templates")
+        if not self.charm.unit.is_leader():
+            # Only the leader can apply the templates
+            return
+
         if self._apply_profile_templates_has_been_called:
             # we can safely abandon this event as we already had a previous call on the same hook
             return
@@ -149,12 +127,6 @@ class OpenSearchPerformance(ops.Object):
         ):
             logger.info("Applying profile templates but cluster not ready yet.")
             event.defer()
-            return
-
-        if (
-            self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR
-            and not self.charm.unit.is_leader()
-        ):
             return
 
         # Configure templates if needed
