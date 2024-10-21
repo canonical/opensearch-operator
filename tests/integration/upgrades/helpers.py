@@ -6,6 +6,7 @@ import logging
 import subprocess
 from typing import Optional
 
+import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
@@ -17,10 +18,41 @@ from ..ha.helpers import (
 from ..helpers import APP_NAME, IDLE_PERIOD, app_name, run_action
 from ..helpers_deployments import get_application_units, wait_until
 
+OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
 ORIGINAL_RESTART_DELAY = 20
 SECOND_APP_NAME = "second-opensearch"
 RESTART_DELAY = 360
+
+
+OPENSEARCH_CHANNEL = "2/edge"
+
+
+STARTING_VERSION = "2.15.0"
+
+
+VERSION_TO_REVISION = {
+    STARTING_VERSION: 144,
+    "2.16.0": 160,
+}
+
+
+CHANNELS = ["edge", "beta", "2/stable"]
+
+
+FROM_VERSION_PREFIX = "from_v{}_to_local"
+
+
+UPGRADE_INITIAL_VERSION = [
+    (
+        pytest.param(
+            version,
+            id=FROM_VERSION_PREFIX.format(version),
+            marks=pytest.mark.group(FROM_VERSION_PREFIX.format(version)),
+        )
+    )
+    for version in VERSION_TO_REVISION.keys()
+]
 
 
 logger = logging.getLogger(__name__)
