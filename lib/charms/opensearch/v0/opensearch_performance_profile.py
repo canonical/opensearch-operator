@@ -14,6 +14,7 @@ There are two ways the charm can learn about its profile and when it changes:
 The charm will then apply the profile and restart the OpenSearch service if needed.
 """
 import logging
+from typing import Any, Dict, Optional, cast
 
 import ops
 from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE
@@ -24,7 +25,7 @@ from charms.opensearch.v0.models import (
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from ops.framework import EventBase, EventSource
+from ops.framework import EventBase, EventSource, Handle
 
 # The unique Charmhub library identifier, never change it
 LIBID = "8b7aa39016e748ea908787df1d7fb089"
@@ -41,11 +42,25 @@ logger = logging.getLogger(__name__)
 
 
 class _ApplyProfileTemplatesOpenSearch(EventBase):
-    """Attempt to acquire lock & restart OpenSearch.
+    """Attempt to apply the profile templates.
 
-    The main reason to have a separate event, is to be able to wait for the cluster.
-    It defers otherwise and only defers the execution of this particular task.
+    The main reason to have a separate event, is to be able to wait for the cluster to restart.
+    In this case, deferring this event does not defer any major other event.
     """
+
+    new_profile: PerformanceType | None = None
+
+    def __init__(self, handle: Handle, id: str, new_profile: Optional[PerformanceType]):
+        super().__init__(handle)
+        self.new_profile = new_profile
+
+    def snapshot(self) -> dict[str, Any]:
+        """Used by the framework to serialize the event to disk."""
+        return {"new_profile": str(self.new_profile)}
+
+    def restore(self, snapshot: Dict[str, Any]):
+        """Used by the framework to deserialize the event from disk."""
+        self.new_profile = cast(PerformanceType, snapshot["new_profile"])
 
 
 class OpenSearchPerformance(ops.Object):
@@ -131,16 +146,19 @@ class OpenSearchPerformance(ops.Object):
             return
 
         # Configure templates if needed
-        if not self.apply_perf_templates_if_needed():
+        if not self.apply_perf_templates_if_needed(new_profile=PerformanceType(event.new_profile)):
             logger.debug("Failed to apply templates. Will retry later.")
             event.defer()
 
-    def apply_perf_templates_if_needed(self) -> bool:  # noqa: C901
+    def apply_perf_templates_if_needed(
+        self, new_profile: PerformanceType | None = None
+    ) -> bool:  # noqa: C901
         """Apply performance templates if needed."""
-        if not self.current:
+        profile = new_profile or self.current.typ
+        if not profile:
             return False
 
-        if self.current.typ == PerformanceType.TESTING:
+        if profile == PerformanceType.TESTING:
             # We try to remove the index and components' templates
             for endpoint in [
                 "/_index_template/charmed-index-tpl",
