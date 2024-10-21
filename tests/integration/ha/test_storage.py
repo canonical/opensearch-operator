@@ -104,11 +104,12 @@ async def test_storage_reuse_after_scale_down(
     subprocess.run(create_testfile_cmd, shell=True)
 
     # scale-down to 1
+    # app status might be blocked because after scaling down not all shards are assigned
     await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
     await wait_until(
         ops_test,
         apps=[app],
-        apps_statuses=["active"],
+        apps_statuses=["active", "blocked"],
         units_statuses=["active"],
         timeout=1000,
         idle_period=IDLE_PERIOD,
@@ -175,15 +176,12 @@ async def test_storage_reuse_after_scale_to_zero(
         # give some time for removing each unit
         time.sleep(60)
 
-    await wait_until(
-        ops_test,
+    # using wait_until doesn't really work well here with 0 units
+    await ops_test.model.wait_for_idle(
+        # app status will not be active because after scaling down not all shards are assigned
         apps=[app],
-        apps_statuses=["active", "blocked"],
         timeout=1000,
-        idle_period=IDLE_PERIOD,
-        wait_for_exact_units={
-            app: 0,
-        },
+        wait_for_exact_units=0,
     )
 
     # scale up again
@@ -251,15 +249,37 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
 
     writes_result = await c_writes.stop()
 
-    # get unit info
+    # Scale down carefully to be able to identify which storage needs to be deployed to
+    # the leader when scaling up again. This is to avoid stale metadata when re-using the
+    # storage on a different cluster.
     storage_ids = []
-    for unit_id in get_application_unit_ids(ops_test, app):
+    unit_ids = get_application_unit_ids(ops_test, app)
+
+    # remember the current storage disks
+    for unit_id in unit_ids:
         storage_ids.append(storage_id(ops_test, app, unit_id))
 
-    # remove the remaining application
+    # remove all but the first unit
+    # this will trigger the remaining unit to become the leader if it wasn't already
+    for unit_id in unit_ids[1:]:
+        await ops_test.model.applications[app].destroy_unit(f"{app}/{unit_id}")
+
+    # app status might be blocked because after scaling down not all shards are assigned
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active", "blocked"],
+        units_statuses=["active"],
+        timeout=1000,
+        wait_for_exact_units={
+            app: 1,
+        },
+    )
+
+    # remove the remaining unit and the entire application
     await ops_test.model.remove_application(app, block_until_done=True)
 
-    # deploy new cluster
+    # deploy new cluster, attaching the storage from the previous leader to the new leader
     my_charm = await ops_test.build_charm(".")
     deploy_cluster_with_storage_cmd = (
         f"deploy {my_charm} --model={ops_test.model.info.name} --attach-storage={storage_ids[0]}"
@@ -269,13 +289,13 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
 
     # wait for cluster to be deployed
+    # app status might be blocked because not all shards are assigned
     await wait_until(
         ops_test,
         apps=[app],
         apps_statuses=["active", "blocked"],
         units_statuses=["active"],
         wait_for_exact_units=1,
-        idle_period=IDLE_PERIOD,
         timeout=2400,
     )
 
