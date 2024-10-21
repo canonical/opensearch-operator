@@ -14,7 +14,6 @@ There are two ways the charm can learn about its profile and when it changes:
 The charm will then apply the profile and restart the OpenSearch service if needed.
 """
 import logging
-from typing import Any, Dict, Optional, cast
 
 import ops
 from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE
@@ -25,7 +24,7 @@ from charms.opensearch.v0.models import (
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from ops.framework import EventBase, EventSource, Handle
+from ops.framework import EventBase, EventSource
 
 # The unique Charmhub library identifier, never change it
 LIBID = "8b7aa39016e748ea908787df1d7fb089"
@@ -47,20 +46,6 @@ class _ApplyProfileTemplatesOpenSearch(EventBase):
     The main reason to have a separate event, is to be able to wait for the cluster to restart.
     In this case, deferring this event does not defer any major other event.
     """
-
-    new_profile: PerformanceType | None = None
-
-    def __init__(self, handle: Handle, id: str, new_profile: Optional[PerformanceType]):
-        super().__init__(handle)
-        self.new_profile = new_profile
-
-    def snapshot(self) -> dict[str, Any]:
-        """Used by the framework to serialize the event to disk."""
-        return {"new_profile": str(self.new_profile)}
-
-    def restore(self, snapshot: Dict[str, Any]):
-        """Used by the framework to deserialize the event from disk."""
-        self.new_profile = cast(PerformanceType, snapshot["new_profile"])
 
 
 class OpenSearchPerformance(ops.Object):
@@ -116,9 +101,10 @@ class OpenSearchPerformance(ops.Object):
             return False
 
         self.charm.opensearch_config.apply_performance_profile(new_profile)
+        self.current = new_profile
+
         if self.charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
             self._apply_profile_templates_event.emit()
-        self.current = new_profile
         return True
 
     def _on_apply_profile_templates(self, event: EventBase):
@@ -146,13 +132,13 @@ class OpenSearchPerformance(ops.Object):
             return
 
         # Configure templates if needed
-        if not self.apply_perf_templates_if_needed(new_profile=PerformanceType(event.new_profile)):
+        if not self.apply_perf_templates_if_needed():
             logger.debug("Failed to apply templates. Will retry later.")
             event.defer()
 
-    def apply_perf_templates_if_needed(
+    def apply_perf_templates_if_needed(  # noqa: C901
         self, new_profile: PerformanceType | None = None
-    ) -> bool:  # noqa: C901
+    ) -> bool:
         """Apply performance templates if needed."""
         profile = new_profile or self.current.typ
         if not profile:
