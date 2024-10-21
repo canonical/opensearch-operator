@@ -8,7 +8,7 @@ import pytest
 from juju.application import Application
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import APP_NAME, MODEL_CONFIG, SERIES, UNIT_IDS
+from ..helpers import APP_NAME, CONFIG_OPTS, MODEL_CONFIG, SERIES, UNIT_IDS
 from ..helpers_deployments import wait_until
 from .helpers_manual_tls import MANUAL_TLS_CERTIFICATES_APP_NAME, ManualTLSAgent
 
@@ -29,6 +29,7 @@ async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest) -> None:
         num_units=len(UNIT_IDS),
         series=SERIES,
         application_name=APP_NAME,
+        config=CONFIG_OPTS,
     )
 
     # Deploy TLS Certificates operator.

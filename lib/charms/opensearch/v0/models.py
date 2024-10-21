@@ -23,6 +23,10 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
+MIN_HEAP_SIZE = 1024 * 1024  # 1GB in KB
+MAX_HEAP_SIZE = 32 * MIN_HEAP_SIZE  # 32GB in KB
+
+
 class Model(ABC, BaseModel):
     """Base model class."""
 
@@ -153,6 +157,14 @@ class DeploymentType(BaseStrEnum):
     OTHER = "other"
 
 
+class PerformanceType(BaseStrEnum):
+    """Performance types available."""
+
+    PRODUCTION = "production"
+    STAGING = "staging"
+    TESTING = "testing"
+
+
 class StartMode(BaseStrEnum):
     """Mode of start of units in this deployment."""
 
@@ -204,6 +216,10 @@ class PeerClusterConfig(Model):
     cluster_name: str
     init_hold: bool
     roles: List[str]
+    # We have a breaking change in the model
+    # For older charms, this field will not exist and they will be set in the
+    # profile called "testing".
+    profile: Optional[PerformanceType] = PerformanceType.TESTING
     data_temperature: Optional[str] = None
 
     @root_validator
@@ -346,3 +362,60 @@ class PeerClusterOrchestrators(Model):
         self.main_app = self.failover_app
         self.main_rel_id = self.failover_rel_id
         self.delete("failover")
+
+
+class OpenSearchPerfProfile(Model):
+    """Generates an immutable description of the performance profile."""
+
+    typ: PerformanceType
+    heap_size_in_kb: int = MIN_HEAP_SIZE
+    opensearch_yml: Dict[str, str] = {}
+    charmed_index_template: Dict[str, str] = {}
+    charmed_component_templates: Dict[str, str] = {}
+
+    @root_validator
+    def set_options(cls, values):  # noqa: N805
+        """Generate the attributes depending on the input."""
+        # Check if PerformanceType has been rendered correctly
+        # if an user creates the OpenSearchPerfProfile
+        if "typ" not in values:
+            raise AttributeError("Missing 'typ' attribute.")
+
+        if values["typ"] == PerformanceType.TESTING:
+            values["heap_size_in_kb"] = MIN_HEAP_SIZE
+            return values
+
+        mem_total = OpenSearchPerfProfile.meminfo()["MemTotal"]
+        mem_percent = 0.50 if values["typ"] == PerformanceType.PRODUCTION else 0.25
+
+        values["heap_size_in_kb"] = min(int(mem_percent * mem_total), MAX_HEAP_SIZE)
+
+        if values["typ"] != PerformanceType.TESTING:
+            values["opensearch_yml"] = {"indices.memory.index_buffer_size": "25%"}
+
+            values["charmed_index_template"] = {
+                "charmed-index-tpl": {
+                    "index_patterns": ["*"],
+                    "template": {
+                        "settings": {
+                            "number_of_replicas": "1",
+                        },
+                    },
+                },
+            }
+
+        return values
+
+    @staticmethod
+    def meminfo() -> dict[str, float]:
+        """Read the /proc/meminfo file and return the values.
+
+        According to the kernel source code, the values are always in kB:
+            https://github.com/torvalds/linux/blob/
+                2a130b7e1fcdd83633c4aa70998c314d7c38b476/fs/proc/meminfo.c#L31
+        """
+        with open("/proc/meminfo") as f:
+            meminfo = f.read().split("\n")
+            meminfo = [line.split() for line in meminfo if line.strip()]
+
+        return {line[0][:-1]: float(line[1]) for line in meminfo}

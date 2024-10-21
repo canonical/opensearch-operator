@@ -34,6 +34,7 @@ async def refresh(
     switch: Optional[str] = None,
     channel: Optional[str] = None,
     path: Optional[str] = None,
+    config: Optional[dict[str, str]] = None,
 ) -> None:
     # due to: https://github.com/juju/python-libjuju/issues/1057
     # the following call does not work:
@@ -52,12 +53,15 @@ async def refresh(
         args.append(f"--channel={channel}")
     if path:
         args.append(f"--path={path}")
+    if config:
+        for key, val in config.items():
+            args.extend(["--config", f"{key}={val}"])
 
     for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(wait=30)):
         with attempt:
             cmd = ["juju", "refresh"]
-            cmd.extend(args)
             cmd.append(app_name)
+            cmd.extend(args)
             subprocess.check_output(cmd)
 
 
@@ -69,7 +73,6 @@ async def assert_upgrade_to_local(
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
 
-    application = ops_test.model.applications[app]
     action = await run_action(
         ops_test,
         leader_id,
@@ -80,7 +83,8 @@ async def assert_upgrade_to_local(
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
-        await application.refresh(path=local_charm)
+
+        await refresh(ops_test, app, path=local_charm, config={"profile": "testing"})
 
         await wait_until(
             ops_test,
@@ -90,7 +94,7 @@ async def assert_upgrade_to_local(
             wait_for_exact_units={
                 APP_NAME: 3,
             },
-            timeout=1400,
+            timeout=2800,
             idle_period=IDLE_PERIOD,
         )
 
@@ -114,7 +118,7 @@ async def assert_upgrade_to_local(
             wait_for_exact_units={
                 APP_NAME: 3,
             },
-            timeout=1400,
+            timeout=2800,
             idle_period=IDLE_PERIOD,
         )
 

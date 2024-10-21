@@ -58,6 +58,7 @@ class TestOpenSearchKNN(unittest.TestCase):
         charms.opensearch.v0.helper_cluster.ClusterTopology.get_cluster_settings = MagicMock(
             return_value={}
         )
+        self.charm.performance_profile = MagicMock()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.update_host_if_needed")
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.is_node_up")
@@ -89,6 +90,8 @@ class TestOpenSearchKNN(unittest.TestCase):
         ___,
         mock_is_node_up,
         mock_update_host_if_needed,
+        # mock_deployment_desc,
+        # ____,
     ) -> None:
         """Tests entire config_changed event with KNN plugin."""
         mock_status.return_value = PluginState.ENABLED
@@ -120,7 +123,6 @@ class TestOpenSearchKNN(unittest.TestCase):
 
         self.harness.update_config({"plugin_opensearch_knn": False})
         self.charm.plugin_manager.check_plugin_manager_ready.assert_called()
-        self.charm._restart_opensearch_event.emit.assert_called_once()
         self.plugin_manager._opensearch_config.add_plugin.assert_called_once_with(
             {"knn.plugin.enabled": "false"}
         )

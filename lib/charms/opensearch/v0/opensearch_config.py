@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import normalized_tls_subject
-from charms.opensearch.v0.models import App
+from charms.opensearch.v0.models import App, OpenSearchPerfProfile
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
 # The unique Charmhub library identifier, never change it
@@ -68,6 +68,25 @@ class OpenSearchConfig:
             self.JVM_OPTIONS,
             "-Djdk.tls.client.protocols=TLSv1.2",
         )
+
+    def apply_performance_profile(self, profile: OpenSearchPerfProfile):
+        """Apply the performance profile to the opensearch config."""
+        self._opensearch.config.replace(
+            self.JVM_OPTIONS,
+            "-Xms[0-9]+[kmgKMG]",
+            f"-Xms{str(profile.heap_size_in_kb)}k",
+            regex=True,
+        )
+
+        self._opensearch.config.replace(
+            self.JVM_OPTIONS,
+            "-Xmx[0-9]+[kmgKMG]",
+            f"-Xmx{str(profile.heap_size_in_kb)}k",
+            regex=True,
+        )
+
+        for key, val in profile.opensearch_yml.items():
+            self._opensearch.config.put(self.CONFIG_YML, key, val)
 
     def set_admin_tls_conf(self, secrets: Dict[str, any]):
         """Configures the admin certificate."""

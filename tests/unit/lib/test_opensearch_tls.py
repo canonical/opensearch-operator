@@ -60,7 +60,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
     deployment_descriptions = {
         "ok": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
@@ -68,7 +70,9 @@ class TestOpenSearchTLS(unittest.TestCase):
             state=DeploymentState(value=State.ACTIVE),
         ),
         "ko": DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="logs", init_hold=True, roles=["ml"]),
+            config=PeerClusterConfig(
+                cluster_name="logs", init_hold=True, roles=["ml"], profile="production"
+            ),
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[Directive.WAIT_FOR_PEER_CLUSTER_RELATION],
             typ=DeploymentType.OTHER,
@@ -85,6 +89,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.harness.add_network("1.1.1.1", endpoint=TLS_RELATION)
         self.harness.begin()
         self.charm = self.harness.charm
+
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
         self.harness.add_relation_unit(self.rel_id, f"{self.charm.app.name}/0")
         self.harness.add_relation(TLS_RELATION, self.charm.app.name)
@@ -162,7 +167,9 @@ class TestOpenSearchTLS(unittest.TestCase):
     def test_on_relation_created_admin(self, _, __, _request_certificate, deployment_desc):
         """Test on certificate relation created event."""
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
@@ -193,7 +200,9 @@ class TestOpenSearchTLS(unittest.TestCase):
     ):
         """Test on certificate relation created event."""
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.OTHER,
@@ -228,7 +237,9 @@ class TestOpenSearchTLS(unittest.TestCase):
     def test_on_relation_created_non_admin(self, _, __, _request_certificate, deployment_desc):
         """Test on certificate relation created event."""
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
@@ -353,7 +364,9 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
@@ -387,7 +400,9 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.MAIN_ORCHESTRATOR,
@@ -430,7 +445,9 @@ class TestOpenSearchTLS(unittest.TestCase):
         self, _, __, _create_keystore_pwd_if_not_exists, deployment_desc
     ):
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=DeploymentType.OTHER,
@@ -509,7 +526,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
@@ -651,7 +670,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
@@ -775,7 +796,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
@@ -871,7 +894,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
@@ -1002,7 +1027,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
@@ -1161,7 +1188,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
@@ -1285,7 +1314,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
@@ -1459,7 +1490,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
@@ -1575,7 +1608,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,
@@ -1671,7 +1706,9 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         # Applies to ANY deployment type
         deployment_desc.return_value = DeploymentDescription(
-            config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+            config=PeerClusterConfig(
+                cluster_name="", init_hold=False, roles=[], profile="production"
+            ),
             start=StartMode.WITH_GENERATED_ROLES,
             pending_directives=[],
             typ=deployment_type,

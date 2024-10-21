@@ -10,7 +10,14 @@ from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
 from ..ha.helpers import assert_continuous_writes_consistency
-from ..helpers import APP_NAME, IDLE_PERIOD, MODEL_CONFIG, SERIES, run_action
+from ..helpers import (
+    APP_NAME,
+    CONFIG_OPTS,
+    IDLE_PERIOD,
+    MODEL_CONFIG,
+    SERIES,
+    run_action,
+)
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 
@@ -64,7 +71,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None
             num_units=WORKLOAD[OPENSEARCH_MAIN_APP_NAME],
             series=SERIES,
             channel=OPENSEARCH_INITIAL_CHANNEL,
-            config=main_orchestrator_conf,
+            config=main_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             OPENSEARCH_ORIGINAL_CHARM_NAME,
@@ -72,7 +79,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None
             num_units=WORKLOAD[OPENSEARCH_FAILOVER_APP_NAME],
             series=SERIES,
             channel=OPENSEARCH_INITIAL_CHANNEL,
-            config=failover_orchestrator_conf,
+            config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             OPENSEARCH_ORIGINAL_CHARM_NAME,
@@ -80,7 +87,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None
             num_units=WORKLOAD[APP_NAME],
             series=SERIES,
             channel=OPENSEARCH_INITIAL_CHANNEL,
-            config=data_hot_conf,
+            config=data_hot_conf | CONFIG_OPTS,
         ),
     )
 

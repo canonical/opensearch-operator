@@ -12,6 +12,7 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
     APP_NAME,
+    CONFIG_OPTS,
     IDLE_PERIOD,
     MODEL_CONFIG,
     SERIES,
@@ -49,6 +50,7 @@ async def test_build_and_deploy(ops_test: OpsTest, lxd_spaces) -> None:
         series=SERIES,
         constraints="spaces=alpha,client,cluster,backup",
         bind={"": "cluster"},
+        config=CONFIG_OPTS,
     )
     config = {"ca-common-name": "CN_CA"}
     await ops_test.model.deploy(
