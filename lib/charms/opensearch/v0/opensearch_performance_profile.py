@@ -60,6 +60,7 @@ class OpenSearchPerformance(ops.Object):
         self.framework.observe(
             self._apply_profile_templates_event, self._on_apply_profile_templates
         )
+        self._apply_profile_templates_has_been_called = False
 
     @property
     def current(self) -> OpenSearchPerfProfile | None:
