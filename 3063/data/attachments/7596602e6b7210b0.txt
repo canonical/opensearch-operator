@@ -1,0 +1,286 @@
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:175 Removing application opensearch
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:178 Removing application self-signed-certificates
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:182 Deploying TLS Certificates operator
+[32mINFO    [0m juju.model:model.py:2097 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:393 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:394 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  03:00:31Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+self-signed-certificates           waiting    0/1  self-signed-certificates  latest/stable  155  no       waiting for machine
+
+Unit                        Workload  Agent       Machine  Public address  Ports  Message
+self-signed-certificates/1  waiting   allocating  4                               waiting for machine
+
+Machine  State    Address  Inst id  Base          AZ  Message
+4        pending           pending  ubuntu@22.04      
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:00:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: self-signed-certificates - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:00:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:412 03:02:46 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:191 Deploying OpenSearch
+[32mINFO    [0m juju.model:model.py:2097 Deploying local:jammy/opensearch-1
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:393 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:394 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  03:02:57Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         waiting    0/1  opensearch                                 1  no       waiting for machine
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent       Machine  Public address  Ports  Message
+opensearch/3                 waiting   allocating  5                               waiting for machine
+self-signed-certificates/1*  active    idle        4        10.93.58.180           
+
+Machine  State    Address       Inst id        Base          AZ  Message
+4        started  10.93.58.180  juju-b14034-4  ubuntu@22.04      Running
+5        pending                pending        ubuntu@22.04      acquiring LXD image
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:02:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:315 opensearch -- expected units: 1 -- current: 0
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:03:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch waiting -- message: waiting for machine
+		opensearch-3.8fb  -- (10.93.58.247) -- [allocating (since: 03:02:57)] waiting: waiting for machine
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:05:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-3.8fb* -- (10.93.58.247) -- [idle (since: 03:05:18)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:05:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-3.8fb* -- (10.93.58.247) -- [idle (since: 03:05:18)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:05:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-3.8fb* -- (10.93.58.247) -- [idle (since: 03:05:18)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:05:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:412 03:05:55 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:207 Changing the expiry time of the secret carrying the certificate to 3 minutes
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:213 Running command: juju ssh opensearch/3 sudo sed -i 's/expire=self._get_next_secret_expiry_time\(certificate\)/expire=timedelta\(seconds=180\)/g' /var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/tls_certificates_interface/v3/tls_certificates.py
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:217 Integrating OpenSearch with TLS Certificates operator
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:393 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:394 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  03:05:55Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         blocked      1  opensearch                                 1  no       Missing TLS relation with this cluster.
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports  Message
+opensearch/3*                blocked   executing  5        10.93.58.247           Missing TLS relation with this cluster.
+self-signed-certificates/1*  active    executing  4        10.93.58.180           
+
+Machine  State    Address       Inst id        Base          AZ  Message
+4        started  10.93.58.180  juju-b14034-4  ubuntu@22.04      Running
+5        started  10.93.58.247  juju-b14034-5  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:05:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-3.8fb* -- (10.93.58.247) -- [executing (since: 03:05:55)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:06:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch waiting -- message: Waiting for OpenSearch to start...
+		opensearch-3.8fb* -- (10.93.58.247) -- [executing (since: 03:06:04)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:06:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch waiting -- message: Waiting for OpenSearch to start...
+		opensearch-3.8fb* -- (10.93.58.247) -- [executing (since: 03:06:04)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:06:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-3.8fb* -- (10.93.58.247) -- [executing (since: 03:06:27)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:06:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-3.8fb* -- (10.93.58.247) -- [idle (since: 03:06:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:06:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-3.8fb* -- (10.93.58.247) -- [idle (since: 03:06:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:07:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:412 03:07:01 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:228 Test cluster health
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.93.58.247:9200/_cluster/health?wait_for_status=green&timeout=1m
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:240 Waiting for certificates to expire. Wait time: 4.0 minutes.
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:245 Test cluster health after certificate expiry
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.93.58.247:9200/_cluster/health?wait_for_status=green&timeout=1m
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:251 Comparing certificates before and after expiry
+[32mINFO    [0m integration.tls.test_tls:test_tls.py:252 Certs: {'http_certificates_list': [{'issuer_dn': 'CN=CN_CA,C=US', 'subject_dn': 'O=opensearch-xftz,CN=10.93.58.247', 'san': '[[2, juju-b14034-5], [2, juju-b14034-5.lxd], [2, opensearch-3.8fb], [7, 10.93.58.247], [8, 1.2.3.4.5.5]]', 'not_before': '2024-10-24T03:05:58Z', 'not_after': '2024-10-25T03:05:58Z'}], 'transport_certificates_list': [{'issuer_dn': 'CN=CN_CA,C=US', 'subject_dn': 'O=opensearch-xftz,CN=10.93.58.247', 'san': '[[2, juju-b14034-5], [2, juju-b14034-5.lxd], [2, opensearch-3.8fb], [7, 10.93.58.247], [8, 1.2.3.4.5.5]]', 'not_before': '2024-10-24T03:05:58Z', 'not_after': '2024-10-25T03:05:58Z'}]}, {'http_certificates_list': [{'issuer_dn': 'CN=CN_CA,C=US', 'subject_dn': 'O=opensearch-xftz,CN=10.93.58.247', 'san': '[[2, juju-b14034-5], [2, juju-b14034-5.lxd], [2, opensearch-3.8fb], [7, 10.93.58.247], [8, 1.2.3.4.5.5]]', 'not_before': '2024-10-24T03:09:19Z', 'not_after': '2024-10-25T03:09:19Z'}], 'transport_certificates_list': [{'issuer_dn': 'CN=CN_CA,C=US', 'subject_dn': 'O=opensearch-xftz,CN=10.93.58.247', 'san': '[[2, juju-b14034-5], [2, juju-b14034-5.lxd], [2, opensearch-3.8fb], [7, 10.93.58.247], [8, 1.2.3.4.5.5]]', 'not_before': '2024-10-24T03:09:21Z', 'not_after': '2024-10-25T03:09:21Z'}]}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  03:11:24Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      1  opensearch                                 1  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/3*                active    idle   5        10.93.58.247    9200/tcp  
+self-signed-certificates/1*  active    idle   4        10.93.58.180              
+
+Machine  State    Address       Inst id        Base          AZ  Message
+4        started  10.93.58.180  juju-b14034-4  ubuntu@22.04      Running
+5        started  10.93.58.247  juju-b14034-5  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-3: 02:42:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:42:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:42:44 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 02:42:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:42:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 02:42:46 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:42:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:42:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 02:42:48 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:44:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:44:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:44:05 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-0: 02:50:17 ERROR unit.opensearch/0.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-0: 02:50:23 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:50:25 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:50:25 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:50:25 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:50:28 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:50:31 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:50:34 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:03 ERROR unit.opensearch/2.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-2: 02:53:07 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:08 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:09 ERROR unit.opensearch/2.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:10 ERROR unit.opensearch/2.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:11 ERROR unit.opensearch/2.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:12 ERROR unit.opensearch/2.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:13 ERROR unit.opensearch/2.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:14 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:15 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:16 ERROR unit.opensearch/2.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:17 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:18 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:19 ERROR unit.opensearch/2.juju-log upgrade-version-a:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:20 ERROR unit.opensearch/2.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:21 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:21 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:53:23 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:56:52 ERROR unit.opensearch/1.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-1: 02:56:56 ERROR unit.opensearch/1.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:56:57 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:56:58 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:56:59 ERROR unit.opensearch/1.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:57:00 ERROR unit.opensearch/1.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:59:36 ERROR juju.worker.uniter resolver loop error: preparing operation "run relation-departed (2; unit: opensearch/1, departee: opensearch/0) hook" for opensearch/0: secret "secret:cscrbqtgum0hsjm5m190" not found (not found)
+unit-opensearch-0: 02:59:36 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "run relation-departed (2; unit: opensearch/1, departee: opensearch/0) hook" for opensearch/0: secret "secret:cscrbqtgum0hsjm5m190" not found (not found)
+unit-opensearch-1: 02:59:44 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:59:44 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:59:50 ERROR unit.opensearch/2.juju-log certificates:3: Error reading secret: 'NoneType' object has no attribute 'get'
+unit-opensearch-0: 02:59:51 ERROR unit.opensearch/0.juju-log Failed to add voting exclusion: opensearch-0.8fb.
+unit-opensearch-1: 02:59:55 ERROR unit.opensearch/1.juju-log certificates:3: Error reading secret: 'NoneType' object has no attribute 'get'
+unit-opensearch-0: 03:00:06 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 03:00:21 ERROR unit.opensearch/0.juju-log certificates:3: Error reading secret: 'NoneType' object has no attribute 'get'
+machine-4: 03:02:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 03:02:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-1: 03:02:23 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 03:04:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 03:04:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-3: 03:04:15 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-3: 03:05:59 ERROR unit.opensearch/3.juju-log certificates:7: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-3: 03:06:05 ERROR unit.opensearch/3.juju-log certificates:7: Cannot connect to the OpenSearch server...
+unit-opensearch-3: 03:06:05 ERROR unit.opensearch/3.juju-log certificates:7: Cannot connect to the OpenSearch server...
+unit-opensearch-3: 03:06:05 ERROR unit.opensearch/3.juju-log certificates:7: Cannot connect to the OpenSearch server...
+unit-opensearch-3: 03:06:08 ERROR unit.opensearch/3.juju-log certificates:7: Cannot connect to the OpenSearch server...
+unit-opensearch-3: 03:06:11 ERROR unit.opensearch/3.juju-log certificates:7: Cannot connect to the OpenSearch server...
+unit-opensearch-3: 03:06:14 ERROR unit.opensearch/3.juju-log certificates:7: Cannot connect to the OpenSearch server...
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
