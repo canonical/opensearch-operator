@@ -267,7 +267,14 @@ class OpenSearchTLS(Object):
                 return
 
         for relation in self.charm.opensearch_provider.relations:
-            self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
+            try:
+                self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
+            except KeyError:
+                # As we are setting the ca_chain, it should not be likely to happen a KeyError at
+                # update_certs. This logic is left for a very corner case.
+                logger.error("Error updating certificates in the relation: ca_chain not set.")
+                event.defer()
+                return
 
         # broadcast secret updates for certs and CA to related sub-clusters
         if self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_provider(typ="main"):

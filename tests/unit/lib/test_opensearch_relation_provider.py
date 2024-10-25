@@ -18,6 +18,7 @@ from charms.opensearch.v0.constants_charm import (
     NodeLockRelationName,
     PeerRelationName,
 )
+from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import (
     App,
@@ -521,3 +522,21 @@ class TestOpenSearchProvider(unittest.TestCase):
         mock_remove_role.assert_called_once_with(
             f"{ClientRelationName}_{self.client_second_rel_id}"
         )
+
+    @patch("ops.model.Unit.is_leader")
+    @patch("charms.opensearch.v0.opensearch_secrets.OpenSearchSecrets.get_object")
+    def test_update_certs(
+        self,
+        mock_get_object,
+        mock_is_leader,
+    ):
+        event = MagicMock()
+        mock_get_object.return_value = {"some_expected_key": "some_value"}
+        mock_is_leader.return_value = True
+        try:
+            self.opensearch_provider.update_certs(event)
+        except KeyError as e:
+            self.assertEqual(str(e), "'chain'")
+        else:
+            self.fail("KeyError not raised")
+        mock_get_object.assert_called_once_with(Scope.APP, CertType.APP_ADMIN.val)
