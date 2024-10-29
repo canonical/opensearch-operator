@@ -634,7 +634,11 @@ class OpenSearchPeerClustersManager:
                 id=credentials["admin_tls"]
             ).get_content()
 
-        if "s3" in credentials:
+        if (
+            "s3" in credentials
+            and credentials["s3"].get("access_key")
+            and credentials["s3"].get("secret_key")
+        ):
             credentials["s3"] = S3RelDataCredentials(
                 access_key=credentials["s3"]["access_key"],
                 secret_key=credentials["s3"]["secret_key"],
