@@ -575,7 +575,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if admin_tls := self.secrets.get_secret_id(Scope.APP, CertType.APP_ADMIN.val):
             redacted_dict["credentials"]["admin_tls"] = admin_tls
 
-        if rel_data.credentials.s3:
+        if (
+            rel_data.credentials.s3
+            and rel_data.credentials.s3.access_key
+            and rel_data.credentials.s3.secret_key
+        ):
             redacted_dict["credentials"]["s3"] = {
                 "access_key": self.secrets.get_secret_id(Scope.APP, "access-key"),
                 "secret_key": self.secrets.get_secret_id(Scope.APP, "access-key"),
