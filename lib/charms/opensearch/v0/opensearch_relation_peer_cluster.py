@@ -596,8 +596,14 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             for rel_id in all_rel_ids:
                 if relation := self.get_rel(rel_id=rel_id):
                     if key == "s3":
-                        self.secrets.grant_secret_to_relation(secret_id["access_key"], relation)
-                        self.secrets.grant_secret_to_relation(secret_id["secret_key"], relation)
+                        if secret_id["access_key"]:
+                            self.secrets.grant_secret_to_relation(
+                                secret_id["access_key"], relation
+                            )
+                        if secret_id["secret_key"]:
+                            self.secrets.grant_secret_to_relation(
+                                secret_id["secret_key"], relation
+                            )
                     else:
                         self.secrets.grant_secret_to_relation(secret_id, relation)
 
