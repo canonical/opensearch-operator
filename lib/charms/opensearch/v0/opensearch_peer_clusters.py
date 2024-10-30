@@ -38,7 +38,6 @@ from charms.opensearch.v0.models import (
     PeerClusterConfig,
     PeerClusterOrchestrators,
     PeerClusterRelData,
-    S3RelDataCredentials,
     StartMode,
     State,
 )
@@ -636,12 +635,14 @@ class OpenSearchPeerClustersManager:
 
         if (
             "s3" in credentials
-            and credentials["s3"].get("access_key")
-            and credentials["s3"].get("secret_key")
+            and credentials["s3"].get("access-key")
+            and credentials["s3"].get("secret-key")
         ):
-            credentials["s3"] = S3RelDataCredentials(
-                access_key=credentials["s3"]["access_key"],
-                secret_key=credentials["s3"]["secret_key"],
-            )
-
+            credentials["s3"]["access-key"] = self._charm.model.get_secret(
+                id=credentials["s3"]["access-key"]
+            ).get_content()
+            credentials["s3"]["secret-key"] = self._charm.model.get_secret(
+                id=credentials["s3"]["secret-key"]
+            ).get_content()
+        logging.log(logging.DEBUG, f"PeerClusterRelData.from_dict: {content}")
         return PeerClusterRelData.from_dict(content)

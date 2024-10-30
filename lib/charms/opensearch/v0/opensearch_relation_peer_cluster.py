@@ -581,8 +581,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             and rel_data.credentials.s3.secret_key
         ):
             redacted_dict["credentials"]["s3"] = {
-                "access_key": self.secrets.get_secret_id(Scope.APP, "access-key"),
-                "secret_key": self.secrets.get_secret_id(Scope.APP, "access-key"),
+                "access-key": self.secrets.get_secret_id(Scope.APP, "access-key"),
+                "secret-key": self.secrets.get_secret_id(Scope.APP, "access-key"),
             }
 
         return redacted_dict
