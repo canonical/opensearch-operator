@@ -743,9 +743,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.status.clear(PluginConfigCheck, app=True)
                 self.status.clear(PluginConfigChangeError, app=True)
 
-        perf_profile_needs_restart = self.performance_profile.apply(
-            self.config.get(PERFORMANCE_PROFILE)
-        )
+        if self.opensearch_peer_cm.deployment_desc():
+            perf_profile_needs_restart = self.performance_profile.apply(
+                self.config.get(PERFORMANCE_PROFILE)
+            )
+        else:
+            event.defer()
+            return
+
         if plugin_needs_restart or perf_profile_needs_restart:
             self._restart_opensearch_event.emit()
 
