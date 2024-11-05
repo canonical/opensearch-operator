@@ -395,18 +395,25 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 return None
 
             # As the main orchestrator, this application must set the S3 information.
+            access_key = self.charm.backup.s3_client.get_s3_connection_info().get("access-key")
+            secret_key = self.charm.backup.s3_client.get_s3_connection_info().get("secret-key")
+
+            # set the secrets in the charm
+            self.charm.secrets.put(Scope.APP, "s3-access-key", access_key)
+            self.charm.secrets.put(Scope.APP, "s3-secret-key", secret_key)
+
             return S3RelDataCredentials(
-                access_key=self.charm.backup.s3_client.get_s3_connection_info().get("access-key"),
-                secret_key=self.charm.backup.s3_client.get_s3_connection_info().get("secret-key"),
+                access_key=access_key,
+                secret_key=secret_key,
             )
 
-        if not self.charm.secrets.get(Scope.APP, "access-key"):
+        if not self.charm.secrets.get(Scope.APP, "s3-access-key"):
             return None
 
         # Return what we have received from the peer relation
         return S3RelDataCredentials(
-            access_key=self.charm.secrets.get(Scope.APP, "access-key"),
-            secret_key=self.charm.secrets.get(Scope.APP, "secret-key"),
+            access_key=self.charm.secrets.get(Scope.APP, "s3-access-key"),
+            secret_key=self.charm.secrets.get(Scope.APP, "s3-secret-key"),
         )
 
     def _rel_data(
@@ -581,8 +588,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             and rel_data.credentials.s3.secret_key
         ):
             redacted_dict["credentials"]["s3"] = {
-                "access-key": self.secrets.get_secret_id(Scope.APP, "access-key"),
-                "secret-key": self.secrets.get_secret_id(Scope.APP, "access-key"),
+                "access-key": self.secrets.get_secret_id(Scope.APP, "s3-access-key"),
+                "secret-key": self.secrets.get_secret_id(Scope.APP, "s3-secret-key"),
             }
 
         return redacted_dict
@@ -600,13 +607,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             for rel_id in all_rel_ids:
                 if relation := self.get_rel(rel_id=rel_id):
                     if key == "s3":
-                        if secret_id["access_key"]:
+                        if secret_id["access-key"]:
                             self.secrets.grant_secret_to_relation(
-                                secret_id["access_key"], relation
+                                secret_id["access-key"], relation
                             )
-                        if secret_id["secret_key"]:
+                        if secret_id["secret-key"]:
                             self.secrets.grant_secret_to_relation(
-                                secret_id["secret_key"], relation
+                                secret_id["secret-key"], relation
                             )
                     else:
                         self.secrets.grant_secret_to_relation(secret_id, relation)

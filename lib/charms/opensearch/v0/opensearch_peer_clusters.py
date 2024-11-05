@@ -638,11 +638,14 @@ class OpenSearchPeerClustersManager:
             and credentials["s3"].get("access-key")
             and credentials["s3"].get("secret-key")
         ):
-            credentials["s3"]["access-key"] = self._charm.model.get_secret(
-                id=credentials["s3"]["access-key"]
-            ).get_content()
-            credentials["s3"]["secret-key"] = self._charm.model.get_secret(
-                id=credentials["s3"]["secret-key"]
-            ).get_content()
-        logging.log(logging.DEBUG, f"PeerClusterRelData.from_dict: {content}")
+            credentials["s3"]["access-key"] = (
+                self._charm.model.get_secret(id=credentials["s3"]["access-key"])
+                .get_content()
+                .get("s3-access-key")
+            )
+            credentials["s3"]["secret-key"] = (
+                self._charm.model.get_secret(id=credentials["s3"]["secret-key"])
+                .get_content()
+                .get("s3-secret-key")
+            )
         return PeerClusterRelData.from_dict(content)
