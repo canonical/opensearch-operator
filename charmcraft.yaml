@@ -13,25 +13,41 @@ parts:
   files:
     plugin: dump
     source: .
+    build-packages:
+      - git
+    override-build: |
+      # Workaround to add unique identifier (git hash) to charm version while specification
+      # DA053 - Charm versioning
+      # (https://docs.google.com/document/d/1Jv1jhWLl8ejK3iJn7Q3VbCIM9GIhp8926bgXpdtx-Sg/edit?pli=1)
+      # is pending review.
+      python3 -c 'import pathlib; import shutil; import subprocess; git_hash=subprocess.run(["git", "describe", "--always", "--dirty"], capture_output=True, check=True, encoding="utf-8").stdout; file = pathlib.Path("charm_version"); shutil.copy(file, pathlib.Path("charm_version.backup")); version = file.read_text().strip(); file.write_text(f"{version}+{git_hash}")'
+
+      craftctl default
+    stage:
+      # Exclude requirements.txt file during staging
+      # Workaround for https://github.com/canonical/charmcraft/issues/1389 on charmcraft 2
+      - -requirements.txt
     prime:
       - charm_version
       - workload_version
   charm:
-    override-pull: |
-      craftctl default
-      if [[ ! -f requirements.txt ]]
-      then
-          echo 'ERROR: Use "tox run -e build-dev" instead of calling "charmcraft pack" directly' >&2
-          exit 1
-      fi
-    override-build: |
-      rustup default stable
-      craftctl default
-    charm-strict-dependencies: true
-    charm-entrypoint: src/charm.py
     build-snaps:
       - rustup
     build-packages:
       - libffi-dev
       - libssl-dev
       - pkg-config
+    override-build: |
+      rustup default stable
+
+      # Convert subset of poetry.lock to requirements.txt
+      curl -sSL https://install.python-poetry.org | python3 -
+      /root/.local/bin/poetry export --only main,charm-libs --output requirements.txt
+
+      craftctl default
+    stage:
+      # Exclude charm_version file during staging
+      - -charm_version
+    charm-strict-dependencies: true
+    charm-requirements: [requirements.txt]
+    charm-entrypoint: src/charm.py

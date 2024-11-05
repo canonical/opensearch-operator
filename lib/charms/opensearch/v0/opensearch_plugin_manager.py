@@ -388,7 +388,7 @@ class OpenSearchPluginManager:
             if any(k in keys_available for k in keys_to_del):
                 return False
         except (KeyError, OpenSearchPluginError) as e:
-            logger.warning(f"_is_enabled: error with {e}")
+            logger.debug(f"_is_enabled: error with {e}")
             return False
         return True
 
