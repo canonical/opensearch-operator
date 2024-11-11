@@ -67,6 +67,10 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
+class OpenSearchTlsRotationWaitNextHookError(OpenSearchError):
+    """We wait for the next hook to finish the TLS rotation."""
+
+
 class OpenSearchTLS(Object):
     """Class that Manages OpenSearch relation with TLS Certificates Operator."""
 
@@ -98,6 +102,18 @@ class OpenSearchTLS(Object):
         self.framework.observe(
             self.certs.on.certificate_invalidated, self._on_certificate_invalidated
         )
+        # We want to avoid a corner case where the leader is the first unit to receive a certificate-available
+        # at CA rotation. It takes the lock (as the leader, it can execute the lock itself rightaway)
+        # which then moves from tls_ca_renewing=True, to `delete tls_ca_renewing` and set tls_ca_renewed=True
+        # That would happen on the call within _on_certificate_available's self.charm.on_tls_ca_rotation()
+        # Once that happens, the leader can still continue to run within the same hook and proceed with
+        # its _on_certificate_available call, reaching: self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
+        # there it could execute the reload successfully and re-execute: reset_ca_rotation_state
+        # Finally, that removes the `tls_ca_renewed` from the databag.
+
+        # Therefore, this boolean exists: we will force the reset_ca_rotation_state to wait a whole hook
+        # between the two calls of reset_ca_rotation_state.
+        self.moved_to_tls_ca_renewed = False
 
     def _on_set_tls_private_key(self, event: ActionEvent) -> None:
         """Set the TLS private key, which will be used for requesting the certificate."""
@@ -210,23 +226,29 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
-        if not self.ca_rotation_complete_in_cluster():
-            event.defer()
-            return
-
         old_cert = secrets.get("cert", None)
         ca_chain = "\n".join(event.chain[::-1])
 
-        self.charm.secrets.put_object(
-            scope,
-            cert_type.val,
-            {
-                "chain": ca_chain,
-                "cert": event.certificate,
-                "ca-cert": event.ca,
-            },
-            merge=True,
-        )
+        current_secret_obj = self.charm.secrets.get_object(scope, cert_type.val) or {}
+        secret = {
+            "chain": current_secret_obj.get("chain"),
+            "cert": current_secret_obj.get("cert"),
+            "ca-cert": current_secret_obj.get("ca-cert"),
+        }
+
+        if secret != {"chain": ca_chain, "cert": event.certificate, "ca-cert": event.ca}:
+            # Juju is not able to check if secrets' content changed between revisions
+            # this IF is intended to reduce a storm of secret-removed/-changed events for the same content
+            self.charm.secrets.put_object(
+                scope,
+                cert_type.val,
+                {
+                    "chain": ca_chain,
+                    "cert": event.certificate,
+                    "ca-cert": event.ca,
+                },
+                merge=True,
+            )
 
         current_stored_ca = self.read_stored_ca()
         if current_stored_ca != event.ca:
@@ -246,6 +268,11 @@ class OpenSearchTLS(Object):
                 )
                 self.charm.on_tls_ca_rotation()
                 return
+
+#        elif not self.ca_rotation_complete_in_cluster():
+#            # We have same current_stored_ca and event.ca, but we are executing the rotation
+#            event.defer()
+#            return
 
         # store the certificates and keys in a key store
         self.store_new_tls_resources(
@@ -858,12 +885,16 @@ class OpenSearchTLS(Object):
             self.update_ca_rotation_flag_to_peer_cluster_relation(
                 flag="tls_ca_renewed", operation="remove"
             )
+            self.moved_to_tls_ca_renewed = True
         else:
+#        elif not self.moved_to_tls_ca_renewed:
             # this means only the CA rotation completed, still need to create certificates
             self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewed", True)
             self.update_ca_rotation_flag_to_peer_cluster_relation(
                 flag="tls_ca_renewed", operation="add"
             )
+#        else:
+#            raise OpenSearchTlsRotationWaitNextHookError()
 
     def ca_rotation_complete_in_cluster(self) -> bool:
         """Check whether the CA rotation completed in all units."""

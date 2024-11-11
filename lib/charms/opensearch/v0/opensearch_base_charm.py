@@ -859,10 +859,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.tls.is_fully_configured():
                 try:
                     self.tls.reload_tls_certificates()
-                except OpenSearchHttpError:
-                    logger.error("Could not reload TLS certificates via API, will restart.")
-                    self._restart_opensearch_event.emit()
-                else:
                     self.status.clear(TLSNotFullyConfigured)
                     self.tls.reset_ca_rotation_state()
                     # if all certs are stored and CA rotation is complete in the cluster
@@ -873,6 +869,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     ):
                         logger.info("on_tls_conf_set: Detected CA rotation complete in cluster")
                         self.tls.on_ca_certs_rotation_complete()
+
+                except OpenSearchHttpError:
+                    logger.error("Could not reload TLS certificates via API, will restart.")
+                    self._restart_opensearch_event.emit()
 
             else:
                 event.defer()
