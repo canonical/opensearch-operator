@@ -21,25 +21,7 @@ The module offers the following configurable inputs:
 | `revision`| number | Revision number of the charm name | False |
 | `units`| number | Number of units to be deployed | False |
 | `constraints`| string | Machine constraints for the charm | False |
-| `storage`| map(object) | Storage configuration, check the section below | False |
 
-
-#### Storage
-The `storage` input follows the schema defined by [Juju provider]( https://registry.terraform.io/providers/juju/juju/latest/docs/resources/application#nested-schema-for-storage), for example:
-```
-module "opensearch" {
-    ...
-
-    storage {
-        opensearch-data = {
-            label = ""
-            pool = ""
-            size = "10G"
-            count = 1
-        }
-    }
-}
-```
 
 ### Outputs
 Upon applied, the module exports the following outputs:
@@ -48,7 +30,7 @@ Upon applied, the module exports the following outputs:
 | - | - |
 | `app_name`|  Application name |
 | `provides`| Map of `provides` endpoints |
-| `requires`|  Map of `reqruires` endpoints |
+| `requires`| Map of `requires` endpoints |
 
 ## Usage
 
