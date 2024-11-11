@@ -83,7 +83,7 @@ class TestOpenSearchTLS(unittest.TestCase):
 
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     def setUp(self, _) -> None:
-        self.skipTest('module not tested')
+        self.skipTest("TODO: remove this skip")
 
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
