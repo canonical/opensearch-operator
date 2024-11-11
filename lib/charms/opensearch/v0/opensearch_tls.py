@@ -222,7 +222,8 @@ class OpenSearchTLS(Object):
 
         if secret != {"chain": ca_chain, "cert": event.certificate, "ca-cert": event.ca}:
             # Juju is not able to check if secrets' content changed between revisions
-            # this IF is intended to reduce a storm of secret-removed/-changed events for the same content
+            # this IF is intended to reduce a storm of secret-removed/-changed events
+            # for the same content
             self.charm.secrets.put_object(
                 scope,
                 cert_type.val,
@@ -864,7 +865,6 @@ class OpenSearchTLS(Object):
             self.update_ca_rotation_flag_to_peer_cluster_relation(
                 flag="tls_ca_renewed", operation="remove"
             )
-            self.moved_to_tls_ca_renewed = True
         else:
             # this means only the CA rotation completed, still need to create certificates
             self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewed", True)
