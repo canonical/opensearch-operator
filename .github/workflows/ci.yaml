@@ -35,13 +35,21 @@ jobs:
   terraform-test:
     name: Terraform - Lint and Simple Deployment
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 120
     steps:
       - name: lint charm module
         run: |
-          terraform validate -test-directory="./terraform"
-          terraform validate -test-directory="./terraform/tests"
-          terraform fmt -recursive
+          pushd ./terraform
+          terraform init
+          terraform fmt
+          terraform validate
+
+          pushd ./tests
+          terraform init
+          terraform fmt
+          terraform validate
+          popd
+          popd
 
       - name: run checks - prepare
         run: |
@@ -66,7 +74,7 @@ jobs:
           juju model-defaults logging-config='<root>=INFO; unit=DEBUG'
           juju add-model test
 
-      - name: deploy
+      - name: Terraform deploy
         run: |
           pushd terraform/tests/
           terraform init
