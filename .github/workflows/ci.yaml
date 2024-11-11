@@ -32,6 +32,34 @@ jobs:
       - name: Run tests
         run: tox run -e unit
 
+  terraform-test:
+    name: Terraform - Lint and Simple Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: lint charm module
+        run: |
+          terraform validate -test-directory="./terraform"
+          terraform validate -test-directory="./terraform/tests"
+          terraform fmt -recursive
+      - name: run checks - prepare
+        run: |
+          sudo snap install juju --channel=3.6/beta --classic
+          sudo snap install juju-wait --channel=3.6/beta --classic
+          sudo snap install jq
+          sudo snap install lxd --channel=latest/stable --classic || true
+          sudo lxd init --auto
+      - name: Juju setup
+        run: |
+          juju bootstrap localhost
+          juju add-model test
+      - name: run checks - prepare
+        run: |
+          pushd terraform/tests/
+          terraform init
+          TF_VAR_model_name=test terraform apply -target null_resource.simple_deployment_juju_wait_deployment -auto-approve
+          popd
+
 
   lib-check:
     name: Check libraries
