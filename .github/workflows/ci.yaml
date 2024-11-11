@@ -44,6 +44,7 @@ jobs:
 
       - name: lint charm module
         run: |
+          # shellcheck disable=SC2209                  
           pushd ./terraform
           terraform init
           terraform fmt
@@ -79,8 +80,10 @@ jobs:
           juju model-defaults logging-config='<root>=INFO; unit=DEBUG'
           juju add-model test
 
+      - name: Terraform deploy
+        run: |
+          # shellcheck disable=SC2209
           pushd ./terraform/tests/
-          terraform init
           TF_VAR_model_name=test terraform apply -target null_resource.simple_deployment_juju_wait_deployment -auto-approve
           popd
 
