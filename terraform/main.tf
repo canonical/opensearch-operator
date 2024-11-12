@@ -26,11 +26,11 @@ resource "juju_application" "opensearch" {
 
   lifecycle {
     precondition {
-      condition     = length(var.machines) == var.units
+      condition     = length(var.machines) == 0 || (length(var.machines) > 0 && length(var.machines) == var.units)
       error_message = "Machine count does not match unit count"
     }
     precondition {
-      condition     = length(var.storage["count"]) <= 1
+      condition     = length(var.storage) == 0 || (length(var.storage) > 0 && (lookup(var.storage, "count", 0) <= 1) && (lookup(var.storage, "count", 0) > 0))
       error_message = "Only one storage is supported"
     }
   }
