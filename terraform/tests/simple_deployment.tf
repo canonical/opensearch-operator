@@ -1,7 +1,7 @@
 module "opensearch" {
   source     = "../"
   app_name   = var.app_name
-  model_name = var.model_name
+  model = var.model_name
   units      = var.simple_opensearch_units
   config = {
     profile = "testing"

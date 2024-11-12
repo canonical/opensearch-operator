@@ -1,3 +1,6 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 variable "app_name" {
   description = "Application name"
   type        = string
@@ -22,7 +25,7 @@ variable "config" {
   default     = {}
 }
 
-variable "model_name" {
+variable "model" {
   description = "Model name"
   type        = string
 }
@@ -40,7 +43,25 @@ variable "units" {
 }
 
 variable "constraints" {
-  description = "Map of constraints"
+  description = "String listing constraints for this application"
   type        = string
   default     = "arch=amd64"
+}
+
+variable "machines" {
+  description = "List of machines for placement"
+  type        = list(string)
+  default     = []
+}
+
+variable "storage" {
+  description = "Map of storage used by the application"
+  type        = map(string)
+  default     = {}
+}
+
+variable "endpoint_bindings" {
+  description = "Map of endpoint bindings"
+  type        = map(string)
+  default     = {}
 }
