@@ -7,6 +7,7 @@ resource "juju_application" "opensearch" {
     name     = "opensearch"
     channel  = var.channel
     revision = var.revision
+    base     = var.base
   }
   config      = var.config
   model       = var.model
@@ -14,7 +15,10 @@ resource "juju_application" "opensearch" {
   units       = var.units
   constraints = var.constraints
 
-  placement = join(",", var.machines)
+
+  # TODO: uncomment once final fixes have been added for:
+  # Error: juju/terraform-provider-juju#443, juju/terraform-provider-juju#182
+  # placement = join(",", var.machines)
 
   endpoint_bindings = [
     for k, v in var.endpoint_bindings : {
