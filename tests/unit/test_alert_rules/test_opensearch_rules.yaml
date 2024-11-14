@@ -1,0 +1,133 @@
+rule_files:
+  - ../../../src/alert_rules/prometheus/prometheus_alerts.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'opensearch_cluster_status{cluster="opensearch-x7zb"}'
+        values: '2x3'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: OpenSearchClusterNotHealthy
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              cluster: opensearch-x7zb
+            exp_annotations:
+              message: "Cluster opensearch-x7zb health status has been RED for at least 2m. Cluster does not accept writes, shards may be missing or master node hasn't been elected yet."
+              summary: "Cluster health status is RED"
+
+  - interval: 1m
+    input_series:
+      - series: 'opensearch_cluster_status{cluster="opensearch-x7zb"}'
+        values: '1x21'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: OpenSearchClusterNotHealthy
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              cluster: opensearch-x7zb
+            exp_annotations:
+              message: "Cluster opensearch-x7zb health status has been YELLOW for at least 20m."
+              summary: "Cluster health status is YELLOW"
+
+  - interval: 1m
+    input_series:
+      - series: 'opensearch_fs_path_available_bytes{cluster="opensearch-x7zb", instance="10.1.156.70:9200", node="opensearch-0.fa9"}'
+        values: '69802552852x10' # just 70 GB available
+      - series: 'opensearch_fs_path_total_bytes{cluster="opensearch-x7zb", instance="10.1.156.70:9200", node="opensearch-0.fa9"}'
+        values: '498589663232x10' # HD with 500 GB
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: OpenSearchNodeDiskWatermarkReached
+        exp_alerts:
+          - exp_labels:
+              severity: alert
+              cluster: opensearch-x7zb
+              instance: 10.1.156.70:9200
+              node: opensearch-0.fa9
+            exp_annotations:
+              message: "Disk Low Watermark Reached at opensearch-0.fa9 node in opensearch-x7zb cluster. Shards can not be allocated to this node anymore. You should consider adding more disk to the node."
+              summary: "Disk Low Watermark Reached - disk saturation is 86%"
+
+  - interval: 1m
+    input_series:
+      - series: 'opensearch_fs_path_available_bytes{cluster="opensearch-x7zb", instance="10.1.156.70:9200", node="opensearch-0.fa9"}'
+        values: '44873069690x10' # just 45 GB available
+      - series: 'opensearch_fs_path_total_bytes{cluster="opensearch-x7zb", instance="10.1.156.70:9200", node="opensearch-0.fa9"}'
+        values: '498589663232x10' # HD with 500 GB
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: OpenSearchNodeDiskWatermarkReached
+        # both low and high water mark alerts are triggered
+        exp_alerts:
+          - exp_labels:
+              severity: alert
+              cluster: opensearch-x7zb
+              instance: 10.1.156.70:9200
+              node: opensearch-0.fa9
+            exp_annotations:
+              message: "Disk Low Watermark Reached at opensearch-0.fa9 node in opensearch-x7zb cluster. Shards can not be allocated to this node anymore. You should consider adding more disk to the node."
+              summary: "Disk Low Watermark Reached - disk saturation is 91%"
+          - exp_labels:
+              severity: high
+              cluster: opensearch-x7zb
+              instance: 10.1.156.70:9200
+              node: opensearch-0.fa9
+            exp_annotations:
+              message: "Disk High Watermark Reached at opensearch-0.fa9 node in opensearch-x7zb cluster. Some shards will be re-allocated to different nodes if possible. Make sure more disk space is added to the node or drop old indices allocated to this node."
+              summary: "Disk High Watermark Reached - disk saturation is 91%"
+
+  - interval: 1m
+    input_series:
+      - series: 'opensearch_jvm_mem_heap_used_percent{cluster="opensearch-x7zb", instance="10.1.156.70:9200", node="opensearch-0.fa9"}'
+        values: '76x60'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: OpenSearchJVMHeapUseHigh
+        exp_alerts:
+          - exp_labels:
+              severity: alert
+              cluster: opensearch-x7zb
+              instance: 10.1.156.70:9200
+              node: opensearch-0.fa9
+            exp_annotations:
+              message: "JVM Heap usage on the node opensearch-0.fa9 in opensearch-x7zb cluster is 76%."
+              summary: "JVM Heap usage on the node is high"
+
+  - interval: 1m
+    input_series:
+      - series: 'opensearch_os_cpu_percent{cluster="opensearch-x7zb", instance="10.1.156.70:9200", node="opensearch-0.fa9"}'
+        values: '91x6'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: OpenSearchHostSystemCPUHigh
+        exp_alerts:
+          - exp_labels:
+              severity: alert
+              cluster: opensearch-x7zb
+              instance: 10.1.156.70:9200
+              node: opensearch-0.fa9
+            exp_annotations:
+              message: "System CPU usage on the node opensearch-0.fa9 in opensearch-x7zb cluster is 91%"
+              summary: "System CPU usage is high"
+
+  - interval: 1m
+    input_series:
+      - series: 'opensearch_process_cpu_percent{cluster="opensearch-x7zb", instance="10.1.156.70:9200", node="opensearch-0.fa9"}'
+        values: '91x6'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: OpenSearchProcessCPUHigh
+        exp_alerts:
+          - exp_labels:
+              severity: alert
+              cluster: opensearch-x7zb
+              instance: 10.1.156.70:9200
+              node: opensearch-0.fa9
+            exp_annotations:
+              message: "OSE process CPU usage on the node opensearch-0.fa9 in opensearch-x7zb cluster is 91%"
+              summary: "OSE process CPU usage is high"
