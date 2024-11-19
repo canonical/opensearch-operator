@@ -1580,9 +1580,6 @@ class TestOpenSearchTLS(unittest.TestCase):
     ):
         """Additional 'certificate-available' event while processing CA rotation.
 
-        In case any stage of a CA cert rotation is being processed,
-        further 'certificate-available' events are deferred.
-
         Applies to:
          - any deployment
          - any unit
@@ -1688,9 +1685,6 @@ class TestOpenSearchTLS(unittest.TestCase):
         run_cmd,
     ):
         """Additional 'certificate-available' event while processing CA rotation.
-
-        In case any stage of a CA cert rotation is being processed,
-        further 'certificate-available' events are deferred.
 
         Applies to:
          - any deployment
