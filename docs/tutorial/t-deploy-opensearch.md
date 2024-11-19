@@ -4,8 +4,13 @@
 
 To deploy Charmed OpenSearch, all you need to do is run the following command:
 
+[note]
+**Note:** Charmed OpenSearch supports performance profile. It is recommended in a single host deployment with LXD to use the testing profile, which will only consume 1G RAM per container.
+[/note]
+
+
 ```shell
-juju deploy opensearch -n 3 --channel 2/beta
+juju deploy opensearch -n 3 --channel 2/beta --config profile="testing"
 ```
 
 [note]

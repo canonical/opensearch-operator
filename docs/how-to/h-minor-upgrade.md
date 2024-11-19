@@ -114,10 +114,25 @@ The action will ensure and check the health of OpenSearch and determine if the c
 
 ## Initiate the upgrade
 
+[note type="caution"]
+**Caution**: Charmed OpenSearch supports performance profiles and will have different RAM consumption according to the profile chosen:
+
+* `production`: consumes 50% of the RAM available, up to 32G
+* `staging`: consumes 25% of the RAM available, up to 32G
+* `testing`: consumes 1G of RAM
+
+In case your charm is running on revision prior to `185`, the `testing` profile will be your default value. Ensure you have it set at upgrade and then feel free to switch to another profile that is more suitable to your use-case.
+
+[/note]
+
 Use the juju refresh command to trigger the charm upgrade process. You have control over what upgrade you want to apply:
 - You can upgrade the charm to the latest revision available in the charm store for a specific channel, in this case, the edge channel:
 
     ```shell
+    # If your charm is running a revision prior to 185, then set the profile explicitly:
+    juju refresh opensearch --channel 2/edge --config profile="testing"
+
+    # Otherwise, just refresh
     juju refresh opensearch --channel 2/edge
     ```
 
