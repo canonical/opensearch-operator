@@ -1580,6 +1580,14 @@ class TestOpenSearchTLS(unittest.TestCase):
     ):
         """Additional 'certificate-available' event while processing CA rotation.
 
+        This run represents a 'certificate-available' right before the leader
+        sets the TLS renewal flags in the peer relation.
+
+        In this case, the leader must execute the update logic for itself.
+
+        Remaining units will just wait until the first flags are set, hence
+        will not have `run_cmd` calls.
+
         Applies to:
          - any deployment
          - any unit
@@ -1685,6 +1693,11 @@ class TestOpenSearchTLS(unittest.TestCase):
         run_cmd,
     ):
         """Additional 'certificate-available' event while processing CA rotation.
+
+        In this case, the leader must execute the update logic for itself.
+
+        Remaining units will just wait until the first flags are set, hence
+        will not have `run_cmd` calls.
 
         Applies to:
          - any deployment
