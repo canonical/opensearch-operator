@@ -529,10 +529,10 @@ class OpenSearchPeerClustersManager:
         rel = self._charm.model.get_relation(
             PeerClusterOrchestratorRelationName, orchestrators.main_rel_id
         )
-        if not (redacted_dict_str := rel.data[rel.app].get("data")):
+        if not (data := rel.data[rel.app].get("data")):
             return None
 
-        return self.rel_data_from_redacted_str(redacted_dict_str)
+        return self.rel_data_from_str(data)
 
     def _pre_validate_roles_change(self, new_roles: List[str], prev_roles: List[str]):
         """Validate that the config changes of roles are allowed to happen."""
@@ -595,7 +595,7 @@ class OpenSearchPeerClustersManager:
             else DeploymentType.FAILOVER_ORCHESTRATOR
         )
 
-    def rel_data_from_redacted_str(self, redacted_dict_str: str) -> PeerClusterRelData | None:
+    def rel_data_from_str(self, redacted_dict_str: str) -> PeerClusterRelData:
         """Construct the peer cluster rel data from the secret data."""
         content = json.loads(redacted_dict_str)
         credentials = content["credentials"]

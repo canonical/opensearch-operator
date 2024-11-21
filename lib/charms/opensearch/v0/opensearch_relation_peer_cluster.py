@@ -260,9 +260,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         )
 
         # compute the data that needs to be broadcast to all related clusters (success or error)
+        # if rel_data is an error, prepare to broadcast it to all related clusters
         rel_data = self._rel_data(deployment_desc, orchestrators)
 
-        # if rel_data is an error, prepare to broadcast it to all related clusters
+        # if rel_data is NOT an error, we will replace the plaintext credentials in
+        # the object, with their corresponding secret IDs
         if isinstance(rel_data, PeerClusterRelData):
             rel_data_redacted_dict = self._rel_data_redacted_dict(rel_data)
 
@@ -399,6 +401,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             secret_key = self.charm.backup.s3_client.get_s3_connection_info().get("secret-key")
 
             # set the secrets in the charm
+            # TODO Move this to s3 relation and include both in one secret
             self.charm.secrets.put(Scope.APP, "s3-access-key", access_key)
             self.charm.secrets.put(Scope.APP, "s3-secret-key", secret_key)
 
@@ -553,10 +556,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ]
 
     def _rel_data_redacted_dict(self, rel_data: PeerClusterRelData) -> dict[str, Any]:
-        """Convert the secret data to a dict for storage in a secret."""
-        # If we use the values of the secrets then the size of the secret
-        # would be too large for juju we store the secret ids instead and
-        # fetch the secrets when needed in the requirer side
+        """Replace the secrets' plain text content in the rel data by their IDs."""
+        # hide the secrets and instead pass their ids so that
+        # they can be fetched when needed in the requirer side
         redacted_dict = rel_data.to_dict()
 
         redacted_dict["credentials"] = {
@@ -587,6 +589,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             and rel_data.credentials.s3.access_key
             and rel_data.credentials.s3.secret_key
         ):
+            # TODO Move this to s3 relation and include both in one secret
             redacted_dict["credentials"]["s3"] = {
                 "access-key": self.secrets.get_secret_id(Scope.APP, "s3-access-key"),
                 "secret-key": self.secrets.get_secret_id(Scope.APP, "s3-secret-key"),
@@ -672,7 +675,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             return
 
         # fetch the success data
-        data = self.peer_cm.rel_data_from_redacted_str(data["data"])
+        data = self.peer_cm.rel_data_from_str(data["data"])
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
             return
@@ -913,11 +916,11 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             if rel_id == -1:
                 continue
 
-            redacted_dict_str = self.get_from_rel(key="data", rel_id=rel_id, remote_app=True)
-            if not redacted_dict_str:  # not ready yet
+            data = self.get_from_rel(key="data", rel_id=rel_id, remote_app=True)
+            if not data:  # not ready yet
                 continue
 
-            data = self.peer_cm.rel_data_from_redacted_str(redacted_dict_str)
+            data = self.peer_cm.rel_data_from_str(data)
             cm_nodes = {**cm_nodes, **{node.name: node for node in data.cm_nodes}}
 
         # attempt to have an opensearch reported list of CMs - the response
