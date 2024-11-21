@@ -11,13 +11,23 @@
     "labels":
       "severity": "critical"
 
+  - "alert": "OpenSearchClusterYellowTemp"
+    "annotations":
+      "message": "Cluster {{ $labels.cluster }} health status has been YELLOW for at least 20m. Cluster might be under heavy load."
+      "summary": "Cluster health status is temporarily YELLOW"
+    "expr": |
+      sum by (cluster, instance) (opensearch_cluster_shards_number{type=~"relocating|initializing"}) > 0 and on(cluster, instance) opensearch_cluster_status == 1
+    "for": "20m"
+    "labels":
+      "severity": "warning"
+
   - "alert": "OpenSearchClusterYellow"
     "annotations":
-      "message": "Cluster {{ $labels.cluster }} health status has been YELLOW for at least 20m. Some cluster replicas shards are not allocated."
-      "summary": "Cluster health status is YELLOW"
+      "message": "Cluster {{ $labels.cluster }} health status has been YELLOW with some replica shards unassigned."
+      "summary": "Number of nodes in the cluster might be too low. Consider scaling the application to ensure that it has enough nodes to host all shards."
     "expr": |
-      sum by (cluster) (opensearch_cluster_status == 1)
-    "for": "20m"
+      sum by (cluster, instance) (opensearch_cluster_shards_number{type="unassigned"}) > 0 and on(cluster, instance) opensearch_cluster_status == 1
+    "for": "10m"
     "labels":
       "severity": "warning"
 
