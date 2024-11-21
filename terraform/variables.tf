@@ -10,7 +10,7 @@ variable "app_name" {
 variable "channel" {
   description = "Charm channel"
   type        = string
-  default     = null
+  default     = "2/stable"
 }
 
 variable "base" {
@@ -39,7 +39,7 @@ variable "revision" {
 variable "units" {
   description = "Charm units"
   type        = number
-  default     = 1
+  default     = 3
 }
 
 variable "constraints" {

@@ -21,6 +21,7 @@ The module offers the following configurable inputs:
 | `revision`| number | Revision number of the charm name | False |
 | `units`| number | Number of units to be deployed | False |
 | `constraints`| string | Machine constraints for the charm | False |
+| `storage`| map(string) | Storage description, must follow the juju provider schema | False |
 
 
 ### Outputs
