@@ -717,7 +717,7 @@ class OpenSearchTLS(Object):
             return False
 
         # to make sure the content is processed correctly by openssl, temporary store it in a file
-        tmp_ca_file = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_ca_file = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.tmp)
         tmp_ca_file.write(current_ca)
         tmp_ca_file.flush()
         tmp_ca_file.seek(0)
@@ -822,12 +822,12 @@ class OpenSearchTLS(Object):
         # using the SSL API requires authentication with app-admin cert and key
         admin_secret = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
-        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.tmp)
         tmp_cert.write(admin_secret["cert"])
         tmp_cert.flush()
         tmp_cert.seek(0)
 
-        tmp_key = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_key = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.tmp)
         tmp_key.write(admin_secret["key"])
         tmp_key.flush()
         tmp_key.seek(0)
