@@ -2,6 +2,19 @@
 - "name": "opensearch.alerts"
   "rules":
 
+  # Write requests rates
+  # =====================
+  - record: write:rejected_requests:rate2m
+    expr: rate(opensearch_threadpool_threads_count{name="write", type="rejected"}[2m])
+
+  - record: write:completed_requests:rate2m
+    expr: rate(opensearch_threadpool_threads_count{name="write", type="completed"}[2m])
+
+  # If there are no write rejections then we get can 0/0 which is NaN. This does not affect the
+  # OpenSearchWriteRequestsRejectionJumps alert
+  - record: write:reject_ratio:rate2m
+    expr: sum by (cluster, instance, node) (write:rejected_requests:rate2m) / on (cluster, instance, node) (write:completed_requests:rate2m)
+
   - "alert": "OpenSearchScrapeFailed"
     "annotations":
       "message": "Scrape on {{ $labels.juju_unit }} failed. Ensure that the OpenSearch systemd service is healthy and that the unit is part of the cluster."
@@ -32,12 +45,12 @@
     "labels":
       "severity": "warning"
 
-  - "alert": "OpenSearchBulkRequestsRejectionJumps"
+  - "alert": "OpenSearchWriteRequestsRejectionJumps"
     "annotations":
-      "message": "High Bulk Rejection Ratio at {{ $labels.node }} node in {{ $labels.cluster }} cluster. This node may not be keeping up with the indexing speed."
-      "summary": "High Bulk Rejection Ratio - {{ $value }}%"
+      "message": "High Write Rejection Ratio at {{ $labels.node }} node in {{ $labels.cluster }} cluster. This node may not be keeping up with the indexing speed."
+      "summary": "High Write Rejection Ratio - {{ $value }}%"
     "expr": |
-      round( bulk:reject_ratio:rate2m * 100, 0.001 ) > 5
+      round( write:reject_ratio:rate2m * 100, 0.001 ) > 5
     "for": "10m"
     "labels":
       "severity": "warning"
