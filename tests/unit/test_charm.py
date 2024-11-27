@@ -15,14 +15,14 @@ class TestCharm(TestOpenSearchBaseCharm):
     def setUp(self):
         super().setUp()
 
-    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("os.chown")
     @patch("pwd.getpwnam")
     @patch("grp.getgrnam")
-    def test_store_tls_resources(self, grp_getgrnam, pwd_getpwnam, os_chown, named_temporary_file):
+    def test_store_tls_resources(self, grp_getgrnam, pwd_getpwnam, os_chown):
         """Test the storing of TLS resources."""
         self.charm.tls.certs_path = MagicMock()
         self.charm.tls.jdk_path = MagicMock()
+        self.charm.opensearch.paths.tmp = "tests/unit/"
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             self.charm.tls.certs_path = tmp_dir
