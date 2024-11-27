@@ -1593,6 +1593,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             )
         )
     )
+    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mock to avoid I/O
@@ -1607,6 +1608,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         read_stored_ca,
         deployment_desc,
         run_cmd,
+        named_temporary_file,
     ):
         """Additional 'certificate-available' event while processing CA rotation.
 
@@ -1707,6 +1709,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             )
         )
     )
+    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mock to avoid I/O
@@ -1721,6 +1724,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         read_stored_ca,
         deployment_desc,
         run_cmd,
+        named_temporary_file,
     ):
         """Additional 'certificate-available' event while processing CA rotation.
 
