@@ -244,6 +244,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             metrics_endpoints=[],
             scrape_configs=self._scrape_config,
             refresh_events=[
+                self.on.config_changed,
                 self.on.set_password_action,
                 self.on.secret_changed,
                 self.on[PeerRelationName].relation_changed,

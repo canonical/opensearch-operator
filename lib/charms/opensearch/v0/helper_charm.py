@@ -2,10 +2,12 @@
 # See LICENSE file for licensing details.
 
 """Utility functions for charms related operations."""
+import json
 import logging
 import os
 import re
 import subprocess
+from pathlib import Path
 from time import time_ns
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, List, Union
@@ -15,6 +17,7 @@ from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import App, PeerClusterApp
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
+from data_platform_helpers.version_check import get_charm_revision
 from ops import CharmBase
 from ops.model import ActiveStatus, StatusBase, Unit
 
@@ -228,3 +231,44 @@ def mask_sensitive_information(cmd: str) -> str:
     pattern = re.compile(r"(-tspass\s+|-kspass\s+|-storepass\s+|-new\s+|pass:)(\S+)")
 
     return re.sub(pattern, r"\1" + "xxx", cmd)
+
+
+def update_grafana_dashboards_titles(charm: "OpenSearchBaseCharm") -> None:
+    """Update the titles in the specified directory to include the charm revision."""
+    revision = get_charm_revision(charm.model.unit)
+    path = charm.charm_dir / "src/grafana_dashboards"
+
+    for dashboard_path in path.iterdir():
+        if dashboard_path.is_file() and dashboard_path.suffix == ".json":
+            try:
+                _update_dashboard_title(revision, dashboard_path)
+            except (json.JSONDecodeError, IOError) as e:
+                logger.error("Failed to process %s: %s", dashboard_path.name, str(e))
+        else:
+            logger.warning("%s is not a valid JSON file", dashboard_path.name)
+
+
+def _update_dashboard_title(revision: str, dashboard_path: Path) -> None:
+    """Update the title of a Grafana dashboard file to include the charm revision."""
+    with open(dashboard_path, "r") as file:
+        dashboard = json.load(file)
+
+    old_title = dashboard.get("title")
+    if old_title:
+        title_prefix = old_title.split(" - Rev")[0]
+        new_title = f"{old_title} - Rev {revision}"
+        dashboard["title"] = f"{title_prefix} - Rev {revision}"
+
+        logger.info(
+            "Changing the title of dashboard %s from %s to %s",
+            dashboard_path.name,
+            old_title,
+            new_title,
+        )
+
+        with open(dashboard_path, "w") as file:
+            json.dump(dashboard, file, indent=4)
+    else:
+        logger.warning(
+            "Dashboard %s does not have title and cannot be updated", dashboard_path.name
+        )
