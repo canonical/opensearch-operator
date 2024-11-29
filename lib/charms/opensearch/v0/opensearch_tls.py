@@ -210,23 +210,30 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
-        if not self.ca_rotation_complete_in_cluster():
-            event.defer()
-            return
-
         old_cert = secrets.get("cert", None)
         ca_chain = "\n".join(event.chain[::-1])
 
-        self.charm.secrets.put_object(
-            scope,
-            cert_type.val,
-            {
-                "chain": ca_chain,
-                "cert": event.certificate,
-                "ca-cert": event.ca,
-            },
-            merge=True,
-        )
+        current_secret_obj = self.charm.secrets.get_object(scope, cert_type.val) or {}
+        secret = {
+            "chain": current_secret_obj.get("chain"),
+            "cert": current_secret_obj.get("cert"),
+            "ca-cert": current_secret_obj.get("ca-cert"),
+        }
+
+        if secret != {"chain": ca_chain, "cert": event.certificate, "ca-cert": event.ca}:
+            # Juju is not able to check if secrets' content changed between revisions
+            # this IF is intended to reduce a storm of secret-removed/-changed events
+            # for the same content
+            self.charm.secrets.put_object(
+                scope,
+                cert_type.val,
+                {
+                    "chain": ca_chain,
+                    "cert": event.certificate,
+                    "ca-cert": event.ca,
+                },
+                merge=True,
+            )
 
         current_stored_ca = self.read_stored_ca()
         if current_stored_ca != event.ca:

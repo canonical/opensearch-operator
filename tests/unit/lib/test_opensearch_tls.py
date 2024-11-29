@@ -1580,8 +1580,13 @@ class TestOpenSearchTLS(unittest.TestCase):
     ):
         """Additional 'certificate-available' event while processing CA rotation.
 
-        In case any stage of a CA cert rotation is being processed,
-        further 'certificate-available' events are deferred.
+        This run represents a 'certificate-available' right before the leader
+        sets the TLS renewal flags in the peer relation.
+
+        In this case, the leader must execute the update logic for itself.
+
+        Remaining units will just wait until the first flags are set, hence
+        will not have `run_cmd` calls.
 
         Applies to:
          - any deployment
@@ -1623,7 +1628,6 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         self.harness.set_leader(is_leader=leader)
-        original_status = self.harness.model.unit.status
 
         # This unit is within the process of certificate renewal
         with self.harness.hooks_disabled():
@@ -1633,20 +1637,32 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         self.charm.tls._on_certificate_available(self.charm.on.certificate_available)
 
-        # No action taken, no change on status or certificates
-        assert run_cmd.call_count == 0
-        assert self.harness.model.unit.status == original_status
+        # exactly three run_cmd commands to be executed: checking the current CA for the
+        # admin cert, the unit_http cert and the unit_transport cert
         if leader:
-            self.charm.on.certificate_available.defer.assert_called_once()
+            assert run_cmd.call_count == 3
+            assert self.harness.model.unit.status == MaintenanceStatus(
+                "Applying new CA certificate..."
+            )
+            assert self.secret_store.get_object(Scope.APP, CertType.APP_ADMIN.val) == {
+                "csr": csr,
+                "chain": "new_chain",
+                "keystore-password": "keystore_12345",
+                "truststore-password": "truststore_12345",
+                "ca-cert": "new_ca",
+                "cert": "new_cert",
+            }
         else:
-            self.charm.on.certificate_available.defer.assert_not_called()
-        assert self.secret_store.get_object(Scope.APP, CertType.APP_ADMIN.val) == {
-            "csr": csr,
-            "keystore-password": "keystore_12345",
-            "truststore-password": "truststore_12345",
-            "ca-cert": "old_ca_cert",
-            "cert": "old_cert",
-        }
+            # We have scope == Scope.APP, so we will skip the entire logic
+            assert run_cmd.call_count == 0
+            assert self.harness.model.unit.status == MaintenanceStatus("")
+            assert self.secret_store.get_object(Scope.APP, CertType.APP_ADMIN.val) == {
+                "csr": csr,
+                "keystore-password": "keystore_12345",
+                "truststore-password": "truststore_12345",
+                "ca-cert": "old_ca_cert",
+                "cert": "old_cert",
+            }
 
     # Mock to investigate/compare/alter
     @parameterized.expand(
@@ -1678,8 +1694,10 @@ class TestOpenSearchTLS(unittest.TestCase):
     ):
         """Additional 'certificate-available' event while processing CA rotation.
 
-        In case any stage of a CA cert rotation is being processed,
-        further 'certificate-available' events are deferred.
+        In this case, the leader must execute the update logic for itself.
+
+        Remaining units will just wait until the first flags are set, hence
+        will not have `run_cmd` calls.
 
         Applies to:
          - any deployment
@@ -1721,7 +1739,6 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
 
         self.harness.set_leader(is_leader=leader)
-        original_status = self.harness.model.unit.status
 
         # This unit has updated CA certificate
         # but another unit of the cluster is still within the process
@@ -1736,17 +1753,29 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         self.charm.tls._on_certificate_available(self.charm.on.certificate_available)
 
-        # No action taken, no change on status or certificates
-        assert run_cmd.call_count == 0
-        assert self.harness.model.unit.status == original_status
+        # exactly three run_cmd commands to be executed: checking the current CA for the
+        # admin cert, the unit_http cert and the unit_transport cert
         if leader:
-            self.charm.on.certificate_available.defer.assert_called_once()
+            assert run_cmd.call_count == 3
+            assert self.harness.model.unit.status == MaintenanceStatus(
+                "Applying new CA certificate..."
+            )
+            assert self.secret_store.get_object(Scope.APP, CertType.APP_ADMIN.val) == {
+                "csr": csr,
+                "chain": "new_chain",
+                "keystore-password": "keystore_12345",
+                "truststore-password": "truststore_12345",
+                "ca-cert": "new_ca",
+                "cert": "new_cert",
+            }
         else:
-            self.charm.on.certificate_available.defer.assert_not_called()
-        assert self.secret_store.get_object(Scope.APP, CertType.APP_ADMIN.val) == {
-            "csr": csr,
-            "keystore-password": "keystore_12345",
-            "truststore-password": "truststore_12345",
-            "ca-cert": "old_ca_cert",
-            "cert": "old_cert",
-        }
+            # We have scope == Scope.APP, so we will skip the entire logic
+            assert run_cmd.call_count == 0
+            assert self.harness.model.unit.status == MaintenanceStatus("")
+            assert self.secret_store.get_object(Scope.APP, CertType.APP_ADMIN.val) == {
+                "csr": csr,
+                "keystore-password": "keystore_12345",
+                "truststore-password": "truststore_12345",
+                "ca-cert": "old_ca_cert",
+                "cert": "old_cert",
+            }

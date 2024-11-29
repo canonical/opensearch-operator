@@ -45,6 +45,7 @@ When no roles are set on the `roles` config option of the opensearch application
 There are currently two ways for users to set roles in an application: at deploy time, or via a config change. Note that a role change will effectively trigger a rolling restart of the OpenSearch application.
 
 To set roles at deploy time, run
+
  ```none
  juju deploy opensearch -n 3 --config roles="cluster_manager,data,ml"
 ```
@@ -63,12 +64,25 @@ The cluster will consist of multiple integrated juju applications (clusters) wit
 
 ### Deploy the clusters
 
+[note type="caution"]
+**Caution**: Charmed OpenSearch supports performance profiles and will have different RAM consumption according to the profile chosen:
+
+* `production`: consumes 50% of the RAM available, up to 32G
+* `staging`: consumes 25% of the RAM available, up to 32G
+* `testing`: consumes 1G of RAM
+
+The configuration defaults to `production`, but for the examples below, testing will be chosen as it is assumed the deployment happens on a single LXD cluster.
+
+[/note]
+
 1. First, deploy the orchestrator app.
+
     ```shell
     juju deploy -n 3 \
         opensearch main \
         --config cluster_name="app" \
-        --channel 2/edge
+        --channel 2/edge \
+        --config profile="testing"
     ```
 
     As a reminder, since we did not set any role to this application, the operator will assign each node the `cluster_manager,coordinating_only,data,ingest,ml` roles.
@@ -80,8 +94,9 @@ The failover app will take over the orchestration of the fleet in the events whe
         opensearch failover \
         --config cluster_name="app" \
         --config init_hold="true" \
-        --config roles="cluster_manager" 
-        --channel 2/edge
+        --config roles="cluster_manager"  \
+        --channel 2/edge \
+        --config profile="testing"
     ```
 
    The failover nodes are not required for a basic deployment of OpenSearch. They are however highly recommended for production deployments to ensure high availability and fault tolerance.
@@ -98,7 +113,8 @@ The failover app will take over the orchestration of the fleet in the events whe
          --config cluster_name="app" \
          --config roles="data.hot" \
          --config init_hold="true" \
-         --channel 2/edge 
+         --channel 2/edge \
+         --config profile="testing"
    ```
 
 4. We also need to deploy a TLS operator to enable TLS encryption for the cluster. We will deploy the `self-signed-certificates` charm to provide self-signed certificates for the cluster.

@@ -150,6 +150,10 @@ juju model-config --file=./cloudinit-userdata.yaml
 
 ## Deploy OpenSearch
 
+[note]
+**Note:** Charmed OpenSearch supports performance profile. It is recommended in a single host deployment with LXD to use the testing profile, which will only consume 1G RAM per container.
+[/note]
+
 To deploy OpenSearch, run
 ```shell
 juju deploy opensearch --channel 2/edge
