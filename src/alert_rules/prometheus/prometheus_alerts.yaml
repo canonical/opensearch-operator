@@ -5,15 +5,15 @@
   # Write requests rates
   # =====================
   - record: write:rejected_requests:rate2m
-    expr: rate(opensearch_threadpool_threads_count{name="write", type="rejected"}[2m])
+    expr: sum by (cluster, instance, node) (rate(opensearch_threadpool_threads_count{name="write", type="rejected"}[2m]))
 
-  - record: write:completed_requests:rate2m
-    expr: rate(opensearch_threadpool_threads_count{name="write", type="completed"}[2m])
+  - record: write:total_requests:rate2m
+    expr: sum by (cluster, instance, node) (rate(opensearch_threadpool_threads_count{name="write"}[2m]))
 
   # If there are no write rejections then we get can 0/0 which is NaN. This does not affect the
   # OpenSearchWriteRequestsRejectionJumps alert
   - record: write:reject_ratio:rate2m
-    expr: sum by (cluster, instance, node) (write:rejected_requests:rate2m) / on (cluster, instance, node) (write:completed_requests:rate2m)
+    expr: write:rejected_requests:rate2m / write:total_requests:rate2m
 
   - "alert": "OpenSearchScrapeFailed"
     "annotations":
