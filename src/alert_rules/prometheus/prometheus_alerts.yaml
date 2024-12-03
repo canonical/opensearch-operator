@@ -24,7 +24,7 @@
 
   - "alert": "OpenSearchClusterYellowTemp"
     "annotations":
-      "message": "Cluster {{ $labels.cluster }} health status has been YELLOW for at least 20m. Shards are still still relocating or initializing. The cluster might be under heavy load."
+      "message": "Cluster {{ $labels.cluster }} health status has been YELLOW for at least 20m. Shards are still relocating or initializing. The cluster might be under heavy load."
       "summary": "Cluster health status is temporarily YELLOW"
     "expr": |
       sum by (cluster) (opensearch_cluster_shards_number{type=~"relocating|initializing"}) > 0 and on(cluster) opensearch_cluster_status == 1
