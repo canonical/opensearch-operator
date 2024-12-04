@@ -43,7 +43,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+          BASE_BRANCH="${{ github.event.pull_request.head.ref }}"
           NEW_BRANCH="24.04-cloned-${{ github.event.pull_request.number }}"
           PR_TITLE="Automated PR: 24.04 Changes from ${NEW_BRANCH}"
           PR_BODY="This pull request was created automatically. Will test 24.04 base on the charm."
