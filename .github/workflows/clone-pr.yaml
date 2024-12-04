@@ -1,0 +1,33 @@
+name: Clone PR to test 24.04 base
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  clone-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Install tox
+        run: |
+          pipx install tox
+
+      - name: Run switch to 24.04
+        run: |
+          tox run -e switch-24.04
+
+      - name: Create and push to a new branch
+        run: |
+          NEW_BRANCH="24.04-cloned-${{ github.event.pull_request.number }}"
+          git checkout -b $NEW_BRANCH
+          git add .
+          git commit -m "switch to 24.04"
+          git push origin $NEW_BRANCH
