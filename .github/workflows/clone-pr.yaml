@@ -8,6 +8,7 @@ on:
 
 jobs:
   clone-pr:
+    if: "!startsWith(github.event.pull_request.head.ref, '24.04-cloned')" # Skip if branch starts with "24.04-cloned"
     runs-on: ubuntu-latest
 
     steps:
@@ -37,3 +38,13 @@ jobs:
           git add .
           git commit -m "switch to 24.04"
           git push origin $NEW_BRANCH
+
+      - name: Create a pull request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+          NEW_BRANCH="24.04-cloned-${{ github.event.pull_request.number }}"
+          PR_TITLE="Automated PR: 24.04 Changes from ${NEW_BRANCH}"
+          PR_BODY="This pull request was created automatically. Will test 24.04 base on the charm."
+          gh pr create --title "$PR_TITLE" --body "$PR_BODY" --head "$NEW_BRANCH" --base "$BASE_BRANCH" --repo "${{ github.repository }}"
