@@ -160,6 +160,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not (data := event.relation.data.get(event.app)):
             return
 
+        if self._get_security_index_initialised():
+            self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
+
         # get list of relations with this orchestrator
         target_relation_ids = [
             rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
