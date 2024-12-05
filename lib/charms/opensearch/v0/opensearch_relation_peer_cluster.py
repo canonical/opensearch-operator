@@ -418,6 +418,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                     s3=self._s3_credentials(deployment_desc),
                 ),
                 deployment_desc=deployment_desc,
+                security_index_initialised=self._get_security_index_initialised(),
             )
         except OpenSearchHttpError:
             return PeerClusterRelErrorData(
@@ -519,6 +520,22 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if node.is_cm_eligible() and node.app.id == deployment_desc.app.id
         ]
 
+    def _get_security_index_initialised(self) -> bool:
+        """Check if the security index is initialised."""
+        if self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
+            return True
+
+        # check all other clusters if they have initialised the security index
+        all_relation_ids = [
+            rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
+        ]
+
+        for rel_id in all_relation_ids:
+            if self.get_from_rel("security_index_initialised", rel_id=rel_id, remote_app=True):
+                return True
+
+        return False
+
 
 class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     """Peer cluster relation requirer class."""
@@ -598,6 +615,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # register main and failover cm app names if any
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
 
+        if data.security_index_initialised:
+            self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
+
         # let the charm know this is an already bootstrapped cluster
         self.charm.peers_data.put(Scope.APP, "bootstrapped", True)
 
@@ -643,7 +663,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         )
 
         self.charm.peers_data.put(Scope.APP, "admin_user_initialized", True)
-        if self.charm.alt_hosts:
+        logger.debug(f"PeerClusterRelData: {data.to_dict()}")
+        if data.security_index_initialised:
             self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
 
         if s3_creds := data.credentials.s3:
@@ -679,6 +700,21 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             )
 
         return PeerClusterOrchestrators.from_dict(local_orchestrators)
+
+    def set_security_index_initialised(self) -> None:
+        """Set the security index as initialised."""
+        # get the MAIN orchestrator
+        orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
+        )
+
+        if not orchestrators:
+            return
+
+        # set the security index as initialised in the unit data bag with the main orchestrator
+        self.put_in_rel(
+            data={"security_index_initialised": "true"}, rel_id=orchestrators.main_rel_id
+        )
 
     def _put_current_app(
         self, event: RelationEvent, deployment_desc: DeploymentDescription
