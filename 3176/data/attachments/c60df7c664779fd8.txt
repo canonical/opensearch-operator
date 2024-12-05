@@ -1,0 +1,44 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:05:32Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         maintenance      3  opensearch                                 0  no       Installing OpenSearch...
+s3-integrator                      blocked          1  s3-integrator             latest/edge     85  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports  Message
+opensearch/0                 active       idle       2        10.81.22.141           
+opensearch/1                 active       idle       3        10.81.22.115           
+opensearch/2*                maintenance  executing  4        10.81.22.245           (install) Installing OpenSearch...
+s3-integrator/0*             blocked      idle       1        10.81.22.248           Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/0*  active       idle       0        10.81.22.84            
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.81.22.84   juju-0173c2-0  ubuntu@22.04      Running
+1        started  10.81.22.248  juju-0173c2-1  ubuntu@22.04      Running
+2        started  10.81.22.141  juju-0173c2-2  ubuntu@22.04      Running
+3        started  10.81.22.115  juju-0173c2-3  ubuntu@22.04      Running
+4        started  10.81.22.245  juju-0173c2-4  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 01:48:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:48:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 01:48:02 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:48:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:48:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:48:58 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:49:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:49:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:49:43 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:51:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:51:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:51:14 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:51:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:51:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:51:26 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:174 Cleaning backups from cloud buckets
