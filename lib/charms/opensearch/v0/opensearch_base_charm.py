@@ -403,7 +403,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # when "data" node joins -> start cluster-manager via _on_peer_cluster_relation_changed
         # cluster-manager notifies "data" node via refresh of peer cluster relation data
         # "data" node starts and initializes security index
-        logger.info(f"Deployment description at on start: {deployment_desc}")
         if (
             deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
             and not deployment_desc.start == StartMode.WITH_GENERATED_ROLES
@@ -1063,9 +1062,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Initialization post OpenSearch start."""
         # initialize the security index if needed (and certs written on disk etc.)
         # this happens only on the first data node to join the cluster
-        logger.debug(
-            f"is_leader: {self.unit.is_leader()}, security_index_initialised: {self.peers_data.get(Scope.APP, 'security_index_initialised')}, roles: {self.opensearch_peer_cm.deployment_desc().config.roles}, start: {self.opensearch_peer_cm.deployment_desc().start}"
-        )
         if (
             self.unit.is_leader()
             and not self.peers_data.get(Scope.APP, "security_index_initialised")
