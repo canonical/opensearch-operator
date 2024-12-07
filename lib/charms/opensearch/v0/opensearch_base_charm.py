@@ -711,14 +711,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
             self._handle_change_to_main_orchestrator_if_needed(event, previous_deployment_desc)
 
-        try:
-            if self.upgrade_in_progress:
-                logger.warning(
-                    "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
-                )
-                event.defer()
-                return
+        if self.upgrade_in_progress:
+            logger.warning(
+                "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
+            event.defer()
+            return
 
+        perf_profile_needs_restart = False
+        plugin_needs_restart = False
+
+        try:
             original_status = None
             if self.unit.status.message not in [
                 PluginConfigChangeError,
@@ -728,31 +731,36 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 original_status = self.unit.status
                 self.status.set(MaintenanceStatus(PluginConfigCheck))
 
-            if self.plugin_manager.run():
-                if self.upgrade_in_progress:
-                    logger.warning(
-                        "Changing config during an upgrade is not supported. The charm may be in a broken, "
-                        "unrecoverable state"
-                    )
-                    event.defer()
-                    return
+            plugin_needs_restart = self.plugin_manager.run()
 
-                self._restart_opensearch_event.emit()
-
-        except OpenSearchPluginError as e:
-            logger.warning(f"{PluginConfigChangeError}: {str(e)}")
-            self.status.set(BlockedStatus(PluginConfigChangeError))
+        except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
+            if isinstance(e, OpenSearchNotFullyReadyError):
+                logger.warning("Plugin management: cluster not ready yet at config changed")
+            else:
+                logger.warning(f"{PluginConfigChangeError}: {str(e)}")
+                self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
-            return
+            self.status.clear(PluginConfigCheck)
         except OpenSearchKeystoreNotReadyError:
             logger.warning("Keystore not ready yet")
             # defer, and let it finish the status clearing down below
             event.defer()
+        else:
+            self.status.clear(PluginConfigChangeError)
+            self.status.clear(PluginConfigCheck)
+            if original_status:
+                self.status.set(original_status)
 
-        self.status.clear(PluginConfigChangeError)
-        self.status.clear(PluginConfigCheck)
-        if original_status:
-            self.status.set(original_status)
+        if self.opensearch_peer_cm.deployment_desc():
+            perf_profile_needs_restart = self.performance_profile.apply(
+                self.config.get(PERFORMANCE_PROFILE)
+            )
+        else:
+            event.defer()
+            return
+
+        if plugin_needs_restart or perf_profile_needs_restart:
+            self._restart_opensearch_event.emit()
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""

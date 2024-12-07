@@ -130,6 +130,9 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.charm.opensearch.version = "2.9.0"
         self.plugin_manager._is_cluster_ready = MagicMock(return_value=True)
 
+        self.charm.performance_profile = MagicMock()
+        self.charm.performance_profile.apply = MagicMock(return_value=False)
+
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_enabled")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager._is_installed")
     @patch(
@@ -156,11 +159,12 @@ class TestOpenSearchPlugin(unittest.TestCase):
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
-    def test_check_plugin_called_on_config_changed(self, mock_version, deployment_desc, _) -> None:
+    def test_check_plugin_called_on_config_changed(self, mock_version, deployment_desc) -> None:
         """Triggers a config change and should call plugin manager."""
         self.harness.set_leader(True)
         self.peers_data.put(Scope.APP, "security_index_initialised", True)
         self.harness.set_leader(False)
+        deployment_desc.return_value = "something"
 
         self.plugin_manager.run = MagicMock(return_value=False)
         self.charm.opensearch_config.update_host_if_needed = MagicMock(return_value=False)
