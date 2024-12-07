@@ -414,7 +414,8 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             charm.on[PeerClusterRelationName].relation_departed,
         ]:
             # We need to keep track of the peer-cluster relation
-            # A unit-level secret will not trigger secret changes
+            # A unit-level secret will not trigger secret changes, nor an app-level secret
+            # change will trigger an update in its leader.
 
             # I've discussed this offline with @wallyworld and the main idea
             # is that the unit is already aware of the secret change, why triggering
@@ -429,9 +430,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
 
     @override
     def _on_secret_changed(self, event: EventBase) -> None:
-        """Clean secret from the plugin cache."""
-        secret = event.secret
-
+        """Processes the secret changes."""
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
             return
@@ -439,7 +438,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         if S3_CREDENTIALS not in event.secret.label:
             logger.debug("Secret %s is not s3-credentials, ignoring it.", event.secret.id)
             return
-        secret.get_content(refresh=True)
+        event.secret.get_content(refresh=True)
 
         self._on_peer_cluster_relation_event(event)
 
@@ -455,8 +454,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
                 ).config(),
             )
         except OpenSearchKeystoreNotReadyError:
-            logger.info("Keystore not ready yet, retrying later.")
-            event.defer()
+            logger.info("Keystore not ready yet, we wait for another peer cluster.")
 
     @override
     def _on_s3_relation_event(self, event: EventBase) -> None:
@@ -694,7 +692,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             raise OpenSearchRestoreCheckError("_is_restore_complete: failed to get indices status")
         return not self._is_restore_in_progress()
 
-    def _is_backup_available_for_restore(self, backup_id: int) -> bool:
+    def _is_backup_available_for_restore(self, backup_id: str) -> bool:
         """Checks if the backup_id exists and is ready for a restore."""
         backups = self._list_backups()
         try:
@@ -913,6 +911,9 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
         This method should be called by the charm in its restart callback resolution.
         """
+        if not self.charm.unit.is_leader():
+            logger.debug("apply_api_config_if_needed: only leader can run this method")
+            return
         # Backup relation has been recently made available with all the parameters needed.
         # Steps:
         #     (1) set up as maintenance;
