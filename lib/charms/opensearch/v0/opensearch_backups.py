@@ -103,7 +103,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchNotFullyReadyError,
 )
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyYetError
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
@@ -454,7 +454,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
                     charm=self.charm,
                 ).config(),
             )
-        except OpenSearchKeystoreNotReadyYetError:
+        except OpenSearchKeystoreNotReadyError:
             logger.info("Keystore not ready yet, retrying later.")
             event.defer()
 
@@ -867,7 +867,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             if not self.charm.plugin_manager.is_ready_for_api():
                 raise OpenSearchNotFullyReadyError()
             self.charm.plugin_manager.apply_config(self.plugin.config())
-        except (OpenSearchKeystoreNotReadyYetError, OpenSearchNotFullyReadyError):
+        except (OpenSearchKeystoreNotReadyError, OpenSearchNotFullyReadyError):
             logger.warning("s3-changed: cluster not ready yet")
             event.defer()
             return
@@ -991,7 +991,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         try:
             if self.charm.plugin_manager.status(self.plugin) == PluginState.ENABLED:
                 self.charm.plugin_manager.apply_config(self.plugin.disable())
-        except OpenSearchKeystoreNotReadyYetError:
+        except OpenSearchKeystoreNotReadyError:
             logger.warning("s3-changed: keystore not ready yet")
             event.defer()
             return

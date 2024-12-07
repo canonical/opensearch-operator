@@ -67,7 +67,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyYetError
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_peer_clusters import (
@@ -709,7 +709,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(BlockedStatus(PluginConfigChangeError))
             event.defer()
             return
-        except OpenSearchKeystoreNotReadyYetError:
+        except OpenSearchKeystoreNotReadyError:
             logger.warning("Keystore not ready yet")
             # defer, and let it finish the status clearing down below
             event.defer()

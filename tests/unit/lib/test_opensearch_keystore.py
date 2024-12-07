@@ -54,7 +54,7 @@ class TestOpenSearchKeystore(unittest.TestCase):
         """Add data to keystore."""
         self.charm.opensearch.request = MagicMock(return_value={"status": 200})
         self.charm.opensearch.run_bin = MagicMock(return_value="")
-        self.keystore.add({"key1": "secret1"})
+        self.keystore._add("key1", "secret1")
         self.charm.opensearch.run_bin.assert_has_calls(
             [call("opensearch-keystore", "add --force key1", stdin="secret1\n")]
         )
@@ -63,7 +63,7 @@ class TestOpenSearchKeystore(unittest.TestCase):
         """Delete data to keystore."""
         self.charm.opensearch.request = MagicMock(return_value={"status": 200})
         self.charm.opensearch.run_bin = MagicMock(return_value="")
-        self.keystore.delete({"key1": "secret1"})
+        self.keystore._delete("key1")
         self.charm.opensearch.run_bin.assert_has_calls(
             [call("opensearch-keystore", "remove key1")]
         )

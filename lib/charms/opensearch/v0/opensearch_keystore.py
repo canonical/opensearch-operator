@@ -8,7 +8,7 @@ This module manages OpenSearch keystore access and lifecycle.
 import functools
 import logging
 import os
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -34,7 +34,7 @@ class OpenSearchKeystoreError(OpenSearchError):
     """Exception thrown when an opensearch keystore is invalid."""
 
 
-class OpenSearchKeystoreNotReadyYetError(OpenSearchKeystoreError):
+class OpenSearchKeystoreNotReadyError(OpenSearchKeystoreError):
     """Exception thrown when the keystore is not ready yet."""
 
 
@@ -48,61 +48,33 @@ class Keystore(ABC):
         self._keytool = charm.opensearch.paths.jdk + "/bin/keytool"
         self._keystore = ""
 
-    def list(self, alias: str = None) -> List[str]:
+    @abstractmethod
+    def update(self, entries: Dict[str, Any]) -> None:
+        """Updates the keystore value (adding or removing) and reload.
+
+        Raises:
+            OpenSearchHttpError: If the reload fails.
+        """
+        ...
+
+    @functools.cached_property
+    @abstractmethod
+    def list(self) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
-        try:
-            # Not using OPENSEARCH_BIN path
-            return self._opensearch.run_cmd(self._keytool, f"-v -list -keystore {self._keystore}")
-        except OpenSearchCmdError as e:
-            raise OpenSearchKeystoreError(str(e))
+        ...
 
-    def add(self, entries: Dict[str, str]) -> None:
-        """Adds a new set of entries to the keystore."""
-        if not entries:
-            raise OpenSearchKeystoreError("Missing entries for keystore")
-        if not os.path.exists(self._keystore):
-            raise OpenSearchKeystoreError(f"{self._keystore} not found")
+    def _clean_cache_if_needed(self):
+        if self.list:
+            del self.list
 
-        for key, filename in entries.items():
-            # First, try removing the key, as a new file will be added:
-            try:
-                self.delete([key])
-            except OpenSearchKeystoreError:
-                # Ignore, it means only the alias does not exist yet
-                pass
-            try:
-                # Not using OPENSEARCH_BIN path
-                self._opensearch.run_cmd(
-                    self._keytool,
-                    f"-import -alias {key} "
-                    f"-file {filename} -storetype JKS "
-                    f"-storepass {self.password} "
-                    f"-keystore {self._keystore} -noprompt",
-                )
-            except OpenSearchCmdError as e:
-                raise OpenSearchKeystoreError(str(e))
+    @abstractmethod
+    def reload_keystore(self) -> None:
+        """Updates the keystore value (adding or removing) and reload.
 
-    def delete(self, entries: List[str]) -> None:
-        """Removes a new set of entries to the keystore."""
-        if not os.path.exists(self._keystore):
-            raise OpenSearchKeystoreError(f"{self._keystore} not found")
-
-        for key in entries:
-            try:
-                # Not using OPENSEARCH_BIN path
-                self._opensearch.run_cmd(
-                    self._keytool,
-                    f"-delete -alias {key} "
-                    f"-keystore {self._keystore} "
-                    f"-storepass {self.password} -noprompt",
-                )
-            except OpenSearchCmdError as e:
-                if "does not exist in the keystore" not in str(e):
-                    raise OpenSearchKeystoreError(str(e))
-                logger.info(
-                    "opensearch_keystore.delete:"
-                    f" Key {key} not found in keystore, continuing..."
-                )
+        Raises:
+            OpenSearchHttpError: If the reload fails.
+        """
+        ...
 
 
 class OpenSearchKeystore(Keystore):
@@ -114,26 +86,6 @@ class OpenSearchKeystore(Keystore):
         self._keytool = "opensearch-keystore"
         self.keystore = f"{charm.opensearch.paths.conf}/opensearch.keystore"
 
-    def add(self, entries: Dict[str, str]) -> None:
-        """Adds a given key to the "opensearch" keystore."""
-        if not os.path.exists(self.keystore):
-            raise OpenSearchKeystoreNotReadyYetError()
-
-        if not entries:
-            return  # no key/value to add, no need to request reload of keystore either
-        for key, value in entries.items():
-            self._add(key, value)
-
-    def delete(self, entries: List[str]) -> None:
-        """Removes a given key from "opensearch" keystore."""
-        if not os.path.exists(self.keystore):
-            raise OpenSearchKeystoreNotReadyYetError()
-
-        if not entries:
-            return  # no key/value to remove, no need to request reload of keystore either
-        for key in entries:
-            self._delete(key)
-
     def update(self, entries: Dict[str, Any]) -> None:
         """Updates the keystore value (adding or removing) and reload.
 
@@ -141,7 +93,7 @@ class OpenSearchKeystore(Keystore):
             OpenSearchHttpError: If the reload fails.
         """
         if not os.path.exists(self.keystore):
-            raise OpenSearchKeystoreNotReadyYetError()
+            raise OpenSearchKeystoreNotReadyError()
 
         if not entries:
             return
@@ -156,15 +108,13 @@ class OpenSearchKeystore(Keystore):
     def list(self) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
         if not os.path.exists(self.keystore):
-            raise OpenSearchKeystoreNotReadyYetError()
+            raise OpenSearchKeystoreNotReadyError()
         try:
             return self._opensearch.run_bin(self._keytool, "list").split("\n")
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
     def _add(self, key: str, value: str):
-        if not value:
-            raise OpenSearchKeystoreError("Missing keystore value")
         try:
             # Add newline to the end of the key, if missing
             value += "" if value.endswith("\n") else "\n"
@@ -187,10 +137,6 @@ class OpenSearchKeystore(Keystore):
                 )
                 return
             raise OpenSearchKeystoreError(str(e))
-
-    def _clean_cache_if_needed(self):
-        if self.list:
-            del self.list
 
     def reload_keystore(self) -> None:
         """Updates the keystore value (adding or removing) and reload.

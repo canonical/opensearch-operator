@@ -334,6 +334,7 @@ class S3RelData(Model):
             return "http"
         if endpoint.startswith("https://"):
             return "https"
+
         return "https"
 
     @classmethod

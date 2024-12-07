@@ -23,7 +23,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_keystore import (
     OpenSearchKeystore,
-    OpenSearchKeystoreNotReadyYetError,
+    OpenSearchKeystoreNotReadyError,
 )
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchBackupPlugin,
@@ -121,7 +121,7 @@ class OpenSearchPluginManager:
 
         This method should be called at config-changed event. Returns if needed restart.
         """
-        is_manager_ready = True
+        is_keystore_ready = True
         err_msgs = []
         restart_needed = False
         for plugin in self.plugins:
@@ -153,7 +153,7 @@ class OpenSearchPluginManager:
                 err_msgs.append(str(e))
                 logger.debug(f"Finished Plugin {plugin.name}: error '{str(e)}' found")
 
-            except OpenSearchKeystoreNotReadyYetError:
+            except OpenSearchKeystoreNotReadyError:
                 # Plugin manager must wait until the keystore is to finish its setup.
                 # This separated exception allows to separate this error and process
                 # it differently, once we have inserted all plugins' configs.
@@ -162,16 +162,16 @@ class OpenSearchPluginManager:
                 # We want to apply all configuration changes to the cluster and then
                 # inform the caller this method needs to be reran later to update keystore.
                 # The keystore does not demand a restart, so we can process it later.
-                is_manager_ready = False
+                is_keystore_ready = False
                 logger.debug(f"Finished Plugin {plugin.name} waiting for keystore")
             else:
                 logger.debug(f"Finished Plugin {plugin.name} status: {self.status(plugin)}")
         logger.info(f"Plugin check finished, restart needed: {restart_needed}")
 
-        if not is_manager_ready:
+        if not is_keystore_ready:
             # Next run, configurations above will not change, as they have been applied, and
             # only the missing keystore will be set.
-            raise OpenSearchKeystoreNotReadyYetError()
+            raise OpenSearchKeystoreNotReadyError()
         if err_msgs:
             raise OpenSearchPluginError("\n".join(err_msgs))
         return restart_needed
@@ -300,7 +300,7 @@ class OpenSearchPluginManager:
         if the configuration files have been changed only.
 
         Raises:
-            OpenSearchKeystoreNotReadyYetError: If the keystore is not yet ready.
+            OpenSearchKeystoreNotReadyError: If the keystore is not yet ready.
         """
         # Update the configuration files
         if config.config_entries:
@@ -312,10 +312,10 @@ class OpenSearchPluginManager:
             self._keystore.update(config.secret_entries)
             if config.secret_entries:
                 self._keystore.reload_keystore()
-        except (OpenSearchKeystoreNotReadyYetError, OpenSearchHttpError):
+        except OpenSearchHttpError:
             # We've failed to set the keystore, we need to rerun this method later
             # Postpone the exception now and set the remaining config.
-            raise OpenSearchKeystoreNotReadyYetError()
+            raise OpenSearchKeystoreNotReadyError()
 
         try:
             current_settings, new_conf = self._compute_settings(config)
@@ -362,7 +362,7 @@ class OpenSearchPluginManager:
             else:  # self._user_requested_to_enable(plugin) == False
                 return PluginState.DISABLING_NEEDED
         except (
-            OpenSearchKeystoreNotReadyYetError,
+            OpenSearchKeystoreNotReadyError,
             OpenSearchPluginMissingConfigError,
         ):
             # We are keystore access. Report the plugin is only installed
@@ -386,7 +386,7 @@ class OpenSearchPluginManager:
         Check if the configuration from enable() is present or not.
 
         Raise:
-            OpenSearchKeystoreNotReadyYetError: If the keystore is not yet ready
+            OpenSearchKeystoreNotReadyError: If the keystore is not yet ready
         """
         # Avoid the keystore check as we may just be writing configuration in the files
         # while the cluster is not up and running yet.
