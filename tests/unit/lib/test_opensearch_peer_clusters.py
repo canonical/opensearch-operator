@@ -40,14 +40,27 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
     )
 
     user_configs = {
-        "default": PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
-        "name": PeerClusterConfig(cluster_name="logs", init_hold=False, roles=[]),
-        "init_hold": PeerClusterConfig(cluster_name="", init_hold=True, roles=[]),
-        "roles_ok": PeerClusterConfig(
-            cluster_name="", init_hold=False, roles=["cluster_manager", "data"]
+        "default": PeerClusterConfig(
+            cluster_name="", init_hold=False, roles=[], profile="production"
         ),
-        "roles_ko": PeerClusterConfig(cluster_name="", init_hold=False, roles=["data"]),
-        "roles_temp": PeerClusterConfig(cluster_name="", init_hold=True, roles=["data.hot"]),
+        "name": PeerClusterConfig(
+            cluster_name="logs", init_hold=False, roles=[], profile="production"
+        ),
+        "init_hold": PeerClusterConfig(
+            cluster_name="", init_hold=True, roles=[], profile="production"
+        ),
+        "roles_ok": PeerClusterConfig(
+            cluster_name="",
+            init_hold=False,
+            roles=["cluster_manager", "data"],
+            profile="production",
+        ),
+        "roles_ko": PeerClusterConfig(
+            cluster_name="", init_hold=False, roles=["data"], profile="production"
+        ),
+        "roles_temp": PeerClusterConfig(
+            cluster_name="", init_hold=True, roles=["data.hot"], profile="production"
+        ),
     }
 
     p_units = [
@@ -88,13 +101,17 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
         ]:
             deployment_desc = DeploymentDescription(
                 config=PeerClusterConfig(
-                    cluster_name="logs", init_hold=False, roles=["cluster_manager", "data"]
+                    cluster_name="logs",
+                    init_hold=False,
+                    roles=["cluster_manager", "data"],
+                    profile="production",
                 ),
                 start=StartMode.WITH_PROVIDED_ROLES,
                 pending_directives=directives,
                 app=App(model_uuid=self.charm.model.uuid, name=self.charm.app.name),
                 typ=DeploymentType.MAIN_ORCHESTRATOR,
                 state=DeploymentState(value=State.ACTIVE),
+                profile="production",
             )
             can_start = self.peer_cm.can_start(deployment_desc)
             self.assertEqual(can_start, expected)
@@ -120,6 +137,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             app=App(model_uuid=self.charm.model.uuid, name="logs"),
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
         with self.assertRaises(OpenSearchProvidedRolesException):
             # on scale up
@@ -185,6 +203,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             app=App(model_uuid=self.charm.model.uuid, name="logs"),
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             state=DeploymentState(value=State.ACTIVE),
+            profile="production",
         )
 
         alt_hosts.return_value = []

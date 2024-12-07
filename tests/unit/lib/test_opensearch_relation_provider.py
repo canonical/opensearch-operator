@@ -5,6 +5,10 @@ import json
 import unittest
 from unittest.mock import ANY, MagicMock, PropertyMock, patch
 
+# Imports to simulate designated imports order
+# (Otherwise circular dependency may be reported,
+import charms.opensearch.v0.helper_cluster  # noqa
+import charms.opensearch.v0.opensearch_distro  # noqa
 import responses
 from charms.opensearch.v0.constants_charm import (
     ClientRelationName,
@@ -14,6 +18,7 @@ from charms.opensearch.v0.constants_charm import (
     NodeLockRelationName,
     PeerRelationName,
 )
+from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import generate_password
 from charms.opensearch.v0.models import (
     App,
@@ -60,7 +65,9 @@ class TestOpenSearchProvider(unittest.TestCase):
 
         def mock_deployment_desc():
             return DeploymentDescription(
-                config=PeerClusterConfig(cluster_name="", init_hold=False, roles=[]),
+                config=PeerClusterConfig(
+                    cluster_name="", init_hold=False, roles=[], profile="production"
+                ),
                 start=StartMode.WITH_GENERATED_ROLES,
                 pending_directives=[],
                 typ=DeploymentType.MAIN_ORCHESTRATOR,
@@ -70,6 +77,7 @@ class TestOpenSearchProvider(unittest.TestCase):
 
         self.charm.opensearch_peer_cm.deployment_desc = mock_deployment_desc
 
+    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides._update_relation_data")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
     @patch("charms.opensearch.v0.opensearch_distro.YamlConfigSetter.put")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
@@ -102,6 +110,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         _is_node_up,
         _,
         __,
+        ___,
     ):
         event = MagicMock()
         event.relation.id = 1
@@ -137,6 +146,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         _set_credentials.assert_not_called()
         _set_version.assert_not_called()
 
+    @patch("charms.data_platform_libs.v0.data_interfaces.OpenSearchProvides._update_relation_data")
     @patch("charm.OpenSearchOperatorCharm._purge_users")
     @patch("charms.opensearch.v0.opensearch_distro.YamlConfigSetter.put")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up")
@@ -169,6 +179,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         _is_node_up,
         _,
         __,
+        ___,
     ):
         event = MagicMock()
         event.relation.id = 1
@@ -303,7 +314,10 @@ class TestOpenSearchProvider(unittest.TestCase):
         self.harness.update_relation_data(
             opensearch_relation,
             f"{DASHBOARDS_CHARM}",
-            {"requested-secrets": '["username", "password", "tls", "tls-ca", "uris"]'},
+            {
+                "index": "opensearch-dashboards-test",
+                "requested-secrets": '["username", "password", "tls", "tls-ca", "uris"]',
+            },
         )
         event = MagicMock()
         relation = MagicMock()
@@ -514,3 +528,21 @@ class TestOpenSearchProvider(unittest.TestCase):
         mock_remove_role.assert_called_once_with(
             f"{ClientRelationName}_{self.client_second_rel_id}"
         )
+
+    @patch("ops.model.Unit.is_leader")
+    @patch("charms.opensearch.v0.opensearch_secrets.OpenSearchSecrets.get_object")
+    def test_update_certs(
+        self,
+        mock_get_object,
+        mock_is_leader,
+    ):
+        event = MagicMock()
+        mock_get_object.return_value = {"some_expected_key": "some_value"}
+        mock_is_leader.return_value = True
+        try:
+            self.opensearch_provider.update_certs(event)
+        except KeyError as e:
+            self.assertEqual(str(e), "'chain'")
+        else:
+            self.fail("KeyError not raised")
+        mock_get_object.assert_called_once_with(Scope.APP, CertType.APP_ADMIN.val)

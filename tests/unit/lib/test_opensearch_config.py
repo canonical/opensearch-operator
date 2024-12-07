@@ -176,7 +176,10 @@ class TestOpenSearchConfig(unittest.TestCase):
         app = App(model_uuid=self.charm.model.uuid, name=self.charm.app.name)
         mock_deployment_desc.return_value = DeploymentDescription(
             config=PeerClusterConfig(
-                cluster_name="logs", init_hold=False, roles=["cluster_manager", "data"]
+                cluster_name="logs",
+                init_hold=False,
+                roles=["cluster_manager", "data"],
+                profile="production",
             ),
             start=StartMode.WITH_PROVIDED_ROLES,
             pending_directives=[],
