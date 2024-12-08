@@ -193,11 +193,15 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
     )
 
-    # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await _wait_for_units(ops_test, deploy_type)
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        units_statuses=["blocked"],
+        wait_for_exact_units={APP_NAME: 3},
+        timeout=3400,
+        idle_period=IDLE_PERIOD,
+    )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
-    await set_watermark(ops_test, APP_NAME)
 
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
@@ -217,6 +221,11 @@ async def test_config_switch_before_cluster_ready(ops_test: OpsTest, deploy_type
         idle_period=IDLE_PERIOD,
     )
     await assert_knn_config_updated(ops_test, True, check_api=False)
+    # Deploy TLS Certificates operator.
+    config = {"ca-common-name": "CN_CA"}
+    await asyncio.gather(
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+    )
 
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
