@@ -208,6 +208,7 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
 @pytest.mark.abort_on_fail
 async def test_config_switch_before_cluster_ready(ops_test: OpsTest, deploy_type) -> None:
     """Configuration change before cluster is ready.
+
     We hold the cluster without starting its unit services by not relating to tls-operator.
     """
     await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "true"})
