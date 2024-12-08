@@ -224,9 +224,6 @@ async def test_config_switch_before_cluster_ready(ops_test: OpsTest, deploy_type
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
-    await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-    )
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
