@@ -213,7 +213,7 @@ class OpenSearchDistribution(ABC):
         if not os.access(script_path, os.X_OK):
             self._run_cmd(f"chmod a+x {script_path}")
 
-        self._run_cmd(f"{script_path}", args)
+        self._run_cmd(f"snap run --shell opensearch.daemon -- {script_path}", args)
 
     def request(  # noqa
         self,
