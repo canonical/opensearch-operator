@@ -27,7 +27,7 @@ The Charmed OpenSearch provides the `opensearch_client` interface to allow other
 To integrate your client application you must define the `opensearch_client` interface in your charm's `metadata.yaml` file.
 
 ```yaml
-provides:
+requires:
   opensearch:
     interface: opensearch_client
 ```
