@@ -4,13 +4,14 @@ rule_files:
 evaluation_interval: 1m
 
 tests:
+
   - interval: 1m
     input_series:
       - series: 'opensearch_cluster_status{cluster="opensearch-x7zb"}'
         values: '2x3'
     alert_rule_test:
       - eval_time: 2m
-        alertname: OpenSearchClusterNotHealthy
+        alertname: OpenSearchClusterRed
         exp_alerts:
           - exp_labels:
               severity: critical
@@ -21,18 +22,72 @@ tests:
 
   - interval: 1m
     input_series:
+      - series: 'up{juju_unit="opensearch/1"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: OpenSearchScrapeFailed
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              juju_unit: opensearch/1
+            exp_annotations:
+              message: "Scrape on opensearch/1 failed. Ensure that the OpenSearch systemd service is healthy and that the unit is part of the cluster."
+              summary: "OpenSearch exporter scrape failed"
+
+  - interval: 1m
+    input_series:
       - series: 'opensearch_cluster_status{cluster="opensearch-x7zb"}'
         values: '1x21'
+      - series: 'opensearch_cluster_shards_number{cluster="opensearch-x7zb", type="relocating"}'
+        values: '35x21'
     alert_rule_test:
       - eval_time: 20m
-        alertname: OpenSearchClusterNotHealthy
+        alertname: OpenSearchClusterYellowTemp
         exp_alerts:
           - exp_labels:
               severity: warning
               cluster: opensearch-x7zb
             exp_annotations:
-              message: "Cluster opensearch-x7zb health status has been YELLOW for at least 20m."
-              summary: "Cluster health status is YELLOW"
+              message: "Cluster opensearch-x7zb health status has been YELLOW for at least 20m. Shards are still relocating or initializing. The cluster might be under heavy load."
+              summary: "Cluster health status is temporarily YELLOW"
+
+  - interval: 1m
+    input_series:
+      - series: 'opensearch_cluster_status{cluster="opensearch-x7zb"}'
+        values: '1x21'
+      - series: 'opensearch_cluster_shards_number{cluster="opensearch-x7zb", type="unassigned"}'
+        values: '35x21'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: OpenSearchClusterYellow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              cluster: opensearch-x7zb
+            exp_annotations:
+              message: "Cluster opensearch-x7zb health status has been YELLOW. Some replica shards are unassigned."
+              summary: "Number of nodes in the cluster might be too low. Consider scaling the application to ensure that it has enough nodes to host all shards."
+
+  - interval: 1m
+    input_series:
+      - series: 'opensearch_threadpool_threads_count{name="write", type="rejected", cluster="opensearch-x7zb", node="opensearch-0.fa9"}'
+        values: '0 2 4 6 8 10 12 14 16 18 20'   # Simulates increasing rejection rates
+
+      - series: 'opensearch_threadpool_threads_count{name="write", type="completed", cluster="opensearch-x7zb", node="opensearch-0.fa9"}'
+        values: '100 110 120 130 140 150 160 170 180 190 200' # Total requests, increasing over time
+
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: OpenSearchWriteRequestsRejectionJumps
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              cluster: opensearch-x7zb
+              node: opensearch-0.fa9
+            exp_annotations:
+              message: "High Write Rejection Ratio at opensearch-0.fa9 node in opensearch-x7zb cluster. This node may not be keeping up with the indexing speed."
+              summary: "High Write Rejection Ratio - 16.7%"
 
   - interval: 1m
     input_series:
@@ -42,7 +97,7 @@ tests:
         values: '498589663232x10' # HD with 500 GB
     alert_rule_test:
       - eval_time: 5m
-        alertname: OpenSearchNodeDiskWatermarkReached
+        alertname: OpenSearchNodeDiskLowWatermarkReached
         exp_alerts:
           - exp_labels:
               severity: alert
@@ -61,17 +116,9 @@ tests:
         values: '498589663232x10' # HD with 500 GB
     alert_rule_test:
       - eval_time: 5m
-        alertname: OpenSearchNodeDiskWatermarkReached
+        alertname: OpenSearchNodeDiskHighWatermarkReached
         # both low and high water mark alerts are triggered
         exp_alerts:
-          - exp_labels:
-              severity: alert
-              cluster: opensearch-x7zb
-              instance: 10.1.156.70:9200
-              node: opensearch-0.fa9
-            exp_annotations:
-              message: "Disk Low Watermark Reached at opensearch-0.fa9 node in opensearch-x7zb cluster. Shards can not be allocated to this node anymore. You should consider adding more disk to the node."
-              summary: "Disk Low Watermark Reached - disk saturation is 91%"
           - exp_labels:
               severity: high
               cluster: opensearch-x7zb
