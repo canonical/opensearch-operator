@@ -548,7 +548,7 @@ class OpenSearchTLS(Object):
                 raise
 
         with tempfile.NamedTemporaryFile(
-            mode="w+t", dir=self.charm.opensearch.paths.tmp
+            mode="w+t", dir=self.charm.opensearch.paths.conf
         ) as ca_tmp_file:
             ca_tmp_file.write(secrets.get("ca-cert"))
             ca_tmp_file.flush()
@@ -672,14 +672,14 @@ class OpenSearchTLS(Object):
             pass
 
         tmp_key = tempfile.NamedTemporaryFile(
-            mode="w+t", suffix=".pem", dir=self.charm.opensearch.paths.tmp
+            mode="w+t", suffix=".pem", dir=self.charm.opensearch.paths.conf
         )
         tmp_key.write(secrets.get("key"))
         tmp_key.flush()
         tmp_key.seek(0)
 
         tmp_cert = tempfile.NamedTemporaryFile(
-            mode="w+t", suffix=".cert", dir=self.charm.opensearch.paths.tmp
+            mode="w+t", suffix=".cert", dir=self.charm.opensearch.paths.conf
         )
         tmp_cert.write(secrets.get("cert"))
         tmp_cert.flush()
@@ -717,7 +717,7 @@ class OpenSearchTLS(Object):
             return False
 
         # to make sure the content is processed correctly by openssl, temporary store it in a file
-        tmp_ca_file = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.tmp)
+        tmp_ca_file = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.conf)
         tmp_ca_file.write(current_ca)
         tmp_ca_file.flush()
         tmp_ca_file.seek(0)
@@ -822,12 +822,12 @@ class OpenSearchTLS(Object):
         # using the SSL API requires authentication with app-admin cert and key
         admin_secret = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
-        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.tmp)
+        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.conf)
         tmp_cert.write(admin_secret["cert"])
         tmp_cert.flush()
         tmp_cert.seek(0)
 
-        tmp_key = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.tmp)
+        tmp_key = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.conf)
         tmp_key.write(admin_secret["key"])
         tmp_key.flush()
         tmp_key.seek(0)
