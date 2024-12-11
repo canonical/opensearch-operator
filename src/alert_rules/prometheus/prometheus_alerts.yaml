@@ -2,6 +2,19 @@
 - "name": "opensearch.alerts"
   "rules":
 
+  # Write requests rates
+  # =====================
+  - record: write:rejected_requests:rate2m
+    expr: sum by (cluster, instance, node) (rate(opensearch_threadpool_threads_count{name="write", type="rejected"}[2m]))
+
+  - record: write:total_requests:rate2m
+    expr: sum by (cluster, instance, node) (rate(opensearch_threadpool_threads_count{name="write"}[2m]))
+
+  # If there are no write rejections then we get can 0/0 which is NaN. This does not affect the
+  # OpenSearchWriteRequestsRejectionJumps alert
+  - record: write:reject_ratio:rate2m
+    expr: write:rejected_requests:rate2m / write:total_requests:rate2m
+
   - "alert": "OpenSearchScrapeFailed"
     "annotations":
       "message": "Scrape on {{ $labels.juju_unit }} failed. Ensure that the OpenSearch systemd service is healthy and that the unit is part of the cluster."
@@ -22,22 +35,32 @@
     "labels":
       "severity": "critical"
 
-  - "alert": "OpenSearchClusterYellow"
+  - "alert": "OpenSearchClusterYellowTemp"
     "annotations":
-      "message": "Cluster {{ $labels.cluster }} health status has been YELLOW for at least 20m. Some cluster replicas shards are not allocated."
-      "summary": "Cluster health status is YELLOW"
+      "message": "Cluster {{ $labels.cluster }} health status has been YELLOW for at least 20m. Shards are still relocating or initializing. The cluster might be under heavy load."
+      "summary": "Cluster health status is temporarily YELLOW"
     "expr": |
-      sum by (cluster) (opensearch_cluster_status == 1)
+      sum by (cluster) (opensearch_cluster_shards_number{type=~"relocating|initializing"}) > 0 and on(cluster) opensearch_cluster_status == 1
     "for": "20m"
     "labels":
       "severity": "warning"
 
-  - "alert": "OpenSearchBulkRequestsRejectionJumps"
+  - "alert": "OpenSearchClusterYellow"
     "annotations":
-      "message": "High Bulk Rejection Ratio at {{ $labels.node }} node in {{ $labels.cluster }} cluster. This node may not be keeping up with the indexing speed."
-      "summary": "High Bulk Rejection Ratio - {{ $value }}%"
+      "message": "Cluster {{ $labels.cluster }} health status has been YELLOW. Some replica shards are unassigned."
+      "summary": "Number of nodes in the cluster might be too low. Consider scaling the application to ensure that it has enough nodes to host all shards."
     "expr": |
-      round( bulk:reject_ratio:rate2m * 100, 0.001 ) > 5
+      sum by (cluster) (opensearch_cluster_shards_number{type="unassigned"}) > 0 and on(cluster) opensearch_cluster_status == 1
+    "for": "10m"
+    "labels":
+      "severity": "warning"
+
+  - "alert": "OpenSearchWriteRequestsRejectionJumps"
+    "annotations":
+      "message": "High Write Rejection Ratio at {{ $labels.node }} node in {{ $labels.cluster }} cluster. This node may not be keeping up with the indexing speed."
+      "summary": "High Write Rejection Ratio - {{ $value }}%"
+    "expr": |
+      round( write:reject_ratio:rate2m * 100, 0.001 ) > 5
     "for": "10m"
     "labels":
       "severity": "warning"
