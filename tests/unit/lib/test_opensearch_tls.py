@@ -563,7 +563,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             in run_cmd.call_args_list[1].args[0]
         )
         assert (
-            "/var/snap/opensearch/common/usr/share/tmp"
+            "/var/snap/opensearch/current/etc/opensearch"
             in named_temporary_file.call_args_list[0][1]["dir"]
         )
 
@@ -711,7 +711,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             in run_cmd.call_args_list[1].args[0]
         )
         assert (
-            "/var/snap/opensearch/common/usr/share/tmp"
+            "/var/snap/opensearch/current/etc/opensearch"
             in named_temporary_file.call_args_list[0][1]["dir"]
         )
 
@@ -839,7 +839,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             in run_cmd.call_args_list[2].args[0]
         )
         assert (
-            "/var/snap/opensearch/common/usr/share/tmp"
+            "/var/snap/opensearch/current/etc/opensearch"
             in named_temporary_file.call_args_list[0][1]["dir"]
         )
         # NOTE: The new cert and chain are NOT saved into the keystore (disk)
@@ -1375,7 +1375,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             in run_cmd.call_args_list[1].args[0]
         )
         assert (
-            "/var/snap/opensearch/common/usr/share/tmp"
+            "/var/snap/opensearch/current/etc/opensearch"
             in named_temporary_file.call_args_list[0][1]["dir"]
         )
         assert (
@@ -1568,7 +1568,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
         assert re.search("keytool .*-delete .*-alias old-ca", run_cmd.call_args_list[-1].args[0])
         assert (
-            "/var/snap/opensearch/common/usr/share/tmp"
+            "/var/snap/opensearch/current/etc/opensearch"
             in named_temporary_file.call_args_list[0][1]["dir"]
         )
 
