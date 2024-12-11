@@ -129,16 +129,6 @@
     "labels":
       "severity": "alert"
 
-  - "alert": "OpenSearchFewNodes"
-    "annotations":
-      "message": "Cluster {{ $labels.cluster }} has less nodes than expected. It's recommend to have at least 3 nodes for high availability."
-      "summary": "Few OpenSearch nodes on cluster"
-    "expr": |
-      sum by (cluster) (opensearch_cluster_nodes_number) / count by (cluster) (opensearch_cluster_nodes_number) < 3
-    "for": "5m"
-    "labels":
-      "severity": "warning"
-
   - "alert": "OpenSearchThrottling"
     "annotations":
       "message": "Cluster {{ $labels.cluster }} is throttling. Please optimize queries and indexing patterns or consider scale the application."
