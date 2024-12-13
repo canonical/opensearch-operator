@@ -58,6 +58,8 @@ class TestOpenSearchKNN(unittest.TestCase):
         charms.opensearch.v0.helper_cluster.ClusterTopology.get_cluster_settings = MagicMock(
             return_value={}
         )
+        self.charm.performance_profile = MagicMock()
+        self.charm.performance_profile.apply = MagicMock(return_value=False)
 
     @patch(f"{BASE_LIB_PATH}.opensearch_plugin_manager.OpenSearchPluginManager.is_ready_for_api")
     @patch(

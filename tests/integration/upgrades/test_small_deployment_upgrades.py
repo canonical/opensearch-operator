@@ -230,7 +230,7 @@ async def test_upgrade_rollback_from_local(
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
-        await refresh(ops_test, app, path=charm)
+        await refresh(ops_test, app, path=charm, config={"profile": "testing"})
 
         await wait_until(
             ops_test,

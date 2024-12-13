@@ -15,6 +15,7 @@ def mock_deployment_desc(
     typ: str,
     temperature: str | None = None,
     cluster_name: str = CLUSTER_NAME,
+    profile: str = "production",
 ) -> dict[str, str]:
     return {
         "app": {
@@ -28,6 +29,7 @@ def mock_deployment_desc(
             "data_temperature": temperature,
             "init_hold": False,
             "roles": roles,
+            "profile": profile,
         },
         "pending_directives": [],
         "promotion_time": 1721391694.387948,

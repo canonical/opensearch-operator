@@ -1,4 +1,4 @@
-# How to integrate OpenSearch with your charm
+# How to integrate OpenSearch with an application
 
 [Integrations](https://juju.is/docs/juju/relation) (formerly "relations") are connections between two applications with compatible endpoints. These connections simplify creating and managing users, passwords, and other shared data.
 
@@ -27,7 +27,7 @@ The Charmed OpenSearch provides the `opensearch_client` interface to allow other
 To integrate your client application you must define the `opensearch_client` interface in your charm's `metadata.yaml` file.
 
 ```yaml
-provides:
+requires:
   opensearch:
     interface: opensearch_client
 ```
