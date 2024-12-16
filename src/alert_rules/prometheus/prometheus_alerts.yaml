@@ -138,3 +138,13 @@
     "for": "5m"
     "labels":
       "severity": "warning"
+
+  - "alert": "OpenSearchThrottlingTooLong"
+    "annotations":
+      "message": "Cluster {{ $labels.cluster }} is throttling for two hours. Please optimize queries and indexing patterns or consider scale the application."
+      "summary": "OpenSearch Indexing Throttle too long"
+    "expr": |
+      sum by (cluster) (opensearch_indices_indexing_is_throttled_bool) > 0
+    "for": "2h"
+    "labels":
+      "severity": "critical"
