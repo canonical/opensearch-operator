@@ -33,7 +33,22 @@ jobs:
         run: tox run -e unit
 
   promtool:
-    uses: ./.github/workflows/test_prometheus_rules.yaml
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # prometheus snap includes promtool
+      - name: Install prometheus snap
+        run: sudo snap install prometheus
+
+      - name: Check validity of prometheus alert rules
+        run: |
+          promtool check rules src/alert_rules/prometheus/*.yaml
+
+      - name: Run unit tests for prometheus alert rules
+        run: |
+          promtool test rules tests/unit/test_alert_rules/*.yaml
 
   terraform-test:
     name: Terraform - Lint and Simple Deployment
