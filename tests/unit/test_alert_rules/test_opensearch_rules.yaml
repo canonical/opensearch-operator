@@ -191,5 +191,20 @@ tests:
               severity: warning
               cluster: opensearch-x7zb
             exp_annotations:
-              message: "Cluster opensearch-x7zb is throttling. Please optimize queries and indexing patterns or consider scale the application."
+              message: "Cluster opensearch-x7zb is throttling. Please review your indexing request rate, index lifecycle or consider scale the application."
               summary: "OpenSearch Indexing Throttle"
+
+  - interval: 1m
+    input_series:
+      - series: 'opensearch_indices_indexing_is_throttled_bool{cluster="opensearch-x7zb"}'
+        values: '1x360'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: OpenSearchThrottlingTooLong
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              cluster: opensearch-x7zb
+            exp_annotations:
+              message: "Cluster opensearch-x7zb is throttling for at least two hours. Please review your indexing request rate, index lifecycle or consider scale the application."
+              summary: "OpenSearch Indexing Throttle too long"
