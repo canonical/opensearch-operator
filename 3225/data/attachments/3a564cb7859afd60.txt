@@ -1,0 +1,94 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.3    unsupported  02:21:20Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-data                    active       1  opensearch                                 2  no       
+opensearch-failover                active       1  opensearch                                 0  no       
+opensearch-main                    blocked      3  opensearch                                 1  no       Even number of members in quorum if current unit started. Add or remove 1 unit.
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch-data/0*           active    idle   1        10.171.145.236  9200/tcp  
+opensearch-failover/0*       active    idle   3        10.171.145.217  9200/tcp  
+opensearch-main/0*           active    idle   4        10.171.145.247  9200/tcp  
+opensearch-main/1            active    idle   5        10.171.145.149  9200/tcp  
+opensearch-main/2            active    idle   6        10.171.145.134  9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.171.145.184            
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.171.145.184  juju-a7d507-0  ubuntu@22.04      Running
+1        started  10.171.145.236  juju-a7d507-1  ubuntu@22.04      Running
+3        started  10.171.145.217  juju-a7d507-3  ubuntu@22.04      Running
+4        started  10.171.145.247  juju-a7d507-4  ubuntu@22.04      Running
+5        started  10.171.145.149  juju-a7d507-5  ubuntu@22.04      Running
+6        started  10.171.145.134  juju-a7d507-6  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:02:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:02:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:02:54 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:03:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:03:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-data-0: 02:03:15 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 02:03:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:03:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-main-0: 02:03:16 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:03:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:03:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-failover-0: 02:03:19 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 02:03:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:03:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-main-1: 02:03:22 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-6: 02:03:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:03:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-main-2: 02:03:29 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-main-0: 02:04:46 ERROR unit.opensearch-main/0.juju-log certificates:9: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-main-0: 02:04:52 ERROR unit.opensearch-main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-0: 02:04:53 ERROR unit.opensearch-main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-0: 02:04:53 ERROR unit.opensearch-main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-0: 02:04:53 ERROR unit.opensearch-main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-0: 02:04:56 ERROR unit.opensearch-main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-0: 02:04:59 ERROR unit.opensearch-main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-0: 02:05:02 ERROR unit.opensearch-main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-0: 02:05:05 ERROR unit.opensearch-main/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-2: 02:05:48 ERROR unit.opensearch-main/2.juju-log certificates:9: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-main-2: 02:05:52 ERROR unit.opensearch-main/2.juju-log opensearch-peers:6: Cannot connect to the OpenSearch server...
+unit-opensearch-main-2: 02:05:53 ERROR unit.opensearch-main/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-2: 02:05:54 ERROR unit.opensearch-main/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-2: 02:05:55 ERROR unit.opensearch-main/2.juju-log node-lock-fallback:7: Cannot connect to the OpenSearch server...
+unit-opensearch-main-2: 02:05:56 ERROR unit.opensearch-main/2.juju-log upgrade-version-a:8: Cannot connect to the OpenSearch server...
+unit-opensearch-main-2: 02:05:57 ERROR unit.opensearch-main/2.juju-log opensearch-peers:6: Cannot connect to the OpenSearch server...
+unit-opensearch-main-2: 02:05:58 ERROR unit.opensearch-main/2.juju-log opensearch-peers:6: Cannot connect to the OpenSearch server...
+unit-opensearch-failover-0: 02:06:21 ERROR unit.opensearch-failover/0.juju-log certificates:10: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-failover-0: 02:06:26 ERROR unit.opensearch-failover/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-failover-0: 02:06:27 ERROR unit.opensearch-failover/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-1: 02:09:58 ERROR unit.opensearch-main/1.juju-log certificates:9: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-main-1: 02:10:03 ERROR unit.opensearch-main/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-1: 02:10:04 ERROR unit.opensearch-main/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-main-0: 02:11:00 ERROR unit.opensearch-main/0.juju-log opensearch-peers:6: Even number of members in quorum if current unit started. Add or remove 1 unit.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-main-0/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 1626, in _compute_and_broadcast_updated_topology
+    self.opensearch_peer_cm.validate_roles(current_nodes, on_new_unit=False)
+  File "/var/lib/juju/agents/unit-opensearch-main-0/charm/lib/charms/opensearch/v0/opensearch_peer_clusters.py", line 426, in validate_roles
+    raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
+charms.opensearch.v0.opensearch_peer_clusters.OpenSearchProvidedRolesException: Even number of members in quorum if current unit started. Add or remove 1 unit.
+unit-opensearch-main-0: 02:11:03 ERROR unit.opensearch-main/0.juju-log opensearch-peers:6: Even number of members in quorum if current unit started. Add or remove 1 unit.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-main-0/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 1626, in _compute_and_broadcast_updated_topology
+    self.opensearch_peer_cm.validate_roles(current_nodes, on_new_unit=False)
+  File "/var/lib/juju/agents/unit-opensearch-main-0/charm/lib/charms/opensearch/v0/opensearch_peer_clusters.py", line 426, in validate_roles
+    raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
+charms.opensearch.v0.opensearch_peer_clusters.OpenSearchProvidedRolesException: Even number of members in quorum if current unit started. Add or remove 1 unit.
+unit-opensearch-data-0: 02:13:56 ERROR unit.opensearch-data/0.juju-log certificates:11: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-data-0: 02:14:01 ERROR unit.opensearch-data/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-data-0: 02:14:03 ERROR unit.opensearch-data/0.juju-log Cannot connect to the OpenSearch server...
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
