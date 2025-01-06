@@ -79,7 +79,7 @@ class OpenSearchTLS(Object):
         self.peer_relation = peer_relation
         self.jdk_path = jdk_path
         self.certs_path = certs_path
-        self.keytool = self.jdk_path + "/bin/keytool"
+        self.keytool = "opensearch.keytool"
         self.certs = TLSCertificatesRequiresV3(charm, TLS_RELATION, expiry_notification_time=23)
 
         self.framework.observe(
@@ -513,8 +513,6 @@ class OpenSearchTLS(Object):
 
     def store_new_ca(self, secrets: Dict[str, Any]) -> bool:  # noqa: C901
         """Add new CA cert to trust store."""
-        keytool = f"sudo {self.jdk_path}/bin/keytool"
-
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             return False
 
@@ -532,7 +530,7 @@ class OpenSearchTLS(Object):
 
         try:
             run_cmd(
-                f"""{keytool} -changealias \
+                f"""{self.keytool} -changealias \
                 -alias {alias} \
                 -destalias old-{alias} \
                 -keystore {store_path} \
@@ -549,13 +547,15 @@ class OpenSearchTLS(Object):
             ):
                 raise
 
-        with tempfile.NamedTemporaryFile(mode="w+t") as ca_tmp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w+t", dir=self.charm.opensearch.paths.conf
+        ) as ca_tmp_file:
             ca_tmp_file.write(secrets.get("ca-cert"))
             ca_tmp_file.flush()
 
             try:
                 run_cmd(
-                    f"""{keytool} -importcert \
+                    f"""{self.keytool} -importcert \
                     -trustcacerts \
                     -noprompt \
                     -alias {alias} \
@@ -604,7 +604,6 @@ class OpenSearchTLS(Object):
 
     def remove_old_ca(self) -> None:
         """Remove old CA cert from trust store."""
-        keytool = f"sudo {self.jdk_path}/bin/keytool"
         ca_trust_store = f"{self.certs_path}/ca.p12"
         old_alias = "old-ca"
 
@@ -613,7 +612,7 @@ class OpenSearchTLS(Object):
 
         try:
             run_cmd(
-                f"""{keytool} \
+                f"""{self.keytool} \
                 -list \
                 -keystore {ca_trust_store} \
                 -storepass {store_pwd} \
@@ -628,7 +627,7 @@ class OpenSearchTLS(Object):
         old_ca_content = self.read_stored_ca(alias=old_alias)
 
         run_cmd(
-            f"""{keytool} \
+            f"""{self.keytool} \
             -delete \
             -keystore {ca_trust_store} \
             -storepass {store_pwd} \
@@ -672,12 +671,16 @@ class OpenSearchTLS(Object):
         except OSError:
             pass
 
-        tmp_key = tempfile.NamedTemporaryFile(mode="w+t", suffix=".pem")
+        tmp_key = tempfile.NamedTemporaryFile(
+            mode="w+t", suffix=".pem", dir=self.charm.opensearch.paths.conf
+        )
         tmp_key.write(secrets.get("key"))
         tmp_key.flush()
         tmp_key.seek(0)
 
-        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t", suffix=".cert")
+        tmp_cert = tempfile.NamedTemporaryFile(
+            mode="w+t", suffix=".cert", dir=self.charm.opensearch.paths.conf
+        )
         tmp_cert.write(secrets.get("cert"))
         tmp_cert.flush()
         tmp_cert.seek(0)
@@ -714,7 +717,7 @@ class OpenSearchTLS(Object):
             return False
 
         # to make sure the content is processed correctly by openssl, temporary store it in a file
-        tmp_ca_file = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_ca_file = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.conf)
         tmp_ca_file.write(current_ca)
         tmp_ca_file.flush()
         tmp_ca_file.seek(0)
@@ -819,12 +822,12 @@ class OpenSearchTLS(Object):
         # using the SSL API requires authentication with app-admin cert and key
         admin_secret = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
-        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_cert = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.conf)
         tmp_cert.write(admin_secret["cert"])
         tmp_cert.flush()
         tmp_cert.seek(0)
 
-        tmp_key = tempfile.NamedTemporaryFile(mode="w+t")
+        tmp_key = tempfile.NamedTemporaryFile(mode="w+t", dir=self.charm.opensearch.paths.conf)
         tmp_key.write(admin_secret["key"])
         tmp_key.flush()
         tmp_key.seek(0)

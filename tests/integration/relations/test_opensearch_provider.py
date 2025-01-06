@@ -89,13 +89,14 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
         ),
     )
     await ops_test.model.integrate(OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[TLS_CERTIFICATES_APP_NAME, OPENSEARCH_APP_NAME], status="active", timeout=1600
+    )
 
     global client_relation
     client_relation = await ops_test.model.integrate(
         f"{OPENSEARCH_APP_NAME}:{ClientRelationName}", f"{CLIENT_APP_NAME}:{FIRST_RELATION_NAME}"
     )
-    wait_for_relation_joined_between(ops_test, OPENSEARCH_APP_NAME, CLIENT_APP_NAME)
 
     # This test shouldn't take so long
     await ops_test.model.wait_for_idle(
