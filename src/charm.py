@@ -9,7 +9,7 @@ import typing
 
 import ops
 from charms.opensearch.v0.constants_charm import InstallError, InstallProgress
-from charms.opensearch.v0.helper_charm import update_grafana_dashboards_titles
+from charms.opensearch.v0.helper_cos import update_grafana_dashboards_titles
 from charms.opensearch.v0.models import PerformanceType
 from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchInstallError
