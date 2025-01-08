@@ -16,7 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v22.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v23.1.1
 
   unit-test:
     name: Unit test charm
@@ -31,6 +31,24 @@ jobs:
           pipx install poetry
       - name: Run tests
         run: tox run -e unit
+
+  promtool:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # prometheus snap includes promtool
+      - name: Install prometheus snap
+        run: sudo snap install prometheus
+
+      - name: Check validity of prometheus alert rules
+        run: |
+          promtool check rules src/alert_rules/prometheus/*.yaml
+
+      - name: Run unit tests for prometheus alert rules
+        run: |
+          promtool test rules tests/unit/test_alert_rules/*.yaml
 
   terraform-test:
     name: Terraform - Lint and Simple Deployment
@@ -114,10 +132,11 @@ jobs:
         path:
         - .
         - ./tests/integration/relations/opensearch_provider/application-charm/
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v22.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@beta-charmcraftst124
     with:
       path-to-charm-directory: ${{ matrix.path }}
-      cache: true
+      cache: false
+      # charmcraft-snap-revision: 5303
 
   integration-test:
     strategy:
@@ -135,12 +154,12 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v22.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v23.1.1
     with:
       juju-agent-version: ${{ matrix.juju.agent }}
       juju-snap-channel: ${{ matrix.juju.snap_channel }}
       _beta_allure_report: ${{ matrix.juju.allure_report }}
-      artifact-prefix: packed-charm-cache-true
+      artifact-prefix: packed-charm-cache-false
       cloud: lxd
     secrets:
       # GitHub appears to redact each line of a multi-line secret

@@ -2,13 +2,18 @@
 # See LICENSE file for licensing details.
 
 type: charm
-bases:
-  - build-on:
-      - name: "ubuntu"
-        channel: "22.04"
-    run-on:
-      - name: "ubuntu"
-        channel: "22.04"
+# base: ubuntu@22.04
+# platforms:
+#   amd64:
+# Use upcoming ST124 syntax
+# To pack this charm, a temporary compatibility wrapper https://github.com/canonical/charmcraftst124
+# is required until ST124 support is added to charmcraft
+# (ST124 syntax is needed to enable multi-base charms with Ubuntu 24.04. We use ST124 syntax across
+# all of our charms [even those that aren't multi base] for consistency and to simplify CI/CD
+# maintenance & tooling)
+platforms:
+  ubuntu@22.04:amd64:
+  ubuntu@24.04:amd64:
 parts:
   files:
     plugin: dump

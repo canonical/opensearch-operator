@@ -45,7 +45,7 @@ class Keystore(ABC):
         """Creates the keystore manager class."""
         self._charm = charm
         self._opensearch = charm.opensearch
-        self._keytool = charm.opensearch.paths.jdk + "/bin/keytool"
+        self._keytool = "opensearch.keytool"
         self._keystore = ""
 
     @abstractmethod
