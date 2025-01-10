@@ -16,7 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v24.0.6
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v26.0.0
 
   unit-test:
     name: Unit test charm
@@ -136,7 +136,7 @@ jobs:
         path:
         - .
         - ./tests/integration/relations/opensearch_provider/application-charm/
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v24.0.6
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v26.0.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
       cache: false
@@ -157,7 +157,7 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v24.0.6
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v26.0.0
     with:
       juju-agent-version: ${{ matrix.juju.agent }}
       juju-snap-channel: ${{ matrix.juju.snap_channel }}
