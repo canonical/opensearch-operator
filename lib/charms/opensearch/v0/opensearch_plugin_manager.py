@@ -200,7 +200,7 @@ class OpenSearchPluginManager:
             if missing_deps:
                 raise OpenSearchPluginMissingDepsError(plugin.name, missing_deps)
 
-            self._opensearch.run_bin("opensearch-plugin", f"install --batch {plugin.name}")
+            self._opensearch.run_bin("plugin", f"install --batch {plugin.name}")
             self._clean_cache_if_needed()
         except KeyError as e:
             raise OpenSearchPluginMissingConfigError(e)
@@ -437,7 +437,7 @@ class OpenSearchPluginManager:
     def _remove_plugin(self, plugin: OpenSearchPlugin) -> bool:
         """Remove a plugin without restarting the node."""
         try:
-            self._opensearch.run_bin("opensearch-plugin", f"remove {plugin.name}")
+            self._opensearch.run_bin("plugin", f"remove {plugin.name}")
             self._clean_cache_if_needed()
 
         except OpenSearchCmdError as e:

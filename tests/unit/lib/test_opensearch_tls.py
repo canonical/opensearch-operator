@@ -740,6 +740,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             (DeploymentType.FAILOVER_ORCHESTRATOR),
         ]
     )
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._add_ca_to_request_bundle")
     @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
@@ -755,6 +756,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         read_stored_ca,
         run_cmd,
         named_temporary_file,
+        mock_add_ca_to_request_bundle,
     ):
         """Test CA rotation 1st stage.
 
@@ -826,6 +828,8 @@ class TestOpenSearchTLS(unittest.TestCase):
         original_status = self.harness.model.unit.status
 
         self.charm.tls._on_certificate_available(event_mock)
+
+        mock_add_ca_to_request_bundle.assert_called_once()
 
         # Old CA cert is saved with corresponding alias, new new CA cert added to keystore
         assert run_cmd.call_count == 3
@@ -1415,6 +1419,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             )
         )
     )
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._remove_ca_from_request_bundle")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.reload_tls_certificates")
     @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
@@ -1441,6 +1446,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         run_cmd,
         named_temporary_file,
         reload_tls_certificates,
+        mock_remove_ca_from_request_bundle,
     ):
         """Test CA rotation 3rd stage -- *unit* certificate.
 
@@ -1549,6 +1555,8 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         self.charm.tls._on_certificate_available(event_mock)
 
+        mock_remove_ca_from_request_bundle.assert_called_once()
+
         # Saving new cert, cleaning up CA renewal flag, removing old CA from keystore
         # Note: the high number of operations come from the fact that on each certificate received
         # the 'issuer' is checked on each certificate that is saved on the disk.
@@ -1593,6 +1601,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             )
         )
     )
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._add_ca_to_request_bundle")
     @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
@@ -1609,6 +1618,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         deployment_desc,
         run_cmd,
         named_temporary_file,
+        __,
     ):
         """Additional 'certificate-available' event while processing CA rotation.
 
@@ -1709,6 +1719,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             )
         )
     )
+    @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._add_ca_to_request_bundle")
     @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
@@ -1724,7 +1735,8 @@ class TestOpenSearchTLS(unittest.TestCase):
         read_stored_ca,
         deployment_desc,
         run_cmd,
-        named_temporary_file,
+        __,
+        mock_add_ca_to_request_bundle,
     ):
         """Additional 'certificate-available' event while processing CA rotation.
 

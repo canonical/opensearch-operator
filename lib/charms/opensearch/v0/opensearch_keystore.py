@@ -45,8 +45,8 @@ class Keystore(ABC):
         """Creates the keystore manager class."""
         self._charm = charm
         self._opensearch = charm.opensearch
-        self._keytool = "opensearch.keytool"
-        self._keystore = ""
+        self._keystore = "keystore"
+        self._keystore_path = ""
 
     @abstractmethod
     def update(self, entries: Dict[str, Any]) -> None:
@@ -83,8 +83,8 @@ class OpenSearchKeystore(Keystore):
     def __init__(self, charm):
         """Creates the keystore manager class."""
         super().__init__(charm)
-        self._keytool = "opensearch-keystore"
-        self.keystore = f"{charm.opensearch.paths.conf}/opensearch.keystore"
+        self._keystore = "keystore"
+        self._keystore_path = f"{charm.opensearch.paths.conf}/opensearch.keystore"
 
     def update(self, entries: Dict[str, Any]) -> None:
         """Updates the keystore value (adding or removing) and reload.
@@ -92,7 +92,7 @@ class OpenSearchKeystore(Keystore):
         Raises:
             OpenSearchHttpError: If the reload fails.
         """
-        if not os.path.exists(self.keystore):
+        if not os.path.exists(self._keystore_path):
             raise OpenSearchKeystoreNotReadyError()
 
         if not entries:
@@ -107,10 +107,10 @@ class OpenSearchKeystore(Keystore):
     @functools.cached_property
     def list(self) -> List[str]:
         """Lists the keys available in opensearch's keystore."""
-        if not os.path.exists(self.keystore):
+        if not os.path.exists(self._keystore_path):
             raise OpenSearchKeystoreNotReadyError()
         try:
-            return self._opensearch.run_bin(self._keytool, "list").split("\n")
+            return self._opensearch.run_bin(self._keystore, "list").split("\n")
         except OpenSearchCmdError as e:
             raise OpenSearchKeystoreError(str(e))
 
@@ -118,7 +118,7 @@ class OpenSearchKeystore(Keystore):
         try:
             # Add newline to the end of the key, if missing
             value += "" if value.endswith("\n") else "\n"
-            self._opensearch.run_bin(self._keytool, f"add --force {key}", stdin=value)
+            self._opensearch.run_bin(self._keystore, f"add --force {key}", stdin=value)
 
             self._clean_cache_if_needed()
         except OpenSearchCmdError as e:
@@ -126,7 +126,7 @@ class OpenSearchKeystore(Keystore):
 
     def _delete(self, key: str) -> None:
         try:
-            self._opensearch.run_bin(self._keytool, f"remove {key}")
+            self._opensearch.run_bin(self._keystore, f"remove {key}")
 
             self._clean_cache_if_needed()
         except OpenSearchCmdError as e:
