@@ -16,7 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v26.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v24.0.6
 
   unit-test:
     name: Unit test charm
@@ -136,23 +136,33 @@ jobs:
         path:
         - .
         - ./tests/integration/relations/opensearch_provider/application-charm/
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v26.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v24.0.6
     with:
-      cache: false  # TODO: will change to `true` before merge
-      charmcraft-snap-channel: latest/beta/data-platform  # TODO: remove after charmcraft 3.3 stable release
       path-to-charm-directory: ${{ matrix.path }}
+      cache: false
 
   integration-test:
-    name: Integration test charm
+    strategy:
+      fail-fast: false
+      matrix:
+        juju:
+          # This runs on all runs
+          - agent: 3.5.3 # renovate: juju-agent-pin-minor
+            allure_report: true
+          # This runs only on scheduled runs, DPW 21 specifics (scheduled + 3.6/X)
+          - snap_channel: 3.6/beta
+            allure_report: false
+    name: Integration test charm | ${{ matrix.juju.agent || matrix.juju.snap_channel }}
     needs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v26.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v24.0.6
     with:
-      juju-agent-version: 3.6.1  # renovate: juju-agent-pin-minor
-      _beta_allure_report: true
-      artifact-prefix: packed-charm-cache-false  # TODO: revert cache
+      juju-agent-version: ${{ matrix.juju.agent }}
+      juju-snap-channel: ${{ matrix.juju.snap_channel }}
+      _beta_allure_report: ${{ matrix.juju.allure_report }}
+      artifact-prefix: packed-charm-cache-false
       cloud: lxd
     secrets:
       # GitHub appears to redact each line of a multi-line secret
