@@ -123,6 +123,7 @@ jobs:
       - name: Check libs
         uses: canonical/charming-actions/check-libraries@2.4.0
         with:
+          charmcraft-channel: latest/beta/data-platform  # TODO: remove after charmcraft 3.3 stable release
           credentials: ${{ secrets.CHARMHUB_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           use-labels: false
@@ -138,7 +139,7 @@ jobs:
         - ./tests/integration/relations/opensearch_provider/application-charm/
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v26.0.0
     with:
-      cache: false  # TODO: will change to `true` before merge
+      cache: true
       charmcraft-snap-channel: latest/beta/data-platform  # TODO: remove after charmcraft 3.3 stable release
       path-to-charm-directory: ${{ matrix.path }}
 
@@ -152,7 +153,7 @@ jobs:
     with:
       juju-agent-version: 3.6.1  # renovate: juju-agent-pin-minor
       _beta_allure_report: true
-      artifact-prefix: packed-charm-cache-false  # TODO: revert cache
+      artifact-prefix: packed-charm-cache-true
       cloud: lxd
     secrets:
       # GitHub appears to redact each line of a multi-line secret
