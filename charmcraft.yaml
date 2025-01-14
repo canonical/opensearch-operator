@@ -2,18 +2,24 @@
 # See LICENSE file for licensing details.
 
 type: charm
-# base: ubuntu@22.04
-# platforms:
-#   amd64:
 # Use upcoming ST124 syntax
 # To pack this charm, a temporary compatibility wrapper https://github.com/canonical/charmcraftst124
 # is required until ST124 support is added to charmcraft
 # (ST124 syntax is needed to enable multi-base charms with Ubuntu 24.04. We use ST124 syntax across
 # all of our charms [even those that aren't multi base] for consistency and to simplify CI/CD
 # maintenance & tooling)
-platforms:
-  ubuntu@22.04:amd64:
-  ubuntu@24.04:amd64:
+# platforms:
+#   ubuntu@22.04:amd64:
+#   # TODO: enable after charmcraft 3 migration
+#   ubuntu@24.04:amd64:
+bases:
+  - build-on:
+      - name: "ubuntu"
+        channel: "22.04"
+    run-on:
+      - name: "ubuntu"
+        channel: "22.04"
+
 parts:
   files:
     plugin: dump
@@ -47,6 +53,7 @@ parts:
 
       # Convert subset of poetry.lock to requirements.txt
       curl -sSL https://install.python-poetry.org | python3 -
+      /root/.local/bin/poetry self add poetry-plugin-export
       /root/.local/bin/poetry export --only main,charm-libs --output requirements.txt
 
       craftctl default
