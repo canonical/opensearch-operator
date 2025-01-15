@@ -123,7 +123,7 @@ jobs:
       - name: Check libs
         uses: canonical/charming-actions/check-libraries@2.4.0
         with:
-          charmcraft-channel: latest/beta/data-platform  # TODO: remove after charmcraft 3.3 stable release
+          charmcraft-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
           credentials: ${{ secrets.CHARMHUB_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           use-labels: false
@@ -140,7 +140,7 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v26.0.0
     with:
       cache: true
-      charmcraft-snap-channel: latest/beta/data-platform  # TODO: remove after charmcraft 3.3 stable release
+      charmcraft-snap-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
       path-to-charm-directory: ${{ matrix.path }}
 
   integration-test:
