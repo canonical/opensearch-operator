@@ -16,11 +16,11 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v24.0.6
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v26.0.0
 
   unit-test:
     name: Unit test charm
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -33,7 +33,7 @@ jobs:
         run: tox run -e unit
 
   promtool:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
 
   terraform-test:
     name: Terraform - Lint and Simple Deployment
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 120
     steps:
       - name: Checkout repo
@@ -110,7 +110,7 @@ jobs:
 
   lib-check:
     name: Check libraries
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
       - name: Checkout
@@ -123,6 +123,7 @@ jobs:
       - name: Check libs
         uses: canonical/charming-actions/check-libraries@2.4.0
         with:
+          charmcraft-channel: latest/beta/data-platform  # TODO: remove after charmcraft 3.3 stable release
           credentials: ${{ secrets.CHARMHUB_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           use-labels: false
@@ -136,34 +137,23 @@ jobs:
         path:
         - .
         - ./tests/integration/relations/opensearch_provider/application-charm/
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@beta-charmcraftst124
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v26.0.0
     with:
+      cache: true
+      charmcraft-snap-channel: latest/beta/data-platform  # TODO: remove after charmcraft 3.3 stable release
       path-to-charm-directory: ${{ matrix.path }}
-      cache: false
-      # charmcraft-snap-revision: 5303
 
   integration-test:
-    strategy:
-      fail-fast: false
-      matrix:
-        juju:
-          # This runs on all runs
-          - agent: 3.5.3 # renovate: juju-agent-pin-minor
-            allure_report: true
-          # This runs only on scheduled runs, DPW 21 specifics (scheduled + 3.6/X)
-          - snap_channel: 3.6/beta
-            allure_report: false
-    name: Integration test charm | ${{ matrix.juju.agent || matrix.juju.snap_channel }}
+    name: Integration test charm
     needs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v24.0.6
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v26.0.0
     with:
-      juju-agent-version: ${{ matrix.juju.agent }}
-      juju-snap-channel: ${{ matrix.juju.snap_channel }}
-      _beta_allure_report: ${{ matrix.juju.allure_report }}
-      artifact-prefix: packed-charm-cache-false
+      juju-agent-version: 3.6.1  # renovate: juju-agent-pin-minor
+      _beta_allure_report: true
+      artifact-prefix: packed-charm-cache-true
       cloud: lxd
     secrets:
       # GitHub appears to redact each line of a multi-line secret
