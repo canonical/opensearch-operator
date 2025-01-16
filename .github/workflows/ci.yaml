@@ -137,7 +137,7 @@ jobs:
         path:
         - .
         - ./tests/integration/relations/opensearch_provider/application-charm/
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v26.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@multi-charm-repos
     with:
       cache: true
       charmcraft-snap-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
@@ -153,7 +153,7 @@ jobs:
     with:
       juju-agent-version: 3.6.1  # renovate: juju-agent-pin-minor
       _beta_allure_report: true
-      artifact-prefix: packed-charm-cache-true
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       cloud: lxd
     secrets:
       # GitHub appears to redact each line of a multi-line secret
