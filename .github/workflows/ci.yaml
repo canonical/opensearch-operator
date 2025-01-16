@@ -143,6 +143,19 @@ jobs:
       charmcraft-snap-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
       path-to-charm-directory: ${{ matrix.path }}
 
+  release:
+    name: Release charm
+    needs:
+      - build
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@multi-charm-repos
+    with:
+      channel: 2/edge/test-dpw-2
+      create-git-tags: false
+      charmcraft-snap-channel: latest/candidate
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+    secrets:
+      charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
+
   integration-test:
     name: Integration test charm
     needs:
