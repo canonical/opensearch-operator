@@ -32,18 +32,15 @@ jobs:
   #         credentials: ${{ secrets.CHARMHUB_TOKEN }}
   #         github-token: ${{ secrets.GITHUB_TOKEN }}
 
-  build:
-    name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v24.0.6
-
   release:
     name: Release charm
     needs:
-      - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v24.0.6
+      - ci-tests
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v29.0.0
     with:
+      charmcraft-snap-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
       channel: 2/edge
-      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+      artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
     permissions:
