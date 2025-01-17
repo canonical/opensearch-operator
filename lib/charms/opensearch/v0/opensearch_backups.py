@@ -73,7 +73,6 @@ object that corresponds to its own case (cluster-manager, failover, data, etc).
 
 import json
 import logging
-from abc import abstractmethod
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
@@ -111,8 +110,8 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginMissingDepsError,
     PluginState,
 )
-from ops.charm import ActionEvent
-from ops.framework import EventBase, Object
+from ops.charm import ActionEvent, RelationEvent, SecretEvent
+from ops.framework import Object
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from overrides import override
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
@@ -224,27 +223,26 @@ class OpenSearchBackupBase(Object):
             self.charm.on.list_backups_action,
             self.charm.on.restore_action,
         ]:
-            self.framework.observe(event, self._on_s3_relation_action)
+            self.framework.observe(event, self._on_s3_base_action)
 
-    def _on_secret_changed(self, event: EventBase) -> None:
+    def _on_secret_changed(self, event: SecretEvent) -> None:
         pass
 
-    def _on_s3_relation_event(self, event: EventBase) -> None:
+    def _on_s3_relation_event(self, event: RelationEvent) -> None:
         """Defers the s3 relation events."""
         logger.info("Deployment description not yet available, deferring s3 relation event")
         event.defer()
 
-    @abstractmethod
-    def _on_s3_relation_broken(self, event: EventBase) -> None:
+    def _on_s3_relation_broken(self, event: RelationEvent) -> None:
         """Defers the s3 relation broken events."""
-        raise NotImplementedError
+        pass
 
-    def _on_s3_relation_action(self, event: EventBase) -> None:
+    def _on_s3_base_action(self, event: ActionEvent) -> None:
         """No deployment description yet, fail any actions."""
         logger.info("Deployment description not yet available, failing actions.")
         event.fail("Failed: deployment description not yet available")
 
-    def _is_restore_in_progress(self) -> bool:
+    def is_restore_in_progress(self) -> bool:
         """Checks if the restore is currently in progress.
 
         Two options:
@@ -262,13 +260,11 @@ class OpenSearchBackupBase(Object):
                 or {}
             )
         except OpenSearchHttpError:
-            # Defaults to True if we have a failure, to avoid any actions due to
-            # intermittent connection issues.
-            logger.warning(
-                "_is_restore_in_progress: failed to get indices status"
+            logger.error(
+                "is_restore_in_progress: failed to get indices status"
                 " - assuming restore is in progress"
             )
-            return True
+            raise
 
         for info in indices_status.values():
             # Now, check the status of each shard
@@ -341,27 +337,28 @@ class OpenSearchBackupBase(Object):
             return BackupServiceState.RESPONSE_FAILED_NETWORK
         # Check if we error'ed b/c s3 repo is not configured, hence we are still
         # waiting for the plugin to be configured
-        if type == "repository_exception" and REPO_NOT_CREATED_ERR in reason:
-            return BackupServiceState.REPO_NOT_CREATED
-        if type == "repository_exception" and REPO_CREATING_ERR in reason:
-            return BackupServiceState.REPO_CREATION_ERR
-        if type == "repository_exception":
-            return BackupServiceState.REPO_ERR_UNKNOWN
-        if type == "repository_missing_exception":
-            return BackupServiceState.REPO_MISSING
-        if type == "repository_verification_exception" and REPO_NOT_ACCESS_ERR in reason:
-            return BackupServiceState.REPO_S3_UNREACHABLE
-        if type == "illegal_argument_exception":
-            return BackupServiceState.ILLEGAL_ARGUMENT
-        if type == "snapshot_missing_exception":
-            return BackupServiceState.SNAPSHOT_MISSING
-        if type == "snapshot_restore_exception" and RESTORE_OPEN_INDEX_WITH_SAME_NAME in reason:
-            return BackupServiceState.SNAPSHOT_RESTORE_ERROR_INDEX_NOT_CLOSED
-        if type == "snapshot_restore_exception":
-            return BackupServiceState.SNAPSHOT_RESTORE_ERROR
-        if type:
-            # There is an error but we could not precise which is
-            return BackupServiceState.REPO_ERR_UNKNOWN
+        match type:
+            case "repository_exception" if REPO_NOT_CREATED_ERR in reason:
+                return BackupServiceState.REPO_NOT_CREATED
+            case "repository_exception" if REPO_CREATING_ERR in reason:
+                return BackupServiceState.REPO_CREATION_ERR
+            case "repository_exception":
+                return BackupServiceState.REPO_ERR_UNKNOWN
+            case "repository_missing_exception":
+                return BackupServiceState.REPO_MISSING
+            case "repository_verification_exception" if REPO_NOT_ACCESS_ERR in reason:
+                return BackupServiceState.REPO_S3_UNREACHABLE
+            case "illegal_argument_exception":
+                return BackupServiceState.ILLEGAL_ARGUMENT
+            case "snapshot_missing_exception":
+                return BackupServiceState.SNAPSHOT_MISSING
+            case "snapshot_restore_exception" if RESTORE_OPEN_INDEX_WITH_SAME_NAME in reason:
+                return BackupServiceState.SNAPSHOT_RESTORE_ERROR_INDEX_NOT_CLOSED
+            case "snapshot_restore_exception":
+                return BackupServiceState.SNAPSHOT_RESTORE_ERROR
+            case _:
+                # There is an error but we could not precise which is
+                return BackupServiceState.REPO_ERR_UNKNOWN
         return self.get_snapshot_status(response)
 
     def get_snapshot_status(self, response: Dict[str, Any] | None) -> BackupServiceState:
@@ -386,9 +383,7 @@ class OpenSearchBackupBase(Object):
         "idle": configured but there are no backups nor restores in progress.
         "not_set": set by the children classes
         """
-        return not (
-            self.is_set() or self.is_backup_in_progress() or self._is_restore_in_progress()
-        )
+        return not (self.is_backup_in_progress() or self.is_restore_in_progress())
 
 
 class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
@@ -411,17 +406,11 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         for event in [
             charm.on[PeerClusterRelationName].relation_joined,
             charm.on[PeerClusterRelationName].relation_changed,
-            charm.on[PeerClusterRelationName].relation_departed,
+            charm.on[PeerClusterRelationName].relation_broken,
         ]:
             # We need to keep track of the peer-cluster relation
             # A unit-level secret will not trigger secret changes, nor an app-level secret
             # change will trigger an update in its leader.
-
-            # I've discussed this offline with @wallyworld and the main idea
-            # is that the unit is already aware of the secret change, why triggering
-            # a new hook in this case?
-            # Now, opensearch_backups.py was originally using opensearch_secrets.py to
-            # update its the s3-credentials secret and inform this class via "manual_update"
 
             # Listening to the peer cluster relation is another alternative:
             # Effectively it will call the common method that both _on_secret_changed and
@@ -429,7 +418,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             self.framework.observe(event, self._on_peer_cluster_relation_event)
 
     @override
-    def _on_secret_changed(self, event: EventBase) -> None:
+    def _on_secret_changed(self, event: SecretEvent) -> None:
         """Processes the secret changes."""
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
@@ -442,7 +431,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
 
         self._on_peer_cluster_relation_event(event)
 
-    def _on_peer_cluster_relation_event(self, event: EventBase) -> None:
+    def _on_peer_cluster_relation_event(self, event: RelationEvent) -> None:
         """Processes the peer-cluster relation events."""
         if not self.charm.secrets.get_object(Scope.APP, S3_CREDENTIALS):
             logger.warning(f"Secret {S3_CREDENTIALS} found but missing s3-credentials set.")
@@ -457,14 +446,14 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             logger.info("Keystore not ready yet, we wait for another peer cluster.")
 
     @override
-    def _on_s3_relation_event(self, event: EventBase) -> None:
+    def _on_s3_relation_event(self, event: RelationEvent) -> None:
         """Processes the non-orchestrator cluster events."""
         if self.charm.unit.is_leader():
             self.charm.status.set(BlockedStatus(S3RelShouldNotExist), app=True)
         logger.info("Non-orchestrator cluster, abandon s3 relation event")
 
     @override
-    def _on_s3_relation_broken(self, event: EventBase) -> None:
+    def _on_s3_relation_broken(self, event: RelationEvent) -> None:
         """Processes the non-orchestrator cluster events."""
         self.charm.status.clear(S3RelMissing)
         if self.charm.unit.is_leader():
@@ -494,12 +483,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
 
     @override
-    def _on_secret_changed(self, event: EventBase) -> None:
-        # This method is not needed anymore, as we already listen to credentials_changed event.
-        pass
-
-    @override
-    def _on_s3_relation_event(self, event: EventBase) -> None:
+    def _on_s3_relation_event(self, event: RelationEvent) -> None:
         """Overrides the parent method to process the s3 relation events, as we use s3_client.
 
         We run the peer cluster orchestrator's refresh on every new s3 information.
@@ -508,7 +492,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     @override
-    def _on_s3_relation_action(self, event: EventBase) -> None:
+    def _on_s3_base_action(self, event: ActionEvent) -> None:
         """Just overloads the base method, as we process each action in this class."""
         pass
 
@@ -622,7 +606,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             raise OpenSearchRestoreIndexClosingError(e)
         return indices_to_close
 
-    def _restore(self, backup_id: int) -> Dict[str, Any]:
+    def _restore(self, backup_id: str) -> Dict[str, Any]:
         """Runs the restore and processes the response."""
         backup_indices = self._list_backups().get(backup_id, {}).get("indices", {})
         output = self.charm.opensearch.request(
@@ -666,12 +650,14 @@ class OpenSearchBackup(OpenSearchBackupBase):
                 retries=6,
                 timeout=10,
             )
-        except OpenSearchHttpError as e:
-            return e.response_body if e.response_body else None
+        except OpenSearchHttpError:
+            # The cluster is unreachable
+            # We cannot determine the status of the backup service
+            return False
         return self.get_service_status(output) in [
             BackupServiceState.REPO_NOT_CREATED,
             BackupServiceState.REPO_MISSING,
-        ] or not (self.is_backup_in_progress() or self._is_restore_in_progress())
+        ] or not (self.is_backup_in_progress() or self.is_restore_in_progress())
 
     def _is_restore_complete(self) -> bool:
         """Checks if the restore is finished.
@@ -690,7 +676,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
         if not indices_status:
             # No restore has happened. Raise an exception
             raise OpenSearchRestoreCheckError("_is_restore_complete: failed to get indices status")
-        return not self._is_restore_in_progress()
+        return not self.is_restore_in_progress()
 
     def _is_backup_available_for_restore(self, backup_id: str) -> bool:
         """Checks if the backup_id exists and is ready for a restore."""
@@ -843,7 +829,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             for snapshot in response.get("snapshots", [])
         }
 
-    def _on_s3_credentials_changed(self, event: EventBase) -> None:  # noqa: C901
+    def _on_s3_credentials_changed(self, event: RelationEvent) -> None:  # noqa: C901
         """Calls the plugin manager config handler.
 
         This method will iterate over the s3 relation and check:
@@ -925,10 +911,12 @@ class OpenSearchBackup(OpenSearchBackupBase):
             logger.error(f"Failed to setup backup service with state {state}")
             self.charm.status.clear(BackupConfigureStart)
             self.charm.status.set(BlockedStatus(BackupSetupFailed))
-            self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
             raise OpenSearchBackupError()
         self.charm.status.clear(BackupSetupFailed)
-        self.charm.status.clear(BackupSetupFailed, app=True)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupSetupFailed, app=True)
         self.charm.status.clear(BackupConfigureStart)
 
     def _on_s3_created(self, _):
@@ -938,7 +926,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
             )
 
     @override
-    def _on_s3_relation_broken(self, event: EventBase) -> None:  # noqa: C901
+    def _on_s3_relation_broken(self, event: RelationEvent) -> None:  # noqa: C901
         """Processes the broken s3 relation.
 
         It runs the reverse process of on_s3_change:
