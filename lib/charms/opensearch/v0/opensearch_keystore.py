@@ -41,7 +41,7 @@ class Keystore(ABC):
         """Creates the keystore manager class."""
         self._charm = charm
         self._opensearch = charm.opensearch
-        self._keytool = charm.opensearch.paths.jdk + "/bin/keytool"
+        self._keytool = "opensearch.keytool"
         self._keystore = ""
         self._password = None
 
@@ -132,7 +132,7 @@ class OpenSearchKeystore(Keystore):
     def __init__(self, charm):
         """Creates the keystore manager class."""
         super().__init__(charm)
-        self._keytool = "opensearch-keystore"
+        self._keytool = "keystore"
 
     def add(self, entries: Dict[str, str]) -> None:
         """Adds a given key to the "opensearch" keystore."""
