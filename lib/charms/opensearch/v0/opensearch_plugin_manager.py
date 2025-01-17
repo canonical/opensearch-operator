@@ -201,7 +201,6 @@ class OpenSearchPluginManager:
                 raise OpenSearchPluginMissingDepsError(plugin.name, missing_deps)
 
             self._opensearch.run_bin("plugin", f"install --batch {plugin.name}")
-            self._clean_cache_if_needed()
         except KeyError as e:
             raise OpenSearchPluginMissingConfigError(e)
         except OpenSearchCmdError as e:
@@ -438,7 +437,6 @@ class OpenSearchPluginManager:
         """Remove a plugin without restarting the node."""
         try:
             self._opensearch.run_bin("plugin", f"remove {plugin.name}")
-            self._clean_cache_if_needed()
 
         except OpenSearchCmdError as e:
             if "not found" in str(e):
@@ -447,13 +445,7 @@ class OpenSearchPluginManager:
             raise OpenSearchPluginRemoveError(plugin.name)
         return True
 
-    def _clean_cache_if_needed(self):
-        if self.plugins:
-            del self.plugins
-        if self._installed_plugins:
-            del self._installed_plugins
-
-    @functools.cached_property
+    @property
     def _installed_plugins(self) -> List[str]:
         """List plugins."""
         try:
