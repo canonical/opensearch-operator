@@ -554,6 +554,6 @@ class OpenSearchDistribution(ABC):
         """
         # Will have a format similar to:
         # Version: 2.14.0, Build: tar/.../2024-05-27T21:17:37.476666822Z, JVM: 21.0.2
-        output = self.run_bin("opensearch", "--version 2>/dev/null")
+        output = self.run_bin("opensearch-bin", "--version 2>/dev/null")
         logger.debug(f"version call output: {output}")
         return output.split(", ")[0].split(": ")[1]
