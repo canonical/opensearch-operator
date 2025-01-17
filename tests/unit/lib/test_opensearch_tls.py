@@ -473,6 +473,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             (DeploymentType.FAILOVER_ORCHESTRATOR),
         ]
     )
+    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
@@ -486,6 +487,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         read_stored_ca,
         deployment_desc,
         run_cmd,
+        named_temporary_file,
     ):
         """New certificate received.
 
@@ -560,6 +562,10 @@ class TestOpenSearchTLS(unittest.TestCase):
             "sudo chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/app-admin.p12"
             in run_cmd.call_args_list[1].args[0]
         )
+        assert (
+            "/var/snap/opensearch/current/etc/opensearch"
+            in named_temporary_file.call_args_list[0][1]["dir"]
+        )
 
         assert self.harness.model.app.status == original_status_app
         assert self.harness.model.unit.status == original_status_unit
@@ -587,6 +593,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             [CertType.UNIT_HTTP.val, CertType.UNIT_TRANSPORT.val],
         )
     )
+    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
@@ -602,6 +609,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         read_stored_ca,
         deployment_desc,
         run_cmd,
+        named_temporary_file,
     ):
         """New *unit* certificate received.
 
@@ -702,6 +710,10 @@ class TestOpenSearchTLS(unittest.TestCase):
             f"sudo chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12"
             in run_cmd.call_args_list[1].args[0]
         )
+        assert (
+            "/var/snap/opensearch/current/etc/opensearch"
+            in named_temporary_file.call_args_list[0][1]["dir"]
+        )
 
         assert self.harness.model.unit.status == original_status_unit
 
@@ -728,6 +740,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             (DeploymentType.FAILOVER_ORCHESTRATOR),
         ]
     )
+    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
@@ -741,6 +754,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         deployment_desc,
         read_stored_ca,
         run_cmd,
+        named_temporary_file,
     ):
         """Test CA rotation 1st stage.
 
@@ -823,6 +837,10 @@ class TestOpenSearchTLS(unittest.TestCase):
         assert (
             "chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12"
             in run_cmd.call_args_list[2].args[0]
+        )
+        assert (
+            "/var/snap/opensearch/current/etc/opensearch"
+            in named_temporary_file.call_args_list[0][1]["dir"]
         )
         # NOTE: The new cert and chain are NOT saved into the keystore (disk)
 
@@ -1259,6 +1277,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             (DeploymentType.FAILOVER_ORCHESTRATOR),
         ]
     )
+    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
@@ -1272,6 +1291,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         read_stored_ca,
         deployment_desc,
         run_cmd,
+        named_temporary_file,
     ):
         """Test CA rotation 3rd stage -- *app* certificate.
 
@@ -1355,6 +1375,10 @@ class TestOpenSearchTLS(unittest.TestCase):
             in run_cmd.call_args_list[1].args[0]
         )
         assert (
+            "/var/snap/opensearch/current/etc/opensearch"
+            in named_temporary_file.call_args_list[0][1]["dir"]
+        )
+        assert (
             self.harness.get_relation_data(self.rel_id, "opensearch/0")["tls_ca_renewed"] == "True"
         )
         # Note that the old flag is left intact
@@ -1392,6 +1416,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
     )
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.reload_tls_certificates")
+    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
@@ -1414,6 +1439,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         read_stored_ca,
         deployment_desc,
         run_cmd,
+        named_temporary_file,
         reload_tls_certificates,
     ):
         """Test CA rotation 3rd stage -- *unit* certificate.
@@ -1541,6 +1567,10 @@ class TestOpenSearchTLS(unittest.TestCase):
             in run_cmd.call_args_list[1].args[0]
         )
         assert re.search("keytool .*-delete .*-alias old-ca", run_cmd.call_args_list[-1].args[0])
+        assert (
+            "/var/snap/opensearch/current/etc/opensearch"
+            in named_temporary_file.call_args_list[0][1]["dir"]
+        )
 
         assert "tls_ca_renewing" not in self.harness.get_relation_data(self.rel_id, "opensearch/0")
         assert "tls_ca_renewed" not in self.harness.get_relation_data(self.rel_id, "opensearch/0")
@@ -1563,6 +1593,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             )
         )
     )
+    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mock to avoid I/O
@@ -1577,6 +1608,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         read_stored_ca,
         deployment_desc,
         run_cmd,
+        named_temporary_file,
     ):
         """Additional 'certificate-available' event while processing CA rotation.
 
@@ -1677,6 +1709,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             )
         )
     )
+    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mock to avoid I/O
@@ -1691,6 +1724,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         read_stored_ca,
         deployment_desc,
         run_cmd,
+        named_temporary_file,
     ):
         """Additional 'certificate-available' event while processing CA rotation.
 

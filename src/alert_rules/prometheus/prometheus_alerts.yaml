@@ -60,7 +60,7 @@
       "message": "High Write Rejection Ratio at {{ $labels.node }} node in {{ $labels.cluster }} cluster. This node may not be keeping up with the indexing speed."
       "summary": "High Write Rejection Ratio - {{ $value }}%"
     "expr": |
-      round( write:reject_ratio:rate2m * 100, 0.001 ) > 5
+      round( write:reject_ratio:rate2m * 100, 0.1) > 5
     "for": "10m"
     "labels":
       "severity": "warning"
@@ -128,3 +128,13 @@
     "for": "1m"
     "labels":
       "severity": "alert"
+
+  - "alert": "OpenSearchThrottling"
+    "annotations":
+      "message": "Cluster {{ $labels.cluster }} is throttling. Please optimize queries and indexing patterns or consider scale the application."
+      "summary": "OpenSearch Indexing Throttle"
+    "expr": |
+      sum by (cluster) (opensearch_indices_indexing_is_throttled_bool) > 0
+    "for": "5m"
+    "labels":
+      "severity": "warning"

@@ -22,6 +22,7 @@ class TestCharm(TestOpenSearchBaseCharm):
         """Test the storing of TLS resources."""
         self.charm.tls.certs_path = MagicMock()
         self.charm.tls.jdk_path = MagicMock()
+        self.charm.opensearch.paths.conf = "tests/unit/"
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             self.charm.tls.certs_path = tmp_dir
