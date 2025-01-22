@@ -1074,7 +1074,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
             try:
                 self._initialize_security_index(admin_secrets)
-                self.peers_data.put(Scope.APP, "security_index_initialised", True)
+                self.put_security_index_initialized(event)
+
             except OpenSearchCmdError as e:
                 logger.debug(f"Error when initializing the security index: {e.out}")
                 event.defer()
@@ -1720,6 +1721,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.clear(PClusterNoDataNode)
         else:
             self._start_opensearch_event.emit(ignore_lock=True)
+
+    def put_security_index_initialized(self, event: EventBase) -> None:
+        """Set the security index initialized flag."""
+        self.peers_data.put(Scope.APP, "security_index_initialised", True)
+        if self.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
+            self.peer_cluster_provider.refresh_relation_data(event)
+        else:
+            # notify the main orchestrator that the security index is initialized
+            self.peer_cluster_requirer.set_security_index_initialised()
 
     @property
     def unit_ip(self) -> str:
