@@ -1,0 +1,174 @@
+[32mINFO    [0m root:test_backups.py:566 Destroying the application
+[32mINFO    [0m root:test_backups.py:574 Deploying a new cluster
+[32mINFO    [0m juju.model:model.py:2284 Deploying ch:amd64/jammy/s3-integrator-106
+[32mINFO    [0m juju.model:model.py:2284 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m juju.model:model.py:2284 Deploying local:jammy/opensearch-1
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  self-signed-certificates/1 [allocating] waiting: waiting for machine
+  opensearch/3 [allocating] waiting: waiting for machine
+  opensearch/4 [allocating] waiting: waiting for machine
+  opensearch/5 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  self-signed-certificates/1 [allocating] waiting: waiting for machine
+  opensearch/3 [allocating] waiting: waiting for machine
+  opensearch/4 [allocating] waiting: waiting for machine
+  opensearch/5 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  self-signed-certificates/1 [allocating] waiting: waiting for machine
+  opensearch/3 [allocating] waiting: waiting for machine
+  opensearch/4 [allocating] waiting: waiting for machine
+  opensearch/5 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  self-signed-certificates/1 [allocating] waiting: waiting for machine
+  opensearch/3 [allocating] waiting: waiting for machine
+  opensearch/4 [allocating] waiting: waiting for machine
+  opensearch/5 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [allocating] waiting: agent initialising
+  opensearch/4 [allocating] waiting: agent initialising
+  opensearch/5 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [executing] maintenance: Installing OpenSearch...
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.1    unsupported  01:54:02Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         error        3  opensearch                                 1  no       hook failed: "opensearch-peers-relation-created"
+s3-integrator                      blocked      1  s3-integrator             latest/edge    106  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports  Message
+opensearch/3                 error     idle   7        10.27.13.36            hook failed: "opensearch-peers-relation-created"
+opensearch/4*                error     idle   8        10.27.13.55            hook failed: "start"
+opensearch/5                 error     idle   9        10.27.13.150           hook failed: "config-changed"
+s3-integrator/1*             blocked   idle   5        10.27.13.148           Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/1*  active    idle   6        10.27.13.136           
+
+Machine  State    Address       Inst id        Base          AZ  Message
+5        started  10.27.13.148  juju-79c646-5  ubuntu@22.04      Running
+6        started  10.27.13.136  juju-79c646-6  ubuntu@22.04      Running
+7        started  10.27.13.36   juju-79c646-7  ubuntu@22.04      Running
+8        started  10.27.13.55   juju-79c646-8  ubuntu@22.04      Running
+9        started  10.27.13.150  juju-79c646-9  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:36:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:36:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:36:06 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:36:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:36:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 01:36:07 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:36:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:36:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:36:26 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:36:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:36:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:36:26 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:36:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:36:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:36:31 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-0: 01:38:24 ERROR unit.opensearch/0.juju-log certificates:4: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-0: 01:38:31 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:38:33 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:38:33 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:38:33 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:38:36 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:38:39 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:38:42 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:38:45 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:38:48 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:38:49 ERROR unit.opensearch/2.juju-log certificates:4: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-2: 01:38:55 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:38:56 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:38:57 ERROR unit.opensearch/2.juju-log certificates:4: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:38:58 ERROR unit.opensearch/1.juju-log certificates:4: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-2: 01:38:59 ERROR unit.opensearch/2.juju-log certificates:4: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:39:00 ERROR unit.opensearch/2.juju-log certificates:4: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:39:02 ERROR unit.opensearch/2.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:03 ERROR unit.opensearch/1.juju-log certificates:4: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:39:03 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:04 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:39:04 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:05 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:06 ERROR unit.opensearch/1.juju-log certificates:4: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 01:39:06 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:08 ERROR unit.opensearch/1.juju-log upgrade-version-a:3: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:09 ERROR unit.opensearch/1.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:10 ERROR unit.opensearch/1.juju-log upgrade-version-a:3: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:11 ERROR unit.opensearch/1.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:12 ERROR unit.opensearch/1.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:13 ERROR unit.opensearch/1.juju-log upgrade-version-a:3: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:15 ERROR unit.opensearch/1.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:16 ERROR unit.opensearch/1.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:17 ERROR unit.opensearch/1.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:19 ERROR unit.opensearch/1.juju-log node-lock-fallback:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:20 ERROR unit.opensearch/1.juju-log upgrade-version-a:3: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:21 ERROR unit.opensearch/1.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:23 ERROR unit.opensearch/1.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:25 ERROR unit.opensearch/1.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:39:26 ERROR unit.opensearch/1.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:50:25 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:50:25 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:50:26 ERROR unit.opensearch/1.juju-log s3-credentials:6: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-1: 01:50:27 ERROR unit.opensearch/1.juju-log certificates:4: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-1: 01:50:28 ERROR unit.opensearch/1.juju-log certificates:4: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-1: 01:50:30 ERROR unit.opensearch/1.juju-log node-lock-fallback:2: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-2: 01:50:30 ERROR unit.opensearch/2.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-1: 01:50:30 ERROR unit.opensearch/1.juju-log opensearch-peers:1: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-2: 01:50:31 ERROR unit.opensearch/2.juju-log s3-credentials:6: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-1: 01:50:31 ERROR unit.opensearch/1.juju-log opensearch-peers:1: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-0: 01:50:32 ERROR unit.opensearch/0.juju-log Failed to delete voting exclusion: opensearch-0.074.
+unit-opensearch-0: 01:50:32 ERROR unit.opensearch/0.juju-log Failed to delete shard allocation exclusion: opensearch-0.074.
+unit-opensearch-2: 01:50:32 ERROR unit.opensearch/2.juju-log certificates:4: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-1: 01:50:32 ERROR unit.opensearch/1.juju-log node-lock-fallback:2: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-2: 01:50:33 ERROR unit.opensearch/2.juju-log certificates:4: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-1: 01:50:33 ERROR unit.opensearch/1.juju-log upgrade-version-a:3: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-0: 01:50:34 ERROR unit.opensearch/0.juju-log s3-credentials:6: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-2: 01:50:34 ERROR unit.opensearch/2.juju-log opensearch-peers:1: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-1: 01:50:34 ERROR unit.opensearch/1.juju-log upgrade-version-a:3: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-0: 01:50:35 ERROR unit.opensearch/0.juju-log certificates:4: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-2: 01:50:35 ERROR unit.opensearch/2.juju-log node-lock-fallback:2: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-1: 01:50:35 ERROR unit.opensearch/1.juju-log failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-0: 01:50:36 ERROR unit.opensearch/0.juju-log node-lock-fallback:2: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-2: 01:50:36 ERROR unit.opensearch/2.juju-log node-lock-fallback:2: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-1: 01:50:36 ERROR unit.opensearch/1.juju-log failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-0: 01:50:37 ERROR unit.opensearch/0.juju-log node-lock-fallback:2: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-2: 01:50:37 ERROR unit.opensearch/2.juju-log opensearch-peers:1: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-0: 01:50:37 ERROR unit.opensearch/0.juju-log opensearch-peers:1: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-2: 01:50:38 ERROR unit.opensearch/2.juju-log upgrade-version-a:3: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-0: 01:50:39 ERROR unit.opensearch/0.juju-log opensearch-peers:1: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-2: 01:50:39 ERROR unit.opensearch/2.juju-log upgrade-version-a:3: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-2: 01:50:40 ERROR unit.opensearch/2.juju-log failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-0: 01:50:40 ERROR unit.opensearch/0.juju-log upgrade-version-a:3: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-2: 01:50:41 ERROR unit.opensearch/2.juju-log failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-0: 01:50:41 ERROR unit.opensearch/0.juju-log upgrade-version-a:3: failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-0: 01:50:42 ERROR unit.opensearch/0.juju-log failed to get root endpoint, implying that this node is offline. Retry once node is online.
+unit-opensearch-0: 01:50:43 ERROR unit.opensearch/0.juju-log failed to get root endpoint, implying that this node is offline. Retry once node is online.
+machine-6: 01:52:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:52:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:52:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:52:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-1: 01:52:34 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-s3-integrator-1: 01:52:34 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-8: 01:52:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 01:52:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-4: 01:52:57 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-9: 01:52:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 01:52:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-5: 01:52:57 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-7: 01:52:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:52:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-3: 01:52:58 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:174 Cleaning backups from cloud buckets
