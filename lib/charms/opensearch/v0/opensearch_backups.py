@@ -172,6 +172,7 @@ class BackupServiceState(BaseStrEnum):
     """Enum for the states possible once plugin is enabled."""
 
     SUCCESS = "success"
+    RESTORE_IN_PROGRESS = "restore in progress"
     RESPONSE_FAILED_NETWORK = "response failed: network error"
     REPO_NOT_CREATED = "repository not created"
     REPO_NOT_CREATED_ALREADY_EXISTS = "repo not created as it already exists"
@@ -243,35 +244,40 @@ class OpenSearchBackupBase(Object):
         event.fail("Failed: deployment description not yet available")
 
     def is_restore_in_progress(self) -> bool:
-        """Checks if the restore is currently in progress.
+        """Checks if the restore is currently in progress."""
+        if self._query_restore_status() in [
+            BackupServiceState.RESTORE_IN_PROGRESS,
+            BackupServiceState.RESPONSE_FAILED_NETWORK,
+        ]:
+            # We have a restore in progress or we cannot reach the API
+            # taking the "safe path" of informing a restore is in progress
+            return True
+        return False
 
-        Two options:
-         1) no restore requested: return False
-         2) check for each index shard: for all type=SNAPSHOT and stage=DONE, return False.
-        """
+    def _query_restore_status(self) -> bool:
         try:
-            indices_status = (
-                self.charm.opensearch.request(
-                    "GET",
-                    "/_recovery?human",
-                    retries=6,
-                    timeout=10,
-                )
-                or {}
-            )
-        except OpenSearchHttpError:
-            logger.error(
-                "is_restore_in_progress: failed to get indices status"
-                " - assuming restore is in progress"
-            )
-            raise
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(5)):
+                with attempt:
+                    indices_status = (
+                        self.charm.opensearch.request(
+                            "GET",
+                            "/_recovery?human",
+                            retries=6,
+                            timeout=10,
+                        )
+                        or {}
+                    )
+                    logger.debug(f"Restore status: {indices_status}")
+        except RetryError as e:
+            logger.error(f"restore query failed with: {e}")
+            return BackupServiceState.RESPONSE_FAILED_NETWORK
 
         for info in indices_status.values():
             # Now, check the status of each shard
             for shard in info["shards"]:
                 if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
-                    return True
-        return False
+                    return BackupServiceState.RESTORE_IN_PROGRESS
+        return BackupServiceState.SUCCESS
 
     def is_backup_in_progress(self) -> bool:
         """Returns True if backup is in progress, False otherwise.
@@ -377,13 +383,26 @@ class OpenSearchBackupBase(Object):
             return BackupServiceState.SNAPSHOT_FAILED_UNKNOWN
         return BackupServiceState.SUCCESS
 
-    def is_idle_or_not_set(self) -> bool:
-        """Checks if the backup system is idle or not yet configured.
+    def is_set(self) -> bool:
+        """Checks if the backup system is set by querying the cluster.
 
-        "idle": configured but there are no backups nor restores in progress.
-        "not_set": set by the children classes
+        Raises:
+            OpenSearchHttpError: cluster is unreachable
         """
-        return not (self.is_backup_in_progress() or self.is_restore_in_progress())
+        output = self.charm.opensearch.request(
+            "GET",
+            f"_snapshot/{S3_REPOSITORY}",
+            retries=6,
+            timeout=10,
+        )
+        return self.get_service_status(output) not in [
+            BackupServiceState.REPO_NOT_CREATED,
+            BackupServiceState.REPO_MISSING,
+        ]
+
+    def is_idle(self) -> bool:
+        """Checks if the backup system is idle."""
+        return self.is_backup_in_progress() or self.is_restore_in_progress()
 
 
 class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
@@ -633,31 +652,6 @@ class OpenSearchBackup(OpenSearchBackupBase):
             raise OpenSearchRestoreCheckError(f"_restore: unexpected response {output}")
 
         return output["snapshot"]
-
-    def is_idle_or_not_set(self) -> bool:
-        """Checks if the backup system is idle or not yet configured.
-
-        "idle": configured but there are no backups nor restores in progress.
-        "not_set": the `get_service_status` returns REPO_NOT_CREATED or REPO_MISSING.
-
-        Raises:
-            OpenSearchHttpError: cluster is unreachable
-        """
-        try:
-            output = self.charm.opensearch.request(
-                "GET",
-                f"_snapshot/{S3_REPOSITORY}",
-                retries=6,
-                timeout=10,
-            )
-        except OpenSearchHttpError:
-            # The cluster is unreachable
-            # We cannot determine the status of the backup service
-            return False
-        return self.get_service_status(output) in [
-            BackupServiceState.REPO_NOT_CREATED,
-            BackupServiceState.REPO_MISSING,
-        ] or not (self.is_backup_in_progress() or self.is_restore_in_progress())
 
     def _is_restore_complete(self) -> bool:
         """Checks if the restore is finished.
