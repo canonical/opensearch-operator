@@ -9,7 +9,7 @@ concurrency:
 on:
   pull_request:
   schedule:
-    - cron: '53 0 * * *'  # Daily at 00:53 UTC
+    - cron: "53 0 * * *" # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
     outputs:
@@ -111,7 +111,6 @@ jobs:
           TF_VAR_model_name="test" terraform apply -target null_resource.simple_deployment_juju_wait_deployment -auto-approve
           popd
 
-
   lib-check:
     name: Check libraries
     runs-on: ubuntu-22.04
@@ -127,7 +126,7 @@ jobs:
       - name: Check libs
         uses: canonical/charming-actions/check-libraries@2.4.0
         with:
-          charmcraft-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
+          charmcraft-channel: latest/candidate # TODO: remove after charmcraft 3.3 stable release
           credentials: ${{ secrets.CHARMHUB_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           use-labels: false
@@ -139,11 +138,11 @@ jobs:
       fail-fast: false
       matrix:
         path:
-        - .
-        - ./tests/integration/relations/opensearch_provider/application-charm/
+          - .
+          - ./tests/integration/relations/opensearch_provider/application-charm/
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.0
     with:
-      charmcraft-snap-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
+      charmcraft-snap-channel: latest/candidate # TODO: remove after charmcraft 3.3 stable release
       path-to-charm-directory: ${{ matrix.path }}
 
   integration-test:
@@ -154,7 +153,7 @@ jobs:
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v29.0.0
     with:
-      juju-agent-version: 3.6.1  # renovate: juju-agent-pin-minor
+      juju-agent-version: 3.6.1 # renovate: juju-agent-pin-minor
       _beta_allure_report: true
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       cloud: lxd
