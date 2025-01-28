@@ -185,3 +185,15 @@ class TestOpenSearchSecrets(TestOpenSearchInternalData):
     @parameterized.expand([Scope.APP, Scope.UNIT])
     def test_put_and_get_complex_obj(self, scope):
         return
+
+    def test_get_secret_id(self):
+        # add a secret to the store
+        content = {"secret": "value"}
+        self.store.put(Scope.APP, "super-secret-key", content)
+        # get the secret id
+        secret_id = self.store.get_secret_id(Scope.APP, "super-secret-key")
+        self.assertIsNotNone(secret_id)
+        # check the secret content
+        secret = self.charm.model.get_secret(id=secret_id)
+        secret_content = secret.get_content()
+        self.assertDictEqual(secret_content, {"super-secret-key": str(content)})

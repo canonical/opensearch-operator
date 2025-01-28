@@ -9,14 +9,18 @@ concurrency:
 on:
   pull_request:
   schedule:
-    - cron: '53 0 * * *' # Daily at 00:53 UTC
-  # Triggered on push to branch "2/edge" by .github/workflows/release.yaml
+    - cron: "53 0 * * *" # Daily at 00:53 UTC
+  # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
+    outputs:
+      artifact-prefix:
+        description: build_charm.yaml `artifact-prefix` output
+        value: ${{ jobs.build.outputs.artifact-prefix }}
 
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v26.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v29.0.0
 
   unit-test:
     name: Unit test charm
@@ -107,7 +111,6 @@ jobs:
           TF_VAR_model_name="test" terraform apply -target null_resource.simple_deployment_juju_wait_deployment -auto-approve
           popd
 
-
   lib-check:
     name: Check libraries
     runs-on: ubuntu-22.04
@@ -123,7 +126,7 @@ jobs:
       - name: Check libs
         uses: canonical/charming-actions/check-libraries@2.4.0
         with:
-          charmcraft-channel: latest/beta/data-platform  # TODO: remove after charmcraft 3.3 stable release
+          charmcraft-channel: latest/candidate # TODO: remove after charmcraft 3.3 stable release
           credentials: ${{ secrets.CHARMHUB_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           use-labels: false
@@ -135,12 +138,11 @@ jobs:
       fail-fast: false
       matrix:
         path:
-        - .
-        - ./tests/integration/relations/opensearch_provider/application-charm/
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v26.0.0
+          - .
+          - ./tests/integration/relations/opensearch_provider/application-charm/
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.0
     with:
-      cache: true
-      charmcraft-snap-channel: latest/beta/data-platform  # TODO: remove after charmcraft 3.3 stable release
+      charmcraft-snap-channel: latest/candidate # TODO: remove after charmcraft 3.3 stable release
       path-to-charm-directory: ${{ matrix.path }}
 
   integration-test:
@@ -149,11 +151,11 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v26.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v29.0.0
     with:
-      juju-agent-version: 3.6.1  # renovate: juju-agent-pin-minor
+      juju-agent-version: 3.6.1 # renovate: juju-agent-pin-minor
       _beta_allure_report: true
-      artifact-prefix: packed-charm-cache-true
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       cloud: lxd
     secrets:
       # GitHub appears to redact each line of a multi-line secret
