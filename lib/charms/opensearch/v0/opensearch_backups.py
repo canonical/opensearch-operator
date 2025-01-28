@@ -92,7 +92,7 @@ from charms.opensearch.v0.constants_charm import (
     S3RelMissing,
     S3RelShouldNotExist,
 )
-from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS
+from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS, S3_PEER_SECRET_KEYS
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import DeploymentType
@@ -101,7 +101,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
-from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
@@ -421,21 +420,40 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         self.framework.observe(
             self.charm.on[S3_RELATION].relation_broken, self._on_s3_relation_broken
         )
+        for event in [
+            charm.on[PeerClusterRelationName].relation_joined,
+            charm.on[PeerClusterRelationName].relation_changed,
+            charm.on[PeerClusterRelationName].relation_broken,
+        ]:
+            # We need to keep track of the peer-cluster relation
+            # A unit-level secret will not trigger secret changes, nor an app-level secret
+            # change will trigger an update in its leader.
+
+            # Listening to the peer cluster relation is another alternative:
+            # Effectively it will call the common method that both _on_secret_changed and
+            # _on_peer_cluster_relation_event uses to update the keystore.
+            self.framework.observe(event, self._on_peer_cluster_relation_event)
 
     @override
     def _on_secret_changed(self, event: SecretEvent) -> None:
         """Processes the secret changes."""
-        if not event.secret.label or S3_CREDENTIALS not in event.secret.label:
-            logger.debug(
-                "Secret %s is no labelled or s3-credentials, ignoring it.", event.secret.id
+        if not all([k in S3_PEER_SECRET_KEYS for k in event.secret.get_content().keys()]):
+            logger.info(
+                "Secret not relevant for backups, abandoning secret id %s", event.secret.id
             )
             return
+
         event.secret.get_content(refresh=True)
 
-        if not self.charm.secrets.get_object(Scope.APP, S3_CREDENTIALS):
-            logger.warning(f"Secret {S3_CREDENTIALS} found but missing s3-credentials set.")
-            return
+        # s3_credentials = self.charm.opensearch_peer_cm.rel_data().credentials.s3
 
+        # if not s3_credentials:
+        #     logger.warning(f"Secret {S3_CREDENTIALS} found but missing s3-credentials set.")
+        #     return
+        self._on_peer_cluster_relation_event(event)
+
+    def _on_peer_cluster_relation_event(self, event: RelationEvent) -> None:
+        """Processes the peer-cluster relation events."""
         try:
             self.charm.plugin_manager.apply_config(
                 OpenSearchBackupPlugin(
