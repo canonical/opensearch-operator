@@ -92,7 +92,7 @@ from charms.opensearch.v0.constants_charm import (
     S3RelMissing,
     S3RelShouldNotExist,
 )
-from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS, S3_PEER_SECRET_KEYS
+from charms.opensearch.v0.constants_secrets import S3_PEER_SECRET_KEYS
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import DeploymentType
