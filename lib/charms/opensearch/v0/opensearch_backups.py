@@ -113,7 +113,6 @@ from ops.charm import ActionEvent, RelationEvent, SecretEvent
 from ops.framework import Object
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from overrides import override
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "d301deee4d2c4c1b8e30cd3df8034be2"
@@ -253,22 +252,25 @@ class OpenSearchBackupBase(Object):
             return True
         return False
 
-    def _query_restore_status(self) -> bool:
+    def _query_restore_status(self) -> BackupServiceState:
         try:
-            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(5)):
-                with attempt:
-                    indices_status = (
-                        self.charm.opensearch.request(
-                            "GET",
-                            "/_recovery?human",
-                            retries=6,
-                            timeout=10,
-                        )
-                        or {}
-                    )
-                    logger.debug(f"Restore status: {indices_status}")
-        except RetryError as e:
-            logger.error(f"restore query failed with: {e}")
+            indices_status = (
+                self.charm.opensearch.request(
+                    "GET",
+                    "/_recovery?human",
+                    retries=6,
+                    timeout=10,
+                )
+                or {}
+            )
+            logger.debug(f"Restore status: {indices_status}")
+        except OpenSearchHttpError as e:
+            output = e.response_body if e.response_body else None
+            if not output:
+                return False
+            return self.get_service_status(output)
+        except Exception as e:
+            logger.error(f"_query_restore_status failed with: {e}")
             return BackupServiceState.RESPONSE_FAILED_NETWORK
 
         for info in indices_status.values():
@@ -295,20 +297,23 @@ class OpenSearchBackupBase(Object):
 
     def _query_backup_status(self, backup_id: Optional[str] = None) -> BackupServiceState:
         try:
-            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(5)):
-                with attempt:
-                    target = f"_snapshot/{S3_REPOSITORY}/"
-                    target += f"{backup_id.lower()}" if backup_id else "_all"
-                    output = self.charm.opensearch.request(
-                        "GET",
-                        target,
-                        retries=6,
-                        timeout=10,
-                    )
-                    logger.debug(f"Backup status: {output}")
-        except RetryError as e:
-            logger.error(f"_request failed with: {e}")
+            target = f"_snapshot/{S3_REPOSITORY}/"
+            target += f"{backup_id.lower()}" if backup_id else "_all"
+            output = self.charm.opensearch.request(
+                "GET",
+                target,
+                retries=6,
+                timeout=10,
+            )
+            logger.debug(f"Backup status: {output}")
+        except OpenSearchHttpError as e:
+            output = e.response_body if e.response_body else None
+        except Exception as e:
+            logger.error(f"_query_backup_status failed with: {e}")
             return BackupServiceState.RESPONSE_FAILED_NETWORK
+
+        if not output:
+            return False
         return self.get_service_status(output)
 
     def get_service_status(  # noqa: C901
@@ -331,7 +336,7 @@ class OpenSearchBackupBase(Object):
         try:
             if "error" not in response:
                 return BackupServiceState.SUCCESS
-            if "root_cause" not in response:
+            if "root_cause" not in response["error"]:
                 return BackupServiceState.REPO_ERR_UNKNOWN
             type = response["error"]["root_cause"][0]["type"]
             reason = response["error"]["root_cause"][0]["reason"]
@@ -388,12 +393,17 @@ class OpenSearchBackupBase(Object):
         Raises:
             OpenSearchHttpError: cluster is unreachable
         """
-        output = self.charm.opensearch.request(
-            "GET",
-            f"_snapshot/{S3_REPOSITORY}",
-            retries=6,
-            timeout=10,
-        )
+        try:
+            output = self.charm.opensearch.request(
+                "GET",
+                f"_snapshot/{S3_REPOSITORY}",
+                retries=6,
+                timeout=10,
+            )
+        except OpenSearchHttpError as e:
+            output = e.response_body if e.response_body else None
+        if not output:
+            return False
         return self.get_service_status(output) not in [
             BackupServiceState.REPO_NOT_CREATED,
             BackupServiceState.REPO_MISSING,
