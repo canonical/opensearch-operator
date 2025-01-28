@@ -460,7 +460,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
                     charm=self.charm,
                 ).config(),
             )
-        except OpenSearchKeystoreNotReadyError:
+        except (OpenSearchKeystoreNotReadyError, OpenSearchPluginMissingConfigError):
             logger.info("Keystore not ready yet, we wait for another peer cluster.")
 
     @override
