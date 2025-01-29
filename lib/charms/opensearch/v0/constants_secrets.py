@@ -20,3 +20,4 @@ ADMIN_PW = f"admin-{PW_POSTFIX}"
 ADMIN_PW_HASH = f"{ADMIN_PW}-hash"
 S3_CREDENTIALS = "s3-creds"
 S3_PEER_SECRET_KEYS = ["secret-key", "access-key", S3_CREDENTIALS]
+AZURE_CREDENTIALS = "azure-creds"

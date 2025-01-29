@@ -291,10 +291,15 @@ import logging
 from abc import abstractmethod
 from typing import Any, Dict, List, Optional
 
-from charms.opensearch.v0.constants_charm import S3_RELATION, PeerRelationName
-from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS
+from charms.data_platform_libs.v0.data_interfaces import RequirerData
+from charms.opensearch.v0.constants_charm import (
+    AZURE_RELATION,
+    S3_RELATION,
+    PeerRelationName,
+)
+from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import DeploymentType, S3RelData
+from charms.opensearch.v0.models import AzureRelData, DeploymentType, S3RelData
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from jproperties import Properties
@@ -503,7 +508,7 @@ class OpenSearchKnn(OpenSearchPlugin):
         return "opensearch-knn"
 
 
-class OpenSearchPluginBackupDataProvider(OpenSearchPluginDataProvider):
+class OpenSearchPluginS3DataProvider(OpenSearchPluginDataProvider):
     """Responsible to decide which data to use for the backup plugin.
 
     Backups should check different relations depending on their role in the cluster:
@@ -513,7 +518,7 @@ class OpenSearchPluginBackupDataProvider(OpenSearchPluginDataProvider):
     """
 
     def __init__(self, charm):
-        """Creates the OpenSearchPluginBackupDataProvider object."""
+        """Creates the OpenSearchPluginS3DataProvider object."""
         super().__init__(charm)
         self._relation = None
         if not self._charm.opensearch_peer_cm.deployment_desc():
@@ -548,7 +553,7 @@ class OpenSearchPluginBackupDataProvider(OpenSearchPluginDataProvider):
         return result
 
 
-class OpenSearchBackupPlugin(OpenSearchPlugin):
+class OpenSearchS3Plugin(OpenSearchPlugin):
     """Manage backup configurations.
 
     This class must load the opensearch plugin: repository-s3 and configure it.
@@ -567,7 +572,7 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         "protocol",
         "credentials",
     ]
-    DATA_PROVIDER = OpenSearchPluginBackupDataProvider
+    DATA_PROVIDER = OpenSearchPluginS3DataProvider
 
     def __init__(self, charm):
         """Creates the OpenSearchBackupPlugin object."""
@@ -585,7 +590,8 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         self._relation = self.dp.get_relation()
         try:
             return self.MODEL.from_relation(self.dp.get_data())
-        except ValidationError:
+        except ValidationError as e:
+            logger.warning(f"Validation of fields failed: {e}")
             return self.MODEL()
 
     @property
@@ -639,5 +645,155 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
             secret_entries={
                 f"s3.client.{self.repo_name}.access_key": None,
                 f"s3.client.{self.repo_name}.secret_key": None,
+            },
+        )
+
+
+class OpenSearchPluginAzureDataProvider(OpenSearchPluginDataProvider):
+    """Responsible to decide which data to use for the backup plugin.
+
+    Backups should check different relations depending on their role in the cluster:
+    * main orchestrator
+    * failover orchestrator
+    * other
+    """
+
+    def __init__(self, charm):
+        """Creates the OpenSearchPluginAzureDataProvider object."""
+        super().__init__(charm)
+        self._relation = None
+        if not self._charm.opensearch_peer_cm.deployment_desc():
+            # Temporary condition: we are waiting for CM to show up and define which type
+            # of cluster are we. Once we have that defined, then we will process.
+            raise OpenSearchPluginMissingConfigError("Missing deployment description in peer CM")
+
+        self.is_main_orchestrator = (
+            self._charm.opensearch_peer_cm.deployment_desc().typ
+            == DeploymentType.MAIN_ORCHESTRATOR
+        )
+
+    def get_relation(self) -> Any:
+        """Updates the relation object if needed."""
+        self._relation = self._charm.model.get_relation(AZURE_RELATION)
+        if not self.is_main_orchestrator:
+            self._relation = self._charm.model.get_relation(PeerRelationName)
+        return self._relation
+
+    def get_data(self) -> Dict[str, Any]:
+        """Returns the data from the relation databag.
+
+        Exceptions:
+            ValueError: if the data is not valid
+        """
+        if not self.get_relation():
+            return {}
+
+        if self._relation.name == AZURE_RELATION:
+            azure_data_endpoint = RequirerData(
+                model=self._charm.model,
+                relation_name=AZURE_RELATION,
+                additional_secret_fields=["secret-key"],
+            )
+            result = azure_data_endpoint.fetch_relation_data()[self._relation.id]
+        # Case where we are on a non cluster_manager.
+        else:
+            result = dict(self.get_relation().data[self._relation.app]) or {}
+
+        if not self.is_main_orchestrator:
+            # Peer relations exchange secrets via peer-cluster secret
+            result |= self._charm.secrets.get_object(Scope.APP, AZURE_CREDENTIALS) or {}
+
+        return result
+
+
+class OpenSearchAzurePlugin(OpenSearchPlugin):
+    """Manage backup configurations.
+
+    This class must load the opensearch plugin: repository-azure and configure it.
+
+    The plugin is responsible for managing the backup configuration, which includes relation
+    databag or only the secrets' content, as backup changes behavior depending on the juju app
+    role within the cluster.
+    """
+
+    MODEL = AzureRelData
+    MANDATORY_CONFS = [
+        "container",
+        "credentials",
+    ]
+
+    DATA_PROVIDER = OpenSearchPluginAzureDataProvider
+
+    def __init__(self, charm):
+        """Creates the OpenSearchAzurePlugin object."""
+        super().__init__(charm)
+        self.dp = self.DATA_PROVIDER(charm)
+        self.repo_name = "default"
+
+    def requested_to_enable(self) -> bool:
+        """Returns True if the plugin is enabled."""
+        return self.dp.get_relation() is not None
+
+    @property
+    def data(self) -> BaseModel:
+        """Returns the data from the relation databag."""
+        self._relation = self.dp.get_relation()
+        try:
+            return self.MODEL.from_relation(self.dp.get_data())
+        except ValidationError as e:
+            logger.warning(f"Validation of fields failed: {e}")
+            return self.MODEL()
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return "repository-azure"
+
+    def config(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
+        conf = self.data.credentials.dict()
+        # First, let's check if credentials are set
+        if any([val is None for val in conf.values()]):
+            raise OpenSearchPluginMissingConfigError(
+                "Plugin {} missing credentials".format(
+                    self.name,
+                )
+            )
+
+        if self.dp.is_main_orchestrator:
+            conf = self.data.dict()
+            # Check any mandatory config is missing
+            if any([val is None and key in self.MANDATORY_CONFS for key, val in conf.items()]):
+                raise OpenSearchPluginMissingConfigError(
+                    "Plugin {} missing: {}".format(
+                        self.name,
+                        [key for key, val in conf.items() if val is None],
+                    )
+                )
+
+        if not self.dp.is_main_orchestrator:
+            return OpenSearchPluginConfig(
+                secret_entries={
+                    f"azure.client.{self.repo_name}.account": self.data.credentials.storage_account,
+                    f"azure.client.{self.repo_name}.key": self.data.credentials.secret_key,
+                },
+            )
+
+        # This is the main orchestrator
+        return OpenSearchPluginConfig(
+            config_entries={},
+            secret_entries={
+                f"azure.client.{self.repo_name}.account": self.data.credentials.storage_account,
+                f"azure.client.{self.repo_name}.key": self.data.credentials.secret_key,
+            },
+        )
+
+    def disable(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin removal."""
+        return OpenSearchPluginConfig(
+            config_entries={},
+            secret_entries={
+                f"azure.client.{self.repo_name}.account": None,
+                f"azure.client.{self.repo_name}.key": None,
             },
         )

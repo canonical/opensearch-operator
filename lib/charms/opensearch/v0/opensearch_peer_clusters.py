@@ -651,4 +651,19 @@ class OpenSearchPeerClustersManager:
                 .get_content()
                 .get("s3-secret-key")
             )
+        if (
+            "azure" in credentials
+            and credentials["azure"].get("storage-account")
+            and credentials["azure"].get("secret-key")
+        ):
+            credentials["azure"]["storage-account"] = (
+                self._charm.model.get_secret(id=credentials["azure"]["storage-account"])
+                .get_content()
+                .get("azure-storage-account")
+            )
+            credentials["azure"]["secret-key"] = (
+                self._charm.model.get_secret(id=credentials["azure"]["secret-key"])
+                .get_content()
+                .get("azure-secret-key")
+            )
         return PeerClusterRelData.from_dict(content)
