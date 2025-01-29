@@ -76,6 +76,7 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
+import pydantic
 from charms.data_platform_libs.v0.object_storage import AzureStorageRequires
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.opensearch.v0.constants_charm import (
@@ -95,33 +96,29 @@ from charms.opensearch.v0.constants_charm import (
     RestoreInProgress,
 )
 from charms.opensearch.v0.constants_secrets import (
-    AZURE_CREDENTIALS,
     AZURE_PEER_SECRET_KEYS,
-    S3_CREDENTIALS,
     S3_PEER_SECRET_KEYS,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import (
     AzureRelData,
-    AzureRelDataCredentials,
     BackupPluginType,
     DeploymentType,
     S3RelData,
-    S3RelDataCredentials,
 )
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
-from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchBackupPlugin,
+    OpenSearchAzureBackupPlugin,
     OpenSearchPluginMissingConfigError,
     OpenSearchPluginMissingDepsError,
+    OpenSearchS3BackupPlugin,
     PluginState,
 )
 from ops import (
@@ -569,38 +566,22 @@ class OpenSearchNonOrchestratorClusterBackupHandler(OpenSearchBackupBaseHandler)
             return
 
         event.secret.get_content(refresh=True)
-
-        # s3_credentials = self.charm.opensearch_peer_cm.rel_data().credentials.s3
-
-        # if not s3_credentials:
-        #     logger.warning(f"Secret {S3_CREDENTIALS} found but missing s3-credentials set.")
-        #     return
         plugin_creds = [
-            (
-                OpenSearchBackupPlugin(
-                    charm=self.charm,
-                    backup_type=BackupPluginType.S3,
-                    data=S3RelDataCredentials.from_dict(
-                        self.charm.secrets.get_object(Scope.APP, S3_CREDENTIALS)
-                    ),
-                ),
-                S3_CREDENTIALS,
+            OpenSearchS3BackupPlugin(
+                charm=self.charm,
+                data=self.charm.opensearch_peer_cm.rel_data().credentials.s3,
             ),
-            (
-                OpenSearchBackupPlugin(
-                    charm=self.charm,
-                    backup_type=BackupPluginType.AZURE,
-                    data=AzureRelDataCredentials.from_dict(
-                        self.charm.secrets.get_object(Scope.APP, AZURE_CREDENTIALS)
-                    ),
-                ),
-                AZURE_CREDENTIALS,
+            OpenSearchAzureBackupPlugin(
+                charm=self.charm,
+                data=self.charm.opensearch_peer_cm.rel_data().credentials.azure,
             ),
         ]
 
-        for plugin, creds in plugin_creds:
-            if not self.charm.secrets.get_object(Scope.APP, creds):
-                logger.warning(f"Secret {creds} found but missing credentials set.")
+        for plugin in plugin_creds:
+            if not plugin.data:
+                logger.warning(
+                    f"Secret for {plugin.backup_type} found but missing credentials set."
+                )
                 continue
             try:
                 if not self.charm.plugin_manager.is_ready_for_api():
@@ -636,11 +617,10 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
         super().__init__(charm, relation_name)
         self.s3_client = S3Requirer(self.charm, S3_RELATION)
 
-        self.relation = self._charm.model.get_relation(S3_RELATION)
-        self.plugin = OpenSearchBackupPlugin(
+        self.relation = self.charm.model.get_relation(S3_RELATION)
+        self.plugin = OpenSearchS3BackupPlugin(
             charm=self.charm,
-            backup_type=BackupPluginType.S3,
-            data=S3RelData.from_relation(self.relation.data[self.relation.app]),
+            data=self.data,
         )
 
         # relation handles the config options for backups
@@ -653,6 +633,16 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
+
+    @property
+    def data(self) -> S3RelData | None:
+        """Returns the S3 relation data."""
+        if self.relation is None:
+            return None
+        try:
+            return S3RelData.from_relation(self.relation.data[self.relation.app])
+        except pydantic.ValidationError:
+            return None
 
     @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
@@ -669,7 +659,9 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
         pass
 
     @property
-    def _plugin_status(self):
+    def _plugin_status(self) -> PluginState:
+        if not self.data:
+            return PluginState.MISSING
         return self.charm.plugin_manager.status(self.plugin)
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
@@ -1150,11 +1142,10 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         super().__init__(charm, relation_name)
         self.azure_client = AzureStorageRequires(self.charm, AZURE_RELATION)
 
-        self.relation = self._charm.model.get_relation(AZURE_RELATION)
-        self.plugin = OpenSearchBackupPlugin(
+        self.relation = self.charm.model.get_relation(AZURE_RELATION)
+        self.plugin = OpenSearchAzureBackupPlugin(
             charm=self.charm,
-            backup_type=BackupPluginType.AZURE,
-            data=AzureRelData.from_relation(self.relation.data[self.relation.app]),
+            data=self.data,
         )
 
         # relation handles the config options for azure backups
@@ -1174,6 +1165,16 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
 
+    @property
+    def data(self) -> AzureRelData | None:
+        """Returns the azure relation data."""
+        if self.relation is None:
+            return None
+        try:
+            return AzureRelData.from_relation(self.relation.data[self.relation.app])
+        except pydantic.ValidationError:
+            return None
+
     @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
         """Overrides to process the azure relation events, as we use azure_client.
@@ -1189,7 +1190,9 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         pass
 
     @property
-    def _plugin_status(self):
+    def _plugin_status(self) -> PluginState:
+        if not self.data:
+            return PluginState.MISSING
         return self.charm.plugin_manager.status(self.plugin)
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:

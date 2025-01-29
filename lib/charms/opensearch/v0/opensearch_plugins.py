@@ -262,7 +262,6 @@ from abc import abstractmethod
 from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import BackupPluginType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from jproperties import Properties
 from pydantic import BaseModel, validator
@@ -442,8 +441,8 @@ class OpenSearchKnn(OpenSearchPlugin):
         return "opensearch-knn"
 
 
-class OpenSearchBackupPlugin(OpenSearchPlugin):
-    """Manage backup configurations.
+class OpenSearchS3BackupPlugin(OpenSearchPlugin):
+    """Manage S3 backup configurations.
 
     This class must load the opensearch plugin repository type and configure it.
 
@@ -452,12 +451,9 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
     role within the cluster.
     """
 
-    def __init__(self, charm, backup_type: BackupPluginType, data: BaseModel | None):
-        """Creates the OpenSearchAzurePlugin object."""
-        # Needs to come before as this is used to build the name
-        self.backup_type = backup_type
+    def __init__(self, charm, data: BaseModel | None):
+        """Creates the OpenSearchS3BackupPlugin object."""
         super().__init__(charm)
-
         self.repo_name = "default"
         self.data = data
 
@@ -468,15 +464,15 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
     @property
     def name(self) -> str:
         """Returns the name of the plugin."""
-        return f"repository-{self.backup_type}"
+        return "repository-s3"
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
         return OpenSearchPluginConfig(
             config_entries={},
             secret_entries={
-                f"{self.backup_type}.client.{self.repo_name}.account": self.data.credentials.storage_account,
-                f"{self.backup_type}.client.{self.repo_name}.key": self.data.credentials.secret_key,
+                f"s3.client.{self.repo_name}.access_key": self.data.credentials.access_key,
+                f"s3.client.{self.repo_name}.secret_key": self.data.credentials.secret_key,
             },
         )
 
@@ -485,7 +481,53 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         return OpenSearchPluginConfig(
             config_entries={},
             secret_entries={
-                f"{self.backup_type}.client.{self.repo_name}.account": None,
-                f"{self.backup_type}.client.{self.repo_name}.key": None,
+                f"s3.client.{self.repo_name}.access_key": None,
+                f"s3.client.{self.repo_name}.secret_key": None,
+            },
+        )
+
+
+class OpenSearchAzureBackupPlugin(OpenSearchPlugin):
+    """Manage azure backup configurations.
+
+    This class must load the opensearch plugin repository type and configure it.
+
+    The plugin is responsible for managing the backup configuration, which includes relation
+    databag or only the secrets' content, as backup changes behavior depending on the juju app
+    role within the cluster.
+    """
+
+    def __init__(self, charm, data: BaseModel | None):
+        """Creates the OpenSearchAzureBackupPlugin object."""
+        super().__init__(charm)
+        self.repo_name = "default"
+        self.data = data
+
+    def requested_to_enable(self) -> bool:
+        """Returns True if the plugin is enabled."""
+        return self.data is not None
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return "repository-azure"
+
+    def config(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
+        return OpenSearchPluginConfig(
+            config_entries={},
+            secret_entries={
+                f"azure.client.{self.repo_name}.account": self.data.credentials.storage_account,
+                f"azure.client.{self.repo_name}.key": self.data.credentials.secret_key,
+            },
+        )
+
+    def disable(self) -> OpenSearchPluginConfig:
+        """Returns OpenSearchPluginConfig composed of configs used at plugin removal."""
+        return OpenSearchPluginConfig(
+            config_entries={},
+            secret_entries={
+                f"azure.client.{self.repo_name}.account": None,
+                f"azure.client.{self.repo_name}.key": None,
             },
         )
