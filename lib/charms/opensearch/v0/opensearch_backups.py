@@ -96,6 +96,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_secrets import (
     AZURE_CREDENTIALS,
+    AZURE_PEER_SECRET_KEYS,
     S3_CREDENTIALS,
     S3_PEER_SECRET_KEYS,
 )
@@ -566,7 +567,12 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     @override
     def _on_secret_changed(self, event: SecretEvent) -> None:
         """Processes the secret changes."""
-        if not any([k in S3_PEER_SECRET_KEYS for k in event.secret.get_content().keys()]):
+        if not any(
+            [
+                k in S3_PEER_SECRET_KEYS + AZURE_PEER_SECRET_KEYS
+                for k in event.secret.get_content().keys()
+            ]
+        ):
             logger.info(
                 "Secret not relevant for backups, abandoning secret id %s", event.secret.id
             )
