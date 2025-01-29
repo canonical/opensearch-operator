@@ -102,7 +102,14 @@ from charms.opensearch.v0.constants_secrets import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import DeploymentType
+from charms.opensearch.v0.models import (
+    AzureRelData,
+    AzureRelDataCredentials,
+    BackupPluginType,
+    DeploymentType,
+    S3RelData,
+    S3RelDataCredentials,
+)
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
@@ -112,10 +119,9 @@ from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchAzurePlugin,
+    OpenSearchBackupPlugin,
     OpenSearchPluginMissingConfigError,
     OpenSearchPluginMissingDepsError,
-    OpenSearchS3Plugin,
     PluginState,
 )
 from ops import (
@@ -183,12 +189,11 @@ class OpenSearchRestoreIndexClosingError(OpenSearchRestoreError):
     """Exception thrown when restore fails to close indices."""
 
 
-# TODO integrate into the class
 class BackupRepository(BaseStrEnum):
     """Possible repositories for backups."""
 
-    S3 = "s3-repository"
-    AZURE = "azure-repository"
+    S3 = f"{BackupPluginType.S3}-repository"
+    AZURE = f"{BackupPluginType.AZURE}-repository"
 
 
 class BackupServiceState(BaseStrEnum):
@@ -224,7 +229,7 @@ class OpenSearchBackupAPI:
         self.repository = repository
 
 
-class OpenSearchBackupBase(Object):
+class OpenSearchBackupBaseHandler(Object):
     """Works as parent for all backup classes.
 
     This class does a smooth transition between orchestrator and non-orchestrator clusters.
@@ -531,7 +536,7 @@ class OpenSearchBackupBase(Object):
         return self._format_backup_list(backup_list)
 
 
-class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
+class OpenSearchNonOrchestratorClusterBackupHandler(OpenSearchBackupBaseHandler):
     """Simpler implementation of backup relation for non-orchestrator clusters.
 
     In a nutshell, non-orchestrator clusters should receive the backup information via
@@ -589,8 +594,26 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     def _on_peer_cluster_relation_event(self, event):
         """Processes the peer-cluster relation events."""
         plugin_creds = [
-            (OpenSearchS3Plugin(charm=self.charm), S3_CREDENTIALS),
-            (OpenSearchAzurePlugin(charm=self.charm), AZURE_CREDENTIALS),
+            (
+                OpenSearchBackupPlugin(
+                    charm=self.charm,
+                    backup_type=BackupPluginType.S3,
+                    data=S3RelDataCredentials(
+                        self.charm.secrets.get_object(Scope.APP, S3_CREDENTIALS)
+                    ),
+                ),
+                S3_CREDENTIALS,
+            ),
+            (
+                OpenSearchBackupPlugin(
+                    charm=self.charm,
+                    backup_type=BackupPluginType.AZURE,
+                    data=AzureRelDataCredentials(
+                        self.charm.secrets.get_object(Scope.APP, AZURE_CREDENTIALS)
+                    ),
+                ),
+                AZURE_CREDENTIALS,
+            ),
         ]
 
         for plugin, creds in plugin_creds:
@@ -623,14 +646,18 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         logger.info("Non-orchestrator cluster, abandon relation event")
 
 
-class OpenSearchS3Backup(OpenSearchBackupBase):
-    """Implements backup relation and API management."""
+class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
+    """Implements backup relation with S3 relation."""
 
     def __init__(self, charm: "OpenSearchBaseCharm", relation_name: str = S3_RELATION):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
         self.s3_client = S3Requirer(self.charm, S3_RELATION)
-        self.plugin = OpenSearchS3Plugin(self.charm)
+        self.plugin = OpenSearchBackupPlugin(
+            charm=self.charm,
+            backup_type=BackupPluginType.S3,
+            data=S3RelData(self.charm.secrets.get_object(Scope.APP, S3_CREDENTIALS)),
+        )
 
         # relation handles the config options for backups
         self.framework.observe(
@@ -659,7 +686,7 @@ class OpenSearchS3Backup(OpenSearchBackupBase):
 
     @property
     def _plugin_status(self):
-        return self.charm.plugin_manager.get_plugin_status(OpenSearchS3Plugin)
+        return self.charm.plugin_manager.status(self.plugin)
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Returns the list of available backups to the user."""
@@ -1131,14 +1158,18 @@ class OpenSearchS3Backup(OpenSearchBackupBase):
         return status
 
 
-class OpenSearchAzureBackup(OpenSearchBackupBase):
+class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
     """Implements backup relation and API management."""
 
     def __init__(self, charm: "OpenSearchBaseCharm", relation_name: str = AZURE_RELATION):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
         self.azure_client = AzureStorageRequires(self.charm, AZURE_RELATION)
-        self.plugin = OpenSearchAzurePlugin(self.charm)
+        self.plugin = OpenSearchBackupPlugin(
+            charm=self.charm,
+            backup_type=BackupPluginType.AZURE,
+            data=AzureRelData(self.charm.secrets.get_object(Scope.APP, AZURE_CREDENTIALS)),
+        )
 
         # relation handles the config options for azure backups
         self.framework.observe(
@@ -1173,7 +1204,7 @@ class OpenSearchAzureBackup(OpenSearchBackupBase):
 
     @property
     def _plugin_status(self):
-        return self.charm.plugin_manager.get_plugin_status(OpenSearchAzurePlugin)
+        return self.charm.plugin_manager.status(self.plugin)
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Returns the list of available backups to the user."""
@@ -1647,7 +1678,7 @@ class OpenSearchAzureBackup(OpenSearchBackupBase):
         return status
 
 
-def backup(charm: "OpenSearchBaseCharm") -> OpenSearchBackupBase:
+def backup(charm: "OpenSearchBaseCharm") -> OpenSearchBackupBaseHandler:
     """Implements the logic that returns the correct class according to the cluster type.
 
     This class is solely responsible for the creation of the correct azure client manager.
@@ -1659,7 +1690,7 @@ def backup(charm: "OpenSearchBaseCharm") -> OpenSearchBackupBase:
     return the base class OpenSearchBackupBase. This class solely defers all backup related events
     until the deployment description is available and the actual S3/Azure object is allocated.
     """
-    backup_base = OpenSearchBackupBase(charm)
+    backup_base = OpenSearchBackupBaseHandler(charm)
     if not charm.opensearch_peer_cm.deployment_desc():
         # Temporary condition: we are waiting for CM to show up and define which type
         # of cluster are we. Once we have that defined, then we will process.
@@ -1676,4 +1707,4 @@ def backup(charm: "OpenSearchBaseCharm") -> OpenSearchBackupBase:
             return OpenSearchS3Backup(charm)
         if backup_base.active_relation == AZURE_RELATION:
             return OpenSearchAzureBackup(charm)
-    return OpenSearchNonOrchestratorClusterBackup(charm)
+    return OpenSearchNonOrchestratorClusterBackupHandler(charm)

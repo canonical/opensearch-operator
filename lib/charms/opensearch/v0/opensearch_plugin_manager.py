@@ -26,7 +26,6 @@ from charms.opensearch.v0.opensearch_keystore import (
     OpenSearchKeystoreNotReadyError,
 )
 from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchAzurePlugin,
     OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
@@ -35,7 +34,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginMissingConfigError,
     OpenSearchPluginMissingDepsError,
     OpenSearchPluginRemoveError,
-    OpenSearchS3Plugin,
     PluginState,
 )
 
@@ -57,14 +55,6 @@ ConfigExposedPlugins = {
     "opensearch-knn": {
         "class": OpenSearchKnn,
         "config": "plugin_opensearch_knn",
-    },
-    "repository-s3": {
-        "class": OpenSearchS3Plugin,
-        "config": None,
-    },
-    "repository-azure": {
-        "class": OpenSearchAzurePlugin,
-        "config": None,
     },
 }
 
@@ -110,12 +100,9 @@ class OpenSearchPluginManager:
 
         raise KeyError(f"Plugin manager did not find plugin: {plugin_class}")
 
-    def get_plugin_status(self, plugin_class: Type[OpenSearchPlugin]) -> PluginState:
+    def get_plugin_status(self, plugin: OpenSearchPlugin) -> PluginState:
         """Returns a given plugin based on its class."""
-        for plugin in self.plugins:
-            if isinstance(plugin, plugin_class):
-                return self.status(plugin)
-        raise KeyError(f"Plugin manager did not find plugin: {plugin_class}")
+        return self.status(plugin)
 
     def is_ready_for_api(self) -> bool:
         """Checks if the plugin manager is ready to run API calls."""

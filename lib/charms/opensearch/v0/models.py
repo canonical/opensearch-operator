@@ -163,6 +163,14 @@ class DeploymentType(BaseStrEnum):
     OTHER = "other"
 
 
+class BackupPluginType(BaseStrEnum):
+    """Nature of a sub cluster deployment."""
+
+    S3 = "s3"
+    AZURE = "azure"
+    GCS = "gcs"
+
+
 class PerformanceType(BaseStrEnum):
     """Performance types available."""
 
