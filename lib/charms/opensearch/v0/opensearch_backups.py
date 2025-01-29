@@ -579,9 +579,7 @@ class OpenSearchNonOrchestratorClusterBackupHandler(OpenSearchBackupBaseHandler)
 
         for plugin in plugin_creds:
             if not plugin.data:
-                logger.warning(
-                    f"Secret for {plugin.backup_type} found but missing credentials set."
-                )
+                logger.warning(f"Secret for {plugin.name} found but missing credentials set.")
                 continue
             try:
                 if not self.charm.plugin_manager.is_ready_for_api():
@@ -620,7 +618,7 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
         self.relation = self.charm.model.get_relation(S3_RELATION)
         self.plugin = OpenSearchS3BackupPlugin(
             charm=self.charm,
-            data=self.data,
+            data=self.data.credentials,
         )
 
         # relation handles the config options for backups
@@ -1145,7 +1143,7 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         self.relation = self.charm.model.get_relation(AZURE_RELATION)
         self.plugin = OpenSearchAzureBackupPlugin(
             charm=self.charm,
-            data=self.data,
+            data=self.data.credentials,
         )
 
         # relation handles the config options for azure backups

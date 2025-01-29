@@ -471,8 +471,8 @@ class OpenSearchS3BackupPlugin(OpenSearchPlugin):
         return OpenSearchPluginConfig(
             config_entries={},
             secret_entries={
-                f"s3.client.{self.repo_name}.access_key": self.data.credentials.access_key,
-                f"s3.client.{self.repo_name}.secret_key": self.data.credentials.secret_key,
+                f"s3.client.{self.repo_name}.access_key": self.data.access_key,
+                f"s3.client.{self.repo_name}.secret_key": self.data.secret_key,
             },
         )
 
@@ -517,8 +517,8 @@ class OpenSearchAzureBackupPlugin(OpenSearchPlugin):
         return OpenSearchPluginConfig(
             config_entries={},
             secret_entries={
-                f"azure.client.{self.repo_name}.account": self.data.credentials.storage_account,
-                f"azure.client.{self.repo_name}.key": self.data.credentials.secret_key,
+                f"azure.client.{self.repo_name}.account": self.data.storage_account,
+                f"azure.client.{self.repo_name}.key": self.data.secret_key,
             },
         )
 
