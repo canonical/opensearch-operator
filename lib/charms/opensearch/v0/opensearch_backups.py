@@ -103,9 +103,11 @@ from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import (
     AzureRelData,
+    AzureRelDataCredentials,
     BackupPluginType,
     DeploymentType,
     S3RelData,
+    S3RelDataCredentials,
 )
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
@@ -618,7 +620,7 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
         self.relation = self.charm.model.get_relation(S3_RELATION)
         self.plugin = OpenSearchS3BackupPlugin(
             charm=self.charm,
-            data=self.data.credentials,
+            data=self.data.credentials if self.data else S3RelDataCredentials(),
         )
 
         # relation handles the config options for backups
@@ -1106,7 +1108,7 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
                 f"_snapshot/{S3_REPOSITORY}",
                 payload={
                     "type": "s3",
-                    "settings": self.plugin.data.dict(exclude={"tls_ca_chain", "credentials"}),
+                    "settings": self.data.dict(exclude={"tls_ca_chain", "credentials"}),
                 },
                 retries=6,
                 timeout=10,
@@ -1143,7 +1145,7 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         self.relation = self.charm.model.get_relation(AZURE_RELATION)
         self.plugin = OpenSearchAzureBackupPlugin(
             charm=self.charm,
-            data=self.data.credentials,
+            data=self.data.credentials if self.data else AzureRelDataCredentials(),
         )
 
         # relation handles the config options for azure backups
@@ -1633,7 +1635,7 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         """Registers the snapshot repo in the cluster."""
         try:
             to_include = {"container"}
-            settings = {k: self.plugin.data.dict()[k] for k in to_include}
+            settings = {k: self.data.dict()[k] for k in to_include}
             response = self.charm.opensearch.request(
                 "PUT",
                 f"_snapshot/{AZURE_REPOSITORY}/",
