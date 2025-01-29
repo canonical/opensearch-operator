@@ -65,10 +65,10 @@ PClusterWrongNodesCountForQuorum = (
 )
 PluginConfigError = "Unexpected error during plugin configuration, check the logs"
 BackupSetupFailed = "Backup setup failed, check logs for details"
-S3RelMissing = "Backup failover cluster missing S3 relation."
-S3RelShouldNotExist = "This unit should not be related to S3"
-S3RelDataIncomplete = "S3 relation data missing or incomplete."
-S3RelUneligible = "Only orchestrator clusters should relate to S3."
+BackupRelMissing = "Backup failover cluster missing backup relation."
+BackupRelShouldNotExist = "This unit should not be related to backup relation"
+BackupRelDataIncomplete = "Backup relation data missing or incomplete."
+BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
@@ -121,4 +121,7 @@ OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 S3_REPO_BASE_PATH = "/"
 S3_RELATION = "s3-credentials"
+AZURE_REPO_BASE_PATH = "/"
+AZURE_RELATION = "azure-credentials"
+
 PERFORMANCE_PROFILE = "profile"
