@@ -598,7 +598,7 @@ class OpenSearchNonOrchestratorClusterBackupHandler(OpenSearchBackupBaseHandler)
                 OpenSearchBackupPlugin(
                     charm=self.charm,
                     backup_type=BackupPluginType.S3,
-                    data=S3RelDataCredentials(
+                    data=S3RelDataCredentials.from_dict(
                         self.charm.secrets.get_object(Scope.APP, S3_CREDENTIALS)
                     ),
                 ),
@@ -608,7 +608,7 @@ class OpenSearchNonOrchestratorClusterBackupHandler(OpenSearchBackupBaseHandler)
                 OpenSearchBackupPlugin(
                     charm=self.charm,
                     backup_type=BackupPluginType.AZURE,
-                    data=AzureRelDataCredentials(
+                    data=AzureRelDataCredentials.from_dict(
                         self.charm.secrets.get_object(Scope.APP, AZURE_CREDENTIALS)
                     ),
                 ),
@@ -653,10 +653,14 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
         self.s3_client = S3Requirer(self.charm, S3_RELATION)
+
+        self.relation = self._charm.model.get_relation(S3_RELATION)
         self.plugin = OpenSearchBackupPlugin(
             charm=self.charm,
             backup_type=BackupPluginType.S3,
-            data=S3RelData(self.charm.secrets.get_object(Scope.APP, S3_CREDENTIALS)),
+            data=S3RelData.from_relation(
+                self.relation.data[self.relation.app]
+            ),
         )
 
         # relation handles the config options for backups
@@ -1165,10 +1169,14 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
         self.azure_client = AzureStorageRequires(self.charm, AZURE_RELATION)
+
+        self.relation = self._charm.model.get_relation(AZURE_RELATION)
         self.plugin = OpenSearchBackupPlugin(
             charm=self.charm,
             backup_type=BackupPluginType.AZURE,
-            data=AzureRelData(self.charm.secrets.get_object(Scope.APP, AZURE_CREDENTIALS)),
+            data=AzureRelData.from_relation(
+                self.relation.data[self.relation.app]
+            ),
         )
 
         # relation handles the config options for azure backups

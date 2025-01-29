@@ -454,10 +454,12 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
 
     def __init__(self, charm, backup_type: BackupPluginType, data: BaseModel | None):
         """Creates the OpenSearchAzurePlugin object."""
+        # Needs to come before as this is used to build the name
+        self.backup_type = backup_type
         super().__init__(charm)
+
         self.repo_name = "default"
         self.data = data
-        self.backup_type = backup_type
 
     def requested_to_enable(self) -> bool:
         """Returns True if the plugin is enabled."""
