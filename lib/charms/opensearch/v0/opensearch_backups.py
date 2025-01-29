@@ -554,20 +554,6 @@ class OpenSearchNonOrchestratorClusterBackupHandler(OpenSearchBackupBaseHandler)
                 self.charm.on[relation].relation_broken, self._on_backup_relation_broken
             )
 
-        for event in [
-            charm.on[PeerClusterRelationName].relation_joined,
-            charm.on[PeerClusterRelationName].relation_changed,
-            charm.on[PeerClusterRelationName].relation_broken,
-        ]:
-            # We need to keep track of the peer-cluster relation
-            # A unit-level secret will not trigger secret changes, nor an app-level secret
-            # change will trigger an update in its leader.
-
-            # Listening to the peer cluster relation is another alternative:
-            # Effectively it will call the common method that both _on_secret_changed and
-            # _on_peer_cluster_relation_event uses to update the keystore.
-            self.framework.observe(event, self._on_peer_cluster_relation_event)
-
     @override
     def _on_secret_changed(self, event: SecretEvent) -> None:
         """Processes the secret changes."""
@@ -589,10 +575,6 @@ class OpenSearchNonOrchestratorClusterBackupHandler(OpenSearchBackupBaseHandler)
         # if not s3_credentials:
         #     logger.warning(f"Secret {S3_CREDENTIALS} found but missing s3-credentials set.")
         #     return
-        self._on_peer_cluster_relation_event(event)
-
-    def _on_peer_cluster_relation_event(self, event):
-        """Processes the peer-cluster relation events."""
         plugin_creds = [
             (
                 OpenSearchBackupPlugin(
@@ -658,9 +640,7 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
         self.plugin = OpenSearchBackupPlugin(
             charm=self.charm,
             backup_type=BackupPluginType.S3,
-            data=S3RelData.from_relation(
-                self.relation.data[self.relation.app]
-            ),
+            data=S3RelData.from_relation(self.relation.data[self.relation.app]),
         )
 
         # relation handles the config options for backups
@@ -1174,9 +1154,7 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         self.plugin = OpenSearchBackupPlugin(
             charm=self.charm,
             backup_type=BackupPluginType.AZURE,
-            data=AzureRelData.from_relation(
-                self.relation.data[self.relation.app]
-            ),
+            data=AzureRelData.from_relation(self.relation.data[self.relation.app]),
         )
 
         # relation handles the config options for azure backups
