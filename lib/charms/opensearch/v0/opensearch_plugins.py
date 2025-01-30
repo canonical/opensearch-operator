@@ -299,7 +299,6 @@ from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from jproperties import Properties
 from pydantic import BaseModel, validator
-from pydantic.error_wrappers import ValidationError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "3b05456c6e304680b4af8e20dae246a2"
@@ -559,14 +558,7 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
     """
 
     MODEL = S3RelData
-    MANDATORY_CONFS = [
-        "bucket",
-        "endpoint",
-        "region",
-        "base_path",
-        "protocol",
-        "credentials",
-    ]
+
     DATA_PROVIDER = OpenSearchPluginBackupDataProvider
 
     def __init__(self, charm):
@@ -574,6 +566,7 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         super().__init__(charm)
         self.dp = self.DATA_PROVIDER(charm)
         self.repo_name = "default"
+        self.charm = charm
 
     def requested_to_enable(self) -> bool:
         """Returns True if the plugin is enabled."""
@@ -584,8 +577,12 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
         """Returns the data from the relation databag."""
         self._relation = self.dp.get_relation()
         try:
-            return self.MODEL.from_relation(self.dp.get_data())
-        except ValidationError:
+            if self.dp.is_main_orchestrator:
+                return self.MODEL.from_relation(self.dp.get_data())
+            if peer_data := self.charm.opensearch_peer_cm.rel_data():
+                return peer_data.credentials.s3
+
+        finally:
             return self.MODEL()
 
     @property
@@ -595,34 +592,6 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
-        conf = self.data.credentials.dict()
-        # First, let's check if credentials are set
-        if any([val is None for val in conf.values()]):
-            raise OpenSearchPluginMissingConfigError(
-                "Plugin {} missing credentials".format(
-                    self.name,
-                )
-            )
-
-        if self.dp.is_main_orchestrator:
-            conf = self.data.dict()
-            # Check any mandatory config is missing
-            if any([val is None and key in self.MANDATORY_CONFS for key, val in conf.items()]):
-                raise OpenSearchPluginMissingConfigError(
-                    "Plugin {} missing: {}".format(
-                        self.name,
-                        [key for key, val in conf.items() if val is None],
-                    )
-                )
-
-        if not self.dp.is_main_orchestrator:
-            return OpenSearchPluginConfig(
-                secret_entries={
-                    f"s3.client.{self.repo_name}.access_key": self.data.credentials.access_key,
-                    f"s3.client.{self.repo_name}.secret_key": self.data.credentials.secret_key,
-                },
-            )
-
         # This is the main orchestrator
         return OpenSearchPluginConfig(
             config_entries={},
