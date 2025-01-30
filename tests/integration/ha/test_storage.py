@@ -258,7 +258,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     writes_result = await c_writes.stop()
 
     # Scale down carefully to be able to identify which storage needs to be deployed to
-    # the leader when scaling up again. This is to avoid stale metadata when re-using the
+    # the leader when scaling up again. This is to avoid stale metadata when reusing the
     # storage on a different cluster.
     storage_ids = []
     unit_ids = get_application_unit_ids(ops_test, app)
