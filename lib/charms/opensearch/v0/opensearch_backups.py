@@ -77,6 +77,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 import pydantic
+from charms.data_platform_libs.v0.data_interfaces import RequirerData
 from charms.data_platform_libs.v0.object_storage import AzureStorageRequires
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.opensearch.v0.constants_charm import (
@@ -103,7 +104,6 @@ from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import (
     AzureRelData,
-    AzureRelDataCredentials,
     BackupPluginType,
     DeploymentType,
     S3RelData,
@@ -618,11 +618,6 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
         self.s3_client = S3Requirer(self.charm, S3_RELATION)
 
         self.relation = self.charm.model.get_relation(S3_RELATION)
-        self.plugin = OpenSearchS3BackupPlugin(
-            charm=self.charm,
-            data=self.data.credentials if self.data else S3RelDataCredentials(),
-        )
-
         # relation handles the config options for backups
         self.framework.observe(
             self.charm.on[S3_RELATION].relation_broken, self._on_backup_relation_broken
@@ -643,6 +638,15 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
             return S3RelData.from_relation(self.relation.data[self.relation.app])
         except pydantic.ValidationError:
             return None
+
+    @property
+    def plugin(self) -> OpenSearchS3BackupPlugin:
+        """Returns the S3 plugin."""
+        self.relation = self.charm.model.get_relation(S3_RELATION)
+        return OpenSearchS3BackupPlugin(
+            charm=self.charm,
+            data=self.data.credentials if self.data else S3RelDataCredentials(),
+        )
 
     @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
@@ -922,13 +926,6 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
         3) If the plugin is not enabled, then defer the event
         4) Send the API calls to setup the backup service
         """
-        if not self.plugin.requested_to_enable():
-            # Always check if a relation actually exists and if options are available
-            # in this case, seems one of the conditions above is not yet present
-            # abandon this restart event, as it will be called later once s3 configuration
-            # is correctly set
-            return
-
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
         try:
@@ -1142,12 +1139,6 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         super().__init__(charm, relation_name)
         self.azure_client = AzureStorageRequires(self.charm, AZURE_RELATION)
 
-        self.relation = self.charm.model.get_relation(AZURE_RELATION)
-        self.plugin = OpenSearchAzureBackupPlugin(
-            charm=self.charm,
-            data=self.data.credentials if self.data else AzureRelDataCredentials(),
-        )
-
         # relation handles the config options for azure backups
         self.framework.observe(
             self.charm.on[AZURE_RELATION].relation_broken, self._on_backup_relation_broken
@@ -1171,9 +1162,25 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         if self.relation is None:
             return None
         try:
-            return AzureRelData.from_relation(self.relation.data[self.relation.app])
+            azure_data_endpoint = RequirerData(
+                model=self._charm.model,
+                relation_name=AZURE_RELATION,
+                additional_secret_fields=["secret-key"],
+            )
+            return AzureRelData.from_relation(
+                azure_data_endpoint.fetch_relation_data()[self.relation.id]
+            )
         except pydantic.ValidationError:
             return None
+
+    @property
+    def plugin(self) -> OpenSearchS3BackupPlugin:
+        """Returns the S3 plugin."""
+        self.relation = self.charm.model.get_relation(AZURE_RELATION)
+        return OpenSearchAzureBackupPlugin(
+            charm=self.charm,
+            data=self.data.credentials if self.data else S3RelDataCredentials(),
+        )
 
     @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
@@ -1453,13 +1460,6 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         3) If the plugin is not enabled, then defer the event
         4) Send the API calls to setup the backup service
         """
-        if not self.plugin.requested_to_enable():
-            # Always check if a relation actually exists and if options are available
-            # in this case, seems one of the conditions above is not yet present
-            # abandon this restart event, as it will be called later once azure configuration
-            # is correctly set
-            return
-
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
         try:

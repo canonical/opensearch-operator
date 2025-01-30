@@ -388,8 +388,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start.assert_called_once()
             _post_start_init.assert_called_once()
 
-    @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackupBase.is_backup_in_progress")
-    @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackupBase._is_restore_complete")
+    @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackupBaseHandler.is_backup_in_progress")
+    @patch(f"{BASE_LIB_PATH}.opensearch_backups.OpenSearchBackupBaseHandler._is_restore_complete")
     @patch(f"{BASE_CHARM_CLASS}._stop_opensearch")
     @patch(f"{BASE_LIB_PATH}.opensearch_base_charm.cert_expiration_remaining_hours")
     @patch(

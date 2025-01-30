@@ -32,7 +32,7 @@ from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginConfig,
     OpenSearchPluginError,
-    OpenSearchS3Plugin,
+    OpenSearchS3BackupPlugin,
     PluginState,
 )
 from ops.model import MaintenanceStatus, WaitingStatus
@@ -83,7 +83,7 @@ def create_deployment_desc(*args, **kwargs):
 @pytest.fixture(scope="module")
 def active_relation(relation: str = S3_RELATION):
     with patch(
-        "charms.opensearch.v0.opensearch_backups.OpenSearchBackupBase.active_relation",
+        "charms.opensearch.v0.opensearch_backups.OpenSearchBackupBaseHandler.active_relation",
         new_callable=PropertyMock,
         return_value=relation,
     ) as mock:
@@ -105,7 +105,7 @@ def harness(active_relation):
         # Override the ConfigExposedPlugins
         charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
             "repository-s3": {
-                "class": OpenSearchS3Plugin,
+                "class": OpenSearchS3BackupPlugin,
                 "config": None,
                 "relation": "s3-credentials",
             },
@@ -121,6 +121,8 @@ def harness(active_relation):
         charm._put_admin_user = MagicMock()
         charm._put_kibanaserver_user = MagicMock()
         charm._put_or_update_internal_user_leader = MagicMock()
+
+        charm.secrets.get_secret = MagicMock()
 
         harness_obj.add_relation(PeerRelationName, "opensearch")
         harness_obj.set_leader(is_leader=True)
@@ -502,10 +504,14 @@ class TestBackups(unittest.TestCase):
     maxDiff = None
 
     @patch(
-        "charms.opensearch.v0.opensearch_backups.OpenSearchBackupBase.active_relation",
+        "charms.opensearch.v0.opensearch_backups.OpenSearchBackupBaseHandler.active_relation",
         new_callable=PropertyMock,
         return_value=S3_RELATION,
     )
+    # @patch(
+    #     "charms.opensearch.v0.opensearch_backups.OpenSearchS3Backup.charm.secrets.get_secret",
+    #     new_callable=MagicMock,
+    # )
     def setUp(self, _) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
@@ -523,7 +529,7 @@ class TestBackups(unittest.TestCase):
             # Override the ConfigExposedPlugins
             charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
                 "repository-s3": {
-                    "class": OpenSearchS3Plugin,
+                    "class": OpenSearchS3BackupPlugin,
                     "config": None,
                     "relation": "s3-credentials",
                 },
@@ -581,7 +587,7 @@ class TestBackups(unittest.TestCase):
             relation_data,
         )
 
-        assert S3RelData.from_relation(relation_data) == self.charm.backup.plugin.data
+        assert S3RelData.from_relation(relation_data) == self.charm.backup.data
         assert (
             mock_apply_config.call_args[0][0].__dict__
             == OpenSearchPluginConfig(

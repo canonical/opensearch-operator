@@ -459,7 +459,8 @@ class OpenSearchS3BackupPlugin(OpenSearchPlugin):
 
     def requested_to_enable(self) -> bool:
         """Returns True if the plugin is enabled."""
-        return self.data.access_key and self.data.secret_key
+        # Nothing to do here, as we do not use this functionality on backup plugins
+        pass
 
     @property
     def name(self) -> str:
