@@ -18,8 +18,8 @@ different cloud.
 import asyncio
 import logging
 import random
-import subprocess
 import string
+import subprocess
 import time
 import uuid
 from datetime import datetime
@@ -280,7 +280,7 @@ async def _configure_azure(
     logger.info("Adding Juju secret for secret-key config option for azure-storage-integrator")
 
     # Creates a new secret for each test
-    local_label = ''.join(random.choice(string.ascii_letters) for _ in range(10))
+    local_label = "".join(random.choice(string.ascii_letters) for _ in range(10))
     credentials_secret_uri = await add_juju_secret(
         ops_test,
         local_label,
