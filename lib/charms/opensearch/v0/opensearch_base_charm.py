@@ -246,6 +246,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             metrics_endpoints=[],
             scrape_configs=self._scrape_config,
             refresh_events=[
+                self.on.config_changed,
                 self.on.set_password_action,
                 self.on.secret_changed,
                 self.on[PeerRelationName].relation_changed,
@@ -1242,7 +1243,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 nodes = self._get_nodes(True)
                 # do not add exclusions if it's the last unit to stop
                 # otherwise cluster manager election will be blocked when starting up again
-                # and re-using storage
+                # and reusing storage
                 if len(nodes) > 1:
                     # 1. Add current node to the voting + alloc exclusions
                     self.opensearch_exclusions.add_current(voting=True, allocation=not restart)

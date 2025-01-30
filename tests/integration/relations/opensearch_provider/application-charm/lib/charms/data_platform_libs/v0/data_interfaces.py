@@ -551,7 +551,7 @@ class Scope(Enum):
 class CachedSecret:
     """Locally cache a secret.
 
-    The data structure is precisely re-using/simulating as in the actual Secret Storage
+    The data structure is precisely reusing/simulating as in the actual Secret Storage
     """
 
     def __init__(

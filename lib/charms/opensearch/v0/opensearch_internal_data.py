@@ -205,7 +205,7 @@ class RelationDataStore(DataStore):
 class SecretCache:
     """Internal helper class locally cache secrets.
 
-    The data structure is precisely re-using/simulating as in the actual Secret Storage
+    The data structure is precisely reusing/simulating as in the actual Secret Storage
     """
 
     CACHED_META = "meta"

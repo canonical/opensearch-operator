@@ -508,10 +508,6 @@ class TestBackups(unittest.TestCase):
         new_callable=PropertyMock,
         return_value=S3_RELATION,
     )
-    # @patch(
-    #     "charms.opensearch.v0.opensearch_backups.OpenSearchS3Backup.charm.secrets.get_secret",
-    #     new_callable=MagicMock,
-    # )
     def setUp(self, _) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)

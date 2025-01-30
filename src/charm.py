@@ -9,6 +9,7 @@ import typing
 
 import ops
 from charms.opensearch.v0.constants_charm import InstallError, InstallProgress
+from charms.opensearch.v0.helper_cos import update_grafana_dashboards_title
 from charms.opensearch.v0.models import PerformanceType
 from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchInstallError
@@ -137,6 +138,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 logger.debug(f"Set app status to {self.app.status}")
 
     def _on_upgrade_charm(self, _):
+        update_grafana_dashboards_title(self)
         if not self.performance_profile.current:
             # We are running (1) install or (2) an upgrade on instance that pre-dates profile
             # First, we set this unit's effective profile -> 1G heap and no index templates.

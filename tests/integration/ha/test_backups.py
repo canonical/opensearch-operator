@@ -17,6 +17,8 @@ different cloud.
 
 import asyncio
 import logging
+import random
+import string
 import subprocess
 import time
 import uuid
@@ -269,6 +271,7 @@ async def _configure_s3(
 
 
 async def _configure_azure(
+<<<<<<< HEAD
     ops_test: OpsTest, config: Dict[str, str], credentials: Dict[str, str], app_name: str = None
 ) -> None:
     await ops_test.model.applications[AZURE_INTEGRATOR].set_config(config)
@@ -276,6 +279,21 @@ async def _configure_azure(
     credentials_secret_uri = await add_juju_secret(
         ops_test,
         AZURE_INTEGRATOR,
+=======
+    ops_test: OpsTest,
+    config: Dict[str, str],
+    credentials: Dict[str, str],
+    app_name: str = None,
+) -> None:
+    await ops_test.model.applications[AZURE_INTEGRATOR].set_config(config)
+    logger.info("Adding Juju secret for secret-key config option for azure-storage-integrator")
+
+    # Creates a new secret for each test
+    local_label = "".join(random.choice(string.ascii_letters) for _ in range(10))
+    credentials_secret_uri = await add_juju_secret(
+        ops_test,
+        local_label,
+>>>>>>> feat/dpe-5982-azure-storage
         "azure-secret",
         {"secret-key": credentials["secret-key"]},
     )
