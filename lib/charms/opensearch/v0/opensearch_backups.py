@@ -114,7 +114,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
-from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (

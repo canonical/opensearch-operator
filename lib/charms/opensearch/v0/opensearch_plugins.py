@@ -261,19 +261,7 @@ import logging
 from abc import abstractmethod
 from typing import Any, Dict, List, Optional
 
-<<<<<<< HEAD
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-=======
-from charms.data_platform_libs.v0.data_interfaces import RequirerData
-from charms.opensearch.v0.constants_charm import (
-    AZURE_RELATION,
-    S3_RELATION,
-    PeerRelationName,
-)
-from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
-from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import AzureRelData, DeploymentType, S3RelData
->>>>>>> feat/dpe-5982-azure-storage
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from jproperties import Properties
 from pydantic import BaseModel, validator

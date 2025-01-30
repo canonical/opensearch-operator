@@ -271,15 +271,6 @@ async def _configure_s3(
 
 
 async def _configure_azure(
-<<<<<<< HEAD
-    ops_test: OpsTest, config: Dict[str, str], credentials: Dict[str, str], app_name: str = None
-) -> None:
-    await ops_test.model.applications[AZURE_INTEGRATOR].set_config(config)
-    logger.info("Adding Juju secret for secret-key config option for azure-storage-integrator")
-    credentials_secret_uri = await add_juju_secret(
-        ops_test,
-        AZURE_INTEGRATOR,
-=======
     ops_test: OpsTest,
     config: Dict[str, str],
     credentials: Dict[str, str],
@@ -293,7 +284,6 @@ async def _configure_azure(
     credentials_secret_uri = await add_juju_secret(
         ops_test,
         local_label,
->>>>>>> feat/dpe-5982-azure-storage
         "azure-secret",
         {"secret-key": credentials["secret-key"]},
     )
