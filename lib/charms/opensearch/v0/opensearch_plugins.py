@@ -298,7 +298,7 @@ from charms.opensearch.v0.models import DeploymentType, S3RelData
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from jproperties import Properties
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, ValidationError, validator
 
 # The unique Charmhub library identifier, never change it
 LIBID = "3b05456c6e304680b4af8e20dae246a2"
@@ -581,8 +581,9 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
                 return self.MODEL.from_relation(self.dp.get_data())
             if peer_data := self.charm.opensearch_peer_cm.rel_data():
                 return peer_data.credentials.s3
+            return self.MODEL()
 
-        finally:
+        except ValidationError:
             return self.MODEL()
 
     @property
@@ -593,11 +594,20 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
     def config(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
         # This is the main orchestrator
+        if self.dp.is_main_orchestrator:
+            return OpenSearchPluginConfig(
+                config_entries={},
+                secret_entries={
+                    f"s3.client.{self.repo_name}.access_key": self.data.credentials.access_key,
+                    f"s3.client.{self.repo_name}.secret_key": self.data.credentials.secret_key,
+                },
+            )
+
         return OpenSearchPluginConfig(
             config_entries={},
             secret_entries={
-                f"s3.client.{self.repo_name}.access_key": self.data.credentials.access_key,
-                f"s3.client.{self.repo_name}.secret_key": self.data.credentials.secret_key,
+                f"s3.client.{self.repo_name}.access_key": self.data.access_key,
+                f"s3.client.{self.repo_name}.secret_key": self.data.secret_key,
             },
         )
 
