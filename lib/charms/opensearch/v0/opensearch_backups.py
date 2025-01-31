@@ -1114,7 +1114,9 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
                 f"_snapshot/{S3_REPOSITORY}",
                 payload={
                     "type": "s3",
-                    "settings": self.data.dict(by_alias=False, exclude={"tls_ca_chain", "credentials"}),
+                    "settings": self.data.dict(
+                        by_alias=False, exclude={"tls_ca_chain", "credentials"}
+                    ),
                 },
                 retries=6,
                 timeout=10,
@@ -1172,7 +1174,7 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
             return None
         try:
             azure_data_endpoint = RequirerData(
-                model=self._charm.model,
+                model=self.charm.model,
                 relation_name=AZURE_RELATION,
                 additional_secret_fields=["secret-key"],
             )
