@@ -10,7 +10,6 @@ import time
 from typing import Dict, List, Optional
 
 from charms.opensearch.v0.models import App, Node
-from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
 from tenacity import (
     RetryError,
@@ -508,15 +507,15 @@ async def wait_for_backup_system_to_settle(
                         raise Exception(f"Recovery failed for shard {shard}")
 
 
-async def delete_backup(ops_test: OpsTest, backup_id: int) -> None:
-    """Deletes a backup."""
-    # Now, check if we have finished the restore
-    unit_ip = await get_leader_unit_ip(ops_test)
-    await http_request(
-        ops_test,
-        "DELETE",
-        f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/{backup_id}",
-    )
+# async def delete_backup(ops_test: OpsTest, backup_id: int, repository: str) -> None:
+#     """Deletes a backup."""
+#     # Now, check if we have finished the restore
+#     unit_ip = await get_leader_unit_ip(ops_test)
+#     await http_request(
+#         ops_test,
+#         "DELETE",
+#         f"https://{unit_ip}:9200/_snapshot/{repository}/{backup_id}",
+#     )
 
 
 async def assert_start_and_check_continuous_writes(
@@ -595,3 +594,19 @@ async def assert_restore_indices_and_compare_consistency(
     # We expect that new_count has a loss of documents and the numbers are different.
     # Check if we have data but not all of it.
     assert 0 < new_count < original_count
+
+
+async def add_juju_secret(
+    ops_test: OpsTest, charm_name: str, secret_label: str, data: Dict[str, str]
+) -> str:
+    """Add a new juju secret."""
+    logger.info(f"Data keys to insert: {data.keys()}")
+    key_values = " ".join([f"{key}={value}" for key, value in data.items()])
+    command = f"add-secret {secret_label} {key_values}"
+    _, stdout, _ = await ops_test.juju(*command.split())
+    logger.info(f"Add secret output: {stdout}")
+    secret_uri = stdout.strip()
+    logger.info(f"Secret uri: {secret_uri}")
+    command = f"grant-secret {secret_label} {charm_name}"
+    _, stdout, _ = await ops_test.juju(*command.split())
+    return secret_uri

@@ -26,3 +26,5 @@ S3_PEER_SECRET_KEYS = [
     "s3-access-key",
     S3_CREDENTIALS,
 ]
+AZURE_CREDENTIALS = "azure-creds"
+AZURE_PEER_SECRET_KEYS = ["azure-storage-account", "azure-secret-key", "secret-key", "storage-account", AZURE_CREDENTIALS]
