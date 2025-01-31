@@ -17,6 +17,7 @@ from charms.opensearch.v0.constants_charm import (
     RestoreInProgress,
 )
 from charms.opensearch.v0.helper_cluster import IndexStateEnum
+from charms.opensearch.v0.models import S3RelData
 from charms.opensearch.v0.opensearch_backups import (
     S3_REPOSITORY,
     BackupServiceState,
@@ -34,7 +35,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchS3BackupPlugin,
     PluginState,
 )
-from charms.opensearch.v0.models import S3RelData
 from ops.model import MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 
