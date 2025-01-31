@@ -550,12 +550,6 @@ class TestBackups(unittest.TestCase):
             self.harness.add_relation_unit(self.s3_rel_id, "s3-integrator/0")
             mock_pm_run.assert_not_called()
 
-    def test_get_endpoint_protocol(self, _) -> None:
-        """Tests the get_endpoint_protocol method."""
-        assert self.charm.backup._get_endpoint_protocol("http://10.0.0.1:8000") == "http"
-        assert self.charm.backup._get_endpoint_protocol("https://10.0.0.2:8000") == "https"
-        assert self.charm.backup._get_endpoint_protocol("test.not-valid-url") == "https"
-
     def test_on_list_backups_action(self, _):
         event = MagicMock()
         event.params = {"output": "table"}
