@@ -95,9 +95,7 @@ from charms.opensearch.v0.constants_charm import (
     RestoreInProgress,
 )
 from charms.opensearch.v0.constants_secrets import (
-    AZURE_CREDENTIALS,
     AZURE_PEER_SECRET_KEYS,
-    S3_CREDENTIALS,
     S3_PEER_SECRET_KEYS,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
@@ -108,7 +106,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
-from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
@@ -593,7 +590,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
 
         for plugin in plugins:
             # Early check to avoid trying to configure both with empty credentials
-            if not plugin.data.credentials.secret_key:
+            if not plugin.data:
                 continue
             try:
                 if not self.charm.plugin_manager.is_ready_for_api():
@@ -1614,6 +1611,8 @@ class OpenSearchAzureBackup(OpenSearchBackupBase):
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
         try:
+            if not self.plugin.data:
+                return BackupServiceState.REPO_ERR_UNKNOWN
             to_include = {"container"}
             settings = {k: self.plugin.data.dict()[k] for k in to_include}
             response = self.charm.opensearch.request(
