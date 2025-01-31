@@ -593,6 +593,10 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
+        if self.data == self.MODEL():
+            # Nothing to do, the backup is not enabled anyways
+            return self.disable()
+
         # This is the main orchestrator
         if self.dp.is_main_orchestrator:
             return OpenSearchPluginConfig(
