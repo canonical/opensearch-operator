@@ -1647,7 +1647,7 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         try:
             if not self.plugin.data:
                 return BackupServiceState.REPO_ERR_UNKNOWN
-            to_include = {"container"}
+            to_include = {"container", "base_path"}
             settings = {k: self.plugin.data.dict()[k] for k in to_include}
             response = self.charm.opensearch.request(
                 "PUT",
