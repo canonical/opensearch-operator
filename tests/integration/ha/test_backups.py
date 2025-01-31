@@ -283,8 +283,8 @@ async def _configure_azure(
     local_label = "".join(random.choice(string.ascii_letters) for _ in range(10))
     credentials_secret_uri = await add_juju_secret(
         ops_test,
+        AZURE_INTEGRATOR,
         local_label,
-        "azure-secret",
         {"secret-key": credentials["secret-key"]},
     )
     logger.info(
