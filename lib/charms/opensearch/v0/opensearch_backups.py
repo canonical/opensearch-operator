@@ -1036,6 +1036,8 @@ class OpenSearchBackup(OpenSearchBackupBase):
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
         try:
+            if not self.plugin.data:
+                return BackupServiceState.REPO_ERR_UNKNOWN
             response = self.charm.opensearch.request(
                 "PUT",
                 f"_snapshot/{S3_REPOSITORY}",

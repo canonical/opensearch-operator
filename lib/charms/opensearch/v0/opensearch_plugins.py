@@ -581,10 +581,10 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
                 return self.MODEL.from_relation(self.dp.get_data())
             if peer_data := self.charm.opensearch_peer_cm.rel_data():
                 return peer_data.credentials.s3
-            return self.MODEL()
+            return None
 
         except ValidationError:
-            return self.MODEL()
+            return None
 
     @property
     def name(self) -> str:
@@ -593,7 +593,7 @@ class OpenSearchBackupPlugin(OpenSearchPlugin):
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
-        if self.data == self.MODEL():
+        if not self.data:
             # Nothing to do, the backup is not enabled anyways
             return self.disable()
 
