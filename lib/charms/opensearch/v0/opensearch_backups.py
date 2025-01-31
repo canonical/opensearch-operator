@@ -1107,14 +1107,14 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
         try:
-            if not self.plugin.data:
+            if not self.data:
                 return BackupServiceState.REPO_ERR_UNKNOWN
             response = self.charm.opensearch.request(
                 "PUT",
                 f"_snapshot/{S3_REPOSITORY}",
                 payload={
                     "type": "s3",
-                    "settings": self.data.dict(exclude={"tls_ca_chain", "credentials"}),
+                    "settings": self.data.dict(by_alias=False, exclude={"tls_ca_chain", "credentials"}),
                 },
                 retries=6,
                 timeout=10,
@@ -1183,7 +1183,7 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
             return None
 
     @property
-    def plugin(self) -> OpenSearchS3BackupPlugin:
+    def plugin(self) -> OpenSearchAzureBackupPlugin:
         """Returns the S3 plugin."""
         self.relation = self.charm.model.get_relation(AZURE_RELATION)
         return OpenSearchAzureBackupPlugin(
@@ -1645,10 +1645,10 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
         try:
-            if not self.plugin.data:
+            if not self.data:
                 return BackupServiceState.REPO_ERR_UNKNOWN
             to_include = {"container", "base_path"}
-            settings = {k: self.plugin.data.dict()[k] for k in to_include}
+            settings = {k: self.data.dict(by_alias=False)[k] for k in to_include}
             response = self.charm.opensearch.request(
                 "PUT",
                 f"_snapshot/{AZURE_REPOSITORY}/",
