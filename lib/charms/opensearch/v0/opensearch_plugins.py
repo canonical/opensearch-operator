@@ -469,6 +469,8 @@ class OpenSearchS3BackupPlugin(OpenSearchPlugin):
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
+        if not self.data:
+            return self.disable()
         return OpenSearchPluginConfig(
             config_entries={},
             secret_entries={
@@ -515,6 +517,8 @@ class OpenSearchAzureBackupPlugin(OpenSearchPlugin):
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns OpenSearchPluginConfig composed of configs used at plugin configuration."""
+        if not self.data:
+            return self.disable()
         return OpenSearchPluginConfig(
             config_entries={},
             secret_entries={

@@ -131,6 +131,7 @@ from ops import (
     Object,
     RelationEvent,
     SecretEvent,
+    SecretNotFoundError,
     WaitingStatus,
 )
 from overrides import override
@@ -380,6 +381,8 @@ class OpenSearchBackupBaseHandler(Object):
         return False
 
     def _query_backup_status(self, backup_id: Optional[str] = None) -> BackupServiceState:
+        if not self.active_relation:
+            return BackupServiceState.REPO_NOT_CREATED
         repository = S3_REPOSITORY if self.active_relation == S3_RELATION else AZURE_REPOSITORY
         try:
             target = f"_snapshot/{repository}/"
@@ -556,15 +559,19 @@ class OpenSearchNonOrchestratorClusterBackupHandler(OpenSearchBackupBaseHandler)
     @override
     def _on_secret_changed(self, event: SecretEvent) -> None:
         """Processes the secret changes."""
-        if not any(
-            [
-                k in S3_PEER_SECRET_KEYS + AZURE_PEER_SECRET_KEYS
-                for k in event.secret.get_content().keys()
-            ]
-        ):
-            logger.info(
-                "Secret not relevant for backups, abandoning secret id %s", event.secret.id
-            )
+        try:
+            if not any(
+                [
+                    k in S3_PEER_SECRET_KEYS + AZURE_PEER_SECRET_KEYS
+                    for k in event.secret.get_content().keys()
+                ]
+            ):
+                logger.info(
+                    "Secret not relevant for backups, abandoning secret id %s", event.secret.id
+                )
+                return
+        except SecretNotFoundError:
+            logger.warning("Secret not found, abandoning secret event")
             return
 
         event.secret.get_content(refresh=True)
@@ -1100,6 +1107,8 @@ class OpenSearchS3Backup(OpenSearchBackupBaseHandler):
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
         try:
+            if not self.plugin.data:
+                return BackupServiceState.REPO_ERR_UNKNOWN
             response = self.charm.opensearch.request(
                 "PUT",
                 f"_snapshot/{S3_REPOSITORY}",
@@ -1634,8 +1643,10 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
     def _register_snapshot_repo(self) -> BackupServiceState:
         """Registers the snapshot repo in the cluster."""
         try:
+            if not self.plugin.data:
+                return BackupServiceState.REPO_ERR_UNKNOWN
             to_include = {"container"}
-            settings = {k: self.data.dict()[k] for k in to_include}
+            settings = {k: self.plugin.data.dict()[k] for k in to_include}
             response = self.charm.opensearch.request(
                 "PUT",
                 f"_snapshot/{AZURE_REPOSITORY}/",
