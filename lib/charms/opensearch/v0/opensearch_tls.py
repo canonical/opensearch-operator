@@ -50,6 +50,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 )
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import Object
+from ops.model import ModelError
 
 if typing.TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
@@ -161,7 +162,12 @@ class OpenSearchTLS(Object):
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             event.defer()
             return
-        admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        try:
+            admin_cert = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        except ModelError as e:
+            event.defer()
+            logger.warning(f"Failed to access secret {CertType.APP_ADMIN.val} with exception: {e}")
+            return
         if self.charm.unit.is_leader() and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             # create passwords for both ca trust_store/admin key_store
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
