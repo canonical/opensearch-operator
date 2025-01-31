@@ -1150,6 +1150,7 @@ class OpenSearchAzureBackup(OpenSearchBackupBaseHandler):
         super().__init__(charm, relation_name)
         self.azure_client = AzureStorageRequires(self.charm, AZURE_RELATION)
 
+        self.relation = self.charm.model.get_relation(S3_RELATION)
         # relation handles the config options for azure backups
         self.framework.observe(
             self.charm.on[AZURE_RELATION].relation_broken, self._on_backup_relation_broken
