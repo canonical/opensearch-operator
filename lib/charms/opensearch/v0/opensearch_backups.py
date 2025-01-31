@@ -111,7 +111,7 @@ from charms.opensearch.v0.opensearch_plugins import (
 )
 from ops.charm import ActionEvent, RelationEvent, SecretEvent
 from ops.framework import Object
-from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus, SecretNotFoundError
 from overrides import override
 
 # The unique Charmhub library identifier, never change it
@@ -447,12 +447,15 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     @override
     def _on_secret_changed(self, event: SecretEvent) -> None:
         """Processes the secret changes."""
-        if not any([k in S3_PEER_SECRET_KEYS for k in event.secret.get_content().keys()]):
-            logger.info(
-                "Secret not relevant for backups, abandoning secret id %s", event.secret.id
-            )
+        try:
+            if not any([k in S3_PEER_SECRET_KEYS for k in event.secret.get_content().keys()]):
+                logger.info(
+                    "Secret not relevant for backups, abandoning secret id %s", event.secret.id
+                )
+                return
+        except SecretNotFoundError:
+            logger.warning("Secret not found, abandoning secret event")
             return
-
         event.secret.get_content(refresh=True)
 
         # s3_credentials = self.charm.opensearch_peer_cm.rel_data().credentials.s3
