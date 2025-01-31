@@ -111,7 +111,12 @@ from charms.opensearch.v0.opensearch_plugins import (
 )
 from ops.charm import ActionEvent, RelationEvent, SecretEvent
 from ops.framework import Object
-from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus, SecretNotFoundError
+from ops.model import (
+    BlockedStatus,
+    MaintenanceStatus,
+    SecretNotFoundError,
+    WaitingStatus,
+)
 from overrides import override
 
 # The unique Charmhub library identifier, never change it
