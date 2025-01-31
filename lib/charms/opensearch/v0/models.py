@@ -393,7 +393,7 @@ class AzureRelData(Model):
     storage_account: str = Field(alias="storage-account", default="")
     container: str = Field(default="")
     endpoint: Optional[str] = Field(default="")
-    path: Optional[str] = Field(default=AZURE_REPO_BASE_PATH)
+    base_path: Optional[str] = Field(alias="path", default=AZURE_REPO_BASE_PATH)
     connection_protocol: Optional[str] = Field(alias="connection-protocol", default=None)
     credentials: AzureRelDataCredentials = Field(
         alias=AZURE_CREDENTIALS, default=AzureRelDataCredentials()
