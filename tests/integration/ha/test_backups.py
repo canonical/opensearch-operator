@@ -901,6 +901,9 @@ async def test_change_config_and_backup_restore(
 
     initial_count: int = 0
     for cloud_name in cloud_configs.keys():
+        # Azure has no different config setups at this point
+        if cloud_name == "azure":
+            continue
         logger.debug(
             f"Index {ContinuousWrites.INDEX_NAME} has {initial_count} documents, starting there"
         )
