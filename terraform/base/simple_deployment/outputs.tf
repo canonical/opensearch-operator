@@ -6,8 +6,8 @@ output "app_name" {
   value       = juju_application.opensearch.name
 }
 
+# ------------------------------
 # Required integration endpoints
-
 output "certificates_endpoint" {
   description = "Name of the endpoint used to integrate with the TLS certificates provider."
   value       = "certificates"
@@ -23,8 +23,8 @@ output "s3_credentials_endpoint" {
   value       = "s3-credentials"
 }
 
+# ------------------------------
 # Provided integration endpoints
-
 output "peer_cluster_orchestrator_endpoint" {
   description = "Name of the peer cluster orchestrator endpoint."
   value       = "peer-cluster-orchestrator"
@@ -38,4 +38,16 @@ output "opensearch_client_endpoint" {
 output "cos_agent_endpoint" {
   description = "Name of the endpoint used to provide COS agent integration."
   value       = "cos-agent-endpoint"
+}
+
+# -------------------------------
+# Provided offers
+output "certificates_offer_url" {
+  description = "Offer URL for TLS certificates"
+  value       = try(juju_offer.self-signed-certificates_offer["offered"].url, null)
+}
+
+output "peer_cluster_orchestrator_offer_url" {
+  description = "Offer URL for Peer cluster orchestrator"
+  value       = try(juju_offer.opensearch-orchestrator_offer["offered"].url, null)
 }

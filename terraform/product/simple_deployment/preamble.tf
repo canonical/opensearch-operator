@@ -13,6 +13,6 @@ resource "juju_application" "self-signed-certificates" {
     name    = "self-signed-certificates"
     channel = "latest/stable"
   }
-  model      = var.model_name
+  model = var.model_name
   depends_on = [null_resource.preamble]
 }

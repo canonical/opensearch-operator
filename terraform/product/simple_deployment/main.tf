@@ -1,13 +1,12 @@
 module "opensearch" {
-  source     = "../"
-  app_name   = var.app_name
-  model = var.model_name
-  units      = var.simple_opensearch_units
-  config = {
-    profile = "testing"
-  }
+  source      = "../.."
 
-  channel = "2/edge"
+  app_name    = var.app_name
+  model       = var.model_name
+  units       = var.units
+  config      = var.config
+
+  channel     = "2/edge"
 
   depends_on = [juju_application.self-signed-certificates]
 }

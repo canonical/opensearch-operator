@@ -9,8 +9,8 @@ variable "app_name" {
   default     = "opensearch"
 }
 
-variable "simple_opensearch_units" {
+variable "units" {
   description = "Node count"
   type        = number
-  default     = 1
+  default     = 3
 }
