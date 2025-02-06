@@ -1,38 +1,96 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+# main opensearch app
 module "opensearch" {
-  source      = "../.."
+  source                  = "../../charm/simple_deployment"
 
-  app_name    = var.app_name
-  model       = var.model_name
-  units       = var.units
-  config      = var.config
+  channel                 = var.channel
+  revision                = var.revision
+  base                    = var.base
 
-  channel     = "2/edge"
-
-  depends_on = [juju_application.self-signed-certificates]
+  app_name                = var.app_name
+  units                   = var.units
+  config                  = merge(var.config, {"init_hold": "false"})
+  model                   = var.model
+  constraints             = var.constraints
+  storage                 = var.storage
+  endpoint_bindings       = var.endpoint_bindings
 }
 
-resource "juju_integration" "simple_deployment_tls-operator_opensearch-integration" {
-  model = var.model_name
+# Integrator apps and grafana-agent
+resource "juju_application" "data-integrator" {
+  charm {
+    name    = "data-integrator"
+    channel = "latest/stable"
+  }
+  model     = var.model
+}
+
+resource "juju_application" "grafana-agent" {
+  charm {
+    name    = "grafana-agent"
+    channel = "latest/stable"
+  }
+  model     = var.model
+}
+
+resource "juju_application" "backups-integrator" {
+  charm {
+    name    = "${var.backups}-integrator"
+    channel = "latest/stable"
+  }
+  model     = var.model
+}
+
+# Integrations
+resource "juju_integration" "backups_integrator-opensearch-integration" {
+  model = var.model
 
   application {
-    name = juju_application.self-signed-certificates.name
+    name = juju_application.backups-integrator.name
   }
+
   application {
-    name = var.app_name
+    name = module.opensearch.app_name
   }
+
   depends_on = [
-    juju_application.self-signed-certificates,
-    module.opensearch
+    module.opensearch,
+    juju_application.backups-integrator,
   ]
-
 }
 
-resource "null_resource" "simple_deployment_juju_wait_deployment" {
-  provisioner "local-exec" {
-    command = <<-EOT
-    juju-wait -v --model ${var.model_name}
-    EOT
+resource "juju_integration" "data_integrator-opensearch-integration" {
+  model = var.model
+
+  application {
+    name = juju_application.data-integrator.name
   }
 
-  depends_on = [juju_integration.simple_deployment_tls-operator_opensearch-integration]
+  application {
+    name = module.opensearch.app_name
+  }
+
+  depends_on = [
+    module.opensearch,
+    juju_application.data-integrator,
+  ]
+}
+
+resource "juju_integration" "grafana_agent-opensearch-integration" {
+  model = var.model
+
+  application {
+    name = juju_application.grafana-agent.name
+  }
+
+  application {
+    name = module.opensearch.app_name
+  }
+
+  depends_on = [
+    module.opensearch,
+    juju_application.grafana-agent,
+  ]
 }
