@@ -1,79 +1,46 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-variable "app_name" {
-  description = "Application name"
-  type        = string
-  default     = "opensearch"
+variable "opensearch" {
+  description = "OpenSearch app definition"
+  type = object({
+    app_name          = optional(string, "opensearch")
+    model             = string
+    config            = optional(map(string), {"cluster_name": "opensearch"})
+    channel           = optional(string, "2/stable")
+    base              = optional(string, "ubuntu@22.04")
+    revision          = optional(string, null)
+    units             = optional(number, 3)
+    constraints       = optional(string, "arch=amd64")
+    machines          = optional(list(string), [])
+    storage           = optional(map(string), {})
+    endpoint_bindings = optional(map(string), {})
+  })
 }
 
-variable "channel" {
-  description = "Charm channel"
-  type        = string
-  default     = "2/stable"
-}
-
-variable "base" {
-  description = "Charm base (old name: series)"
-  type        = string
-  default     = "ubuntu@22.04"
-}
-
-variable "config" {
-  description = "Map of charm configuration options"
-  type = map(string)
-  default = {}
-}
-
-variable "model" {
-  description = "Model name"
-  type        = string
-}
-
-variable "revision" {
-  description = "Charm revision"
-  type        = number
-  default     = null
-}
-
-variable "units" {
-  description = "Charm units"
-  type        = number
-  default     = 3
-}
-
-variable "constraints" {
-  description = "String listing constraints for this application"
-  type        = string
-  default     = "arch=amd64"
-}
-
-variable "machines" {
-  description = "List of machines for placement"
-  type = list(string)
-  default = []
-}
-
-variable "storage" {
-  description = "Map of storage used by the application"
-  type = map(string)
-  default = {}
-}
-
-variable "endpoint_bindings" {
-  description = "Map of endpoint bindings"
-  type = map(string)
-  default = {}
-}
-
-# additional variables
-variable "backups" {
-  type = string
-  description = "Type of backup integrator (s3 or azure)"
-  default = "s3"
+variable "backups-integrator" {
+  description = "Configuration for the backup integrator"
+  type = object({
+    storage_type  = optional(string, "s3")
+    config        = map(string)
+  })
 
   validation {
-    condition     = contains(["s3", "azure"], var.backups)
-    error_message = "Allowed values are: 's3', 'azure'"
+    condition     = contains(["s3", "azure"], var.backups-integrator.storage_type)
+    error_message = "backup-integrator allows one of the values: 's3', 'azure' for storage_type."
+  }
+}
+
+variable "data-integrator" {
+  description = "Configuration for the data-integrator"
+  type        = map(string)
+  default     = {"index-name": "test", "extra-user-roles": "admin"}
+
+  validation {
+    condition = (
+      lookup(var.data-integrator, "index-name", "") != ""
+      && contains(["default", "admin"], lookup(var.data-integrator, "extra-user-roles", "admin"))
+    )
+    error_message = "data-integrator must contain a non-empty 'index-name' and 'extra-user-roles' must be either 'default' or 'admin'."
   }
 }

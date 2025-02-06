@@ -5,17 +5,23 @@
 module "opensearch" {
   source                  = "../../charm/simple_deployment"
 
-  channel                 = var.channel
-  revision                = var.revision
-  base                    = var.base
+  channel                 = var.opensearch.channel
+  revision                = var.opensearch.revision
+  base                    = var.opensearch.base
 
-  app_name                = var.app_name
-  units                   = var.units
-  config                  = merge(var.config, {"init_hold": "false"})
-  model                   = var.model
-  constraints             = var.constraints
-  storage                 = var.storage
-  endpoint_bindings       = var.endpoint_bindings
+  app_name                = var.opensearch.app_name
+  units                   = var.opensearch.units
+  config                  = merge(var.opensearch.config, {"init_hold": "false"})
+  model                   = var.opensearch.model
+  constraints             = var.opensearch.constraints
+  storage                 = var.opensearch.storage
+  endpoint_bindings       = var.opensearch.endpoint_bindings
+}
+
+# OpenSearch dashboards
+module "opensearch-dashboards" {
+  source   = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=tf"
+  model    = var.opensearch.model
 }
 
 # Integrator apps and grafana-agent
@@ -24,7 +30,8 @@ resource "juju_application" "data-integrator" {
     name    = "data-integrator"
     channel = "latest/stable"
   }
-  model     = var.model
+  model     = var.opensearch.model
+  config    = var.data-integrator
 }
 
 resource "juju_application" "grafana-agent" {
@@ -32,20 +39,38 @@ resource "juju_application" "grafana-agent" {
     name    = "grafana-agent"
     channel = "latest/stable"
   }
-  model     = var.model
+  model     = var.opensearch.model
 }
 
 resource "juju_application" "backups-integrator" {
   charm {
-    name    = "${var.backups}-integrator"
+    name    = "${var.backups-integrator.storage_type}-integrator"
     channel = "latest/stable"
   }
-  model     = var.model
+  model     = var.opensearch.model
+  config    = var.backups-integrator.config
 }
 
 # Integrations
+resource "juju_integration" "opensearch_dashboards-opensearch-integration" {
+  model = var.opensearch.model
+
+  application {
+    name = module.opensearch-dashboards.app_name
+  }
+
+  application {
+    name = module.opensearch.app_name
+  }
+
+  depends_on = [
+    module.opensearch,
+    module.opensearch-dashboards,
+  ]
+}
+
 resource "juju_integration" "backups_integrator-opensearch-integration" {
-  model = var.model
+  model = var.opensearch.model
 
   application {
     name = juju_application.backups-integrator.name
@@ -62,7 +87,7 @@ resource "juju_integration" "backups_integrator-opensearch-integration" {
 }
 
 resource "juju_integration" "data_integrator-opensearch-integration" {
-  model = var.model
+  model = var.opensearch.model
 
   application {
     name = juju_application.data-integrator.name
@@ -79,7 +104,7 @@ resource "juju_integration" "data_integrator-opensearch-integration" {
 }
 
 resource "juju_integration" "grafana_agent-opensearch-integration" {
-  model = var.model
+  model = var.opensearch.model
 
   application {
     name = juju_application.grafana-agent.name
