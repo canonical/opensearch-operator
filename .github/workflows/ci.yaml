@@ -105,7 +105,8 @@ jobs:
 
       - name: Wait for juju deployment
         run: |
-          juju wait-for model test --query='life=="alive" && status=="available" && forEach(applications, app => app.status == "active")'
+          juju wait-for application opensearch -m test --query='status=="active"'
+          juju wait-for model test --query='life=="alive" && status=="available"'
 
   lib-check:
     name: Check libraries
