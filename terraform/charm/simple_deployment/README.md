@@ -10,28 +10,28 @@ This module requires a `juju` model to be available. Refer to the [usage section
 ### Inputs
 The module offers the following configurable inputs:
 
-| Name | Type | Description | Required |
-| - | - | - | - |
-| `app_name`| string | Application name | False |
-| `channel`| string | Channel that the charm is deployed from | False |
-| `base`| string | The series to be used for this charm | False |
-| `config`| map(string) | Map of the charm configuration options | False |
-| `model`| string | Name of the model that the charm is deployed on | True |
-| `resources`| map(string) | Map of the charm resources | False |
-| `revision`| number | Revision number of the charm name | False |
-| `units`| number | Number of units to be deployed | False |
-| `constraints`| string | Machine constraints for the charm | False |
-| `storage`| map(string) | Storage description, must follow the juju provider schema | False |
+| Name          | Type        | Description                                               | Required   |
+|---------------|-------------|-----------------------------------------------------------|------------|
+| `app_name`    | string      | Application name                                          | False      |
+| `channel`     | string      | Channel that the charm is deployed from                   | False      |
+| `base`        | string      | The series to be used for this charm                      | False      |
+| `config`      | map(string) | Map of the charm configuration options                    | False      |
+| `model`       | string      | Name of the model that the charm is deployed on           | **True**       |
+| `resources`   | map(string) | Map of the charm resources                                | False      |
+| `revision`    | number      | Revision number of the charm name                         | False      |
+| `units`       | number      | Number of units to be deployed                            | False      |
+| `constraints` | string      | Machine constraints for the charm                         | False      |
+| `storage`     | map(string) | Storage description, must follow the juju provider schema | False      |
 
 
 ### Outputs
-Upon applied, the module exports the following outputs:
+When applied, the module exports the following outputs:
 
-| Name | Description |
-| - | - |
-| `app_name`|  Application name |
-| `provides`| Map of `provides` endpoints |
-| `requires`| Map of `requires` endpoints |
+| Name       | Description                 |
+|------------|-----------------------------|
+| `app_name` | Application name            |
+| `provides` | Map of `provides` endpoints |
+| `requires` | Map of `requires` endpoints |
 
 ## Usage
 

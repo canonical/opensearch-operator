@@ -102,7 +102,9 @@ jobs:
           pushd ./terraform/charm/simple_deployment/
           terraform apply -var='model=test' -auto-approve
           popd
-          
+
+      - name: Wait for juju deployment
+        run: |
           juju wait-for model test --query='life=="alive" && status=="available" && forEach(applications, app => app.status == "active")'
 
   lib-check:
