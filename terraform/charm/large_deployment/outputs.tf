@@ -20,3 +20,18 @@ output "provides" {
     cos_agent                 = "cos-agent"
   }
 }
+
+output "certificates_offer_url" {
+  description = "Offer URL for TLS provider"
+  value       = try(juju_offer.self_signed_certificates-offer["offered"].url, null)
+}
+
+output "peer_cluster_orchestrator_main_offer_url" {
+  description = "Offer URL for Main Peer cluster orchestrator"
+  value       = try(juju_offer.opensearch_main-offer["offered"].url, null)
+}
+
+output "peer_cluster_orchestrator_failover_offer_url" {
+  description = "Offer URL for Failover Peer cluster orchestrator"
+  value       = try(juju_offer.opensearch_failover-offer["offered"].url, null)
+}

@@ -1,6 +1,10 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+#--------------------------------------------------------
+# 1. DEPLOYMENTS
+#--------------------------------------------------------
+
 # main opensearch app
 module "opensearch" {
   source                  = "../../charm/simple_deployment"
@@ -50,6 +54,11 @@ resource "juju_application" "backups-integrator" {
   model     = var.opensearch.model
   config    = var.backups-integrator.config
 }
+
+
+#--------------------------------------------------------
+# 2. INTEGRATIONS
+#--------------------------------------------------------
 
 # Integrations
 resource "juju_integration" "opensearch_dashboards-opensearch-integration" {
@@ -116,6 +125,23 @@ resource "juju_integration" "grafana_agent-opensearch-integration" {
 
   depends_on = [
     module.opensearch,
+    juju_application.grafana-agent,
+  ]
+}
+
+resource "juju_integration" "grafana_agent-opensearch_dashboards-integration" {
+  model = var.opensearch.model
+
+  application {
+    name = juju_application.grafana-agent.name
+  }
+
+  application {
+    name = module.opensearch-dashboards.app_name
+  }
+
+  depends_on = [
+    module.opensearch-dashboards,
     juju_application.grafana-agent,
   ]
 }

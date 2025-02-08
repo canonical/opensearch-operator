@@ -2,43 +2,41 @@
 # See LICENSE file for licensing details.
 
 locals {
-  orchestrator_modules = merge(
-    { (var.main.app_name) = module.opensearch_main },
-      var.failover != null ? { (var.failover.app_name) = module.opensearch_failover } : {}
-  )
-
-  apps          = var.apps != null ? var.apps : []
-  non_main_apps = concat(local.apps, var.failover != null ? [var.failover] : [])
-
-  peer_cluster_relations = [
-    for rel in flatten([
-      for consumer in local.non_main_apps : [
-        // Always connect to main
-        {
-          consumer_app       = consumer.app_name
-          consumer_model     = consumer.model
-          orchestrator_app   = var.main.app_name
-          orchestrator_model = var.main.model
-        },
-        // Connect remaining apps to failover if exists
-          var.failover != null && consumer.app_name != var.failover.app_name ? {
-          consumer_app       = consumer.app_name
-          consumer_model     = consumer.model
-          orchestrator_app   = var.failover.app_name
-          orchestrator_model = var.failover.model
-        } : null
-      ]
-    ]) : rel if rel != null
+  apps = [
+    for app in concat(var.apps != null ? var.apps : []) : app if app != null
   ]
+
+  apps_in_main_model = [
+    for app in concat([var.failover], local.apps) :
+    app if app != null && app.model == var.main.model
+  ]
+  apps_not_in_main_model = [
+    for app in concat([var.failover], local.apps) :
+    app if app != null && app.model != var.main.model
+  ]
+  apps_in_failover_model = [
+    for app in local.apps :
+    app if app.model == var.failover.model
+  ]
+  apps_not_in_failover_model = [
+    for app in local.apps :
+    app if app.model != var.failover.model
+  ]
+
+  all_models = distinct(concat(
+    [var.main.model],
+    var.failover != null ? [var.failover.model] : [],
+    var.apps != null ? [for app in var.apps : app.model] : [],
+  ))
 }
+
+#--------------------------------------------------------
+# 1. DEPLOYMENTS
+#--------------------------------------------------------
 
 # main orchestrator opensearch app
 module "opensearch_main" {
   source                  = "../simple_deployment"
-
-  is_orchestrator         = true
-  offer_certificates      = true
-  offer_opensearch        = true
 
   channel                 = var.main.channel
   revision                = var.main.revision
@@ -55,14 +53,11 @@ module "opensearch_main" {
 
 # failover orchestrator opensearch app
 module "opensearch_failover" {
-  count                   = var.failover != null ? 1 : 0
+  for_each                = var.failover != null ? { "deployed" = true } : {}
   source                  = "../simple_deployment"
 
   # required to flag whether this app is in the same model as the main orchestrator for TLS relation
-  main_model              = var.failover.model
-  is_orchestrator         = true
-  offer_opensearch        = true
-  certificates_offer_url  = var.failover.model != var.main.model ? module.opensearch_main.certificates_offer_url : null
+  main_model              = var.main.model
 
   channel                 = var.failover.channel
   revision                = var.failover.revision
@@ -85,12 +80,6 @@ module "opensearch_non_orchestrator_apps" {
   # required to flag whether this app is in the same model as the main orchestrator for TLS relation
   main_model              = var.main.model
 
-  # Cross-model offer URL (only for non-main models)
-  certificates_offer_url  = each.value.model != var.main.model ? module.opensearch_main.certificates_offer_url : null
-  is_orchestrator         = false
-  offer_certificates      = false
-  offer_opensearch        = false
-
   channel                 = each.value.channel
   revision                = each.value.revision
   base                    = each.value.base
@@ -103,32 +92,95 @@ module "opensearch_non_orchestrator_apps" {
   storage                 = each.value.storage
 }
 
-# large deployments peer-cluster integrations
-resource "juju_integration" "peer_cluster" {
-  for_each = {for idx, rel in local.peer_cluster_relations : idx => rel}
-  model    = each.value.consumer_model
+#--------------------------------------------------------
+# 2. OFFERS (if cross model)
+#--------------------------------------------------------
 
-  # Client side (always local)
+# offer TLS certificates if needed
+resource "juju_offer" "self_signed_certificates-offer" {
+  for_each = length(local.all_models) > 1 ? { "offered" = true } : {}
+
+  model            = var.main.model
+  application_name = "self-signed-certificates"
+  endpoint         = "certificates"
+}
+
+resource "juju_offer" "opensearch_main-offer" {
+  for_each = length(local.all_models) > 1 ? { "offered" = true } : {}
+
+  model            = var.main.model
+  application_name = var.main.app_name
+  endpoint         = "peer-cluster-orchestrator"
+}
+
+resource "juju_offer" "opensearch_failover-offer" {
+  for_each = var.failover != null && length(local.apps_not_in_failover_model) > 1 ? { "offered" = true } : {}
+
+  model            = var.failover.model
+  application_name = var.failover.app_name
+  endpoint         = "peer-cluster-orchestrator"
+}
+
+
+#--------------------------------------------------------
+# 3. INTEGRATIONS
+#--------------------------------------------------------
+
+# For CROSS-MODEL TLS integrations
+resource "juju_integration" "tls-opensearch-cross_model-integration" {
+  # Only if cross-model
+  for_each = { for app in local.apps_not_in_main_model : app.app_name => app }
+  model = each.value.model
+
   application {
-    name     = each.value.consumer_app
+    offer_url = juju_offer.self_signed_certificates-offer["offered"].url
+  }
+  application {
+    name = each.value.app_name
+  }
+
+  depends_on = [
+    module.opensearch_main,
+    juju_offer.self_signed_certificates-offer,
+  ]
+}
+
+# large deployments peer-cluster integrations with main orchestrator
+resource "juju_integration" "peer_cluster-main-cross_model-relation" {
+  for_each = { for app in local.apps_not_in_main_model : app.app_name => app }
+  model    = each.value.model
+
+  application {
+    name     = each.value.app_name
+    endpoint = "peer-cluster"
+  }
+  application {
+    offer_url   = juju_offer.opensearch_main-offer["offered"].url
+  }
+
+  depends_on = [
+    module.opensearch_main,
+    module.opensearch_failover,
+    juju_offer.opensearch_main-offer,
+  ]
+}
+
+# large deployments peer-cluster integrations with failover orchestrator if any
+resource "juju_integration" "peer_cluster-failover-cross_model-relation" {
+  for_each = var.failover != null ? { for app in local.apps_not_in_failover_model : app.app_name => app } : {}
+  model    = each.value.model
+
+  application {
+    name     = each.value.app_name
     endpoint = "peer-cluster"
   }
 
-  # Consumer side: choose one of these two options depending on whether it's local or cross-model.
-  dynamic "application" {
-    for_each = each.value.consumer_model == each.value.orchestrator_model ? [each.value] : []
-    content {
-      name     = each.value.orchestrator_app
-      endpoint = "peer-cluster-orchestrator"
-    }
+  application {
+    offer_url   = juju_offer.opensearch_failover-offer["offered"].url
   }
 
-  dynamic "application" {
-    # Cross-model target: supply an offer_url and endpoint.
-    for_each = each.value.consumer_model != each.value.orchestrator_model ? [each.value] : []
-    content {
-      offer_url = local.orchestrator_modules[each.value.orchestrator_app].peer_offer_url
-      endpoint  = "peer-cluster-orchestrator"
-    }
-  }
+  depends_on = [
+    module.opensearch_failover,
+    juju_offer.opensearch_failover-offer,
+  ]
 }

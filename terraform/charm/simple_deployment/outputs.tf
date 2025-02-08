@@ -24,14 +24,3 @@ output "provides" {
     cos_agent                 = "cos-agent"
   }
 }
-
-# Provided offers
-output "certificates_offer_url" {
-  description = "Offer URL for TLS certificates"
-  value       = try(juju_offer.self-signed-certificates_offer["offered"].url, null)
-}
-
-output "peer_cluster_orchestrator_offer_url" {
-  description = "Offer URL for Peer cluster orchestrator"
-  value       = try(juju_offer.opensearch-orchestrator_offer["offered"].url, null)
-}

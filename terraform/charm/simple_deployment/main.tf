@@ -4,8 +4,11 @@
 # Identify if the current model is where the main orchestrator resides to deploy the tls provider
 locals {
   is_main_orchestrator  = !lookup(var.config, "init_hold", false)
-  is_orchestrator       = var.is_orchestrator || local.is_main_orchestrator
 }
+
+#--------------------------------------------------------
+# 1. DEPLOYMENTS
+#--------------------------------------------------------
 
 # Deploy required applications
 resource "juju_application" "opensearch" {
@@ -42,7 +45,7 @@ resource "juju_application" "opensearch" {
       error_message = "Only one storage is supported"
     }
     precondition {
-      condition     = (local.is_main_orchestrator && var.main_model == null) || var.model == var.main_model
+      condition     = local.is_main_orchestrator && (var.main_model == null || var.model == var.main_model) || !local.is_main_orchestrator && var.main_model != null
       error_message = "The main_model should either be null or equal to the model for main orchestrators."
     }
   }
@@ -60,23 +63,10 @@ resource "juju_application" "self-signed-certificates" {
   }
 }
 
-# Define offers
-resource "juju_offer" "self-signed-certificates_offer" {
-  for_each = local.is_main_orchestrator && var.offer_certificates ? { "offered" = true } : {}
 
-  model            = var.model
-  application_name = juju_application.self-signed-certificates["deployed"].name
-  endpoint         = "certificates"
-}
-
-resource "juju_offer" "opensearch-orchestrator_offer" {
-  for_each = local.is_orchestrator && var.offer_opensearch ? { "offered" = true } : {}
-
-  model            = var.model
-  application_name = juju_application.opensearch.name
-  endpoint         = "peer-cluster-orchestrator"
-}
-
+#--------------------------------------------------------
+# 2. INTEGRATIONS
+#--------------------------------------------------------
 
 # Integrations
 resource "juju_integration" "tls-opensearch-same-model_integration" {
@@ -96,22 +86,4 @@ resource "juju_integration" "tls-opensearch-same-model_integration" {
     juju_application.self-signed-certificates,
     juju_application.opensearch,
   ]
-}
-
-# For CROSS-MODEL TLS integrations
-resource "juju_integration" "tls-opensearch-cross-model_integration" {
-  for_each = var.model != var.main_model && var.certificates_offer_url != null ? { "cross" = true } : {}
-  # Only if cross-model
-
-  model = var.model
-
-  application {
-    offer_url = var.certificates_offer_url
-  }
-
-  application {
-    name = juju_application.opensearch.name
-  }
-
-  depends_on = [juju_application.opensearch]
 }
