@@ -6,7 +6,7 @@ variable "opensearch" {
   type = object({
     app_name          = optional(string, "opensearch")
     model             = string
-    config            = optional(map(string), {"cluster_name": "opensearch"})
+    config            = optional(map(string), { "cluster_name" : "opensearch" })
     channel           = optional(string, "2/stable")
     base              = optional(string, "ubuntu@22.04")
     revision          = optional(string, null)
@@ -21,8 +21,8 @@ variable "opensearch" {
 variable "backups-integrator" {
   description = "Configuration for the backup integrator"
   type = object({
-    storage_type  = optional(string, "s3")
-    config        = map(string)
+    storage_type = optional(string, "s3")
+    config       = map(string)
   })
 
   validation {
@@ -34,7 +34,7 @@ variable "backups-integrator" {
 variable "data-integrator" {
   description = "Configuration for the data-integrator"
   type        = map(string)
-  default     = {"index-name": "test", "extra-user-roles": "admin"}
+  default     = { "index-name" : "test", "extra-user-roles" : "admin" }
 
   validation {
     condition = (

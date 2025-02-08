@@ -7,25 +7,25 @@
 
 # main opensearch app
 module "opensearch" {
-  source                  = "../../charm/simple_deployment"
+  source = "../../charm/simple_deployment"
 
-  channel                 = var.opensearch.channel
-  revision                = var.opensearch.revision
-  base                    = var.opensearch.base
+  channel  = var.opensearch.channel
+  revision = var.opensearch.revision
+  base     = var.opensearch.base
 
-  app_name                = var.opensearch.app_name
-  units                   = var.opensearch.units
-  config                  = merge(var.opensearch.config, {"init_hold": "false"})
-  model                   = var.opensearch.model
-  constraints             = var.opensearch.constraints
-  storage                 = var.opensearch.storage
-  endpoint_bindings       = var.opensearch.endpoint_bindings
+  app_name          = var.opensearch.app_name
+  units             = var.opensearch.units
+  config            = merge(var.opensearch.config, { "init_hold" : "false" })
+  model             = var.opensearch.model
+  constraints       = var.opensearch.constraints
+  storage           = var.opensearch.storage
+  endpoint_bindings = var.opensearch.endpoint_bindings
 }
 
 # OpenSearch dashboards
 module "opensearch-dashboards" {
-  source   = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=tf"
-  model    = var.opensearch.model
+  source = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=tf"
+  model  = var.opensearch.model
 }
 
 # Integrator apps and grafana-agent
@@ -34,8 +34,8 @@ resource "juju_application" "data-integrator" {
     name    = "data-integrator"
     channel = "latest/stable"
   }
-  model     = var.opensearch.model
-  config    = var.data-integrator
+  model  = var.opensearch.model
+  config = var.data-integrator
 }
 
 resource "juju_application" "grafana-agent" {
@@ -43,7 +43,7 @@ resource "juju_application" "grafana-agent" {
     name    = "grafana-agent"
     channel = "latest/stable"
   }
-  model     = var.opensearch.model
+  model = var.opensearch.model
 }
 
 resource "juju_application" "backups-integrator" {
@@ -51,8 +51,8 @@ resource "juju_application" "backups-integrator" {
     name    = "${var.backups-integrator.storage_type}-integrator"
     channel = "latest/stable"
   }
-  model     = var.opensearch.model
-  config    = var.backups-integrator.config
+  model  = var.opensearch.model
+  config = var.backups-integrator.config
 }
 
 

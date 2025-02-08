@@ -29,7 +29,7 @@ variable "failover" {
   type = object({
     app_name          = string
     model             = string
-    config            = optional(map(string), {"init_hold": "true"})
+    config            = optional(map(string), { "init_hold" : "true" })
     channel           = optional(string, "2/stable")
     base              = optional(string, "ubuntu@22.04")
     revision          = optional(string, null)
@@ -47,7 +47,7 @@ variable "apps" {
   type = list(object({
     app_name          = string
     model             = string
-    config            = optional(map(string), {"init_hold": "true"})
+    config            = optional(map(string), { "init_hold" : "true" })
     channel           = optional(string, "2/stable")
     base              = optional(string, "ubuntu@22.04")
     revision          = optional(string, null)

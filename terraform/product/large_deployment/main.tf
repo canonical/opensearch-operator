@@ -10,10 +10,10 @@ locals {
 
   # Map each model to its OpenSearch apps
   opensearch_apps_per_model = { for model in local.all_models : model => flatten(concat(
-      model == var.main.model ? [var.main.app_name] : [],
-      var.failover != null && model == var.failover.model ? [var.failover.app_name] : [],
-      var.apps != null ? [for app in var.apps : app.app_name if app.model == model] : [],
-  ))}
+    model == var.main.model ? [var.main.app_name] : [],
+    var.failover != null && model == var.failover.model ? [var.failover.app_name] : [],
+    var.apps != null ? [for app in var.apps : app.app_name if app.model == model] : [],
+  )) }
 }
 
 #--------------------------------------------------------
@@ -31,8 +31,8 @@ module "opensearch" {
 
 # opensearch-dashboards in the main model
 module "opensearch-dashboards" {
-  source   = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=tf"
-  model    = var.main.model
+  source = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=tf"
+  model  = var.main.model
 }
 
 # data-integrator in the main model

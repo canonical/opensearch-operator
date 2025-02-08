@@ -68,25 +68,17 @@ jobs:
         run: |
           sudo snap install terraform --channel=latest/stable --classic
 
-      - name: lint charm module
+      - name: Lint / format / validate TF modules
         run: |
           pushd ./terraform
-          terraform init
-          terraform fmt
-          terraform validate
-
-          pushd ./tests
-          terraform init
-          terraform fmt
-          terraform validate
-          popd
+          for dir in charm/simple_deployment charm/large_deployment product/simple_deployment product/large_deployment; do
+            (cd "${dir}" && terraform init && terraform fmt && terraform validate)
+          done
           popd
 
       - name: run checks - prepare
         run: |
-          sudo snap install juju --channel=3.6/beta --classic
-          sudo snap install juju-wait --channel=latest/stable --classic
-          sudo snap install jq
+          sudo snap install juju --channel=3.6 --classic
 
       - name: LXD setup
         run: |
@@ -105,11 +97,13 @@ jobs:
           juju model-defaults logging-config='<root>=INFO; unit=DEBUG'
           juju add-model test
 
-      - name: Terraform deploy
+      - name: Terraform deploy - simple deployments charm module
         run: |
-          pushd ./terraform/tests/
-          TF_VAR_model_name="test" terraform apply -target null_resource.simple_deployment_juju_wait_deployment -auto-approve
+          pushd ./terraform/charm/simple_deployment/
+          terraform apply -var='model=test' -auto-approve
           popd
+          
+          juju wait-for model test --query='life=="alive" && status=="available" && forEach(applications, app => app.status == "active")'
 
   lib-check:
     name: Check libraries

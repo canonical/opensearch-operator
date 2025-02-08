@@ -3,7 +3,7 @@
 
 # Identify if the current model is where the main orchestrator resides to deploy the tls provider
 locals {
-  is_main_orchestrator  = !lookup(var.config, "init_hold", false)
+  is_main_orchestrator = !lookup(var.config, "init_hold", false)
 }
 
 #--------------------------------------------------------
@@ -75,7 +75,7 @@ resource "juju_integration" "tls-opensearch-same-model_integration" {
   model = var.model
 
   application {
-    name = "self-signed-certificates"  # we have to fix the name for subsequent non-main same model apps
+    name = "self-signed-certificates" # we have to fix the name for subsequent non-main same model apps
   }
 
   application {

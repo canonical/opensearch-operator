@@ -21,8 +21,8 @@ variable "base" {
 
 variable "config" {
   description = "Map of charm configuration options"
-  type = map(string)
-  default = {}
+  type        = map(string)
+  default     = {}
 }
 
 variable "model" {
@@ -50,50 +50,26 @@ variable "constraints" {
 
 variable "machines" {
   description = "List of machines for placement"
-  type = list(string)
-  default = []
+  type        = list(string)
+  default     = []
 }
 
 variable "storage" {
   description = "Map of storage used by the application"
-  type = map(string)
-  default = {}
+  type        = map(string)
+  default     = {}
 }
 
 variable "endpoint_bindings" {
   description = "Map of endpoint bindings"
-  type = map(string)
-  default = {}
+  type        = map(string)
+  default     = {}
 }
 
 # --------
 # Additional variables - needed for extensibility
 variable "main_model" {
   description = "Model name of the main orchestrator (to detect same-model apps)"
-  type        = string
-  default     = null
-}
-
-variable "is_orchestrator" {
-  description = "Whether this deployment acts as a cluster orchestrator"
-  type        = bool
-  default     = false
-}
-
-variable "offer_certificates" {
-  description = "Whether this deployment should offer the certificates endpoint."
-  type        = bool
-  default     = false
-}
-
-variable "offer_opensearch" {
-  description = "Whether this deployment should offer the peer-cluster-orchestrator endpoint."
-  type        = bool
-  default     = false
-}
-
-variable "certificates_offer_url" {
-  description = "URL of the cross-model offer for TLS certificates"
   type        = string
   default     = null
 }

@@ -29,7 +29,7 @@ variable "failover" {
   type = object({
     app_name          = string
     model             = string
-    config            = optional(map(string), {"init_hold": "true"})
+    config            = optional(map(string), { "init_hold" : "true" })
     channel           = optional(string, "2/stable")
     base              = optional(string, "ubuntu@22.04")
     revision          = optional(string, null)
@@ -47,7 +47,7 @@ variable "apps" {
   type = list(object({
     app_name          = string
     model             = string
-    config            = optional(map(string), {"init_hold": "true"})
+    config            = optional(map(string), { "init_hold" : "true" })
     channel           = optional(string, "2/stable")
     base              = optional(string, "ubuntu@22.04")
     revision          = optional(string, null)
@@ -64,8 +64,8 @@ variable "apps" {
 variable "backups-integrator" {
   description = "Configuration for the backup integrator"
   type = object({
-    storage_type  = optional(string, "s3")
-    config        = map(string)
+    storage_type = optional(string, "s3")
+    config       = map(string)
   })
 
   validation {
@@ -77,7 +77,7 @@ variable "backups-integrator" {
 variable "data-integrator" {
   description = "Configuration for the data-integrator"
   type        = map(string)
-  default     = {"index-name": "test", "extra-user-roles": "admin"}
+  default     = { "index-name" : "test", "extra-user-roles" : "admin" }
 
   validation {
     condition = (

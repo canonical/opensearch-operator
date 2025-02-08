@@ -36,60 +36,60 @@ locals {
 
 # main orchestrator opensearch app
 module "opensearch_main" {
-  source                  = "../simple_deployment"
+  source = "../simple_deployment"
 
-  channel                 = var.main.channel
-  revision                = var.main.revision
-  base                    = var.main.base
+  channel  = var.main.channel
+  revision = var.main.revision
+  base     = var.main.base
 
-  app_name                = var.main.app_name
-  units                   = var.main.units
-  config                  = merge(var.main.config, {"cluster_name" : var.cluster_name, "init_hold": "false"})
-  model                   = var.main.model
-  constraints             = var.main.constraints
-  storage                 = var.main.storage
-  endpoint_bindings       = var.main.endpoint_bindings
+  app_name          = var.main.app_name
+  units             = var.main.units
+  config            = merge(var.main.config, { "cluster_name" : var.cluster_name, "init_hold" : "false" })
+  model             = var.main.model
+  constraints       = var.main.constraints
+  storage           = var.main.storage
+  endpoint_bindings = var.main.endpoint_bindings
 }
 
 # failover orchestrator opensearch app
 module "opensearch_failover" {
-  for_each                = var.failover != null ? { "deployed" = true } : {}
-  source                  = "../simple_deployment"
+  for_each = var.failover != null ? { "deployed" = true } : {}
+  source   = "../simple_deployment"
 
   # required to flag whether this app is in the same model as the main orchestrator for TLS relation
-  main_model              = var.main.model
+  main_model = var.main.model
 
-  channel                 = var.failover.channel
-  revision                = var.failover.revision
-  base                    = var.failover.base
+  channel  = var.failover.channel
+  revision = var.failover.revision
+  base     = var.failover.base
 
-  app_name                = var.failover.app_name
-  units                   = var.failover.units
-  config                  = merge(var.failover.config, {"cluster_name" : var.cluster_name, "init_hold": "true"})
-  model                   = var.failover.model
-  constraints             = var.failover.constraints
-  storage                 = var.failover.storage
-  endpoint_bindings       = var.failover.endpoint_bindings
+  app_name          = var.failover.app_name
+  units             = var.failover.units
+  config            = merge(var.failover.config, { "cluster_name" : var.cluster_name, "init_hold" : "true" })
+  model             = var.failover.model
+  constraints       = var.failover.constraints
+  storage           = var.failover.storage
+  endpoint_bindings = var.failover.endpoint_bindings
 }
 
 # all non orchestrator apps
 module "opensearch_non_orchestrator_apps" {
-  for_each                = {for idx, app in local.apps : idx => app if app != null}
-  source                  = "../simple_deployment"
+  for_each = { for idx, app in local.apps : idx => app if app != null }
+  source   = "../simple_deployment"
 
   # required to flag whether this app is in the same model as the main orchestrator for TLS relation
-  main_model              = var.main.model
+  main_model = var.main.model
 
-  channel                 = each.value.channel
-  revision                = each.value.revision
-  base                    = each.value.base
+  channel  = each.value.channel
+  revision = each.value.revision
+  base     = each.value.base
 
-  app_name                = each.value.app_name
-  units                   = each.value.units
-  config                  = merge(each.value.config, {"cluster_name" : var.cluster_name, "init_hold": "true"})
-  model                   = each.value.model
-  constraints             = each.value.constraints
-  storage                 = each.value.storage
+  app_name    = each.value.app_name
+  units       = each.value.units
+  config      = merge(each.value.config, { "cluster_name" : var.cluster_name, "init_hold" : "true" })
+  model       = each.value.model
+  constraints = each.value.constraints
+  storage     = each.value.storage
 }
 
 #--------------------------------------------------------
@@ -130,7 +130,7 @@ resource "juju_offer" "opensearch_failover-offer" {
 resource "juju_integration" "tls-opensearch-cross_model-integration" {
   # Only if cross-model
   for_each = { for app in local.apps_not_in_main_model : app.app_name => app }
-  model = each.value.model
+  model    = each.value.model
 
   application {
     offer_url = juju_offer.self_signed_certificates-offer["offered"].url
@@ -155,7 +155,7 @@ resource "juju_integration" "peer_cluster-main-cross_model-relation" {
     endpoint = "peer-cluster"
   }
   application {
-    offer_url   = juju_offer.opensearch_main-offer["offered"].url
+    offer_url = juju_offer.opensearch_main-offer["offered"].url
   }
 
   depends_on = [
@@ -174,9 +174,8 @@ resource "juju_integration" "peer_cluster-failover-cross_model-relation" {
     name     = each.value.app_name
     endpoint = "peer-cluster"
   }
-
   application {
-    offer_url   = juju_offer.opensearch_failover-offer["offered"].url
+    offer_url = juju_offer.opensearch_failover-offer["offered"].url
   }
 
   depends_on = [
