@@ -1,0 +1,42 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.1    unsupported  02:46:22Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           waiting    1/2  opensearch                                 2  no       waiting for machine
+main                               waiting    0/1  opensearch                                 0  no       waiting for machine
+opensearch                         waiting    0/1  opensearch                                 1  no       waiting for machine
+s3-integrator                      blocked      1  s3-integrator             latest/edge    124  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent       Machine  Public address  Ports  Message
+failover/0*                  active    idle        2        10.168.106.167         
+failover/1                   waiting   allocating  3                               waiting for machine
+main/0                       waiting   allocating  4                               waiting for machine
+opensearch/0                 waiting   allocating  5                               waiting for machine
+s3-integrator/0*             blocked   idle        1        10.168.106.53          Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/0*  active    idle        0        10.168.106.241         
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.168.106.241  juju-dd51fe-0  ubuntu@22.04      Running
+1        started  10.168.106.53   juju-dd51fe-1  ubuntu@22.04      Running
+2        started  10.168.106.167  juju-dd51fe-2  ubuntu@22.04      Running
+3        pending                  juju-dd51fe-3  ubuntu@22.04      Running
+4        pending                  juju-dd51fe-4  ubuntu@22.04      Running
+5        pending                  juju-dd51fe-5  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 01:48:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:48:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 01:48:55 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:49:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:49:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:49:00 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:51:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:51:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-0: 01:51:13 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:174 Cleaning backups from cloud buckets
