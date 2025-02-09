@@ -173,7 +173,7 @@ def test_can_unit_perform_backup_backup_in_progress(harness, caplog):
         harness.charm.backup._check_repo_status = MagicMock(
             return_value=BackupServiceState.SUCCESS
         )
-        harness.charm.backup.is_backup_in_progress = MagicMock(return_value=True)
+        harness.charm.backup.backup_manager.is_backup_in_progress = MagicMock(return_value=True)
         result = harness.charm.backup._can_unit_perform_backup(event)
     assert not caplog.records
     assert not result
@@ -259,7 +259,7 @@ def test_can_unit_perform_backup_backup_in_progress(harness, caplog):
 def test_restore_finished_true(harness, mock_request, leader, request_value, result_value):
     harness.charm.backup.charm.unit.is_leader = MagicMock(return_value=leader)
     mock_request.return_value = request_value
-    assert harness.charm.backup._is_restore_complete() == result_value
+    assert harness.charm.backup.backup_manager.is_restore_complete() == result_value
 
 
 @pytest.mark.parametrize(
@@ -385,7 +385,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
 def test_close_indices_if_needed(
     harness, mock_request, list_backup_response, cluster_state, req_response, exception_raised
 ):
-    harness.charm.backup._list_backups = MagicMock(return_value=list_backup_response)
+    harness.charm.backup.backup_manager.list_backups = MagicMock(return_value=list_backup_response)
     charms.opensearch.v0.opensearch_backups.ClusterState.indices = MagicMock(
         return_value=cluster_state
     )
@@ -464,7 +464,9 @@ def test_on_s3_broken_steps(
     harness.charm.plugin_manager.apply_config = (
         MagicMock(side_effect=apply_config_exc) if apply_config_exc else MagicMock()
     )
-    harness.charm.backup._check_snapshot_status = MagicMock(return_value=snapshot_status)
+    harness.charm.backup.backup_manager.check_snapshot_status = MagicMock(
+        return_value=snapshot_status
+    )
     harness.charm.unit.is_leader = MagicMock(return_value=is_leader)
     harness.charm.plugin_manager.get_plugin = MagicMock()
     harness.charm.plugin_manager.status = MagicMock(return_value=PluginState.ENABLED)
@@ -563,7 +565,9 @@ class TestBackups(unittest.TestCase):
     def test_on_list_backups_action_in_json_format(self, _):
         event = MagicMock()
         event.params = {"output": "json"}
-        self.charm.backup._list_backups = MagicMock(return_value={"backup1": {"state": "SUCCESS"}})
+        self.charm.backup.backup_manager.list_backups = MagicMock(
+            return_value={"backup1": {"state": "SUCCESS"}}
+        )
         self.charm.backup._generate_backup_list_output = MagicMock(
             return_value="backup1 | finished"
         )
@@ -580,7 +584,7 @@ class TestBackups(unittest.TestCase):
             "index2": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
             "index3": {"shards": [{"type": "PRIMARY", "stage": "DONE"}]},
         }
-        result = self.charm.backup._is_restore_complete()
+        result = self.charm.backup.backup_manager.is_restore_complete()
         self.assertTrue(result)
 
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchS3Backup.apply_api_config_if_needed")
@@ -630,7 +634,7 @@ class TestBackups(unittest.TestCase):
                 ]
             }
         )
-        backups = self.charm.backup._list_backups(S3_REPOSITORY)
+        backups = self.charm.backup.backup_manager.list_backups()
         self.assertEqual(
             self.charm.backup._generate_backup_list_output(backups), LIST_BACKUPS_TRIAL
         )
@@ -675,7 +679,7 @@ class TestBackups(unittest.TestCase):
     def test_on_create_backup_action_backup_in_progress(self, _):
         event = MagicMock()
         self.charm.backup._check_repo_status = MagicMock(return_value=BackupServiceState.SUCCESS)
-        self.charm.backup.is_backup_in_progress = MagicMock(return_value=True)
+        self.charm.backup.backup_manager.is_backup_in_progress = MagicMock(return_value=True)
         plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchS3Backup._plugin_status"
         with patch(plugin_method, new_callable=PropertyMock) as mock_plugin_status:
             mock_plugin_status.return_value = PluginState.ENABLED
@@ -687,7 +691,7 @@ class TestBackups(unittest.TestCase):
     def test_on_create_backup_action_exception(self, mock_request, _):
         event = MagicMock()
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
-        self.charm.backup.is_backup_in_progress = MagicMock(return_value=False)
+        self.charm.backup.backup_manager.is_backup_in_progress = MagicMock(return_value=False)
         mock_request.side_effect = OpenSearchHttpError(500, "Internal Server Error")
         self.charm.backup._on_create_backup_action(event)
         event.fail.assert_called_with(
@@ -701,7 +705,7 @@ class TestBackups(unittest.TestCase):
 
         # Mocking helper methods
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
-        self.charm.backup._is_restore_complete = MagicMock(return_value=True)
+        self.charm.backup.backup_manager.is_restore_complete = MagicMock(return_value=True)
         self.charm.backup._is_backup_available_for_restore = MagicMock(return_value=True)
         self.charm.backup._close_indices_if_needed = MagicMock(return_value=set())
         self.charm.backup._restore = MagicMock(
@@ -751,7 +755,7 @@ class TestBackups(unittest.TestCase):
         event.params = {"backup-id": "2023-01-01T00:00:00Z"}
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
         self.charm.backup._close_indices_if_needed = MagicMock(return_value=set())
-        self.charm.backup._is_restore_complete = MagicMock(return_value=False)
+        self.charm.backup.backup_manager.is_restore_complete = MagicMock(return_value=False)
         self.charm.backup._restore = MagicMock()
         self.charm.status = MagicMock()
 
@@ -768,7 +772,7 @@ class TestBackups(unittest.TestCase):
         event.params = {"backup-id": "2023-01-01T00:00:00Z"}
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
         self.charm.backup._close_indices_if_needed = MagicMock(return_value=set())
-        self.charm.backup._is_restore_complete = MagicMock(return_value=True)
+        self.charm.backup.backup_manager.is_restore_complete = MagicMock(return_value=True)
         self.charm.backup._is_backup_available_for_restore = MagicMock(return_value=False)
         self.charm.backup._restore = MagicMock()
         self.charm.status = MagicMock()
@@ -786,7 +790,7 @@ class TestBackups(unittest.TestCase):
         event.params = {"backup-id": "2023-01-01T00:00:00Z"}
         self.charm.backup._can_unit_perform_backup = MagicMock(return_value=True)
         self.charm.backup._close_indices_if_needed = MagicMock(return_value=set())
-        self.charm.backup._is_restore_complete = MagicMock(return_value=True)
+        self.charm.backup.backup_manager.is_restore_complete = MagicMock(return_value=True)
         self.charm.backup._is_backup_available_for_restore = MagicMock(return_value=True)
         self.charm.backup._restore = MagicMock(
             side_effect=OpenSearchRestoreCheckError("_restore: unexpected response")
