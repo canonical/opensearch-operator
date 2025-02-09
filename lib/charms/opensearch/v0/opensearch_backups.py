@@ -659,6 +659,11 @@ class OpenSearchS3Backup(OpenSearchBackupBase):
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
 
+    @override
+    def _on_backup_action(self, event: ActionEvent) -> None:
+        """Just overloads the base method, as we process each action in this class."""
+        pass
+
     @property
     def _plugin_status(self):
         return self.charm.plugin_manager.get_plugin_status(OpenSearchS3Plugin)
@@ -1161,6 +1166,11 @@ class OpenSearchAzureBackup(OpenSearchBackupBase):
         """
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
+
+    @override
+    def _on_backup_action(self, event: ActionEvent) -> None:
+        """Just overloads the base method, as we process each action in this class."""
+        pass
 
     @property
     def _plugin_status(self):
