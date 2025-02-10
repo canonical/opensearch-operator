@@ -35,6 +35,8 @@ This module is intended to be a product module, deploying all components for a p
 
 It may be used as-is and directly as follows:
 ```
+tf init
+
 tf plan \
   -var='main={"app_name": "main", "model": "dev"}' \
   -var='failover={"app_name": "failover", "model": "dev1"}' \
