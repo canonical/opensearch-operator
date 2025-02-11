@@ -6,10 +6,6 @@ locals {
     for app in concat(var.apps != null ? var.apps : []) : app if app != null
   ]
 
-  apps_in_main_model = [
-    for app in concat([var.failover], local.apps) :
-    app if app != null && app.model == var.main.model
-  ]
   apps_not_in_main_model = [
     for app in concat([var.failover], local.apps) :
     app if app != null && app.model != var.main.model

@@ -55,7 +55,7 @@ jobs:
           promtool test rules tests/unit/test_alert_rules/*.yaml
 
   terraform-test:
-    name: Terraform - Lint and Simple Deployment
+    name: Terraform - Validation and Simple Deployment product
     runs-on: ubuntu-22.04
     timeout-minutes: 120
     steps:
@@ -63,6 +63,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: (GitHub hosted) Free up disk space
+        run: |
+          printf '\nDisk usage before cleanup\n'
+          df --human-readable
+          # Based on https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+          rm -r /opt/hostedtoolcache/
+          printf '\nDisk usage after cleanup\n'
+          df --human-readable
+
+      - name: (self hosted) Disk usage
+        run: df --human-readable
 
       - name: Install terraform snap
         run: |
@@ -93,20 +105,38 @@ jobs:
 
       - name: Juju setup
         run: |
+          mkdir -p ~/.local/share/juju
           sg 'lxd' -c "juju bootstrap 'localhost' --config model-logs-size=10G"
           juju model-defaults logging-config='<root>=INFO; unit=DEBUG'
           juju add-model test
+          
+          sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
+          vm.max_map_count=262144
+          vm.swappiness=0
+          net.ipv4.tcp_retries2=5
+          fs.file-max=1048576
+          EOT
+          
+          sudo sysctl -p
 
-      - name: Terraform deploy - simple deployments charm module
+      - name: Terraform deploy - simple deployments product module
         run: |
-          pushd ./terraform/charm/simple_deployment/
-          terraform apply -var='model=test' -auto-approve
+          pushd ./terraform/product/simple_deployment/
+          terraform apply \
+            -var='opensearch={"model": "test"}' \
+            -var='backups-integrator={"config": {"bucket": "test"}}' \
+            -auto-approve
           popd
 
       - name: Wait for juju deployment
         run: |
-          juju wait-for application opensearch -m test --query='status=="active"'
-          juju wait-for model test --query='life=="alive" && status=="available"'
+          # TODO - remove this when juju wait-for starts reporting the up to date status
+          until timeout 2m juju wait-for model test --query='life=="alive" && status=="available"'
+          do
+            echo "Retrying in 5 seconds..."
+            juju status -m test
+            sleep 5
+          done
 
   lib-check:
     name: Check libraries
