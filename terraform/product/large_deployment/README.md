@@ -38,6 +38,8 @@ It may be used as-is and directly as follows:
 tf init
 
 tf plan \
+
+tf plan \
   -var='main={"app_name": "main", "model": "dev"}' \
   -var='failover={"app_name": "failover", "model": "dev1"}' \
   -var='apps=[{"app_name": "data1", "model": "dev2"},{"app_name": "ml", "model": "dev2"}]' \
