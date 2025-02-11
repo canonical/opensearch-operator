@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 
 from data_platform_helpers.version_check import get_charm_revision
 
-
 # The unique Charmhub library identifier, never change it
 LIBID = "98222ad783074ec6b098d4014b853119"
 
