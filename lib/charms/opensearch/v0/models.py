@@ -414,17 +414,6 @@ class AzureRelData(Model):
         ):
             raise ValueError("Missing fields: storage_account, secret_key")
 
-        # NOTE: Both storage_account and container must be set. If none of them are set,
-        # but credentials were found, this likely means that we are validating for a
-        # non cluster_manager application, which only needs credentials.
-        core_values = ["container"]
-        found = [item for item in core_values if values.get(item)]
-
-        if len(found) != len(core_values) and len(found) > 0:
-            raise ValueError(f"Missing fields: {set(core_values) - set(found)}")
-
-        return values
-
     @validator(AZURE_CREDENTIALS, check_fields=False)
     def ensure_secret_content(cls, conf: Dict[str, str] | AzureRelDataCredentials):  # noqa: N805
         """Ensure the secret content is set."""
