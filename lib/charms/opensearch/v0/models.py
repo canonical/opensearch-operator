@@ -414,6 +414,8 @@ class AzureRelData(Model):
         ):
             raise ValueError("Missing fields: storage_account, secret_key")
 
+        return values
+
     @validator(AZURE_CREDENTIALS, check_fields=False)
     def ensure_secret_content(cls, conf: Dict[str, str] | AzureRelDataCredentials):  # noqa: N805
         """Ensure the secret content is set."""
