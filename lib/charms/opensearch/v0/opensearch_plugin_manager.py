@@ -26,7 +26,7 @@ from charms.opensearch.v0.opensearch_keystore import (
     OpenSearchKeystoreNotReadyError,
 )
 from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchBackupPlugin,
+    OpenSearchAzurePlugin,
     OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
@@ -35,6 +35,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginMissingConfigError,
     OpenSearchPluginMissingDepsError,
     OpenSearchPluginRemoveError,
+    OpenSearchS3Plugin,
     PluginState,
 )
 
@@ -58,7 +59,11 @@ ConfigExposedPlugins = {
         "config": "plugin_opensearch_knn",
     },
     "repository-s3": {
-        "class": OpenSearchBackupPlugin,
+        "class": OpenSearchS3Plugin,
+        "config": None,
+    },
+    "repository-azure": {
+        "class": OpenSearchAzurePlugin,
         "config": None,
     },
 }
@@ -201,6 +206,7 @@ class OpenSearchPluginManager:
                 raise OpenSearchPluginMissingDepsError(plugin.name, missing_deps)
 
             self._opensearch.run_bin("plugin", f"install --batch {plugin.name}")
+            self._clean_cache_if_needed()
         except KeyError as e:
             raise OpenSearchPluginMissingConfigError(e)
         except OpenSearchCmdError as e:
@@ -437,6 +443,7 @@ class OpenSearchPluginManager:
         """Remove a plugin without restarting the node."""
         try:
             self._opensearch.run_bin("plugin", f"remove {plugin.name}")
+            self._clean_cache_if_needed()
 
         except OpenSearchCmdError as e:
             if "not found" in str(e):

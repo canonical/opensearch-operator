@@ -291,7 +291,10 @@ class Upgrade(abc.ABC):
             ):
                 raise PrecheckFailed("Not all units are online for the current app.")
 
-            if self._charm.backup.is_set() and not self._charm.backup.is_idle():
+            if (
+                self._charm.backup.backup_manager.is_set()
+                and not self._charm.backup.backup_manager.is_idle()
+            ):
                 raise PrecheckFailed("Backup or restore is in progress")
 
         except OpenSearchHttpError:

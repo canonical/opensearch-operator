@@ -3,13 +3,14 @@
 
 """Cluster-related data structures / model classes."""
 import json
+import logging
 from abc import ABC
 from datetime import datetime
 from hashlib import md5
 from typing import Any, Dict, List, Literal, Optional
 
-from charms.opensearch.v0.constants_charm import S3_REPO_BASE_PATH
-from charms.opensearch.v0.constants_secrets import S3_CREDENTIALS
+from charms.opensearch.v0.constants_charm import AZURE_REPO_BASE_PATH, S3_REPO_BASE_PATH
+from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
 from pydantic.utils import ROOT_KEY
@@ -27,6 +28,9 @@ LIBPATCH = 1
 
 MIN_HEAP_SIZE = 1024 * 1024  # 1GB in KB
 MAX_HEAP_SIZE = 32 * MIN_HEAP_SIZE  # 32GB in KB
+
+
+logger = logging.getLogger(__name__)
 
 
 class Model(ABC, BaseModel):
@@ -316,7 +320,9 @@ class S3RelData(Model):
         ):
             raise ValueError("Missing fields: access_key, secret_key")
 
-        # Both bucket and endpoint must be set, or not.
+        # NOTE: Both bucket and endpoint must be set. If none of them are set,
+        # but credentials were found, this likely means that we are validating for a
+        # non cluster_manager application, which only needs credentials.
         if values.get("bucket") and not values.get("endpoint"):
             raise ValueError("Missing field: endpoint")
         if values.get("endpoint") and not values.get("bucket"):
@@ -366,6 +372,78 @@ class S3RelData(Model):
         )
 
 
+class AzureRelDataCredentials(Model):
+    """Model class for credentials passed on the Azure relation."""
+
+    storage_account: str = Field(alias="storage-account", default=None)
+    secret_key: str = Field(alias="secret-key", default=None)
+
+    class Config:
+        """Model config of this pydantic model."""
+
+        allow_population_by_field_name = True
+
+
+class AzureRelData(Model):
+    """Model class for the Azure relation data.
+
+    This model should receive the data directly from the relation and map it to a model.
+    """
+
+    storage_account: str = Field(alias="storage-account", default="")
+    container: str = Field(default="")
+    endpoint: Optional[str] = Field(default="")
+    base_path: Optional[str] = Field(alias="path", default=AZURE_REPO_BASE_PATH)
+    connection_protocol: Optional[str] = Field(alias="connection-protocol", default=None)
+    credentials: AzureRelDataCredentials = Field(
+        alias=AZURE_CREDENTIALS, default=AzureRelDataCredentials()
+    )
+
+    class Config:
+        """Model config of this pydantic model."""
+
+        allow_population_by_field_name = True
+
+    @root_validator
+    def validate_core_fields(cls, values):  # noqa: N805
+        """Validate the core fields of the azure relation data."""
+        if (
+            not (creds := values.get("credentials"))
+            and not creds.storage_account
+            and not creds.secret_key
+        ):
+            raise ValueError("Missing fields: storage_account, secret_key")
+
+        return values
+
+    @validator(AZURE_CREDENTIALS, check_fields=False)
+    def ensure_secret_content(cls, conf: Dict[str, str] | AzureRelDataCredentials):  # noqa: N805
+        """Ensure the secret content is set."""
+        if not conf:
+            return None
+
+        data = conf
+        if isinstance(conf, dict):
+            data = AzureRelDataCredentials.from_dict(conf)
+
+        for value in data.dict().values():
+            if value.startswith("secret://"):
+                raise ValueError(f"The secret content must be passed, received {value} instead")
+        return data
+
+    @classmethod
+    def from_relation(cls, input_dict: Optional[Dict[str, Any]]):
+        """Create a new instance of this class from a json/dict repr.
+
+        This method creates a nested AzureRelDataCredentials object from the input dict.
+        """
+        if not input_dict:
+            return cls()
+
+        creds = AzureRelDataCredentials(**input_dict)
+        return cls.from_dict(dict(input_dict) | {AZURE_CREDENTIALS: creds.dict()})
+
+
 class PeerClusterRelDataCredentials(Model):
     """Model class for credentials passed on the PCluster relation."""
 
@@ -377,6 +455,7 @@ class PeerClusterRelDataCredentials(Model):
     monitor_password: Optional[str]
     admin_tls: Optional[Dict[str, Optional[str]]]
     s3: Optional[S3RelDataCredentials]
+    azure: Optional[AzureRelDataCredentials]
 
 
 class PeerClusterApp(Model):
