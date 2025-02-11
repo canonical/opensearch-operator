@@ -396,7 +396,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # configure clients auth
         self.opensearch_config.set_client_auth()
 
-        deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
+            event.defer()
+            return
         # only start the main orchestrator if a data node is available
         # this allows for "cluster-manager-only" nodes in large deployments
         # workflow documentation:
