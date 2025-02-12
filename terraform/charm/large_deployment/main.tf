@@ -10,10 +10,6 @@ locals {
     for app in concat([var.failover], local.apps) :
     app if app != null && app.model != var.main.model
   ]
-  apps_in_failover_model = [
-    for app in local.apps :
-    app if app.model == var.failover.model
-  ]
   apps_not_in_failover_model = [
     for app in local.apps :
     app if app.model != var.failover.model
