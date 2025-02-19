@@ -536,7 +536,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Returns the list of available backups to the user."""
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+        if not self.charm.opensearch_peer_cm.deployment_desc():
             event.fail("The action can be run only after the deployment is finished.")
             return
         backups = {}
@@ -684,7 +684,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
     def _on_restore_backup_action(self, event: ActionEvent) -> None:  # noqa #C901
         """Restores a backup to the current cluster."""
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+        if not self.charm.opensearch_peer_cm.deployment_desc():
             event.fail("The action can be run only after the deployment is finished.")
             return
         if self.charm.upgrade_in_progress:
@@ -754,7 +754,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:  # noqa: C901
         """Creates a backup from the current cluster."""
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+        if not self.charm.opensearch_peer_cm.deployment_desc():
             event.fail("The action can be run only after the deployment is finished.")
             return
         if self.charm.upgrade_in_progress:
