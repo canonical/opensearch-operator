@@ -1058,7 +1058,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             blocked_msg = (
                 "A cluster can only be related to 1 main and 1 failover-clusters at most."
             )
-        elif peer_cluster_rel_data.cluster_name != deployment_desc.config.cluster_name and Directive.INHERIT_CLUSTER_NAME not in deployment_desc.pending_directives:
+        elif (
+            peer_cluster_rel_data.cluster_name != deployment_desc.config.cluster_name
+            and Directive.INHERIT_CLUSTER_NAME not in deployment_desc.pending_directives
+        ):
             blocked_msg = "Cannot relate 2 clusters with different 'cluster_name' values."
 
         if not blocked_msg:
