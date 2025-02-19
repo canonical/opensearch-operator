@@ -798,7 +798,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
-        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
+        if not self.opensearch_peer_cm.deployment_desc():
             event.fail("The action can be run only after the deployment is finished.")
             return
 
