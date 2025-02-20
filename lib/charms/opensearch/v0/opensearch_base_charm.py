@@ -764,7 +764,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             not self.opensearch_peer_cm.deployment_desc()
             or self.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR
         ):
-            event.fail("The action can be run only on the leader unit of the main cluster.")
+            event.fail("The action can only be run once the deployment is complete.")
             return
 
         if not self.unit.is_leader():
