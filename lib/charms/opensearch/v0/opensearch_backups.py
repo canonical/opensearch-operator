@@ -537,7 +537,7 @@ class OpenSearchBackup(OpenSearchBackupBase):
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Returns the list of available backups to the user."""
         if not self.charm.opensearch_peer_cm.deployment_desc():
-            event.fail("The action can be run only after the deployment is finished.")
+            event.fail("The action can only be run once the deployment is complete.")
             return
         backups = {}
         try:
