@@ -102,7 +102,7 @@ class OpenSearchTLS(Object):
     def _on_set_tls_private_key(self, event: ActionEvent) -> None:
         """Set the TLS private key, which will be used for requesting the certificate."""
         if not self.charm.opensearch_peer_cm.deployment_desc():
-            event.fail("The action can be run only after the deployment is finished.")
+            event.fail("The action can only be run once the deployment is complete.")
             return
         if self.charm.upgrade_in_progress:
             event.fail("Setting private key not supported while upgrade in-progress")

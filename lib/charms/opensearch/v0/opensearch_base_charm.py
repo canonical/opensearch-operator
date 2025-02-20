@@ -396,9 +396,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # configure clients auth
         self.opensearch_config.set_client_auth()
 
-        if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
-            event.defer()
-            return
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
         # only start the main orchestrator if a data node is available
         # this allows for "cluster-manager-only" nodes in large deployments
         # workflow documentation:
@@ -799,7 +797,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _on_get_password_action(self, event: ActionEvent):
         """Return the password and cert chain for the admin user of the cluster."""
         if not self.opensearch_peer_cm.deployment_desc():
-            event.fail("The action can be run only after the deployment is finished.")
+            event.fail("The action can only be run once the deployment is complete.")
             return
 
         user_name = event.params.get("username")
