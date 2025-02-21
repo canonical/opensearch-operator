@@ -757,9 +757,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
-        if self.upgrade_in_progress:
-            event.fail("Setting password not supported while upgrade in-progress")
-            return
         if not self.opensearch_peer_cm.deployment_desc():
             event.fail("The action can only be run once the deployment is complete.")
             return
@@ -768,6 +765,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return        
         if not self.unit.is_leader():
             event.fail("The action can only be run on leader unit.")
+            return
+
+        if self.upgrade_in_progress:
+            event.fail("Setting password not supported while upgrade in-progress")
             return
 
         user_name = event.params.get("username")
