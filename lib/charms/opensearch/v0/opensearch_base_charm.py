@@ -767,7 +767,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.fail("The action can only be run on the main cluster.")
             return        
         if not self.unit.is_leader():
-            event.fail("The action can be run only on leader unit.")
+            event.fail("The action can only be run on leader unit.")
             return
 
         user_name = event.params.get("username")
