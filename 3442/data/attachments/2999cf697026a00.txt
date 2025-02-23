@@ -1,0 +1,420 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.1    unsupported  02:10:42Z
+
+App         Version  Status  Scale  Charm       Channel  Rev  Exposed  Message
+opensearch           error       2  opensearch             1  no       hook failed: "start"
+
+Unit           Workload  Agent  Machine  Public address  Ports  Message
+opensearch/1*  error     idle   2        10.207.149.87          hook failed: "start"
+opensearch/2   blocked   idle   3        10.207.149.104         Missing TLS relation with this cluster.
+
+Machine  State    Address         Inst id        Base          AZ  Message
+2        started  10.207.149.87   juju-183386-2  ubuntu@22.04      Running
+3        started  10.207.149.104  juju-183386-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:42:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:42:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:42:42 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:42:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:42:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:42:44 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-0: 01:45:24 ERROR unit.opensearch/0.juju-log certificates:3: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-opensearch-0: 01:45:29 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:45:29 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:45:30 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:45:33 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:45:36 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:45:39 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:45:42 ERROR unit.opensearch/0.juju-log certificates:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:50:17 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+machine-2: 01:53:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:53:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:53:21 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:53:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:53:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:53:22 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-1: 01:55:16 ERROR unit.opensearch/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3213, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-opensearch-1/secret-get', '--label', 'opensearch:app:kibanaserver-password', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/src/charm.py", line 223, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 515, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 863, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 313, in _on_leader_elected
+    self._put_or_update_internal_user_leader(user)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 1403, in _put_or_update_internal_user_leader
+    secret = self.secrets.get(Scope.APP, self.secrets.password_key(user))
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 308, in get
+    content = self._get_juju_secret_content(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 209, in _get_juju_secret_content
+    secret = self._get_juju_secret(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 197, in _get_juju_secret
+    secret = self._charm.model.get_secret(label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 299, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3579, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3215, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-opensearch-1: 01:55:16 ERROR juju.worker.uniter.operation hook "start" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-1: 01:55:22 ERROR unit.opensearch/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3213, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-opensearch-1/secret-get', '--label', 'opensearch:app:admin-password', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/src/charm.py", line 223, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 515, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 863, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 313, in _on_leader_elected
+    self._put_or_update_internal_user_leader(user)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 1403, in _put_or_update_internal_user_leader
+    secret = self.secrets.get(Scope.APP, self.secrets.password_key(user))
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 308, in get
+    content = self._get_juju_secret_content(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 209, in _get_juju_secret_content
+    secret = self._get_juju_secret(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 197, in _get_juju_secret
+    secret = self._charm.model.get_secret(label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 299, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3579, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3215, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-opensearch-1: 01:55:22 ERROR juju.worker.uniter.operation hook "start" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-1: 01:55:32 ERROR unit.opensearch/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3213, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-opensearch-1/secret-get', '--label', 'opensearch:app:kibanaserver-password', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/src/charm.py", line 223, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 515, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 863, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 313, in _on_leader_elected
+    self._put_or_update_internal_user_leader(user)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 1403, in _put_or_update_internal_user_leader
+    secret = self.secrets.get(Scope.APP, self.secrets.password_key(user))
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 308, in get
+    content = self._get_juju_secret_content(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 209, in _get_juju_secret_content
+    secret = self._get_juju_secret(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 197, in _get_juju_secret
+    secret = self._charm.model.get_secret(label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 299, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3579, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3215, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-opensearch-1: 01:55:33 ERROR juju.worker.uniter.operation hook "start" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-1: 01:55:52 ERROR unit.opensearch/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3213, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-opensearch-1/secret-get', '--label', 'opensearch:app:admin-password', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/src/charm.py", line 223, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 515, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 863, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 313, in _on_leader_elected
+    self._put_or_update_internal_user_leader(user)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 1403, in _put_or_update_internal_user_leader
+    secret = self.secrets.get(Scope.APP, self.secrets.password_key(user))
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 308, in get
+    content = self._get_juju_secret_content(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 209, in _get_juju_secret_content
+    secret = self._get_juju_secret(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 197, in _get_juju_secret
+    secret = self._charm.model.get_secret(label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 299, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3579, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3215, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-opensearch-1: 01:55:53 ERROR juju.worker.uniter.operation hook "start" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-1: 01:56:32 ERROR unit.opensearch/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3213, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-opensearch-1/secret-get', '--label', 'opensearch:app:kibanaserver-password', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/src/charm.py", line 223, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 515, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 863, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 313, in _on_leader_elected
+    self._put_or_update_internal_user_leader(user)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 1403, in _put_or_update_internal_user_leader
+    secret = self.secrets.get(Scope.APP, self.secrets.password_key(user))
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 308, in get
+    content = self._get_juju_secret_content(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 209, in _get_juju_secret_content
+    secret = self._get_juju_secret(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 197, in _get_juju_secret
+    secret = self._charm.model.get_secret(label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 299, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3579, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3215, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-opensearch-1: 01:56:32 ERROR juju.worker.uniter.operation hook "start" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-1: 01:57:51 ERROR unit.opensearch/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3213, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-opensearch-1/secret-get', '--label', 'opensearch:app:kibanaserver-password', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/src/charm.py", line 223, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 515, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 863, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 313, in _on_leader_elected
+    self._put_or_update_internal_user_leader(user)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 1403, in _put_or_update_internal_user_leader
+    secret = self.secrets.get(Scope.APP, self.secrets.password_key(user))
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 308, in get
+    content = self._get_juju_secret_content(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 209, in _get_juju_secret_content
+    secret = self._get_juju_secret(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 197, in _get_juju_secret
+    secret = self._charm.model.get_secret(label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 299, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3579, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3215, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-opensearch-1: 01:57:51 ERROR juju.worker.uniter.operation hook "start" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-1: 02:00:24 ERROR unit.opensearch/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3213, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-opensearch-1/secret-get', '--label', 'opensearch:app:admin-password', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/src/charm.py", line 223, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 515, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 863, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 313, in _on_leader_elected
+    self._put_or_update_internal_user_leader(user)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 1403, in _put_or_update_internal_user_leader
+    secret = self.secrets.get(Scope.APP, self.secrets.password_key(user))
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 308, in get
+    content = self._get_juju_secret_content(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 209, in _get_juju_secret_content
+    secret = self._get_juju_secret(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 197, in _get_juju_secret
+    secret = self._charm.model.get_secret(label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 299, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3579, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3215, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-opensearch-1: 02:00:24 ERROR juju.worker.uniter.operation hook "start" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-1: 02:05:25 ERROR unit.opensearch/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3213, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-opensearch-1/secret-get', '--label', 'opensearch:app:admin-password', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/src/charm.py", line 223, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 515, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 863, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 313, in _on_leader_elected
+    self._put_or_update_internal_user_leader(user)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 1403, in _put_or_update_internal_user_leader
+    secret = self.secrets.get(Scope.APP, self.secrets.password_key(user))
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 308, in get
+    content = self._get_juju_secret_content(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 209, in _get_juju_secret_content
+    secret = self._get_juju_secret(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 197, in _get_juju_secret
+    secret = self._charm.model.get_secret(label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 299, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3579, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3215, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-opensearch-1: 02:05:25 ERROR juju.worker.uniter.operation hook "start" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-1: 02:10:26 ERROR unit.opensearch/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3213, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-opensearch-1/secret-get', '--label', 'opensearch:app:admin-password', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/src/charm.py", line 223, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 515, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 863, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 313, in _on_leader_elected
+    self._put_or_update_internal_user_leader(user)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 1403, in _put_or_update_internal_user_leader
+    secret = self.secrets.get(Scope.APP, self.secrets.password_key(user))
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 308, in get
+    content = self._get_juju_secret_content(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 209, in _get_juju_secret_content
+    secret = self._get_juju_secret(scope, key)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/opensearch_secrets.py", line 197, in _get_juju_secret
+    secret = self._charm.model.get_secret(label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 299, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3579, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3215, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-opensearch-1: 02:10:26 ERROR juju.worker.uniter.operation hook "start" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
