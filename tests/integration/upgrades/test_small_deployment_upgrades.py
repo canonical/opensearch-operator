@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
 OPENSEARCH_CHANNEL = "2/edge"
+OPENSEARCH_STABLE_CHANNEL = "2/stable"
 
 
 STARTING_VERSION = "2.15.0"
@@ -245,11 +246,13 @@ async def test_upgrade_rollback_from_local(
         )
 
         logger.info(f"Rolling back to {version}")
+        # TODO: return to 2/edge channel instead once this channel's latest 2.17 charm
+        # revision points to snap rev. 65 instead of snap rev. 62.
         await refresh(
             ops_test,
             app,
             switch=OPENSEARCH_ORIGINAL_CHARM_NAME,
-            channel=OPENSEARCH_CHANNEL,
+            channel=OPENSEARCH_STABLE_CHANNEL,
         )
         # Wait until we are set in an idle state and can rollback the revision.
         # app status blocked: that will happen if we are jumping N-2 versions in our test
