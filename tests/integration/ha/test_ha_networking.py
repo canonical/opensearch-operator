@@ -37,7 +37,8 @@ from ..helpers import (
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
-from .test_horizontal_scaling import IDLE_PERIOD
+
+IDLE_PERIOD = 75
 
 logger = logging.getLogger(__name__)
 

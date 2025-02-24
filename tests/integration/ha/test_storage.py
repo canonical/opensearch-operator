@@ -16,7 +16,6 @@ from ..ha.helpers import (
     storage_id,
     storage_type,
 )
-from ..ha.test_horizontal_scaling import IDLE_PERIOD
 from ..helpers import (
     APP_NAME,
     CONFIG_OPTS,
@@ -27,6 +26,10 @@ from ..helpers import (
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
+
+
+IDLE_PERIOD = 75
+
 
 logger = logging.getLogger(__name__)
 
