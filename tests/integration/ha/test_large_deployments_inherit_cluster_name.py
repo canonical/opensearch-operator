@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 REL_ORCHESTRATOR = "peer-cluster-orchestrator"
 REL_PEER = "peer-cluster"
 
-MAIN_APP = "opensearch-main"
+MAIN_APP_NOT_AUTOGEN = "opensearch-main"
 INVALID_FAILOVER_APP = "opensearch-failover-invalid"
 
 MAIN_APP_AUTOGEN = "opensearch-main-autogen"
@@ -32,7 +32,7 @@ DATA_APP_AUTOGEN = "opensearch-data-autogen"
 CLUSTER_NAME = "log-app"
 
 APP_UNITS = {
-    MAIN_APP: 1,
+    MAIN_APP_NOT_AUTOGEN: 1,
     INVALID_FAILOVER_APP: 1,
     MAIN_APP_AUTOGEN: 1,
     FAILOVER_APP_AUTOGEN: 1,
@@ -57,7 +57,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(
             my_charm,
-            application_name=MAIN_APP,
+            application_name=MAIN_APP_NOT_AUTOGEN,
             num_units=1,
             series=SERIES,
             config={"cluster_name": CLUSTER_NAME} | CONFIG_OPTS,
@@ -104,7 +104,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     # integrate TLS to all applications
     for app in [
-        MAIN_APP,
+        MAIN_APP_NOT_AUTOGEN,
         INVALID_FAILOVER_APP,
         MAIN_APP_AUTOGEN,
         FAILOVER_APP_AUTOGEN,
@@ -112,19 +112,19 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     ]:
         await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
 
-    # confirm all apps are blocked because NO TLS relation established
+    # confirm all apps are blocked due to missing data node or waiting for relation
     await wait_until(
         ops_test,
         apps=list(APP_UNITS.keys()),
         apps_full_statuses={
-            MAIN_APP: {"active": []},
+            MAIN_APP_NOT_AUTOGEN: {"active": []},
             MAIN_APP_AUTOGEN: {"blocked": [PClusterNoDataNode]},
             INVALID_FAILOVER_APP: {"blocked": [PClusterNoRelation]},
             FAILOVER_APP_AUTOGEN: {"blocked": [PClusterNoRelation]},
             DATA_APP_AUTOGEN: {"blocked": [PClusterNoRelation]},
         },
         units_full_statuses={
-            MAIN_APP: {"units": {"active": []}},
+            MAIN_APP_NOT_AUTOGEN: {"units": {"active": []}},
             MAIN_APP_AUTOGEN: {"units": {"blocked": [PClusterNoDataNode]}},
             INVALID_FAILOVER_APP: {"units": {"active": []}},
             FAILOVER_APP_AUTOGEN: {"units": {"active": []}},
@@ -139,17 +139,17 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_inherit_cluster_name_integration(ops_test: OpsTest) -> None:
-    """After integrating the cluster manager with the data application, both should start up."""
+async def test_invalid_inherit_cluster_name_integration(ops_test: OpsTest) -> None:
+    """If the cluster name wasn't auto generated, cluster name should not be inherited"""
     await ops_test.model.integrate(
-        f"{INVALID_FAILOVER_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}"
+        f"{INVALID_FAILOVER_APP}:{REL_PEER}", f"{MAIN_APP_NOT_AUTOGEN}:{REL_ORCHESTRATOR}"
     )
 
     await wait_until(
         ops_test,
-        apps=[MAIN_APP, INVALID_FAILOVER_APP],
+        apps=[MAIN_APP_NOT_AUTOGEN, INVALID_FAILOVER_APP],
         apps_full_statuses={
-            MAIN_APP: {"active": []},
+            MAIN_APP_NOT_AUTOGEN: {"active": []},
             INVALID_FAILOVER_APP: {
                 "blocked": ["Cannot relate 2 clusters with different 'cluster_name' values."]
             },
@@ -163,7 +163,7 @@ async def test_inherit_cluster_name_integration(ops_test: OpsTest) -> None:
         INVALID_FAILOVER_APP, block_until_done=True, force=True, destroy_storage=True, no_wait=True
     )
     await ops_test.model.remove_application(
-        MAIN_APP, block_until_done=True, force=True, destroy_storage=True, no_wait=True
+        MAIN_APP_NOT_AUTOGEN, block_until_done=True, force=True, destroy_storage=True, no_wait=True
     )
 
 
